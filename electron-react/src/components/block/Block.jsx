@@ -178,7 +178,7 @@ export default function Block() {
       value: BigInt(blockRecord.weight).toLocaleString(),
       tooltip: (
         <Trans id="Block.weightTooltip">
-          Weight is the total added difficulty of all blocks up to and including
+          Weight is the total added difficulty of all sub blocks up to and including
           this one
         </Trans>
       ),
@@ -198,7 +198,7 @@ export default function Block() {
       tooltip: (
         <Trans id="Block.totalVDFIterationsTooltip">
           The total number of VDF (verifiable delay function) or proof of time
-          iterations on the whole chain up to this block.
+          iterations on the whole chain up to this sub block.
         </Trans>
       ),
     },
@@ -255,7 +255,7 @@ export default function Block() {
       value: `${chia_cb} TXCH`,
       tooltip: (
         <Trans id="Block.coinbaseAmountTooltip">
-          The Chia block reward, goes to the pool (or farmer if not pooling)
+          The chia block reward, goes to the pool (or farmer if not pooling)
         </Trans>
       ),
     },

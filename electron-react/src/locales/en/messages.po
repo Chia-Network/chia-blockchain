@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:522
+#: src/components/wallet/standard/WalletStandard.tsx:525
 msgid "AddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:526
+#: src/components/wallet/standard/WalletStandard.tsx:529
 msgid "AddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/standard/WalletStandard.tsx:538
+#: src/components/wallet/standard/WalletStandard.tsx:541
 msgid "AddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:514
+#: src/components/wallet/standard/WalletStandard.tsx:517
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
@@ -49,15 +49,15 @@ msgstr "Connecting to wallet"
 msgid "Application.loggingIn"
 msgstr "Logging in"
 
-#: src/components/wallet/standard/WalletStandard.tsx:202
+#: src/components/wallet/standard/WalletStandard.tsx:203
 msgid "BalanceCard.balance"
 msgstr "Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:239
+#: src/components/wallet/standard/WalletStandard.tsx:240
 msgid "BalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:241
+#: src/components/wallet/standard/WalletStandard.tsx:242
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
@@ -69,143 +69,143 @@ msgstr "Pending Change"
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 
-#: src/components/wallet/standard/WalletStandard.tsx:246
+#: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "Pending Farming Rewards"
 
-#: src/components/wallet/standard/WalletStandard.tsx:248
+#: src/components/wallet/standard/WalletStandard.tsx:249
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
-msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
+msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable."
 
-#: src/components/wallet/standard/WalletStandard.tsx:232
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:207
 msgid "BalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:207
 msgid "BalanceCard.totalBalanceTooltip"
-msgstr "This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
-#: src/components/wallet/standard/WalletStandard.tsx:225
+#: src/components/wallet/standard/WalletStandard.tsx:226
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:206
 msgid "Block.blockVDFIterations"
 msgstr "Block VDF Iterations"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:209
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 
-#: src/components/block/Block.jsx:243
+#: src/components/block/Block.jsx:254
 msgid "Block.coinbaseAmount"
 msgstr "Coinbase Amount"
 
-#: src/components/block/Block.jsx:246
+#: src/components/block/Block.jsx:257
 msgid "Block.coinbaseAmountTooltip"
-msgstr "The Chia block reward, goes to the pool (or farmer if not pooling)"
+msgstr "The chia block reward, goes to the pool (or farmer if not pooling)"
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:263
 msgid "Block.coinbasePuzzleHash"
 msgstr "Coinbase Puzzle Hash"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:292
 msgid "Block.description"
 msgstr "Block at height {0} in the Chia blockchain"
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:192
 msgid "Block.difficulty"
 msgstr "Difficulty"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:267
 msgid "Block.feesAmount"
 msgstr "Fees Amount"
 
-#: src/components/block/Block.jsx:259
+#: src/components/block/Block.jsx:270
 msgid "Block.feesAmountTooltip"
 msgstr "The total fees in this block, goes to the farmer"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:276
 msgid "Block.feesPuzzleHash"
 msgstr "Fees Puzzle Hash"
 
-#: src/components/block/Block.jsx:148
+#: src/components/block/Block.jsx:159
 msgid "Block.headerHash"
 msgstr "Header hash"
 
-#: src/components/block/Block.jsx:162
+#: src/components/block/Block.jsx:173
 msgid "Block.height"
 msgstr "Height"
 
-#: src/components/block/Block.jsx:119
+#: src/components/block/Block.jsx:130
 msgid "Block.notFound"
 msgstr "Block with hash {headerHash} does not exists."
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:228
 msgid "Block.plotId"
 msgstr "Plot Id"
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:231
 msgid "Block.plotIdTooltip"
 msgstr "The seed used to create the plot, this depends on the pool pk and plot pk"
 
-#: src/components/block/Block.jsx:209
+#: src/components/block/Block.jsx:220
 msgid "Block.plotPublicKey"
 msgstr "Plot Public Key"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:224
 msgid "Block.poolPublicKey"
 msgstr "Pool Public Key"
 
-#: src/components/block/Block.jsx:176
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:187
+#: src/components/block/Block.jsx:301
 msgid "Block.previousBlock"
 msgstr "Previous Block"
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:216
 msgid "Block.proofOfSpaceSize"
 msgstr "Proof of Space Size"
 
-#: src/components/block/Block.jsx:152
+#: src/components/block/Block.jsx:163
 msgid "Block.timestamp"
 msgstr "Timestamp"
 
-#: src/components/block/Block.jsx:155
+#: src/components/block/Block.jsx:166
 msgid "Block.timestampTooltip"
 msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 
-#: src/components/block/Block.jsx:92
-#: src/components/block/Block.jsx:104
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:103
+#: src/components/block/Block.jsx:115
+#: src/components/block/Block.jsx:127
+#: src/components/block/Block.jsx:283
 msgid "Block.title"
 msgstr "Block"
 
-#: src/components/block/Block.jsx:185
+#: src/components/block/Block.jsx:196
 msgid "Block.totalVDFIterations"
 msgstr "Total VDF Iterations"
 
-#: src/components/block/Block.jsx:188
+#: src/components/block/Block.jsx:199
 msgid "Block.totalVDFIterationsTooltip"
-msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:239
 msgid "Block.transactionsFilterHash"
 msgstr "Transactions Filter Hash"
 
@@ -213,20 +213,20 @@ msgstr "Transactions Filter Hash"
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr "Transactions Generator Hash"
 
-#: src/components/block/Block.jsx:166
+#: src/components/block/Block.jsx:177
 msgid "Block.weight"
 msgstr "Weight"
 
-#: src/components/block/Block.jsx:169
+#: src/components/block/Block.jsx:180
 msgid "Block.weightTooltip"
-msgstr "Weight is the total added difficulty of all blocks up to and including this one"
+msgstr "Weight is the total added difficulty of all sub blocks up to and including this one"
 
 #: src/components/fullNode/FullNode.jsx:91
 #~ msgid "BlocksCard.expectedFinishTime"
 #~ msgstr "Expected Finish Time"
 
 #: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:88
+#: src/components/fullNode/FullNode.jsx:85
 msgid "BlocksCard.finished"
 msgstr "Finished"
 
@@ -242,7 +242,7 @@ msgstr "Height"
 msgid "BlocksCard.inProgress"
 msgstr "In Progress"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:89
 msgid "BlocksCard.state"
 msgstr "State"
 
@@ -250,11 +250,11 @@ msgstr "State"
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:322
+#: src/components/fullNode/FullNode.jsx:317
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
-#: src/components/fullNode/FullNode.jsx:89
+#: src/components/fullNode/FullNode.jsx:86
 msgid "BlocksCard.unfinished"
 msgstr "Unfinished"
 
@@ -282,123 +282,123 @@ msgstr "Coloured Coin Options"
 #~ msgid "Challenges.title"
 #~ msgstr "Challenges"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:195
+#: src/components/wallet/coloured/WalletColoured.tsx:196
 msgid "ColourCard.colour"
 msgstr "Colour:"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:211
+#: src/components/wallet/coloured/WalletColoured.tsx:212
 msgid "ColourCard.nickname"
 msgstr "Nickname"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:217
+#: src/components/wallet/coloured/WalletColoured.tsx:218
 msgid "ColourCard.rename"
 msgstr "Rename"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:186
+#: src/components/wallet/coloured/WalletColoured.tsx:187
 msgid "ColourCard.title"
 msgstr "Colour Info"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:597
+#: src/components/wallet/coloured/WalletColoured.tsx:601
 msgid "ColouredAddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:601
+#: src/components/wallet/coloured/WalletColoured.tsx:605
 msgid "ColouredAddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:613
+#: src/components/wallet/coloured/WalletColoured.tsx:617
 msgid "ColouredAddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:589
+#: src/components/wallet/coloured/WalletColoured.tsx:593
 msgid "ColouredAddressCard.title"
 msgstr "Receive Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:313
+#: src/components/wallet/coloured/WalletColoured.tsx:314
 msgid "ColouredBalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:308
+#: src/components/wallet/coloured/WalletColoured.tsx:309
 msgid "ColouredBalanceCard.title"
 msgstr "Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:312
+#: src/components/wallet/coloured/WalletColoured.tsx:313
 msgid "ColouredBalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:322
+#: src/components/wallet/coloured/WalletColoured.tsx:323
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "View pending balances..."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:563
+#: src/components/wallet/coloured/WalletColoured.tsx:567
 msgid "ColouredHistoryCard.title"
 msgstr "History"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:443
+#: src/components/wallet/coloured/WalletColoured.tsx:444
 msgid "ColouredSendCard.address"
 msgstr "Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:455
+#: src/components/wallet/coloured/WalletColoured.tsx:456
 msgid "ColouredSendCard.amount"
 msgstr "Amount ({cc_unit})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:472
+#: src/components/wallet/coloured/WalletColoured.tsx:473
 msgid "ColouredSendCard.farm"
 msgstr "Farm"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:462
+#: src/components/wallet/coloured/WalletColoured.tsx:463
 msgid "ColouredSendCard.fee"
 msgstr "Fee (TXCH)"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:477
+#: src/components/wallet/coloured/WalletColoured.tsx:478
 msgid "ColouredSendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:428
+#: src/components/wallet/coloured/WalletColoured.tsx:429
 msgid "ColouredSendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:523
+#: src/components/wallet/coloured/WalletColoured.tsx:527
 msgid "ColouredTransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:508
 msgid "ColouredTransactionTable.confirmed"
 msgstr "Confirmed"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:517
+#: src/components/wallet/coloured/WalletColoured.tsx:521
 msgid "ColouredTransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:526
+#: src/components/wallet/coloured/WalletColoured.tsx:530
 msgid "ColouredTransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:499
+#: src/components/wallet/coloured/WalletColoured.tsx:505
 msgid "ColouredTransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:492
+#: src/components/wallet/coloured/WalletColoured.tsx:493
 msgid "ColouredTransactionTable.noPreviousTransactions"
 msgstr "No previous transactions"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:501
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:508
 msgid "ColouredTransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:520
+#: src/components/wallet/coloured/WalletColoured.tsx:524
 msgid "ColouredTransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:514
+#: src/components/wallet/coloured/WalletColoured.tsx:518
 msgid "ColouredTransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:511
+#: src/components/wallet/coloured/WalletColoured.tsx:515
 msgid "ColouredTransactionTable.type"
 msgstr "Type"
 
@@ -424,11 +424,11 @@ msgstr "Delete"
 
 #: src/components/fullNode/FullNodeConnections.jsx:95
 msgid "Connections.ipAddress"
-msgstr "Ip address"
+msgstr "IP address"
 
 #: src/components/fullNode/FullNodeConnections.jsx:182
 msgid "Connections.ipAddressHost"
-msgstr "Ip address / host"
+msgstr "IP address / host"
 
 #: src/components/fullNode/FullNodeConnections.jsx:115
 msgid "Connections.lastMessage"
@@ -436,7 +436,7 @@ msgstr "Last message"
 
 #: src/components/fullNode/FullNodeConnections.jsx:92
 msgid "Connections.nodeId"
-msgstr "Node Id"
+msgstr "Node ID"
 
 #: src/components/fullNode/FullNodeConnections.jsx:98
 #: src/components/fullNode/FullNodeConnections.jsx:188
@@ -501,7 +501,7 @@ msgstr "Add"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "CreateOffer.addTradePair"
-msgstr "Please add trade pair"
+msgstr "Please add a trade pair"
 
 #: src/components/trading/CreateOffer.jsx:213
 msgid "CreateOffer.amount"
@@ -509,7 +509,7 @@ msgstr "Amount"
 
 #: src/components/trading/CreateOffer.jsx:132
 msgid "CreateOffer.availableOnlyFromElectron"
-msgstr "This feature is available only from electron app"
+msgstr "This feature is available only from the GUI."
 
 #: src/components/trading/CreateOffer.jsx:174
 msgid "CreateOffer.buyOrSell"
@@ -745,9 +745,9 @@ msgstr "Delete key"
 msgid "Farm.title"
 msgstr "Your Farm Overview"
 
-#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:14
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 msgid "FarmCardCoinbaseRewards.title"
-msgstr "TXCH Framing Rewards"
+msgstr "TXCH Farming Rewards"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
 msgid "FarmCardExpectedTimeToWin.title"
@@ -757,15 +757,15 @@ msgstr "Expected Time to Win"
 msgid "FarmCardExpectedTimeToWin.tooltip"
 msgstr "You have {0}% of the space on the network, so farming a block will take{totalHours} in expectation"
 
-#: src/components/farm/card/FarmCardFeesReward.tsx:14
+#: src/components/farm/card/FarmCardFeesReward.tsx:12
 msgid "FarmCardFeesReward.title"
 msgstr "TXCH Fees Collected"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "FarmCardLastHeightFarmed.noBlocksFarmedYet"
 msgstr "No blocks farmed yet"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "FarmCardLastHeightFarmed.title"
 msgstr "Last Height Farmed"
 
@@ -777,7 +777,7 @@ msgstr "Plot Count"
 msgid "FarmCardStatus.title"
 msgstr "Farming Status"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:14
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "FarmCardTotalChiaFarmed.title"
 msgstr "Total Chia Farmed"
 
@@ -824,7 +824,7 @@ msgstr "Host Name"
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 msgid "FarmFullNodeConnections.nodeId"
-msgstr "Node Id"
+msgstr "Node ID"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:32
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:32
@@ -837,7 +837,7 @@ msgstr "Time"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:60
 msgid "FarmFullNodeConnections.title"
-msgstr "Your Full Node Connnection"
+msgstr "Your Full Node Connection"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
@@ -963,15 +963,15 @@ msgstr "Connected"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:395
+#: src/components/fullNode/FullNode.jsx:390
 msgid "FullNode.title"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:281
+#: src/components/fullNode/FullNode.jsx:276
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
-#: src/components/wallet/standard/WalletStandard.tsx:488
+#: src/components/wallet/standard/WalletStandard.tsx:491
 msgid "HistoryCard.title"
 msgstr "History"
 
@@ -1147,42 +1147,42 @@ msgstr "Please specify final directory"
 msgid "PlotAddSelectFinalDirectory.title"
 msgstr "Select Final Directory"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "PlotAddSelectTemporaryDirectory.browse"
 msgstr "Browse"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "PlotAddSelectTemporaryDirectory.defaultIsFinal"
 msgstr "If none selected, then it will default to the temporary directory."
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:33
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "PlotAddSelectTemporaryDirectory.description"
 msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:62
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "PlotAddSelectTemporaryDirectory.selectSecondTemporaryDirectory"
 msgstr "Select 2nd Temporary Directory"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "PlotAddSelectTemporaryDirectory.selected"
 msgstr "Selected"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:47
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "PlotAddSelectTemporaryDirectory.specifyTemporaryDirectory"
 msgstr "Please specify temporary directory"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:31
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "PlotAddSelectTemporaryDirectory.title"
 msgstr "Select Temporary Directory"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:40
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "PlotAddSelectTemporaryDirectory.workspaceLocation"
 msgstr "Temporary folder location"
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:67
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "PlotAddSelectTemporaryDirectory.workspaceLocation2"
 msgstr "Second temporary folder location"
 
@@ -1276,7 +1276,7 @@ msgstr "Farming"
 
 #: src/components/plot/PlotStatus.tsx:22
 msgid "PlotStatus.synching"
-msgstr "Synching"
+msgstr "Syncing"
 
 #: src/components/farmer/Farmer.jsx:581
 #~ msgid "Plots.back"
@@ -1305,7 +1305,7 @@ msgstr "Synching"
 
 #: src/components/farmer/Farmer.jsx:532
 #~ msgid "Plots.failedToOpenPlotsDescription"
-#~ msgstr "These plots are invalid, you might want to delete them forever."
+#~ msgstr "These plots are invalid, you might want to delete them."
 
 #: src/components/farmer/Farmer.jsx:410
 #~ msgid "Plots.filename"
@@ -1345,7 +1345,7 @@ msgstr "Synching"
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "PlotsFailed.description"
-msgstr "These plots are invalid, you might want to delete them forever."
+msgstr "These plots are invalid, you might want to delete them."
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "PlotsFailed.title"
@@ -1375,7 +1375,7 @@ msgstr "Not found Plots"
 
 #: src/components/plotter/Plotter.jsx:298
 #~ msgid "PlotterFinalLocation.availableOnlyFromElectron"
-#~ msgstr "This feature is available only from electron app"
+#~ msgstr "This feature is available only from the GUI."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 msgid "PlotterFinalLocation.browse"
@@ -1403,7 +1403,7 @@ msgstr "Selected"
 
 #: src/components/plotter/Plotter.jsx:630
 #~ msgid "PlotterProgress.plottingStoppedSuccesfully"
-#~ msgstr "Plotting stopped succesfully."
+#~ msgstr "Plotting stopped successfully."
 
 #: src/components/plotter/Plotter.jsx:619
 #~ msgid "PlotterProgress.title"
@@ -1525,23 +1525,23 @@ msgstr "Create Transaction"
 msgid "RLSendCard.waitForSyncing"
 msgstr "Please finish syncing before making a transaction"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:937
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:942
 msgid "RLTransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:918
 msgid "RLTransactionTable.confirmed"
 msgstr "Confirmed"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:931
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:936
 msgid "RLTransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:940
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:945
 msgid "RLTransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
 msgid "RLTransactionTable.incoming"
 msgstr "Incoming"
 
@@ -1549,23 +1549,23 @@ msgstr "Incoming"
 msgid "RLTransactionTable.noPreviousTransactions"
 msgstr "No previous transactions"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:909
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:912
 msgid "RLTransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:915
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
 msgid "RLTransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:934
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:939
 msgid "RLTransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:928
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:933
 msgid "RLTransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:925
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:930
 msgid "RLTransactionTable.type"
 msgstr "Type"
 
@@ -1597,15 +1597,15 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:360
+#: src/components/fullNode/FullNode.jsx:355
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:371
+#: src/components/fullNode/FullNode.jsx:366
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:354
+#: src/components/fullNode/FullNode.jsx:349
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
@@ -1705,27 +1705,27 @@ msgstr "syncing"
 msgid "StatusCard.title"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:149
 msgid "StatusItem.connectionStatus"
 msgstr "Connection Status"
 
-#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/FullNode.jsx:151
 msgid "StatusItem.connectionStatusConnected"
 msgstr "Connected"
 
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:153
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:195
 msgid "StatusItem.difficulty"
 msgstr "Difficulty"
 
-#: src/components/fullNode/FullNode.jsx:228
+#: src/components/fullNode/FullNode.jsx:223
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:234
+#: src/components/fullNode/FullNode.jsx:229
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
@@ -1760,66 +1760,66 @@ msgstr "Estimated sum of all the plotted disk space of all farmers in the networ
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "Min Iterations"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:170
 msgid "StatusItem.peakHeight"
 msgstr "Peak Height"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:176
 msgid "StatusItem.peakSubBlockHeight"
 msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:182
 msgid "StatusItem.peakTime"
 msgstr "Peak Time"
 
-#: src/components/fullNode/FullNode.jsx:190
+#: src/components/fullNode/FullNode.jsx:187
 msgid "StatusItem.peakTimeTooltip"
-msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+msgstr "This is the time of the latest peak sub block."
 
-#: src/components/fullNode/FullNode.jsx:105
-#: src/components/fullNode/FullNode.jsx:122
-#: src/components/fullNode/FullNode.jsx:138
-#: src/components/fullNode/FullNode.jsx:164
+#: src/components/fullNode/FullNode.jsx:102
+#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:161
 msgid "StatusItem.status"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:162
 msgid "StatusItem.statusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:121
 msgid "StatusItem.statusNotSynced"
 msgstr "Not Synced"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:127
 msgid "StatusItem.statusNotSyncedTooltip"
-msgstr "The node is not synced and currently not syncing"
+msgstr "The node is not synced"
 
-#: src/components/fullNode/FullNode.jsx:139
+#: src/components/fullNode/FullNode.jsx:136
 msgid "StatusItem.statusSynced"
 msgstr "Synced"
 
-#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:139
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "This node is fully caught up and validating the network"
 
-#: src/components/fullNode/FullNode.jsx:113
+#: src/components/fullNode/FullNode.jsx:110
 msgid "StatusItem.statusTooltip"
 msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 
-#: src/components/fullNode/FullNode.jsx:107
+#: src/components/fullNode/FullNode.jsx:104
 msgid "StatusItem.statusValue"
 msgstr "Syncing {progress}/{tip}"
 
-#: src/components/fullNode/FullNode.jsx:208
+#: src/components/fullNode/FullNode.jsx:203
 msgid "StatusItem.subSlotIters"
 msgstr "VDF Sub Slot Iterations"
 
-#: src/components/fullNode/FullNode.jsx:216
+#: src/components/fullNode/FullNode.jsx:211
 msgid "StatusItem.totalIterations"
 msgstr "Total Iterations"
 
-#: src/components/fullNode/FullNode.jsx:220
+#: src/components/fullNode/FullNode.jsx:215
 msgid "StatusItem.totalIterationsTooltip"
 msgstr "Total iterations since the start of the blockchain"
 
@@ -1971,43 +1971,43 @@ msgstr "Sell"
 msgid "TradingHistory.title"
 msgstr "Trading History"
 
-#: src/components/wallet/standard/WalletStandard.tsx:444
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:423
+#: src/components/wallet/standard/WalletStandard.tsx:426
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Confirmed at height {0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:438
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/standard/WalletStandard.tsx:447
+#: src/components/wallet/standard/WalletStandard.tsx:450
 msgid "TransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:418
+#: src/components/wallet/standard/WalletStandard.tsx:423
 msgid "TransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/standard/WalletStandard.tsx:420
+#: src/components/wallet/standard/WalletStandard.tsx:422
 msgid "TransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/standard/WalletStandard.tsx:425
+#: src/components/wallet/standard/WalletStandard.tsx:428
 msgid "TransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/standard/WalletStandard.tsx:435
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "TransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/standard/WalletStandard.tsx:432
+#: src/components/wallet/standard/WalletStandard.tsx:435
 msgid "TransactionTable.type"
 msgstr "Type"
 
@@ -2077,8 +2077,8 @@ msgstr "Wallets"
 
 #: src/hooks/useSelectDirectory.tsx:26
 msgid "useSelectDirectory.availableOnlyFromElectron"
-msgstr "This feature is available only from electron app"
+msgstr "This feature is available only from the GUI."
 
 #: src/hooks/useSelectFile.tsx:26
 msgid "useSelectFile.availableOnlyFromElectron"
-msgstr "This feature is available only from electron app"
+msgstr "This feature is available only from the GUI."
