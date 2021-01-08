@@ -538,7 +538,8 @@ class TradeManager:
             # debug_spend_bundle(spend_bundle)
             if chia_discrepancy < 0:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
@@ -555,7 +556,8 @@ class TradeManager:
                 )
             else:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
@@ -576,7 +578,8 @@ class TradeManager:
             wallet = wallets[colour]
             if chia_discrepancy > 0:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(amount)),
@@ -593,7 +596,8 @@ class TradeManager:
                 )
             else:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(amount)),
@@ -611,7 +615,8 @@ class TradeManager:
             my_tx_records.append(tx_record)
 
         tx_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=token_bytes(),
             amount=uint64(0),
