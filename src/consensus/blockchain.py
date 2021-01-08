@@ -94,7 +94,7 @@ class Blockchain:
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 1, 1))
+        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
         log.info(f"Cpu count {cpu_count}")
         self.batch_size = 4
         self.pool = ProcessPoolExecutor(max_workers=max(cpu_count, 1))
