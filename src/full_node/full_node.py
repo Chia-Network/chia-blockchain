@@ -644,6 +644,8 @@ class FullNode:
                 fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
                 self.blockchain.sub_blocks,
             )
+            if sub_slots[1] is None:
+                assert new_peak.ip_sub_slot_total_iters(self.constants) == 0
             # Ensure the signage point is also in the store, for consistency
             self.full_node_store.new_signage_point(
                 new_peak.signage_point_index,

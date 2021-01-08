@@ -84,16 +84,18 @@ def validate_unfinished_header_block(
         if prev_sb.sub_epoch_summary_included is not None:
             can_finish_se, can_finish_epoch = False, False
         else:
-            can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-                constants,
-                prev_sb.sub_block_height,
-                prev_sb.deficit,
-                sub_blocks,
-                prev_sb.prev_hash,
-                False,
-            )
-        can_finish_se = can_finish_se and new_sub_slot
-        can_finish_epoch = can_finish_epoch and new_sub_slot
+            if new_sub_slot:
+                can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
+                    constants,
+                    prev_sb.sub_block_height,
+                    prev_sb.deficit,
+                    sub_blocks,
+                    prev_sb.prev_hash,
+                    False,
+                )
+            else:
+                can_finish_se = False
+                can_finish_epoch = False
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -178,6 +180,7 @@ def validate_unfinished_header_block(
                 if sub_slot.infused_challenge_chain is not None:
                     assert icc_vdf_input is not None
                     assert icc_iters_proof is not None
+                    assert icc_challenge_hash is not None
                     assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
                     # 2f. Check infused challenge chain sub-slot VDF
                     # Only validate from prev_sb to optimize
@@ -537,14 +540,14 @@ def validate_unfinished_header_block(
     sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_sub_slot_iters if overflow else 0))
     if overflow and skip_overflow_last_ss_validation:
         dummy_vdf_info = VDFInfo(
-            bytes([0] * 32),
+            bytes32([0] * 32),
             uint64(1),
             ClassgroupElement.get_default_element(),
         )
         dummy_sub_slot = EndOfSubSlotBundle(
             ChallengeChainSubSlot(dummy_vdf_info, None, None, None, None),
             None,
-            RewardChainSubSlot(dummy_vdf_info, bytes([0] * 32), None, uint8(0)),
+            RewardChainSubSlot(dummy_vdf_info, bytes32([0] * 32), None, uint8(0)),
             SubSlotProofs(VDFProof(uint8(0), b""), None, VDFProof(uint8(0), b"")),
         )
         sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]
@@ -993,24 +996,28 @@ def validate_finished_header_block(
     return required_iters, None
 
 
-def validate_finished_header_block_pickled(
+def batch_validate_finished_header_block_pickled(
     constants: Dict,
-    sub_blocks_pickled: Dict[bytes, Dict],
-    header_block_pickled: Dict,
+    sub_blocks_pickled: Dict[bytes, bytes],
+    header_blocks_pickled: List[bytes],
     check_filter: bool,
-    expected_difficulty: uint64,
-    expected_sub_slot_iters: uint64,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+    expected_difficulty: List[uint64],
+    expected_sub_slot_iters: List[uint64],
+) -> List[Tuple[Optional[uint64], Optional[ValidationError]]]:
     sub_blocks = {}
     for k, v in sub_blocks_pickled.items():
-        sub_blocks[k] = SubBlockRecord.from_json_dict(v)
-    header_block = HeaderBlock.from_json_dict(header_block_pickled)
+        sub_blocks[k] = SubBlockRecord.from_bytes(v)
+    results = []
+    for i in range(len(header_blocks_pickled)):
+        header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
 
-    return validate_finished_header_block(
-        dataclass_from_dict(ConsensusConstants, constants),
-        sub_blocks,
-        header_block,
-        check_filter,
-        expected_difficulty,
-        expected_sub_slot_iters,
-    )
+        res = validate_finished_header_block(
+            dataclass_from_dict(ConsensusConstants, constants),
+            sub_blocks,
+            header_block,
+            check_filter,
+            expected_difficulty[i],
+            expected_sub_slot_iters[i],
+        )
+        results.append(res)
+    return results

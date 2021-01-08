@@ -525,6 +525,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
+            log.info(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,
