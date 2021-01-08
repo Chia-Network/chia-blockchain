@@ -73,7 +73,9 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
 
 async def load_blocks_dont_validate(
     blocks,
-) -> Tuple[Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, SubBlockRecord], Dict[bytes32, SubEpochSummary]]:
+) -> Tuple[
+    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, SubBlockRecord], Dict[bytes32, SubEpochSummary]
+]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, SubBlockRecord] = {}
