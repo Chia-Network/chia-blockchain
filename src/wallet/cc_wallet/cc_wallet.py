@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from secrets import token_bytes
 
 from typing import Dict, Optional, List, Any, Set
 from blspy import G2Element, AugSchemeMPL
@@ -121,6 +122,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
         cc_record = TransactionRecord(
             confirmed_at_sub_height=uint32(0),
@@ -138,6 +140,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
+            name=spend_bundle.name(),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -378,6 +381,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
+                name=token_bytes(),
             )
             cc_record = TransactionRecord(
                 confirmed_at_sub_height=uint32(0),
@@ -395,6 +399,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
+                name=full_spend.name(),
             )
             await self.wallet_state_manager.add_transaction(regular_record)
             await self.wallet_state_manager.add_pending_transaction(cc_record)
@@ -591,6 +596,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     async def add_lineage(self, name: bytes32, lineage: Optional[Program]):

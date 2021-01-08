@@ -60,19 +60,18 @@ class TestWalletSimulator:
         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 2)]
         )
 
         async def check_tx_are_pool_farm_rewards():
             wsm: WalletStateManager = wallet_node.wallet_state_manager
-            all_coin = await wsm.coin_store.get_unspent_coins_for_wallet(1)
             all_txs = await wsm.get_all_transactions(1)
-            wsm.log.info(all_txs)
             expected_count = (num_blocks + 1) * 2
             if len(all_txs) != expected_count:
                 return False
             pool_rewards = 0
             farm_rewards = 0
+
             for tx in all_txs:
                 if tx.type == TransactionType.COINBASE_REWARD:
                     pool_rewards += 1

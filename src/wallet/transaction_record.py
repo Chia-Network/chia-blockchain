@@ -35,11 +35,7 @@ class TransactionRecord(Streamable):
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
     type: uint32  # TransactionType
-
-    def name(self) -> bytes32:
-        if self.spend_bundle:
-            return self.spend_bundle.name()
-        return std_hash(bytes(self.to_puzzle_hash) + bytes(self.created_at_time) + bytes(self.amount))
+    name: bytes32
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success, we set it to success
