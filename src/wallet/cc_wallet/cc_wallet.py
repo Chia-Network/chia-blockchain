@@ -122,7 +122,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
+            name=token_bytes(),
         )
         cc_record = TransactionRecord(
             confirmed_at_sub_height=uint32(0),
@@ -140,7 +140,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=spend_bundle.name(),
+            name=token_bytes(),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
