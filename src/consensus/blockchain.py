@@ -457,7 +457,9 @@ class Blockchain:
         recent_sub_blocks: Dict[bytes32, SubBlockRecord] = {}
         if blocks[0].sub_block_height > 0:
             curr = self.sub_blocks[blocks[0].prev_header_hash]
-            while curr.sub_epoch_summary_included is None and curr.sub_block_height > 0:
+            while (
+                curr.sub_epoch_summary_included is None or len(recent_sub_blocks) < 100
+            ) and curr.sub_block_height > 0:
                 recent_sub_blocks[curr.header_hash] = curr
                 curr = self.sub_blocks[curr.prev_hash]
 
