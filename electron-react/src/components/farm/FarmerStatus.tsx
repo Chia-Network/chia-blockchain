@@ -31,7 +31,7 @@ export default function FarmerStatusComponent() {
         {farmerStatus === FarmerStatus.FARMING ? (
           <Trans id="FarmerStatus.farming">Farming</Trans>
         ) : farmerStatus === FarmerStatus.SYNCHING ? (
-          <Trans id="FarmerStatus.synching">Synching</Trans>
+          <Trans id="FarmerStatus.synching">Syncing</Trans>
         ) : (
           <Trans id="FarmerStatus.error">Error</Trans>
         )}
