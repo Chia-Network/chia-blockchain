@@ -73,17 +73,17 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
 
 async def load_blocks_dont_validate(
     blocks,
-) -> (Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, SubBlockRecord], Dict[bytes32, SubEpochSummary]):
+) -> Tuple[Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, SubBlockRecord], Dict[bytes32, SubEpochSummary]]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, SubBlockRecord] = {}
     sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = {}
-    height_to_hash: Dict[uint32, bytes32]
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
     block: FullBlock
     for block in blocks:
         if block.sub_block_height > 0:
+            assert prev_block is not None
             difficulty = block.reward_chain_sub_block.weight - prev_block.weight
 
         if block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
