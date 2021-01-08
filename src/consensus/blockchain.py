@@ -470,13 +470,15 @@ class Blockchain:
                 or num_blocks_seen < self.constants.NUMBER_OF_TIMESTAMPS
                 or num_sub_slots_found < num_sub_slots_to_look_for
             ) and curr.sub_block_height > 0:
-                if curr.first_in_sub_slot:
-                    num_sub_slots_found += 1
                 if (
                     num_blocks_seen < self.constants.NUMBER_OF_TIMESTAMPS
                     or num_sub_slots_found < num_sub_slots_to_look_for
                 ):
                     recent_sub_blocks_compressed[curr.header_hash] = curr
+
+                if curr.first_in_sub_slot:
+                    assert curr.finished_challenge_slot_hashes is not None
+                    num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
                 recent_sub_blocks[curr.header_hash] = curr
                 if curr.is_block:
                     num_blocks_seen += 1

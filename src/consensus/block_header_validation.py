@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 import time
+import traceback
 from typing import Dict, Optional, List, Tuple
 
 from blspy import AugSchemeMPL
@@ -1009,14 +1010,19 @@ def batch_validate_finished_header_block_pickled(
         sub_blocks[k] = SubBlockRecord.from_bytes(v)
     results = []
     for i in range(len(header_blocks_pickled)):
-        header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
-        res = validate_finished_header_block(
-            dataclass_from_dict(ConsensusConstants, constants),
-            sub_blocks,
-            header_block,
-            check_filter,
-            expected_difficulty[i],
-            expected_sub_slot_iters[i],
-        )
-        results.append(res)
+        try:
+            header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
+            res = validate_finished_header_block(
+                dataclass_from_dict(ConsensusConstants, constants),
+                sub_blocks,
+                header_block,
+                check_filter,
+                expected_difficulty[i],
+                expected_sub_slot_iters[i],
+            )
+            results.append(res)
+        except Exception:
+            error_stack = traceback.format_exc()
+            log.error(f"Exception: {error_stack}")
+            results.append((None, ValidationError(Err.UNKNOWN)))
     return results

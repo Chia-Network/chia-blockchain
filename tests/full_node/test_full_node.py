@@ -712,11 +712,13 @@ class TestFullNodeProtocol:
         assert res is None
 
     @pytest.mark.asyncio
-    async def test_request_unfinished_sub_block(self, two_nodes, wallet_blocks):
+    async def test_request_unfinished_sub_block(self, two_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        wallet_a, wallet_receiver, blocks = wallet_blocks
         peer = await connect_and_get_peer(server_1, server_2)
 
+        blocks = bt.get_consecutive_blocks(
+            5,
+        )
         block: FullBlock = blocks[0]
         unf = UnfinishedBlock(
             block.finished_sub_slots,
