@@ -82,6 +82,20 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
+def mempool_assert_announcement_consumed(
+    condition: ConditionVarPair, spend_bundle: SpendBundle
+) -> Optional[Err]:
+    """
+    Check if an announcement is included in the list of announcements
+    """
+    announcements = spend_bundle.announcements()
+    announcement_hash = condition.vars[0]
+    if announcement_hash not in [a.name() for a in announcements]:
+        return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+
+    return None
+
+
 def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord):
     """
     Check if the current time in millis exceeds the time specified by condition
@@ -99,8 +113,7 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
 
 def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
     # TODO: allow generator mod to take something (future)
-    # TODO: check strict mode locations are set correctly
-    # TODO: write various tests
+    # TODO: write more tests
     try:
         if safe_mode:
             cost, result = GENERATOR_MOD.run_safe_with_cost(block_program)
@@ -172,6 +185,8 @@ def mempool_check_conditions_dict(
                 error = mempool_assert_time_exceeds(cvp)
             elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:
                 error = mempool_assert_relative_time_exceeds(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                error = mempool_assert_announcement_consumed(cvp, spend_bundle)
             if error:
                 return error
 

@@ -14,6 +14,8 @@ class ConditionOpcode(bytes, enum.Enum):
     AGG_SIG_ME = bytes([57])
     ASSERT_FEE = bytes([58])
     ASSERT_TIME_EXCEEDS = bytes([59])
+    CREATE_ANNOUNCEMENT = bytes([60])
+    ASSERT_ANNOUNCEMENT = bytes([61])
 
     def __bytes__(self) -> bytes:
         return bytes(self.value)

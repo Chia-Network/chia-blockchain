@@ -30,6 +30,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_aggsig_condition,
     make_assert_time_exceeds_condition,
     make_assert_fee_condition,
+    make_create_announcement,
+    make_assert_announcement
 )
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.types.sized_bytes import bytes32
@@ -113,7 +115,10 @@ class WalletTool:
                     ret.append(make_assert_block_age_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
                     ret.append(make_assert_fee_condition(cvp.vars[0]))
-
+                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT:
+                    ret.append(make_create_announcement(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                    ret.append(make_assert_announcement(cvp.vars[0]))
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(
