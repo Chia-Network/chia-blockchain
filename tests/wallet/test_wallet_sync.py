@@ -134,7 +134,7 @@ class TestWalletSync:
         for block in blocks_reorg[-30:]:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await time_out_assert(50, get_tx_count, 0, 1)
+        await time_out_assert(5, get_tx_count, 0, 1)
         await time_out_assert(5, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
@@ -143,6 +143,7 @@ class TestWalletSync:
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
+        wsm = wallet_node.wallet_state_manager
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
@@ -159,6 +160,12 @@ class TestWalletSync:
         for block in blocks_reorg[:-5]:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
+        async def get_tx_count(wallet_id):
+            txs = await wsm.get_all_transactions(wallet_id)
+            return len(txs)
+
+        await time_out_assert(5, get_tx_count, 0, 1)
+
         num_blocks_reorg_1 = 40
         blocks_reorg_1 = bt.get_consecutive_blocks(
             1, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph, block_list_input=blocks_reorg[:-30]
@@ -173,4 +180,5 @@ class TestWalletSync:
             uint32(len(blocks_reorg_1))
         )
 
+        await time_out_assert(5, get_tx_count, 2, 1)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
