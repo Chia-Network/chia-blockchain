@@ -3,7 +3,7 @@ import dataclasses
 import time
 
 import src.server.ws_connection as ws
-from typing import AsyncGenerator, List, Optional, Tuple, Callable, Dict
+from typing import AsyncGenerator, List, Optional, Tuple, Callable, Dict, Union
 from chiabip158 import PyBIP158
 from blspy import G2Element, AugSchemeMPL
 
@@ -81,12 +81,16 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_peers(
-        self, request: introducer_protocol.RespondPeers, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
-        if peer.connection_type is NodeType.INTRODUCER:
-            await peer.close()
+            if peer.connection_type is NodeType.INTRODUCER:
+                is_full_node = False
+            else:
+                is_full_node = True
+            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), is_full_node)
+            if not is_full_node:
+                await peer.close()
         return None
 
     @peer_required
