@@ -16,9 +16,6 @@ from src.util.significant_bits import (
 )
 
 
-log = logging.getLogger(__name__)
-
-
 def _get_blocks_at_height(
     height_to_hash: Dict[uint32, bytes32],
     sub_blocks: Dict[bytes32, SubBlockRecord],
@@ -50,7 +47,6 @@ def _get_blocks_at_height(
     curr_b: SubBlockRecord = prev_sb
     target_blocks = []
     while curr_b.sub_block_height >= target_sub_block_height:
-        log.info(f"Backtracking at {curr_b.sub_block_height}, up to {target_sub_block_height}")
         if curr_b.sub_block_height < target_sub_block_height + max_num_sub_blocks:
             target_blocks.append(curr_b)
         if curr_b.sub_block_height == 0:

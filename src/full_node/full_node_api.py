@@ -359,7 +359,6 @@ class FullNodeAPI:
                 new_sp.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE
                 and self.full_node.full_node_store.get_sub_slot(new_sp.challenge_hash) is None
             ):
-                self.log.warning(f"DId not find SS: {new_sp.challenge_hash}")
                 # If this is a normal signage point,, and we don't have the end of sub slot, request the end of sub slot
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                     new_sp.challenge_hash, uint8(0), new_sp.last_rc_infusion
