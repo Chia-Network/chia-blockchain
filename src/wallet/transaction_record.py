@@ -4,7 +4,6 @@ from typing import Optional, List, Tuple
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.hash import std_hash
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32, uint64, uint8
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
