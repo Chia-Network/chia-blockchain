@@ -1,6 +1,8 @@
 import asyncio
+import dataclasses
 import logging
 from concurrent.futures.process import ProcessPoolExecutor
+from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
 from typing import Dict, List, Optional, Tuple
@@ -29,6 +31,7 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import (
     validate_finished_header_block,
     validate_unfinished_header_block,
+    validate_finished_header_block_pickled,
 )
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
@@ -215,7 +218,7 @@ class Blockchain:
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
                 self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
             )
-            required_iters, error = await validate_finished_header_block(
+            required_iters, error = validate_finished_header_block(
                 self.constants,
                 self.sub_blocks,
                 await block.get_block_header(),
@@ -403,8 +406,12 @@ class Blockchain:
             return curr.finished_sub_slots[-2], ip_sub_slot
 
         prev_curr: Optional[FullBlock] = await self.block_store.get_full_block(curr.prev_header_hash)
-        assert prev_curr is not None
-        prev_curr_sbr = self.sub_blocks[curr.prev_header_hash]
+        if prev_curr is None:
+            assert curr.sub_block_height == 0
+            prev_curr = curr
+            prev_curr_sbr = self.sub_blocks[curr.header_hash]
+        else:
+            prev_curr_sbr = self.sub_blocks[curr.prev_header_hash]
         assert prev_curr_sbr is not None
         while prev_curr_sbr.sub_block_height > 0:
             if prev_curr_sbr.first_in_sub_slot:
@@ -515,17 +522,17 @@ class Blockchain:
         for i, block in enumerate(blocks):
             if self._shut_down:
                 return None
-            breakpoint()
+            recent_sb_pickled = {bytes(k): v.to_json_dict() for k, v in recent_sub_blocks.items()}
             futures.append(
                 asyncio.get_running_loop().run_in_executor(
                     self.pool,
-                    validate_unfinished_header_block,
-                    self.constants,
-                    recent_sub_blocks,
+                    validate_finished_header_block_pickled,
+                    recurse_jsonify(dataclasses.asdict(self.constants)),
+                    recent_sb_pickled,
+                    (await block.get_block_header()).to_json_dict(),
                     True,
                     diff_ssis[i][0],
                     diff_ssis[i][1],
-                    False,
                 )
             )
         results = await asyncio.gather(*futures)
@@ -561,7 +568,7 @@ class Blockchain:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants, unfinished_header_block, self.sub_height_to_hash, prev_sb, self.sub_blocks
         )
-        required_iters, error = await validate_unfinished_header_block(
+        required_iters, error = validate_unfinished_header_block(
             self.constants,
             self.sub_blocks,
             unfinished_header_block,

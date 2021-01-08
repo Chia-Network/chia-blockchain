@@ -751,7 +751,6 @@ class TestFullNodeProtocol:
 
         blockchain = full_node_1.full_node.blockchain
         peak = blockchain.get_peak()
-        log.info(f"Peak: {peak}")
 
         sp = get_signage_point(
             test_constants,
@@ -766,7 +765,9 @@ class TestFullNodeProtocol:
         res = await full_node_1.new_signage_point_or_end_of_sub_slot(
             fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge)
         )
-        log.info(f"Res: {res}")
+        assert res is not None
+        assert isinstance(res.data, fnp.RequestSignagePointOrEndOfSubSlot)
+        assert res.data.index_from_challenge == uint8(11)
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_blocks):
