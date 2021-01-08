@@ -22,6 +22,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
     make_create_coin_condition,
     make_assert_fee_condition,
+    make_create_announcement,
+    make_assert_announcement
 )
 from src.wallet.secret_key_store import SecretKeyStore
 from src.wallet.sign_coin_solutions import sign_coin_solutions
@@ -133,7 +135,16 @@ class Wallet:
     async def get_new_puzzlehash(self) -> bytes32:
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
-    def make_solution(self, primaries=None, min_time=0, me=None, consumed=None, fee=0):
+    def make_solution(
+        self,
+        primaries=None,
+        min_time=0,
+        me=None,
+        consumed=None,
+        announcements=None,
+        announcements_to_consume=None,
+        fee=0
+    ):
         assert fee >= 0
         condition_list = []
         if primaries:
@@ -148,6 +159,12 @@ class Wallet:
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_assert_fee_condition(fee))
+        if announcements:
+            for announcement in announcements:
+                condition_list.append(make_create_announcement(announcement))
+        if announcements_to_consume:
+            for announcement_hash in announcements_to_consume:
+                condition_list.append(make_assert_announcement(announcement_hash))
         return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:

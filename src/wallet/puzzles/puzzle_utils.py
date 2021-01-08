@@ -31,3 +31,11 @@ def make_assert_time_exceeds_condition(time):
 
 def make_assert_fee_condition(fee):
     return [ConditionOpcode.ASSERT_FEE, fee]
+
+
+def make_assert_announcement(announcement_hash):
+    return [ConditionOpcode.ASSERT_ANNOUNCEMENT, announcement_hash]
+
+
+def make_create_announcement(message):
+    return [ConditionOpcode.CREATE_ANNOUNCEMENT, message]
