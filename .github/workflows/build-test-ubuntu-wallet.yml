@@ -5,7 +5,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Build and test Ubuntu
+    name: Build and test Ubuntu Wallet
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
