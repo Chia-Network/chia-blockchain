@@ -60,7 +60,10 @@ class TestWalletSimulator:
         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 2)]
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks + 2)
+            ]
         )
 
         async def check_tx_are_pool_farm_rewards():
