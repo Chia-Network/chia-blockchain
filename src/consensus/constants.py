@@ -28,8 +28,8 @@ class ConsensusConstants:
     NUM_SP_INTERVALS_EXTRA: int  # The difference between signage point and infusion point (plus required_iters)
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
-    FIRST_CC_CHALLENGE: bytes  # The "hash" of the "challenge chain end of slot" for the sub-slot before the 1st one
-    FIRST_RC_CHALLENGE: bytes  # The "hash" of the "reward chain end of slot" for the sub-slot before the 1st one
+    FIRST_CC_CHALLENGE: bytes32  # The "hash" of the "challenge chain end of slot" for the sub-slot before the 1st one
+    FIRST_RC_CHALLENGE: bytes32  # The "hash" of the "reward chain end of slot" for the sub-slot before the 1st one
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PREV_HASH: bytes32  # The prev sub-block and prev block of the genesis block
     GENESIS_SES_HASH: bytes32  # The sub epoch summary "hash" of the sub-epoch that end at height -

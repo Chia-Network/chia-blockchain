@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import logging
+import time
 from concurrent.futures.process import ProcessPoolExecutor
 from src.util.streamable import recurse_jsonify
 from enum import Enum
@@ -31,7 +32,7 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import (
     validate_finished_header_block,
     validate_unfinished_header_block,
-    validate_finished_header_block_pickled,
+    batch_validate_finished_header_block_pickled,
 )
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
@@ -54,6 +55,8 @@ class ReceiveBlockResult(Enum):
 
 class Blockchain:
     constants: ConsensusConstants
+    constants_json: Dict
+
     # peak of the blockchain
     peak_height: Optional[uint32]
     # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
@@ -94,11 +97,13 @@ class Blockchain:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         # self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
         log.info(f"Cpu count {cpu_count}")
+        self.batch_size = 4
         self.pool = ProcessPoolExecutor(max_workers=max(cpu_count, 1))
 
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
+        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
         await self._load_chain_from_store()
         return self
@@ -452,25 +457,37 @@ class Blockchain:
             blocks: list of full blocks to validate (must be connected to current chain)
         """
         prev_sb: Optional[SubBlockRecord] = None
-
+        start = time.time()
         # Collects all the recent sub-blocks (up to the previous sub-epoch)
         recent_sub_blocks: Dict[bytes32, SubBlockRecord] = {}
+        recent_sub_blocks_compressed: Dict[bytes32, SubBlockRecord] = {}
+        num_sub_slots_found = 0
+        num_blocks_seen = 0
         if blocks[0].sub_block_height > 0:
             curr = self.sub_blocks[blocks[0].prev_header_hash]
+            num_sub_slots_to_look_for = 3 if curr.overflow else 2
             while (
-                curr.sub_epoch_summary_included is None or len(recent_sub_blocks) < 100
+                curr.sub_epoch_summary_included is None
+                or num_blocks_seen < self.constants.NUMBER_OF_TIMESTAMPS
+                or num_sub_slots_found < num_sub_slots_to_look_for
             ) and curr.sub_block_height > 0:
-                recent_sub_blocks[curr.header_hash] = curr
-                curr = self.sub_blocks[curr.prev_hash]
-
-            # Then adds another 2 slots
-            num_sub_slots_found = 0
-            while num_sub_slots_found < 3 and curr.height > 0:
-                recent_sub_blocks[curr.header_hash] = curr
                 if curr.first_in_sub_slot:
                     num_sub_slots_found += 1
+                if (
+                    num_blocks_seen < self.constants.NUMBER_OF_TIMESTAMPS
+                    or num_sub_slots_found < num_sub_slots_to_look_for
+                ):
+                    recent_sub_blocks_compressed[curr.header_hash] = curr
+                recent_sub_blocks[curr.header_hash] = curr
+                if curr.is_block:
+                    num_blocks_seen += 1
                 curr = self.sub_blocks[curr.prev_hash]
             recent_sub_blocks[curr.header_hash] = curr
+            recent_sub_blocks_compressed[curr.header_hash] = curr
+        sub_block_was_present = []
+        for block in blocks:
+            sub_block_was_present.append(block.header_hash in self.sub_blocks)
+        log.info(f"PV time 1: {time.time() - start}")
 
         diff_ssis: List[Tuple[uint64, uint64]] = []
         for sub_block in blocks:
@@ -478,7 +495,7 @@ class Blockchain:
             if sub_block.sub_block_height != 0 and prev_sb is None:
                 prev_sb = self.sub_blocks[sub_block.prev_header_hash]
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.constants, sub_block, self.sub_height_to_hash, prev_sb, recent_sub_blocks
+                self.constants, sub_block, self.sub_height_to_hash, prev_sb, self.sub_blocks
             )
             overflow = is_overflow_sub_block(self.constants, sub_block.reward_chain_sub_block.signage_point_index)
             challenge = get_block_challenge(
@@ -497,6 +514,9 @@ class Blockchain:
                 self.constants, challenge, cc_sp_hash
             )
             if q_str is None:
+                for i, block_i in enumerate(blocks):
+                    if not sub_block_was_present[i] and block_i.header_hash in self.sub_blocks:
+                        del self.sub_blocks[block_i.header_hash]
                 return None
 
             required_iters: uint64 = calculate_iterations_quality(
@@ -508,43 +528,65 @@ class Blockchain:
 
             sub_block_rec = block_to_sub_block_record(
                 self.constants,
-                recent_sub_blocks,
+                self.sub_blocks,
                 self.sub_height_to_hash,
                 required_iters,
                 sub_block,
                 None,
             )
             recent_sub_blocks[sub_block_rec.header_hash] = sub_block_rec
-            log.info(f"Added to recent: {sub_block_rec.header_hash}")
+            recent_sub_blocks_compressed[sub_block_rec.header_hash] = sub_block_rec
+            self.sub_blocks[sub_block_rec.header_hash] = sub_block_rec  # Temporarily add sub block to dict
             prev_sb = sub_block_rec
             diff_ssis.append((difficulty, sub_slot_iters))
 
+        for i, block in enumerate(blocks):
+            if not sub_block_was_present[i]:
+                del self.sub_blocks[block.header_hash]
+
+        log.info(f"PV time 2: {time.time() - start}")
+        recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks_compressed.items()}
+        log.info(f"PV time 3: {time.time() - start}")
+
         futures = []
         # Pool of workers to validate blocks concurrently
-        for i, block in enumerate(blocks):
+        for i in range(0, len(blocks), self.batch_size):
+            end_i = min(i + self.batch_size, len(blocks))
+            blocks_to_validate = blocks[i : i + end_i]
+            if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
+                final_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks.items()}
+                log.info(f"Using big ones: {len(recent_sub_blocks)}")
+            else:
+                log.info(f"Using small ones: {len(recent_sb_compressed_pickled)}")
+                final_pickled = recent_sb_compressed_pickled
+
             if self._shut_down:
                 return None
-            recent_sb_pickled = {bytes(k): v.to_json_dict() for k, v in recent_sub_blocks.items()}
             futures.append(
                 asyncio.get_running_loop().run_in_executor(
                     self.pool,
-                    validate_finished_header_block_pickled,
-                    recurse_jsonify(dataclasses.asdict(self.constants)),
-                    recent_sb_pickled,
-                    (await block.get_block_header()).to_json_dict(),
+                    batch_validate_finished_header_block_pickled,
+                    self.constants_json,
+                    final_pickled,
+                    [bytes(await block.get_block_header()) for block in blocks_to_validate],
                     True,
-                    diff_ssis[i][0],
-                    diff_ssis[i][1],
+                    [diff_ssis[j][0] for j in range(i, end_i)],
+                    [diff_ssis[j][1] for j in range(i, end_i)],
                 )
             )
+        log.info(f"PV time 4: {time.time() - start}")
         results = await asyncio.gather(*futures)
         returned_iters = []
 
-        for i, (it, error) in enumerate(results):
-            if error is not None:
-                log.error(f"Validation error on sb: {blocks[i].sub_block_height} {blocks[i].header_hash}, {error}")
-                return None
-            returned_iters.append(it)
+        log.info(f"PV time 5: {time.time() - start}")
+        i = 0
+        for block_batch in results:
+            for it, error in block_batch:
+                if error is not None:
+                    log.error(f"Validation error on sb: {blocks[i].sub_block_height} {blocks[i].header_hash}, {error}")
+                    return None
+                returned_iters.append(it)
+                i += 1
         assert len(blocks) == len(returned_iters)
         return returned_iters
 
