@@ -108,42 +108,24 @@ class TestGenesisBlock:
 
 class TestBlockHeaderValidation:
     @pytest.mark.asyncio
-    async def test_very_long_chain(self, empty_blockchain, default_1000_blocks):
-        # blocks = default_1000_blocks
-        connection = await aiosqlite.connect(Path("blockchain_v22.db"))
-        block_store = await BlockStore.create(connection)
-        coin_store = await CoinStore.create(connection)
-
-        db_path = Path("blockchain_test213.db")
-        if db_path.exists():
-            db_path.unlink()
-        connection_2 = await aiosqlite.connect(Path("blockchain_test213.db"))
-        block_store_2 = await BlockStore.create(connection_2)
-        blockchain = await Blockchain.create(coin_store, block_store_2, DEFAULT_CONSTANTS)
-        sbr, peak = await block_store.get_sub_block_records()
-        blocks = []
-        curr = sbr[peak]
-        blocks.append(await block_store.get_full_block(curr.header_hash))
-        while curr.sub_block_height != 0:
-            curr = sbr[curr.prev_hash]
-            blocks.append(await block_store.get_full_block(curr.header_hash))
-        blocks.reverse()
+    async def test_pre_validation(self, empty_blockchain, default_1000_blocks):
+        blocks = default_1000_blocks
         start = time.time()
-        # n_at_a_time = multiprocessing.cpu_count()
-        n_at_a_time = 8
+        n_at_a_time = multiprocessing.cpu_count()
         times_pv = []
         times_rb = []
         for i in range(0, len(blocks), n_at_a_time):
-            blocks_to_validate = blocks[i : i + n_at_a_time]
+            end_i = min(i + n_at_a_time, len(blocks))
+            blocks_to_validate = blocks[i:end_i]
             start_pv = time.time()
-            res = await blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
+            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
             end_pv = time.time()
             times_pv.append(end_pv - start_pv)
             assert res is not None
-            for n in range(n_at_a_time):
+            for n in range(end_i - i):
                 block = blocks_to_validate[n]
                 start_rb = time.time()
-                result, err, _ = await blockchain.receive_block(block, True, res[n])
+                result, err, _ = await empty_blockchain.receive_block(block, True, res[n])
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
@@ -156,42 +138,6 @@ class TestBlockHeaderValidation:
         log.info(f"Total time: {end - start} seconds")
         log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
         log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
-
-    @pytest.mark.asyncio
-    async def test_benchmark_single(self, empty_blockchain, default_1000_blocks):
-        # blocks = default_1000_blocks
-        connection = await aiosqlite.connect(Path("blockchain_v22.db"))
-        block_store = await BlockStore.create(connection)
-        coin_store = await CoinStore.create(connection)
-
-        db_path = Path("blockchain_test213.db")
-        if db_path.exists():
-            db_path.unlink()
-        connection_2 = await aiosqlite.connect(Path("blockchain_test213.db"))
-        block_store_2 = await BlockStore.create(connection_2)
-        blockchain = await Blockchain.create(coin_store, block_store_2, DEFAULT_CONSTANTS)
-        sbr, peak = await block_store.get_sub_block_records()
-        blocks = []
-        curr = sbr[peak]
-        blocks.append(await block_store.get_full_block(curr.header_hash))
-        while curr.sub_block_height != 0:
-            curr = sbr[curr.prev_hash]
-            blocks.append(await block_store.get_full_block(curr.header_hash))
-        blocks.reverse()
-
-        start_time = time.time()
-        times = []
-        for block in blocks:
-            start = time.time()
-            result, err, _ = await blockchain.receive_block(block)
-            end = time.time()
-            times.append(end - start)
-            log.info(f"{block.sub_block_height}, time {end - start}")
-            assert err is None
-            assert result == ReceiveBlockResult.NEW_PEAK
-        s = sum(times)
-        log.info(f"Average: {s/len(blocks)}")
-        log.info(f"Total: {time.time() - start_time}")
 
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
