@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: Build and test MacOS
+    name: Build and test MacOS Core
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
