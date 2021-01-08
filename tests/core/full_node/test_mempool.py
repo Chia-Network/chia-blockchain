@@ -10,7 +10,6 @@ from src.types.coin_solution import CoinSolution
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import SpendBundle
-from src.types.program import Program
 from src.types.announcement import Announcement
 from src.util.condition_tools import conditions_for_solution
 from src.util.clvm import int_to_bytes
