@@ -553,6 +553,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
+                    name=chia_spend_bundle.name(),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -571,6 +572,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
+                    name=chia_spend_bundle.name(),
                 )
             my_tx_records.append(tx_record)
 
@@ -593,6 +595,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
+                    name=spend_bundle.name(),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -611,6 +614,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
+                    name=token_bytes(),
                 )
             my_tx_records.append(tx_record)
 
@@ -630,6 +634,7 @@ class TradeManager:
             sent_to=[],
             trade_id=std_hash(spend_bundle.name() + bytes(now)),
             type=uint32(TransactionType.OUTGOING_TRADE.value),
+            name=spend_bundle.name(),
         )
 
         now = uint64(int(time.time()))

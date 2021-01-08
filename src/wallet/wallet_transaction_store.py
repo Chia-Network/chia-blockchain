@@ -92,7 +92,7 @@ class WalletTransactionStore:
             "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 bytes(record),
-                record.name().hex(),
+                record.name,
                 record.confirmed_at_sub_height,
                 record.confirmed_at_height,
                 record.created_at_time,
@@ -108,7 +108,7 @@ class WalletTransactionStore:
         )
         await cursor.close()
         await self.db_connection.commit()
-        self.tx_record_cache[record.name().hex()] = record
+        self.tx_record_cache[record.name.hex()] = record
         if len(self.tx_record_cache) > self.cache_size:
             while len(self.tx_record_cache) > self.cache_size:
                 first_in = list(self.tx_record_cache.keys())[0]
@@ -137,6 +137,7 @@ class WalletTransactionStore:
             sent_to=current.sent_to,
             trade_id=None,
             type=current.type,
+            name=current.name,
         )
         await self.add_transaction_record(tx)
 
@@ -204,6 +205,7 @@ class WalletTransactionStore:
             sent_to=sent_to,
             trade_id=None,
             type=current.type,
+            name=current.name,
         )
 
         await self.add_transaction_record(tx)
@@ -233,6 +235,7 @@ class WalletTransactionStore:
             sent_to=[],
             trade_id=None,
             type=current.type,
+            name=current.name,
         )
         await self.add_transaction_record(tx)
 

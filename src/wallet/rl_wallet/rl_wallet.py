@@ -319,6 +319,7 @@ class RLWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
         await self.push_transaction(tx_record)
@@ -532,6 +533,7 @@ class RLWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     async def rl_sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]) -> SpendBundle:
@@ -614,6 +616,7 @@ class RLWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2

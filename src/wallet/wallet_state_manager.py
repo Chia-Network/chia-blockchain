@@ -486,11 +486,24 @@ class WalletStateManager:
 
         pool_rewards = set()
         farmer_rewards = set()
-        farmer_rewards.add(bytes32(sub_block.sub_block_height.to_bytes(32, "big")))
-        pool_rewards.add(std_hash(std_hash(sub_block.sub_block_height)))
+
         prev = self.blockchain.sub_blocks.get(sub_block.prev_hash, None)
+        # [sub 1] [sub 2] [block 3] [sub 4] [sub 5] [block6]
+        # [block 6] will contain rewards for [sub 1] [sub 2] [block 3]
+        while prev is not None:
+            # step 1 find previous block
+            if prev.is_block:
+                break
+            prev = self.blockchain.sub_blocks[prev.prev_hash]
+
+        if prev is not None:
+            # include last block
+            pool_rewards.add(bytes32(prev.sub_block_height.to_bytes(32, "big")))
+            farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
+            prev = self.blockchain.sub_blocks.get(prev.prev_hash, None)
 
         while prev is not None:
+            # step 2 traverse from previous block to the block before it
             pool_rewards.add(bytes32(prev.sub_block_height.to_bytes(32, "big")))
             farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
             if prev.is_block:
@@ -567,6 +580,7 @@ class WalletStateManager:
         """
         Adding coin to DB
         """
+        self.log.error(f"Adding coin: {coin} at {sub_height}")
         farm_reward = False
         if coinbase or fee_reward:
             farm_reward = True
@@ -591,6 +605,7 @@ class WalletStateManager:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(type),
+                name=coin.name(),
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
@@ -619,6 +634,7 @@ class WalletStateManager:
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
+                    name=coin.name(),
                 )
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record)
@@ -815,8 +831,6 @@ class WalletStateManager:
         is the tip, or even beyond the tip.
         """
         self.log.info(f"Rolling back to sub_height: {sub_height}")
-        all_coins = await self.coin_store.get_all_coins()
-        self.log.info(f"all coins: {all_coins}")
         await self.coin_store.rollback_to_block(sub_height)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(sub_height)
