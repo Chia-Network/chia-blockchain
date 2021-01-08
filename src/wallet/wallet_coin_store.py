@@ -131,7 +131,7 @@ class WalletCoinStore:
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """ Returns height of first confirmed coin"""
-        cursor = await self.db_connection.execute("SELECT MIN(confirmed_index) FROM coin_record;")
+        cursor = await self.db_connection.execute("SELECT MIN(confirmed_sub_height) FROM coin_record;")
         row = await cursor.fetchone()
         await cursor.close()
 
