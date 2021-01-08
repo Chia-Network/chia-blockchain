@@ -208,17 +208,17 @@ class TestWalletSimulator:
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, 32 * b"0", 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
-        await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever1
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_2._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
