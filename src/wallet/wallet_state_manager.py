@@ -751,7 +751,7 @@ class WalletStateManager:
                 unspent_coin_names.add(coin.name())
 
         # # Get all blocks after fork point up to but not including this block
-        # curr: SubBlockRecord = self.blockchain.sub_blocks[new_block.prev_header_hash]
+        # curr: SubBlockRecord = self.lockchain.sub_blocks[new_block.prev_header_hash]
         # reorg_blocks: List[HeaderBlockRecord] = []
         # while curr.height > fork_h:
         #     header_block_record = await self.block_store.get_header_block_record(
@@ -872,6 +872,7 @@ class WalletStateManager:
         self.tx_pending_changed()
 
     async def close_all_stores(self):
+        self.blockchain.shut_down()
         await self.db_connection.close()
 
     async def clear_all_stores(self):
