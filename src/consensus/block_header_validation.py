@@ -1010,7 +1010,6 @@ def batch_validate_finished_header_block_pickled(
     results = []
     for i in range(len(header_blocks_pickled)):
         header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
-
         res = validate_finished_header_block(
             dataclass_from_dict(ConsensusConstants, constants),
             sub_blocks,

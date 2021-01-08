@@ -464,12 +464,18 @@ class FullNode:
 
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:
-            for block in blocks:
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+            for i, block in enumerate(blocks):
+                req_iters, error = pre_validation_results[i]
+                if error:
+                    raise error
+                if req_iters is None:
+                    raise RuntimeError("Required iters should not be none")
                 (
                     result,
                     error,
                     fork_height,
-                ) = await self.blockchain.receive_block(block)
+                ) = await self.blockchain.receive_block(block, True, req_iters)
                 if result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     if error is not None:
                         self.log.info(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
@@ -500,7 +506,19 @@ class FullNode:
         await self.send_peak_to_timelords()
 
         peak: SubBlockRecord = self.blockchain.get_peak()
+        peak_fb: FullBlock = await self.blockchain.get_full_peak()
         if peak is not None:
+            # Adjust full node store
+            sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(peak_fb.header_hash)
+            assert sub_slots is not None
+
+            self.full_node_store.new_peak(
+                peak,
+                sub_slots[0],
+                sub_slots[1],
+                True,
+                self.blockchain.sub_blocks,
+            )
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             request_wallet = wallet_protocol.NewPeak(
                 peak.header_hash,

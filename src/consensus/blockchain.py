@@ -1,7 +1,6 @@
 import asyncio
 import dataclasses
 import logging
-import time
 from concurrent.futures.process import ProcessPoolExecutor
 from src.util.streamable import recurse_jsonify
 from enum import Enum
@@ -95,7 +94,7 @@ class Blockchain:
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        # self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
+        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 1, 1))
         log.info(f"Cpu count {cpu_count}")
         self.batch_size = 4
         self.pool = ProcessPoolExecutor(max_workers=max(cpu_count, 1))
@@ -457,7 +456,6 @@ class Blockchain:
             blocks: list of full blocks to validate (must be connected to current chain)
         """
         prev_sb: Optional[SubBlockRecord] = None
-        start = time.time()
         # Collects all the recent sub-blocks (up to the previous sub-epoch)
         recent_sub_blocks: Dict[bytes32, SubBlockRecord] = {}
         recent_sub_blocks_compressed: Dict[bytes32, SubBlockRecord] = {}
@@ -487,11 +485,9 @@ class Blockchain:
         sub_block_was_present = []
         for block in blocks:
             sub_block_was_present.append(block.header_hash in self.sub_blocks)
-        log.info(f"PV time 1: {time.time() - start}")
 
         diff_ssis: List[Tuple[uint64, uint64]] = []
         for sub_block in blocks:
-            log.info(f"Starting to pre-validate sub-block {sub_block.sub_block_height}")
             if sub_block.sub_block_height != 0 and prev_sb is None:
                 prev_sb = self.sub_blocks[sub_block.prev_header_hash]
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
@@ -544,20 +540,16 @@ class Blockchain:
             if not sub_block_was_present[i]:
                 del self.sub_blocks[block.header_hash]
 
-        log.info(f"PV time 2: {time.time() - start}")
         recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks_compressed.items()}
-        log.info(f"PV time 3: {time.time() - start}")
 
         futures = []
         # Pool of workers to validate blocks concurrently
         for i in range(0, len(blocks), self.batch_size):
             end_i = min(i + self.batch_size, len(blocks))
-            blocks_to_validate = blocks[i : i + end_i]
+            blocks_to_validate = blocks[i:end_i]
             if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
                 final_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks.items()}
-                log.info(f"Using big ones: {len(recent_sub_blocks)}")
             else:
-                log.info(f"Using small ones: {len(recent_sb_compressed_pickled)}")
                 final_pickled = recent_sb_compressed_pickled
 
             if self._shut_down:
@@ -574,11 +566,9 @@ class Blockchain:
                     [diff_ssis[j][1] for j in range(i, end_i)],
                 )
             )
-        log.info(f"PV time 4: {time.time() - start}")
         results = await asyncio.gather(*futures)
         returned_iters = []
 
-        log.info(f"PV time 5: {time.time() - start}")
         i = 0
         for block_batch in results:
             for it, error in block_batch:
