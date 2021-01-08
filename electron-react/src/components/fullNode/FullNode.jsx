@@ -205,7 +205,7 @@ const getStatusItems = (state, connected) => {
     value: sub_slot_iters,
   });
 
-  const totalIters = state.peak?.total_iters ?? 0;
+  const totalIters = state.peak?.reward_chain_sub_block?.total_iters ?? 0;
   status_items.push({
     label: (
       <Trans id="StatusItem.totalIterations">Total Iterations</Trans>
