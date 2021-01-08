@@ -101,6 +101,15 @@ class FullNodeDiscovery:
             await self.address_manager.add_to_new_table([timestamped_peer_info], peer.get_peer_info(), 0)
             if self.relay_queue is not None:
                 self.relay_queue.put_nowait((timestamped_peer_info, 1))
+        if (
+            peer.is_outbound
+            and peer.peer_server_port is not None
+            and peer.connection_type is NodeType.FULL_NODE
+            and self.server._local_type is NodeType.FULL_NODE
+            and self.address_manager is not None
+        ):
+            msg = Message("request_peers", full_node_protocol.RequestPeers())
+            await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
     async def update_peer_timestamp_on_message(self, peer: ws.WSChiaConnection):
