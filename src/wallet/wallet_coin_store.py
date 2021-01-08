@@ -27,8 +27,10 @@ class WalletCoinStore:
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("
                 "coin_name text PRIMARY KEY,"
-                " confirmed_index bigint,"
-                " spent_index bigint,"
+                " confirmed_sub_height bigint,"
+                " confirmed_height bigint,"
+                " spent_sub_height bigint,"
+                " spent_height bigint,"
                 " spent int,"
                 " coinbase int,"
                 " puzzle_hash text,"
@@ -41,10 +43,15 @@ class WalletCoinStore:
 
         # Useful for reorg lookups
         await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
+            "CREATE INDEX IF NOT EXISTS coin_confirmed_sub_height on coin_record(confirmed_sub_height)"
         )
-
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS coin_confirmed_height on coin_record(confirmed_height)"
+        )
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent_sub_height on coin_record(spent_sub_height)"
+        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent_height on coin_record(spent_height)")
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
 
@@ -66,11 +73,13 @@ class WalletCoinStore:
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord) -> None:
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.coin.name().hex(),
-                record.confirmed_block_index,
-                record.spent_block_index,
+                record.confirmed_block_sub_height,
+                record.confirmed_block_height,
+                record.spent_block_sub_height,
+                record.spent_block_height,
                 int(record.spent),
                 int(record.coinbase),
                 str(record.coin.puzzle_hash.hex()),
@@ -90,14 +99,16 @@ class WalletCoinStore:
                 del self.coin_record_cache[first_in]
 
     # Update coin_record to be spent in DB
-    async def set_spent(self, coin_name: bytes32, index: uint32):
+    async def set_spent(self, coin_name: bytes32, sub_height: uint32, height: uint32):
         current: Optional[WalletCoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
             return
         spent: WalletCoinRecord = WalletCoinRecord(
             current.coin,
-            current.confirmed_block_index,
-            index,
+            current.confirmed_block_sub_height,
+            current.confirmed_block_height,
+            sub_height,
+            height,
             True,
             current.coinbase,
             current.wallet_type,
@@ -114,8 +125,8 @@ class WalletCoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            return WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
+            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+            return WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
         return None
 
     async def get_first_coin_height(self) -> Optional[uint32]:
@@ -138,7 +149,7 @@ class WalletCoinStore:
         coins = set()
         if height is not None:
             cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE (spent=? OR spent_index>?) AND confirmed_index<=?",
+                "SELECT * from coin_record WHERE (spent=? OR spent_height>?) AND confirmed_height<=?",
                 (0, height, height),
             )
         else:
@@ -146,8 +157,10 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
+            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+            coins.add(
+                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
+            )
         return coins
 
     async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
@@ -161,8 +174,10 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
+            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+            coins.add(
+                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
+            )
         return coins
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
@@ -173,11 +188,13 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
+            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+            coins.add(
+                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
+            )
         return coins
 
-    async def get_spendable_for_index(self, index: int, wallet_id: int) -> Set[WalletCoinRecord]:
+    async def get_spendable_for_index(self, height: int, wallet_id: int) -> Set[WalletCoinRecord]:
         """
         Returns set of unspent coin records that are not coinbases, or if they are coinbases,
         must have been confirmed at or before index.
@@ -185,8 +202,8 @@ class WalletCoinStore:
         coins = set()
 
         cursor_coinbase_coins = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=? and confirmed_index<=? and wallet_id=? and coinbase=?",
-            (0, int(index), wallet_id, 1),
+            "SELECT * from coin_record WHERE spent=? and confirmed_height<=? and wallet_id=? and coinbase=?",
+            (0, int(height), wallet_id, 1),
         )
 
         coinbase_rows = await cursor_coinbase_coins.fetchall()
@@ -205,8 +222,10 @@ class WalletCoinStore:
         await cursor_regular_coins.close()
 
         for row in list(coinbase_rows) + list(regular_rows):
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
+            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+            coins.add(
+                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
+            )
         return coins
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
@@ -217,8 +236,10 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
+            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+            coins.add(
+                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
+            )
         return list(coins)
 
     async def get_coin_record_by_coin_id(self, coin_id: bytes32) -> Optional[WalletCoinRecord]:
@@ -229,11 +250,13 @@ class WalletCoinStore:
         if row is None:
             return None
 
-        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-        coin_record = WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
+        coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+        coin_record = WalletCoinRecord(
+            coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11]
+        )
         return coin_record
 
-    async def rollback_to_block(self, block_index):
+    async def rollback_to_block(self, sub_height: uint32):
         """
         Rolls back the blockchain to block_index. All blocks confirmed after this point
         are removed from the LCA. All coins confirmed after this point are removed.
@@ -242,29 +265,36 @@ class WalletCoinStore:
         # Update memory cache
         delete_queue: bytes32 = []
         for coin_name, coin_record in self.coin_record_cache.items():
-            if coin_record.spent_block_index > block_index:
+            if coin_record.spent_block_sub_height > sub_height:
                 new_record = WalletCoinRecord(
                     coin_record.coin,
-                    coin_record.confirmed_block_index,
-                    coin_record.spent_block_index,
+                    coin_record.confirmed_block_sub_height,
+                    coin_record.confirmed_block_height,
+                    coin_record.spent_block_sub_height,
+                    coin_record.spent_block_height,
                     False,
                     coin_record.coinbase,
                     coin_record.wallet_type,
                     coin_record.wallet_id,
                 )
                 self.coin_record_cache[coin_record.coin.name().hex()] = new_record
-            if coin_record.confirmed_block_index > block_index:
+            if coin_record.confirmed_block_sub_height > sub_height:
                 delete_queue.append(coin_name)
 
         for coin_name in delete_queue:
             self.coin_record_cache.pop(coin_name)
 
         # Delete from storage
-        c1 = await self.db_connection.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
+        c1 = await self.db_connection.execute("DELETE FROM coin_record WHERE confirmed_sub_height>?", (sub_height,))
         await c1.close()
         c2 = await self.db_connection.execute(
-            "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",
-            (block_index,),
+            "UPDATE coin_record SET spent_sub_height = 0, spent = 0 WHERE spent_sub_height>?",
+            (sub_height,),
         )
+        c3 = await self.db_connection.execute(
+            "UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_sub_height>?",
+            (sub_height,),
+        )
+        await c3.close()
         await c2.close()
         await self.db_connection.commit()

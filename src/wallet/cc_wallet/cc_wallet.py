@@ -106,7 +106,8 @@ class CCWallet:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
         regular_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
@@ -122,7 +123,8 @@ class CCWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
         )
         cc_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
@@ -361,7 +363,8 @@ class CCWallet:
 
         if send:
             regular_record = TransactionRecord(
-                confirmed_at_index=uint32(0),
+                confirmed_at_sub_height=uint32(0),
+                confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
@@ -377,7 +380,8 @@ class CCWallet:
                 type=uint32(TransactionType.INCOMING_TX.value),
             )
             cc_record = TransactionRecord(
-                confirmed_at_index=uint32(0),
+                confirmed_at_sub_height=uint32(0),
+                confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
@@ -457,7 +461,7 @@ class CCWallet:
             used_coins: Set = set()
 
             # Use older coins first
-            spendable.sort(key=lambda r: r.confirmed_block_index)
+            spendable.sort(key=lambda r: r.confirmed_block_sub_height)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -471,7 +475,7 @@ class CCWallet:
                     continue
                 sum += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!")
+                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -572,7 +576,8 @@ class CCWallet:
         )
         # TODO add support for array in stored records
         return TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],
             amount=uint64(outgoing_amount),
