@@ -93,9 +93,9 @@ def recurse_jsonify(d):
             if type(item) in unhashable_types or issubclass(type(item), bytes):
                 item = f"0x{bytes(item).hex()}"
             if isinstance(item, dict):
-                recurse_jsonify(item)
+                item = recurse_jsonify(item)
             if isinstance(item, list):
-                recurse_jsonify(item)
+                item = recurse_jsonify(item)
             if isinstance(item, Enum):
                 item = item.name
             if isinstance(item, int) and type(item) in big_ints:
@@ -108,9 +108,9 @@ def recurse_jsonify(d):
             if type(value) in unhashable_types or issubclass(type(value), bytes):
                 d[key] = f"0x{bytes(value).hex()}"
             if isinstance(value, dict):
-                recurse_jsonify(value)
+                d[key] = recurse_jsonify(value)
             if isinstance(value, list):
-                recurse_jsonify(value)
+                d[key] = recurse_jsonify(value)
             if isinstance(value, Enum):
                 d[key] = value.name
             if isinstance(value, int) and type(value) in big_ints:

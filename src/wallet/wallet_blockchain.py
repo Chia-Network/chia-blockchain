@@ -190,7 +190,7 @@ class WalletBlockchain:
                 None,
             )
 
-        required_iters, error = await validate_finished_header_block(
+        required_iters, error = validate_finished_header_block(
             self.constants,
             self.sub_blocks,
             self.sub_height_to_hash,

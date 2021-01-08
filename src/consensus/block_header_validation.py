@@ -30,12 +30,13 @@ from src.types.vdf import VDFInfo, VDFProof
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
 
 
 # noinspection PyCallByClass
-async def validate_unfinished_header_block(
+def validate_unfinished_header_block(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     header_block: UnfinishedHeaderBlock,
@@ -771,7 +772,7 @@ async def validate_unfinished_header_block(
     return required_iters, None  # Valid unfinished header block
 
 
-async def validate_finished_header_block(
+def validate_finished_header_block(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     header_block: HeaderBlock,
@@ -793,7 +794,7 @@ async def validate_finished_header_block(
         header_block.transactions_filter,
     )
 
-    required_iters, validate_unfinished_err = await validate_unfinished_header_block(
+    required_iters, validate_unfinished_err = validate_unfinished_header_block(
         constants,
         sub_blocks,
         unfinished_header_block,
@@ -992,14 +993,24 @@ async def validate_finished_header_block(
     return required_iters, None
 
 
-async def validate_finished_header_block_pickled(
-    constants: ConsensusConstants,
-    sub_blocks: Dict[bytes, SubBlockRecord],
-    header_block: HeaderBlock,
+def validate_finished_header_block_pickled(
+    constants: Dict,
+    sub_blocks_pickled: Dict[bytes, Dict],
+    header_block_pickled: Dict,
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+    sub_blocks = {}
+    for k, v in sub_blocks_pickled.items():
+        sub_blocks[k] = SubBlockRecord.from_json_dict(v)
+    header_block = HeaderBlock.from_json_dict(header_block_pickled)
+
     return validate_finished_header_block(
-        constants, sub_blocks, header_block, check_filter, expected_difficulty, expected_sub_slot_iters
+        dataclass_from_dict(ConsensusConstants, constants),
+        sub_blocks,
+        header_block,
+        check_filter,
+        expected_difficulty,
+        expected_sub_slot_iters,
     )
