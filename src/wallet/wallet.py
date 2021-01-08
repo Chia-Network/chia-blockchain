@@ -288,6 +288,7 @@ class Wallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
