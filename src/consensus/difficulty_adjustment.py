@@ -1,6 +1,4 @@
 from typing import Dict, List, Union, Optional, Tuple
-import logging
-
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.unfinished_block import UnfinishedBlock
