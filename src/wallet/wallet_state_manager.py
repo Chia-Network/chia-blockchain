@@ -563,7 +563,7 @@ class WalletStateManager:
 
         unconfirmed_record: List[TransactionRecord] = await self.tx_store.unconfirmed_with_removal_coin(coin.name())
         for unconfirmed in unconfirmed_record:
-            await self.tx_store.set_confirmed(unconfirmed.name(), sub_height, height)
+            await self.tx_store.set_confirmed(unconfirmed.name, sub_height, height)
 
         self.state_changed("coin_removed", wallet_id)
 
@@ -615,7 +615,7 @@ class WalletStateManager:
                 # This is the change from this transaction
                 for record in records:
                     if record.confirmed is False:
-                        await self.tx_store.set_confirmed(record.name(), sub_height, height)
+                        await self.tx_store.set_confirmed(record.name, sub_height, height)
             else:
                 now = uint64(int(time.time()))
                 tx_record = TransactionRecord(
