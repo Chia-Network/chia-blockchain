@@ -466,11 +466,10 @@ class FullNode:
         async with self.blockchain.lock:
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
             for i, block in enumerate(blocks):
-                req_iters, error = pre_validation_results[i]
-                if error:
-                    raise error
-                if req_iters is None:
-                    raise RuntimeError("Required iters should not be none")
+                if pre_validation_results is None:
+                    return False
+                req_iters = pre_validation_results[i]
+                assert req_iters is not None
                 (
                     result,
                     error,

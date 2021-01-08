@@ -12,7 +12,7 @@ from src.types.classgroup import ClassgroupElement
 
 @dataclass(frozen=True)
 @streamable
-class SubBlockRecord:
+class SubBlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more
     efficient way to maintain data about the blockchain. This allows us to validate future blocks,
