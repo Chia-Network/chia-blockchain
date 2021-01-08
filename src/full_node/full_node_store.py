@@ -488,15 +488,20 @@ class FullNodeStore:
                         if (
                             ip_sub_slot is not None
                             and ip_sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-                        ) == self.constants.FIRST_CC_CHALLENGE:
+                            == self.constants.FIRST_CC_CHALLENGE
+                        ):
+                            log.info(f"1. Adding sub slot {sub_slot is None}, total iters: {total_iters}")
                             new_finished_sub_slots.append((sub_slot, sps, total_iters))
                             continue
+
                     else:
                         # Overflow sub block
+                        log.info(f"2. Adding sub slot {sub_slot is None}, total iters: {total_iters}")
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
                         continue
                 if sub_slot == ip_sub_slot:
                     ip_sub_slot_found = True
+                    log.info(f"3. Adding sub slot {sub_slot is None}, total iters: {total_iters}")
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
             self.finished_sub_slots = new_finished_sub_slots
         if reorg or not ip_sub_slot_found:
@@ -506,6 +511,7 @@ class FullNodeStore:
             if peak.overflow:
                 prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
                 assert total_iters_peak != prev_sub_slot_total_iters
+                log.info(f"4. Adding sub slot {sp_sub_slot is None}, total iters: {prev_sub_slot_total_iters}")
                 self.finished_sub_slots = [
                     (
                         sp_sub_slot,
@@ -513,6 +519,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
+            log.info(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,
