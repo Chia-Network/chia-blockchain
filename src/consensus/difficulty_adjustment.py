@@ -1,4 +1,5 @@
 from typing import Dict, List, Union, Optional, Tuple
+import logging
 
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -13,6 +14,9 @@ from src.util.significant_bits import (
     count_significant_bits,
     truncate_to_significant_bits,
 )
+
+
+log = logging.getLogger(__name__)
 
 
 def _get_blocks_at_height(
@@ -35,7 +39,7 @@ def _get_blocks_at_height(
         max_num_sub_blocks: max number of sub-blocks to fetch (although less might be fetched)
 
     """
-    if height_to_hash[prev_sb.sub_block_height] == prev_sb.header_hash:
+    if prev_sb.sub_block_height in height_to_hash and height_to_hash[prev_sb.sub_block_height] == prev_sb.header_hash:
         # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
         return [
             sub_blocks[height_to_hash[uint32(h)]]
@@ -46,6 +50,7 @@ def _get_blocks_at_height(
     curr_b: SubBlockRecord = prev_sb
     target_blocks = []
     while curr_b.sub_block_height >= target_sub_block_height:
+        log.info(f"Backtracking at {curr_b.sub_block_height}, up to {target_sub_block_height}")
         if curr_b.sub_block_height < target_sub_block_height + max_num_sub_blocks:
             target_blocks.append(curr_b)
         if curr_b.sub_block_height == 0:
