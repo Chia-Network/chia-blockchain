@@ -71,6 +71,7 @@ class Blockchain:
     block_store: BlockStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
+    batch_size: int
 
     # Whether blockchain is shut down or not
     _shut_down: bool

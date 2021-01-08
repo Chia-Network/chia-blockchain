@@ -6,13 +6,13 @@ from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
-from src.util.streamable import streamable
+from src.util.streamable import streamable, Streamable
 from src.types.classgroup import ClassgroupElement
 
 
 @dataclass(frozen=True)
 @streamable
-class SubBlockRecord:
+class SubBlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more
     efficient way to maintain data about the blockchain. This allows us to validate future blocks,

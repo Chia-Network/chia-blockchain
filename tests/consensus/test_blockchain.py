@@ -106,7 +106,18 @@ class TestGenesisBlock:
         assert err == Err.INVALID_PREV_BLOCK_HASH
 
 
-class TestBlockHeaderValidation:
+class TestPreValidation:
+    @pytest.mark.asyncio
+    async def test_pre_validation_fails_bad_blocks(self, empty_blockchain):
+        blocks = bt.get_consecutive_blocks(2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_sub_block.total_iters", blocks[-1].reward_chain_sub_block.total_iters + 1
+        )
+        res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad])
+        assert res is None
+
     @pytest.mark.asyncio
     async def test_pre_validation(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
@@ -139,6 +150,8 @@ class TestBlockHeaderValidation:
         log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
         log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
 
+
+class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
