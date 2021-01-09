@@ -130,9 +130,9 @@ async def show_async(args, parser):
                 sync_max_block = blockchain_state["sync"]["sync_tip_height"]
                 sync_current_block = blockchain_state["sync"]["sync_progress_height"]
                 print(
-                    "Current Blockchain Status: Full Node syncing to",
+                    "Current Blockchain Status: Full Node syncing to sub block",
                     sync_max_block,
-                    "\nCurrently synched to tip:",
+                    "\nCurrently synced to block:",
                     sync_current_block,
                 )
             elif peak is not None and peak.height > 2:
