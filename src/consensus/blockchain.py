@@ -238,7 +238,10 @@ class Blockchain(BlockchainInterface):
 
         # Always add the block to the database
         await self.block_store.add_full_block(block, sub_block)
+
         self.__sub_blocks[sub_block.header_hash] = sub_block
+
+        self.clean_sub_block_record(sub_block.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
@@ -305,11 +308,6 @@ class Blockchain(BlockchainInterface):
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
-                # remove other chain sub_block from sub_blocks
-                if self.peak_height is not None and (fetched_sub_block.sub_block_height < self.peak_height):
-                    old_chain_block = self.__sub_height_to_hash[fetched_sub_block.sub_block_height]
-                    log.info(f"removing {old_chain_block} from sub_blocks")
-                    del self.__sub_blocks[old_chain_block]
                 self.__sub_height_to_hash[fetched_sub_block.sub_block_height] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
                     await self.coin_store.new_block(fetched_block)
@@ -543,12 +541,28 @@ class Blockchain(BlockchainInterface):
     def get_peak_height(self) -> Optional[uint32]:
         return self.peak_height
 
+    async def revert_to_height(self, fork_point: uint32):
+        # load all blocks such that fork - self.constants.SUB_BLOCKS_CACHE_SIZE -> fork in dict
+        self.__sub_blocks = await self.block_store.get_sub_block_in_range(
+            fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, fork_point
+        )
+        return
+
+    def clean_sub_block_record(self, sub_height: int):
+        if sub_height < 0:
+            return
+        curr = self.__sub_blocks[self.__sub_height_to_hash[uint32(sub_height)]]
+        while curr is not None:
+            log.info(f"delete {curr.header_hash} height {curr.sub_block_height} from sub blocks")
+            del self.__sub_blocks[curr.header_hash]
+            curr = self.__sub_blocks[curr.prev_hash]
+
     def clean_sub_block_records(self):
-        if len(self.__sub_blocks) % self.constants.SUB_BLOCKS_CACHE_SIZE == 0:
-            peak = self.get_peak()
-            assert peak is not None
-            curr = self.__sub_height_to_hash[peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE]
-            while curr is not None:
-                log.info(f"delete {curr.header_hash} height {curr.sub_block_height} from sub blocks")
-                del self.__sub_blocks[curr.header_hash]
-                curr = self.__sub_blocks[curr.prev_hash]
+        if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
+            return
+
+        peak = self.get_peak()
+        assert peak is not None
+        if peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE < 0:
+            return
+        self.clean_sub_block_record(peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
