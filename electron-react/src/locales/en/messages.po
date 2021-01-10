@@ -119,7 +119,7 @@ msgstr "Coinbase Amount"
 
 #: src/components/block/Block.jsx:257
 msgid "Block.coinbaseAmountTooltip"
-msgstr "The chia block reward, goes to the pool (or farmer if not pooling)"
+msgstr "This is the chia block reward which goes to the pool (or farmer if not pooling)"
 
 #: src/components/block/Block.jsx:263
 msgid "Block.coinbasePuzzleHash"
@@ -139,7 +139,7 @@ msgstr "Fees Amount"
 
 #: src/components/block/Block.jsx:270
 msgid "Block.feesAmountTooltip"
-msgstr "The total fees in this block, goes to the farmer"
+msgstr "The total transactions fees in this block. Rewarded to the farmer."
 
 #: src/components/block/Block.jsx:276
 msgid "Block.feesPuzzleHash"
@@ -163,7 +163,7 @@ msgstr "Plot Id"
 
 #: src/components/block/Block.jsx:231
 msgid "Block.plotIdTooltip"
-msgstr "The seed used to create the plot, this depends on the pool pk and plot pk"
+msgstr "The seed used to create the plot. This depends on the pool pk and plot pk."
 
 #: src/components/block/Block.jsx:220
 msgid "Block.plotPublicKey"
@@ -755,7 +755,7 @@ msgstr "Expected Time to Win"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
 msgid "FarmCardExpectedTimeToWin.tooltip"
-msgstr "You have {0}% of the space on the network, so farming a block will take{totalHours} in expectation"
+msgstr "You have {0}% of the space on the network, so farming a block will take {totalHours} in expectation."
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
 msgid "FarmCardFeesReward.title"
@@ -810,7 +810,7 @@ msgstr "Date"
 #: src/components/farm/FarmFullNodeConnections.tsx:62
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:62
 msgid "FarmFullNodeConnections.description"
-msgstr "A harvester is a service running on a machine where plot(s) are actually stored. View your network of connected harvesters below Learn more"
+msgstr "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:11
 msgid "FarmFullNodeConnections.height"
@@ -858,7 +858,7 @@ msgstr "Last Attempted Proof"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:33
 msgid "FarmLastAttemptedProof.tooltip"
-msgstr "This table shows you the last time your farm attempted to win a block a block challenge."
+msgstr "This table shows you the last time your farm attempted to win a block challenge."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:34
 #~ msgid "FarmLatestBlockChallenges.bestEstimate"
