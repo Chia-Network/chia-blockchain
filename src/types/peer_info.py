@@ -19,6 +19,8 @@ class PeerInfo(Streamable):
         except ValueError:
             ip = None
         if ip is not None:
+            if ip.is_private:
+                return False
             return True
 
         try:
@@ -26,6 +28,8 @@ class PeerInfo(Streamable):
         except ValueError:
             ip = None
         if ip is not None:
+            if ip.is_private:
+                return False
             return True
         return False
 
