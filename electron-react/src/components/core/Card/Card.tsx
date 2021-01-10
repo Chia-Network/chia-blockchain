@@ -10,10 +10,11 @@ type Props = {
   actions?: ReactNode;
   gap?: number;
   interactive?: boolean;
+  action?: ReactNode,
 };
 
 export default function Card(props: Props) {
-  const { children, title, tooltip, actions, gap, interactive } = props;
+  const { children, title, tooltip, actions, gap, interactive, action } = props;
 
   const headerTitle = tooltip ? (
     <Flex alignItems="center" gap={1}>
@@ -29,7 +30,7 @@ export default function Card(props: Props) {
   return (
     <CardMaterial>
       {title && (
-        <CardHeader title={headerTitle} />
+        <CardHeader title={headerTitle} action={action} />
       )}
       <CardContent>
         <Flex flexDirection="column" gap={3}>

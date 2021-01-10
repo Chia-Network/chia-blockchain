@@ -11,7 +11,8 @@ fi
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
 	LSB_RELEASE=$(lsb_release -rs)
-	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20.04" | bc)
+	# Mint 20.04 repsonds with 20 here so 20 instead of 20.04
+	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
 fi
 
 # Manage npm and other install requirements on an OS specific basis
