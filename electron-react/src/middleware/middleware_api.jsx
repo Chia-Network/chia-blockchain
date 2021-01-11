@@ -98,6 +98,19 @@ async function ping_harvester(store) {
   }
 }
 
+var timeout_height = null;
+var can_call = true;
+
+async function get_height(store) {
+  if (can_call === true) {
+    store.dispatch(get_height_info());
+    can_call = false;
+    timeout_height = setTimeout(() => {
+      can_call = true;
+    }, 1000);
+  }
+}
+
 export function refreshAllState() {
   return async (dispatch, getState) => {
     dispatch(format_message('get_wallets', {}));
@@ -249,9 +262,9 @@ export const handle_message = async (store, payload) => {
       } else if (state === 'sync_changed') {
         store.dispatch(get_sync_status());
       } else if (state === 'new_block') {
-        store.dispatch(get_height_info());
+        await get_height(store);
       } else if (state === 'new_peak') {
-        store.dispatch(get_height_info());
+        await get_height(store);
         store.dispatch(getBlockChainState());
       } else if (state === 'pending_transaction') {
         wallet_id = payload.data.wallet_id;
