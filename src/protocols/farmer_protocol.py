@@ -5,8 +5,9 @@ from blspy import G2Element
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
-from src.util.cbor_message import cbor_message
-from src.util.ints import uint64, uint8, uint32
+from src.util.ints import uint32
+from src.util.ints import uint64, uint8
+from src.util.streamable import Streamable, streamable
 
 """
 Protocol between farmer and full node.
@@ -14,8 +15,8 @@ Protocol between farmer and full node.
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewSignagePoint:
+@streamable
+class NewSignagePoint(Streamable):
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
     reward_chain_sp: bytes32
@@ -25,8 +26,8 @@ class NewSignagePoint:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class DeclareProofOfSpace:
+@streamable
+class DeclareProofOfSpace(Streamable):
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
     signage_point_index: uint8
@@ -40,16 +41,16 @@ class DeclareProofOfSpace:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestSignedValues:
+@streamable
+class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_sub_block_hash: bytes32
     foliage_block_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class FarmingInfo:
+@streamable
+class FarmingInfo(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     timestamp: uint64
@@ -59,8 +60,8 @@ class FarmingInfo:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class SignedValues:
+@streamable
+class SignedValues(Streamable):
     quality_string: bytes32
     foliage_sub_block_signature: G2Element
     foliage_block_signature: G2Element

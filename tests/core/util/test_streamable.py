@@ -14,7 +14,6 @@ from src.util import cbor
 
 class TestStreamable(unittest.TestCase):
     def test_basic(self):
-        @dataclass(frozen=True)
         @streamable
         class TestClass(Streamable):
             a: uint32

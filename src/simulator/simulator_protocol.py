@@ -6,13 +6,13 @@ from src.util.ints import uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
+@streamable
 class FarmNewBlockProtocol:
     puzzle_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message
+@streamable
 class ReorgProtocol:
     old_index: uint32
     new_index: uint32
