@@ -1,10 +1,10 @@
-name: Build and test MacOS
+name: Build and test MacOS Core
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Build and test MacOS
+    name: Build and test MacOS Core
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
@@ -45,18 +45,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v2
-      with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-
-    - name: Link home directory
+    - name: Download Chia test blocks and plots
       run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        mkdir $HOME/.chia
+        cd $HOME/.chia
+        curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
+        curl -L https://download.chia.net/tests/test-plots-2021-01-04.tgz | tar -zx
 
     - name: Run install script
       env:
@@ -80,4 +74,4 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests -s -v --durations 0
+        ./venv/bin/py.test tests/core -s -v --durations 0

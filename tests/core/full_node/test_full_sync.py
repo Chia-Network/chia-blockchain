@@ -9,7 +9,7 @@ from src.protocols import full_node_protocol
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
-from tests.full_node.fixtures import (
+from tests.core.fixtures import (
     empty_blockchain,
     default_400_blocks,
     default_1000_blocks,
