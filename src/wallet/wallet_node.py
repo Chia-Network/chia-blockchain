@@ -524,7 +524,7 @@ class WalletNode:
         res: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(request)
         if res is None or not isinstance(res, RespondHeaderBlocks):
             raise ValueError("Peer returned no response")
-        header_blocks: HeaderBlock = res.header_blocks
+        header_blocks: List[HeaderBlock] = res.header_blocks
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
 
