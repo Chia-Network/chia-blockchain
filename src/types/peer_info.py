@@ -12,7 +12,7 @@ class PeerInfo(Streamable):
     host: str
     port: uint16
 
-    def is_valid(self, allow_private_subnets: bool = False):
+    def is_valid(self, allow_private_subnets=False):
         ip = None
         try:
             ip = ipaddress.IPv6Address(self.host)
