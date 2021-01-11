@@ -1,6 +1,5 @@
 name: MacOS installer on Catalina and Python 3.8
 
-
 on: [push, pull_request]
 
 jobs:
