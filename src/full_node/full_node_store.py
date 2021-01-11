@@ -21,34 +21,44 @@ class FullNodeStore:
     constants: ConsensusConstants
 
     # Blocks which we have created, but don't have plot signatures yet, so not yet "unfinished blocks"
-    candidate_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]] = {}
+    candidate_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
 
     # Header hashes of unfinished blocks that we have seen recently
-    seen_unfinished_blocks: set = set()
+    seen_unfinished_blocks: set
 
     # Blocks which we have received but our blockchain does not reach, old ones are cleared
-    disconnected_blocks: Dict[bytes32, FullBlock] = {}
+    disconnected_blocks: Dict[bytes32, FullBlock]
 
     # Unfinished blocks, keyed from reward hash
-    unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]] = {}
+    unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
     # Also stores the total iters at the end of slot
     # For the first sub-slot, EndOfSlotBundle is None
-    finished_sub_slots: List[Tuple[Optional[EndOfSubSlotBundle], List[Optional[SignagePoint]], uint128]] = []
+    finished_sub_slots: List[Tuple[Optional[EndOfSubSlotBundle], List[Optional[SignagePoint]], uint128]]
 
     # These caches maintain objects which depend on infused sub-blocks in the reward chain, that we
     # might receive before the sub-blocks themselves. The dict keys are the reward chain challenge hashes.
 
     # End of slots which depend on infusions that we don't have
-    future_eos_cache: Dict[bytes32, List[EndOfSubSlotBundle]] = {}
+    future_eos_cache: Dict[bytes32, List[EndOfSubSlotBundle]]
 
     # Signage points which depend on infusions that we don't have
-    future_sp_cache: Dict[bytes32, List[SignagePoint]] = {}
+    future_sp_cache: Dict[bytes32, List[SignagePoint]]
 
     # Infusion point VDFs which depend on infusions that we don't have
-    future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]] = {}
+    future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]]
+
+    def __init__(self):
+        self.candidate_blocks = {}
+        self.seen_unfinished_blocks = set()
+        self.disconnected_blocks = {}
+        self.unfinished_blocks = {}
+        self.finished_sub_slots = []
+        self.future_eos_cache = {}
+        self.future_sp_cache = {}
+        self.future_ip_cache = {}
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
