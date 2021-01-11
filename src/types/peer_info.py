@@ -13,7 +13,7 @@ class PeerInfo(Streamable):
     port: uint16
 
     def is_valid(self):
-        if host == "127.0.0.1" or host == "localhost":
+        if self.host == "127.0.0.1" or self.host == "localhost":
             return True
 
         ip = None
