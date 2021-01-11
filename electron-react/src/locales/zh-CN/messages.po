@@ -794,12 +794,10 @@ msgid "FarmCardTotalSizeOfPlots.title"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:47
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
 msgid "FarmFullNodeConnections.actions"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:70
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr ""
 
@@ -808,7 +806,6 @@ msgid "FarmFullNodeConnections.date"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:62
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
 msgid "FarmFullNodeConnections.description"
 msgstr ""
 
@@ -817,17 +814,14 @@ msgid "FarmFullNodeConnections.height"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:25
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
 msgid "FarmFullNodeConnections.hostName"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 msgid "FarmFullNodeConnections.nodeId"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:32
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
 msgid "FarmFullNodeConnections.port"
 msgstr ""
 
@@ -840,15 +834,14 @@ msgid "FarmFullNodeConnections.title"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "FarmFullNodeConnections.upDown"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:38
+#: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:44
+#: src/components/farm/FarmLastAttemptedProof.tsx:43
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr ""
 
@@ -901,8 +894,36 @@ msgstr ""
 msgid "FarmOverviewHero.description"
 msgstr ""
 
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
+msgid "FarmYourHarvesterNetwork.actions"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
+msgid "FarmYourHarvesterNetwork.connectionStatus"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
+msgid "FarmYourHarvesterNetwork.description"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
+msgid "FarmYourHarvesterNetwork.hostName"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:20
+msgid "FarmYourHarvesterNetwork.nodeId"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+msgid "FarmYourHarvesterNetwork.port"
+msgstr ""
+
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:60
 msgid "FarmYourHarvesterNetwork.title"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
+msgid "FarmYourHarvesterNetwork.upDown"
 msgstr ""
 
 #: src/components/farm/Farm.tsx:13
@@ -1064,17 +1085,14 @@ msgid "Plot.title"
 msgstr ""
 
 #: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "PlotAction.deleteButton"
 msgstr ""
 
 #: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "PlotAction.deleteDescription"
 msgstr ""
 
 #: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "PlotAction.deleteTitle"
 msgstr ""
 
@@ -1252,6 +1270,18 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:82
 msgid "PlotOverviewPlots.totalPlotSize"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+msgid "PlotQueueAction.deleteButton"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueActions.tsx:27
+msgid "PlotQueueAction.deleteDescription"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+msgid "PlotQueueAction.deleteTitle"
 msgstr ""
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14

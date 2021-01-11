@@ -33,19 +33,19 @@ const cols = [
         </Tooltip>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.nodeId">Node ID</Trans>,
+    title: <Trans id="FarmYourHarvesterNetwork.nodeId">Node ID</Trans>,
   },
   {
     width: '150px',
     field: 'peer_host',
-    title: <Trans id="FarmFullNodeConnections.hostName">Host Name</Trans>,
+    title: <Trans id="FarmYourHarvesterNetwork.hostName">Host Name</Trans>,
   },
   {
     width: '150px',
     field(row: Connection) {
       return `${row.peer_port}/${row.peer_server_port}`;
     },
-    title: <Trans id="FarmFullNodeConnections.port">Port</Trans>,
+    title: <Trans id="FarmYourHarvesterNetwork.port">Port</Trans>,
   },
   {
     width: '200px',
@@ -58,11 +58,11 @@ const cols = [
         </>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.upDown">Up/Down</Trans>,
+    title: <Trans id="FarmYourHarvesterNetwork.upDown">Up/Down</Trans>,
   },
   {
     width: '100px',
-    title: <Trans id="FarmFullNodeConnections.actions">Actions</Trans>,
+    title: <Trans id="FarmYourHarvesterNetwork.actions">Actions</Trans>,
     field(row: Connection) {
       return (
         <FarmCloseConnection nodeId={row.node_id}>
@@ -97,17 +97,17 @@ export default function FarmYourHarvesterNetwork() {
         </Trans>
       )}
       tooltip={(
-        <Trans id="FarmFullNodeConnections.description">
-          A harvester is a service running on a machine where plot(s) are
-          actually stored. View your network of connected harvesters below
-          Learn more
+        <Trans id="FarmYourHarvesterNetwork.description">
+          A harvester is a service running on a machine where plot(s) are actually stored. 
+          A farmer and harvester talk to a full node to see the state of the chain. 
+          View your network of connected harvesters below Learn more
         </Trans>
       )}
       interactive
     >
       <Flex justifyContent="flex-end" gap={1}>
         <Typography variant="caption" color="textSecondary">
-          <Trans id="FarmFullNodeConnections.connectionStatus">
+          <Trans id="FarmYourHarvesterNetwork.connectionStatus">
             Connection Status:
           </Trans>
         </Typography>
