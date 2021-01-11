@@ -441,6 +441,7 @@ class WalletNode:
         ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
         for _, block in potential_peaks:
             if current_peak.weight < block.weight:
+                await asyncio.sleep(5)
                 self.start_sync()
                 return
 
