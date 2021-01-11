@@ -152,7 +152,7 @@ class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_request_peers(self, two_empty_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
-        full_node_2.full_node_peers.address_manager.make_private_subnets_valid()
+        full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
         await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
 
         async def have_msgs():
