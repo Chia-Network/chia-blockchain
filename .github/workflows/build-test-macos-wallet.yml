@@ -1,4 +1,4 @@
-name: Build and test MacOS
+name: Build and test MacOS Wallet
 
 on: [push, pull_request]
 

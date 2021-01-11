@@ -1,5 +1,4 @@
-name: Build and test Ubuntu
-
+name: Build and test Ubuntu Core
 
 on: [push, pull_request]
 
