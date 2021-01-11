@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from src.types.peer_info import TimestampedPeerInfo
-from src.util.cbor_message import cbor_message
-
+from src.util.streamable import streamable, Streamable
 
 """
 Protocol to introducer
@@ -11,14 +10,14 @@ Protocol to introducer
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestPeers:
+@streamable
+class RequestPeers(Streamable):
     """
     Return full list of peers
     """
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondPeers:
+@streamable
+class RespondPeers(Streamable):
     peer_list: List[TimestampedPeerInfo]
