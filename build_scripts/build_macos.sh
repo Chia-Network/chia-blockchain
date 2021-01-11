@@ -36,14 +36,25 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
 	exit $LAST_EXIT_CODE
 fi
+
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION
+LAST_EXIT_CODE=$?
+if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+	echo >&2 "electron-packager failed!"
+	exit $LAST_EXIT_CODE
+fi
 
 electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
 --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
 --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
 --no-gatekeeper-assess
+LAST_EXIT_CODE=$?
+if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+	echo >&2 "electron-osx-sign failed!"
+	exit $LAST_EXIT_CODE
+fi
 
 mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
@@ -53,6 +64,11 @@ echo "Create $DMG_NAME"
 mkdir final_installer
 electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION \
 --overwrite --out final_installer
+LAST_EXIT_CODE=$?
+if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+	echo >&2 "electron-installer-dmg failed!"
+	exit $LAST_EXIT_CODE
+fi
 
 if [ "$NOTARIZE" ]; then
 	echo "Notarize $DMG_NAME on ci"
