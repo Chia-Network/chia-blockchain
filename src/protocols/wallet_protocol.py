@@ -132,3 +132,25 @@ class RespondAdditions:
 class RejectAdditionsRequest:
     sub_height: uint32
     header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestHeaderBlocks:
+    start_sub_height: uint32
+    end_sub_height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RejectHeaderBlocks:
+    start_sub_height: uint32
+    end_sub_height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondHeaderBlocks:
+    start_sub_height: uint32
+    end_sub_height: uint32
+    header_blocks: List[HeaderBlock]
