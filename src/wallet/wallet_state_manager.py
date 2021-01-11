@@ -15,7 +15,7 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import init_wallet_block_cache, BlockCache
+from src.full_node.block_cache import BlockCache
 from src.full_node.weight_proof import WeightProofHandler
 from src.protocols.wallet_protocol import RespondPuzzleSolution, PuzzleSolutionResponse
 from src.types.coin import Coin

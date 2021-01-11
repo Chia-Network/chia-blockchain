@@ -1,6 +1,5 @@
 import asyncio
 import json
-import time
 import traceback
 from asyncio import Task
 from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable, Union
@@ -12,7 +11,6 @@ from blspy import PrivateKey
 from src.consensus.sub_block_record import SubBlockRecord
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.wallet_protocol import (
-    RequestSubBlockHeader,
     RespondSubBlockHeader,
     RequestAdditions,
     RespondAdditions,
@@ -22,7 +20,6 @@ from src.protocols.wallet_protocol import (
     RequestHeaderBlocks,
     RespondHeaderBlocks,
 )
-from src.server.connection_utils import send_to_random
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list, Coin
 from src.types.peer_info import PeerInfo
