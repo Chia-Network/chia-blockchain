@@ -210,7 +210,6 @@ class Blockchain(BlockchainInterface):
         required_iters, error = await validate_finished_header_block(
             self.constants,
             self,
-            self.__sub_height_to_hash,
             await block.get_block_header(),
             False,
         )
@@ -476,7 +475,6 @@ class Blockchain(BlockchainInterface):
         required_iters, error = await validate_unfinished_header_block(
             self.constants,
             self,
-            self.__sub_height_to_hash,
             unfinished_header_block,
             False,
             skip_overflow_ss_validation,

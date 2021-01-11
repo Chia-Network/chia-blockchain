@@ -51,6 +51,8 @@ class WalletBlockchain(BlockchainInterface):
     __sub_blocks: Dict[bytes32, SubBlockRecord]
     # Defines the path from genesis to the peak, no orphan sub-blocks
     __sub_height_to_hash: Dict[uint32, bytes32]
+    # all hashes of sub blocks in sub_block_record by height, used for garbage collection
+    __sub_heights_in_cache: Dict[uint32, List[bytes32]]
     # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
     # (height_included, SubEpochSummary). Note: ONLY for the sub-blocks in the path to the peak
     __sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
@@ -109,6 +111,7 @@ class WalletBlockchain(BlockchainInterface):
         self.__sub_blocks, peak = await self.block_store.get_sub_block_records()
         self.__sub_height_to_hash = {}
         self.__sub_epoch_summaries = {}
+        self.__sub_heights_in_cache = {}
 
         if len(self.__sub_blocks) == 0:
             assert peak is None
@@ -120,6 +123,7 @@ class WalletBlockchain(BlockchainInterface):
         self.peak_sub_height = self.__sub_blocks[peak].sub_block_height
 
         # Sets the other state variables (peak_height and height_to_hash)
+
         curr: SubBlockRecord = self.__sub_blocks[peak]
         while True:
             self.__sub_height_to_hash[curr.sub_block_height] = curr.header_hash
@@ -127,6 +131,11 @@ class WalletBlockchain(BlockchainInterface):
                 self.__sub_epoch_summaries[curr.sub_block_height] = curr.sub_epoch_summary_included
             if curr.height == 0:
                 break
+            #  only keep last SUB_BLOCKS_CACHE_SIZE in mem
+            if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
+                curr = self.__sub_blocks[curr.prev_hash]
+            self.__sub_heights_in_cache[curr.sub_block_height] = []
+            self.__sub_heights_in_cache[curr.sub_block_height].append(curr.header_hash)
             curr = self.__sub_blocks[curr.prev_hash]
 
         assert len(self.__sub_blocks) == len(self.__sub_height_to_hash) == self.peak_sub_height + 1
@@ -194,7 +203,6 @@ class WalletBlockchain(BlockchainInterface):
         required_iters, error = await validate_finished_header_block(
             self.constants,
             self,
-            self.__sub_height_to_hash,
             block,
             False,
         )
@@ -215,6 +223,10 @@ class WalletBlockchain(BlockchainInterface):
 
         await self.block_store.add_block_record(block_record, sub_block)
         self.__sub_blocks[sub_block.header_hash] = sub_block
+        if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
+            self.__sub_heights_in_cache[sub_block.sub_block_height] = []
+        self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
+        self.clean_sub_block_record(sub_block.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
@@ -416,12 +428,33 @@ class WalletBlockchain(BlockchainInterface):
     def get_peak_height(self) -> Optional[uint32]:
         return self.peak_sub_height
 
+    async def forkpoint_warmup(self, fork_point: uint32):
+        # load all blocks such that fork - self.constants.SUB_BLOCKS_CACHE_SIZE -> fork in dict
+        blocks = await self.block_store.get_sub_block_in_range(
+            fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, fork_point
+        )
+        self.__sub_blocks.update(blocks)
+        return
+
+    def clean_sub_block_record(self, sub_height: int):
+        if sub_height < 0:
+            return
+        blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
+        while blocks_to_remove is not None and sub_height >= 0:
+            for header_hash in blocks_to_remove:
+                log.debug(f"delete {header_hash} height {sub_height} from sub blocks")
+                del self.__sub_blocks[header_hash]  # remove from sub blocks
+            del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
+
+            sub_height = sub_height - 1
+            blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
+
     def clean_sub_block_records(self):
-        if len(self.__sub_blocks) % self.constants.SUB_BLOCKS_CACHE_SIZE == 0:
-            peak = self.get_peak()
-            assert peak is not None
-            curr = self.__sub_height_to_hash[peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE]
-            while curr is not None:
-                log.info(f"delete {curr.header_hash} height {curr.sub_block_height} from sub blocks")
-                del self.__sub_blocks[curr.header_hash]
-                curr = self.__sub_blocks[curr.prev_hash]
+        if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
+            return
+
+        peak = self.get_peak()
+        assert peak is not None
+        if peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE < 0:
+            return
+        self.clean_sub_block_record(peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)

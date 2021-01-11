@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 import time
-from typing import Dict, Optional, List, Tuple
+from typing import Optional, List, Tuple
 
 from blspy import AugSchemeMPL
 
@@ -40,7 +40,6 @@ log = logging.getLogger(__name__)
 async def validate_unfinished_header_block(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    height_to_hash: Dict[uint32, bytes32],
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
     skip_overflow_last_ss_validation: bool = False,
@@ -781,7 +780,6 @@ async def validate_unfinished_header_block(
 async def validate_finished_header_block(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    height_to_hash: Dict[uint32, bytes32],
     header_block: HeaderBlock,
     check_filter: bool,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
@@ -802,7 +800,6 @@ async def validate_finished_header_block(
     required_iters, validate_unfinished_err = await validate_unfinished_header_block(
         constants,
         sub_blocks,
-        height_to_hash,
         unfinished_header_block,
         check_filter,
         False,

@@ -170,3 +170,25 @@ class WalletBlockStore:
         )
         await cursor_2.close()
         await self.db.commit()
+
+    async def get_sub_block_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, SubBlockRecord]:
+        """
+        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        if present.
+        """
+
+        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {start} and sub_height <= {stop}"
+
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, SubBlockRecord] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+
+        return ret

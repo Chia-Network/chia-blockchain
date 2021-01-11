@@ -13,7 +13,7 @@ from tests.time_out_assert import time_out_assert
 
 def wallet_height_at_least(wallet_node, h):
     height = wallet_node.wallet_state_manager.blockchain.peak_sub_height
-    wallet_node.log.info(f"Peak h is {height}")
+    # wallet_node.log.info(f"Peak h is {height}")
     if height == h:
         return True
     return False

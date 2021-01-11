@@ -84,8 +84,7 @@ def next_sub_epoch_summary(
 
     Args:
         constants: consensus constants being used for this chain
-        sub_blocks: dictionary from header hash to SBR of all included SBR
-        height_to_hash: dictionary from sub-block height to header hash
+        sub_blocks: interface to cached SBR
         required_iters: required iters of the proof of space in block
         block: the (potentially) last sub-block in the new epoch
         can_finish_soon: this is useful when sending SES to timelords. We might not be able to finish it, but we will
