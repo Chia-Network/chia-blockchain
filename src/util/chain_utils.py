@@ -5,7 +5,7 @@ from src.types.announcement import Announcement
 from src.util.condition_tools import (
     created_outputs_for_conditions_dict,
     conditions_dict_for_solution,
-    created_announcements_for_conditions_dict
+    created_announcements_for_conditions_dict,
 )
 
 

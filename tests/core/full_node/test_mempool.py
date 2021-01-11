@@ -539,18 +539,11 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), "test")
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_ANNOUNCEMENT,
-            announce.name(),
-            None
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name(), None)
 
         dic = {cvp.opcode: [cvp]}
 
-        cvp2 = ConditionVarPair(
-            ConditionOpcode.CREATE_ANNOUNCEMENT,
-            bytes("test", "utf-8")
-        )
+        cvp2 = ConditionVarPair(ConditionOpcode.CREATE_ANNOUNCEMENT, bytes("test", "utf-8"))
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
 
@@ -587,10 +580,7 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), "test")
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_ANNOUNCEMENT,
-            announce.name()
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name())
 
         dic = {cvp.opcode: [cvp]}
 
@@ -634,10 +624,7 @@ class TestMempool:
 
         announce = Announcement(coin_1.name(), "test")
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_ANNOUNCEMENT,
-            announce.name()
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name())
 
         dic = {cvp.opcode: [cvp]}
 

@@ -82,9 +82,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-def mempool_assert_announcement_consumed(
-    condition: ConditionVarPair, spend_bundle: SpendBundle
-) -> Optional[Err]:
+def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
