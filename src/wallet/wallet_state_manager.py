@@ -373,6 +373,14 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
+    async def synced(self):
+        if self.sync_mode is True:
+            return False
+        full_peak = await self.blockchain.get_full_peak()
+        if full_peak is not None and full_peak.foliage_block.timestamp > int(time.time()) - 10 * 60:
+            return True
+        return False
+
     def set_sync_mode(self, mode: bool):
         """
         Sets the sync mode. This changes the behavior of the wallet node.
