@@ -27,7 +27,7 @@ from src.protocols import (
     wallet_protocol,
 )
 from src.protocols.full_node_protocol import RejectSubBlocks
-from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse
+from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse, RejectHeaderBlocks
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.coin import Coin, hash_coin_list
 
@@ -1027,3 +1027,32 @@ class FullNodeAPI:
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = Message("respond_puzzle_solution", response)
         return response_msg
+
+    @api_request
+    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
+            return None
+        for i in range(request.start_sub_height, request.end_sub_height + 1):
+            if i not in self.full_node.blockchain.sub_height_to_hash:
+                reject = RejectHeaderBlocks(request.start_sub_height, request.end_sub_height)
+                msg = Message("reject_header_blocks_request", reject)
+                return msg
+
+        blocks: List[HeaderBlock] = []
+
+        for i in range(request.start_sub_height, request.end_sub_height + 1):
+            block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+                self.full_node.blockchain.sub_height_to_hash[uint32(i)]
+            )
+            if block is None:
+                reject = RejectHeaderBlocks(request.start_sub_height, request.end_sub_height)
+                msg = Message("reject_header_blocks_request", reject)
+                return msg
+
+            blocks.append(await block.get_block_header())
+
+        msg = Message(
+            "respond_header_blocks",
+            wallet_protocol.RespondHeaderBlocks(request.start_sub_height, request.end_sub_height, blocks),
+        )
+        return msg
