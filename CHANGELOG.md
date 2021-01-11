@@ -17,7 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 - You now have to sync 16 times more "blocks" for every 5 minutes of historical time so syncing is slower than it was on the old chain. We're aware of this and will be speeding it up and addresing blockchain database growth in the nest couple of releases.
 - Prior to this Beta 19, we had block times that targeted 5 minutes and rewarded 16 TXCH to one farmer. Moving forward we have epoch times that target 10 minutes and reward 32 TXCH to 32 farmers about every 17-18 seconds over that period. This has subtle naming and UI impacts in various places.
 -Total transaction throughput is still targeted at 2.1x Bitcoin's throughput per hour but you will get more confirmations on a transaction much faster. This release has the errata that it doesn't limit transaction block size correctly.
-- For testing purposes this chain is quickly halving block rewards. By the time you're reading this and using the chain, farmers will be receiving less than 1 TXCH for each block won as if it were 15-20 years from now. Block rewards are still artificially given in two components as if one component was fees. This will change shortly.
+- For testing purposes this chain is quickly halving block rewards. By the time you're reading this and using the chain, farmers and pools will be receiving less than 1 TXCH for each block won as if it were 15-20 years from now. Block rewards are given in two components, the majority to the pool key and the rest to the farmer. The farmer also receives any transaction fees.
 - You can now plot in parallel using the GUI.
 - The GUI now warns if you attempt to create a plot smaller than k=32.
 - Added Chinese language localization (zh-cn). A big thank you to @goomario for their pull request!
