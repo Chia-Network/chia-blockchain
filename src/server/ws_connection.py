@@ -328,6 +328,7 @@ class WSChiaConnection:
             full_message_loaded: Any = cbor.loads(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            assert len(full_message_loaded["f"]) < 256
             msg = Message(full_message_loaded["f"], full_message_loaded["d"])
             payload_id = full_message_loaded["i"]
             payload = Payload(msg, payload_id)

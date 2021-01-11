@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Optional
 from src.types.sized_bytes import bytes32, bytes8
+from src.util.streamable import streamable, Streamable
 
 
 class NodeType(IntEnum):
@@ -28,24 +29,25 @@ class Delivery(IntEnum):
     SPECIFIC = 6
 
 
-@dataclass
-class Message:
+@dataclass(frozen=True)
+class Message(Streamable):
     # Function to call
     function: str
     # Message data for that function call
     data: Any
 
 
-@dataclass
-class Payload:
+@dataclass(frozen=True)
+class Payload(Streamable):
     # Message payload
     msg: Message
     # payload id
     id: Optional[bytes8]
 
 
-@dataclass
-class OutboundMessage:
+@dataclass(frozen=True)
+@streamable
+class OutboundMessage(Streamable):
     # Type of the peer, 'farmer', 'harvester', 'full_node', etc.
     peer_type: NodeType
     # Message to send
