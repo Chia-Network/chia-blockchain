@@ -23,7 +23,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_create_coin_condition,
     make_assert_fee_condition,
     make_create_announcement,
-    make_assert_announcement
+    make_assert_announcement,
 )
 from src.wallet.secret_key_store import SecretKeyStore
 from src.wallet.sign_coin_solutions import sign_coin_solutions
@@ -143,7 +143,7 @@ class Wallet:
         consumed=None,
         announcements=None,
         announcements_to_consume=None,
-        fee=0
+        fee=0,
     ):
         assert fee >= 0
         condition_list = []

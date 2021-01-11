@@ -31,7 +31,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_time_exceeds_condition,
     make_assert_fee_condition,
     make_create_announcement,
-    make_assert_announcement
+    make_assert_announcement,
 )
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.types.sized_bytes import bytes32
