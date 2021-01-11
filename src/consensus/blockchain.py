@@ -565,7 +565,7 @@ class Blockchain(BlockchainInterface):
             for header_hash in blocks_to_remove:
                 log.debug(f"delete {header_hash} height {sub_height} from sub blocks")
                 del self.__sub_blocks[header_hash]  # remove from sub blocks
-            del self.__sub_heights_in_cache[sub_height]  # remove height from heights in cache
+            del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
 
             sub_height = sub_height - 1
             blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
