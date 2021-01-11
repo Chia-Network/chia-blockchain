@@ -10,8 +10,6 @@ from src.util.ints import uint32
 
 
 class BlockCache(BlockchainInterface):
-    BATCH_SIZE = 300
-
     def __init__(
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
@@ -52,9 +50,12 @@ class BlockCache(BlockchainInterface):
 
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if height not in self._sub_height_to_hash:
-            self.log.warning("could not find height in cache")
+            self.log.warning(f"could not find height in cache {height}")
             return None
         return self._sub_height_to_hash[height]
 
     def contains_sub_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._sub_blocks
+
+    def contains_sub_height(self, sub_height: uint32) -> bool:
+        return sub_height in self._sub_height_to_hash
