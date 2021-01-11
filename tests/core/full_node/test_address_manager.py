@@ -20,6 +20,7 @@ class AddressManagerTest(AddressManager):
         super().__init__()
         if make_deterministic:
             self.make_deterministic()
+        self.make_private_subnets_valid()
 
     def make_deterministic(self):
         # Fix seed.

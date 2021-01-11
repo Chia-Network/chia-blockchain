@@ -171,6 +171,7 @@ class AddressManager:
     tried_collisions: List[int]
     used_new_matrix_positions: Set[Tuple[int, int]]
     used_tried_matrix_positions: Set[Tuple[int, int]]
+    allow_private_subnets: bool
 
     def __init__(self):
         self.clear()
@@ -190,6 +191,10 @@ class AddressManager:
         self.tried_collisions = []
         self.used_new_matrix_positions = set()
         self.used_tried_matrix_positions = set()
+        self.allow_private_subnets = False
+
+    def make_private_subnets_valid(self):
+        self.allow_private_subnets = True
 
     # Use only this method for modifying new matrix.
     def _set_new_matrix(self, row: int, col: int, value: int):
@@ -293,7 +298,7 @@ class AddressManager:
     def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int):
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
-        if not addr.is_valid():
+        if not addr.is_valid(self.allow_private_subnets):
             return
         if info is None:
             return
@@ -358,7 +363,7 @@ class AddressManager:
             addr.host,
             addr.port,
         )
-        if not peer_info.is_valid():
+        if not peer_info.is_valid(self.allow_private_subnets):
             return False
         (info, node_id) = self.find_(peer_info)
         if info is not None and info.peer_info.host == addr.host and info.peer_info.port == addr.port:
@@ -539,7 +544,7 @@ class AddressManager:
             rand_pos = randrange(len(self.random_pos) - n) + n
             self.swap_random_(n, rand_pos)
             info = self.map_info[self.random_pos[n]]
-            if not info.peer_info.is_valid():
+            if not info.peer_info.is_valid(self.allow_private_subnets):
                 continue
             if not info.is_terrible():
                 cur_peer_info = TimestampedPeerInfo(
