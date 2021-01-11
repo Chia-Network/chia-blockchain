@@ -30,6 +30,7 @@ async def empty_blockchain():
 
     await connection.close()
     bc1.shut_down()
+    db_path.unlink()
 
 
 @pytest.fixture(scope="function")
