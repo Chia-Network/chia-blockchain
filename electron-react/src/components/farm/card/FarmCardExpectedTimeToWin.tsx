@@ -37,8 +37,7 @@ export default function FarmCardExpectedTimeToWin() {
       tooltip={
         <Trans id="FarmCardExpectedTimeToWin.tooltip">
           You have {(proportion * 100).toFixed(4)}% of the space on the network,
-          so farming a block will take
-          {totalHours} in expectation
+          so farming a block will take {totalHours} in expectation.
         </Trans>
       }
     />

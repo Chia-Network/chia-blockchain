@@ -794,12 +794,10 @@ msgid "FarmCardTotalSizeOfPlots.title"
 msgstr "Total Size of Plots"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:47
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
 msgid "FarmFullNodeConnections.actions"
 msgstr "Actions"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:70
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Connection Status:"
 
@@ -808,26 +806,22 @@ msgid "FarmFullNodeConnections.date"
 msgstr "Date"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:62
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
 msgid "FarmFullNodeConnections.description"
-msgstr "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+msgstr "The full node that your farmer is connected to is below. <0>Learn more</0>"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:11
 msgid "FarmFullNodeConnections.height"
 msgstr "Height"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:25
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
 msgid "FarmFullNodeConnections.hostName"
 msgstr "Host Name"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 msgid "FarmFullNodeConnections.nodeId"
 msgstr "Node ID"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:32
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
@@ -840,15 +834,14 @@ msgid "FarmFullNodeConnections.title"
 msgstr "Your Full Node Connection"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "FarmFullNodeConnections.upDown"
 msgstr "Up/Down"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:38
+#: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:44
+#: src/components/farm/FarmLastAttemptedProof.tsx:43
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr "But you are currently farming <0/>"
 
@@ -901,9 +894,37 @@ msgstr "Add a Plot"
 msgid "FarmOverviewHero.description"
 msgstr "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
+msgid "FarmYourHarvesterNetwork.actions"
+msgstr "Actions"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
+msgid "FarmYourHarvesterNetwork.connectionStatus"
+msgstr "Connection Status:"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
+msgid "FarmYourHarvesterNetwork.description"
+msgstr "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
+msgid "FarmYourHarvesterNetwork.hostName"
+msgstr "Host Name"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:20
+msgid "FarmYourHarvesterNetwork.nodeId"
+msgstr "Node ID"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+msgid "FarmYourHarvesterNetwork.port"
+msgstr "Port"
+
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:60
 msgid "FarmYourHarvesterNetwork.title"
 msgstr "Your Harvester Network"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
+msgid "FarmYourHarvesterNetwork.upDown"
+msgstr "Up/Down"
 
 #: src/components/farm/Farm.tsx:13
 msgid "Farmer.title"
@@ -941,7 +962,7 @@ msgstr "Farming"
 
 #: src/components/farm/FarmerStatus.tsx:39
 msgid "FarmerStatus.synching"
-msgstr "Synching"
+msgstr "Syncing"
 
 #: src/components/farmer/Farmer.jsx:238
 #~ msgid "FarmerStatus.title"
@@ -1064,17 +1085,14 @@ msgid "Plot.title"
 msgstr "Plot"
 
 #: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "PlotAction.deleteButton"
 msgstr "Delete"
 
 #: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "PlotAction.deleteDescription"
 msgstr "Are you sure you want to delete the plot? The plot cannot be recovered."
 
 #: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "PlotAction.deleteTitle"
 msgstr "Delete Plot"
 
@@ -1253,6 +1271,18 @@ msgstr "Local Harvester Plots"
 #: src/components/plot/overview/PlotOverviewPlots.tsx:82
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr "Total Plot Size:"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+msgid "PlotQueueAction.deleteButton"
+msgstr "Delete"
+
+#: src/components/plot/queue/PlotQueueActions.tsx:27
+msgid "PlotQueueAction.deleteDescription"
+msgstr "Are you sure you want to delete the plot? The plot cannot be recovered."
+
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+msgid "PlotQueueAction.deleteTitle"
+msgstr "Delete Plot"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "PlotQueueIndicator.error"

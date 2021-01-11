@@ -43,8 +43,7 @@ export default function FarmLastAttemptedProof() {
       )}
       tooltip={(
         <Trans id="FarmLastAttemptedProof.tooltip">
-          This table shows you the last time your farm attempted to win a
-          block a block challenge.
+          This table shows you the last time your farm attempted to win a block challenge.
         </Trans>
       )}
     >
