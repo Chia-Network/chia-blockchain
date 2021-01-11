@@ -48,6 +48,10 @@ function Iterator(props: any) {
   function handleTextFieldChange(
     e: InputEvent & { target: { id: number; value: string } },
   ) {
+    /* TODO: (Zlatko)
+    Pre fill Trie (src/util/trie.js) with words from english.txt
+    Find current input in trie and either show mnemonic suggestion | error 
+    */
     if (!e.target) {
       return;
     }
