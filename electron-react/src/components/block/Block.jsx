@@ -229,8 +229,8 @@ export default function Block() {
       value: newPlotId,
       tooltip: (
         <Trans id="Block.plotIdTooltip">
-          The seed used to create the plot, this depends on the pool pk and plot
-          pk
+          The seed used to create the plot.
+          This depends on the pool pk and plot pk.
         </Trans>
       ),
     },
@@ -255,7 +255,7 @@ export default function Block() {
       value: `${chia_cb} TXCH`,
       tooltip: (
         <Trans id="Block.coinbaseAmountTooltip">
-          The chia block reward, goes to the pool (or farmer if not pooling)
+          This is the chia block reward which goes to the pool (or farmer if not pooling)
         </Trans>
       ),
     },
@@ -268,7 +268,7 @@ export default function Block() {
       value: `${chia_fees} TXCH`,
       tooltip: (
         <Trans id="Block.feesAmountTooltip">
-          The total fees in this block, goes to the farmer
+          The total transactions fees in this block. Rewarded to the farmer.
         </Trans>
       ),
     },
