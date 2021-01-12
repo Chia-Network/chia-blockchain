@@ -16,10 +16,9 @@ for setuptools_scm/PEP 440 reasons.
 - New consensus means this is a very hard fork. All of your TXCH from Beta 17/18 will be gone. Your plots and keys will work just fine however. You will have to sync to the new chain.
 - You now have to sync 16 times more "blocks" for every 5 minutes of historical time so syncing is slower than it was on the old chain. We're aware of this and will be speeding it up and addresing blockchain database growth in the nest couple of releases.
 - Prior to this Beta 19, we had block times that targeted 5 minutes and rewarded 16 TXCH to one farmer. Moving forward we have epoch times that target 10 minutes and reward 32 TXCH to 32 farmers about every 17-18 seconds over that period. This has subtle naming and UI impacts in various places.
--Total transaction throughput is still targeted at 2.1x Bitcoin's throughput per hour but you will get more confirmations on a transaction much faster. This release has the errata that it doesn't limit transaction block size correctly.
+- Total transaction throughput is still targeted at 2.1x Bitcoin's throughput per hour but you will get more confirmations on a transaction much faster. This release has the errata that it doesn't limit transaction block size correctly.
 - For testing purposes this chain is quickly halving block rewards. By the time you're reading this and using the chain, farmers and pools will be receiving less than 1 TXCH for each block won as if it were 15-20 years from now. Block rewards are given in two components, 7/8's to the pool key and 1/8 to the farmer. The farmer also receives any transaction fees from the block.
-- With the change to new consensus many components of the chain and local database are not yet stored optimally. Startup and sync times may be slower than usual so please be patient. This will improve next release.
-- You can now plot in parallel using the GUI.
+- You can now plot in parallel using the GUI. A known limitation is that you can't yet specify that you want 4 sets of two parallel plots. Each parallel plot added starts immediately parallel. We will continue to improve this.
 - The GUI now warns if you attempt to create a plot smaller than k=32.
 - Added Chinese language localization (zh-cn). A big thank you to @goomario for their pull request!
 - You can now specify which private key to use for `chia plots create`. After obtaining the fingerprint from `chia keys show`, try `chia plots create -a FINGERPRINT`. Thanks to @eFishCent for this pull request!
@@ -50,6 +49,9 @@ for setuptools_scm/PEP 440 reasons.
 - aiohttp, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
 - Tests now place a cache of blocks and plots in the ~/.chia/ directory to speed up total testing time.
 - Changes were made to chiapos to correctly support the new bitfiled backpropogation on FreeBSD and OpenBSD. With the exception of needing to work around python cryptography as outlined on the wiki, FreeBSD and OpenBSD should be able to compile and run chia-blockchain.
+- With the change to new consensus many components of the chain and local database are not yet stored optimally. Startup and sync times may be slower than usual so please be patient. This will improve next release.
+- Errata: Coinbase amount is missing from the GUI Block view.
+- Eratta: wallet Backup, and Fly-sync on the wallet are currently not working.
 
 ### Fixed
 
