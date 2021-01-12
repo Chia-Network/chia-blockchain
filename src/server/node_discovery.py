@@ -57,6 +57,7 @@ class FullNodeDiscovery:
         self.log = log
         self.relay_queue = None
         self.address_manager = None
+        self.connection_time_pretest = {}
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
@@ -120,7 +121,12 @@ class FullNodeDiscovery:
             and self.server._local_type is NodeType.FULL_NODE
             and self.address_manager is not None
         ):
-            await self.address_manager.connect(peer.get_peer_info())
+            peer_info = peer.get_peer_info()
+            if peer_info.host not in self.connection_time_pretest:
+                self.connection_time_pretest[peer_info.host] = time.time()
+            if time.time() - self.connection_time_pretest[peer_info.host] > 600:
+                self.connection_time_pretest[peer_info.host] = time.time()
+                await self.address_manager.connect(peer_info)
 
     def _num_needed_peers(self) -> int:
         diff = self.target_outbound_count
