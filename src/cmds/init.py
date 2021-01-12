@@ -23,7 +23,7 @@ import yaml
 
 from src.ssl.create_ssl import generate_selfsigned_cert
 from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pool_sk
-from src.util.chech32 import encode_puzzle_hash
+from src.util.chech32m import encode_puzzle_hash
 
 
 def make_parser(parser: ArgumentParser):

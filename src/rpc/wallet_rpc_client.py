@@ -4,7 +4,7 @@ from src.rpc.rpc_client import RpcClient
 from src.wallet.transaction_record import TransactionRecord
 from src.util.ints import uint64, uint32
 from src.types.sized_bytes import bytes32
-from src.util.chech32 import decode_puzzle_hash
+from src.util.chech32m import decode_puzzle_hash
 
 
 class WalletRpcClient(RpcClient):

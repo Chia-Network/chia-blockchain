@@ -4,7 +4,7 @@ from typing import List
 from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
-from src.util.chech32 import encode_puzzle_hash
+from src.util.chech32m import encode_puzzle_hash
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
