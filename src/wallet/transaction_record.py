@@ -4,7 +4,6 @@ from typing import Optional, List, Tuple
 from src.types.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.hash import std_hash
 from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32, uint64, uint8
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -17,7 +16,8 @@ class TransactionRecord(Streamable):
     Used for storing transaction data and status in wallets.
     """
 
-    confirmed_at_index: uint32
+    confirmed_at_sub_height: uint32
+    confirmed_at_height: uint32
     created_at_time: uint64
     to_puzzle_hash: bytes32
     amount: uint64
@@ -33,12 +33,8 @@ class TransactionRecord(Streamable):
     # included it in the mempool, and what the error message (if any) was
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
-    type: uint32
-
-    def name(self) -> bytes32:
-        if self.spend_bundle:
-            return self.spend_bundle.name()
-        return std_hash(bytes(self.to_puzzle_hash) + bytes(self.created_at_time) + bytes(self.amount))
+    type: uint32  # TransactionType
+    name: bytes32
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success, we set it to success

@@ -39,6 +39,7 @@ class FarmerAPI:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
             self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
+        self.farmer.state_changed("proof", {"proof": new_proof_of_space})
         max_pos_per_sp = 5
         if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
             self.farmer.log.warning(
@@ -75,7 +76,7 @@ class FarmerAPI:
             # Double check that the iters are good
             assert required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters)
 
-            self.farmer.state_changed("proof", new_proof_of_space.sp_hash)
+            self.farmer.state_changed("proof", {"proof": new_proof_of_space})
 
             # Proceed at getting the signatures for this PoSpace
             request = harvester_protocol.RequestSignatures(
@@ -246,7 +247,7 @@ class FarmerAPI:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = uint64(int(time.time()))
-        self.farmer.state_changed("signage_point", new_signage_point.challenge_chain_sp)
+        self.farmer.state_changed("signage_point", {"sp_hash": new_signage_point.challenge_chain_sp})
 
     @api_request
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues):

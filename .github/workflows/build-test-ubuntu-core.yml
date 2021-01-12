@@ -1,11 +1,10 @@
-name: Build and test Ubuntu
-
+name: Build and test Ubuntu Core
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Build and test Ubuntu
+    name: Build and test Ubuntu Core
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
@@ -93,4 +92,4 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests -s -v --durations 0
+        ./venv/bin/py.test tests/core -s -v --durations 0
