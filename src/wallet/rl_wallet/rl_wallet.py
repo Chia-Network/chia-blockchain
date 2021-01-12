@@ -453,7 +453,7 @@ class RLWallet:
         return None
 
     async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
-        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+        rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
         for coin_record in rl_coins:
