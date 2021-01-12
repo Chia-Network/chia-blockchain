@@ -128,7 +128,7 @@ class WalletBlockchain:
                 break
             curr = self.sub_blocks[curr.prev_hash]
 
-        assert len(self.sub_blocks) == len(self.sub_height_to_hash) == self.peak_sub_height + 1
+        assert len(self.sub_height_to_hash) == self.peak_sub_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
         """
@@ -255,10 +255,6 @@ class WalletBlockchain:
 
             # Rollback to fork
             # TODO(straya): reorg coins based on height not sub-block height
-            self.log.info(
-                f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, "
-                f"{peak.height}"
-            )
             if fork_h == -1:
                 await self.reorg_rollback(-1)
             else:
