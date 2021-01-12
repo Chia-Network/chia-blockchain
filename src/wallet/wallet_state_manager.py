@@ -732,7 +732,6 @@ class WalletStateManager:
 
         # Find fork point
         if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
-            self.log.info("not genesis")
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
                 self.blockchain.sub_blocks,
@@ -847,7 +846,6 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        self.log.info(f"Rolling back to sub_height: {sub_height}")
         await self.coin_store.rollback_to_block(sub_height)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(sub_height)
