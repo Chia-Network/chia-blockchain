@@ -390,7 +390,7 @@ class WalletRpcApi:
 
         return {
             "transaction": tr,
-            "transaction_id": tr.name(),
+            "transaction_id": tr.name,
         }
 
     async def get_transactions(self, request: Dict) -> Dict:
@@ -454,7 +454,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": tx,
-            "transaction_id": tx.name(),
+            "transaction_id": tx.name,
         }
 
     async def create_backup(self, request):
@@ -500,7 +500,7 @@ class WalletRpcApi:
 
         return {
             "transaction": tx,
-            "transaction_id": tx.name(),
+            "transaction_id": tx.name,
         }
 
     async def cc_get_colour(self, request):
@@ -644,7 +644,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": tx,
-            "transaction_id": tx.name(),
+            "transaction_id": tx.name,
         }
 
     async def add_rate_limited_funds(self, request):
