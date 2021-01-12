@@ -511,6 +511,7 @@ class WalletNode:
             for peer in peers:
                 try:
                     await self.fetch_blocks_and_validate(peer, start_height, end_height)
+                    break
                 except Exception as e:
                     await peer.close()
                     exc = traceback.format_exc()
