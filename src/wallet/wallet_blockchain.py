@@ -139,10 +139,14 @@ class WalletBlockchain:
         return self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
 
     async def get_full_peak(self) -> Optional[HeaderBlock]:
+        """ Return a peak transaction block"""
         if self.peak_sub_height is None:
             return None
-        """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_header_block(self.sub_height_to_hash[self.peak_sub_height])
+        curr: SubBlockRecord = self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
+        while curr is not None and not curr.is_block:
+            curr = self.sub_blocks.get(curr.prev_hash, None)
+
+        block = await self.block_store.get_header_block(curr.header_hash)
         assert block is not None
         return block
 
