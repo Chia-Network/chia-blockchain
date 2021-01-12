@@ -8,7 +8,7 @@
 # from tests.setup_nodes import setup_simulators_and_wallets, bt
 # from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 # from tests.time_out_assert import time_out_assert
-# from src.util.chech32 import encode_puzzle_hash
+# from src.util.chech32m import encode_puzzle_hash
 # from src.rpc.wallet_rpc_client import WalletRpcClient
 # from src.rpc.wallet_rpc_api import WalletRpcApi
 # from src.rpc.rpc_server import start_rpc_server
