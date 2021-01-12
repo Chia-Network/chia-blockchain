@@ -70,6 +70,9 @@ Write-Output "   ---"
 npm install --save-dev electron-winstaller
 npm install -g electron-packager
 npm install
+npm run locale:extract
+npm run locale:compile
+
 
 Write-Output "   ---"
 Write-Output "Electron package Windows Installer"

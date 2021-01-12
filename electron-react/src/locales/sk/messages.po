@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:525
+#: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "AddressCard.address"
 msgstr "Adresa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:529
+#: src/components/wallet/standard/WalletStandard.tsx:436
 msgid "AddressCard.copy"
 msgstr "Kopírovať"
 
-#: src/components/wallet/standard/WalletStandard.tsx:541
+#: src/components/wallet/standard/WalletStandard.tsx:448
 msgid "AddressCard.newAddress"
 msgstr "Nová adresa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:517
+#: src/components/wallet/standard/WalletStandard.tsx:424
 msgid "AddressCard.title"
 msgstr "Adresa príjemcu"
 
@@ -49,59 +49,59 @@ msgstr "Pripájanie k peňaženke"
 msgid "Application.loggingIn"
 msgstr "Prihlasovanie"
 
-#: src/components/wallet/standard/WalletStandard.tsx:203
+#: src/components/wallet/standard/WalletStandard.tsx:202
 msgid "BalanceCard.balance"
 msgstr "Zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:240
+#: src/components/wallet/standard/WalletStandard.tsx:239
 msgid "BalanceCard.pendingBalance"
 msgstr "Nespracovaný zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:242
+#: src/components/wallet/standard/WalletStandard.tsx:241
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nie sú zahrnuté do blockchainu). To nezahŕňa odmeny za ťažbu."
 
-#: src/components/wallet/standard/WalletStandard.tsx:254
+#: src/components/wallet/standard/WalletStandard.tsx:253
 msgid "BalanceCard.pendingChange"
 msgstr "Nespracované zmeny"
 
-#: src/components/wallet/standard/WalletStandard.tsx:256
+#: src/components/wallet/standard/WalletStandard.tsx:255
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale zatiaľ neboli spracované."
 
-#: src/components/wallet/standard/WalletStandard.tsx:247
+#: src/components/wallet/standard/WalletStandard.tsx:246
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "Nespracované odmeny za ťažbu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:249
+#: src/components/wallet/standard/WalletStandard.tsx:248
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr "Toto je celková suma nedávno získaných odmien za ťažbu, ktoré boli potvrdené, ale zatiaľ nie sú vyplatiteľné. Odmeny za ťaženie sú zmrazené na 200 blokov."
 
-#: src/components/wallet/standard/WalletStandard.tsx:233
+#: src/components/wallet/standard/WalletStandard.tsx:232
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Celkový nespracovaný zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:235
+#: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
-#: src/components/wallet/standard/WalletStandard.tsx:213
+#: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.spendableBalance"
 msgstr "Disponibilný zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:213
+#: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "Toto je množstvo Chia, ktoré môžete v súčasnosti použiť na uskutočnenie transakcií. Nezahŕňa nespracované odmeny za ťažbu, nespracované prichádzajúce transakcie a Chia, ktorú ste práve minuli, ale ešte nie je v blockchaine."
 
-#: src/components/wallet/standard/WalletStandard.tsx:207
+#: src/components/wallet/standard/WalletStandard.tsx:206
 msgid "BalanceCard.totalBalance"
 msgstr "Celkový zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:207
+#: src/components/wallet/standard/WalletStandard.tsx:206
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší spoločný predok), ktorý je kontrolovaný vašimi súkromnými kľúčmi. Zahŕňa odmeny za zmrazené ťaženie, ale nie nespracované prichádzajúce a odchádzajúce transakcie."
 
-#: src/components/wallet/standard/WalletStandard.tsx:226
+#: src/components/wallet/standard/WalletStandard.tsx:225
 msgid "BalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky"
 
@@ -993,8 +993,8 @@ msgid "FullNodeStatus.title"
 msgstr "Stav siete"
 
 #: src/components/wallet/standard/WalletStandard.tsx:491
-msgid "HistoryCard.title"
-msgstr "História"
+#~ msgid "HistoryCard.title"
+#~ msgstr "História"
 
 #: src/components/core/LocaleToggle/LocaleToggle.tsx:38
 msgid "LocaleToggle.helpToTranslate"
@@ -1671,43 +1671,43 @@ msgstr "Prihlásiť sa"
 msgid "SelectKey.title"
 msgstr "Vyberte kľúč"
 
-#: src/components/wallet/standard/WalletStandard.tsx:368
+#: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "SendCard.address"
 msgstr "Adresa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:380
+#: src/components/wallet/standard/WalletStandard.tsx:379
 msgid "SendCard.amount"
 msgstr "Suma"
 
-#: src/components/wallet/standard/WalletStandard.tsx:328
+#: src/components/wallet/standard/WalletStandard.tsx:327
 msgid "SendCard.enterValidAddress"
 msgstr "Prosím zadajte platnú adresu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:310
+#: src/components/wallet/standard/WalletStandard.tsx:309
 msgid "SendCard.enterValidAmount"
 msgstr "Prosím zadajte platnú sumu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:318
+#: src/components/wallet/standard/WalletStandard.tsx:317
 msgid "SendCard.enterValidFee"
 msgstr "Prosím zadajte platný poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:395
+#: src/components/wallet/standard/WalletStandard.tsx:394
 msgid "SendCard.farm"
 msgstr "Ťažiť"
 
-#: src/components/wallet/standard/WalletStandard.tsx:385
+#: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "SendCard.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:298
+#: src/components/wallet/standard/WalletStandard.tsx:297
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr "Prosím počkajte na synchronizáciu skôr ako vytvoríte transakciu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:400
+#: src/components/wallet/standard/WalletStandard.tsx:399
 msgid "SendCard.send"
 msgstr "Poslať"
 
-#: src/components/wallet/standard/WalletStandard.tsx:353
+#: src/components/wallet/standard/WalletStandard.tsx:352
 msgid "SendCard.title"
 msgstr "Vytvoriť transakciu"
 
@@ -2001,45 +2001,45 @@ msgstr "Predať"
 msgid "TradingHistory.title"
 msgstr "História ponúk"
 
-#: src/components/wallet/standard/WalletStandard.tsx:447
+#: src/components/wallet/WalletHistory.tsx:47
 msgid "TransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/standard/WalletStandard.tsx:426
+#: src/components/wallet/WalletHistory.tsx:38
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Potvrdené na pozícii {0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/WalletHistory.tsx:32
 msgid "TransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/standard/WalletStandard.tsx:450
+#: src/components/wallet/WalletHistory.tsx:52
 msgid "TransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:423
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "TransactionTable.incoming"
 msgstr "Prichádzajúci"
 
-#: src/components/wallet/standard/WalletStandard.tsx:422
+#: src/components/wallet/WalletHistory.tsx:18
 msgid "TransactionTable.outgoing"
 msgstr "Odchádzajúci"
 
-#: src/components/wallet/standard/WalletStandard.tsx:428
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "TransactionTable.pending"
 msgstr "Spracúva sa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:444
+#: src/components/wallet/WalletHistory.tsx:42
 msgid "TransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/standard/WalletStandard.tsx:438
+#: src/components/wallet/WalletHistory.tsx:27
 msgid "TransactionTable.to"
 msgstr "Príjemca"
 
 #: src/components/wallet/standard/WalletStandard.tsx:435
-msgid "TransactionTable.type"
-msgstr "Typ"
+#~ msgid "TransactionTable.type"
+#~ msgstr "Typ"
 
 #: src/components/wallet/WalletAdd.tsx:37
 msgid "WalletAdd.description"
@@ -2052,6 +2052,14 @@ msgstr "Ďalej"
 #: src/components/wallet/WalletAdd.tsx:34
 msgid "WalletAdd.title"
 msgstr "Pridať peňaženku"
+
+#: src/components/wallet/WalletHistory.tsx:58
+msgid "WalletHistory.title"
+msgstr ""
+
+#: src/components/wallet/WalletHistory.tsx:21
+msgid "WalletHistory.type"
+msgstr ""
 
 #: src/components/wallet/WalletImport.tsx:70
 msgid "WalletImport.description"
