@@ -14,11 +14,6 @@ import {
   Typography,
   Button,
   TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
 } from '@material-ui/core';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -30,13 +25,11 @@ import {
   farm_block,
 } from '../../../modules/message';
 import { mojo_to_chia_string, chia_to_mojo } from '../../../util/chia';
-import { unix_to_short_date } from '../../../util/utils';
 import { openDialog } from '../../../modules/dialog';
 import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
 import type { RootState } from '../../../modules/rootReducer';
-import Transaction from '../../../types/Transaction';
-import TransactionType from '../../../constants/TransactionType';
+import WalletHistory from '../WalletHistory';
 
 const drawerWidth = 240;
 
@@ -602,133 +595,6 @@ function SendCard(props: SendCardProps) {
   );
 }
 
-type TransactionTableProps = {
-  wallet_id: number;
-};
-
-function TransactionTable(props: TransactionTableProps) {
-  const classes = useStyles();
-  const id = props.wallet_id;
-  const transactions = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].transactions,
-  );
-
-  if (transactions.length === 0) {
-    return <div style={{ margin: '30px' }}>No previous transactions</div>;
-  }
-
-  const incoming_string = (type: TransactionType) => {
-    const isOutgoing = [
-      TransactionType.OUTGOING, 
-      TransactionType.OUTGOING_TRADE,
-    ].includes(type);
-
-    return isOutgoing
-      ? <Trans id="TransactionTable.outgoing">Outgoing</Trans>
-      : <Trans id="TransactionTable.incoming">Incoming</Trans>;
-  };
-
-  const confirmed_to_string = (tx: Transaction) => {
-    return tx.confirmed ? (
-      <Trans id="TransactionTable.confirmedAtHeight">
-        Confirmed at height {tx.confirmed_at_index}
-      </Trans>
-    ) : (
-      <Trans id="TransactionTable.pending">Pending</Trans>
-    );
-  };
-
-  return (
-    <Paper className={classes.table_root}>
-      <Table stickyHeader className={classes.table}>
-        <TableHead>
-          <TableRow className={classes.row}>
-            <TableCell className={classes.cell_short}>
-              <Trans id="TransactionTable.type">Type</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="TransactionTable.to">To</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="TransactionTable.date">Date</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="TransactionTable.status">Status</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="TransactionTable.amount">Amount</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="TransactionTable.fee">Fee</Trans>
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody className={classes.tableBody}>
-          {transactions.map((tx) => (
-            <TableRow
-              className={classes.row}
-              key={
-                tx.to_address +
-                tx.created_at_time +
-                tx.amount +
-                // @ts-ignore
-                (tx.removals.length > 0 ? tx.removals[0].parent_coin_info : '')
-              }
-            >
-              <TableCell className={classes.cell_short}>
-                {incoming_string(tx.type)}
-              </TableCell>
-              <TableCell
-                style={{ maxWidth: '150px' }}
-                className={classes.cell_short}
-              >
-                {tx.to_address}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {unix_to_short_date(tx.created_at_time)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {confirmed_to_string(tx)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {mojo_to_chia_string(tx.amount)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {mojo_to_chia_string(tx.fee_amount)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Paper>
-  );
-}
-
-type HistoryCardProps = {
-  wallet_id: number;
-};
-
-function HistoryCard(props: HistoryCardProps) {
-  const id = props.wallet_id;
-  const classes = useStyles();
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="HistoryCard.title">History</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <TransactionTable wallet_id={id} />
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-}
-
 type AddressCardProps = {
   wallet_id: number;
 };
@@ -822,7 +688,8 @@ export default function StandardWallet(props: StandardWalletProps) {
         <BalanceCard wallet_id={id} />
         <SendCard wallet_id={id} />
         <AddressCard wallet_id={id} />
-        <HistoryCard wallet_id={id} />
+        <br />
+        <WalletHistory walletId={id} />
       </Grid>
     );
   }
