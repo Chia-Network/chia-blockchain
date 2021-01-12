@@ -57,7 +57,7 @@ class FullNodeDiscovery:
         self.log = log
         self.relay_queue = None
         self.address_manager = None
-        self.connection_time_pretest = {}
+        self.connection_time_pretest: Dict = {}
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
