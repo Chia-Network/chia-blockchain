@@ -68,6 +68,8 @@ steps:
       cd ./electron-react
       npm install
       npm audit fix
+      npm run locale:extract
+      npm run locale:compile
     displayName: "Build Electron/React UI"
 
 #  install-timelord.sh in venv
