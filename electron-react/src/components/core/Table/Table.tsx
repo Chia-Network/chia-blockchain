@@ -160,10 +160,14 @@ export default function Table(props: Props) {
 
                 let tooltipValue;
                 if (tooltip) {
-                  tooltipValue = typeof tooltip === 'function'
+                  if (tooltip === true) {
+                    tooltipValue = value;
+                  } else {
+                    tooltipValue = typeof tooltip === 'function'
                     ? tooltip(row)
                     : // @ts-ignore
                       row[tooltip];
+                  }
                 }
 
                 return (
