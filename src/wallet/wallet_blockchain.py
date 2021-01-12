@@ -142,10 +142,11 @@ class WalletBlockchain:
         """ Return a peak transaction block"""
         if self.peak_sub_height is None:
             return None
-        curr: SubBlockRecord = self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
+        curr: Optional[SubBlockRecord] = self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
         while curr is not None and not curr.is_block:
             curr = self.sub_blocks.get(curr.prev_hash, None)
-
+        if curr is None:
+            return None
         block = await self.block_store.get_header_block(curr.header_hash)
         assert block is not None
         return block
