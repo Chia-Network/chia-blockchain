@@ -240,6 +240,18 @@ class FullNode:
                 await peer.send_message(msg)
         return None
 
+    async def peak_to_wallets(self):
+        peak = self.blockchain.get_peak()
+        if peak is not None:
+            request_wallet = wallet_protocol.NewPeak(
+                peak.header_hash,
+                peak.sub_block_height,
+                peak.weight,
+                peak.sub_block_height,
+            )
+            msg = Message("new_peak", request_wallet)
+            await self.server.send_to_all([msg], NodeType.WALLET)
+
     async def send_peak_to_timelords(self):
         """
         Sends current peak to timelords
@@ -461,6 +473,9 @@ class FullNode:
             if batch_added is False:
                 self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
                 break
+
+            if any(j % 100 == 0 for j in range(i, i + batch_size)):
+                await self.peak_to_wallets()
 
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:
@@ -713,16 +728,7 @@ class FullNode:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             # Tell wallets about the new peak
-            msg = Message(
-                "new_peak",
-                wallet_protocol.NewPeak(
-                    sub_block.header_hash,
-                    sub_block.sub_block_height,
-                    sub_block.weight,
-                    fork_height,
-                ),
-            )
-            await self.server.send_to_all([msg], NodeType.WALLET)
+            await self.peak_to_wallets()
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.warning(
