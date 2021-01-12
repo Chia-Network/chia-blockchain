@@ -45,15 +45,14 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10
+      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
     displayName: "Install dependencies"
 
   - script: |
       . ./activate
       clang --version
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
-      pip install --no-index --find-links=./wheels/ chia-blockchain
-    displayName: "Build and install wheels"
+    displayName: "Build wheels"
 
   - task: NodeTool@0
     inputs:
@@ -65,7 +64,13 @@ steps:
       cd ./electron-react
       npm install
       npm audit fix
-    displayName: "Build Electron/React UI"
+    displayName: "Build Electron UI"
+
+  #  Using wheels and release style install so no sh install.sh
+  - script: |
+      . ./activate
+      pip install .
+    displayName: "Install wheels"
 
 #  install-timelord.sh in venv
 #  - script: |
