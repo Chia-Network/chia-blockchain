@@ -1711,27 +1711,27 @@ msgstr "Send"
 msgid "SendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:108
 msgid "StatusCard.connections"
 msgstr "connections:"
 
-#: src/components/wallet/Wallets.tsx:94
+#: src/components/wallet/Wallets.tsx:102
 msgid "StatusCard.height"
 msgstr "height:"
 
-#: src/components/wallet/Wallets.tsx:86
+#: src/components/wallet/Wallets.tsx:87
 msgid "StatusCard.status"
 msgstr "status:"
 
 #: src/components/wallet/Wallets.tsx:89
-msgid "StatusCard.synced"
-msgstr "synced"
+#~ msgid "StatusCard.synced"
+#~ msgstr "synced"
 
 #: src/components/wallet/Wallets.tsx:89
-msgid "StatusCard.syncing"
-msgstr "syncing"
+#~ msgid "StatusCard.syncing"
+#~ msgstr "syncing"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:82
 msgid "StatusCard.title"
 msgstr "Status"
 
@@ -2053,15 +2053,15 @@ msgstr "Next"
 msgid "WalletAdd.title"
 msgstr "New Wallet"
 
-#: src/components/wallet/WalletImport.tsx:66
+#: src/components/wallet/WalletImport.tsx:70
 msgid "WalletImport.description"
 msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 
-#: src/components/wallet/WalletImport.tsx:76
+#: src/components/wallet/WalletImport.tsx:80
 msgid "WalletImport.next"
 msgstr "Next"
 
-#: src/components/wallet/WalletImport.tsx:63
+#: src/components/wallet/WalletImport.tsx:67
 msgid "WalletImport.title"
 msgstr "Import Wallet from Mnemonics"
 
@@ -2085,15 +2085,21 @@ msgstr "connections:"
 msgid "WalletStatusCard.height"
 msgstr "height:"
 
+#: src/components/wallet/Wallets.tsx:96
+msgid "WalletStatusCard.not_synced"
+msgstr "not synced"
+
 #: src/components/wallet/WalletStatusCard.tsx:16
 msgid "WalletStatusCard.status"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:94
 msgid "WalletStatusCard.synced"
 msgstr "synced"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:92
 msgid "WalletStatusCard.syncing"
 msgstr "syncing"
 
@@ -2101,7 +2107,7 @@ msgstr "syncing"
 msgid "WalletStatusCard.title"
 msgstr "Status"
 
-#: src/components/wallet/Wallets.tsx:112
+#: src/components/wallet/Wallets.tsx:120
 msgid "Wallets.title"
 msgstr "Wallets"
 

@@ -107,6 +107,10 @@ export function StatusCard() {
   const syncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
+  const synced = useSelector(
+    (state: RootState) => state.wallet_state.status.synced,
+  );
+
   const height = useSelector(
     (state: RootState) => state.wallet_state.status.height,
   );
@@ -125,11 +129,16 @@ export function StatusCard() {
             <Trans id="StatusCard.status">status:</Trans>
           </Box>
           <Box>
-            {syncing ? (
-              <Trans id="StatusCard.syncing">syncing</Trans>
-            ) : (
-              <Trans id="StatusCard.synced">synced</Trans>
-            )}
+          {
+            (() => {
+              if (syncing)
+                 return <Trans id="WalletStatusCard.syncing">syncing</Trans>
+              if (synced)
+                 return <Trans id="WalletStatusCard.synced">synced</Trans>
+              if (!synced)
+                return <Trans id="WalletStatusCard.not_synced">not synced</Trans>
+          })()
+            }
           </Box>
         </Box>
         <Box display="flex">

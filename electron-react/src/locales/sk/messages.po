@@ -1711,27 +1711,27 @@ msgstr "Poslať"
 msgid "SendCard.title"
 msgstr "Vytvoriť transakciu"
 
-#: src/components/wallet/Wallets.tsx:100
+#: src/components/wallet/Wallets.tsx:108
 msgid "StatusCard.connections"
 msgstr "pripojenia:"
 
-#: src/components/wallet/Wallets.tsx:94
+#: src/components/wallet/Wallets.tsx:102
 msgid "StatusCard.height"
 msgstr "pozícia:"
 
-#: src/components/wallet/Wallets.tsx:86
+#: src/components/wallet/Wallets.tsx:87
 msgid "StatusCard.status"
 msgstr "stav:"
 
 #: src/components/wallet/Wallets.tsx:89
-msgid "StatusCard.synced"
-msgstr "synchronizované"
+#~ msgid "StatusCard.synced"
+#~ msgstr "synchronizované"
 
 #: src/components/wallet/Wallets.tsx:89
-msgid "StatusCard.syncing"
-msgstr "synchronizuje sa"
+#~ msgid "StatusCard.syncing"
+#~ msgstr "synchronizuje sa"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:82
 msgid "StatusCard.title"
 msgstr "Stav"
 
@@ -2053,15 +2053,15 @@ msgstr "Ďalej"
 msgid "WalletAdd.title"
 msgstr "Pridať peňaženku"
 
-#: src/components/wallet/WalletImport.tsx:66
+#: src/components/wallet/WalletImport.tsx:70
 msgid "WalletImport.description"
 msgstr "Zadaj 24 slov v presnom poradí, ktoré si si uložil pre obnovu svojej Chia peňaženky."
 
-#: src/components/wallet/WalletImport.tsx:76
+#: src/components/wallet/WalletImport.tsx:80
 msgid "WalletImport.next"
 msgstr "Ďalej"
 
-#: src/components/wallet/WalletImport.tsx:63
+#: src/components/wallet/WalletImport.tsx:67
 msgid "WalletImport.title"
 msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
 
@@ -2085,15 +2085,21 @@ msgstr "spojenia:"
 msgid "WalletStatusCard.height"
 msgstr "pozícia:"
 
+#: src/components/wallet/Wallets.tsx:96
+msgid "WalletStatusCard.not_synced"
+msgstr ""
+
 #: src/components/wallet/WalletStatusCard.tsx:16
 msgid "WalletStatusCard.status"
 msgstr "stav:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:94
 msgid "WalletStatusCard.synced"
 msgstr "synchronizované"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:92
 msgid "WalletStatusCard.syncing"
 msgstr "synchronizuje sa"
 
@@ -2101,7 +2107,7 @@ msgstr "synchronizuje sa"
 msgid "WalletStatusCard.title"
 msgstr "Stav"
 
-#: src/components/wallet/Wallets.tsx:112
+#: src/components/wallet/Wallets.tsx:120
 msgid "Wallets.title"
 msgstr "Peňaženky"
 
