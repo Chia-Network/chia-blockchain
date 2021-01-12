@@ -106,7 +106,8 @@
 #         assert cc_wallet.cc_info.my_genesis_checker is not None
 #         colour = cc_wallet.get_colour()
 #
-#         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
+#         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2,
+#         colour)
 #
 #         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 #
@@ -204,7 +205,8 @@
 #         assert cc_wallet.cc_info.my_genesis_checker is not None
 #         colour = cc_wallet.get_colour()
 #
-#         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
+#         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2,
+#         colour)
 #
 #         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 #
@@ -259,7 +261,8 @@
 #         assert cc_wallet.cc_info.my_genesis_checker is not None
 #         colour = cc_wallet.get_colour()
 #
-#         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
+#         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2,
+#         colour)
 #
 #         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 #
