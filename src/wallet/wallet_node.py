@@ -462,7 +462,8 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Loop exception in sync {e}. {tb}")
             finally:
-                self.wallet_state_manager.set_sync_mode(False)
+                if self.wallet_state_manager is not None:
+                    self.wallet_state_manager.set_sync_mode(False)
             self.log.info("Loop end in sync job")
 
     async def _sync(self):
@@ -512,6 +513,7 @@ class WalletNode:
             for peer in peers:
                 try:
                     await self.fetch_blocks_and_validate(peer, start_height, end_height)
+                    break
                 except Exception as e:
                     await peer.close()
                     exc = traceback.format_exc()

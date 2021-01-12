@@ -88,6 +88,7 @@ def configure(args, parser):
             print("Logging level updated. Check CHIA_ROOT/log/debug.log")
             change_made = True
     if change_made:
+        print("Restart any running chia services for changes to take effect.")
         save_config(args.root_path, "config.yaml", config)
     else:
         help_message()
