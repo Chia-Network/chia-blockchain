@@ -16,7 +16,7 @@ class BlockchainInterface:
     def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
         pass
 
-    def get_ses_heights(self) -> List[bytes32]:
+    def get_ses_heights(self) -> List[uint32]:
         pass
 
     def get_ses(self, height: uint32) -> SubEpochSummary:

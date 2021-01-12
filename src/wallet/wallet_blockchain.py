@@ -402,7 +402,7 @@ class WalletBlockchain(BlockchainInterface):
         assert header_hash is not None
         return self.sub_block_record(header_hash)
 
-    def get_ses_heights(self) -> List[bytes32]:
+    def get_ses_heights(self) -> List[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
