@@ -6,12 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [1.0beta19] aka Beta 1.19 - 2021-01-12
 
 ### Added
 
 - Welcome to the new consensus. This release is an all but a full re-write of the blockchain in under 30 days. There is now only one tip of the blockchain but we went from two chains to three. Block times are now a little under a minute but there are a couple of sub blocks between each transaction block. A block is also itself a special kind of sub block and each sub block rewards the farmer who won it 1 TXCH. Sub blocks come, on average, about every 17 to 18 seconds.
-- Starting with this Beta, there are 4068 opportunities per day for a farmer to win 1 TXCH compared to Beta 18 where there were 288 opportunities per day for a farmer to win 16 TXCH.
+- Starting with this Beta, there are 4608 opportunities per day for a farmer to win 1 TXCH compared to Beta 18 where there were 288 opportunities per day for a farmer to win 16 TXCH.
 - There is a lot more information and explanation of the new consensus algorithm in the New Consensus Working Document linked from [chia.net](https://chia.net/). Among the improvements this gives the Chia blockchain are a much higher security level against all attacks, more frequent transaction blocks that have less time variation between them and are then buried under confirmations (sub blocks also count towards re-org security) much more quickly.
 - New consensus means this is a very hard fork. All of your TXCH from Beta 17/18 will be gone. Your plots and keys will work just fine however. You will have to sync to the new chain.
 - You now have to sync 16 times more "blocks" for every 5 minutes of historical time so syncing is slower than it was on the old chain. We're aware of this and will be speeding it up and addresing blockchain database growth in the nest couple of releases.
