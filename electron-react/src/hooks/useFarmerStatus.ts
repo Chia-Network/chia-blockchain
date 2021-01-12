@@ -16,7 +16,7 @@ function getFarmerStatus(
     return FarmerStatus.ERROR;
   }
 
-  if (connected && running) {
+  if (!blockchainSynching && blockchainSynced && connected && running) {
     return FarmerStatus.FARMING;
   }
 
