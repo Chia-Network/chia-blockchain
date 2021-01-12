@@ -460,7 +460,8 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Loop exception in sync {e}. {tb}")
             finally:
-                self.wallet_state_manager.set_sync_mode(False)
+                if self.wallet_state_manager is not None:
+                    self.wallet_state_manager.set_sync_mode(False)
             self.log.info("Loop end in sync job")
 
     async def _sync(self):
