@@ -13,6 +13,7 @@ type IncomingState = {
     connections: [];
     connection_count: number;
     syncing: boolean;
+    synced: boolean;
     height?: number;
   };
   send_transaction_result?: string | null;
@@ -31,6 +32,7 @@ const initialState: IncomingState = {
     connections: [],
     connection_count: 0,
     syncing: false,
+    synced: false,
   },
   show_create_backup: false,
 };
@@ -217,7 +219,11 @@ export default function incomingReducer(
         if (data.success) {
           return {
             ...state,
-            status: { ...state.status, syncing: data.syncing },
+            status: {
+              ...state.status,
+              syncing: data.syncing,
+              synced: data.synced,
+            },
           };
         }
       } else if (command === 'cc_get_colour') {
