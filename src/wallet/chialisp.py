@@ -67,8 +67,18 @@ def sha256(*argv):
     return apply("sha256", argv)
 
 
+SHA256TREE_PROG = """
+((c (q ((c 2 (c 2 (c 3 (q ()))))))
+    (c (q ((c (i (l 5)
+                 (q (sha256 (q 2)
+                            ((c 2 (c 2 (c 9 (q ())))))
+                            ((c 2 (c 2 (c 13 (q ())))))))
+                 (q (sha256 (q 1) 5))) 1))) %s)))
+"""
+
+
 def sha256tree(*argv):
-    return apply("sha256tree", argv)
+    return SHA256TREE_PROG % argv[0]
 
 
 def equal(*argv):

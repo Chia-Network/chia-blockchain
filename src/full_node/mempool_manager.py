@@ -27,6 +27,7 @@ from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
 
+from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 
 log = logging.getLogger(__name__)
 
@@ -124,6 +125,7 @@ class MempoolManager:
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list, cost = calculate_cost_of_program(program, self.constants.CLVM_COST_RATIO_CONSTANT, True)
         if fail_reason:
+            debug_spend_bundle.debug_spend_bundle(new_spend)
             return None, MempoolInclusionStatus.FAILED, fail_reason
 
         # build removal list
