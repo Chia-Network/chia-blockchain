@@ -15,6 +15,7 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import streamable, Streamable
+from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
     rl_make_aggregation_puzzle,
@@ -328,10 +329,8 @@ class RLWallet:
         self.rl_coin_record = await self._get_rl_coin_record()
         if self.rl_coin_record is None:
             return uint64(0)
-        # TODO get proper peak here
-        lca_header_hash = self.wallet_state_manager.lca
-        lca = self.wallet_state_manager.block_records[lca_header_hash]
-        height = lca.height
+        peak = await self.wallet_state_manager.blockchain.get_full_peak()
+        height = peak.height if peak else 0
         assert self.rl_info.limit is not None
         unlocked = int(
             ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
