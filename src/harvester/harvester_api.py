@@ -88,8 +88,12 @@ class HarvesterAPI:
                 quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
             except Exception as e:
                 self.harvester.log.error(f"Error using prover object. Reinitializing prover object. {e}")
-                self.harvester.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
-                return []
+                try:
+                    self.harvester.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
+                except Exception as e:
+                    self.harvester.log.error(f"Error reinitializing. Will not try to farm plot. {e}")
+                    self.harvester.provers.pop(filename)
+                    return []
 
             responses: List[Tuple[bytes32, ProofOfSpace]] = []
             if quality_strings is not None:
