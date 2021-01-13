@@ -26,6 +26,7 @@ class FullNodeRpcApi:
             "/get_sub_block": self.get_sub_block,
             "/get_sub_block_record_by_sub_height": self.get_sub_block_record_by_sub_height,
             "/get_sub_block_record": self.get_sub_block_record,
+            "/get_sub_block_records": self.get_sub_block_records,
             "/get_unfinished_sub_block_headers": self.get_unfinished_sub_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_unspent_coins": self.get_unspent_coins,
@@ -166,6 +167,28 @@ class FullNodeRpcApi:
                 json["header_hash"] = block.header_hash.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
+
+    async def get_sub_block_records(self, request: Dict) -> Optional[Dict]:
+        if "start" not in request:
+            raise ValueError("No start in request")
+        if "end" not in request:
+            raise ValueError("No end in request")
+
+        start = int(request["start"])
+        end = int(request["end"])
+        records = []
+        for a in range(start, end):
+            header_hash: Optional[bytes32] = self.service.blockchain.sub_height_to_hash.get(uint32(a), None)
+            if header_hash is None:
+                continue
+            record: Optional[SubBlockRecord] = self.service.blockchain.sub_blocks.get(header_hash, None)
+            if record is None:
+                # Fetch from DB
+                record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
+            if record is None:
+                raise ValueError(f"Sub block {header_hash.hex()} does not exist")
+            records.append(record)
+        return {"sub_block_records": records}
 
     async def get_sub_block_record_by_sub_height(self, request: Dict) -> Optional[Dict]:
         if "sub_height" not in request:
