@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 import pytest
 import logging
@@ -11,6 +10,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
 from src.util.errors import Err, ConsensusError
+from src.util.ints import uint64
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
