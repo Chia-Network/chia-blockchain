@@ -108,7 +108,7 @@ class WalletBlockchain(BlockchainInterface):
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
+        self.__sub_blocks, peak = await self.block_store.get_sub_block_records()
         self.__sub_height_to_hash = {}
         self.__sub_epoch_summaries = {}
         self.__sub_heights_in_cache = {}
