@@ -19,9 +19,7 @@ def event_loop():
 class TestCCWallet:
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(
-            1, 2, {}
-        ):
+        async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
     @pytest.mark.asyncio
@@ -37,29 +35,19 @@ class TestCCWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(
-            PeerInfo("localhost", uint16(full_node_server._port)), None
-        )
-        await wallet_server_1.start_client(
-            PeerInfo("localhost", uint16(full_node_server._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await wallet_server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
-        rl_admin: RLWallet = await RLWallet.create_rl_admin(
-            wallet_node.wallet_state_manager
-        )
+        rl_admin: RLWallet = await RLWallet.create_rl_admin(wallet_node.wallet_state_manager)
 
-        rl_user: RLWallet = await RLWallet.create_rl_user(
-            wallet_node_1.wallet_state_manager
-        )
+        rl_user: RLWallet = await RLWallet.create_rl_user(wallet_node_1.wallet_state_manager)
         interval = uint64(2)
         limit = uint64(1)
         amount = uint64(100)
-        await rl_admin.admin_create_coin(
-            interval, limit, rl_user.rl_info.user_pubkey.hex(), amount, 0
-        )
+        await rl_admin.admin_create_coin(interval, limit, rl_user.rl_info.user_pubkey.hex(), amount, 0)
         origin = rl_admin.rl_info.rl_origin
         admin_pubkey = rl_admin.rl_info.admin_pubkey
 
