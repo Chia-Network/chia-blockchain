@@ -51,6 +51,11 @@ def calculate_cost_of_program(
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_CONSUMED.value
             elif condition is ConditionOpcode.ASSERT_FEE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_FEE.value
+            # TODO: give these real values
+            elif condition is ConditionOpcode.CREATE_ANNOUNCEMENT:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
+            elif condition is ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_CONSUMED.value
             else:
                 # We ignore unknown conditions in order to allow for future soft forks
                 pass

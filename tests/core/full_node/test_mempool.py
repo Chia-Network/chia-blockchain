@@ -537,7 +537,7 @@ class TestMempool:
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
 
-        announce = Announcement(coin_2.name(), "test")
+        announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
         cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name(), None)
 
@@ -578,7 +578,7 @@ class TestMempool:
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
 
-        announce = Announcement(coin_2.name(), "test")
+        announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
         cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name())
 
@@ -622,7 +622,7 @@ class TestMempool:
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
 
-        announce = Announcement(coin_1.name(), "test")
+        announce = Announcement(coin_1.name(), bytes("test", "utf-8"))
 
         cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name())
 

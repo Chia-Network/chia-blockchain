@@ -88,7 +88,7 @@ def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bund
     """
     announcements = spend_bundle.announcements()
     announcement_hash = condition.vars[0]
-    if announcement_hash not in [a.name() for a in announcements]:
+    if announcement_hash not in [ann.name() for ann in announcements]:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     return None
@@ -129,6 +129,7 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
                 elif not safe_mode:
                     opcode = ConditionOpcode.UNKNOWN
                 else:
+                    breakpoint()
                     return "Unknown operator in safe mode.", None, None
                 if len(list(cond.as_iter())) > 1:
                     cond_var_list = []
