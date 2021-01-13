@@ -27,8 +27,6 @@ from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
 
-from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
-
 log = logging.getLogger(__name__)
 
 
