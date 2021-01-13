@@ -9,12 +9,16 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased
 
 ### Added
+- Plotting now checks to see if there are MacOS created `._` plot files and ignores them.
 
 ### Changed
+- Node sync is now multithreaded and much quicker.
 - Peer gossip is faster and smarter. It also will no longer accidentally gossip a private IP address to another peer.
+- If harvester hits an exception it will be caught, logged and skipped. This normally happens if it attempts to harvest a plot file you are still copying in.
+- The Rate Limited wallet has been updated to work in new consensus.
 
 ### Fixed
-- There was a bug in block reorg code that would keep a peer with a lower weight chain from validating and syncing to a higher weight chain when the node thought it had a double spend in the other chain. This caused a persistant chain split.
+- There was a bug in block reorg code that would keep a peer with a lower weight chain from validating and syncing to a higher weight chain when the node thought it had a double spend in the other chain. This caused a persistent chain split.
 
 ## [1.0beta19] aka Beta 1.19 - 2021-01-12
 

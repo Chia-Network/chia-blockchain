@@ -37,8 +37,8 @@ def _get_filenames(directory: Path) -> List[Path]:
     try:
         for child in directory.iterdir():
             if not child.is_dir():
-                # If it is a file ending in .plot, add it
-                if child.suffix == ".plot":
+                # If it is a file ending in .plot, add it - work around MacOS ._ files
+                if child.suffix == ".plot" and not child.name.startswith("._"):
                     all_files.append(child)
             else:
                 log.info(f"Not checking subdirectory {child} - no .plot files found")
