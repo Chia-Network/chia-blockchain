@@ -113,8 +113,7 @@ class TestRLWallet:
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
         address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
         assert await receiving_wallet.get_spendable_balance() == 0
-        val = await api_user.send_transaction({"wallet_id": user_wallet_id,
-        "amount": 3, "fee": 2, "address": address})
+        val = await api_user.send_transaction({"wallet_id": user_wallet_id, "amount": 3, "fee": 2, "address": address})
         assert "transaction_id" in val
 
         async def is_transaction_in_mempool(api, tx_id: bytes32) -> bool:
