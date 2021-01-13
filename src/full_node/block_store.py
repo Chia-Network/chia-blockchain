@@ -160,6 +160,29 @@ class BlockStore:
 
         return ret
 
+    async def get_sub_blocks_from_peak(self, blocks_n: int) -> (Dict[bytes32, SubBlockRecord], Optional[bytes32]):
+        """
+        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        if present.
+        """
+
+        res = await self.db.execute("SELECT * from sub_block_records WHERE is_peak = 1")
+        row = await res.fetchone()
+        await res.close()
+        if row is None:
+            return {}, None
+
+        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, SubBlockRecord] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+        print(f"loaded {len(ret)} blocks peak is {row[2]} ")
+        return ret, row[0]
+
     async def set_peak(self, header_hash: bytes32) -> None:
         cursor_1 = await self.db.execute("UPDATE sub_block_records SET is_peak=0 WHERE is_peak=1")
         await cursor_1.close()

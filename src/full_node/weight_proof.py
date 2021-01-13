@@ -51,7 +51,7 @@ class WeightProofHandler:
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
 
-        tip_rec = self.blockchain.sub_block_record(tip)
+        tip_rec = self.blockchain.try_sub_block(tip)
         if tip_rec is None:
             self.log.error("unknown tip")
             return None

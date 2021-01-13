@@ -382,7 +382,7 @@ class FullNode:
 
             fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak_hash)
             # cache warmup to fork height
-            await self.blockchain.forkpoint_warmup(fork_point_height)
+            await self.blockchain.warmup(fork_point_height)
             await self.sync_from_fork_point(fork_point_height, heaviest_peak_height, heaviest_peak_hash)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")

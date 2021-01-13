@@ -66,7 +66,7 @@ from src.wallet.derive_keys import (
     master_sk_to_wallet_sk,
 )
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from tests.consensus.block_cache import BlockCache
+from tests.core.consensus.block_cache import BlockCache
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -645,7 +645,7 @@ class BlockTools:
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
-                    BlockCache({}),
+                    BlockCache({}, {}),
                     None,
                     sub_slot_total_iters,
                     uint8(signage_point_index),

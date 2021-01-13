@@ -105,7 +105,7 @@ class Blockchain(BlockchainInterface):
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__sub_blocks, peak = await self.block_store.get_sub_block_records()
+        self.__sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
         self.__sub_heights_in_cache = {}
         self.__sub_height_to_hash = {}
         self.__sub_epoch_summaries = {}
@@ -546,7 +546,7 @@ class Blockchain(BlockchainInterface):
     def get_peak_height(self) -> Optional[uint32]:
         return self.peak_height
 
-    async def forkpoint_warmup(self, fork_point: uint32):
+    async def warmup(self, fork_point: uint32):
         # load all blocks such that fork - self.constants.SUB_BLOCKS_CACHE_SIZE -> fork in dict
         blocks = await self.block_store.get_sub_block_in_range(
             fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, fork_point

@@ -34,6 +34,9 @@ class BlockchainInterface:
     def contains_sub_height(self, height: uint32) -> bool:
         pass
 
+    async def warmup(self, fork_point: uint32):
+        pass
+
     def try_sub_block(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         if self.contains_sub_block(header_hash):
             return self.sub_block_record(header_hash)
