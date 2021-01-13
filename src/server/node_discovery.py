@@ -57,6 +57,7 @@ class FullNodeDiscovery:
         self.log = log
         self.relay_queue = None
         self.address_manager = None
+        self.connection_time_pretest: Dict = {}
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
@@ -67,6 +68,7 @@ class FullNodeDiscovery:
         else:
             await self.address_manager_store.clear()
             self.address_manager = AddressManager()
+        self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
     async def start_tasks(self):
         random = Random()
@@ -100,6 +102,31 @@ class FullNodeDiscovery:
             await self.address_manager.add_to_new_table([timestamped_peer_info], peer.get_peer_info(), 0)
             if self.relay_queue is not None:
                 self.relay_queue.put_nowait((timestamped_peer_info, 1))
+        if (
+            peer.is_outbound
+            and peer.peer_server_port is not None
+            and peer.connection_type is NodeType.FULL_NODE
+            and self.server._local_type is NodeType.FULL_NODE
+            and self.address_manager is not None
+        ):
+            msg = Message("request_peers", full_node_protocol.RequestPeers())
+            await peer.send_message(msg)
+
+    # Updates timestamps each time we receive a message for outbound connections.
+    async def update_peer_timestamp_on_message(self, peer: ws.WSChiaConnection):
+        if (
+            peer.is_outbound
+            and peer.peer_server_port is not None
+            and peer.connection_type is NodeType.FULL_NODE
+            and self.server._local_type is NodeType.FULL_NODE
+            and self.address_manager is not None
+        ):
+            peer_info = peer.get_peer_info()
+            if peer_info.host not in self.connection_time_pretest:
+                self.connection_time_pretest[peer_info.host] = time.time()
+            if time.time() - self.connection_time_pretest[peer_info.host] > 600:
+                self.connection_time_pretest[peer_info.host] = time.time()
+                await self.address_manager.connect(peer_info)
 
     def _num_needed_peers(self) -> int:
         diff = self.target_outbound_count
@@ -141,7 +168,7 @@ class FullNodeDiscovery:
                 if size == 0 or empty_tables:
                     await self._introducer_client()
                     try:
-                        await asyncio.sleep(min(30, self.peer_connect_interval))
+                        await asyncio.sleep(min(5, self.peer_connect_interval))
                     except asyncio.CancelledError:
                         return
                     empty_tables = False
@@ -190,7 +217,8 @@ class FullNodeDiscovery:
                 elif len(groups) <= 5:
                     max_tries = 25
                 while not got_peer and not self.is_closed:
-                    sleep_interval = min(15, self.peer_connect_interval)
+                    sleep_interval = 1 + len(groups) * 0.5
+                    sleep_interval = min(sleep_interval, self.peer_connect_interval)
                     try:
                         await asyncio.sleep(sleep_interval)
                     except asyncio.CancelledError:
@@ -224,7 +252,7 @@ class FullNodeDiscovery:
                         addr = None
                         continue
                     # only consider very recently tried nodes after 30 failed attempts
-                    if now - info.last_try < 3600 and tries < 30:
+                    if now - info.last_try < 600 and tries < 30:
                         continue
                     if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
                         local_peerinfo = await self.server.get_peer_info()
@@ -250,11 +278,15 @@ class FullNodeDiscovery:
                         self.log.error(f"Exception in create outbound connections: {e}")
                         self.log.error(f"Traceback: {traceback.format_exc()}")
 
-                    if connected is True:
-                        await self.address_manager.mark_good(addr)
-                        await self.address_manager.connect(addr)
+                    if self.server.is_duplicate_or_self_connection(addr):
+                        # Mark it as a softer attempt, without counting the failures.
+                        await self.address_manager.attempt(addr, False)
                     else:
-                        await self.address_manager.attempt(addr, True)
+                        if connected is True:
+                            await self.address_manager.mark_good(addr)
+                            await self.address_manager.connect(addr)
+                        else:
+                            await self.address_manager.attempt(addr, True)
 
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
@@ -283,9 +315,6 @@ class FullNodeDiscovery:
             max_timestamp_difference = 14 * 3600 * 24
             max_consecutive_failures = 10
             await asyncio.sleep(cleanup_interval)
-
-            # HACK: skip this code for now. Later, remove this "continue"
-            continue
 
             # Perform the cleanup only if we have at least 3 connections.
             full_node_connected = self.server.get_full_node_connections()
