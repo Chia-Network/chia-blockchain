@@ -125,7 +125,6 @@ class MempoolManager:
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list, cost = calculate_cost_of_program(program, self.constants.CLVM_COST_RATIO_CONSTANT, True)
         if fail_reason:
-            debug_spend_bundle.debug_spend_bundle(new_spend)
             return None, MempoolInclusionStatus.FAILED, fail_reason
 
         # build removal list
