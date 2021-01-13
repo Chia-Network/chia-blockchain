@@ -214,6 +214,7 @@ class Blockchain:
         error_code = await validate_block_body(
             self.constants,
             self.sub_blocks,
+            self.sub_height_to_hash,
             self.block_store,
             self.coin_store,
             self.get_peak(),
@@ -489,6 +490,7 @@ class Blockchain:
         error_code = await validate_block_body(
             self.constants,
             self.sub_blocks,
+            self.sub_height_to_hash,
             self.block_store,
             self.coin_store,
             self.get_peak(),
