@@ -15,7 +15,6 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import streamable, Streamable
-from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
     rl_make_aggregation_puzzle,
