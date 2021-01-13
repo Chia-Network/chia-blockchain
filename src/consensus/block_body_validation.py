@@ -39,6 +39,7 @@ log = logging.getLogger(__name__)
 async def validate_block_body(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_height_to_hash: Dict[uint32, bytes32],
     block_store: BlockStore,
     coin_store: CoinStore,
     peak: Optional[SubBlockRecord],
@@ -215,9 +216,18 @@ async def validate_block_body(
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     if peak is None or sub_height == 0:
-        fork_h: int = -1
+        fork_sub_h: int = -1
     else:
-        fork_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
+        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
+
+    if fork_sub_h == -1:
+        coin_store_reorg_height = -1
+    else:
+        last_sb_in_common = sub_blocks[sub_height_to_hash[uint32(fork_sub_h)]]
+        if last_sb_in_common.is_block:
+            coin_store_reorg_height = last_sb_in_common.height
+        else:
+            coin_store_reorg_height = last_sb_in_common.height - 1
 
     # Get additions and removals since (after) fork_h but not including this block
     additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
@@ -228,7 +238,7 @@ async def validate_block_body(
         curr: Optional[FullBlock] = await block_store.get_full_block(block.prev_header_hash)
         assert curr is not None
 
-        while curr.sub_block_height > fork_h:
+        while curr.sub_block_height > fork_sub_h:
             removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
                 removals_since_fork.add(c_name)
@@ -259,10 +269,10 @@ async def validate_block_body(
             removal_coin_records[new_unspent.name] = new_unspent
         else:
             unspent = await coin_store.get_coin_record(rem)
-            if unspent is not None and unspent.confirmed_block_index <= fork_h:
+            if unspent is not None and unspent.confirmed_block_index <= coin_store_reorg_height:
                 # Spending something in the current chain, confirmed before fork
                 # (We ignore all coins confirmed after fork)
-                if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
+                if unspent.spent == 1 and unspent.spent_block_index <= coin_store_reorg_height:
                     # Check for coins spent in an ancestor block
                     return Err.DOUBLE_SPEND
                 removal_coin_records[unspent.name] = unspent

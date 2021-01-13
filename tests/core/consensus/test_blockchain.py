@@ -16,6 +16,7 @@ from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint64, uint8, int512
+from src.util.wallet_tools import WalletTool
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
 from tests.core.fixtures import empty_blockchain  # noqa: F401
@@ -1503,6 +1504,9 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
         b = empty_blockchain
+        WALLET_A = WalletTool()
+        WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
+
         blocks = bt.get_consecutive_blocks(15)
 
         for block in blocks:
@@ -1535,3 +1539,50 @@ class TestReorgs:
         assert result == ReceiveBlockResult.NEW_PEAK
         assert found_orphan
         assert b.get_peak().sub_block_height == 17
+
+    @pytest.mark.asyncio
+    async def test_reorg_transaction(self, empty_blockchain):
+        b = empty_blockchain
+        wallet_a = WalletTool()
+        WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+        blocks = bt.get_consecutive_blocks(10, farmer_reward_puzzle_hash=coinbase_puzzlehash)
+        blocks = bt.get_consecutive_blocks(
+            2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+        )
+
+        spend_block = blocks[10]
+        spend_coin = None
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin = coin
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+
+        blocks = bt.get_consecutive_blocks(
+            2,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=spend_bundle,
+            guarantee_block=True,
+        )
+
+        blocks_fork = bt.get_consecutive_blocks(
+            1, blocks[:12], farmer_reward_puzzle_hash=coinbase_puzzlehash, seed=b"123", guarantee_block=True
+        )
+        blocks_fork = bt.get_consecutive_blocks(
+            2,
+            blocks_fork,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=spend_bundle,
+            guarantee_block=True,
+            seed=b"1245",
+        )
+        for block in blocks:
+            result, error_code, _ = await b.receive_block(block)
+            assert error_code is None and result == ReceiveBlockResult.NEW_PEAK
+
+        for block in blocks_fork:
+            result, error_code, _ = await b.receive_block(block)
+            assert error_code is None
