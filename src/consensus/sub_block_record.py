@@ -3,6 +3,7 @@ from typing import Optional, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters
+from src.types.coin import Coin
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -43,6 +44,7 @@ class SubBlockRecord(Streamable):
     timestamp: Optional[uint64]
     prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
     fees: Optional[uint64]
+    included_reward_coins: Optional[List[Coin]]
 
     # Slot (present iff this is the first SB in sub slot)
     finished_challenge_slot_hashes: Optional[List[bytes32]]
