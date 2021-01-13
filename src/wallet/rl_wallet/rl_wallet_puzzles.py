@@ -26,6 +26,7 @@ from src.wallet.chialisp import (
     sha256tree,
     cons,
     rest,
+    string,
 )
 
 
@@ -66,7 +67,7 @@ def rl_puzzle_for_pk(
             equal(args(0), hexstr(origin_id)),
         ),
         sexp(),
-        fail(quote("Parent doesnt satisfy RL conditions")),
+        fail(quote(string("Parent doesnt satisfy RL conditions"))),
     )
     TEMPLATE_BLOCK_AGE = make_if(
         iff(
@@ -84,7 +85,7 @@ def rl_puzzle_for_pk(
             ),
         ),
         make_list(hexstr(opcode_coin_block_age), args(5)),
-        fail("wrong min block time"),
+        fail(string("wrong min block time")),
     )
     TEMPLATE_MY_ID = make_list(hexstr(opcode_myid), sha256(args(0), args(1), args(2)))
     CREATE_CHANGE = make_list(hexstr(opcode_create), args(1), subtract(args(2), add(args(4), args(8))))
@@ -114,7 +115,7 @@ def rl_puzzle_for_pk(
             equal(hexstr(origin_id), args(5)),
         ),
         sexp(),
-        fail(quote("Parent doesnt satisfy RL conditions")),
+        fail(quote(string("Parent doesnt satisfy RL conditions"))),
     )
     CREATE_CONSOLIDATED = make_list(hexstr(opcode_create), args(1), (add(args(4), args(6))))
     MODE_TWO_ME_STRING = make_list(hexstr(opcode_myid), sha256(args(5), args(1), args(6)))

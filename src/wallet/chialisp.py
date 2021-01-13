@@ -111,3 +111,7 @@ def hexstr(str):
 
 def greater(*argv):
     return apply(">", argv)
+
+
+def string(str):
+    return f'"{str}"'
