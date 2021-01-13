@@ -80,6 +80,8 @@
      (defconstant CREATE_COIN 51)
      (defconstant ASSERT_COIN_CONSUMED 52)
      (defconstant ASSERT_MY_COIN_ID 53)
+     (defconstant CREATE_ANNOUNCEMENT 60)
+     (defconstant ASSERT_ANNOUNCEMENT 61)
 
      (defmacro assert items
          (if (r items)
@@ -185,12 +187,12 @@
 
      ;; calculate the coin id of a lock coin
      (defun-inline calculate-next-lock-coin-id (my-coin-info subtotal next-coin-info)
-       (sha256 (coin-id-for-coin next-coin-info) (puzzle-hash-for-lock my-coin-info subtotal) 0)
+       (sha256 (coin-id-for-coin next-coin-info) (puzzle-hash-for-lock my-coin-info subtotal))
      )
 
      ;; create the `ASSERT_COIN_CONSUMED` condition that ensures the next coin's lock is spent
      (defun-inline create-assert-next-lock-consumed-condition (my-coin-info right-subtotal next-coin-info)
-       (list ASSERT_COIN_CONSUMED
+       (list ASSERT_ANNOUNCEMENT
              (calculate-next-lock-coin-id my-coin-info
                                           right-subtotal
                                           next-coin-info
@@ -205,9 +207,8 @@
 
      ;; here we commit to O_k, I_{k+1} and S_k
      (defun-inline create-lock-coin-condition (prev-coin-info subtotal)
-       (list CREATE_COIN
+       (list CREATE_ANNOUNCEMENT
          (puzzle-hash-for-lock prev-coin-info subtotal)
-         0
        )
       )
 

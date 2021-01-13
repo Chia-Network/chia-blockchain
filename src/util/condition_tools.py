@@ -119,7 +119,7 @@ def created_announcements_for_conditions_dict(
         # maybe write a type-checking framework for conditions
         # and don't just fail with asserts
         message = cvp.vars[0]
-        announcement = Announcement(input_coin_name, message.decode("utf-8"))
+        announcement = Announcement(input_coin_name, message)
         output_announcements.append(announcement)
     return output_announcements
 
