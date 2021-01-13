@@ -56,6 +56,7 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_block=True)
 
             assert len(await client.get_unfinished_sub_block_headers()) == 0
+            assert len((await client.get_sub_block_records(0, 100))) == 0
             for block in blocks:
                 if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
                     finished_ss = block.finished_sub_slots[:-1]
@@ -86,6 +87,8 @@ class TestRpc:
             assert (await client.get_sub_block(bytes([1] * 32))) is None
 
             assert (await client.get_sub_block_record_by_sub_height(2)).header_hash == blocks[2].header_hash
+
+            assert len((await client.get_sub_block_records(0, 100))) == num_blocks + 1
 
             assert (await client.get_sub_block_record_by_sub_height(100)) is None
 
