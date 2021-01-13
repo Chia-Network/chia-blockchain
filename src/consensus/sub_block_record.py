@@ -55,7 +55,7 @@ class SubBlockRecord(Streamable):
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
 
-    # todo remove the hash lists (redundant)
+    # todo almog remove the hash lists (redundant)
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
     challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot

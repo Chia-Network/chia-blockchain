@@ -129,8 +129,7 @@ class Blockchain(BlockchainInterface):
             #  only keep last SUB_BLOCKS_CACHE_SIZE in mem
             if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
                 curr = self.__sub_blocks[curr.prev_hash]
-            self.__sub_heights_in_cache[curr.sub_block_height] = []
-            self.__sub_heights_in_cache[curr.sub_block_height].append(curr.header_hash)
+            self.__sub_heights_in_cache[curr.sub_block_height] = [curr.header_hash]
         assert len(self.__sub_height_to_hash) == self.peak_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
@@ -511,9 +510,7 @@ class Blockchain(BlockchainInterface):
         return required_iters, None
 
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
-        sub_block = self.__sub_blocks[header_hash]
-        assert sub_block is not None
-        return sub_block
+        return self.__sub_blocks[header_hash]
 
     def height_to_sub_block_record(self, sub_height: uint32) -> SubBlockRecord:
         header_hash = self.sub_height_to_hash(sub_height)
@@ -551,7 +548,7 @@ class Blockchain(BlockchainInterface):
         blocks = await self.block_store.get_sub_block_in_range(
             fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, fork_point
         )
-        self.__sub_blocks.update(blocks)
+        self.__sub_blocks = blocks
         return
 
     def clean_sub_block_record(self, sub_height: int):
