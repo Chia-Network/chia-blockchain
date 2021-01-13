@@ -1,10 +1,11 @@
 import dataclasses
 import logging
 import time
-from typing import Dict, Optional, List, Tuple
+from typing import Optional, List, Tuple
 
 from blspy import AugSchemeMPL
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import (
@@ -38,8 +39,7 @@ log = logging.getLogger(__name__)
 # noinspection PyCallByClass
 async def validate_unfinished_header_block(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: BlockchainInterface,
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
     skip_overflow_last_ss_validation: bool = False,
@@ -56,8 +56,9 @@ async def validate_unfinished_header_block(
     and lead to other small tweaks in validation.
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
-
-    prev_sb = sub_blocks.get(header_block.prev_header_hash, None)
+    prev_sb = None
+    if sub_blocks.contains_sub_block(header_block.prev_header_hash):
+        prev_sb = sub_blocks.sub_block_record(header_block.prev_header_hash)
     genesis_block = prev_sb is None
 
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
@@ -95,9 +96,7 @@ async def validate_unfinished_header_block(
         can_finish_epoch = can_finish_epoch and new_sub_slot
 
         # Gets the difficulty and SSI for this sub-block
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            constants, header_block, height_to_hash, prev_sb, sub_blocks
-        )
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, header_block, prev_sb, sub_blocks)
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -118,7 +117,7 @@ async def validate_unfinished_header_block(
                     assert prev_sb is not None
                     curr: SubBlockRecord = prev_sb
                     while not curr.first_in_sub_slot:
-                        curr = sub_blocks[curr.prev_hash]
+                        curr = sub_blocks.sub_block_record(curr.prev_hash)
                     assert curr.finished_challenge_slot_hashes is not None
 
                     # 2b. check sub-slot challenge hash for non-genesis block
@@ -151,7 +150,7 @@ async def validate_unfinished_header_block(
                         # This is the first sub slot after the last sb, which must have deficit 1-4, and thus an ICC
                         curr = prev_sb
                         while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
-                            curr = sub_blocks[curr.prev_hash]
+                            curr = sub_blocks.sub_block_record(curr.prev_hash)
                         if curr.is_challenge_sub_block(constants):
                             icc_challenge_hash = curr.challenge_block_info_hash
                             icc_iters_committed = uint64(prev_sb.sub_slot_iters - curr.ip_iters(constants))
@@ -391,7 +390,7 @@ async def validate_unfinished_header_block(
                     constants,
                     sub_blocks,
                     uint32(prev_sb.sub_block_height + 1),
-                    sub_blocks[prev_sb.prev_hash],
+                    sub_blocks.sub_block_record(prev_sb.prev_hash),
                     difficulty if can_finish_epoch else None,
                     sub_slot_iters if can_finish_epoch else None,
                 )
@@ -423,7 +422,7 @@ async def validate_unfinished_header_block(
         curr = prev_sb
         while not curr.first_in_sub_slot:
             num_sub_blocks += 1
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
         if num_sub_blocks > constants.MAX_SUB_SLOT_SUB_BLOCKS:
             return None, ValidationError(Err.TOO_MANY_SUB_BLOCKS)
 
@@ -606,7 +605,7 @@ async def validate_unfinished_header_block(
                 assert prev_sb is not None
                 curr = prev_sb
                 while not curr.first_in_sub_slot:
-                    curr = sub_blocks[curr.prev_hash]
+                    curr = sub_blocks.sub_block_record(curr.prev_hash)
                 assert curr.finished_reward_slot_hashes is not None
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
@@ -657,7 +656,7 @@ async def validate_unfinished_header_block(
         # Finds the previous block
         curr = prev_sb
         while not curr.is_block:
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
 
         # The first sub-block to have an sp > the last block's infusion iters, is a block
         if overflow:
@@ -743,7 +742,7 @@ async def validate_unfinished_header_block(
             # 24b. Check prev block hash for non-genesis
             curr_sb: SubBlockRecord = prev_sb
             while not curr_sb.is_block:
-                curr_sb = sub_blocks[curr_sb.prev_hash]
+                curr_sb = sub_blocks.sub_block_record(curr_sb.prev_hash)
             if not header_block.foliage_block.prev_block_hash == curr_sb.header_hash:
                 log.error(
                     f"Prev BH: {header_block.foliage_block.prev_block_hash} {curr_sb.header_hash} curr sb: {curr_sb}"
@@ -758,11 +757,11 @@ async def validate_unfinished_header_block(
         # 26. The timestamp in Foliage Block must comply with the timestamp rules
         if prev_sb is not None:
             last_timestamps: List[uint64] = []
-            curr_sb = sub_blocks[header_block.foliage_block.prev_block_hash]
+            curr_sb = sub_blocks.sub_block_record(header_block.foliage_block.prev_block_hash)
             assert curr_sb.timestamp is not None
             while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
                 last_timestamps.append(curr_sb.timestamp)
-                fetched: Optional[SubBlockRecord] = sub_blocks.get(curr_sb.prev_block_hash, None)
+                fetched: Optional[SubBlockRecord] = sub_blocks.try_sub_block(curr_sb.prev_block_hash)
                 if not fetched:
                     break
                 curr_sb = fetched
@@ -780,8 +779,7 @@ async def validate_unfinished_header_block(
 
 async def validate_finished_header_block(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: BlockchainInterface,
     header_block: HeaderBlock,
     check_filter: bool,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
@@ -802,7 +800,6 @@ async def validate_finished_header_block(
     required_iters, validate_unfinished_err = await validate_unfinished_header_block(
         constants,
         sub_blocks,
-        height_to_hash,
         unfinished_header_block,
         check_filter,
         False,
@@ -818,10 +815,10 @@ async def validate_finished_header_block(
         prev_sb: Optional[SubBlockRecord] = None
         genesis_block = True
     else:
-        prev_sb = sub_blocks[header_block.prev_header_hash]
+        prev_sb = sub_blocks.sub_block_record(header_block.prev_header_hash)
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
     sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-        constants, unfinished_header_block, height_to_hash, prev_sb, sub_blocks
+        constants, unfinished_header_block, prev_sb, sub_blocks
     )
     ip_iters: uint64 = calculate_ip_iters(
         constants,
@@ -881,7 +878,7 @@ async def validate_finished_header_block(
             # Not genesis block, go back to first sub-block in slot
             curr = prev_sb
             while curr.finished_challenge_slot_hashes is None:
-                curr = sub_blocks[curr.prev_hash]
+                curr = sub_blocks.sub_block_record(curr.prev_hash)
             cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
     cc_target_vdf_info = VDFInfo(
@@ -965,7 +962,7 @@ async def validate_finished_header_block(
                 while curr.finished_infused_challenge_slot_hashes is None and not curr.is_challenge_sub_block(
                     constants
                 ):
-                    curr = sub_blocks[curr.prev_hash]
+                    curr = sub_blocks.sub_block_record(curr.prev_hash)
 
                 if curr.is_challenge_sub_block(constants):
                     icc_vdf_challenge = curr.challenge_block_info_hash

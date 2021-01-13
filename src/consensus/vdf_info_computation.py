@@ -1,5 +1,6 @@
-from typing import List, Optional, Dict
+from typing import List, Optional
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
@@ -13,7 +14,7 @@ def get_signage_point_vdf_info(
     finished_sub_slots: List[EndOfSubSlotBundle],
     overflow: bool,
     prev_sb: Optional[SubBlockRecord],
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     sp_total_iters: uint128,
     sp_iters: uint64,
 ):
@@ -52,7 +53,7 @@ def get_signage_point_vdf_info(
         assert prev_sb is not None
         curr: SubBlockRecord = prev_sb
         while not curr.first_in_sub_slot and curr.total_iters > sp_total_iters:
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
         if curr.total_iters < sp_total_iters:
             sp_vdf_iters = uint64(sp_total_iters - curr.total_iters)
             cc_vdf_input = curr.challenge_vdf_output
@@ -64,7 +65,7 @@ def get_signage_point_vdf_info(
             rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
 
         while not curr.first_in_sub_slot:
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
         assert curr.finished_challenge_slot_hashes is not None
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
     elif not new_sub_slot and overflow:
@@ -92,7 +93,7 @@ def get_signage_point_vdf_info(
         while len(found_sub_slots) < 2 and curr.sub_block_height > 0:
             if sp_pre_sb is None and curr.total_iters < sp_total_iters:
                 sp_pre_sb = curr
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
                 assert curr.finished_reward_slot_hashes is not None
@@ -124,7 +125,7 @@ def get_signage_point_vdf_info(
         assert prev_sb is not None
         curr = prev_sb
         while not curr.first_in_sub_slot and curr.total_iters > sp_total_iters:
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
         if curr.total_iters < sp_total_iters:
             sp_vdf_iters = uint64(sp_total_iters - curr.total_iters)
             cc_vdf_input = curr.challenge_vdf_output
@@ -136,7 +137,7 @@ def get_signage_point_vdf_info(
             rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
 
         while not curr.first_in_sub_slot:
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
         assert curr.finished_challenge_slot_hashes is not None
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
     else:

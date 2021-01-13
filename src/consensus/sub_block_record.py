@@ -3,7 +3,10 @@ from typing import Optional, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.vdf import VDFProof
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
@@ -51,6 +54,13 @@ class SubBlockRecord(Streamable):
 
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
+
+    # todo remove the hash lists (redundant)
+    finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
+    reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
+    challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
+    challenge_chain_ip_proof: VDFProof
+    infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 4
 
     @property
     def is_block(self) -> bool:

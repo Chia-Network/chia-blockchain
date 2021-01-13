@@ -387,7 +387,7 @@ class WalletNode:
                 # Fetch blocks backwards until we hit the one that we have,
                 # then complete them with additions / removals going forward
                 while (
-                    top.prev_header_hash not in self.wallet_state_manager.blockchain.sub_blocks
+                    not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash)
                     and top.sub_block_height > 0
                 ):
                     request_prev = wallet_protocol.RequestSubBlockHeader(top.sub_block_height - 1)

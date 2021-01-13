@@ -1,5 +1,6 @@
-from typing import Dict, Optional, Union, List
+from typing import Optional, Union, List
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.consensus.deficit import calculate_deficit
@@ -17,8 +18,7 @@ from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 
 def block_to_sub_block_record(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: BlockchainInterface,
     required_iters: uint64,
     full_block: Optional[FullBlock],
     header_block: Optional[HeaderBlock],
@@ -34,7 +34,7 @@ def block_to_sub_block_record(
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
         height = 0
     else:
-        prev_sb = sub_blocks[block.prev_header_hash]
+        prev_sb = sub_blocks.sub_block_record(block.prev_header_hash)
         assert prev_sb is not None
         if prev_sb.is_block:
             height = prev_sb.height + 1
@@ -43,7 +43,6 @@ def block_to_sub_block_record(
         sub_slot_iters = get_next_sub_slot_iters(
             constants,
             sub_blocks,
-            height_to_hash,
             prev_sb.prev_hash,
             prev_sb.sub_block_height,
             prev_sb.sub_slot_iters,
@@ -97,7 +96,7 @@ def block_to_sub_block_record(
             constants,
             sub_blocks,
             block.sub_block_height,
-            sub_blocks[prev_sb.prev_hash],
+            sub_blocks.sub_block_record(prev_sb.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
@@ -139,4 +138,9 @@ def block_to_sub_block_record(
         finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,
         ses,
+        block.finished_sub_slots,
+        block.reward_chain_sub_block,
+        block.challenge_chain_sp_proof,
+        block.challenge_chain_ip_proof,
+        block.infused_challenge_chain_ip_proof,
     )

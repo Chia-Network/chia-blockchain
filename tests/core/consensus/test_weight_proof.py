@@ -108,7 +108,9 @@ async def load_blocks_dont_validate(
             cc_sp,
         )
 
-        sub_block = block_to_sub_block_record(test_constants, sub_blocks, height_to_hash, required_iters, block, None)
+        sub_block = block_to_sub_block_record(
+            test_constants, BlockCache(sub_blocks, height_to_hash, header_cache), required_iters, block, None
+        )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.sub_block_height] = block.header_hash
         header_cache[block.header_hash] = await block.get_block_header()
@@ -323,10 +325,8 @@ class TestWeightProof:
                 break
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
-        block_cache = BlockCache(
-            sub_blocks, sub_height_to_hash, sub_epoch_summaries=sub_epoch_summaries, block_store=block_store
-        )
-
+        block_cache = BlockCache(sub_blocks, sub_height_to_hash, sub_epoch_summaries=sub_epoch_summaries)
+        print(f"size{len(sub_blocks)}")
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
         valid, fork_point = wpf.validate_weight_proof(wp)
