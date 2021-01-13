@@ -84,7 +84,7 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+        await time_out_assert(120, node_height_at_least, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
     async def test_short_sync(self, two_nodes):
@@ -108,6 +108,39 @@ class TestFullSync:
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+
+    @pytest.mark.asyncio
+    async def test_short_sync_2(self, two_nodes):
+        blocks = bt.get_consecutive_blocks(1, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        # 3 blocks to node_1 in different sub slots
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(server_1._port)),
+            on_connect=full_node_2.full_node.on_connect,
+        )
+        await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
+
+    @pytest.mark.asyncio
+    async def test_short_sync_3(self, two_nodes):
+        blocks = bt.get_consecutive_blocks(1, skip_slots=3)
+        blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        # 3 blocks to node_1 in different sub slots
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(server_1._port)),
+            on_connect=full_node_2.full_node.on_connect,
+        )
+        await time_out_assert(60, node_height_at_least, True, full_node_2, 1)
 
     @pytest.mark.asyncio
     async def test_sync_different_chains(self, two_nodes, default_1000_blocks, default_400_blocks):

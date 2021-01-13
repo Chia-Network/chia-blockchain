@@ -9,6 +9,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
     get_next_difficulty,
     get_next_sub_slot_iters,
+    get_sub_slot_iters_and_difficulty,
 )
 from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -195,12 +196,15 @@ class WalletBlockchain:
                 None,
             )
 
-        required_iters, error = await validate_finished_header_block(
-            self.constants,
-            self.sub_blocks,
-            self.sub_height_to_hash,
-            block,
-            False,
+        if block.sub_block_height == 0:
+            prev_sb: Optional[SubBlockRecord] = None
+        else:
+            prev_sb = self.sub_blocks[block.prev_header_hash]
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+            self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
+        )
+        required_iters, error = validate_finished_header_block(
+            self.constants, self.sub_blocks, block, False, difficulty, sub_slot_iters
         )
 
         if error is not None:

@@ -28,7 +28,7 @@ class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_basic_store(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(10)
+        blocks = bt.get_consecutive_blocks(10, seed=b"1234")
 
         store = await FullNodeStore.create(test_constants)
 

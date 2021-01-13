@@ -164,7 +164,7 @@ class TestWalletSync:
             txs = await wsm.get_all_transactions(wallet_id)
             return len(txs)
 
-        await time_out_assert(5, get_tx_count, 0, 1)
+        await time_out_assert(10, get_tx_count, 0, 1)
 
         num_blocks_reorg_1 = 40
         blocks_reorg_1 = bt.get_consecutive_blocks(
@@ -180,5 +180,5 @@ class TestWalletSync:
             uint32(len(blocks_reorg_1))
         )
 
-        await time_out_assert(5, get_tx_count, 2, 1)
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, get_tx_count, 2, 1)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)

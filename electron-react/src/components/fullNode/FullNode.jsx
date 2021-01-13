@@ -29,7 +29,7 @@ const cols = [
         },
       } = row;
 
-      const value = isFinished 
+      const value = isFinished
         ? header_hash
         : <span>{foliage_block_hash}</span>;
 

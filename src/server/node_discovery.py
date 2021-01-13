@@ -167,7 +167,10 @@ class FullNodeDiscovery:
                 size = await self.address_manager.size()
                 if size == 0 or empty_tables:
                     await self._introducer_client()
-                    await asyncio.sleep(min(5, self.peer_connect_interval))
+                    try:
+                        await asyncio.sleep(min(5, self.peer_connect_interval))
+                    except asyncio.CancelledError:
+                        return
                     empty_tables = False
                     continue
 
@@ -216,7 +219,10 @@ class FullNodeDiscovery:
                 while not got_peer and not self.is_closed:
                     sleep_interval = 1 + len(groups) * 0.5
                     sleep_interval = min(sleep_interval, self.peer_connect_interval)
-                    await asyncio.sleep(sleep_interval)
+                    try:
+                        await asyncio.sleep(sleep_interval)
+                    except asyncio.CancelledError:
+                        return
                     tries += 1
                     if tries > max_tries:
                         addr = None
@@ -385,7 +391,10 @@ class FullNodePeers(FullNodeDiscovery):
     async def _periodically_self_advertise(self):
         while not self.is_closed:
             try:
-                await asyncio.sleep(24 * 3600)
+                try:
+                    await asyncio.sleep(24 * 3600)
+                except asyncio.CancelledError:
+                    return
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
                     for neighbour in list(self.neighbour_known_peers.keys()):
@@ -455,7 +464,10 @@ class FullNodePeers(FullNodeDiscovery):
     async def _address_relay(self):
         while not self.is_closed:
             try:
-                relay_peer, num_peers = await self.relay_queue.get()
+                try:
+                    relay_peer, num_peers = await self.relay_queue.get()
+                except asyncio.CancelledError:
+                    return
                 relay_peer_info = PeerInfo(relay_peer.host, relay_peer.port)
                 if not relay_peer_info.is_valid():
                     continue

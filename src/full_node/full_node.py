@@ -464,12 +464,17 @@ class FullNode:
 
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:
-            for block in blocks:
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+            for i, block in enumerate(blocks):
+                if pre_validation_results is None:
+                    return False
+                req_iters = pre_validation_results[i]
+                assert req_iters is not None
                 (
                     result,
                     error,
                     fork_height,
-                ) = await self.blockchain.receive_block(block)
+                ) = await self.blockchain.receive_block(block, True, req_iters)
                 if result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     if error is not None:
                         self.log.info(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
@@ -500,7 +505,19 @@ class FullNode:
         await self.send_peak_to_timelords()
 
         peak: SubBlockRecord = self.blockchain.get_peak()
+        peak_fb: FullBlock = await self.blockchain.get_full_peak()
         if peak is not None:
+            # Adjust full node store
+            sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(peak_fb.header_hash)
+            assert sub_slots is not None
+
+            self.full_node_store.new_peak(
+                peak,
+                sub_slots[0],
+                sub_slots[1],
+                True,
+                self.blockchain.sub_blocks,
+            )
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             request_wallet = wallet_protocol.NewPeak(
                 peak.header_hash,
@@ -644,6 +661,8 @@ class FullNode:
                 fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
                 self.blockchain.sub_blocks,
             )
+            if sub_slots[1] is None:
+                assert new_peak.ip_sub_slot_total_iters(self.constants) == 0
             # Ensure the signage point is also in the store, for consistency
             self.full_node_store.new_signage_point(
                 new_peak.signage_point_index,
@@ -675,8 +694,6 @@ class FullNode:
                 self.full_node_store.clear_seen_unfinished_blocks()
 
             if self.sync_store.get_sync_mode() is False:
-
-                await self.weight_proof_handler.get_proof_of_weight(sub_block.header_hash)
                 await self.send_peak_to_timelords()
 
                 # Tell full nodes about the new peak
@@ -866,9 +883,13 @@ class FullNode:
         if block.reward_chain_sub_block.signage_point_index == 0:
             res = self.full_node_store.get_sub_slot(block.reward_chain_sub_block.pos_ss_cc_challenge_hash)
             if res is None:
-                self.log.warning(f"Do not have sub slot {block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
-                return
-            rc_prev = res[0].reward_chain.get_hash()
+                if block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
+                    rc_prev = self.constants.FIRST_RC_CHALLENGE
+                else:
+                    self.log.warning(f"Do not have sub slot {block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
+                    return
+            else:
+                rc_prev = res[0].reward_chain.get_hash()
         else:
             assert block.reward_chain_sub_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_sub_block.reward_chain_sp_vdf.challenge
