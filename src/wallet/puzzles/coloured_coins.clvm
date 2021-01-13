@@ -35,13 +35,13 @@
   ;; utility function used by `curry_args`
   (defun fix_curry_args (items core)
     (if items
-        (qq (c (q (unquote (f items))) (unquote (fix_curry_args (r items) core))))
+        (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
         core
     )
   )
 
   ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-  (defun curry_args (func list_of_args) (qq ((c (q (unquote func)) (unquote (fix_curry_args list_of_args (q 1)))))))
+  (defun curry_args (func list_of_args) (qq ((c (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1)))))))
 
   ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
   (defun curry (func . args) (curry_args func args))
@@ -126,7 +126,7 @@
     (list ASSERT_COIN_CONSUMED
           (sha256 auditor_id
                   (sha256tree1 (create_a_puz_for_cn my_id))
-                  (q 0))))
+                  (q . 0))))
 
   ; assembles information from the solution to create the auditor's full ID
   (defun-inline calculate_auditor_id (mod_hash genesis_id auditor_parent auditor_inner_puzzle_hash auditor_amount)
@@ -193,14 +193,14 @@
   (defun-inline create_a (aggee_id)
     (list CREATE_COIN
           (sha256tree1 (create_a_puz_for_cn aggee_id))
-          (q 0)))
+          (q . 0)))
 
   ; this will consume the lock which lets the auditor know how much each coin is outputting
   (defun-inline consume_e (aggee_id my_id spend_amount)
     (list ASSERT_COIN_CONSUMED
           (sha256 aggee_id
                   (sha256tree1 (puzzle_for_e_coin my_id spend_amount))
-                  (q 0))))
+                  (q . 0))))
 
   ; this adds the conditions related to the locks to the output of the auditor case
   (defun create_a_and_consume_e (aggee_id my_id spend_amount output)
@@ -304,7 +304,7 @@
   ;(calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash)
   ;(generate_create_e_coin_condition ((f (f ARGS)) (f (r (f ARGS))) (f (r (r (f ARGS))))) (f (r ARGS)) 100)
   ;(create_a_puz_cn ((f (f ARGS)) (f (r (f ARGS))) (f (r (r (f ARGS))))) (f (r ARGS)) (f (r (r ARGS))) (f (r (r (r ARGS)))))
-  ;(prepend_additional_conditions (calculate_my_id (parent_parent parent_innerpuz parent_amount) my_innerpuz my_amount corehash) (calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash) (q 100))
+  ;(prepend_additional_conditions (calculate_my_id (parent_parent parent_innerpuz parent_amount) my_innerpuz my_amount corehash) (calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash) (q . 100))
   ;(conditions_from_inner_puzzle inner_puzzle solution)
 
   ;(eve_case_parent_check genesis_id parent_info (sha256tree1 (create_fullpuz (sha256tree1 inner_puzzle) corehash)) my_amount)

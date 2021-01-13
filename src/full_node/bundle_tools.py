@@ -15,4 +15,4 @@ def best_solution_program(bundle: SpendBundle) -> Program:
     for coin_solution in bundle.coin_solutions:
         entry = [coin_solution.coin.name(), coin_solution.solution]
         r.append(entry)
-    return Program.to([binutils.assemble("#q"), r])
+    return Program.to((binutils.assemble("#q"), r))
