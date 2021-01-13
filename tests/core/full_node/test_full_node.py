@@ -35,9 +35,7 @@ from tests.time_out_assert import (
     time_out_assert_custom_interval,
     time_out_messages,
 )
-from tests.core.fixtures import (
-    default_1000_blocks,
-)
+from tests.core.fixtures import default_1000_blocks
 from src.protocols.shared_protocol import protocol_version
 
 log = logging.getLogger(__name__)

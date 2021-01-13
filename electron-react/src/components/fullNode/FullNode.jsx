@@ -29,7 +29,7 @@ const cols = [
         },
       } = row;
 
-      const value = isFinished 
+      const value = isFinished
         ? header_hash
         : <span>{foliage_block_hash}</span>;
 
@@ -316,98 +316,17 @@ const BlocksCard = () => {
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
     >
-<<<<<<< HEAD
       {!!rows.length ? (
         <Table
           cols={cols}
           rows={rows}
           onRowClick={handleRowClick}
         />
-=======
-      {latestBlocks ? (
-        <>
-          <Box
-            className={classes.block_header}
-            display="flex"
-            key="header"
-            style={{ minWidth: '100%' }}
-          >
-            <Box className={classes.left_block_cell}>
-              <Trans id="BlocksCard.headerHash">Header Hash</Trans>
-            </Box>
-            <Box className={classes.center_block_cell_small}>
-              <Trans id="BlocksCard.height">Height</Trans>
-            </Box>
-            <Box flexGrow={1} className={classes.center_block_cell}>
-              <Trans id="BlocksCard.timeCreated">Time Created</Trans>
-            </Box>
-            <Box className={classes.right_block_cell}>
-              <Trans id="BlocksCard.expectedFinishTime">
-                Expected finish time
-              </Trans>
-            </Box>
-          </Box>
-
-          {latestBlocks.map((record) => {
-            const isFinished = true; //record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
-            const {
-              foliage_block: {
-                height,
-                timestamp,
-                header_hash = 'mocked-hash',
-                prev_block_hash,
-              }
-            } = record;
-
-            return (
-              <Box
-                className={
-                  isFinished
-                    ? classes.block_row
-                    : classes.block_row_unfinished
-                }
-                onClick={
-                  isFinished
-                    ? clickedBlock(
-                        height,
-                        header_hash,
-                        prev_block_hash,
-                      )
-                    : () => {}
-                }
-                display="flex"
-                key={header_hash}
-                style={{ minWidth: '100%' }}
-              >
-                <Box className={classes.left_block_cell}>
-                  {`${header_hash.slice(0, 12)}...`}
-                  {isFinished ? '' : ' (unfinished)'}
-                </Box>
-                <Box className={classes.center_block_cell_small}>
-                  {height}
-                </Box>
-                <Box flexGrow={1} className={classes.center_block_cell}>
-                  {unix_to_short_date(Number.parseInt(timestamp))}
-                </Box>
-                <Box className={classes.right_block_cell}>
-                  {isFinished
-                    ? 'finished'
-                    : unix_to_short_date(Number.parseInt(timestamp))}
-                </Box>
-              </Box>
-            );
-          })}
-        </>
->>>>>>> 83bc7c4b... Ms.bug fixes (#615)
       ) : (
         <Flex justifyContent="center">
           <Loading />
         </Flex>
       )}
-<<<<<<< HEAD
-=======
-
->>>>>>> 83bc7c4b... Ms.bug fixes (#615)
     </Card>
   );
 };

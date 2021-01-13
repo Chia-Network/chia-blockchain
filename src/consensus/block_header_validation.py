@@ -8,9 +8,7 @@ from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import (
-    can_finish_sub_and_full_epoch,
-)
+from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from src.consensus.get_block_challenge import get_block_challenge
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
