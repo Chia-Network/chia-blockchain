@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""Reference implementation for Bech32 and segwit addresses."""
+"""Reference implementation for Bech32m and segwit addresses."""
 from src.types.sized_bytes import bytes32
 
 CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
@@ -41,7 +41,7 @@ def bech32_hrp_expand(hrp):
     return [ord(x) >> 5 for x in hrp] + [0] + [ord(x) & 31 for x in hrp]
 
 
-# Follows specification here for bech32m/chech32m.
+# Follows specification here for bech32m.
 # https://gist.github.com/sipa/14c248c288c3880a3b191f978a34508e
 M = 0x2BC830A3
 
