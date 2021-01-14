@@ -534,7 +534,7 @@ class Blockchain(BlockchainInterface):
     async def warmup(self, fork_point: uint32):
         # load all blocks such that fork - self.constants.SUB_BLOCKS_CACHE_SIZE -> fork in dict
         blocks = await self.block_store.get_sub_block_in_range(
-            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, uint32(0)), fork_point
+            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, uint32(0)), self.peak_height
         )
         self.__sub_blocks = blocks
         return
