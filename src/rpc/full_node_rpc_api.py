@@ -182,12 +182,19 @@ class FullNodeRpcApi:
             if header_hash is None:
                 continue
             record: Optional[SubBlockRecord] = self.service.blockchain.sub_blocks.get(header_hash, None)
+            full = await self.service.blockchain.block_store.get_full_block(header_hash)
             if record is None:
                 # Fetch from DB
                 record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
-            if record is None:
+            if record is None or full is None:
                 raise ValueError(f"Sub block {header_hash.hex()} does not exist")
-            records.append(record)
+
+            json = record.to_json_dict()
+            if full.transactions_info is not None:
+                json["reward_claims_incorporated"] = full.transactions_info.reward_claims_incorporated
+            else:
+                json["reward_claims_incorporated"] = []
+            records.append(json)
         return {"sub_block_records": records}
 
     async def get_sub_block_record_by_sub_height(self, request: Dict) -> Optional[Dict]:

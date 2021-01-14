@@ -97,7 +97,6 @@ class TestRpc:
             assert len(coins) >= 1
 
             additions, removals = await client.get_additions_and_removals(blocks[-1].header_hash)
-            print(additions, removals)
             assert len(additions) >= 2 and len(removals) == 0
 
             assert len(await client.get_connections()) == 0

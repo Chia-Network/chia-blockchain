@@ -62,9 +62,9 @@ def block_to_sub_block_record(
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None
-    reward_claims_incorporated = (
-        block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
-    )
+    # reward_claims_incorporated = (
+    #     block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
+    # )
 
     if len(block.finished_sub_slots) > 0:
         finished_challenge_slot_hashes: Optional[List[bytes32]] = [
@@ -138,7 +138,7 @@ def block_to_sub_block_record(
         timestamp,
         prev_block_hash,
         fees,
-        reward_claims_incorporated,
+        # reward_claims_incorporated,
         finished_challenge_slot_hashes,
         finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,
