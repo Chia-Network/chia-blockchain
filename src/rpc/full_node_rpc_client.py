@@ -88,14 +88,12 @@ class FullNodeRpcClient(RpcClient):
             additions.append(CoinRecord.from_json_dict(coin_record))
         return additions, removals
 
-    async def get_sub_block_records(self, start: int, end: int) -> List[SubBlockRecord]:
+    async def get_sub_block_records(self, start: int, end: int) -> List:
         try:
             response = await self.fetch("get_sub_block_records", {"start": start, "end": end})
             if response["sub_block_records"] is None:
                 return []
         except Exception:
             return []
-        ret: List[SubBlockRecord] = []
-        for sbr in response["sub_block_records"]:
-            ret.append(SubBlockRecord.from_json_dict(sbr))
-        return ret
+        # TODO: return sub block records
+        return response["sub_block_records"]
