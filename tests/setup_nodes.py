@@ -18,7 +18,7 @@ from src.server.start_timelord import service_kwargs_for_timelord
 from src.server.start_wallet import service_kwargs_for_wallet
 from src.server.start_service import Service
 from src.util.ints import uint16, uint32
-from src.util.chech32m import encode_puzzle_hash
+from src.util.bech32m import encode_puzzle_hash
 
 from tests.time_out_assert import time_out_assert_custom_interval
 
