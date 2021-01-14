@@ -415,7 +415,7 @@ class WalletBlockchain(BlockchainInterface):
 
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if height not in self.__sub_height_to_hash:
-            log.warning("could not find header hash in cache")
+            log.warning(f"could not find height {height} in cache")
             return None
         return self.__sub_height_to_hash[height]
 
