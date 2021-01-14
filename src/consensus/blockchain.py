@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import sys
-import time
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 import multiprocessing
@@ -107,11 +105,11 @@ class Blockchain(BlockchainInterface):
         """
         Initializes the state of the Blockchain class from the database.
         """
-
-        self.__sub_blocks, peak = await self.block_store.get_sub_block_records()
+        height_to_hash, sub_epoch_summaries = await self.block_store.get_sub_block_dicts()
+        self.__sub_height_to_hash = height_to_hash
+        self.__sub_epoch_summaries = sub_epoch_summaries
+        self.__sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
         self.__sub_heights_in_cache = {}
-        self.__sub_height_to_hash = {}
-        self.__sub_epoch_summaries = {}
 
         if len(self.__sub_blocks) == 0:
             assert peak is None
@@ -120,19 +118,6 @@ class Blockchain(BlockchainInterface):
 
         assert peak is not None
         self.peak_height = self.__sub_blocks[peak].sub_block_height
-
-        # Sets the other state variables (peak_height and height_to_hash)
-        curr: SubBlockRecord = self.__sub_blocks[peak]
-        while True:
-            self.__sub_height_to_hash[curr.sub_block_height] = curr.header_hash
-            if curr.sub_epoch_summary_included is not None:
-                self.__sub_epoch_summaries[curr.sub_block_height] = curr.sub_epoch_summary_included
-            if curr.sub_block_height == 0:
-                break
-            #  only keep last SUB_BLOCKS_CACHE_SIZE in mem
-            if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
-                curr = self.__sub_blocks[curr.prev_hash]
-            self.__sub_heights_in_cache[curr.sub_block_height] = [curr.header_hash]
         assert len(self.__sub_height_to_hash) == self.peak_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
@@ -292,7 +277,6 @@ class Blockchain(BlockchainInterface):
 
             # Rollback to fork
             await self.coin_store.rollback_to_block(coin_store_reorg_height)
-            self.clean_sub_block_records()
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.__sub_epoch_summaries.keys():
