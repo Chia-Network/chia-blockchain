@@ -53,6 +53,7 @@ class Harvester:
         self.cached_challenges = []
         self.log = log
         self.state_changed_callback: Optional[Callable] = None
+        self.last_load_time: float = 0
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -102,8 +103,8 @@ class Harvester:
     async def refresh_plots(self):
         locked: bool = self._refresh_lock.locked()
         changed: bool = False
-        async with self._refresh_lock:
-            if not locked:
+        if not locked:
+            async with self._refresh_lock:
                 # Avoid double refreshing of plots
                 (changed, self.provers, self.failed_to_open_filenames, self.no_key_filenames,) = load_plots(
                     self.provers,

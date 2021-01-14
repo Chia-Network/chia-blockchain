@@ -72,7 +72,9 @@ class HarvesterAPI:
         assert len(new_challenge.challenge_hash) == 32
 
         # Refresh plots to see if there are any new ones
-        await self.harvester.refresh_plots()
+        if start - self.harvester.last_load_time > 120:
+            await self.harvester.refresh_plots()
+            self.harvester.last_load_time = time.time()
 
         loop = asyncio.get_running_loop()
 
@@ -85,54 +87,62 @@ class HarvesterAPI:
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
-                quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
-            except Exception as e:
-                self.harvester.log.error(f"Error using prover object. Reinitializing prover object. {e}")
                 try:
-                    self.harvester.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
+                    quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
                 except Exception as e:
-                    self.harvester.log.error(f"Error reinitializing. Will not try to farm plot. {e}")
-                    self.harvester.provers.pop(filename)
-                    return []
-
-            responses: List[Tuple[bytes32, ProofOfSpace]] = []
-            if quality_strings is not None:
-                # Found proofs of space (on average 1 is expected per plot)
-                for index, quality_str in enumerate(quality_strings):
-                    required_iters: uint64 = calculate_iterations_quality(
-                        quality_str,
-                        plot_info.prover.get_size(),
-                        new_challenge.difficulty,
-                        new_challenge.sp_hash,
-                    )
-                    sp_interval_iters = calculate_sp_interval_iters(
-                        self.harvester.constants, new_challenge.sub_slot_iters
-                    )
-                    if required_iters < sp_interval_iters:
-                        # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
-                        try:
-                            proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
-                        except RuntimeError:
-                            self.harvester.log.error(f"Exception fetching full proof for {filename}")
-                            continue
-
-                        plot_public_key = ProofOfSpace.generate_plot_public_key(
-                            plot_info.local_sk.get_g1(), plot_info.farmer_public_key
+                    self.harvester.log.error(f"Error using prover object. Reinitializing prover object. {e}")
+                    try:
+                        self.harvester.provers[filename] = dataclasses.replace(
+                            plot_info, prover=DiskProver(str(filename))
                         )
-                        responses.append(
-                            (
-                                quality_str,
-                                ProofOfSpace(
-                                    sp_challenge_hash,
-                                    plot_info.pool_public_key,
-                                    None,
-                                    plot_public_key,
-                                    uint8(plot_info.prover.get_size()),
-                                    proof_xs,
-                                ),
+                        quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                    except Exception as e:
+                        self.harvester.log.error(f"Error reinitializing. Will not try to farm plot. {e}")
+                        self.harvester.provers.pop(filename, None)
+                        return []
+
+                responses: List[Tuple[bytes32, ProofOfSpace]] = []
+                if quality_strings is not None:
+                    # Found proofs of space (on average 1 is expected per plot)
+                    for index, quality_str in enumerate(quality_strings):
+                        required_iters: uint64 = calculate_iterations_quality(
+                            quality_str,
+                            plot_info.prover.get_size(),
+                            new_challenge.difficulty,
+                            new_challenge.sp_hash,
+                        )
+                        sp_interval_iters = calculate_sp_interval_iters(
+                            self.harvester.constants, new_challenge.sub_slot_iters
+                        )
+                        if required_iters < sp_interval_iters:
+                            # Found a very good proof of space! will fetch the whole proof from disk,
+                            # then send to farmer
+                            try:
+                                proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
+                            except RuntimeError:
+                                self.harvester.log.error(f"Exception fetching full proof for {filename}")
+                                continue
+
+                            plot_public_key = ProofOfSpace.generate_plot_public_key(
+                                plot_info.local_sk.get_g1(), plot_info.farmer_public_key
                             )
-                        )
-            return responses
+                            responses.append(
+                                (
+                                    quality_str,
+                                    ProofOfSpace(
+                                        sp_challenge_hash,
+                                        plot_info.pool_public_key,
+                                        None,
+                                        plot_public_key,
+                                        uint8(plot_info.prover.get_size()),
+                                        proof_xs,
+                                    ),
+                                )
+                            )
+                return responses
+            except Exception as e:
+                self.harvester.log.error(f"Unknown error: {e}")
+                return []
 
         async def lookup_challenge(filename: Path, plot_info: PlotInfo) -> List[harvester_protocol.NewProofOfSpace]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
