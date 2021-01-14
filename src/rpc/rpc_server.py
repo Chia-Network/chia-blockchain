@@ -264,7 +264,11 @@ class RpcServer:
                 cert_path, key_path = load_ssl_paths(self.root_path, self.net_config)
                 ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
                 async with session.ws_connect(
-                    f"wss://{self_hostname}:{daemon_port}", autoclose=False, autoping=True, ssl_context=ssl_context
+                    f"wss://{self_hostname}:{daemon_port}",
+                    autoclose=False,
+                    autoping=True,
+                    ssl_context=ssl_context,
+                    max_msg_size=50 * 1024 * 1024,
                 ) as ws:
                     self.websocket = ws
                     await self.connection(ws)
