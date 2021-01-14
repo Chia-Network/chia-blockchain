@@ -43,18 +43,6 @@ GENERATOR_FOR_SINGLE_COIN_MOD = Program.from_bytes(
 )
 
 
-def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
-    """
-    Checks coin consumed conditions
-    Returns None if conditions are met, if not returns the reason why it failed
-    """
-    bundle_removals = spend_bundle.removal_names()
-    coin_name = condition.vars[0]
-    if coin_name not in bundle_removals:
-        return Err.ASSERT_COIN_CONSUMED_FAILED
-    return None
-
-
 def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -196,9 +184,7 @@ def mempool_check_conditions_dict(
         cvp: ConditionVarPair
         for cvp in con_list:
             error = None
-            if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = mempool_assert_coin_consumed(cvp, spend_bundle)
-            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+            if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
                 error = mempool_assert_block_index_exceeds(cvp, peak_height)

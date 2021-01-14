@@ -78,10 +78,9 @@
      ;;;;; start library code
 
      (defconstant CREATE_COIN 51)
-     (defconstant ASSERT_COIN_CONSUMED 52)
      (defconstant ASSERT_MY_COIN_ID 53)
      (defconstant CREATE_ANNOUNCEMENT 60)
-     (defconstant ASSERT_ANNOUNCEMENT 61)
+     (defconstant ASSERT_ANNOUNCEMENT 52)
 
      (defmacro assert items
          (if (r items)

@@ -9,17 +9,6 @@ from src.util.errors import Err
 from src.util.ints import uint64, uint32
 
 
-def blockchain_assert_coin_consumed(condition: ConditionVarPair, removed: Dict[bytes32, CoinRecord]) -> Optional[Err]:
-    """
-    Checks coin consumed conditions
-    Returns None if conditions are met, if not returns the reason why it failed
-    """
-    coin_name = condition.vars[0]
-    if coin_name not in removed:
-        return Err.ASSERT_COIN_CONSUMED_FAILED
-    return None
-
-
 def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -103,9 +92,7 @@ def blockchain_check_conditions_dict(
         cvp: ConditionVarPair
         for cvp in con_list:
             error = None
-            if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = blockchain_assert_coin_consumed(cvp, removed)
-            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+            if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = blockchain_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
                 error = blockchain_assert_block_index_exceeds(cvp, height)

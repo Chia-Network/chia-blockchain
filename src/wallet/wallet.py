@@ -19,7 +19,6 @@ from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
     make_assert_time_exceeds_condition,
-    make_assert_coin_consumed_condition,
     make_create_coin_condition,
     make_assert_fee_condition,
     make_create_announcement,
@@ -140,7 +139,6 @@ class Wallet:
         primaries=None,
         min_time=0,
         me=None,
-        consumed=None,
         announcements=None,
         announcements_to_consume=None,
         fee=0,
@@ -150,9 +148,6 @@ class Wallet:
         if primaries:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"]))
-        if consumed:
-            for coin in consumed:
-                condition_list.append(make_assert_coin_consumed_condition(coin))
         if min_time > 0:
             condition_list.append(make_assert_time_exceeds_condition(min_time))
         if me:

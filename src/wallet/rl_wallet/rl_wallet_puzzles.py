@@ -57,6 +57,7 @@ def rl_puzzle_for_pk(
     opcode_aggsig = ConditionOpcode.AGG_SIG.hex()
     opcode_coin_block_age = ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS.hex()
     opcode_create = ConditionOpcode.CREATE_COIN.hex()
+    opcode_create_announce = ConditionOpcode.CREATE_ANNOUNCEMENT.hex()
     opcode_myid = ConditionOpcode.ASSERT_MY_COIN_ID.hex()
 
     TEMPLATE_MY_PARENT_ID = sha256(args(6), args(1), args(7))
@@ -120,7 +121,7 @@ def rl_puzzle_for_pk(
     CREATE_CONSOLIDATED = make_list(hexstr(opcode_create), args(1), (add(args(4), args(6))))
     MODE_TWO_ME_STRING = make_list(hexstr(opcode_myid), sha256(args(5), args(1), args(6)))
     CREATE_LOCK = make_list(
-        hexstr(opcode_create),
+        hexstr(opcode_create_announce),
         sha256tree(
             make_list(
                 quote(7),
@@ -130,8 +131,7 @@ def rl_puzzle_for_pk(
                     quote(make_list()),
                 ),
             )
-        ),  # why?
-        quote(0),
+        ),
     )
     MODE_TWO = make_if(
         TEMPLATE_SINGLETON_RL_2,
@@ -243,7 +243,7 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)
     """
     opcode_myid = hexlify(ConditionOpcode.ASSERT_MY_COIN_ID).decode("ascii")
-    opcode_consumed = hexlify(ConditionOpcode.ASSERT_COIN_CONSUMED).decode("ascii")
+    opcode_consumed = hexlify(ConditionOpcode.ASSERT_ANNOUNCEMENT).decode("ascii")
     me_is_my_id = make_list(hexstr(opcode_myid), args(0))
 
     # lock_puzzle is the hash of '(r (c (q "merge in ID") (q ())))'
