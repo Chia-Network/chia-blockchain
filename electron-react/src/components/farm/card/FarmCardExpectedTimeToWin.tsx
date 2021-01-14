@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { useSelector } from 'react-redux';
-import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
 import moment from 'moment';
 import { Flex } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';
@@ -11,10 +10,6 @@ import type Plot from '../../../types/Plot';
 import StateColor from '../../../constants/StateColor';
 import FullNodeState from '../../../constants/FullNodeState';
 import useFullNodeState from '../../../hooks/useFullNodeState';
-
-const StyledFiberManualRecordIcon = styled(FiberManualRecordIcon)`
-  font-size: 1rem;
-`;
 
 const StyledFlexContainer = styled(({ color: Color, ...rest }) => <Flex {...rest} />)`
   color: ${({ color }) => color};
