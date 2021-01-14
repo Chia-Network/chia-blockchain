@@ -3,7 +3,7 @@ import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { AlertDialog } from '@chia/core';
+import { AlertDialog, Card, Flex } from '@chia/core';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import {
@@ -13,12 +13,6 @@ import {
   Box,
   Button,
   TextField,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
 } from '@material-ui/core';
 import {
   get_address,
@@ -27,16 +21,14 @@ import {
   rename_cc_wallet,
 } from '../../../modules/message';
 import {
-  mojo_to_chia_string,
   mojo_to_colouredcoin_string,
   colouredcoin_to_mojo,
 } from '../../../util/chia';
-import { unix_to_short_date } from '../../../util/utils';
 import { openDialog } from '../../../modules/dialog';
 import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
-import TransactionType from '../../../constants/TransactionType';
 import type { RootState } from '../../../modules/rootReducer';
+import WalletHistory from '../WalletHistory';
 
 const drawerWidth = 240;
 
@@ -224,67 +216,56 @@ function ColourCard(props: ColourCardProps) {
 
   const classes = useStyles();
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColourCard.title">Colour Info</Trans>
+    <Card
+      title={<Trans id="ColourCard.title">Colour Info</Trans>}
+    >
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box>
+            <Typography>
+              <Trans id="ColourCard.colour">Colour:</Trans>
             </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box>
-                <Typography>
-                  <Trans id="ColourCard.colour">Colour:</Trans>
-                </Typography>
-              </Box>
-              <Box
-                style={{
-                  wordBreak: 'break-word',
-                  minWidth: '0',
-                }}
-              >
-                <Typography variant="subtitle1">{colour}</Typography>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  label={<Trans id="ColourCard.nickname">Nickname</Trans>}
-                  inputRef={(input) => {
-                    name_input = input;
-                  }}
-                  defaultValue={name}
-                  key={name}
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={rename}
-                  className={classes.copyButton}
-                  variant="contained"
-                  color="secondary"
-                  disableElevation
-                >
-                  <Trans id="ColourCard.rename">Rename</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+          </Box>
+          <Box
+            style={{
+              wordBreak: 'break-word',
+              minWidth: '0',
+            }}
+          >
+            <Typography variant="subtitle1">{colour}</Typography>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              label={<Trans id="ColourCard.nickname">Nickname</Trans>}
+              inputRef={(input) => {
+                name_input = input;
+              }}
+              defaultValue={name}
+              key={name}
+            />
+          </Box>
+          <Box>
+            <Button
+              onClick={rename}
+              className={classes.copyButton}
+              variant="contained"
+              color="secondary"
+              disableElevation
+            >
+              <Trans id="ColourCard.rename">Rename</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </Grid>
+    </Card>
   );
 }
 
@@ -295,25 +276,22 @@ type BalanceCardSubSectionProps = {
 };
 
 function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
-  const classes = useStyles();
   let cc_unit = props.name;
   if (cc_unit.length > 10) {
     cc_unit = `${cc_unit.slice(0, 10)}...`;
   }
   return (
     <Grid item xs={12}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <Typography variant="subtitle1">{props.title}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1">
-              {mojo_to_colouredcoin_string(props.balance)} {cc_unit}
-            </Typography>
-          </Box>
+      <Box display="flex">
+        <Box flexGrow={1}>
+          <Typography variant="subtitle1">{props.title}</Typography>
         </Box>
-      </div>
+        <Box>
+          <Typography variant="subtitle1">
+            {mojo_to_colouredcoin_string(props.balance)} {cc_unit}
+          </Typography>
+        </Box>
+      </Box>
     </Grid>
   );
 }
@@ -393,53 +371,43 @@ function BalanceCard(props: BalanceCardProps) {
     balancebox_unit +
     balancebox_5;
 
-  const classes = useStyles();
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColouredBalanceCard.title">Balance</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <BalanceCardSubSection
-          title={
-            <Trans id="ColouredBalanceCard.totalBalance">Total Balance</Trans>
-          }
-          balance={balance}
-          name={name}
-        />
-        <BalanceCardSubSection
-          title={
-            <Trans id="ColouredBalanceCard.spendableBalance">
-              Spendable Balance
-            </Trans>
-          }
-          balance={balance_spendable}
-          name={name}
-        />
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Trans id="ColouredBalanceCard.viewPendingBalances">
-                      View pending balances...
-                    </Trans>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <div dangerouslySetInnerHTML={{ __html: acc_content }} />
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+    <Card
+      title={<Trans id="ColouredBalanceCard.title">Balance</Trans>}
+    >
+      <BalanceCardSubSection
+        title={
+          <Trans id="ColouredBalanceCard.totalBalance">Total Balance</Trans>
+        }
+        balance={balance}
+        name={name}
+      />
+      <BalanceCardSubSection
+        title={
+          <Trans id="ColouredBalanceCard.spendableBalance">
+            Spendable Balance
+          </Trans>
+        }
+        balance={balance_spendable}
+        name={name}
+      />
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Trans id="ColouredBalanceCard.viewPendingBalances">
+                  View pending balances...
+                </Trans>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div dangerouslySetInnerHTML={{ __html: acc_content }} />
+              </AccordionDetails>
+            </Accordion>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+    </Card>
   );
 }
 
@@ -577,233 +545,95 @@ function SendCard(props: SendCardProps) {
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
+    <Card
+      title={<Trans id="ColouredSendCard.title">Create Transaction</Trans>}
+    >
+      {result_message && (
         <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColouredSendCard.title">Create Transaction</Trans>
-            </Typography>
-          </div>
+          <p className={result_class}>{result_message}</p>
         </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <p className={result_class}>{result_message}</p>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  disabled={sending_transaction}
-                  inputRef={(input) => {
-                    address_input = input;
-                  }}
-                  label={<Trans id="ColouredSendCard.address">Address</Trans>}
-                />
-              </Box>
-              <Box />
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={6}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  disabled={sending_transaction}
-                  margin="normal"
-                  className={classes.amountField}
-                  inputRef={(input) => {
-                    amount_input = input;
-                  }}
-                  label={
-                    <Trans id="ColouredSendCard.amount">
-                      Amount ({cc_unit})
-                    </Trans>
-                  }
-                />
-              </Box>
-              <Box flexGrow={6}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  fullWidth
-                  color="secondary"
-                  margin="normal"
-                  disabled={sending_transaction}
-                  inputRef={(input) => {
-                    fee_input = input;
-                  }}
-                  label={<Trans id="ColouredSendCard.fee">Fee (TXCH)</Trans>}
-                />
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Button
-                  onClick={farm}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                  style={config.local_test ? {} : { visibility: 'hidden' }}
-                >
-                  <Trans id="ColouredSendCard.farm">Farm</Trans>
-                </Button>
-              </Box>
-              <Box>
-                <Button
-                  onClick={send}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="ColouredSendCard.send">Send</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+      )}
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={sending_transaction}
+              inputRef={(input) => {
+                address_input = input;
+              }}
+              label={<Trans id="ColouredSendCard.address">Address</Trans>}
+            />
+          </Box>
+          <Box />
+        </Box>
       </Grid>
-    </Paper>
-  );
-}
-
-type TransactionTableProps = {
-  wallet_id: number;
-};
-
-function TransactionTable(props: TransactionTableProps) {
-  const classes = useStyles();
-  const id = props.wallet_id;
-  const transactions = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].transactions,
-  );
-
-  if (transactions.length === 0) {
-    return (
-      <div style={{ margin: '30px' }}>
-        <Trans id="ColouredTransactionTable.noPreviousTransactions">
-          No previous transactions
-        </Trans>
-      </div>
-    );
-  }
-
-  const incoming_string = (type: TransactionType) => {
-    const isOutgoing = [
-      TransactionType.OUTGOING, 
-      TransactionType.OUTGOING_TRADE,
-    ].includes(type);
-
-    return isOutgoing
-      ? <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>
-      : <Trans id="ColouredTransactionTable.incoming">Incoming</Trans>;
-  };
-
-  const confirmed_to_string = (confirmed: boolean) => {
-    return confirmed ? (
-      <Trans id="ColouredTransactionTable.confirmed">Confirmed</Trans>
-    ) : (
-      <Trans id="ColouredTransactionTable.pending">Pending</Trans>
-    );
-  };
-
-  return (
-    <Paper className={classes.table_root}>
-      <Table stickyHeader className={classes.table}>
-        <TableHead>
-          <TableRow className={classes.row}>
-            <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.type">Type</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.to">To</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.date">Date</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.status">Status</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.amount">Amount</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.fee">Fee</Trans>
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody className={classes.tableBody}>
-          {transactions.map((tx) => (
-            <TableRow
-              className={classes.row}
-              key={tx.to_address + tx.created_at_time + tx.amount}
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={6}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={sending_transaction}
+              margin="normal"
+              className={classes.amountField}
+              inputRef={(input) => {
+                amount_input = input;
+              }}
+              label={
+                <Trans id="ColouredSendCard.amount">
+                  Amount ({cc_unit})
+                </Trans>
+              }
+            />
+          </Box>
+          <Box flexGrow={6}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              fullWidth
+              color="secondary"
+              margin="normal"
+              disabled={sending_transaction}
+              inputRef={(input) => {
+                fee_input = input;
+              }}
+              label={<Trans id="ColouredSendCard.fee">Fee (TXCH)</Trans>}
+            />
+          </Box>
+        </Box>
+      </Grid>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Button
+              onClick={farm}
+              className={classes.sendButton}
+              variant="contained"
+              color="primary"
+              style={config.local_test ? {} : { visibility: 'hidden' }}
             >
-              <TableCell className={classes.cell_short}>
-                {incoming_string(tx.type)}
-              </TableCell>
-              <TableCell
-                style={{ maxWidth: '150px' }}
-                className={classes.cell_short}
-              >
-                {tx.to_address}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {unix_to_short_date(tx.created_at_time)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {confirmed_to_string(tx.confirmed)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {mojo_to_colouredcoin_string(tx.amount)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {mojo_to_chia_string(tx.fee_amount)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Paper>
-  );
-}
-
-type HistoryCardProps = {
-  wallet_id: number;
-};
-
-function HistoryCard(props: HistoryCardProps) {
-  const id = props.wallet_id;
-  const classes = useStyles();
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColouredHistoryCard.title">History</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <TransactionTable wallet_id={id} />
-        </Grid>
+              <Trans id="ColouredSendCard.farm">Farm</Trans>
+            </Button>
+          </Box>
+          <Box>
+            <Button
+              onClick={send}
+              className={classes.sendButton}
+              variant="contained"
+              color="primary"
+            >
+              <Trans id="ColouredSendCard.send">Send</Trans>
+            </Button>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+    </Card>
   );
 }
 
@@ -828,62 +658,51 @@ function AddressCard(props: AddressCardProps) {
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColouredAddressCard.title">Receive Address</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  disabled
-                  fullWidth
-                  label={
-                    <Trans id="ColouredAddressCard.address">Address</Trans>
-                  }
-                  value={address}
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={copy}
-                  className={classes.copyButton}
-                  variant="contained"
-                  color="secondary"
-                  disableElevation
-                >
-                  <Trans id="ColouredAddressCard.copy">Copy</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1} />
-              <Box>
-                <Button
-                  onClick={newAddress}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="ColouredAddressCard.newAddress">New Address</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+    <Card
+      title={<Trans id="ColouredAddressCard.title">Receive Address</Trans>}
+    >
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              disabled
+              fullWidth
+              label={
+                <Trans id="ColouredAddressCard.address">Address</Trans>
+              }
+              value={address}
+              variant="outlined"
+            />
+          </Box>
+          <Box>
+            <Button
+              onClick={copy}
+              className={classes.copyButton}
+              variant="contained"
+              color="secondary"
+              disableElevation
+            >
+              <Trans id="ColouredAddressCard.copy">Copy</Trans>
+            </Button>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1} />
+          <Box>
+            <Button
+              onClick={newAddress}
+              className={classes.sendButton}
+              variant="contained"
+              color="primary"
+            >
+              <Trans id="ColouredAddressCard.newAddress">New Address</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </Grid>
+    </Card>
   );
 }
 
@@ -897,13 +716,13 @@ export default function ColouredWallet(props: ColouredWalletProps) {
 
   if (wallets.length > props.wallet_id) {
     return (
-      <>
+      <Flex flexDirection="column" gap={3}>
         <ColourCard wallet_id={id} />
         <BalanceCard wallet_id={id} />
         <SendCard wallet_id={id} />
         <AddressCard wallet_id={id} />
-        <HistoryCard wallet_id={id} />
-      </>
+        <WalletHistory walletId={id} />
+      </Flex>
     );
   }
 

@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import Grid from '@material-ui/core/Grid';
-import { AlertDialog } from '@chia/core';
+import { AlertDialog, Flex, Card } from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -10,7 +10,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   Box,
-  Paper,
   Typography,
   Button,
   TextField,
@@ -197,29 +196,25 @@ type BalanceCardSubSectionProps = {
 };
 
 function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
-  const classes = useStyles();
-
   return (
     <Grid item xs={12}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <Typography variant="subtitle1">
-              {props.title}
-              {props.tooltip && (
-                <Tooltip title={props.tooltip}>
-                  <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
-                </Tooltip>
-              )}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1">
-              {mojo_to_chia_string(props.balance)} TXCH
-            </Typography>
-          </Box>
+      <Box display="flex">
+        <Box flexGrow={1}>
+          <Typography variant="subtitle1">
+            {props.title}
+            {props.tooltip && (
+              <Tooltip title={props.tooltip}>
+                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
+              </Tooltip>
+            )}
+          </Typography>
         </Box>
-      </div>
+        <Box>
+          <Typography variant="subtitle1">
+            {mojo_to_chia_string(props.balance)} TXCH
+          </Typography>
+        </Box>
+      </Box>
     </Grid>
   );
 }
@@ -249,128 +244,119 @@ function BalanceCard(props: BalanceCardProps) {
   const classes = useStyles();
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="BalanceCard.balance">Balance</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <BalanceCardSubSection
-          title={<Trans id="BalanceCard.totalBalance">Total Balance</Trans>}
-          balance={balance}
-          tooltip={
-            <Trans id="BalanceCard.totalBalanceTooltip">
-              This is the total amount of chia in the blockchain at the current
-              peak sub block that is controlled by your private keys.
-              It includes frozen farming rewards,
-              but not pending incoming and outgoing transactions.
-            </Trans>
-          }
-        />
-        <BalanceCardSubSection
-          title={
-            <Trans id="BalanceCard.spendableBalance">Spendable Balance</Trans>
-          }
-          balance={balance_spendable}
-          tooltip={
-            <Trans id="BalanceCard.spendableBalanceTooltip">
-              This is the amount of Chia that you can currently use to make
-              transactions. It does not include pending farming rewards, pending
-              incoming transactions, and Chia that you have just spent but is not
-              yet in the blockchain.
-            </Trans>
-          }
-        />
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Accordion className={classes.front}>
-                  <AccordionSummary
-                    expandIcon={<ExpandMoreIcon />}
-                    aria-controls="panel1a-content"
-                    id="panel1a-header"
-                  >
-                    <Typography className={classes.heading}>
-                      <Trans id="BalanceCard.viewPendingBalances">
-                        View pending balances
+    <Card
+      title={<Trans id="BalanceCard.balance">Balance</Trans>}
+    >
+      <BalanceCardSubSection
+        title={<Trans id="BalanceCard.totalBalance">Total Balance</Trans>}
+        balance={balance}
+        tooltip={
+          <Trans id="BalanceCard.totalBalanceTooltip">
+            This is the total amount of chia in the blockchain at the current
+            peak sub block that is controlled by your private keys.
+            It includes frozen farming rewards,
+            but not pending incoming and outgoing transactions.
+          </Trans>
+        }
+      />
+      <BalanceCardSubSection
+        title={
+          <Trans id="BalanceCard.spendableBalance">Spendable Balance</Trans>
+        }
+        balance={balance_spendable}
+        tooltip={
+          <Trans id="BalanceCard.spendableBalanceTooltip">
+            This is the amount of Chia that you can currently use to make
+            transactions. It does not include pending farming rewards, pending
+            incoming transactions, and Chia that you have just spent but is not
+            yet in the blockchain.
+          </Trans>
+        }
+      />
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Accordion className={classes.front}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel1a-content"
+                id="panel1a-header"
+              >
+                <Typography className={classes.heading}>
+                  <Trans id="BalanceCard.viewPendingBalances">
+                    View pending balances
+                  </Trans>
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={0}>
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="BalanceCard.pendingTotalBalance">
+                        Pending Total Balance
                       </Trans>
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={0}>
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="BalanceCard.pendingTotalBalance">
-                            Pending Total Balance
-                          </Trans>
-                        }
-                        balance={balance_ptotal}
-                        tooltip={
-                          <Trans id="BalanceCard.pendingTotalBalanceTooltip">
-                            This is the total balance + pending balance: it is
-                            what your balance will be after all pending
-                            transactions are confirmed.
-                          </Trans>
-                        }
-                      />
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="BalanceCard.pendingBalance">
-                            Pending Balance
-                          </Trans>
-                        }
-                        balance={balance_pending}
-                        tooltip={
-                          <Trans id="BalanceCard.pendingBalanceTooltip">
-                            This is the sum of the incoming and outgoing pending
-                            transactions (not yet included into the blockchain).
-                            This does not include farming rewards.
-                          </Trans>
-                        }
-                      />
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="BalanceCard.pendingFarmingRewards">
-                            Pending Farming Rewards
-                          </Trans>
-                        }
-                        balance={balance_frozen}
-                        tooltip={
-                          <Trans id="BalanceCard.pendingFarmingRewardsTooltip">
-                            This is the total amount of farming rewards farmed
-                            recently, that have been confirmed but are not yet
-                            spendable.
-                          </Trans>
-                        }
-                      />
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="BalanceCard.pendingChange">
-                            Pending Change
-                          </Trans>
-                        }
-                        balance={balance_change}
-                        tooltip={
-                          <Trans id="BalanceCard.pendingChangeTooltip">
-                            This is the pending change, which are change coins
-                            which you have sent to yourself, but have not been
-                            confirmed yet.
-                          </Trans>
-                        }
-                      />
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+                    }
+                    balance={balance_ptotal}
+                    tooltip={
+                      <Trans id="BalanceCard.pendingTotalBalanceTooltip">
+                        This is the total balance + pending balance: it is
+                        what your balance will be after all pending
+                        transactions are confirmed.
+                      </Trans>
+                    }
+                  />
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="BalanceCard.pendingBalance">
+                        Pending Balance
+                      </Trans>
+                    }
+                    balance={balance_pending}
+                    tooltip={
+                      <Trans id="BalanceCard.pendingBalanceTooltip">
+                        This is the sum of the incoming and outgoing pending
+                        transactions (not yet included into the blockchain).
+                        This does not include farming rewards.
+                      </Trans>
+                    }
+                  />
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="BalanceCard.pendingFarmingRewards">
+                        Pending Farming Rewards
+                      </Trans>
+                    }
+                    balance={balance_frozen}
+                    tooltip={
+                      <Trans id="BalanceCard.pendingFarmingRewardsTooltip">
+                        This is the total amount of farming rewards farmed
+                        recently, that have been confirmed but are not yet
+                        spendable.
+                      </Trans>
+                    }
+                  />
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="BalanceCard.pendingChange">
+                        Pending Change
+                      </Trans>
+                    }
+                    balance={balance_change}
+                    tooltip={
+                      <Trans id="BalanceCard.pendingChangeTooltip">
+                        This is the pending change, which are change coins
+                        which you have sent to yourself, but have not been
+                        confirmed yet.
+                      </Trans>
+                    }
+                  />
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+    </Card>
   );
 }
 
@@ -491,107 +477,94 @@ function SendCard(props: SendCardProps) {
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
+    <Card
+      title={<Trans id="SendCard.title">Create Transaction</Trans>}
+    >
+      {result_message && (
         <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="SendCard.title">Create Transaction</Trans>
-            </Typography>
-          </div>
+          <p className={result_class}>{result_message}</p>
         </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <p className={result_class}>{result_message}</p>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  disabled={sending_transaction}
-                  inputRef={(input) => {
-                    address_input = input;
-                  }}
-                  label={
-                    <Trans id="SendCard.address">Address / Puzzle hash</Trans>
-                  }
-                />
-              </Box>
-              <Box />
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={6}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  disabled={sending_transaction}
-                  className={classes.amountField}
-                  margin="normal"
-                  inputRef={(input) => {
-                    amount_input = input;
-                  }}
-                  label={<Trans id="SendCard.amount">Amount</Trans>}
-                />
-              </Box>
-              <Box flexGrow={6}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  fullWidth
-                  color="secondary"
-                  margin="normal"
-                  disabled={sending_transaction}
-                  inputRef={(input) => {
-                    fee_input = input;
-                  }}
-                  label={<Trans id="SendCard.fee">Fee</Trans>}
-                />
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Button
-                  onClick={farm}
-                  className={classes.sendButton}
-                  style={config.local_test ? {} : { visibility: 'hidden' }}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="SendCard.farm">Farm</Trans>
-                </Button>
-              </Box>
-              <Box>
-                <Button
-                  onClick={send}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                  disabled={sending_transaction}
-                >
-                  <Trans id="SendCard.send">Send</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+      )}
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={sending_transaction}
+              inputRef={(input) => {
+                address_input = input;
+              }}
+              label={
+                <Trans id="SendCard.address">Address / Puzzle hash</Trans>
+              }
+            />
+          </Box>
+          <Box />
+        </Box>
       </Grid>
-    </Paper>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={6}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={sending_transaction}
+              className={classes.amountField}
+              margin="normal"
+              inputRef={(input) => {
+                amount_input = input;
+              }}
+              label={<Trans id="SendCard.amount">Amount</Trans>}
+            />
+          </Box>
+          <Box flexGrow={6}>
+            <TextField
+              id="filled-secondary"
+              variant="filled"
+              fullWidth
+              color="secondary"
+              margin="normal"
+              disabled={sending_transaction}
+              inputRef={(input) => {
+                fee_input = input;
+              }}
+              label={<Trans id="SendCard.fee">Fee</Trans>}
+            />
+          </Box>
+        </Box>
+      </Grid>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Button
+              onClick={farm}
+              className={classes.sendButton}
+              style={config.local_test ? {} : { visibility: 'hidden' }}
+              variant="contained"
+              color="primary"
+            >
+              <Trans id="SendCard.farm">Farm</Trans>
+            </Button>
+          </Box>
+          <Box>
+            <Button
+              onClick={send}
+              className={classes.sendButton}
+              variant="contained"
+              color="primary"
+              disabled={sending_transaction}
+            >
+              <Trans id="SendCard.send">Send</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </Grid>
+    </Card>
   );
 }
 
@@ -616,60 +589,49 @@ function AddressCard(props: AddressCardProps) {
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="AddressCard.title">Receive Address</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  disabled
-                  fullWidth
-                  label={<Trans id="AddressCard.address">Address</Trans>}
-                  value={address}
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={copy}
-                  className={classes.copyButton}
-                  variant="contained"
-                  color="secondary"
-                  disableElevation
-                >
-                  <Trans id="AddressCard.copy">Copy</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1} />
-              <Box>
-                <Button
-                  onClick={newAddress}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="AddressCard.newAddress">New Address</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+    <Card
+      title={<Trans id="AddressCard.title">Receive Address</Trans>}
+    >
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              disabled
+              fullWidth
+              label={<Trans id="AddressCard.address">Address</Trans>}
+              value={address}
+              variant="outlined"
+            />
+          </Box>
+          <Box>
+            <Button
+              onClick={copy}
+              className={classes.copyButton}
+              variant="contained"
+              color="secondary"
+              disableElevation
+            >
+              <Trans id="AddressCard.copy">Copy</Trans>
+            </Button>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1} />
+          <Box>
+            <Button
+              onClick={newAddress}
+              className={classes.sendButton}
+              variant="contained"
+              color="primary"
+            >
+              <Trans id="AddressCard.newAddress">New Address</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </Grid>
+    </Card>
   );
 }
 
@@ -678,19 +640,17 @@ type StandardWalletProps = {
 };
 
 export default function StandardWallet(props: StandardWalletProps) {
-  const classes = useStyles();
   const id = props.wallet_id;
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
   if (wallets.length > props.wallet_id) {
     return (
-      <Grid className={classes.walletContainer} item xs={12}>
+      <Flex flexDirection="column" gap={3}>
         <BalanceCard wallet_id={id} />
         <SendCard wallet_id={id} />
         <AddressCard wallet_id={id} />
-        <br />
         <WalletHistory walletId={id} />
-      </Grid>
+      </Flex>
     );
   }
 

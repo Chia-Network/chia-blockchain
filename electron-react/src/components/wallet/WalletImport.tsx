@@ -21,7 +21,7 @@ import english from '../../util/english';
 
 const options = english.map((item) => item.word);
 
-const filterOptions = (options, { inputValue }) =>
+const filterOptions = (options: string[], { inputValue }: { inputValue: string }) =>
   matchSorter(options, inputValue, {
     threshold: matchSorter.rankings.STARTS_WITH,
   });
