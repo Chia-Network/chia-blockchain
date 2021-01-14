@@ -4,7 +4,7 @@ import { Typography } from '@material-ui/core';
 import { useSelector } from 'react-redux';
 import { Card, Table } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
-import type { Row } from '../core/Table/Table';
+import type { Row } from '../core/components/Table/Table';
 import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../util/chia';
 import { unix_to_short_date } from '../../util/utils';
 import TransactionType from '../../constants/TransactionType';

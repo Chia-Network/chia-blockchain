@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Typography } from '@material-ui/core';
+import { Loading } from '@chia/core';
 import LayoutHero from './LayoutHero';
-import Loading from '../core/Loading/Loading';
 
 type Props = {
   children?: ReactNode;

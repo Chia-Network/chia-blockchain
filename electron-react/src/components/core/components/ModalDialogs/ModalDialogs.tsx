@@ -1,5 +1,5 @@
 import React, { cloneElement } from 'react';
-import type { Dialog } from '../../../modules/dialog';
+import type { Dialog } from '../../../../modules/dialog';
 
 type Props = {
   dialogs: Dialog[];
