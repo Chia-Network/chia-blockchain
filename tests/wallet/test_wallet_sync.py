@@ -56,7 +56,7 @@ class TestWalletSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
-        await time_out_assert(40, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+        await time_out_assert(100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
         # Tests a reorg with the wallet
         num_blocks = 30
@@ -65,7 +65,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
 
         await time_out_assert(
-            40, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
+            100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
 
     @pytest.mark.asyncio
