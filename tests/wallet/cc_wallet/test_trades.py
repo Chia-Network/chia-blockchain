@@ -60,12 +60,8 @@
 #     ph0 = await wallet_0.get_new_puzzlehash()
 #     ph1 = await wallet_1.get_new_puzzlehash()
 #
-#     await wallet_server_0.start_client(
-#         PeerInfo("localhost", uint16(full_node_server._port)), None
-#     )
-#     await wallet_server_1.start_client(
-#         PeerInfo("localhost", uint16(full_node_server._port)), None
-#     )
+#     await wallet_server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+#     await wallet_server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 #
 #     for i in range(0, farm_blocks):
 #         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph0))
@@ -86,9 +82,7 @@
 #         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 #         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 #
-#         cc_wallet: CCWallet = await CCWallet.create_new_cc(
-#             wallet_node_0.wallet_state_manager, wallet_0, uint64(100)
-#         )
+#         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
 #
 #         for i in range(1, buffer_blocks):
 #             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -103,10 +97,7 @@
 #             wallet_node_1.wallet_state_manager, wallet_1, colour
 #         )
 #
-#         assert (
-#             cc_wallet.cc_info.my_genesis_checker
-#             == cc_wallet_2.cc_info.my_genesis_checker
-#         )
+#         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 #
 #         for i in range(0, buffer_blocks):
 #             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -129,16 +120,12 @@
 #
 #         offer_dict = {1: 10, 2: -30}
 #
-#         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
-#             offer_dict, file
-#         )
+#         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(offer_dict, file)
 #
 #         assert success is True
 #         assert trade_offer is not None
 #
-#         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
-#             file_path
-#         )
+#         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
 #
 #         assert error is None
 #         assert success is True
@@ -165,9 +152,7 @@
 #         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 #         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 #
-#         cc_wallet: CCWallet = await CCWallet.create_new_cc(
-#             wallet_node_0.wallet_state_manager, wallet_0, uint64(100)
-#         )
+#         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
 #
 #         for i in range(1, buffer_blocks):
 #             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -182,10 +167,7 @@
 #             wallet_node_1.wallet_state_manager, wallet_1, colour
 #         )
 #
-#         assert (
-#             cc_wallet.cc_info.my_genesis_checker
-#             == cc_wallet_2.cc_info.my_genesis_checker
-#         )
+#         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 #
 #         ph = await wallet_1.get_new_puzzlehash()
 #         for i in range(0, buffer_blocks):
@@ -202,16 +184,12 @@
 #
 #         offer_dict = {1: 10, 3: -30}
 #
-#         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
-#             offer_dict, file
-#         )
+#         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(offer_dict, file)
 #
 #         assert success is True
 #         assert trade_offer is not None
 #
-#         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
-#             file_path
-#         )
+#         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
 #
 #         assert error is None
 #         assert success is True
@@ -248,9 +226,7 @@
 #         cc_a_2 = wallet_node_a.wallet_state_manager.wallets[2]
 #         cc_b_2 = wallet_node_b.wallet_state_manager.wallets[2]
 #
-#         cc_a_3: CCWallet = await CCWallet.create_new_cc(
-#             wallet_node_a.wallet_state_manager, wallet_a, uint64(100)
-#         )
+#         cc_a_3: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
 #
 #         for i in range(0, buffer_blocks):
 #             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -268,9 +244,7 @@
 #         for i in range(0, buffer_blocks):
 #             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 #
-#         cc_b_3: CCWallet = await CCWallet.create_wallet_for_cc(
-#             wallet_node_b.wallet_state_manager, wallet_b, red
-#         )
+#         cc_b_3: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_b.wallet_state_manager, wallet_b, red)
 #
 #         assert cc_a_3.cc_info.my_genesis_checker == cc_b_3.cc_info.my_genesis_checker
 #
@@ -289,16 +263,12 @@
 #         # Wallet
 #         offer_dict = {1: 1000, 2: -20, 4: -50}
 #
-#         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
-#             offer_dict, file
-#         )
+#         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(offer_dict, file)
 #
 #         assert success is True
 #         assert trade_offer is not None
 #
-#         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
-#             file_path
-#         )
+#         success, offer, error = await trade_manager_1.get_discrepancies_for_offer(file_path)
 #         assert error is None
 #         assert success is True
 #         assert offer is not None
@@ -322,12 +292,8 @@
 #         await time_out_assert(15, cc_a_3.get_confirmed_balance, 50)
 #         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 50)
 #
-#         await time_out_assert(
-#             15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2]
-#         )
-#         await time_out_assert(
-#             15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2]
-#         )
+#         await time_out_assert(15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2])
+#         await time_out_assert(15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2])
 #
 #         trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
 #
@@ -349,9 +315,7 @@
 #         trade_manager_a: TradeManager = wallet_node_a.wallet_state_manager.trade_manager
 #         trade_manager_b: TradeManager = wallet_node_b.wallet_state_manager.trade_manager
 #
-#         cc_a_4: CCWallet = await CCWallet.create_new_cc(
-#             wallet_node_a.wallet_state_manager, wallet_a, uint64(100)
-#         )
+#         cc_a_4: CCWallet = await CCWallet.create_new_cc(wallet_node_a.wallet_state_manager, wallet_a, uint64(100))
 #
 #         for i in range(0, buffer_blocks):
 #             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -360,9 +324,7 @@
 #
 #         colour = cc_a_4.get_colour()
 #
-#         cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(
-#             wallet_node_b.wallet_state_manager, wallet_b, colour
-#         )
+#         cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_b.wallet_state_manager, wallet_b, colour)
 #         cc_balance = await cc_a_4.get_confirmed_balance()
 #         cc_balance_2 = await cc_b_4.get_confirmed_balance()
 #         offer_dict = {1: -30, cc_a_4.id(): 50}
@@ -372,9 +334,7 @@
 #         if file_path.exists():
 #             file_path.unlink()
 #
-#         success, offer, error = await trade_manager_b.create_offer_for_ids(
-#             offer_dict, file
-#         )
+#         success, offer, error = await trade_manager_b.create_offer_for_ids(offer_dict, file)
 #
 #         success, trade_a, reason = await trade_manager_a.respond_to_offer(file_path)
 #
@@ -419,9 +379,7 @@
 #
 #         offer_dict = {1: 10, 2: -30, 3: 30}
 #
-#         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(
-#             offer_dict, file
-#         )
+#         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(offer_dict, file)
 #
 #         spendable_chia_after = await wallet_a.get_spendable_balance()
 #
@@ -467,9 +425,7 @@
 #
 #         offer_dict = {1: 10, 2: -30, 3: 30}
 #
-#         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(
-#             offer_dict, file
-#         )
+#         success, trade_offer, error = await trade_manager_a.create_offer_for_ids(offer_dict, file)
 #
 #         spendable_chia_after = await wallet_a.get_spendable_balance()
 #

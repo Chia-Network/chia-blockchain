@@ -9,6 +9,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
     get_next_difficulty,
     get_next_sub_slot_iters,
+    get_sub_slot_iters_and_difficulty,
 )
 from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -128,7 +129,7 @@ class WalletBlockchain:
                 break
             curr = self.sub_blocks[curr.prev_hash]
 
-        assert len(self.sub_blocks) == len(self.sub_height_to_hash) == self.peak_sub_height + 1
+        assert len(self.sub_height_to_hash) == self.peak_sub_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
         """
@@ -139,10 +140,15 @@ class WalletBlockchain:
         return self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
 
     async def get_full_peak(self) -> Optional[HeaderBlock]:
+        """ Return a peak transaction block"""
         if self.peak_sub_height is None:
             return None
-        """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_header_block(self.sub_height_to_hash[self.peak_sub_height])
+        curr: Optional[SubBlockRecord] = self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
+        while curr is not None and not curr.is_block:
+            curr = self.sub_blocks.get(curr.prev_hash, None)
+        if curr is None:
+            return None
+        block = await self.block_store.get_header_block(curr.header_hash)
         assert block is not None
         return block
 
@@ -190,12 +196,15 @@ class WalletBlockchain:
                 None,
             )
 
-        required_iters, error = await validate_finished_header_block(
-            self.constants,
-            self.sub_blocks,
-            self.sub_height_to_hash,
-            block,
-            False,
+        if block.sub_block_height == 0:
+            prev_sb: Optional[SubBlockRecord] = None
+        else:
+            prev_sb = self.sub_blocks[block.prev_header_hash]
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+            self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
+        )
+        required_iters, error = validate_finished_header_block(
+            self.constants, self.sub_blocks, block, False, difficulty, sub_slot_iters
         )
 
         if error is not None:
@@ -218,7 +227,7 @@ class WalletBlockchain:
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
-            self.log.info(f"💰💰💰 Updated peak to height {sub_block.sub_block_height}, weight {sub_block.weight}, ")
+            self.log.info(f"💰💰💰 Updated peak to sub height {sub_block.sub_block_height}, weight {sub_block.weight}, ")
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
@@ -237,12 +246,12 @@ class WalletBlockchain:
                     sub_block.header_hash
                 )
                 assert block is not None
+                self.sub_height_to_hash[uint32(0)] = block.header_hash
                 for removed in block.removals:
                     self.log.info(f"Removed: {removed.name()}")
                 await self.coins_of_interest_received(
                     block.removals, block.additions, block.height, block.sub_block_height
                 )
-                self.sub_height_to_hash[uint32(0)] = block.header_hash
                 self.peak_sub_height = uint32(0)
                 return uint32(0)
             return None
@@ -255,16 +264,12 @@ class WalletBlockchain:
 
             # Rollback to fork
             # TODO(straya): reorg coins based on height not sub-block height
-            self.log.info(
-                f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, "
-                f"{peak.height}"
-            )
             if fork_h == -1:
                 await self.reorg_rollback(-1)
             else:
                 fork_hash = self.sub_height_to_hash[uint32(fork_h)]
                 fork_block = self.sub_blocks[fork_hash]
-                await self.reorg_rollback(fork_block.height)
+                await self.reorg_rollback(fork_block.sub_block_height)
 
             # Rollback sub_epoch_summaries
             heights_to_delete = []

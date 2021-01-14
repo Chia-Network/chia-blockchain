@@ -1,11 +1,21 @@
 # flake8: noqa: F811, F401
 import asyncio
+import multiprocessing
+import time
 from dataclasses import replace
 import logging
+from pathlib import Path
+
+import aiosqlite
 import pytest
 from blspy import AugSchemeMPL, G2Element
 
-from src.consensus.blockchain import ReceiveBlockResult
+from src.consensus.blockchain import ReceiveBlockResult, Blockchain
+from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.full_node.block_store import BlockStore
+from src.full_node.coin_store import CoinStore
+from src.full_node.full_node_store import FullNodeStore
+from src.full_node.sync_store import SyncStore
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -18,10 +28,10 @@ from src.util.hash import std_hash
 from src.util.ints import uint64, uint8, int512
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
-from tests.full_node.fixtures import empty_blockchain  # noqa: F401
-from tests.full_node.fixtures import default_1000_blocks  # noqa: F401
-from tests.full_node.fixtures import default_400_blocks  # noqa: F401
-from tests.full_node.fixtures import default_10000_blocks  # noqa: F401
+from tests.core.fixtures import empty_blockchain  # noqa: F401
+from tests.core.fixtures import default_1000_blocks  # noqa: F401
+from tests.core.fixtures import default_400_blocks  # noqa: F401
+from tests.core.fixtures import default_10000_blocks  # noqa: F401
 
 log = logging.getLogger(__name__)
 
@@ -94,6 +104,51 @@ class TestGenesisBlock:
         genesis = recursive_replace(genesis, "foliage_sub_block.prev_sub_block_hash", bad_prev)
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err == Err.INVALID_PREV_BLOCK_HASH
+
+
+class TestPreValidation:
+    @pytest.mark.asyncio
+    async def test_pre_validation_fails_bad_blocks(self, empty_blockchain):
+        blocks = bt.get_consecutive_blocks(2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_sub_block.total_iters", blocks[-1].reward_chain_sub_block.total_iters + 1
+        )
+        res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad])
+        assert res is None
+
+    @pytest.mark.asyncio
+    async def test_pre_validation(self, empty_blockchain, default_1000_blocks):
+        blocks = default_1000_blocks
+        start = time.time()
+        n_at_a_time = multiprocessing.cpu_count()
+        times_pv = []
+        times_rb = []
+        for i in range(0, len(blocks), n_at_a_time):
+            end_i = min(i + n_at_a_time, len(blocks))
+            blocks_to_validate = blocks[i:end_i]
+            start_pv = time.time()
+            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
+            end_pv = time.time()
+            times_pv.append(end_pv - start_pv)
+            assert res is not None
+            for n in range(end_i - i):
+                block = blocks_to_validate[n]
+                start_rb = time.time()
+                result, err, _ = await empty_blockchain.receive_block(block, True, res[n])
+                end_rb = time.time()
+                times_rb.append(end_rb - start_rb)
+                assert err is None
+                assert result == ReceiveBlockResult.NEW_PEAK
+                log.info(
+                    f"Added block {block.sub_block_height} total iters {block.total_iters} "
+                    f"new slot? {len(block.finished_sub_slots)}, time {end_rb - start_rb}"
+                )
+        end = time.time()
+        log.info(f"Total time: {end - start} seconds")
+        log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
+        log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
 
 
 class TestBlockHeaderValidation:

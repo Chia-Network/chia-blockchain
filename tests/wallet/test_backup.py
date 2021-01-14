@@ -4,11 +4,11 @@
 #
 # import pytest
 #
+# from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 # from src.simulator.simulator_protocol import FarmNewBlockProtocol
 # from src.types.peer_info import PeerInfo
 # from src.util.ints import uint16, uint32, uint64
 # from tests.setup_nodes import setup_simulators_and_wallets
-# from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 # from src.wallet.cc_wallet.cc_wallet import CCWallet
 # from tests.time_out_assert import time_out_assert
 #
@@ -22,14 +22,12 @@
 # class TestCCWalletBackup:
 #     @pytest.fixture(scope="function")
 #     async def two_wallet_nodes(self):
-#         async for _ in setup_simulators_and_wallets(
-#             1, 1, {}
-#         ):
+#         async for _ in setup_simulators_and_wallets(1, 1, {}):
 #             yield _
 #
 #     @pytest.mark.asyncio
 #     async def test_coin_backup(self, two_wallet_nodes):
-#         num_blocks = 5
+#         num_blocks = 3
 #         full_nodes, wallets = two_wallet_nodes
 #         full_node_api = full_nodes[0]
 #         full_node_server = full_node_api.full_node.server
@@ -38,24 +36,20 @@
 #
 #         ph = await wallet.get_new_puzzlehash()
 #
-#         await server_2.start_client(
-#             PeerInfo("localhost", uint16(full_node_server._port)), None
-#         )
-#         for i in range(1, 4):
+#         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+#         for i in range(1, num_blocks):
 #             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 #
 #         funds = sum(
 #             [
-#                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-#                 for i in range(1, 4 - 2)
+#                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+#                 for i in range(1, num_blocks - 1)
 #             ]
 #         )
 #
 #         await time_out_assert(15, wallet.get_confirmed_balance, funds)
 #
-#         cc_wallet: CCWallet = await CCWallet.create_new_cc(
-#             wallet_node.wallet_state_manager, wallet, uint64(100)
-#         )
+#         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
 #
 #         for i in range(1, num_blocks):
 #             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
@@ -79,9 +73,8 @@
 #         assert started is False
 #
 #         await wallet_node._start(backup_file=file_path)
-#         await server_2.start_client(
-#             PeerInfo("localhost", uint16(full_node_server._port)), None
-#         )
+#
+#         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), wallet_node.on_connect)
 #
 #         all_wallets = wallet_node.wallet_state_manager.wallets
 #         assert len(all_wallets) == 2

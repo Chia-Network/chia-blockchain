@@ -304,7 +304,8 @@ class RLWallet:
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
         tx_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hash,
             amount=uint64(0),
@@ -318,6 +319,7 @@ class RLWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
         await self.push_transaction(tx_record)
@@ -326,12 +328,11 @@ class RLWallet:
         self.rl_coin_record = await self._get_rl_coin_record()
         if self.rl_coin_record is None:
             return uint64(0)
-        lca_header_hash = self.wallet_state_manager.lca
-        lca = self.wallet_state_manager.block_records[lca_header_hash]
-        height = lca.height
+        peak = await self.wallet_state_manager.blockchain.get_full_peak()
+        height = peak.height if peak else 0
         assert self.rl_info.limit is not None
         unlocked = int(
-            ((height - self.rl_coin_record.confirmed_block_index) / self.rl_info.interval) * int(self.rl_info.limit)
+            ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
         )
         total_amount = self.rl_coin_record.coin.amount
         available_amount = min(unlocked, total_amount)
@@ -440,7 +441,7 @@ class RLWallet:
         return pubkey, private
 
     async def _get_rl_coin(self) -> Optional[Coin]:
-        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+        rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
         for coin_record in rl_coins:
@@ -450,7 +451,7 @@ class RLWallet:
         return None
 
     async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
-        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+        rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
         for coin_record in rl_coins:
@@ -466,7 +467,7 @@ class RLWallet:
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
         if rl_parent_id == self.rl_info.rl_origin_id:
             return self.rl_info.rl_origin
-        rl_parent = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(rl_parent_id)
+        rl_parent = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(rl_parent_id)
         if rl_parent is None:
             return None
 
@@ -515,7 +516,8 @@ class RLWallet:
         spend_bundle = await self.rl_sign_transaction(transaction)
 
         return TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(amount),
@@ -529,6 +531,7 @@ class RLWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     async def rl_sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]) -> SpendBundle:
@@ -596,7 +599,8 @@ class RLWallet:
         spend_bundle = await self.clawback_rl_coin(to_puzzle_hash, fee)
 
         return TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(0),
@@ -610,6 +614,7 @@ class RLWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2

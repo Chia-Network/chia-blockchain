@@ -89,10 +89,10 @@ export default function Connections(props) {
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <Trans id="Connections.nodeId">Node Id</Trans>
+                  <Trans id="Connections.nodeId">Node ID</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.ipAddress">Ip address</Trans>
+                  <Trans id="Connections.ipAddress">IP address</Trans>
                 </TableCell>
                 <TableCell align="right">
                   <Trans id="Connections.port">Port</Trans>
@@ -179,7 +179,7 @@ export default function Connections(props) {
       <form className={classes.form} noValidate autoComplete="off">
         <TextField
           label={
-            <Trans id="Connections.ipAddressHost">Ip address / host</Trans>
+            <Trans id="Connections.ipAddressHost">IP address / host</Trans>
           }
           value={host}
           onChange={handleChangeHost}

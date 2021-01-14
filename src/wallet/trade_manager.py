@@ -195,7 +195,7 @@ class TradeManager:
         result = {}
         removals = bundle.removals()
         for coin in removals:
-            coin_record = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(coin.name())
+            coin_record = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(coin.name())
             if coin_record is None:
                 continue
             result[coin_record.name()] = coin_record
@@ -538,7 +538,8 @@ class TradeManager:
             # debug_spend_bundle(spend_bundle)
             if chia_discrepancy < 0:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
@@ -552,10 +553,12 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
+                    name=chia_spend_bundle.name(),
                 )
             else:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
@@ -569,6 +572,7 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
+                    name=chia_spend_bundle.name(),
                 )
             my_tx_records.append(tx_record)
 
@@ -576,7 +580,8 @@ class TradeManager:
             wallet = wallets[colour]
             if chia_discrepancy > 0:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(amount)),
@@ -590,10 +595,12 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
+                    name=spend_bundle.name(),
                 )
             else:
                 tx_record = TransactionRecord(
-                    confirmed_at_index=uint32(0),
+                    confirmed_at_sub_height=uint32(0),
+                    confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(amount)),
@@ -607,11 +614,13 @@ class TradeManager:
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                     type=uint32(TransactionType.INCOMING_TRADE.value),
+                    name=token_bytes(),
                 )
             my_tx_records.append(tx_record)
 
         tx_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=token_bytes(),
             amount=uint64(0),
@@ -625,6 +634,7 @@ class TradeManager:
             sent_to=[],
             trade_id=std_hash(spend_bundle.name() + bytes(now)),
             type=uint32(TransactionType.OUTGOING_TRADE.value),
+            name=spend_bundle.name(),
         )
 
         now = uint64(int(time.time()))

@@ -11,7 +11,7 @@ if [ "$(uname)" = "Linux" ]; then
 	if type apt-get; then
 		# Debian/Ubuntu
 		UBUNTU=true
-		sudo apt-get install -y npm nodejs
+		sudo apt-get install -y npm nodejs libxss1
 	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2"
@@ -58,6 +58,8 @@ if [ ! "$CI" ]; then
 	cd ./electron-react
 	npm install
 	npm audit fix
+	npm run locale:extract
+	npm run locale:compile
 	npm run build
 else
 	echo "Skipping node.js in install.sh on MacOS ci"

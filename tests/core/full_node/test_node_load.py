@@ -7,10 +7,10 @@ from src.protocols import full_node_protocol
 from src.server.outbound_message import Message, NodeType
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
-from tests.full_node.test_full_node import connect_and_get_peer
+from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
-from tests.full_node.test_full_sync import node_height_at_least
+from tests.core.full_node.test_full_sync import node_height_at_least
 
 
 @pytest.fixture(scope="function")

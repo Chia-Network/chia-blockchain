@@ -12,13 +12,15 @@ class PeerInfo(Streamable):
     host: str
     port: uint16
 
-    def is_valid(self):
+    def is_valid(self, allow_private_subnets=False):
         ip = None
         try:
             ip = ipaddress.IPv6Address(self.host)
         except ValueError:
             ip = None
         if ip is not None:
+            if ip.is_private and not allow_private_subnets:
+                return False
             return True
 
         try:
@@ -26,6 +28,8 @@ class PeerInfo(Streamable):
         except ValueError:
             ip = None
         if ip is not None:
+            if ip.is_private and not allow_private_subnets:
+                return False
             return True
         return False
 

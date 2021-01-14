@@ -29,7 +29,7 @@ export default function useSelectDirectory(
     openDialog(
       <AlertDialog>
         <Trans id="useSelectDirectory.availableOnlyFromElectron">
-          This feature is available only from electron app
+          This feature is available only from the GUI.
         </Trans>
       </AlertDialog>,
     );

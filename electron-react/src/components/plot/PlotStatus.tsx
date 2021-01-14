@@ -33,7 +33,7 @@ export default function PlotStatus(props: Props) {
       )}
       {farmerStatus === FarmerStatus.SYNCHING && (
         <Trans id="PlotStatus.synching">
-          Synching
+          Syncing
         </Trans>
       )}
       {farmerStatus === FarmerStatus.ERROR && (

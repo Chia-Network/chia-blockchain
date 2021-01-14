@@ -1,5 +1,4 @@
 from typing import Dict, List, Union, Optional, Tuple
-
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.unfinished_block import UnfinishedBlock
@@ -35,7 +34,7 @@ def _get_blocks_at_height(
         max_num_sub_blocks: max number of sub-blocks to fetch (although less might be fetched)
 
     """
-    if height_to_hash[prev_sb.sub_block_height] == prev_sb.header_hash:
+    if prev_sb.sub_block_height in height_to_hash and height_to_hash[prev_sb.sub_block_height] == prev_sb.header_hash:
         # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
         return [
             sub_blocks[height_to_hash[uint32(h)]]

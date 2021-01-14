@@ -1,19 +1,18 @@
-name: Build and test Ubuntu
-
+name: Build and test MacOS Core
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Build and test Ubuntu
+    name: Build and test MacOS Core
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest]
+        python-version: [3.8, 3.9]
+        os: [macOS-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -32,14 +31,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache npm
-      uses: actions/cache@v2
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Get pip cache dir
       id: pip-cache
       run: |
@@ -48,29 +39,31 @@ jobs:
     - name: Cache pip
       uses: actions/cache@v2
       with:
+        # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Download Chia test blocks and plots
-      run: |
-        mkdir $HOME/.chia
-        cd $HOME/.chia
-        curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
-        curl -L https://download.chia.net/tests/test-plots-2021-01-04.tgz | tar -zx
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
 
-    - name: Install ubuntu dependencies
+    - name: Link home directory
       run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
 
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        BUILD_VDF_CLIENT: "N"
       run: |
+        brew install boost
         sh install.sh
 
     - name: Install timelord
@@ -87,4 +80,4 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests -s -v --durations 0
+        ./venv/bin/py.test tests/core -s -v --durations 0

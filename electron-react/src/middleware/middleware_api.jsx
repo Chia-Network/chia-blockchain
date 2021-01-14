@@ -20,9 +20,9 @@ import {
   service_wallet,
   service_full_node,
   service_simulator,
+  service_plotter,
   service_farmer,
   service_harvester,
-  service_plotter,
 } from '../util/service_names';
 import {
   pingFullNode,
@@ -45,13 +45,14 @@ import {
 import { plottingStopped } from '../modules/plotter_messages';
 
 import { plotQueueUpdate } from '../modules/plotQueue';
-import { startService, isServiceRunning } from '../modules/daemon_messages';
+import { startService, startServiceTest } from '../modules/daemon_messages';
 import { get_all_trades } from '../modules/trade_messages';
 import {
   COLOURED_COIN,
   STANDARD_WALLET,
   RATE_LIMITED,
 } from '../util/wallet_types';
+const config = require('../config/config');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -97,13 +98,32 @@ async function ping_harvester(store) {
   }
 }
 
+var timeout_height = null;
+var can_call = true;
+
+async function get_height(store) {
+  if (can_call === true) {
+    store.dispatch(get_height_info());
+    can_call = false;
+    timeout_height = setTimeout(() => {
+      can_call = true;
+    }, 1000);
+  }
+}
+
 export function refreshAllState() {
   return async (dispatch, getState) => {
     dispatch(format_message('get_wallets', {}));
-    const start_farmer = startService(service_farmer);
-    const start_harvester = startService(service_harvester);
-    dispatch(start_farmer);
-    dispatch(start_harvester);
+
+    if (config.local_test) {
+      dispatch(startServiceTest(service_wallet));
+      dispatch(startService(service_simulator));
+    } else {
+      dispatch(startService(service_wallet));
+      dispatch(startService(service_full_node));
+      dispatch(startService(service_farmer));
+      dispatch(startService(service_harvester));
+    }
 
     dispatch(get_height_info());
     dispatch(get_sync_status());
@@ -141,7 +161,7 @@ export const handle_message = async (store, payload) => {
       store.dispatch(get_connection_info());
       store.dispatch(format_message('get_public_keys', {}));
     } else if (payload.origin === service_full_node) {
-      await store.dispatch(getBlockChainState());
+      store.dispatch(getBlockChainState());
       store.dispatch(getFullNodeConnections());
     } else if (payload.origin === service_farmer) {
       store.dispatch(getLatestChallenges());
@@ -225,7 +245,6 @@ export const handle_message = async (store, payload) => {
   } else if (payload.command === 'state_changed') {
     const { origin } = payload;
     const { state } = payload.data;
-    debugger;
 
     if (origin === service_plotter) {
       const { queue } = payload.data;
@@ -243,9 +262,9 @@ export const handle_message = async (store, payload) => {
       } else if (state === 'sync_changed') {
         store.dispatch(get_sync_status());
       } else if (state === 'new_block') {
-        store.dispatch(get_height_info());
+        await get_height(store);
       } else if (state === 'new_peak') {
-        store.dispatch(get_height_info());
+        await get_height(store);
         store.dispatch(getBlockChainState());
       } else if (state === 'pending_transaction') {
         wallet_id = payload.data.wallet_id;

@@ -20,14 +20,13 @@ from src.consensus.sub_block_record import SubBlockRecord
 
 
 from src.protocols import (
-    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
     wallet_protocol,
 )
 from src.protocols.full_node_protocol import RejectSubBlocks
-from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse
+from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse, RejectHeaderBlocks
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.coin import Coin, hash_coin_list
 
@@ -81,10 +80,15 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_peers(
-        self, request: introducer_protocol.RespondPeers, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
+            if peer.connection_type is NodeType.INTRODUCER:
+                is_full_node = False
+            else:
+                is_full_node = True
+            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), is_full_node)
+
         if peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
         return None
@@ -196,25 +200,19 @@ class FullNodeAPI:
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp, request.tip))
 
     @api_request
-    @peer_required
-    async def respond_proof_of_weight(
-        self,
-        response: full_node_protocol.RespondProofOfWeight,
-        peer: ws.WSChiaConnection,
-    ) -> Optional[Message]:
-        self.full_node.pow_pending.remove(peer.peer_node_id)
+    async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
-        if not validated:
-            raise Exception("bad weight proof, disconnecting peer")
-        # get tip params
-        tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
-        tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
-        self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
-        self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
-        return Message(
-            "request_sub_block",
-            full_node_protocol.RequestSubBlock(uint32(tip_height), True),
-        )
+        if validated is True:
+            # get tip params
+            tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
+            tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
+            self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
+            self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
+            return Message(
+                "request_sub_block",
+                full_node_protocol.RequestSubBlock(uint32(tip_height), True),
+            )
+        return None
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
@@ -1033,3 +1031,32 @@ class FullNodeAPI:
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = Message("respond_puzzle_solution", response)
         return response_msg
+
+    @api_request
+    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
+            return None
+        for i in range(request.start_sub_height, request.end_sub_height + 1):
+            if i not in self.full_node.blockchain.sub_height_to_hash:
+                reject = RejectHeaderBlocks(request.start_sub_height, request.end_sub_height)
+                msg = Message("reject_header_blocks_request", reject)
+                return msg
+
+        blocks: List[HeaderBlock] = []
+
+        for i in range(request.start_sub_height, request.end_sub_height + 1):
+            block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+                self.full_node.blockchain.sub_height_to_hash[uint32(i)]
+            )
+            if block is None:
+                reject = RejectHeaderBlocks(request.start_sub_height, request.end_sub_height)
+                msg = Message("reject_header_blocks_request", reject)
+                return msg
+
+            blocks.append(await block.get_block_header())
+
+        msg = Message(
+            "respond_header_blocks",
+            wallet_protocol.RespondHeaderBlocks(request.start_sub_height, request.end_sub_height, blocks),
+        )
+        return msg

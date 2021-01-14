@@ -48,6 +48,10 @@ function Iterator(props: any) {
   function handleTextFieldChange(
     e: InputEvent & { target: { id: number; value: string } },
   ) {
+    /* TODO: (Zlatko)
+    Pre fill Trie (src/util/trie.js) with words from english.txt
+    Find current input in trie and either show mnemonic suggestion | error 
+    */
     if (!e.target) {
       return;
     }
@@ -123,7 +127,7 @@ export default function WalletImport() {
           </Typography>
           <Typography variant="subtitle1" align="center">
             <Trans id="WalletImport.description">
-              Enter the 24 word mmemonic that you have saved in order to restore
+              Enter the 24 word mnemonic that you have saved in order to restore
               your Chia wallet.
             </Trans>
           </Typography>

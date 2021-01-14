@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from secrets import token_bytes
 
 from typing import Dict, Optional, List, Any, Set
 from blspy import G2Element, AugSchemeMPL
@@ -106,7 +107,8 @@ class CCWallet:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
         regular_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
@@ -120,9 +122,11 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=token_bytes(),
         )
         cc_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
@@ -136,6 +140,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
+            name=token_bytes(),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -361,7 +366,8 @@ class CCWallet:
 
         if send:
             regular_record = TransactionRecord(
-                confirmed_at_index=uint32(0),
+                confirmed_at_sub_height=uint32(0),
+                confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
@@ -375,9 +381,11 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
+                name=token_bytes(),
             )
             cc_record = TransactionRecord(
-                confirmed_at_index=uint32(0),
+                confirmed_at_sub_height=uint32(0),
+                confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
@@ -391,6 +399,7 @@ class CCWallet:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.INCOMING_TX.value),
+                name=full_spend.name(),
             )
             await self.wallet_state_manager.add_transaction(regular_record)
             await self.wallet_state_manager.add_pending_transaction(cc_record)
@@ -457,7 +466,7 @@ class CCWallet:
             used_coins: Set = set()
 
             # Use older coins first
-            spendable.sort(key=lambda r: r.confirmed_block_index)
+            spendable.sort(key=lambda r: r.confirmed_block_sub_height)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -471,7 +480,7 @@ class CCWallet:
                     continue
                 sum += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!")
+                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -572,7 +581,8 @@ class CCWallet:
         )
         # TODO add support for array in stored records
         return TransactionRecord(
-            confirmed_at_index=uint32(0),
+            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],
             amount=uint64(outgoing_amount),
@@ -586,6 +596,7 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
         )
 
     async def add_lineage(self, name: bytes32, lineage: Optional[Program]):

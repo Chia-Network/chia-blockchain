@@ -13,6 +13,7 @@ import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plot from '../plot/Plot';
 import Farm from '../farm/Farm';
+import Block from '../block/Block';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
 import TradeManager from '../trading/TradeManager';
@@ -80,6 +81,9 @@ export default function Dashboard() {
         <Switch>
           <Route path={`${path}`} exact>
             <FullNode />
+          </Route>
+          <Route path={`${path}/block/:headerHash`} exact>
+            <Block />
           </Route>
           <Route path={`${path}/wallets`}>
             <Wallets />

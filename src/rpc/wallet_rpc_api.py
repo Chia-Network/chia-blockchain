@@ -252,8 +252,8 @@ class WalletRpcApi:
     async def get_sync_status(self, request: Dict):
         assert self.service.wallet_state_manager is not None
         syncing = self.service.wallet_state_manager.sync_mode
-
-        return {"syncing": syncing}
+        synced = await self.service.wallet_state_manager.synced()
+        return {"synced": synced, "syncing": syncing}
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
@@ -390,7 +390,7 @@ class WalletRpcApi:
 
         return {
             "transaction": tr,
-            "transaction_id": tr.name(),
+            "transaction_id": tr.name,
         }
 
     async def get_transactions(self, request: Dict) -> Dict:
@@ -454,7 +454,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": tx,
-            "transaction_id": tx.name(),
+            "transaction_id": tx.name,
         }
 
     async def create_backup(self, request):
@@ -500,7 +500,7 @@ class WalletRpcApi:
 
         return {
             "transaction": tx,
-            "transaction_id": tx.name(),
+            "transaction_id": tx.name,
         }
 
     async def cc_get_colour(self, request):
@@ -644,7 +644,7 @@ class WalletRpcApi:
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": tx,
-            "transaction_id": tx.name(),
+            "transaction_id": tx.name,
         }
 
     async def add_rate_limited_funds(self, request):

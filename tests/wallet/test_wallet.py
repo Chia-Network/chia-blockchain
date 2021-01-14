@@ -9,6 +9,8 @@ from src.server.server import ChiaServer
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
+from src.wallet.util.transaction_type import TransactionType
+from src.wallet.wallet_state_manager import WalletStateManager
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
@@ -42,7 +44,7 @@ class TestWalletSimulator:
 
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node):
-        num_blocks = 4
+        num_blocks = 10
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
@@ -53,15 +55,39 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_sub_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks - 1)
+                for i in range(1, num_blocks + 2)
             ]
         )
 
+        async def check_tx_are_pool_farm_rewards():
+            wsm: WalletStateManager = wallet_node.wallet_state_manager
+            all_txs = await wsm.get_all_transactions(1)
+            expected_count = (num_blocks + 1) * 2
+            if len(all_txs) != expected_count:
+                return False
+            pool_rewards = 0
+            farm_rewards = 0
+
+            for tx in all_txs:
+                if tx.type == TransactionType.COINBASE_REWARD:
+                    pool_rewards += 1
+                elif tx.type == TransactionType.FEE_REWARD:
+                    farm_rewards += 1
+
+            if pool_rewards != expected_count / 2:
+                return False
+            if farm_rewards != expected_count / 2:
+                return False
+            return True
+
+        await time_out_assert(10, check_tx_are_pool_farm_rewards, True)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
@@ -182,17 +208,17 @@ class TestWalletSimulator:
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, 32 * b"0", 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
-        await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever1
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_2._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):

@@ -9,31 +9,72 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased
 
 ### Added
+- Plotting now checks to see if there are MacOS created `._` plot files and ignores them.
 
-- The UI now warns if you attempt to create a plot smaller than k=32.
+### Changed
+- Node sync is now multithreaded and much quicker.
+- Peer gossip is faster and smarter. It also will no longer accidentally gossip a private IP address to another peer.
+- If harvester hits an exception it will be caught, logged and skipped. This normally happens if it attempts to harvest a plot file you are still copying in.
+- The Rate Limited wallet has been updated to work in new consensus.
+
+### Fixed
+- There was a bug in block reorg code that would keep a peer with a lower weight chain from validating and syncing to a higher weight chain when the node thought it had a double spend in the other chain. This caused a persistent chain split.
+
+## [1.0beta19] aka Beta 1.19 - 2021-01-12
+
+### Added
+
+- Welcome to the new consensus. This release is an all but a full re-write of the blockchain in under 30 days. There is now only one tip of the blockchain but we went from two chains to three. Block times are now a little under a minute but there are a couple of sub blocks between each transaction block. A block is also itself a special kind of sub block and each sub block rewards the farmer who won it 1 TXCH. Sub blocks come, on average, about every 17 to 18 seconds.
+- Starting with this Beta, there are 4608 opportunities per day for a farmer to win 1 TXCH compared to Beta 18 where there were 288 opportunities per day for a farmer to win 16 TXCH.
+- There is a lot more information and explanation of the new consensus algorithm in the New Consensus Working Document linked from [chia.net](https://chia.net/). Among the improvements this gives the Chia blockchain are a much higher security level against all attacks, more frequent transaction blocks that have less time variation between them and are then buried under confirmations (sub blocks also count towards re-org security) much more quickly.
+- New consensus means this is a very hard fork. All of your TXCH from Beta 17/18 will be gone. Your plots and keys will work just fine however. You will have to sync to the new chain.
+- You now have to sync 16 times more "blocks" for every 5 minutes of historical time so syncing is slower than it was on the old chain. We're aware of this and will be speeding it up and addressing blockchain database growth in the nest couple of releases.
+- Prior to this Beta 19, we had block times that targeted 5 minutes and rewarded 16 TXCH to one farmer. Moving forward we have epoch times that target 10 minutes and reward 32 TXCH to 32 farmers about every 17-18 seconds over that period. This has subtle naming and UI impacts in various places.
+- Total transaction throughput is still targeted at 2.1x Bitcoin's throughput per hour but you will get more confirmations on a transaction much faster. This release has the errata that it doesn't limit transaction block size correctly.
+- For testing purposes this chain is quickly halving block rewards. By the time you're reading this and using the chain, farmers and pools will be receiving less than 1 TXCH for each block won as if it were 15-20 years from now. Block rewards are given in two components, 7/8's to the pool key and 1/8 to the farmer. The farmer also receives any transaction fees from the block.
+- You can now plot in parallel using the GUI. A known limitation is that you can't yet specify that you want 4 sets of two parallel plots. Each parallel plot added starts immediately parallel. We will continue to improve this.
+- The GUI now warns if you attempt to create a plot smaller than k=32.
+- Added Chinese language localization (zh-cn). A big thank you to @goomario for their pull request!
 - You can now specify which private key to use for `chia plots create`. After obtaining the fingerprint from `chia keys show`, try `chia plots create -a FINGERPRINT`. Thanks to @eFishCent for this pull request!
+- We use a faster hash to prime function for chiavdf from the current release of gmp-6.2.1 which we have upgraded chiavdf and blspy to support.
+- There is a new cli command - `chia configure`. This allows you to update certain configuration details like log level in config.yaml from the command line. This is particularly useful in containerization and linux automation. Try `chia configure -h`. Note that if chia services are running and you issue this command you will have to restart them for changes to take effect but you can use this command in the venv when no services are running or call it directly by path in the venv without activating the venv. Expect the options for this command to expand.
 - We now fully support Python 3.9.
 
 ### Changed
 
-- There are new farming and plotting pages. The plotting flow was redesigned to streamline it and add advanced options as drop downs as appropriate. Plots are now queued into your local plot list. To see the plotting log, try the three vertical dots. Remote harvester plot display will be coming to the plot page as well.
-- Harvester and farmer will start when the GUI starts instead of waiting for key selection.
-- Plotting has a new option `-e`. This allows you to choose from either the default bitfield back propagation or the classic back propagation. SSD temp space is generally faster with the classic mode with `-e` and spinning disk are generally faster with the new method. YMMV.
+- The Plot tab on the GUI is now the Plots tab. It starts out with a much more friendly new user wizard and otherwise keeps all of your farming plots listed here. Use the "+ ADD A PLOT" button in the top right to plot your second or later plot.
+- The new plots page offers advanced plotting options in the various "Show Advanced Options" fold outs.
+- The plotter supports the new bitfield back propagation method and the old method from Beta 17. To choose the old method add a `-e` to the command line or choose "Disable bitfield plotting" in "Show Advanced Options" of the Plots tab. Bitfield back propagation writes about 13% less total writes and can be faster on some slower hard drive temp spaces. For now, SSD temp space will likely plot faster with bitfield back propagation disabled. We will be returning to speed enhancements to the plotter as we approach and pass our mainnet launch.
+- The Farm tab in the GUI is significantly enhanced. Here you have a dashboard overview of your farm and your activity in response to challenges blockchain challnegs, how long it will take you - on average - to win a block, and how much TXCH you've won so far. Harvester and Full Node connections have moved to Advanced Options.
+- Harvester and farmer will start when the GUI starts instead of waiting for key selection if there are already keys available. This means you will start farming on reboot if you have the Chia application set to launch on start.
+- Testnet is now running at the primary port of 58444. Update your routers appropriately. This opens 8444 for mainnet.
+- All networking code has been refactored and mostly moved to websockets.
+- RPCs and daemon now communicate over TLS with certificates that are generated into `~/.chia/VERSION/config/`
 - We have moved to taproot across all of our transactions and smart transactions.
+- We have adopted chech32m encoding of keys and addresses in parallel to bitcoin's coming adoption of bech32m.
 - The rate limited wallet was updated and re-factored.
 - All appropriate Chialisp smart transactions have been updated to use aggsig_me.
 - Full node should be more aggressive about finding other peers.
 - Peer disconnect messages are now set to log level INFO down from WARNING.
 - chiavdf now allows passing in input to a VDF for new consensus.
 - sha256tree has been removed from Chialisp.
+- `chia show -s` has been refactored to support the new consensus.
+- `chia netspace` has been refactored for new consensus.
 - aiohttp, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
-- Tests now place a cache of blocks in the ~/.chia/ directory to speed up total testing time.
+- Tests now place a cache of blocks and plots in the ~/.chia/ directory to speed up total testing time.
+- Changes were made to chiapos to correctly support the new bitfiled backpropogation on FreeBSD and OpenBSD. With the exception of needing to work around python cryptography as outlined on the wiki, FreeBSD and OpenBSD should be able to compile and run chia-blockchain.
+- With the change to new consensus many components of the chain and local database are not yet stored optimally. Startup and sync times may be slower than usual so please be patient. This will improve next release.
+- Errata: Coinbase amount is missing from the GUI Block view.
+- Eratta: wallet Backup, and Fly-sync on the wallet are currently not working.
 
 ### Fixed
 
 - There was a regression in Beta 18 where the plotter took 499GiB of temp space for a k32 when it used to only use 332GiB. The plotter should now use just slightly less than it did in Beta 17.
-- blspy was bumped to 0.3.0 which now correctly supports the aggsig of no signatures.
+- blspy was bumped to 0.3.1 which now correctly supports the aggsig of no signatures and is built with gmp-6.2.1.
 - Fixed a plotter crash after pulling a disk without ejecting it first.
+- `sh install.sh` now works properly on Linux Mint.
+- `chia show -s` now is less brain dead when a node is initially starting to sync.
+
 ## [1.0beta18] aka Beta 1.18 - 2020-12-03
 
 ### Added

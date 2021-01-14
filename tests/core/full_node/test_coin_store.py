@@ -67,17 +67,12 @@ class TestCoinStore:
         should_be_included: Set[Coin] = set()
         last_block_height = -1
         for block in blocks:
-            print(f"Block {block.sub_block_height} {block.is_block()}")
             farmer_coin, pool_coin = block.get_future_reward_coins(last_block_height + 1)
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
             if block.is_block():
                 last_block_height = block.height
                 removals, additions = await block.tx_removals_and_additions()
-
-                print(len(block.get_included_reward_coins()), len(should_be_included_prev))
-                print([c.amount for c in block.get_included_reward_coins()])
-                print([c.amount for c in should_be_included_prev])
 
                 assert block.get_included_reward_coins() == should_be_included_prev
 
