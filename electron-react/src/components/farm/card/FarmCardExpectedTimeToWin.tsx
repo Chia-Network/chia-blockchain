@@ -6,6 +6,8 @@ import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
 import type Plot from '../../../types/Plot';
 
+const MINUTES_PER_BLOCK = (24 * 60) / 4608; // 0.3125
+
 export default function FarmCardExpectedTimeToWin() {
   const plots = useSelector(
     (state: RootState) => state.farming_state.harvester.plots,
@@ -22,22 +24,26 @@ export default function FarmCardExpectedTimeToWin() {
     return plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
   }, [plots]);
 
-  const proportion = totalNetworkSpace ? farmerSpace / totalNetworkSpace : 0;
+  const proportion = totalNetworkSpace 
+    ? farmerSpace / totalNetworkSpace 
+    : 0;
 
-  const minutes = proportion ? 5 / proportion : 0;
+  const minutes = proportion 
+    ? MINUTES_PER_BLOCK / proportion 
+    : 0;
 
-  const totalHours = moment.duration({ minutes }).humanize();
+  const expectedTimeToWin = moment.duration({ minutes }).humanize();
 
   return (
     <FarmCard
       title={
         <Trans id="FarmCardExpectedTimeToWin.title">Expected Time to Win</Trans>
       }
-      value={`${totalHours}`}
+      value={`${expectedTimeToWin}`}
       tooltip={
         <Trans id="FarmCardExpectedTimeToWin.tooltip">
           You have {(proportion * 100).toFixed(4)}% of the space on the network,
-          so farming a block will take {totalHours} in expectation.
+          so farming a block will take {expectedTimeToWin} in expectation.
         </Trans>
       }
     />
