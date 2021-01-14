@@ -453,10 +453,10 @@ class AddressManager:
                 else:
                     # The table is dense, randomly trying positions is faster than loading positions list.
                     tried_bucket = randrange(TRIED_BUCKET_COUNT)
-                    tried_buket_pos = randrange(BUCKET_SIZE)
-                    while self.tried_matrix[tried_bucket][tried_buket_pos] == -1:
+                    tried_bucket_pos = randrange(BUCKET_SIZE)
+                    while self.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
                         tried_bucket = (tried_bucket + randbits(LOG_TRIED_BUCKET_COUNT)) % TRIED_BUCKET_COUNT
-                        tried_buket_pos = (tried_buket_pos + randbits(LOG_BUCKET_SIZE)) % BUCKET_SIZE
+                        tried_bucket_pos = (tried_bucket_pos + randbits(LOG_BUCKET_SIZE)) % BUCKET_SIZE
 
                 node_id = self.tried_matrix[tried_bucket][tried_bucket_pos]
                 assert node_id != -1
