@@ -395,7 +395,9 @@ class WeightProofHandler:
     async def __create_sub_epoch_segments(
         self, ses_block: SubBlockRecord, se_start: SubBlockRecord, sub_epoch_n: uint32
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        sub_blocks = await self.blockchain.get_sub_block_in_range(se_start.sub_block_height, ses_block.sub_block_height)
+        sub_blocks = await self.blockchain.get_sub_blocks_in_range(
+            se_start.sub_block_height, ses_block.sub_block_height
+        )
         segments: List[SubEpochChallengeSegment] = []
 
         curr: Optional[SubBlockRecord] = se_start

@@ -457,5 +457,5 @@ class WalletBlockchain(BlockchainInterface):
             return
         self.clean_sub_block_record(peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
-    async def get_sub_block_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
+    async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return await self.block_store.get_sub_block_in_range(start, stop)
