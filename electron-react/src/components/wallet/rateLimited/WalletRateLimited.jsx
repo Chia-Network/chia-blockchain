@@ -8,28 +8,21 @@ import Paper from '@material-ui/core/Paper';
 import Box from '@material-ui/core/Box';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-
 import Accordion from '@material-ui/core/Accordion';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { Tooltip } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
-import { AlertDialog } from '@chia/core';
+import { AlertDialog, Card, Flex, } from '@chia/core';
 import {
   send_transaction,
   rl_set_user_info_action,
 } from '../../../modules/message';
 import { mojo_to_chia_string, chia_to_mojo } from '../../../util/chia';
 import { get_transaction_result } from '../../../util/transaction_result';
-import { unix_to_short_date } from '../../../util/utils';
-import TransactionType from '../../../constants/TransactionType';
 import { openDialog } from '../../../modules/dialog';
+import WalletHistory from '../WalletHistory';
 
 const drawerWidth = 240;
 
@@ -278,104 +271,97 @@ const IncompleteCard = (props) => {
 
   const classes = useStyles();
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="RTIncompleteCard.title">
-                Rate Limited User Wallet Setup
-              </Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.setupSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Typography variant="subtitle1">
-                  <Trans id="RTIncompleteCard.description">
-                    Send your pubkey to your Rate Limited Wallet admin:
-                  </Trans>
-                </Typography>
-              </Box>
+    <Card
+      title={(
+        <Trans id="RTIncompleteCard.title">
+          Rate Limited User Wallet Setup
+        </Trans>
+      )}
+    >
+      <Grid item xs={12}>
+        <div className={classes.setupSection}>
+          <Box display="flex">
+            <Box flexGrow={1}>
+              <Typography variant="subtitle1">
+                <Trans id="RTIncompleteCard.description">
+                  Send your pubkey to your Rate Limited Wallet admin:
+                </Trans>
+              </Typography>
             </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  disabled
-                  fullWidth
-                  label={
-                    <Trans id="RTIncompleteCard.userPubkey">User Pubkey</Trans>
-                  }
-                  value={pubkey}
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={copy}
-                  className={classes.copyButton}
-                  variant="contained"
-                  color="secondary"
-                  disableElevation
-                >
-                  <Trans id="RTIncompleteCard.copy">Copy</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.setupSection}>
-            <Box display="flex">
-              <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
-                <Typography variant="subtitle1">
-                  <Trans id="RTIncompleteCard.description2">
-                    When you receive the setup info packet from your admin,
-                    enter it below to complete your Rate Limited Wallet setup:
-                  </Trans>
-                </Typography>
-              </Box>
-            </Box>
-            <Box display="flex">
-              <Box flexGrow={1} style={{ marginTop: 0 }}>
-                <TextField
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  inputRef={(input) => {
-                    ip_input = input;
-                  }}
-                  margin="normal"
-                  label={
-                    <Trans id="RTIncompleteCard.infoPacket">Info Packet</Trans>
-                  }
-                />
-              </Box>
-            </Box>
-          </div>
-          <div className={classes.setupSection}>
-            <Box display="flex">
-              <Box>
-                <Button
-                  onClick={submit}
-                  className={classes.submitButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="RTIncompleteCard.submit">Submit</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+          </Box>
+        </div>
       </Grid>
-    </Paper>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              disabled
+              fullWidth
+              label={
+                <Trans id="RTIncompleteCard.userPubkey">User Pubkey</Trans>
+              }
+              value={pubkey}
+              variant="outlined"
+            />
+          </Box>
+          <Box>
+            <Button
+              onClick={copy}
+              className={classes.copyButton}
+              variant="contained"
+              color="secondary"
+              disableElevation
+            >
+              <Trans id="RTIncompleteCard.copy">Copy</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </Grid>
+      <Grid item xs={12}>
+        <div className={classes.setupSection}>
+          <Box display="flex">
+            <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
+              <Typography variant="subtitle1">
+                <Trans id="RTIncompleteCard.description2">
+                  When you receive the setup info packet from your admin,
+                  enter it below to complete your Rate Limited Wallet setup:
+                </Trans>
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex">
+            <Box flexGrow={1} style={{ marginTop: 0 }}>
+              <TextField
+                variant="filled"
+                color="secondary"
+                fullWidth
+                inputRef={(input) => {
+                  ip_input = input;
+                }}
+                margin="normal"
+                label={
+                  <Trans id="RTIncompleteCard.infoPacket">Info Packet</Trans>
+                }
+              />
+            </Box>
+          </Box>
+        </div>
+        <div className={classes.setupSection}>
+          <Box display="flex">
+            <Box>
+              <Button
+                onClick={submit}
+                className={classes.submitButton}
+                variant="contained"
+                color="primary"
+              >
+                <Trans id="RTIncompleteCard.submit">Submit</Trans>
+              </Button>
+            </Box>
+          </Box>
+        </div>
+      </Grid>
+    </Card>
   );
 };
 
@@ -413,167 +399,142 @@ const RLDetailsCard = (props) => {
   const classes = useStyles();
   if (type === 'user') {
     return (
-      <Paper className={classes.paper}>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <div className={classes.cardTitle}>
-              <Typography component="h6" variant="h6">
-                <Trans id="RLDetailsCard.title">Rate Limited Info</Trans>
+      <Card
+        title={<Trans id="RLDetailsCard.title">Rate Limited Info</Trans>}
+      >
+        <Grid item xs={12}>
+          <Box display="flex">
+            <Box flexGrow={1}>
+              <Typography variant="subtitle1">
+                <Trans id="RLDetailsCard.spendingInterval">
+                  Spending Interval (number of blocks): {interval}
+                </Trans>
               </Typography>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
-                <Box flexGrow={1}>
-                  <Typography variant="subtitle1">
-                    <Trans id="RLDetailsCard.spendingInterval">
-                      Spending Interval (number of blocks): {interval}
-                    </Trans>
-                  </Typography>
-                </Box>
-                <Box flexGrow={1}>
-                  <Typography variant="subtitle1">
-                    <Trans id="RLDetailsCard.spendingLimit">
-                      Spending Limit (chia per interval):{' '}
-                      {mojo_to_chia_string(limit)}
-                    </Trans>
-                  </Typography>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex" style={{ marginBottom: 20 }}>
-                <Box flexGrow={1}>
-                  <TextField
-                    disabled
-                    fullWidth
-                    label={<Trans id="RLDetailsCard.myPubkey">My Pubkey</Trans>}
-                    value={user_pubkey}
-                    variant="outlined"
-                  />
-                </Box>
-                <Box>
-                  <Button
-                    onClick={user_copy}
-                    className={classes.copyButton}
-                    variant="contained"
-                    color="secondary"
-                    disableElevation
-                  >
-                    <Trans id="RLDetailsCard.copy">Copy</Trans>
-                  </Button>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
+            </Box>
+            <Box flexGrow={1}>
+              <Typography variant="subtitle1">
+                <Trans id="RLDetailsCard.spendingLimit">
+                  Spending Limit (chia per interval):{' '}
+                  {mojo_to_chia_string(limit)}
+                </Trans>
+              </Typography>
+            </Box>
+          </Box>
         </Grid>
-      </Paper>
+        <Grid item xs={12}>
+          <Box display="flex" style={{ marginBottom: 20 }}>
+            <Box flexGrow={1}>
+              <TextField
+                disabled
+                fullWidth
+                label={<Trans id="RLDetailsCard.myPubkey">My Pubkey</Trans>}
+                value={user_pubkey}
+                variant="outlined"
+              />
+            </Box>
+            <Box>
+              <Button
+                onClick={user_copy}
+                className={classes.copyButton}
+                variant="contained"
+                color="secondary"
+                disableElevation
+              >
+                <Trans id="RLDetailsCard.copy">Copy</Trans>
+              </Button>
+            </Box>
+          </Box>
+        </Grid>
+      </Card>
     );
   }
   if (type === 'admin') {
     return (
-      <Paper className={classes.paper}>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <div className={classes.cardTitle}>
-              <Typography component="h6" variant="h6">
-                <Trans id="RLDetailsCard.title">Rate Limited Info</Trans>
+      <Card
+        title={<Trans id="RLDetailsCard.title">Rate Limited Info</Trans>}
+      >
+        <Grid item xs={12}>
+          <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
+            <Box flexGrow={1}>
+              <Typography variant="subtitle1">
+                <Trans id="RLDetailsCard.spendingInterval">
+                  Spending Interval (number of blocks): {interval}
+                </Trans>
               </Typography>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
-                <Box flexGrow={1}>
-                  <Typography variant="subtitle1">
-                    <Trans id="RLDetailsCard.spendingInterval">
-                      Spending Interval (number of blocks): {interval}
-                    </Trans>
-                  </Typography>
-                </Box>
-                <Box flexGrow={1}>
-                  <Typography variant="subtitle1">
-                    <Trans id="RLDetailsCard.spendingLimit">
-                      Spending Limit (chia per interval):{' '}
-                      {mojo_to_chia_string(limit)}
-                    </Trans>
-                  </Typography>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex">
-                <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
-                  <Typography variant="subtitle1">
-                    <Trans id="RLDetailsCard.description">
-                      Send this info packet to your Rate Limited Wallet user who
-                      must use it to complete setup of their wallet:
-                    </Trans>
-                  </Typography>
-                </Box>
-              </Box>
-              <Box display="flex" style={{ marginBottom: 20 }}>
-                <Box flexGrow={1}>
-                  <TextField
-                    disabled
-                    fullWidth
-                    label={
-                      <Trans id="RLDetailsCard.infoPacket">Info Packet</Trans>
-                    }
-                    value={ip_hex}
-                    variant="outlined"
-                  />
-                </Box>
-                <Box>
-                  <Button
-                    onClick={ip_hex_copy}
-                    className={classes.copyButton}
-                    variant="contained"
-                    color="secondary"
-                    disableElevation
-                  >
-                    <Trans id="RLDetailsCard.copy">Copy</Trans>
-                  </Button>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
+            </Box>
+            <Box flexGrow={1}>
+              <Typography variant="subtitle1">
+                <Trans id="RLDetailsCard.spendingLimit">
+                  Spending Limit (chia per interval):{' '}
+                  {mojo_to_chia_string(limit)}
+                </Trans>
+              </Typography>
+            </Box>
+          </Box>
         </Grid>
-      </Paper>
+        <Grid item xs={12}>
+          <Box display="flex">
+            <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
+              <Typography variant="subtitle1">
+                <Trans id="RLDetailsCard.description">
+                  Send this info packet to your Rate Limited Wallet user who
+                  must use it to complete setup of their wallet:
+                </Trans>
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" style={{ marginBottom: 20 }}>
+            <Box flexGrow={1}>
+              <TextField
+                disabled
+                fullWidth
+                label={
+                  <Trans id="RLDetailsCard.infoPacket">Info Packet</Trans>
+                }
+                value={ip_hex}
+                variant="outlined"
+              />
+            </Box>
+            <Box>
+              <Button
+                onClick={ip_hex_copy}
+                className={classes.copyButton}
+                variant="contained"
+                color="secondary"
+                disableElevation
+              >
+                <Trans id="RLDetailsCard.copy">Copy</Trans>
+              </Button>
+            </Box>
+          </Box>
+        </Grid>
+      </Card>
     );
   }
 };
 
 const BalanceCardSubSection = (props) => {
-  const classes = useStyles();
   return (
     <Grid item xs={12}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <Typography variant="subtitle1">
-              {props.title}
-              {props.tooltip ? (
-                <Tooltip title={props.tooltip}>
-                  <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
-                </Tooltip>
-              ) : (
-                ''
-              )}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1">
-              {mojo_to_chia_string(props.balance)} TXCH
-            </Typography>
-          </Box>
+      <Box display="flex">
+        <Box flexGrow={1}>
+          <Typography variant="subtitle1">
+            {props.title}
+            {props.tooltip ? (
+              <Tooltip title={props.tooltip}>
+                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
+              </Tooltip>
+            ) : (
+              ''
+            )}
+          </Typography>
         </Box>
-      </div>
+        <Box>
+          <Typography variant="subtitle1">
+            {mojo_to_chia_string(props.balance)} TXCH
+          </Typography>
+        </Box>
+      </Box>
     </Grid>
   );
 };
@@ -596,81 +557,72 @@ const BalanceCard = (props) => {
   const classes = useStyles();
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="RLBalanceCard.title">Balance</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <BalanceCardSubSection
-          title={<Trans id="RLBalanceCard.totalBalance">Total Balance</Trans>}
-          balance={balance}
-          tooltip=""
-        />
-        <BalanceCardSubSection
-          title={
-            <Trans id="RLBalanceCard.spendableBalance">Spendable Balance</Trans>
-          }
-          balance={balance_spendable}
-          tooltip=""
-        />
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <Accordion className={classes.front}>
-                  <AccordionSummary
-                    expandIcon={<ExpandMoreIcon />}
-                    aria-controls="panel1a-content"
-                    id="panel1a-header"
-                  >
-                    <Typography className={classes.heading}>
-                      <Trans id="RLBalanceCard.viewPendingBalances">
-                        View pending balances
+    <Card
+      title={<Trans id="RLBalanceCard.title">Balance</Trans>}
+    >
+      <BalanceCardSubSection
+        title={<Trans id="RLBalanceCard.totalBalance">Total Balance</Trans>}
+        balance={balance}
+        tooltip=""
+      />
+      <BalanceCardSubSection
+        title={
+          <Trans id="RLBalanceCard.spendableBalance">Spendable Balance</Trans>
+        }
+        balance={balance_spendable}
+        tooltip=""
+      />
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Accordion className={classes.front}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel1a-content"
+                id="panel1a-header"
+              >
+                <Typography className={classes.heading}>
+                  <Trans id="RLBalanceCard.viewPendingBalances">
+                    View pending balances
+                  </Trans>
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={0}>
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="RLBalanceCard.pendingTotalBalance">
+                        Pending Total Balance
                       </Trans>
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={0}>
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="RLBalanceCard.pendingTotalBalance">
-                            Pending Total Balance
-                          </Trans>
-                        }
-                        balance={balance_ptotal}
-                        tooltip=""
-                      />
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="RLBalanceCard.pendingBalance">
-                            Pending Balance
-                          </Trans>
-                        }
-                        balance={balance_pending}
-                        tooltip=""
-                      />
-                      <BalanceCardSubSection
-                        title={
-                          <Trans id="RLBalanceCard.pendingChange">
-                            Pending Change
-                          </Trans>
-                        }
-                        balance={balance_change}
-                        tooltip=""
-                      />
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+                    }
+                    balance={balance_ptotal}
+                    tooltip=""
+                  />
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="RLBalanceCard.pendingBalance">
+                        Pending Balance
+                      </Trans>
+                    }
+                    balance={balance_pending}
+                    tooltip=""
+                  />
+                  <BalanceCardSubSection
+                    title={
+                      <Trans id="RLBalanceCard.pendingChange">
+                        Pending Change
+                      </Trans>
+                    }
+                    balance={balance_change}
+                    tooltip=""
+                  />
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
+    </Card>
   );
 };
 
@@ -772,217 +724,86 @@ const SendCard = (props) => {
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
+    <Card
+      title={<Trans id="RLSendCard.title">Create Transaction</Trans>}
+    >
+      {result_message && (
         <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="RLSendCard.title">Create Transaction</Trans>
-            </Typography>
-          </div>
+          <p className={result_class}>{result_message}</p>
         </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <p className={result_class}>{result_message}</p>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  disabled={sending_transaction}
-                  inputRef={(input) => {
-                    address_input = input;
-                  }}
-                  label={
-                    <Trans id="RLSendCard.addressPuzzleHash">
-                      Address / Puzzle hash
-                    </Trans>
-                  }
-                />
-              </Box>
-              <Box />
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={6}>
-                <TextField
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  disabled={sending_transaction}
-                  className={classes.leftField}
-                  margin="normal"
-                  inputRef={(input) => {
-                    amount_input = input;
-                  }}
-                  label={<Trans id="RLSendCard.amount">Amount</Trans>}
-                />
-              </Box>
-              <Box flexGrow={6}>
-                <TextField
-                  variant="filled"
-                  fullWidth
-                  color="secondary"
-                  margin="normal"
-                  disabled={sending_transaction}
-                  inputRef={(input) => {
-                    fee_input = input;
-                  }}
-                  label={<Trans id="RLSendCard.fee">Fee</Trans>}
-                />
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box>
-                <Button
-                  onClick={send}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                  disabled={sending_transaction}
-                >
-                  <Trans id="RLSendCard.send">Send</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+      )}
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={sending_transaction}
+              inputRef={(input) => {
+                address_input = input;
+              }}
+              label={
+                <Trans id="RLSendCard.addressPuzzleHash">
+                  Address / Puzzle hash
+                </Trans>
+              }
+            />
+          </Box>
+          <Box />
+        </Box>
       </Grid>
-    </Paper>
-  );
-};
-
-const HistoryCard = (props) => {
-  const id = props.wallet_id;
-  const classes = useStyles();
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="RLHistoryCard.title">History</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <TransactionTable wallet_id={id} />
-        </Grid>
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box flexGrow={6}>
+            <TextField
+              variant="filled"
+              color="secondary"
+              fullWidth
+              disabled={sending_transaction}
+              className={classes.leftField}
+              margin="normal"
+              inputRef={(input) => {
+                amount_input = input;
+              }}
+              label={<Trans id="RLSendCard.amount">Amount</Trans>}
+            />
+          </Box>
+          <Box flexGrow={6}>
+            <TextField
+              variant="filled"
+              fullWidth
+              color="secondary"
+              margin="normal"
+              disabled={sending_transaction}
+              inputRef={(input) => {
+                fee_input = input;
+              }}
+              label={<Trans id="RLSendCard.fee">Fee</Trans>}
+            />
+          </Box>
+        </Box>
       </Grid>
-    </Paper>
-  );
-};
-
-const TransactionTable = (props) => {
-  const classes = useStyles();
-  const id = props.wallet_id;
-  const transactions = useSelector(
-    (state) => state.wallet_state.wallets[id].transactions,
-  );
-
-  if (transactions.length === 0) {
-    return (
-      <div style={{ margin: '30px' }}>
-        <Trans id="RLTransactionTable.noPreviousTransactions">
-          No previous transactions
-        </Trans>
-      </div>
-    );
-  }
-
-  const incoming_string = (type: TransactionType) => {
-    const isOutgoing = [
-      TransactionType.OUTGOING, 
-      TransactionType.OUTGOING_TRADE,
-    ].includes(type);
-
-    return isOutgoing
-      ? <Trans id="RLTransactionTable.outgoing">Outgoing</Trans>
-      : <Trans id="RLTransactionTable.incoming">Incoming</Trans>;
-  };
-
-  const confirmed_to_string = (confirmed) => {
-    return confirmed ? (
-      <Trans id="RLTransactionTable.confirmed">Confirmed</Trans>
-    ) : (
-      <Trans id="RLTransactionTable.pending">Pending</Trans>
-    );
-  };
-
-  return (
-    <Paper className={classes.table_root}>
-      <Table stickyHeader className={classes.table}>
-        <TableHead className={classes.head}>
-          <TableRow className={classes.row}>
-            <TableCell className={classes.cell_short}>
-              <Trans id="RLTransactionTable.type">Type</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="RLTransactionTable.to">To</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="RLTransactionTable.date">Date</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="RLTransactionTable.status">Status</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="RLTransactionTable.amount">Amount</Trans>
-            </TableCell>
-            <TableCell className={classes.cell_short}>
-              <Trans id="RLTransactionTable.fee">Fee</Trans>
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody className={classes.tableBody}>
-          {transactions.map((tx) => (
-            <TableRow
-              className={classes.row}
-              key={tx.to_address + tx.created_at_time + tx.amount}
+      <Grid item xs={12}>
+        <Box display="flex">
+          <Box>
+            <Button
+              onClick={send}
+              className={classes.sendButton}
+              variant="contained"
+              color="primary"
+              disabled={sending_transaction}
             >
-              <TableCell className={classes.cell_short}>
-                {incoming_string(tx.type)}
-              </TableCell>
-              <TableCell
-                style={{ maxWidth: '150px' }}
-                className={classes.cell_short}
-              >
-                {tx.to_address}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {unix_to_short_date(tx.created_at_time)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {confirmed_to_string(tx.confirmed)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {mojo_to_chia_string(tx.amount)}
-              </TableCell>
-              <TableCell className={classes.cell_short}>
-                {mojo_to_chia_string(tx.fee_amount)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Paper>
+              <Trans id="RLSendCard.send">Send</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </Grid>
+    </Card>
   );
 };
 
 export default function RateLimitedWallet(props) {
-  const classes = useStyles();
   const id = useSelector((state) => state.wallet_menu.id);
   const wallets = useSelector((state) => state.wallet_state.wallets);
   const data = useSelector((state) => state.wallet_state.wallets[id].data);
@@ -994,26 +815,26 @@ export default function RateLimitedWallet(props) {
     if (type === 'user') {
       if (initStatus) {
         return (
-          <Grid className={classes.walletContainer} item xs={12}>
+          <Flex flexDirection="column" gap={3}>
             <RLDetailsCard wallet_id={id} />
             <BalanceCard wallet_id={id} />
             <SendCard wallet_id={id} />
-            <HistoryCard wallet_id={id} />
-          </Grid>
+            <WalletHistory walletId={id} />
+          </Flex>
         );
       }
       return (
-        <Grid className={classes.walletContainer} item xs={12}>
+        <Flex flexDirection="column" gap={3}>
           <IncompleteCard wallet_id={id} />
-        </Grid>
+        </Flex>
       );
     }
     if (type === 'admin') {
       return (
-        <Grid className={classes.walletContainer} item xs={12}>
+        <Flex flexDirection="column" gap={3}>
           <RLDetailsCard wallet_id={id} />
           <BalanceCard wallet_id={id} />
-        </Grid>
+        </Flex>
       );
     }
   }

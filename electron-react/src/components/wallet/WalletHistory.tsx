@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { Typography } from '@material-ui/core';
 import { useSelector } from 'react-redux';
 import { Card, Table } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/Table/Table';
-import { mojo_to_chia_string } from '../../util/chia';
+import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../util/chia';
 import { unix_to_short_date } from '../../util/utils';
 import TransactionType from '../../constants/TransactionType';
+import WalletType from '../../constants/WalletType';
 
-const cols = [
+const getCols = (type: WalletType) => [
   {
     width: '120px',
     field(row: Row) {
@@ -49,7 +50,9 @@ const cols = [
   },
   {
     minWidth: '130px',
-    field: (row: Row) => mojo_to_chia_string(row.amount),
+    field: (row: Row) => type === WalletType.COLOURED_COIN
+      ? mojo_to_colouredcoin_string(row.amount)
+      : mojo_to_chia_string(row.amount),
     title: <Trans id="TransactionTable.amount">Amount</Trans>,
   },
   {
@@ -59,16 +62,20 @@ const cols = [
   },
 ];
 
-
 type Props = {
   walletId: number;
 };
 
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
+  const type = useSelector(
+    (state: RootState) => state.wallet_state.wallets[walletId].type,
+  );
   const transactions = useSelector(
     (state: RootState) => state.wallet_state.wallets[walletId].transactions,
   );
+
+  const cols = useMemo(() => getCols(type), [type]);
 
   return (
     <Card
