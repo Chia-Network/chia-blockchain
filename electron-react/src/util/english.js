@@ -1,4 +1,4 @@
-export const word_list = [
+export default [
   { word: 'abandon', value: 0 },
   { word: 'ability', value: 1 },
   { word: 'able', value: 2 },
@@ -1173,7 +1173,7 @@ export const word_list = [
   { word: 'mystery', value: 1171 },
   { word: 'myth', value: 1172 },
   { word: 'naive', value: 1173 },
-  { word: '{ word', value: 1174 },
+  { word: 'name', value: 1174 },
   { word: 'napkin', value: 1175 },
   { word: 'narrow', value: 1176 },
   { word: 'nasty', value: 1177 },
