@@ -29,11 +29,11 @@ msgstr "新建地址"
 msgid "AddressCard.title"
 msgstr "接收地址"
 
-#: src/components/core/AdvancedOptions/AdvancedOptions.tsx:35
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "AdvancedOptions.hideAdvancedOptions"
 msgstr ""
 
-#: src/components/core/AdvancedOptions/AdvancedOptions.tsx:40
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "AdvancedOptions.showAdvancedOptions"
 msgstr ""
 
@@ -225,36 +225,36 @@ msgstr "权重是所有区块（包括该区块在内）的累计难度"
 #~ msgid "BlocksCard.expectedFinishTime"
 #~ msgstr "预计完成时间"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:85
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:84
 msgid "BlocksCard.finished"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:53
+#: src/components/fullNode/FullNode.jsx:52
 msgid "BlocksCard.headerHash"
 msgstr "区块头 Hash"
 
-#: src/components/fullNode/FullNode.jsx:63
+#: src/components/fullNode/FullNode.jsx:62
 msgid "BlocksCard.height"
 msgstr "高度"
 
-#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:41
 msgid "BlocksCard.inProgress"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:89
+#: src/components/fullNode/FullNode.jsx:88
 msgid "BlocksCard.state"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:74
 msgid "BlocksCard.timeCreated"
 msgstr "创建时间"
 
-#: src/components/fullNode/FullNode.jsx:317
+#: src/components/fullNode/FullNode.jsx:316
 msgid "BlocksCard.title"
 msgstr "区块"
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:85
 msgid "BlocksCard.unfinished"
 msgstr ""
 
@@ -749,16 +749,25 @@ msgstr ""
 msgid "FarmCardCoinbaseRewards.title"
 msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:48
-msgid "FarmCardExpectedTimeToWin.synching"
+#: src/components/farm/card/FarmCardNotAvailable.tsx:8
+#: src/components/farm/card/FarmCardNotAvailable.tsx:9
+msgid "FarmCardExpectedTimeToWin.notAvailable"
 msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:47
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#: src/components/farm/card/FarmCardNotAvailable.tsx:9
+msgid "FarmCardExpectedTimeToWin.notAvailableDescription"
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:48
+#~ msgid "FarmCardExpectedTimeToWin.synching"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "FarmCardExpectedTimeToWin.title"
 msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "FarmCardExpectedTimeToWin.tooltip"
 msgstr ""
 
@@ -778,7 +787,28 @@ msgstr ""
 msgid "FarmCardPlotCount.title"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:6
+#: src/components/farm/card/FarmCardStatus.tsx:23
+#: src/components/farm/card/FarmCardStatus.tsx:28
+msgid "FarmCardStatus.error"
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:24
+msgid "FarmCardStatus.farmerIsNotConnected"
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:29
+msgid "FarmCardStatus.farmerIsNotRunning"
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+msgid "FarmCardStatus.synching"
+msgstr ""
+
+#: src/components/farm/card/FarmCardStatus.tsx:14
+#: src/components/farm/card/FarmCardStatus.tsx:19
+#: src/components/farm/card/FarmCardStatus.tsx:22
+#: src/components/farm/card/FarmCardStatus.tsx:27
+#: src/components/farm/card/FarmCardStatus.tsx:31
 msgid "FarmCardStatus.title"
 msgstr ""
 
@@ -944,11 +974,12 @@ msgstr "挖矿"
 #~ msgid "FarmerStatus.connectionStatus"
 #~ msgstr "连接状态"
 
-#: src/components/farm/FarmerStatus.tsx:39
+#: src/components/farm/FarmerStatus.tsx:38
 msgid "FarmerStatus.error"
 msgstr ""
 
-#: src/components/farm/FarmerStatus.tsx:39
+#: src/components/farm/FarmerStatus.tsx:38
+#: src/components/farm/card/FarmCardStatus.tsx:32
 msgid "FarmerStatus.farming"
 msgstr ""
 
@@ -965,7 +996,7 @@ msgstr ""
 #~ msgid "FarmerStatus.notConnected"
 #~ msgstr "未连接"
 
-#: src/components/farm/FarmerStatus.tsx:39
+#: src/components/farm/FarmerStatus.tsx:38
 msgid "FarmerStatus.synching"
 msgstr ""
 
@@ -981,19 +1012,19 @@ msgstr ""
 #~ msgid "FarmerStatus.totalSizeOfLocalPlots"
 #~ msgstr "本地算力文件总量"
 
-#: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:47
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 msgid "FormatConnectionStatus.connected"
 msgstr ""
 
-#: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:48
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 msgid "FormatConnectionStatus.notConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:390
+#: src/components/fullNode/FullNode.jsx:389
 msgid "FullNode.title"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:276
+#: src/components/fullNode/FullNode.jsx:275
 msgid "FullNodeStatus.title"
 msgstr "全节点状态"
 
@@ -1001,7 +1032,7 @@ msgstr "全节点状态"
 #~ msgid "HistoryCard.title"
 #~ msgstr "历史记录"
 
-#: src/components/core/LocaleToggle/LocaleToggle.tsx:38
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
 msgid "LocaleToggle.helpToTranslate"
 msgstr "帮助翻译"
 
@@ -1109,19 +1140,19 @@ msgstr ""
 msgid "PlotAdd.title"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:19
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "PlotAddChooseSize.description"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:37
+#: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "PlotAddChooseSize.kLow"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:29
+#: src/components/plot/add/PlotAddChooseSize.tsx:28
 msgid "PlotAddChooseSize.plotSize"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:17
+#: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "PlotAddChooseSize.title"
 msgstr ""
 
@@ -1301,15 +1332,15 @@ msgstr ""
 msgid "PlotQueueIndicator.queued"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:25
+#: src/components/plot/PlotStatus.tsx:24
 msgid "PlotStatus.error"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:19
+#: src/components/plot/PlotStatus.tsx:18
 msgid "PlotStatus.farming"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:22
+#: src/components/plot/PlotStatus.tsx:21
 msgid "PlotStatus.synching"
 msgstr ""
 
@@ -1632,15 +1663,15 @@ msgstr "费率受限的用户钱包设置"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:355
+#: src/components/fullNode/FullNode.jsx:354
 msgid "SearchBlock.blockHash"
 msgstr "区块哈希"
 
-#: src/components/fullNode/FullNode.jsx:366
+#: src/components/fullNode/FullNode.jsx:365
 msgid "SearchBlock.search"
 msgstr "搜索"
 
-#: src/components/fullNode/FullNode.jsx:349
+#: src/components/fullNode/FullNode.jsx:348
 msgid "SearchBlock.title"
 msgstr "按标题哈希搜索块"
 
@@ -1740,27 +1771,27 @@ msgstr "状态："
 msgid "StatusCard.title"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:149
+#: src/components/fullNode/FullNode.jsx:148
 msgid "StatusItem.connectionStatus"
 msgstr "连接状态"
 
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:150
 msgid "StatusItem.connectionStatusConnected"
 msgstr "已连接"
 
-#: src/components/fullNode/FullNode.jsx:153
+#: src/components/fullNode/FullNode.jsx:152
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:195
+#: src/components/fullNode/FullNode.jsx:194
 msgid "StatusItem.difficulty"
 msgstr "难度"
 
-#: src/components/fullNode/FullNode.jsx:223
+#: src/components/fullNode/FullNode.jsx:222
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "预估的网络空间"
 
-#: src/components/fullNode/FullNode.jsx:229
+#: src/components/fullNode/FullNode.jsx:228
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "网络中矿工的所有已创建的空间的估计总和"
 
@@ -1795,66 +1826,66 @@ msgstr "网络中矿工的所有已创建的空间的估计总和"
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "最小迭代次数"
 
-#: src/components/fullNode/FullNode.jsx:170
+#: src/components/fullNode/FullNode.jsx:169
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:176
+#: src/components/fullNode/FullNode.jsx:175
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:182
+#: src/components/fullNode/FullNode.jsx:181
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:187
+#: src/components/fullNode/FullNode.jsx:186
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:102
-#: src/components/fullNode/FullNode.jsx:119
-#: src/components/fullNode/FullNode.jsx:135
-#: src/components/fullNode/FullNode.jsx:161
+#: src/components/fullNode/FullNode.jsx:101
+#: src/components/fullNode/FullNode.jsx:118
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:160
 msgid "StatusItem.status"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/FullNode.jsx:161
 msgid "StatusItem.statusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:120
 msgid "StatusItem.statusNotSynced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:127
+#: src/components/fullNode/FullNode.jsx:126
 msgid "StatusItem.statusNotSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:135
 msgid "StatusItem.statusSynced"
 msgstr "已同步"
 
-#: src/components/fullNode/FullNode.jsx:139
+#: src/components/fullNode/FullNode.jsx:138
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "此节点已同步到最新状态"
 
-#: src/components/fullNode/FullNode.jsx:110
+#: src/components/fullNode/FullNode.jsx:109
 msgid "StatusItem.statusTooltip"
 msgstr "该节点正在同步，这意味着它正在从其他节点下载块，以到达链中的最新块"
 
-#: src/components/fullNode/FullNode.jsx:104
+#: src/components/fullNode/FullNode.jsx:103
 msgid "StatusItem.statusValue"
 msgstr "正在同步{progress} / {tip}"
 
-#: src/components/fullNode/FullNode.jsx:203
+#: src/components/fullNode/FullNode.jsx:202
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:211
+#: src/components/fullNode/FullNode.jsx:210
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:215
+#: src/components/fullNode/FullNode.jsx:214
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 

@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useToggle } from 'react-use';
 import { Button, Menu, MenuItem } from '@material-ui/core';
 import { Translate, ExpandMore } from '@material-ui/icons';
-import useLocale from '../../../hooks/useLocale';
+import useLocale from '../../../../hooks/useLocale';
 
 // https://www.codetwo.com/admins-blog/list-of-office-365-language-id/
 const locales: { [char: string]: string } = {

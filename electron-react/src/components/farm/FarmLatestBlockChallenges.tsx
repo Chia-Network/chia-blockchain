@@ -9,7 +9,7 @@ import {
 } from '@material-ui/core';
 import { Table, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
-import type { Row } from '../core/Table/Table';
+import type { Row } from '../core/components/Table/Table';
 
 const cols = [
   {

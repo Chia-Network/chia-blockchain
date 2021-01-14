@@ -29,11 +29,11 @@ msgstr "New Address"
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
-#: src/components/core/AdvancedOptions/AdvancedOptions.tsx:35
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "AdvancedOptions.hideAdvancedOptions"
 msgstr "Hide Advanced Options"
 
-#: src/components/core/AdvancedOptions/AdvancedOptions.tsx:40
+#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "AdvancedOptions.showAdvancedOptions"
 msgstr "Show Advanced Options"
 
@@ -225,36 +225,36 @@ msgstr "Weight is the total added difficulty of all sub blocks up to and includi
 #~ msgid "BlocksCard.expectedFinishTime"
 #~ msgstr "Expected Finish Time"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:85
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:84
 msgid "BlocksCard.finished"
 msgstr "Finished"
 
-#: src/components/fullNode/FullNode.jsx:53
+#: src/components/fullNode/FullNode.jsx:52
 msgid "BlocksCard.headerHash"
 msgstr "Header Hash"
 
-#: src/components/fullNode/FullNode.jsx:63
+#: src/components/fullNode/FullNode.jsx:62
 msgid "BlocksCard.height"
 msgstr "Height"
 
-#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:41
 msgid "BlocksCard.inProgress"
 msgstr "In Progress"
 
-#: src/components/fullNode/FullNode.jsx:89
+#: src/components/fullNode/FullNode.jsx:88
 msgid "BlocksCard.state"
 msgstr "State"
 
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:74
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:317
+#: src/components/fullNode/FullNode.jsx:316
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:85
 msgid "BlocksCard.unfinished"
 msgstr "Unfinished"
 
@@ -749,16 +749,25 @@ msgstr "Your Farm Overview"
 msgid "FarmCardCoinbaseRewards.title"
 msgstr "TXCH Farming Rewards"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:48
-msgid "FarmCardExpectedTimeToWin.synching"
-msgstr "Syncing"
+#: src/components/farm/card/FarmCardNotAvailable.tsx:8
+#: src/components/farm/card/FarmCardNotAvailable.tsx:9
+msgid "FarmCardExpectedTimeToWin.notAvailable"
+msgstr "Not Available"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:47
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#: src/components/farm/card/FarmCardNotAvailable.tsx:9
+msgid "FarmCardExpectedTimeToWin.notAvailableDescription"
+msgstr "Wait for synchronization"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:48
+#~ msgid "FarmCardExpectedTimeToWin.synching"
+#~ msgstr "Syncing"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "FarmCardExpectedTimeToWin.title"
 msgstr "Expected Time to Win"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "FarmCardExpectedTimeToWin.tooltip"
 msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 
@@ -778,7 +787,28 @@ msgstr "Last Height Farmed"
 msgid "FarmCardPlotCount.title"
 msgstr "Plot Count"
 
-#: src/components/farm/card/FarmCardStatus.tsx:6
+#: src/components/farm/card/FarmCardStatus.tsx:23
+#: src/components/farm/card/FarmCardStatus.tsx:28
+msgid "FarmCardStatus.error"
+msgstr "Error"
+
+#: src/components/farm/card/FarmCardStatus.tsx:24
+msgid "FarmCardStatus.farmerIsNotConnected"
+msgstr "Farmer is not connected"
+
+#: src/components/farm/card/FarmCardStatus.tsx:29
+msgid "FarmCardStatus.farmerIsNotRunning"
+msgstr "Farmer is not running"
+
+#: src/components/farm/card/FarmCardStatus.tsx:15
+msgid "FarmCardStatus.synching"
+msgstr "Syncing"
+
+#: src/components/farm/card/FarmCardStatus.tsx:14
+#: src/components/farm/card/FarmCardStatus.tsx:19
+#: src/components/farm/card/FarmCardStatus.tsx:22
+#: src/components/farm/card/FarmCardStatus.tsx:27
+#: src/components/farm/card/FarmCardStatus.tsx:31
 msgid "FarmCardStatus.title"
 msgstr "Farming Status"
 
@@ -944,11 +974,12 @@ msgstr "Farming"
 #~ msgid "FarmerStatus.connectionStatus"
 #~ msgstr "Connection Status"
 
-#: src/components/farm/FarmerStatus.tsx:39
+#: src/components/farm/FarmerStatus.tsx:38
 msgid "FarmerStatus.error"
 msgstr "Error"
 
-#: src/components/farm/FarmerStatus.tsx:39
+#: src/components/farm/FarmerStatus.tsx:38
+#: src/components/farm/card/FarmCardStatus.tsx:32
 msgid "FarmerStatus.farming"
 msgstr "Farming"
 
@@ -965,7 +996,7 @@ msgstr "Farming"
 #~ msgid "FarmerStatus.notConnected"
 #~ msgstr "Not connected"
 
-#: src/components/farm/FarmerStatus.tsx:39
+#: src/components/farm/FarmerStatus.tsx:38
 msgid "FarmerStatus.synching"
 msgstr "Syncing"
 
@@ -981,19 +1012,19 @@ msgstr "Syncing"
 #~ msgid "FarmerStatus.totalSizeOfLocalPlots"
 #~ msgstr "Total size of local plots"
 
-#: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:47
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 msgid "FormatConnectionStatus.connected"
 msgstr "Connected"
 
-#: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:48
+#: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:390
+#: src/components/fullNode/FullNode.jsx:389
 msgid "FullNode.title"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:276
+#: src/components/fullNode/FullNode.jsx:275
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
@@ -1001,7 +1032,7 @@ msgstr "Full Node Status"
 #~ msgid "HistoryCard.title"
 #~ msgstr "History"
 
-#: src/components/core/LocaleToggle/LocaleToggle.tsx:38
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
 msgid "LocaleToggle.helpToTranslate"
 msgstr "Help to translate"
 
@@ -1109,19 +1140,19 @@ msgstr "Create Plot"
 msgid "PlotAdd.title"
 msgstr "Add a Plot"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:19
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "PlotAddChooseSize.description"
 msgstr "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:37
+#: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "PlotAddChooseSize.kLow"
 msgstr "The minimum required size for mainnet is k=32"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:29
+#: src/components/plot/add/PlotAddChooseSize.tsx:28
 msgid "PlotAddChooseSize.plotSize"
 msgstr "Plot Size"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:17
+#: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "PlotAddChooseSize.title"
 msgstr "Choose Plot Size"
 
@@ -1301,15 +1332,15 @@ msgstr "Plotting"
 msgid "PlotQueueIndicator.queued"
 msgstr "Queued"
 
-#: src/components/plot/PlotStatus.tsx:25
+#: src/components/plot/PlotStatus.tsx:24
 msgid "PlotStatus.error"
 msgstr "Error"
 
-#: src/components/plot/PlotStatus.tsx:19
+#: src/components/plot/PlotStatus.tsx:18
 msgid "PlotStatus.farming"
 msgstr "Farming"
 
-#: src/components/plot/PlotStatus.tsx:22
+#: src/components/plot/PlotStatus.tsx:21
 msgid "PlotStatus.synching"
 msgstr "Syncing"
 
@@ -1632,15 +1663,15 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:355
+#: src/components/fullNode/FullNode.jsx:354
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:366
+#: src/components/fullNode/FullNode.jsx:365
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:349
+#: src/components/fullNode/FullNode.jsx:348
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
@@ -1740,27 +1771,27 @@ msgstr "status:"
 msgid "StatusCard.title"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:149
+#: src/components/fullNode/FullNode.jsx:148
 msgid "StatusItem.connectionStatus"
 msgstr "Connection Status"
 
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:150
 msgid "StatusItem.connectionStatusConnected"
 msgstr "Connected"
 
-#: src/components/fullNode/FullNode.jsx:153
+#: src/components/fullNode/FullNode.jsx:152
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:195
+#: src/components/fullNode/FullNode.jsx:194
 msgid "StatusItem.difficulty"
 msgstr "Difficulty"
 
-#: src/components/fullNode/FullNode.jsx:223
+#: src/components/fullNode/FullNode.jsx:222
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:229
+#: src/components/fullNode/FullNode.jsx:228
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
@@ -1795,66 +1826,66 @@ msgstr "Estimated sum of all the plotted disk space of all farmers in the networ
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "Min Iterations"
 
-#: src/components/fullNode/FullNode.jsx:170
+#: src/components/fullNode/FullNode.jsx:169
 msgid "StatusItem.peakHeight"
 msgstr "Peak Height"
 
-#: src/components/fullNode/FullNode.jsx:176
+#: src/components/fullNode/FullNode.jsx:175
 msgid "StatusItem.peakSubBlockHeight"
 msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:182
+#: src/components/fullNode/FullNode.jsx:181
 msgid "StatusItem.peakTime"
 msgstr "Peak Time"
 
-#: src/components/fullNode/FullNode.jsx:187
+#: src/components/fullNode/FullNode.jsx:186
 msgid "StatusItem.peakTimeTooltip"
 msgstr "This is the time of the latest peak sub block."
 
-#: src/components/fullNode/FullNode.jsx:102
-#: src/components/fullNode/FullNode.jsx:119
-#: src/components/fullNode/FullNode.jsx:135
-#: src/components/fullNode/FullNode.jsx:161
+#: src/components/fullNode/FullNode.jsx:101
+#: src/components/fullNode/FullNode.jsx:118
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:160
 msgid "StatusItem.status"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/FullNode.jsx:161
 msgid "StatusItem.statusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:120
 msgid "StatusItem.statusNotSynced"
 msgstr "Not Synced"
 
-#: src/components/fullNode/FullNode.jsx:127
+#: src/components/fullNode/FullNode.jsx:126
 msgid "StatusItem.statusNotSyncedTooltip"
 msgstr "The node is not synced"
 
-#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:135
 msgid "StatusItem.statusSynced"
 msgstr "Synced"
 
-#: src/components/fullNode/FullNode.jsx:139
+#: src/components/fullNode/FullNode.jsx:138
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "This node is fully caught up and validating the network"
 
-#: src/components/fullNode/FullNode.jsx:110
+#: src/components/fullNode/FullNode.jsx:109
 msgid "StatusItem.statusTooltip"
 msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 
-#: src/components/fullNode/FullNode.jsx:104
+#: src/components/fullNode/FullNode.jsx:103
 msgid "StatusItem.statusValue"
 msgstr "Syncing {progress}/{tip}"
 
-#: src/components/fullNode/FullNode.jsx:203
+#: src/components/fullNode/FullNode.jsx:202
 msgid "StatusItem.subSlotIters"
 msgstr "VDF Sub Slot Iterations"
 
-#: src/components/fullNode/FullNode.jsx:211
+#: src/components/fullNode/FullNode.jsx:210
 msgid "StatusItem.totalIterations"
 msgstr "Total Iterations"
 
-#: src/components/fullNode/FullNode.jsx:215
+#: src/components/fullNode/FullNode.jsx:214
 msgid "StatusItem.totalIterationsTooltip"
 msgstr "Total iterations since the start of the blockchain"
 

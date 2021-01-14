@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
+import { StateColor } from '@chia/core';
 import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
-import StateColor from '../../constants/StateColor';
 
 const StyledFiberManualRecordIcon = styled(({ color, ...rest }) => <FiberManualRecordIcon {...rest} />)`
   font-size: 1rem;
