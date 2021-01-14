@@ -132,8 +132,8 @@ class BlockStore:
         peak: Optional[bytes32] = None
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
-            if row[4]:
+            ret[header_hash] = SubBlockRecord.from_bytes(row[4])
+            if row[5]:
                 assert peak is None  # Sanity check, only one peak
                 peak = header_hash
         return ret, peak
