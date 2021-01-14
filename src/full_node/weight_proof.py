@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import random
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 import math
 
@@ -128,7 +128,7 @@ class WeightProofHandler:
         if weight_to_check is None:
             self.log.warning("math error while sampling sub epochs")
 
-        prev_ses_block = self.blockchain.height_to_sub_block_record(uint32(0))
+        prev_ses_block = self.blockchain.height_to_sub_block_record(uint32(0), True)
         if prev_ses_block is None:
             return None
 
@@ -136,7 +136,7 @@ class WeightProofHandler:
         summary_heights = self.blockchain.get_ses_heights()
         for idx, ses_height in enumerate(summary_heights):
             # next sub block
-            ses_block = self.blockchain.height_to_sub_block_record(ses_height)
+            ses_block = self.blockchain.height_to_sub_block_record(ses_height, True)
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
                 self.log.error("error while building proof")
                 return None
@@ -395,10 +395,7 @@ class WeightProofHandler:
     async def __create_sub_epoch_segments(
         self, ses_block: SubBlockRecord, se_start: SubBlockRecord, sub_epoch_n: uint32
     ) -> Optional[List[SubEpochChallengeSegment]]:
-
-        # get headers in cache
-        # await self.block_cache.init_headers(uint32(se_start.sub_block_height),
-        # uint32(ses_block.sub_block_height + 30))
+        sub_blocks = await self.blockchain.get_sub_block_in_range(se_start.sub_block_height, ses_block.sub_block_height)
         segments: List[SubEpochChallengeSegment] = []
 
         curr: Optional[SubBlockRecord] = se_start
@@ -407,33 +404,36 @@ class WeightProofHandler:
         while curr.sub_block_height < ses_block.sub_block_height:
             if curr.is_challenge_sub_block(self.constants):
                 self.log.debug(f"challenge segment, starts at {curr.sub_block_height} ")
-                seg, height = await self._handle_challenge_segment(curr, sub_epoch_n)
+                seg, height = await self._handle_challenge_segment(curr, sub_epoch_n, sub_blocks)
                 if seg is None:
                     self.log.error(f"failed creating segment {curr.header_hash} ")
                     return None
                 segments.append(seg)
             else:
                 height = height + uint32(1)  # type: ignore
-            curr = self.blockchain.height_to_sub_block_record(height)
+            curr = sub_blocks[self.blockchain.sub_height_to_hash(height)]
             if curr is None:
                 return None
         self.log.debug(f"next sub epoch starts at {height}")
         return segments
 
     async def _handle_challenge_segment(
-        self, block_rec: SubBlockRecord, sub_epoch_n: uint32
+        self,
+        block_rec: SubBlockRecord,
+        sub_epoch_n: uint32,
+        sub_blocks: Dict[bytes32, SubBlockRecord],
     ) -> Tuple[Optional[SubEpochChallengeSegment], uint32]:
         assert self.blockchain is not None
         sub_slots: List[SubSlotData] = []
         self.log.debug(
             f"create challenge segment for block {block_rec.header_hash} sub_block_height {block_rec.sub_block_height} "
         )
-        block_header = self.blockchain.sub_block_record(block_rec.header_hash)
+        block_header = sub_blocks[block_rec.header_hash]
         if block_header is None:
             return None, uint32(0)
 
         # VDFs from sub slots before challenge block
-        first_sub_slots = await self.__first_sub_slots_data(block_header)
+        first_sub_slots = await self.__first_sub_slots_data(block_header, sub_blocks)
         if first_sub_slots is None:
             self.log.error("failed building first sub slots")
             return None, uint32(0)
@@ -446,7 +446,7 @@ class WeightProofHandler:
         )
 
         challenge_slot_end_sub_slots, end_height = await self.__get_slot_end_vdf(
-            uint32(block_header.sub_block_height + 1)
+            uint32(block_header.sub_block_height + 1), sub_blocks
         )
         if challenge_slot_end_sub_slots is None:
             self.log.error("failed building slot end ")
@@ -457,46 +457,46 @@ class WeightProofHandler:
             end_height,
         )
 
-    async def __get_slot_end_vdf(self, start_height: uint32) -> Tuple[Optional[List[SubSlotData]], uint32]:
+    async def __get_slot_end_vdf(self, start_height: uint32, sub_blocks) -> Tuple[Optional[List[SubSlotData]], uint32]:
         # gets all vdfs first sub slot after challenge block to last sub slot
         self.log.debug(f"slot end vdf start height {start_height}")
-        curr = self.blockchain.height_to_sub_block_record(start_height)
-        if curr is None:
-            return None, uint32(0)
-        curr_header = self.blockchain.sub_block_record(curr.header_hash)
+        curr_header = self.blockchain.sub_height_to_hash(start_height)
         if curr_header is None:
+            return None, uint32(0)
+        curr = sub_blocks[curr_header]
+        if curr is None:
             return None, uint32(0)
         cc_proofs: List[VDFProof] = []
         icc_proofs: List[VDFProof] = []
         sub_slots_data: List[SubSlotData] = []
         while not curr.is_challenge_sub_block(self.constants):
-            for sub_slot in curr_header.finished_sub_slots:
+            for sub_slot in curr.finished_sub_slots:
                 sub_slots_data.append(handle_finished_slots(sub_slot))
             # append sub slot proofs
-            if curr_header.infused_challenge_chain_ip_proof is not None:
-                icc_proofs.append(curr_header.infused_challenge_chain_ip_proof)
-            if curr_header.challenge_chain_sp_proof is not None:
-                cc_proofs.append(curr_header.challenge_chain_sp_proof)
-            if curr_header.challenge_chain_ip_proof is not None:
-                cc_proofs.append(curr_header.challenge_chain_ip_proof)
-            curr = self.blockchain.height_to_sub_block_record(uint32(curr.sub_block_height + 1))
+            if curr.infused_challenge_chain_ip_proof is not None:
+                icc_proofs.append(curr.infused_challenge_chain_ip_proof)
+            if curr.challenge_chain_sp_proof is not None:
+                cc_proofs.append(curr.challenge_chain_sp_proof)
+            if curr.challenge_chain_ip_proof is not None:
+                cc_proofs.append(curr.challenge_chain_ip_proof)
+            curr = sub_blocks[self.blockchain.sub_height_to_hash(uint32(curr.sub_block_height + 1))]
             if curr is None:
                 return None, uint32(0)
-            curr_header = self.blockchain.sub_block_record(curr.header_hash)
-            if curr_header is None:
+            curr_rec = sub_blocks[curr.header_hash]
+            if curr_rec is None:
                 return None, uint32(0)
         self.log.debug(f"slot end vdf end height {curr.sub_block_height}")
         return sub_slots_data, curr.sub_block_height
 
     # returns a challenge chain vdf from slot start to signage point
-    async def __first_sub_slots_data(self, block: SubBlockRecord) -> Optional[List[SubSlotData]]:
+    async def __first_sub_slots_data(self, block: SubBlockRecord, sub_blocks) -> Optional[List[SubSlotData]]:
         # combine cc vdfs of all reward blocks from the start of the sub slot to end
 
         curr: Optional[SubBlockRecord] = block
         # find slot start
         assert curr is not None
         while not curr.first_in_sub_slot and curr.sub_block_height > 0:
-            curr = self.blockchain.sub_block_record(curr.prev_hash)
+            curr = sub_blocks[curr.prev_hash]
             if curr is None:
                 return None
 
@@ -508,7 +508,7 @@ class WeightProofHandler:
         cc_slot_end_vdf: List[VDFProof] = []
         icc_slot_end_vdf: List[VDFProof] = []
         while curr.sub_block_height < block.sub_block_height:
-            curr = self.blockchain.height_to_sub_block_record(uint32(curr.sub_block_height + 1))
+            curr = sub_blocks[self.blockchain.sub_height_to_hash(uint32(curr.sub_block_height + 1))]
             if curr is None:
                 return None
 

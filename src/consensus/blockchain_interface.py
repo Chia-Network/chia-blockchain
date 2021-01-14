@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sized_bytes import bytes32
@@ -13,7 +13,7 @@ class BlockchainInterface:
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         pass
 
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
+    def height_to_sub_block_record(self, height: uint32, check_db=False) -> SubBlockRecord:
         pass
 
     def get_ses_heights(self) -> List[uint32]:
@@ -35,6 +35,9 @@ class BlockchainInterface:
         pass
 
     async def warmup(self, fork_point: uint32):
+        pass
+
+    async def get_sub_block_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         pass
 
     def try_sub_block(self, header_hash: bytes32) -> Optional[SubBlockRecord]:

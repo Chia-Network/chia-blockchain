@@ -394,9 +394,10 @@ class WalletBlockchain(BlockchainInterface):
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         return self.__sub_blocks[header_hash]
 
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-        header_hash = self.sub_height_to_hash(height)
-        assert header_hash is not None
+    def height_to_sub_block_record(self, sub_height: uint32, check_db: bool = False) -> SubBlockRecord:
+        header_hash = self.sub_height_to_hash(sub_height)
+        if header_hash not in self.__sub_blocks:
+            self.block_store.get_sub_block_record(header_hash)
         return self.sub_block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
@@ -455,3 +456,6 @@ class WalletBlockchain(BlockchainInterface):
         if peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE < 0:
             return
         self.clean_sub_block_record(peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
+
+    async def get_sub_block_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
+        return await self.block_store.get_sub_block_in_range(start, stop)
