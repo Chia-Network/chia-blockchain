@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:432
+#: src/components/wallet/standard/WalletStandard.tsx:392
 msgid "AddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:436
+#: src/components/wallet/standard/WalletStandard.tsx:396
 msgid "AddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/standard/WalletStandard.tsx:448
+#: src/components/wallet/standard/WalletStandard.tsx:406
 msgid "AddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:424
+#: src/components/wallet/standard/WalletStandard.tsx:388
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
@@ -49,59 +49,59 @@ msgstr "Connecting to wallet"
 msgid "Application.loggingIn"
 msgstr "Logging in"
 
-#: src/components/wallet/standard/WalletStandard.tsx:202
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "BalanceCard.balance"
 msgstr "Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:239
+#: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "BalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:241
+#: src/components/wallet/standard/WalletStandard.tsx:229
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
-#: src/components/wallet/standard/WalletStandard.tsx:253
+#: src/components/wallet/standard/WalletStandard.tsx:241
 msgid "BalanceCard.pendingChange"
 msgstr "Pending Change"
 
-#: src/components/wallet/standard/WalletStandard.tsx:255
+#: src/components/wallet/standard/WalletStandard.tsx:243
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 
-#: src/components/wallet/standard/WalletStandard.tsx:246
+#: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "Pending Farming Rewards"
 
-#: src/components/wallet/standard/WalletStandard.tsx:248
+#: src/components/wallet/standard/WalletStandard.tsx:236
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable."
 
-#: src/components/wallet/standard/WalletStandard.tsx:232
+#: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:222
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "BalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "BalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
-#: src/components/wallet/standard/WalletStandard.tsx:225
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
@@ -282,125 +282,125 @@ msgstr "Coloured Coin Options"
 #~ msgid "Challenges.title"
 #~ msgstr "Challenges"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:196
+#: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "ColourCard.colour"
 msgstr "Colour:"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:212
+#: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "ColourCard.nickname"
 msgstr "Nickname"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:218
+#: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "ColourCard.rename"
 msgstr "Rename"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:187
+#: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "ColourCard.title"
 msgstr "Colour Info"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:601
+#: src/components/wallet/coloured/WalletColoured.tsx:456
 msgid "ColouredAddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:605
+#: src/components/wallet/coloured/WalletColoured.tsx:460
 msgid "ColouredAddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:617
+#: src/components/wallet/coloured/WalletColoured.tsx:470
 msgid "ColouredAddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:593
+#: src/components/wallet/coloured/WalletColoured.tsx:452
 msgid "ColouredAddressCard.title"
 msgstr "Receive Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:314
+#: src/components/wallet/coloured/WalletColoured.tsx:288
 msgid "ColouredBalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:309
+#: src/components/wallet/coloured/WalletColoured.tsx:286
 msgid "ColouredBalanceCard.title"
 msgstr "Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:313
+#: src/components/wallet/coloured/WalletColoured.tsx:287
 msgid "ColouredBalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:323
+#: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "View pending balances..."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:567
-msgid "ColouredHistoryCard.title"
-msgstr "History"
+#~ msgid "ColouredHistoryCard.title"
+#~ msgstr "History"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:444
+#: src/components/wallet/coloured/WalletColoured.tsx:404
 msgid "ColouredSendCard.address"
 msgstr "Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:456
+#: src/components/wallet/coloured/WalletColoured.tsx:414
 msgid "ColouredSendCard.amount"
 msgstr "Amount ({cc_unit})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:473
+#: src/components/wallet/coloured/WalletColoured.tsx:429
 msgid "ColouredSendCard.farm"
 msgstr "Farm"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:463
+#: src/components/wallet/coloured/WalletColoured.tsx:421
 msgid "ColouredSendCard.fee"
 msgstr "Fee (TXCH)"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:478
+#: src/components/wallet/coloured/WalletColoured.tsx:434
 msgid "ColouredSendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:429
+#: src/components/wallet/coloured/WalletColoured.tsx:395
 msgid "ColouredSendCard.title"
 msgstr "Create Transaction"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:527
-msgid "ColouredTransactionTable.amount"
-msgstr "Amount"
+#~ msgid "ColouredTransactionTable.amount"
+#~ msgstr "Amount"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:508
-msgid "ColouredTransactionTable.confirmed"
-msgstr "Confirmed"
+#~ msgid "ColouredTransactionTable.confirmed"
+#~ msgstr "Confirmed"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:521
-msgid "ColouredTransactionTable.date"
-msgstr "Date"
+#~ msgid "ColouredTransactionTable.date"
+#~ msgstr "Date"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:530
-msgid "ColouredTransactionTable.fee"
-msgstr "Fee"
+#~ msgid "ColouredTransactionTable.fee"
+#~ msgstr "Fee"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:505
-msgid "ColouredTransactionTable.incoming"
-msgstr "Incoming"
+#~ msgid "ColouredTransactionTable.incoming"
+#~ msgstr "Incoming"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:493
-msgid "ColouredTransactionTable.noPreviousTransactions"
-msgstr "No previous transactions"
+#~ msgid "ColouredTransactionTable.noPreviousTransactions"
+#~ msgstr "No previous transactions"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:504
-msgid "ColouredTransactionTable.outgoing"
-msgstr "Outgoing"
+#~ msgid "ColouredTransactionTable.outgoing"
+#~ msgstr "Outgoing"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:508
-msgid "ColouredTransactionTable.pending"
-msgstr "Pending"
+#~ msgid "ColouredTransactionTable.pending"
+#~ msgstr "Pending"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:524
-msgid "ColouredTransactionTable.status"
-msgstr "Status"
+#~ msgid "ColouredTransactionTable.status"
+#~ msgstr "Status"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:518
-msgid "ColouredTransactionTable.to"
-msgstr "To"
+#~ msgid "ColouredTransactionTable.to"
+#~ msgstr "To"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:515
-msgid "ColouredTransactionTable.type"
-msgstr "Type"
+#~ msgid "ColouredTransactionTable.type"
+#~ msgstr "Type"
 
 #: src/components/fullNode/FullNodeConnections.jsx:199
 msgid "Connections.connect"
@@ -749,13 +749,18 @@ msgstr "Your Farm Overview"
 msgid "FarmCardCoinbaseRewards.title"
 msgstr "TXCH Farming Rewards"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:48
+msgid "FarmCardExpectedTimeToWin.synching"
+msgstr "Syncing"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:47
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
 msgid "FarmCardExpectedTimeToWin.title"
 msgstr "Expected Time to Win"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
 msgid "FarmCardExpectedTimeToWin.tooltip"
-msgstr "You have {0}% of the space on the network, so farming a block will take {totalHours} in expectation."
+msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
 msgid "FarmCardFeesReward.title"
@@ -1451,179 +1456,179 @@ msgstr "Selected"
 #~ msgid "PlotterWorkLocation.temporaryFolderLocation"
 #~ msgstr "Temporary folder location"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:602
 msgid "RLBalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:611
 msgid "RLBalanceCard.pendingChange"
 msgstr "Pending Change"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:640
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:593
 msgid "RLBalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:615
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:569
 msgid "RLBalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
 msgid "RLBalanceCard.title"
 msgstr "Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:609
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:563
 msgid "RLBalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:631
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:584
 msgid "RLBalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:540
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
 msgid "RLDetailsCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:513
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "RLDetailsCard.description"
 msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:526
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "RLDetailsCard.infoPacket"
 msgstr "Info Packet"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "RLDetailsCard.myPubkey"
 msgstr "My Pubkey"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:430
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:492
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "RLDetailsCard.spendingInterval"
 msgstr "Spending Interval (number of blocks): {interval}"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:437
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:499
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "RLDetailsCard.spendingLimit"
 msgstr "Spending Limit (chia per interval): {0}"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:421
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:483
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "RLDetailsCard.title"
 msgstr "Rate Limited Info"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:876
-msgid "RLHistoryCard.title"
-msgstr "History"
+#~ msgid "RLHistoryCard.title"
+#~ msgstr "History"
 
 #: src/components/wallet/create/WalletCreate.jsx:227
 msgid "RLListItems.title"
 msgstr "Rate Limited Options"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:802
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:746
 msgid "RLSendCard.addressPuzzleHash"
 msgstr "Address / Puzzle hash"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:826
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:768
 msgid "RLSendCard.amount"
 msgstr "Amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:759
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:710
 msgid "RLSendCard.enter0fee"
 msgstr "Please enter 0 fee. Positive fees not supported yet for RL."
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:677
 msgid "RLSendCard.enterValidAmount"
 msgstr "Please enter a valid numeric amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:738
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:689
 msgid "RLSendCard.enterValidFee"
 msgstr "Please enter a valid numeric fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:839
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:781
 msgid "RLSendCard.fee"
 msgstr "Fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:856
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:796
 msgid "RLSendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:780
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:727
 msgid "RLSendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:708
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:659
 msgid "RLSendCard.waitForSyncing"
 msgstr "Please finish syncing before making a transaction"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:942
-msgid "RLTransactionTable.amount"
-msgstr "Amount"
+#~ msgid "RLTransactionTable.amount"
+#~ msgstr "Amount"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:918
-msgid "RLTransactionTable.confirmed"
-msgstr "Confirmed"
+#~ msgid "RLTransactionTable.confirmed"
+#~ msgstr "Confirmed"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:936
-msgid "RLTransactionTable.date"
-msgstr "Date"
+#~ msgid "RLTransactionTable.date"
+#~ msgstr "Date"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:945
-msgid "RLTransactionTable.fee"
-msgstr "Fee"
+#~ msgid "RLTransactionTable.fee"
+#~ msgstr "Fee"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
-msgid "RLTransactionTable.incoming"
-msgstr "Incoming"
+#~ msgid "RLTransactionTable.incoming"
+#~ msgstr "Incoming"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:898
-msgid "RLTransactionTable.noPreviousTransactions"
-msgstr "No previous transactions"
+#~ msgid "RLTransactionTable.noPreviousTransactions"
+#~ msgstr "No previous transactions"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:912
-msgid "RLTransactionTable.outgoing"
-msgstr "Outgoing"
+#~ msgid "RLTransactionTable.outgoing"
+#~ msgstr "Outgoing"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
-msgid "RLTransactionTable.pending"
-msgstr "Pending"
+#~ msgid "RLTransactionTable.pending"
+#~ msgstr "Pending"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:939
-msgid "RLTransactionTable.status"
-msgstr "Status"
+#~ msgid "RLTransactionTable.status"
+#~ msgstr "Status"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:933
-msgid "RLTransactionTable.to"
-msgstr "To"
+#~ msgid "RLTransactionTable.to"
+#~ msgstr "To"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:930
-msgid "RLTransactionTable.type"
-msgstr "Type"
+#~ msgid "RLTransactionTable.type"
+#~ msgstr "Type"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:327
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 msgid "RTIncompleteCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:297
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "RTIncompleteCard.description"
 msgstr "Send your pubkey to your Rate Limited Wallet admin:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:338
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "RTIncompleteCard.description2"
 msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 msgid "RTIncompleteCard.infoPacket"
 msgstr "Info Packet"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:371
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "RTIncompleteCard.submit"
 msgstr "Submit"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:286
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "RTIncompleteCard.title"
 msgstr "Rate Limited User Wallet Setup"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
@@ -1671,43 +1676,43 @@ msgstr "Sign In"
 msgid "SelectKey.title"
 msgstr "Select Key"
 
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:342
 msgid "SendCard.address"
 msgstr "Address / Puzzle hash"
 
-#: src/components/wallet/standard/WalletStandard.tsx:379
+#: src/components/wallet/standard/WalletStandard.tsx:352
 msgid "SendCard.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:327
+#: src/components/wallet/standard/WalletStandard.tsx:313
 msgid "SendCard.enterValidAddress"
 msgstr "Error: Cannot send chia to coloured address. Please enter a chia address."
 
-#: src/components/wallet/standard/WalletStandard.tsx:309
+#: src/components/wallet/standard/WalletStandard.tsx:295
 msgid "SendCard.enterValidAmount"
 msgstr "Please enter a valid numeric amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:317
+#: src/components/wallet/standard/WalletStandard.tsx:303
 msgid "SendCard.enterValidFee"
 msgstr "Please enter a valid numeric fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:394
+#: src/components/wallet/standard/WalletStandard.tsx:365
 msgid "SendCard.farm"
 msgstr "Farm"
 
-#: src/components/wallet/standard/WalletStandard.tsx:384
+#: src/components/wallet/standard/WalletStandard.tsx:357
 msgid "SendCard.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:297
+#: src/components/wallet/standard/WalletStandard.tsx:283
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr "Please finish syncing before making a transaction"
 
-#: src/components/wallet/standard/WalletStandard.tsx:399
+#: src/components/wallet/standard/WalletStandard.tsx:370
 msgid "SendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/standard/WalletStandard.tsx:352
+#: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "SendCard.title"
 msgstr "Create Transaction"
 
@@ -2001,39 +2006,39 @@ msgstr "Sell"
 msgid "TradingHistory.title"
 msgstr "Trading History"
 
-#: src/components/wallet/WalletHistory.tsx:47
+#: src/components/wallet/WalletHistory.tsx:50
 msgid "TransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/WalletHistory.tsx:38
+#: src/components/wallet/WalletHistory.tsx:39
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Confirmed at height {0}"
 
-#: src/components/wallet/WalletHistory.tsx:32
+#: src/components/wallet/WalletHistory.tsx:33
 msgid "TransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:55
 msgid "TransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:20
 msgid "TransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/WalletHistory.tsx:18
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "TransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/WalletHistory.tsx:40
+#: src/components/wallet/WalletHistory.tsx:41
 msgid "TransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 msgid "TransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/WalletHistory.tsx:27
+#: src/components/wallet/WalletHistory.tsx:28
 msgid "TransactionTable.to"
 msgstr "To"
 
@@ -2053,23 +2058,23 @@ msgstr "Next"
 msgid "WalletAdd.title"
 msgstr "New Wallet"
 
-#: src/components/wallet/WalletHistory.tsx:58
+#: src/components/wallet/WalletHistory.tsx:63
 msgid "WalletHistory.title"
 msgstr "History"
 
-#: src/components/wallet/WalletHistory.tsx:21
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "WalletHistory.type"
 msgstr "Type"
 
-#: src/components/wallet/WalletImport.tsx:70
+#: src/components/wallet/WalletImport.tsx:77
 msgid "WalletImport.description"
 msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 
-#: src/components/wallet/WalletImport.tsx:80
+#: src/components/wallet/WalletImport.tsx:87
 msgid "WalletImport.next"
 msgstr "Next"
 
-#: src/components/wallet/WalletImport.tsx:67
+#: src/components/wallet/WalletImport.tsx:74
 msgid "WalletImport.title"
 msgstr "Import Wallet from Mnemonics"
 

@@ -6,19 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## [1.0beta20] aka Beta 1.20 - 2021-01-14
 
 ### Added
 - Plotting now checks to see if there are MacOS created `._` plot files and ignores them.
+- Mnemonics now autocomplete in the GUI.
 
 ### Changed
 - Node sync is now multithreaded and much quicker.
 - Peer gossip is faster and smarter. It also will no longer accidentally gossip a private IP address to another peer.
+- When syncing in the GUI, estimated time to win just shows syncing until synced.
 - If harvester hits an exception it will be caught, logged and skipped. This normally happens if it attempts to harvest a plot file you are still copying in.
 - The Rate Limited wallet has been updated to work in new consensus.
 
 ### Fixed
 - There was a bug in block reorg code that would keep a peer with a lower weight chain from validating and syncing to a higher weight chain when the node thought it had a double spend in the other chain. This caused a persistent chain split.
+- The Farm page in the GUI should not report just error when initially starting to sync.
 
 ## [1.0beta19] aka Beta 1.19 - 2021-01-12
 
