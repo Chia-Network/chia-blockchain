@@ -1,4 +1,4 @@
-from src.util.chech32m import bech32_decode
+from src.util.bech32m import bech32_decode
 
 
 def test_valid_imports():

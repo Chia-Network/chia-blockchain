@@ -13,7 +13,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.chech32m import encode_puzzle_hash
+from src.util.bech32m import encode_puzzle_hash
 
 
 def make_parser(parser):

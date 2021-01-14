@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Dict, Callable
 from blspy import PrivateKey
 
 from src.util.byte_types import hexstr_to_bytes
-from src.util.chech32m import encode_puzzle_hash, decode_puzzle_hash
+from src.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
