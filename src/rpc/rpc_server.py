@@ -45,7 +45,6 @@ class RpcServer:
         if self.websocket is None:
             return
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
-        log.info(f"State changed: {change}")
 
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
@@ -265,7 +264,11 @@ class RpcServer:
                 cert_path, key_path = load_ssl_paths(self.root_path, self.net_config)
                 ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
                 async with session.ws_connect(
-                    f"wss://{self_hostname}:{daemon_port}", autoclose=False, autoping=True, ssl_context=ssl_context
+                    f"wss://{self_hostname}:{daemon_port}",
+                    autoclose=False,
+                    autoping=True,
+                    ssl_context=ssl_context,
+                    max_msg_size=50 * 1024 * 1024,
                 ) as ws:
                     self.websocket = ws
                     await self.connection(ws)

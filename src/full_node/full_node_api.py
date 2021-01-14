@@ -20,7 +20,6 @@ from src.consensus.sub_block_record import SubBlockRecord
 
 
 from src.protocols import (
-    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
@@ -81,10 +80,15 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_peers(
-        self, request: introducer_protocol.RespondPeers, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         if self.full_node.full_node_peers is not None:
-            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
+            if peer.connection_type is NodeType.INTRODUCER:
+                is_full_node = False
+            else:
+                is_full_node = True
+            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), is_full_node)
+
         if peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
         return None

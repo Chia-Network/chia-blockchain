@@ -196,4 +196,5 @@ class AddressManagerStore:
         for node_id, info in list(address_manager.map_info.items()):
             if not info.is_tried and info.ref_count == 0:
                 address_manager.delete_new_entry_(node_id)
+        address_manager.load_used_table_positions()
         return address_manager

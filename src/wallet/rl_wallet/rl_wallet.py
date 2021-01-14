@@ -328,10 +328,8 @@ class RLWallet:
         self.rl_coin_record = await self._get_rl_coin_record()
         if self.rl_coin_record is None:
             return uint64(0)
-        # TODO get proper peak here
-        lca_header_hash = self.wallet_state_manager.lca
-        lca = self.wallet_state_manager.block_records[lca_header_hash]
-        height = lca.height
+        peak = await self.wallet_state_manager.blockchain.get_full_peak()
+        height = peak.height if peak else 0
         assert self.rl_info.limit is not None
         unlocked = int(
             ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
@@ -443,7 +441,7 @@ class RLWallet:
         return pubkey, private
 
     async def _get_rl_coin(self) -> Optional[Coin]:
-        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+        rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
         for coin_record in rl_coins:
@@ -453,7 +451,7 @@ class RLWallet:
         return None
 
     async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
-        rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
+        rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
         for coin_record in rl_coins:
@@ -469,7 +467,7 @@ class RLWallet:
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
         if rl_parent_id == self.rl_info.rl_origin_id:
             return self.rl_info.rl_origin
-        rl_parent = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(rl_parent_id)
+        rl_parent = await self.wallet_state_manager.coin_store.get_coin_record_by_coin_id(rl_parent_id)
         if rl_parent is None:
             return None
 

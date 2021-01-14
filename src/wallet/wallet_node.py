@@ -411,6 +411,8 @@ class WalletNode:
                 if weight_proof_response is None:
                     return
                 weight_proof = weight_proof_response.wp
+                if self.wallet_state_manager is None:
+                    return
                 valid, fork_point = self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
                 if not valid:
                     self.log.error(

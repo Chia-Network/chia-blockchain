@@ -27,7 +27,6 @@ from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
 
-
 log = logging.getLogger(__name__)
 
 

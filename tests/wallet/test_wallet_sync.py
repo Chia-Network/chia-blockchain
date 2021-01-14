@@ -56,7 +56,7 @@ class TestWalletSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
-        await time_out_assert(40, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+        await time_out_assert(100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
         # Tests a reorg with the wallet
         num_blocks = 30
@@ -65,7 +65,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
 
         await time_out_assert(
-            40, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
+            100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
 
     @pytest.mark.asyncio
@@ -164,7 +164,7 @@ class TestWalletSync:
             txs = await wsm.get_all_transactions(wallet_id)
             return len(txs)
 
-        await time_out_assert(5, get_tx_count, 0, 1)
+        await time_out_assert(10, get_tx_count, 0, 1)
 
         num_blocks_reorg_1 = 40
         blocks_reorg_1 = bt.get_consecutive_blocks(
@@ -180,5 +180,5 @@ class TestWalletSync:
             uint32(len(blocks_reorg_1))
         )
 
-        await time_out_assert(5, get_tx_count, 2, 1)
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, get_tx_count, 2, 1)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
