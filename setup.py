@@ -14,7 +14,7 @@ dependencies = [
     # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
     "cbor2==5.2.0",  # Used for network wire format
-    "colorlog==4.6.2",  # Adds color to logs
+    "colorlog==4.7.2",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.3.1",  # Python cryptography library for TLS
     "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
