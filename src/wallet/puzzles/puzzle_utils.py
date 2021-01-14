@@ -9,10 +9,6 @@ def make_assert_aggsig_condition(pubkey):
     return [ConditionOpcode.AGG_SIG, pubkey]
 
 
-def make_assert_coin_consumed_condition(coin_name):
-    return [ConditionOpcode.ASSERT_COIN_CONSUMED, coin_name]
-
-
 def make_assert_my_coin_id_condition(coin_name):
     return [ConditionOpcode.ASSERT_MY_COIN_ID, coin_name]
 
