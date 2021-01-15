@@ -316,7 +316,10 @@ class WalletTransactionStore:
     async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
         limit = end - start
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_sub_height not in (select confirmed_at_sub_height from transaction_record order by confirmed_at_sub_height ASC LIMIT {start}) order by confirmed_at_sub_height ASC LIMIT {limit}",
+            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_sub_height not in"
+            f" (select confirmed_at_sub_height from transaction_record order by confirmed_at_sub_height"
+            f" ASC LIMIT {start})"
+            f" order by confirmed_at_sub_height ASC LIMIT {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
