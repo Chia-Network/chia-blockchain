@@ -236,6 +236,7 @@ class WalletBlockchain:
             required_iters, validate_unfinished_err = validate_unfinished_header_block(
                 self.constants, self.sub_blocks, unfinished_header_block, False, difficulty, sub_slot_iters, False, True
             )
+            assert required_iters is not None
 
         sub_block = block_to_sub_block_record(
             self.constants,

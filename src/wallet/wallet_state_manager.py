@@ -445,7 +445,7 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
-        return uiunt64(0)
+        return uint64(0)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
         """
