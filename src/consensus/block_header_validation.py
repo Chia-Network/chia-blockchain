@@ -41,6 +41,7 @@ def validate_unfinished_header_block(
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
     skip_overflow_last_ss_validation: bool = False,
+    skip_vdf_is_valid: bool = False,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -191,7 +192,7 @@ def validate_unfinished_header_block(
                         number_of_iterations=icc_iters_committed,
                     ):
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
-                    if not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
+                    if not skip_vdf_is_valid and not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
                         constants, icc_vdf_input, target_vdf_info, None
                     ):
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
@@ -288,7 +289,7 @@ def validate_unfinished_header_block(
                 eos_vdf_iters,
                 sub_slot.reward_chain.end_of_slot_vdf.output,
             )
-            if not sub_slot.proofs.reward_chain_slot_proof.is_valid(
+            if not skip_vdf_is_valid and not sub_slot.proofs.reward_chain_slot_proof.is_valid(
                 constants,
                 ClassgroupElement.get_default_element(),
                 sub_slot.reward_chain.end_of_slot_vdf,
@@ -319,7 +320,7 @@ def validate_unfinished_header_block(
 
             # Pass in None for target info since we are only checking the proof from the temporary point,
             # but the challenge_chain_end_of_slot_vdf actually starts from the start of slot (for light clients)
-            if not sub_slot.proofs.challenge_chain_slot_proof.is_valid(
+            if not skip_vdf_is_valid and not sub_slot.proofs.challenge_chain_slot_proof.is_valid(
                 constants, cc_start_element, partial_cc_vdf_info, None
             ):
                 return None, ValidationError(Err.INVALID_CC_EOS_VDF)
@@ -578,7 +579,7 @@ def validate_unfinished_header_block(
             rc_vdf_iters,
             header_block.reward_chain_sub_block.reward_chain_sp_vdf.output,
         )
-        if not header_block.reward_chain_sp_proof.is_valid(
+        if not skip_vdf_is_valid and not header_block.reward_chain_sp_proof.is_valid(
             constants,
             rc_vdf_input,
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
@@ -627,7 +628,9 @@ def validate_unfinished_header_block(
             number_of_iterations=sp_iters,
         ):
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
-        if not header_block.challenge_chain_sp_proof.is_valid(constants, cc_vdf_input, target_vdf_info, None):
+        if not skip_vdf_is_valid and not header_block.challenge_chain_sp_proof.is_valid(
+            constants, cc_vdf_input, target_vdf_info, None
+        ):
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
     else:
         assert overflow is not None

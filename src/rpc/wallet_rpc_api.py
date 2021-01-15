@@ -368,10 +368,7 @@ class WalletRpcApi:
         pending_balance = await wallet.get_unconfirmed_balance()
         spendable_balance = await wallet.get_spendable_balance()
         pending_change = await wallet.get_pending_change_balance()
-        if wallet.type() == WalletType.COLOURED_COIN:
-            frozen_balance = 0
-        else:
-            frozen_balance = await wallet.get_frozen_amount()
+        frozen_balance = 0
 
         wallet_balance = {
             "wallet_id": wallet_id,
@@ -400,7 +397,16 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
-        transactions = await self.service.wallet_state_manager.get_all_transactions(wallet_id)
+        if "start" in request:
+            start = request["start"]
+        else:
+            start = 0
+        if "end" in request:
+            end = request["end"]
+        else:
+            end = 50
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
         formatted_transactions = []
 
         for tx in transactions:

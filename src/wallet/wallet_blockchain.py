@@ -20,11 +20,11 @@ from src.types.sized_bytes import bytes32
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint64
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.block_header_validation import validate_finished_header_block
-from src.util.streamable import recurse_jsonify
+from src.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.wallet_coin_store import WalletCoinStore
 from src.wallet.wallet_block_store import WalletBlockStore
@@ -211,20 +211,31 @@ class WalletBlockchain:
             self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
         )
 
-        if pre_validation_result is None:
+        if pre_validation_result is False:
             required_iters, error = validate_finished_header_block(
                 self.constants, self.sub_blocks, block, False, difficulty, sub_slot_iters
             )
+            if error is not None:
+                return ReceiveBlockResult.INVALID_BLOCK, error.code, None
+            assert required_iters is not None
         else:
             required_iters = pre_validation_result.required_iters
             error = (
                 ValidationError(Err(pre_validation_result.error)) if pre_validation_result.error is not None else None
             )
+            unfinished_header_block = UnfinishedHeaderBlock(
+                block.finished_sub_slots,
+                block.reward_chain_sub_block.get_unfinished(),
+                block.challenge_chain_sp_proof,
+                block.reward_chain_sp_proof,
+                block.foliage_sub_block,
+                block.foliage_block,
+                block.transactions_filter,
+            )
 
-        assert required_iters is not None
-        if error is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error.code, None
-        assert required_iters is not None
+            required_iters, validate_unfinished_err = validate_unfinished_header_block(
+                self.constants, self.sub_blocks, unfinished_header_block, False, difficulty, sub_slot_iters, False, True
+            )
 
         sub_block = block_to_sub_block_record(
             self.constants,

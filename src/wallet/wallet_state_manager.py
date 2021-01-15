@@ -445,18 +445,7 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
-        if self.peak is not None:
-            current_index = self.peak.height
-        else:
-            current_index = uint32(0)
-
-        valid_index = current_index
-
-        not_frozen: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
-        all_records: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(current_index, wallet_id)
-        sum_not_frozen = sum(record.coin.amount for record in not_frozen if record.coinbase)
-        sum_all_records = sum(record.coin.amount for record in all_records if record.coinbase)
-        return uint64(sum_all_records - sum_not_frozen)
+        return uiunt64(0)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
         """
@@ -970,11 +959,7 @@ class WalletStateManager:
         if self.peak is None:
             return set()
 
-        current_index = self.peak.height
-
-        valid_index = current_index
-
-        records = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
+        records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
         # Coins that are currently part of a transaction
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
