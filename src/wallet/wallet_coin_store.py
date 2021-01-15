@@ -13,14 +13,12 @@ class WalletCoinStore:
     """
 
     db_connection: aiosqlite.Connection
-    coin_record_cache: Dict[str, WalletCoinRecord]
-    cache_size: uint32
+    coin_record_cache: Dict[bytes32, WalletCoinRecord]
+    coin_wallet_record_cache: Dict[int, Dict[bytes32, WalletCoinRecord]]
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
+    async def create(cls, connection: aiosqlite.Connection):
         self = cls()
-
-        self.cache_size = cache_size
 
         self.db_connection = connection
         await self.db_connection.execute(
@@ -63,6 +61,10 @@ class WalletCoinStore:
 
         await self.db_connection.commit()
         self.coin_record_cache = dict()
+        self.coin_wallet_record_cache = {}
+        all_coins = await self.get_all_coins()
+        for coin_record in all_coins:
+            self.coin_record_cache[coin_record.coin.name()] = coin_record
         return self
 
     async def _clear_database(self):
@@ -72,6 +74,14 @@ class WalletCoinStore:
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord) -> None:
+        # update wallet cache
+        if record.wallet_id in self.coin_wallet_record_cache:
+            cache_dict = self.coin_wallet_record_cache[record.wallet_id]
+            if record.coin.name() in cache_dict and record.spent:
+                cache_dict.pop(record.coin.name())
+            else:
+                cache_dict[record.coin.name()] = record
+
         cursor = await self.db_connection.execute(
             "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -92,17 +102,14 @@ class WalletCoinStore:
         await cursor.close()
         await self.db_connection.commit()
 
-        self.coin_record_cache[record.coin.name().hex()] = record
-        if len(self.coin_record_cache) > self.cache_size:
-            while len(self.coin_record_cache) > self.cache_size:
-                first_in = list(self.coin_record_cache.keys())[0]
-                del self.coin_record_cache[first_in]
+        self.coin_record_cache[record.coin.name()] = record
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, sub_height: uint32, height: uint32):
         current: Optional[WalletCoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
             return
+
         spent: WalletCoinRecord = WalletCoinRecord(
             current.coin,
             current.confirmed_block_sub_height,
@@ -119,8 +126,8 @@ class WalletCoinStore:
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
         """ Returns CoinRecord with specified coin id. """
-        if coin_name.hex() in self.coin_record_cache:
-            return self.coin_record_cache[coin_name.hex()]
+        if coin_name in self.coin_record_cache:
+            return self.coin_record_cache[coin_name]
         cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
@@ -146,26 +153,30 @@ class WalletCoinStore:
         We can also return coins that were unspent at this height (but maybe spent later).
         Finally, the coins must be confirmed at the height or less.
         """
-        coins = set()
-        if height is not None:
-            cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE (spent=? OR spent_height>?) AND confirmed_height<=?",
-                (0, height, height),
-            )
+        if height is None:
+            all_unspent = set()
+            for name, coin_record in self.coin_record_cache.items():
+                if coin_record.spent is False:
+                    all_unspent.add(coin_record)
+            return all_unspent
         else:
-            cursor = await self.db_connection.execute("SELECT * from coin_record WHERE spent=?", (0,))
-        rows = await cursor.fetchall()
-        await cursor.close()
-        for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
-            coins.add(
-                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
-            )
-        return coins
+            all_unspent = set()
+            for name, coin_record in self.coin_record_cache.items():
+                if (
+                    coin_record.spent is False
+                    or coin_record.spent_block_sub_height > height
+                    and coin_record.confirmed_block_sub_height < height
+                ):
+                    all_unspent.add(coin_record)
+            return all_unspent
 
     async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have not been spent yet for a wallet. """
-        coins = set()
+        if wallet_id in self.coin_wallet_record_cache:
+            wallet_coins: Dict[bytes32, WalletCoinRecord] = self.coin_wallet_record_cache[wallet_id]
+            return set(wallet_coins.values())
+
+        coin_set = set()
 
         cursor = await self.db_connection.execute(
             "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
@@ -173,12 +184,17 @@ class WalletCoinStore:
         )
         rows = await cursor.fetchall()
         await cursor.close()
+        cache_dict = {}
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
-            coins.add(
-                WalletCoinRecord(coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11])
+            coin_record = WalletCoinRecord(
+                coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11]
             )
-        return coins
+            coin_set.add(coin_record)
+            cache_dict[coin.name()] = coin_record
+
+        self.coin_wallet_record_cache[wallet_id] = cache_dict
+        return coin_set
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
         """ Returns set of all CoinRecords."""
@@ -263,7 +279,7 @@ class WalletCoinStore:
         All coins spent after this point are set to unspent.
         """
         # Update memory cache
-        delete_queue: bytes32 = []
+        delete_queue: List[WalletCoinRecord] = []
         for coin_name, coin_record in self.coin_record_cache.items():
             if coin_record.spent_block_sub_height > sub_height:
                 new_record = WalletCoinRecord(
@@ -277,12 +293,16 @@ class WalletCoinStore:
                     coin_record.wallet_type,
                     coin_record.wallet_id,
                 )
-                self.coin_record_cache[coin_record.coin.name().hex()] = new_record
+                self.coin_record_cache[coin_record.coin.name()] = new_record
             if coin_record.confirmed_block_sub_height > sub_height:
-                delete_queue.append(coin_name)
+                delete_queue.append(coin_record)
 
-        for coin_name in delete_queue:
-            self.coin_record_cache.pop(coin_name)
+        for coin_record in delete_queue:
+            self.coin_record_cache.pop(coin_record.coin.name())
+            if coin_record.wallet_id in self.coin_wallet_record_cache:
+                coin_cache = self.coin_wallet_record_cache[coin_record.wallet_id]
+                if coin_record.coin.name() in coin_cache:
+                    coin_cache.pop(coin_record.coin.name())
 
         # Delete from storage
         c1 = await self.db_connection.execute("DELETE FROM coin_record WHERE confirmed_sub_height>?", (sub_height,))

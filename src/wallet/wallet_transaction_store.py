@@ -5,6 +5,7 @@ from src.util.ints import uint32, uint8
 from src.wallet.transaction_record import TransactionRecord
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
+from src.wallet.util.transaction_type import TransactionType
 
 
 class WalletTransactionStore:
@@ -155,7 +156,7 @@ class WalletTransactionStore:
     async def tx_with_addition_coin(self, removal_id: bytes32, wallet_id: int) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
         result = []
-        all: List[TransactionRecord] = await self.get_all_transactions(wallet_id)
+        all: List[TransactionRecord] = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX)
         for record in all:
             for coin in record.additions:
                 if coin.name() == removal_id:
@@ -312,12 +313,38 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_all_transactions(self, wallet_id: int) -> List[TransactionRecord]:
+    async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
+        limit = end - start
+        cursor = await self.db_connection.execute(
+            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_sub_height not in (select confirmed_at_sub_height from transaction_record order by confirmed_at_sub_height ASC LIMIT {start}) order by confirmed_at_sub_height ASC LIMIT {limit}",
+            (wallet_id,),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_all_transactions(self, wallet_id: int, type=None) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
-
-        cursor = await self.db_connection.execute("SELECT * from transaction_record where wallet_id=?", (wallet_id,))
+        if type is None:
+            cursor = await self.db_connection.execute(
+                "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
+            )
+        else:
+            cursor = await self.db_connection.execute(
+                "SELECT * from transaction_record where wallet_id=? and type=?",
+                (
+                    wallet_id,
+                    type,
+                ),
+            )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

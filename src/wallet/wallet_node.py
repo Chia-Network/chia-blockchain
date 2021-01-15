@@ -71,6 +71,7 @@ class WalletNode:
     root_path: Path
     state_changed_callback: Optional[Callable]
     syncing: bool
+    full_node_peer: Optional[PeerInfo]
 
     def __init__(
         self,
@@ -192,6 +193,7 @@ class WalletNode:
 
     async def _await_closed(self):
         self.log.info("self._await_closed")
+        await self.server.close_all_connections()
         asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
@@ -566,11 +568,19 @@ class WalletNode:
             else:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
 
+            if (
+                self.full_node_peer is not None
+                and peer.peer_host == self.full_node_peer.host
+                or peer.peer_host == "127.0.0.1"
+            ):
+                trusted = True
+            else:
+                trusted = False
             (
                 result,
                 error,
                 fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record, pre_validation_results[i])
+            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record, pre_validation_results[i], trusted)
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
