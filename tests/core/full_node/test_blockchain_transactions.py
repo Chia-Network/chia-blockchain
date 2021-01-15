@@ -35,7 +35,7 @@ class TestBlockchainTransactions:
     async def two_nodes(self):
         async for _ in setup_two_nodes(test_constants):
             yield _
-    """
+
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes):
         num_blocks = 10
@@ -533,7 +533,7 @@ class TestBlockchainTransactions:
         res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert res == ReceiveBlockResult.NEW_PEAK
         assert err is None
-    """
+
     @pytest.mark.asyncio
     async def test_assert_announcement_consumed(self, two_nodes):
 
@@ -617,7 +617,7 @@ class TestBlockchainTransactions:
         res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert res == ReceiveBlockResult.NEW_PEAK
         assert err is None
-    """
+
     @pytest.mark.asyncio
     async def test_assert_block_index_exceeds(self, two_nodes):
         num_blocks = 10
@@ -875,4 +875,3 @@ class TestBlockchainTransactions:
         res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
         assert err is None
         assert res == ReceiveBlockResult.NEW_PEAK
-    """

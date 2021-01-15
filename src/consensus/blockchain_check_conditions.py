@@ -3,7 +3,6 @@ from typing import Optional, Dict, List
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.coin_record import CoinRecord
 from src.types.announcement import Announcement
-from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode
 from src.util.errors import Err
