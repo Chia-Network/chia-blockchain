@@ -6,7 +6,6 @@ from typing import Optional, List, Tuple, Any
 
 import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
-from clvm_tools import binutils
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
