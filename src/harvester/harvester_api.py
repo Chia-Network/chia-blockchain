@@ -97,8 +97,7 @@ class HarvesterAPI:
                         )
                         quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
                     except Exception as e:
-                        self.harvester.log.error(f"Error reinitializing. Will not try to farm plot. {e}")
-                        self.harvester.provers.pop(filename, None)
+                        self.harvester.log.error(f"Error reinitializing plot {filename}. {e}")
                         return []
 
                 responses: List[Tuple[bytes32, ProofOfSpace]] = []
