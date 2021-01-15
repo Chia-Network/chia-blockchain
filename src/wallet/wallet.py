@@ -334,8 +334,6 @@ class Wallet:
                 primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
-            else:
-                solution = self.make_solution(consumed=[output_created.name()])
             list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
 
         await self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)

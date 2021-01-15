@@ -78,9 +78,7 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent
     return None
 
 
-def blockchain_assert_announcement(
-    condition: ConditionVarPair, announcements: List[Announcement]
-) -> Optional[Err]:
+def blockchain_assert_announcement(condition: ConditionVarPair, announcements: List[Announcement]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
