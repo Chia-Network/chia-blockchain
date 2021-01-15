@@ -347,6 +347,7 @@ async def validate_block_body(
     for npc in npc_list:
         unspent = removal_coin_records[npc.coin_name]
         assert height is not None
+        unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
             unspent,
             announcements,
