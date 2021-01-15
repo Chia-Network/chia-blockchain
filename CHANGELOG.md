@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased
+
+### Added
+- The cli now warns if you attempt to create a plot smaller than k=32.
+- `chia configure` now lets you enable or disable uPnP.
+- If a peer gives a bad weight proof it will now be disconnected.
+
+### Changed
+- Harvester now only checks every 2 minutes for new files and otherwise caches the plot listing in memory and logs how long it took to load all plot files at INFO level.
+- Harvester multithreading is now configureable in config.yaml.
+- Bumped Colorlog to 4.7.2, and pyinstaller to 4.2.
+
+### Fixed
+
 ## [1.0beta20] aka Beta 1.20 - 2021-01-14
 
 ### Added
