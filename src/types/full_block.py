@@ -6,9 +6,13 @@ from chiabip158 import PyBIP158
 from src.types.header_block import HeaderBlock
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
+from src.types.announcement import Announcement
 from src.types.sized_bytes import bytes32
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.condition_tools import created_outputs_for_conditions_dict
+from src.util.condition_tools import (
+    created_outputs_for_conditions_dict,
+    created_announcements_for_conditions_dict,
+)
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
@@ -170,3 +174,13 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
             additions.append(coin)
 
     return additions
+
+
+def announcements_for_npc(npc_list: List[NPC]) -> List[Announcement]:
+    announcements: List[Announcement] = []
+
+    for npc in npc_list:
+        for coin in created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name):
+            announcements.append(coin)
+
+    return announcements
