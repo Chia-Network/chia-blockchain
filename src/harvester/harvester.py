@@ -34,7 +34,7 @@ class Harvester:
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
 
-    def __init__(self, root_path: Path, constants: ConsensusConstants):
+    def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.root_path = root_path
 
         # From filename to prover
@@ -46,7 +46,7 @@ class Harvester:
         self.farmer_public_keys = []
         self.pool_public_keys = []
         self.match_str = None
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
