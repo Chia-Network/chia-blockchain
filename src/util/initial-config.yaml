@@ -23,6 +23,7 @@ harvester:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8560
+  num_threads: 30
 
   logging: *logging
 
