@@ -5,6 +5,7 @@ from src.util.config import (
 from argparse import ArgumentParser
 from typing import Dict
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.config import str2bool
 
 
 def make_parser(parser: ArgumentParser):
@@ -31,6 +32,15 @@ def make_parser(parser: ArgumentParser):
         type=str,
         nargs="?",
         default="",
+    )
+
+    parser.add_argument(
+        "--enable-upnp",
+        "--upnp",
+        help="Enable or disable uPnP. Can be True or False",
+        type=str,
+        nargs="?",
+        default="True",
     )
 
     parser.set_defaults(function=configure)
@@ -87,6 +97,13 @@ def configure(args, parser):
             config["logging"]["log_level"] = args.set_log_level
             print("Logging level updated. Check CHIA_ROOT/log/debug.log")
             change_made = True
+    if args.enable_upnp:
+        config["full_node"]["enable_upnp"] = str2bool(args.enable_upnp)
+        if str2bool(args.enable_upnp):
+            print("uPnP enabled.")
+        else:
+            print("uPnP disabled.")
+        change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect.")
         save_config(args.root_path, "config.yaml", config)
