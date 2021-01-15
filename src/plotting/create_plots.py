@@ -73,9 +73,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         num = 1
 
     if args.size < config["min_mainnet_k_size"]:
-        log.warn(
-            f"CREATING PLOTS WITH SIZE k={args.size}, which is less than the minimum required for mainnet"
-        )
+        log.warn(f"CREATING PLOTS WITH SIZE k={args.size}, which is less than the minimum required for mainnet")
     log.info(
         f"Creating {num} plots of size {args.size}, pool public key:  "
         f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
