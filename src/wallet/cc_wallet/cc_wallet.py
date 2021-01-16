@@ -197,10 +197,9 @@ class CCWallet:
     def id(self):
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self) -> uint64:
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
-            self.id()
-        )
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
+        if record_list is None:
+            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
         amount: uint64 = uint64(0)
         for record in record_list:
@@ -211,8 +210,8 @@ class CCWallet:
         self.log.info(f"Confirmed balance for cc wallet {self.id()} is {amount}")
         return uint64(amount)
 
-    async def get_unconfirmed_balance(self) -> uint64:
-        confirmed = await self.get_confirmed_balance()
+    async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
+        confirmed = await self.get_confirmed_balance(unspent_records)
         unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             self.id()
         )

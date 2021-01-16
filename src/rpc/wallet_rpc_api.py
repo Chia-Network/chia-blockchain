@@ -365,9 +365,10 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        balance = await wallet.get_confirmed_balance()
-        pending_balance = await wallet.get_unconfirmed_balance()
-        spendable_balance = await wallet.get_spendable_balance()
+        unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        balance = await wallet.get_confirmed_balance(unspent_records)
+        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+        spendable_balance = await wallet.get_spendable_balance(unspent_records)
         pending_change = await wallet.get_pending_change_balance()
         frozen_balance = 0
 

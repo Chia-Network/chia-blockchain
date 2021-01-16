@@ -388,18 +388,18 @@ class WalletStateManager:
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int) -> uint64:
+    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint64:
         """
         Returns the balance amount of all coins that are spendable.
         """
-        spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(wallet_id)
 
-        amount: uint64 = uint64(0)
+        spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(wallet_id, unspent_records)
 
+        spendable_amount: uint64 = uint64(0)
         for record in spendable:
-            amount = uint64(amount + record.coin.amount)
+            spendable_amount = uint64(spendable_amount + record.coin.amount)
 
-        return uint64(amount)
+        return spendable_amount
 
     async def does_coin_belong_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
         """
@@ -416,23 +416,28 @@ class WalletStateManager:
 
         return False
 
-    async def get_confirmed_balance_for_wallet(self, wallet_id: int) -> uint64:
+    async def get_confirmed_balance_for_wallet(
+        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+    ) -> uint64:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
         """
-        record_list: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        if unspent_coin_records is None:
+            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
         amount: uint64 = uint64(0)
-        for record in record_list:
+        for record in unspent_coin_records:
             amount = uint64(amount + record.coin.amount)
         self.log.info(f"Confirmed balance amount is {amount}")
         return uint64(amount)
 
-    async def get_unconfirmed_balance(self, wallet_id) -> uint64:
+    async def get_unconfirmed_balance(
+        self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+    ) -> uint64:
         """
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
         transactions.
         """
-        confirmed = await self.get_confirmed_balance_for_wallet(wallet_id)
+        confirmed = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         removal_amount = 0
 
@@ -955,11 +960,12 @@ class WalletStateManager:
         self.wallets[uint32(id)] = wallet
         await self.create_more_puzzle_hashes()
 
-    async def get_spendable_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
+    async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
         if self.peak is None:
             return set()
 
-        records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        if records is None:
+            records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
         # Coins that are currently part of a transaction
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)

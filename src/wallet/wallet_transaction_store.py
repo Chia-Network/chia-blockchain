@@ -342,7 +342,10 @@ class WalletTransactionStore:
             "SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,)
         )
         count_result = await cursor.fetchone()
-        count = count_result[0]
+        if count_result is not None:
+            count = count_result[0]
+        else:
+            count = 0
         await cursor.close()
         return count
 
