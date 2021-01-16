@@ -90,7 +90,10 @@ async def netstorge_async(args, parser):
                 f"Iterations:  {newer_block_header.total_iters}\n"
             )
             network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
-            print(f"The network has an estimated {network_space_terabytes_estimate:.2f}TiB")
+            if network_space_terabytes_estimate > 1024:
+                print(f"The network has an estimated {network_space_terabytes_estimate / 1024:.3f}PiB")
+            else:
+                print(f"The network has an estimated {network_space_terabytes_estimate:.3f}TiB")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
