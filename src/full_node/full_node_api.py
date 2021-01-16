@@ -206,7 +206,9 @@ class FullNodeAPI:
         response: full_node_protocol.RespondProofOfWeight,
         peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
-        self.full_node.pow_pending.remove(peer.peer_node_id)
+        if peer.peer_node_id not in self.full_node.pow_pending:
+            self.log.warning("weight proof not in pending request list")
+            return
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
         if not validated:
             raise Exception("bad weight proof, disconnecting peer")
