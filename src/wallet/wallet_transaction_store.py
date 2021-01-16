@@ -314,12 +314,15 @@ class WalletTransactionStore:
         return records
 
     async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
+        """Return a list of transaction between start and end index. List is in reverse chronological order.
+        start = 0 is most recent transaction
+        """
         limit = end - start
         cursor = await self.db_connection.execute(
             f"SELECT * from transaction_record where wallet_id=? and confirmed_at_sub_height not in"
             f" (select confirmed_at_sub_height from transaction_record order by confirmed_at_sub_height"
             f" ASC LIMIT {start})"
-            f" order by confirmed_at_sub_height ASC LIMIT {limit}",
+            f" order by confirmed_at_sub_height DESC LIMIT {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
@@ -330,7 +333,18 @@ class WalletTransactionStore:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
 
+        records.reverse()
+
         return records
+
+    async def get_transaction_count_for_wallet(self, wallet_id) -> int:
+        cursor = await self.db_connection.execute(
+            "SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,)
+        )
+        count_result = await cursor.fetchone()
+        count = count_result[0]
+        await cursor.close()
+        return count
 
     async def get_all_transactions(self, wallet_id: int, type=None) -> List[TransactionRecord]:
         """
