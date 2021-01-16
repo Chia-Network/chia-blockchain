@@ -248,8 +248,8 @@ class WeightProofHandler:
     ) -> Optional[List[SubEpochSummary]]:
         assert self.block_cache is not None
 
-        last_ses_block = _get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
-        if last_ses_block is None:
+        last_ses_hash, last_ses_sub_height = _get_last_ses_hash(self.constants, weight_proof.recent_chain_data)
+        if last_ses_hash is None:
             self.log.warning("could not find last ses block")
             return None
 
@@ -268,19 +268,16 @@ class WeightProofHandler:
             return None
 
         last_ses = summaries[-1]
-        self.log.info(f"last ses height {last_ses_block.reward_chain_sub_block.sub_block_height}")
+        self.log.info(f"last ses height {last_ses_sub_height}")
         # validate last ses_hash
-        if last_ses.get_hash() != last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash:
-            self.log.error(
-                f"failed to validate ses hashes block height {last_ses_block.reward_chain_sub_block.sub_block_height}"
-            )
+        if last_ses.get_hash() != last_ses_hash:
+            self.log.error(f"failed to validate ses hashes block height {last_ses_sub_height}")
             return None
         return summaries
 
     def _validate_summaries_weight(self, sub_epoch_data_weight, summaries, weight_proof) -> bool:
         num_over = summaries[-1].num_sub_blocks_overflow
         ses_end_height = (len(summaries) - 1) * self.constants.SUB_EPOCH_SUB_BLOCKS + num_over - 1
-        self.log.info(f"weight height {ses_end_height}")
         curr = None
         for block in weight_proof.recent_chain_data:
             if block.reward_chain_sub_block.sub_block_height == ses_end_height:
@@ -737,9 +734,9 @@ def _map_summaries(
     return summaries, sub_epoch_data_weight
 
 
-def _get_last_ses_block_idx(
+def _get_last_ses_hash(
     constants: ConsensusConstants, recent_reward_chain: List[ProofBlockHeader]
-) -> Optional[ProofBlockHeader]:
+) -> Tuple[Optional[bytes32], uint32]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
         if (block.reward_chain_sub_block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
             idx = len(recent_reward_chain) - 1 - idx  # reverse
@@ -749,9 +746,12 @@ def _get_last_ses_block_idx(
                 if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
                         if slot.challenge_chain.subepoch_summary_hash is not None:
-                            return curr
+                            return (
+                                slot.challenge_chain.subepoch_summary_hash,
+                                curr.reward_chain_sub_block.sub_block_height,
+                            )
                 idx += 1
-    return None
+    return None, uint32(0)
 
 
 def handle_finished_slots(end_of_slot: EndOfSubSlotBundle):
