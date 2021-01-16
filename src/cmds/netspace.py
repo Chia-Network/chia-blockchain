@@ -79,7 +79,7 @@ async def netstorge_async(args, parser):
                 f"Header Hash: 0x{older_block_header.header_hash}\n"
                 f"Weight:      {older_block_header.weight}\n"
                 f"Total VDF\n"
-                f"Iterations:  {older_block_header.total_iters}\n"
+                f" Iterations: {older_block_header.total_iters}\n"
             )
             print(
                 f"Newer Sub-block Height: {newer_block_header.sub_block_height}\n"
@@ -87,7 +87,7 @@ async def netstorge_async(args, parser):
                 f"Header Hash: 0x{newer_block_header.header_hash}\n"
                 f"Weight:      {newer_block_header.weight}\n"
                 f"Total VDF\n"
-                f"Iterations:  {newer_block_header.total_iters}\n"
+                f" Iterations: {newer_block_header.total_iters}\n"
             )
             network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
             if network_space_terabytes_estimate > 1024:
