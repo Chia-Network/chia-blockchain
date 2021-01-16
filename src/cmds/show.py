@@ -165,9 +165,9 @@ async def show_async(args, parser):
             network_space_human_readable = blockchain_state["space"] / 1024 ** 4
             if network_space_human_readable >= 1024:
                 network_space_human_readable = network_space_human_readable / 1024
-                print(f"{network_space_human_readable:.3f}PiB")
+                print(f"{network_space_human_readable:.3f} PiB")
             else:
-                print(f"{network_space_human_readable:.3f}TiB")
+                print(f"{network_space_human_readable:.3f} TiB")
             print(f"Current difficulty: {difficulty}")
             print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
             print("Total iterations since the start of the blockchain:", total_iters)

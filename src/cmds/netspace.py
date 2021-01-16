@@ -74,26 +74,26 @@ async def netstorge_async(args, parser):
                 newer_block_header.header_hash, older_block_header.header_hash
             )
             print(
-                f"Older Sub-block Height: {older_block_header.sub_block_height}\n"
-                f"Older Height: {older_block_header.height}\n"
-                f"Header Hash: 0x{older_block_header.header_hash}\n"
-                f"Weight:      {older_block_header.weight}\n"
-                f"Total VDF\n"
-                f" Iterations: {older_block_header.total_iters}\n"
+                "Older Sub Block\n"
+                f"Sub Block Height: {older_block_header.sub_block_height}\n"
+                f"Height:           {older_block_header.height}\n"
+                f"Weight:           {older_block_header.weight}\n"
+                f"VDF Iterations:   {older_block_header.total_iters}\n"
+                f"Header Hash:      0x{older_block_header.header_hash}\n"
             )
             print(
-                f"Newer Sub-block Height: {newer_block_header.sub_block_height}\n"
-                f"Newer Height: {newer_block_header.height}\n"
-                f"Header Hash: 0x{newer_block_header.header_hash}\n"
-                f"Weight:      {newer_block_header.weight}\n"
-                f"Total VDF\n"
-                f" Iterations: {newer_block_header.total_iters}\n"
+                "Newer Sub Block\n"
+                f"Sub Block Height: {newer_block_header.sub_block_height}\n"
+                f"Height:           {newer_block_header.height}\n"
+                f"Weight:           {newer_block_header.weight}\n"
+                f"VDF Iterations:   {newer_block_header.total_iters}\n"
+                f"Header Hash:      0x{newer_block_header.header_hash}\n"
             )
             network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
             if network_space_terabytes_estimate > 1024:
-                print(f"The network has an estimated {network_space_terabytes_estimate / 1024:.3f}PiB")
+                print(f"The network has an estimated {network_space_terabytes_estimate / 1024:.3f} PiB")
             else:
-                print(f"The network has an estimated {network_space_terabytes_estimate:.3f}TiB")
+                print(f"The network has an estimated {network_space_terabytes_estimate:.3f} TiB")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
