@@ -208,7 +208,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if peer.peer_node_id not in self.full_node.pow_pending:
             self.log.warning("weight proof not in pending request list")
-            return
+            return None
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
         if not validated:
             raise Exception("bad weight proof, disconnecting peer")
@@ -551,10 +551,7 @@ class FullNodeAPI:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
-        self.log.info(f"Request: {request}")
-        self.log.info("1")
         async with self.full_node.timelord_lock:
-            self.log.info("2")
             if request.pool_target is None or request.pool_signature is None:
                 raise ValueError("Adaptable pool protocol not yet available.")
 
@@ -562,7 +559,6 @@ class FullNodeAPI:
                 request.challenge_chain_sp
             )
 
-            self.log.info("3")
             if sp_vdfs is None:
                 self.log.warning(f"Received proof of space for an unknown signage point {request.challenge_chain_sp}")
                 return None
@@ -575,14 +571,12 @@ class FullNodeAPI:
                     )
                     return None
 
-            self.log.info("4")
             if request.signage_point_index == 0:
                 cc_challenge_hash: bytes32 = request.challenge_chain_sp
             else:
                 assert sp_vdfs.cc_vdf is not None
                 cc_challenge_hash = sp_vdfs.cc_vdf.challenge
 
-            self.log.info("5")
             pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int, uint128]] = None
             if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
                 # Checks that the proof of space is a response to a recent challenge and valid SP
@@ -594,7 +588,6 @@ class FullNodeAPI:
             else:
                 total_iters_pos_slot = uint128(0)
             assert cc_challenge_hash == request.challenge_hash
-            self.log.info("6")
 
             # Now we know that the proof of space has a signage point either:
             # 1. In the previous sub-slot of the peak (overflow)
@@ -607,17 +600,13 @@ class FullNodeAPI:
             )
             assert quality_string is not None and len(quality_string) == 32
 
-            self.log.info("7")
             # Grab best transactions from Mempool for given tip target
             async with self.full_node.blockchain.lock:
-                self.log.info("8")
                 peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is None:
                     spend_bundle: Optional[SpendBundle] = None
                 else:
                     spend_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
-
-            self.log.info("9")
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -629,12 +618,10 @@ class FullNodeAPI:
             def get_pool_sig(_1, _2) -> G2Element:
                 return request.pool_signature
 
-            self.log.info("10")
             prev_sb: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
 
             # Finds the previous sub block from the signage point, ensuring that the reward chain VDF is correct
             if prev_sb is not None:
-                self.log.info("11")
                 if request.signage_point_index == 0:
                     if pos_sub_slot is None:
                         self.log.warning("Pos sub slot is None")
@@ -644,7 +631,6 @@ class FullNodeAPI:
                     assert sp_vdfs.rc_vdf is not None
                     rc_challenge = sp_vdfs.rc_vdf.challenge
 
-                self.log.info(f"12, {len(self.full_node.full_node_store.finished_sub_slots)}")
                 # Backtrack through empty sub-slots
                 for eos, _, _ in reversed(self.full_node.full_node_store.finished_sub_slots):
                     if eos is not None and eos.reward_chain.get_hash() == rc_challenge:
@@ -652,7 +638,6 @@ class FullNodeAPI:
 
                 found = False
                 attempts = 0
-                self.log.info("13")
                 while prev_sb is not None and attempts < 10:
                     if prev_sb.reward_infusion_new_challenge == rc_challenge:
                         found = True
@@ -670,12 +655,10 @@ class FullNodeAPI:
                     self.log.warning("Did not find a previous block with the correct reward chain hash")
                     return None
 
-            self.log.info("14")
             try:
                 finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
                     prev_sb, self.full_node.blockchain.sub_blocks, cc_challenge_hash
                 )
-                self.log.info(f"15, {len(finished_sub_slots)}")
                 if (
                     len(finished_sub_slots) > 0
                     and pos_sub_slot is not None
@@ -686,7 +669,6 @@ class FullNodeAPI:
             except ValueError as e:
                 self.log.warning(f"Value Error: {e}")
                 return None
-            self.log.info(f"16")
             if prev_sb is None:
                 pool_target = PoolTarget(
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
@@ -695,13 +677,10 @@ class FullNodeAPI:
             else:
                 pool_target = request.pool_target
 
-            self.log.info(f"17")
             if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
-                self.log.info(f"18")
                 difficulty = self.full_node.constants.DIFFICULTY_STARTING
                 sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
             else:
-                self.log.info(f"19")
                 difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
                 sub_slot_iters = peak.sub_slot_iters
                 for sub_slot in finished_sub_slots:
@@ -710,7 +689,6 @@ class FullNodeAPI:
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
-            self.log.info(f"20")
             required_iters: uint64 = calculate_iterations_quality(
                 quality_string,
                 request.proof_of_space.size,
@@ -718,7 +696,6 @@ class FullNodeAPI:
                 request.challenge_chain_sp,
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
-            self.log.info(f"21")
             ip_iters: uint64 = calculate_ip_iters(
                 self.full_node.constants,
                 sub_slot_iters,
@@ -726,7 +703,7 @@ class FullNodeAPI:
                 required_iters,
             )
 
-            self.log.info(f"22")
+            self.log.info("Starting to make the unfinished sub-block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
@@ -748,23 +725,21 @@ class FullNodeAPI:
                 self.full_node.blockchain.sub_blocks,
                 finished_sub_slots,
             )
-            self.log.info(f"23")
+            self.log.info("Made the unfinished sub-block")
             self.log.info(f"Uninifhsed block: {unfinished_block}")
-            self.log.info(f"Uninifhsed block bytes: {bytes(unfinished_block)}")
+            self.log.info(f"Unfinished block {bytes(unfinished_block)}")
             if prev_sb is not None:
                 height: uint32 = uint32(prev_sb.sub_block_height + 1)
             else:
                 height = uint32(0)
             self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
-            self.log.info(f"24")
             foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
             if unfinished_block.is_block():
                 foliage_block_hash = unfinished_block.foliage_sub_block.foliage_block_hash
             else:
                 foliage_block_hash = bytes([0] * 32)
 
-            self.log.info(f"25")
             message = farmer_protocol.RequestSignedValues(
                 quality_string,
                 foliage_sb_data_hash,
