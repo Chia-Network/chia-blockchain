@@ -40,7 +40,6 @@ def make_parser(parser: ArgumentParser):
         help="Enable or disable uPnP. Can be True or False",
         type=str,
         nargs="?",
-        default="True",
     )
 
     parser.set_defaults(function=configure)
@@ -97,7 +96,7 @@ def configure(args, parser):
             config["logging"]["log_level"] = args.set_log_level
             print("Logging level updated. Check CHIA_ROOT/log/debug.log")
             change_made = True
-    if args.enable_upnp:
+    if args.enable_upnp is not None:
         config["full_node"]["enable_upnp"] = str2bool(args.enable_upnp)
         if str2bool(args.enable_upnp):
             print("uPnP enabled.")
