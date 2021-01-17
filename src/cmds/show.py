@@ -65,7 +65,7 @@ def make_parser(parser):
     parser.add_argument(
         "-r",
         "--remove-connection",
-        help="Remove a Node by the first 10 characters of NodeID",
+        help="Remove a Node by the first 8 characters of NodeID",
         type=str,
         default="",
     )
