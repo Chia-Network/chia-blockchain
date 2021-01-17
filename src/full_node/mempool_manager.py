@@ -68,7 +68,7 @@ class MempoolManager:
             for item in dic.values():
                 # TODO: reenable big blocks
                 # if item.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM:
-                if item.cost + cost_sum <= 100000:
+                if item.cost + cost_sum <= 10000000:
                     spend_bundles.append(item.spend_bundle)
                     cost_sum += item.cost
                 else:
