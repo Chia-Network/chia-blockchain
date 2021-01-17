@@ -552,7 +552,6 @@ class FullNodeAPI:
         by the farmer, and sends the hash of the header data back to the farmer.
         """
         self.log.info(f"Request: {request}")
-        self.log.info(f"Request bytes: {bytes(request)}")
         self.log.info("1")
         async with self.full_node.timelord_lock:
             self.log.info("2")
