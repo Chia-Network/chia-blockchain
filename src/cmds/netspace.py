@@ -4,6 +4,7 @@ import time
 from time import struct_time, localtime
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.byte_types import hexstr_to_bytes
 
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
@@ -65,7 +66,13 @@ async def netstorge_async(args, parser):
 
                 newer_block_height = blockchain_state["peak"].sub_block_height
             else:
-                newer_block_height = int(args.start)  # Starting block height in args
+                newer_sub_block = await client.get_sub_block_record(hexstr_to_bytes(args.start))
+                if newer_sub_block is None:
+                    print("Sub block header hash", args.start, "not found.")
+                    return None
+                else:
+                    print("newer_sub_block_height", newer_sub_block.sub_block_height)
+                    newer_block_height = newer_sub_block.sub_block_height
 
             newer_block_header = await client.get_sub_block_record_by_sub_height(newer_block_height)
             older_block_height = max(0, newer_block_height - int(args.delta_block_height))
