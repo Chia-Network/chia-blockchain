@@ -244,6 +244,7 @@ def chia_init(root_path: Path):
         "farmer.full_node_peer.port",
         "timelord.full_node_peer.port",
         "full_node.port",
+        "harvester.num_threads"
     ]
 
     # These are the files that will be migrated
