@@ -726,8 +726,6 @@ class FullNodeAPI:
                 finished_sub_slots,
             )
             self.log.info("Made the unfinished sub-block")
-            self.log.info(f"Uninifhsed block: {unfinished_block}")
-            self.log.info(f"Unfinished block {bytes(unfinished_block)}")
             if prev_sb is not None:
                 height: uint32 = uint32(prev_sb.sub_block_height + 1)
             else:
