@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## [1.0beta21] aka Beta 1.21 - 2021-01-16
 
 ### Added
 - The cli now warns if you attempt to create a plot smaller than k=32.
@@ -16,9 +16,13 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 - Harvester now only checks every 2 minutes for new files and otherwise caches the plot listing in memory and logs how long it took to load all plot files at INFO level.
 - Harvester multithreading is now configureable in config.yaml.
+- Websocket heartbeat timeout was increased from 30 seconds to 300 seconds.
 - Bumped Colorlog to 4.7.2, and pyinstaller to 4.2.
 
 ### Fixed
+- Weight proofs were failing to verify contributing to a chain stall. This release gets things moving again but nodes are using too much CPU and can pause/lag at times. This may resolve as people upgrade to Beta 21.
+- A toxic combination of transaction limits set too high and a non performant clvm kept the chain stalled. A faster rust implementation of clvm is already nearing completion.
+- `chia netspace -s` would not correctly look up the start block height by block hash. Additionally netspace now flips to PiB above 1024 TiB. To compare netspace to `chia show` of the GUI use `chia netspace -d 1000` as `chia netspace` defaults to `-d 192` which is one hour.
 
 ## [1.0beta20] aka Beta 1.20 - 2021-01-14
 
