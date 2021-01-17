@@ -177,11 +177,16 @@ class FullNodeRpcApi:
         start = int(request["start"])
         end = int(request["end"])
         records = []
+        peak_height = self.full_node.blockchain.peak_height
+        if peak_height is None:
+            raise ValueError("Peak is None")
+
         for a in range(start, end):
-            header_hash: Optional[bytes32] = self.service.blockchain.sub_height_to_hash.get(uint32(a), None)
-            if header_hash is None:
-                continue
-            record: Optional[SubBlockRecord] = self.service.blockchain.sub_blocks.get(header_hash, None)
+            if peak_height < uint32(a):
+                self.full_node.log.warning("requested block is higher than known peak ")
+                break
+            header_hash: bytes32 = self.service.blockchain.sub_height_to_hash(uint32(a))
+            record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
             full = await self.service.blockchain.block_store.get_full_block(header_hash)
             if record is None:
                 # Fetch from DB

@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 from blspy import AugSchemeMPL
 
@@ -27,6 +27,7 @@ from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.types.vdf import VDFInfo, VDFProof
+from src.util.block_cache import BlockCache
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -998,7 +999,7 @@ def validate_finished_header_block(
 
 
 def batch_validate_finished_header_block_pickled(
-    constants: Dict,
+    constants: ConsensusConstants,
     sub_blocks_pickled: Dict[bytes, bytes],
     header_blocks_pickled: List[bytes],
     check_filter: bool,
@@ -1014,7 +1015,7 @@ def batch_validate_finished_header_block_pickled(
             header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
             res = validate_finished_header_block(
                 dataclass_from_dict(ConsensusConstants, constants),
-                sub_blocks,
+                BlockCache(sub_blocks),
                 header_block,
                 check_filter,
                 expected_difficulty[i],

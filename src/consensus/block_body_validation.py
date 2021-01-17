@@ -40,7 +40,6 @@ log = logging.getLogger(__name__)
 async def validate_block_body(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    sub_height_to_hash: Dict[uint32, bytes32],
     block_store: BlockStore,
     coin_store: CoinStore,
     peak: Optional[SubBlockRecord],
@@ -219,12 +218,12 @@ async def validate_block_body(
     if peak is None or sub_height == 0:
         fork_sub_h: int = -1
     else:
-        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
+        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks.sub_block_record(block.prev_header_hash))
 
     if fork_sub_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = sub_blocks[sub_height_to_hash[uint32(fork_sub_h)]]
+        last_sb_in_common = sub_blocks.height_to_sub_block_record(uint32(fork_sub_h))
         if last_sb_in_common.is_block:
             coin_store_reorg_height = last_sb_in_common.height
         else:

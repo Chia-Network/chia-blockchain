@@ -214,13 +214,11 @@ class Blockchain(BlockchainInterface):
             if block.sub_block_height == 0:
                 prev_sb: Optional[SubBlockRecord] = None
             else:
-                prev_sb = self.sub_blocks[block.prev_header_hash]
-            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
-            )
+                prev_sb = self.__sub_blocks[block.prev_header_hash]
+            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(self.constants, block, prev_sb, self)
             required_iters, error = validate_finished_header_block(
                 self.constants,
-                self.sub_blocks,
+                self,
                 await block.get_block_header(),
                 False,
                 difficulty,
@@ -234,7 +232,6 @@ class Blockchain(BlockchainInterface):
         error_code = await validate_block_body(
             self.constants,
             self,
-            self.sub_height_to_hash,
             self.block_store,
             self.coin_store,
             self.get_peak(),
@@ -411,7 +408,7 @@ class Blockchain(BlockchainInterface):
         if prev_curr is None:
             assert curr.sub_block_height == 0
             prev_curr = curr
-            prev_curr_sbr = self.sub_blocks[curr.header_hash]
+            prev_curr_sbr = self.__sub_blocks[curr.header_hash]
         else:
             prev_curr_sbr = self.sub_block_record(curr.prev_header_hash)
         assert prev_curr_sbr is not None
@@ -460,7 +457,7 @@ class Blockchain(BlockchainInterface):
         num_sub_slots_found = 0
         num_blocks_seen = 0
         if blocks[0].sub_block_height > 0:
-            curr = self.sub_blocks[blocks[0].prev_header_hash]
+            curr = self.__sub_blocks[blocks[0].prev_header_hash]
             num_sub_slots_to_look_for = 3 if curr.overflow else 2
             while (
                 curr.sub_epoch_summary_included is None
@@ -479,25 +476,23 @@ class Blockchain(BlockchainInterface):
                 recent_sub_blocks[curr.header_hash] = curr
                 if curr.is_block:
                     num_blocks_seen += 1
-                curr = self.sub_blocks[curr.prev_hash]
+                curr = self.__sub_blocks[curr.prev_hash]
             recent_sub_blocks[curr.header_hash] = curr
             recent_sub_blocks_compressed[curr.header_hash] = curr
         sub_block_was_present = []
         for block in blocks:
-            sub_block_was_present.append(block.header_hash in self.sub_blocks)
+            sub_block_was_present.append(block.header_hash in self.__sub_blocks)
 
         diff_ssis: List[Tuple[uint64, uint64]] = []
         for sub_block in blocks:
             if sub_block.sub_block_height != 0 and prev_sb is None:
-                prev_sb = self.sub_blocks[sub_block.prev_header_hash]
-            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.constants, sub_block, self.sub_height_to_hash, prev_sb, self.sub_blocks
-            )
+                prev_sb = self.__sub_blocks[sub_block.prev_header_hash]
+            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(self.constants, sub_block, prev_sb, self)
             overflow = is_overflow_sub_block(self.constants, sub_block.reward_chain_sub_block.signage_point_index)
             challenge = get_block_challenge(
                 self.constants,
                 sub_block,
-                recent_sub_blocks,
+                self,
                 prev_sb is None,
                 overflow,
                 False,
@@ -511,8 +506,8 @@ class Blockchain(BlockchainInterface):
             )
             if q_str is None:
                 for i, block_i in enumerate(blocks):
-                    if not sub_block_was_present[i] and block_i.header_hash in self.sub_blocks:
-                        del self.sub_blocks[block_i.header_hash]
+                    if not sub_block_was_present[i] and block_i.header_hash in self.__sub_blocks:
+                        del self.__sub_blocks[block_i.header_hash]
                 return None
 
             required_iters: uint64 = calculate_iterations_quality(
@@ -524,21 +519,20 @@ class Blockchain(BlockchainInterface):
 
             sub_block_rec = block_to_sub_block_record(
                 self.constants,
-                self.sub_blocks,
-                self.sub_height_to_hash,
+                self,
                 required_iters,
                 sub_block,
                 None,
             )
             recent_sub_blocks[sub_block_rec.header_hash] = sub_block_rec
             recent_sub_blocks_compressed[sub_block_rec.header_hash] = sub_block_rec
-            self.sub_blocks[sub_block_rec.header_hash] = sub_block_rec  # Temporarily add sub block to dict
+            self.__sub_blocks[sub_block_rec.header_hash] = sub_block_rec  # Temporarily add sub block to dict
             prev_sb = sub_block_rec
             diff_ssis.append((difficulty, sub_slot_iters))
 
         for i, block in enumerate(blocks):
             if not sub_block_was_present[i]:
-                del self.sub_blocks[block.header_hash]
+                del self.__sub_blocks[block.header_hash]
 
         recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks_compressed.items()}
 
@@ -598,9 +592,9 @@ class Blockchain(BlockchainInterface):
             block.foliage_block,
             b"",
         )
-        prev_sb = self.sub_blocks.get(unfinished_header_block.prev_header_hash, None)
+        prev_sb = self.try_sub_block(unfinished_header_block.prev_header_hash)
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            self.constants, unfinished_header_block, self.sub_height_to_hash, prev_sb, self.sub_blocks
+            self.constants, unfinished_header_block, prev_sb, self
         )
         required_iters, error = validate_unfinished_header_block(
             self.constants,
@@ -629,7 +623,6 @@ class Blockchain(BlockchainInterface):
         error_code = await validate_block_body(
             self.constants,
             self,
-            self.sub_height_to_hash,
             self.block_store,
             self.coin_store,
             self.get_peak(),
@@ -679,8 +672,10 @@ class Blockchain(BlockchainInterface):
         return self.peak_height
 
     async def warmup(self, fork_point: uint32):
+        if self.peak_height is None:
+            return
         blocks = await self.block_store.get_sub_block_in_range(
-            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, uint32(0)), self.peak_height
+            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), self.peak_height
         )
         self.__sub_blocks = blocks
         return

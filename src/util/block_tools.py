@@ -53,6 +53,7 @@ from src.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block,
 )
+from src.util.block_cache import BlockCache
 from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -66,7 +67,6 @@ from src.wallet.derive_keys import (
     master_sk_to_wallet_sk,
 )
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from tests.core.consensus.block_cache import BlockCache
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{

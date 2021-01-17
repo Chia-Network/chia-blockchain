@@ -203,12 +203,10 @@ class WalletBlockchain(BlockchainInterface):
         if block.sub_block_height == 0:
             prev_sb: Optional[SubBlockRecord] = None
         else:
-            prev_sb = self.sub_blocks[block.prev_header_hash]
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
-        )
+            prev_sb = self.__sub_blocks[block.prev_header_hash]
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(self.constants, block, prev_sb, self)
         required_iters, error = validate_finished_header_block(
-            self.constants, self.sub_blocks, block, False, difficulty, sub_slot_iters
+            self.constants, self, block, False, difficulty, sub_slot_iters
         )
 
         if error is not None:
@@ -434,6 +432,8 @@ class WalletBlockchain(BlockchainInterface):
         return self.peak_sub_height
 
     async def warmup(self, fork_point: uint32):
+        if self.peak_sub_height is None:
+            return
         blocks = await self.block_store.get_sub_block_in_range(
             fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, self.peak_sub_height
         )
