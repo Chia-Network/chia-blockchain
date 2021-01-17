@@ -22,7 +22,6 @@ from src.consensus.pot_iterations import calculate_iterations_quality, calculate
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
-    _get_last_ses_block_idx,
     _map_summaries,
     BlockCache,
 )
@@ -142,19 +141,6 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
 
 
 class TestWeightProof:
-    @pytest.mark.asyncio
-    async def test_get_last_ses_block_idx(self, default_1000_blocks):
-        blocks = default_1000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        sub_epoch_end, _ = get_prev_ses_block(sub_blocks, blocks[-1].prev_header_hash)
-        recent_blocks: List[ProofBlockHeader] = []
-        for block in header_cache.values():
-            recent_blocks.append(ProofBlockHeader(block.finished_sub_slots, block.reward_chain_sub_block))
-        block = _get_last_ses_block_idx(test_constants, recent_blocks)
-        assert block is not None
-        assert block.reward_chain_sub_block.sub_block_height == sub_epoch_end.sub_block_height
-        assert sub_blocks[height_to_hash[block.reward_chain_sub_block.sub_block_height]].sub_epoch_summary_included
-
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_400_blocks):
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(default_400_blocks)
