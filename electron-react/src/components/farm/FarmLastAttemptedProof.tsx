@@ -4,7 +4,7 @@ import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
-import type { Row } from '../core/Table/Table';
+import type { Row } from '../core/components/Table/Table';
 import usePlots from '../../hooks/usePlots';
 import { RootState } from '../../modules/rootReducer';
 

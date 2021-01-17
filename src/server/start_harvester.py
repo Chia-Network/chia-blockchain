@@ -27,7 +27,7 @@ def service_kwargs_for_harvester(
 ) -> Dict:
     connect_peers = [PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])]
 
-    harvester = Harvester(root_path, consensus_constants)
+    harvester = Harvester(root_path, config, consensus_constants)
     peer_api = HarvesterAPI(harvester)
 
     kwargs = dict(

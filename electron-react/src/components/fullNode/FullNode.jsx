@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { FormatBytes, Flex, Card, Loading, Table } from '@chia/core';
+import { FormatBytes, Flex, Card, Loading, StateColor, Table } from '@chia/core';
 import { Status } from '@chia/icons';
 import { useRouteMatch, useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -13,7 +13,6 @@ import {
   openConnection,
 } from '../../modules/fullnodeMessages';
 import LayoutMain from '../layout/LayoutMain';
-import StateColor from '../../constants/StateColor';
 
 /* global BigInt */
 

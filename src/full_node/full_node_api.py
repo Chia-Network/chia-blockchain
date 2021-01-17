@@ -200,19 +200,27 @@ class FullNodeAPI:
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp, request.tip))
 
     @api_request
-    async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
+    @peer_required
+    async def respond_proof_of_weight(
+        self,
+        response: full_node_protocol.RespondProofOfWeight,
+        peer: ws.WSChiaConnection,
+    ) -> Optional[Message]:
+        if peer.peer_node_id not in self.full_node.pow_pending:
+            self.log.warning("weight proof not in pending request list")
+            return None
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
-        if validated is True:
-            # get tip params
-            tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
-            tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
-            self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
-            self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
-            return Message(
-                "request_sub_block",
-                full_node_protocol.RequestSubBlock(uint32(tip_height), True),
-            )
-        return None
+        if not validated:
+            raise Exception("bad weight proof, disconnecting peer")
+        # get tip params
+        tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
+        tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
+        self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
+        self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
+        return Message(
+            "request_sub_block",
+            full_node_protocol.RequestSubBlock(uint32(tip_height), True),
+        )
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
@@ -694,6 +702,7 @@ class FullNodeAPI:
                 required_iters,
             )
 
+            self.log.info("Starting to make the unfinished sub-block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
@@ -715,6 +724,7 @@ class FullNodeAPI:
                 prev_sb,
                 finished_sub_slots,
             )
+            self.log.info("Made the unfinished sub-block")
             if prev_sb is not None:
                 height: uint32 = uint32(prev_sb.sub_block_height + 1)
             else:

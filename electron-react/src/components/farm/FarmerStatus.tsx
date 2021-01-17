@@ -1,10 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { Flex } from '@chia/core';
+import { Flex, StateColor } from '@chia/core';
 import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
 import FarmerStatus from '../../constants/FarmerStatus';
-import StateColor from '../../constants/StateColor';
 import useFarmerStatus from '../../hooks/useFarmerStatus';
 
 const Color = {

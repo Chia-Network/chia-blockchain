@@ -34,7 +34,7 @@ class Harvester:
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
 
-    def __init__(self, root_path: Path, constants: ConsensusConstants):
+    def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.root_path = root_path
 
         # From filename to prover
@@ -46,13 +46,14 @@ class Harvester:
         self.farmer_public_keys = []
         self.pool_public_keys = []
         self.match_str = None
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
         self.cached_challenges = []
         self.log = log
         self.state_changed_callback: Optional[Callable] = None
+        self.last_load_time: float = 0
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -102,8 +103,8 @@ class Harvester:
     async def refresh_plots(self):
         locked: bool = self._refresh_lock.locked()
         changed: bool = False
-        async with self._refresh_lock:
-            if not locked:
+        if not locked:
+            async with self._refresh_lock:
                 # Avoid double refreshing of plots
                 (changed, self.provers, self.failed_to_open_filenames, self.no_key_filenames,) = load_plots(
                     self.provers,

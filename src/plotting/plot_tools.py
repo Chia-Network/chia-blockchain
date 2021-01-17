@@ -116,6 +116,7 @@ def load_plots(
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
+    start_time = time.time()
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
     no_key_filenames: Set[Path] = set()
@@ -186,5 +187,8 @@ def load_plots(
                 continue
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
-    log.info(f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB")
+    log.info(
+        f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
+        f" {time.time()-start_time} seconds"
+    )
     return changed, new_provers, failed_to_open_filenames, no_key_filenames

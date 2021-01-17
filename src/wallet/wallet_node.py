@@ -560,7 +560,6 @@ class WalletNode:
             ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record)
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
-                self.log.info("New Peak")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 raise ValueError("Value error peer sent us invalid block")
 

@@ -6,19 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## [1.0beta21] aka Beta 1.21 - 2021-01-16
+
+### Added
+- The cli now warns if you attempt to create a plot smaller than k=32.
+- `chia configure` now lets you enable or disable uPnP.
+- If a peer gives a bad weight proof it will now be disconnected.
+
+### Changed
+- Harvester now only checks every 2 minutes for new files and otherwise caches the plot listing in memory and logs how long it took to load all plot files at INFO level.
+- Harvester multithreading is now configureable in config.yaml.
+- Websocket heartbeat timeout was increased from 30 seconds to 300 seconds.
+- Bumped Colorlog to 4.7.2, and pyinstaller to 4.2.
+
+### Fixed
+- Weight proofs were failing to verify contributing to a chain stall. This release gets things moving again but nodes are using too much CPU and can pause/lag at times. This may resolve as people upgrade to Beta 21.
+- A toxic combination of transaction limits set too high and a non performant clvm kept the chain stalled. A faster rust implementation of clvm is already nearing completion.
+- `chia netspace -s` would not correctly look up the start block height by block hash. Additionally netspace now flips to PiB above 1024 TiB. To compare netspace to `chia show` of the GUI use `chia netspace -d 1000` as `chia netspace` defaults to `-d 192` which is one hour.
+
+## [1.0beta20] aka Beta 1.20 - 2021-01-14
 
 ### Added
 - Plotting now checks to see if there are MacOS created `._` plot files and ignores them.
+- Mnemonics now autocomplete in the GUI.
 
 ### Changed
 - Node sync is now multithreaded and much quicker.
 - Peer gossip is faster and smarter. It also will no longer accidentally gossip a private IP address to another peer.
+- When syncing in the GUI, estimated time to win just shows syncing until synced.
 - If harvester hits an exception it will be caught, logged and skipped. This normally happens if it attempts to harvest a plot file you are still copying in.
 - The Rate Limited wallet has been updated to work in new consensus.
 
 ### Fixed
 - There was a bug in block reorg code that would keep a peer with a lower weight chain from validating and syncing to a higher weight chain when the node thought it had a double spend in the other chain. This caused a persistent chain split.
+- The Farm page in the GUI should not report just error when initially starting to sync.
 
 ## [1.0beta19] aka Beta 1.19 - 2021-01-12
 

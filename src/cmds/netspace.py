@@ -4,6 +4,7 @@ import time
 from time import struct_time, localtime
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.byte_types import hexstr_to_bytes
 
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
@@ -65,7 +66,13 @@ async def netstorge_async(args, parser):
 
                 newer_block_height = blockchain_state["peak"].sub_block_height
             else:
-                newer_block_height = int(args.start)  # Starting block height in args
+                newer_sub_block = await client.get_sub_block_record(hexstr_to_bytes(args.start))
+                if newer_sub_block is None:
+                    print("Sub block header hash", args.start, "not found.")
+                    return None
+                else:
+                    print("newer_sub_block_height", newer_sub_block.sub_block_height)
+                    newer_block_height = newer_sub_block.sub_block_height
 
             newer_block_header = await client.get_sub_block_record_by_sub_height(newer_block_height)
             older_block_height = max(0, newer_block_height - int(args.delta_block_height))
@@ -74,23 +81,26 @@ async def netstorge_async(args, parser):
                 newer_block_header.header_hash, older_block_header.header_hash
             )
             print(
-                f"Older Sub-block Height: {older_block_header.sub_block_height}\n"
-                f"Older Height: {older_block_header.height}\n"
-                f"Header Hash: 0x{older_block_header.header_hash}\n"
-                f"Weight:      {older_block_header.weight}\n"
-                f"Total VDF\n"
-                f"Iterations:  {older_block_header.total_iters}\n"
+                "Older Sub Block\n"
+                f"Sub Block Height: {older_block_header.sub_block_height}\n"
+                f"Height:           {older_block_header.height}\n"
+                f"Weight:           {older_block_header.weight}\n"
+                f"VDF Iterations:   {older_block_header.total_iters}\n"
+                f"Header Hash:      0x{older_block_header.header_hash}\n"
             )
             print(
-                f"Newer Sub-block Height: {newer_block_header.sub_block_height}\n"
-                f"Newer Height: {newer_block_header.height}\n"
-                f"Header Hash: 0x{newer_block_header.header_hash}\n"
-                f"Weight:      {newer_block_header.weight}\n"
-                f"Total VDF\n"
-                f"Iterations:  {newer_block_header.total_iters}\n"
+                "Newer Sub Block\n"
+                f"Sub Block Height: {newer_block_header.sub_block_height}\n"
+                f"Height:           {newer_block_header.height}\n"
+                f"Weight:           {newer_block_header.weight}\n"
+                f"VDF Iterations:   {newer_block_header.total_iters}\n"
+                f"Header Hash:      0x{newer_block_header.header_hash}\n"
             )
             network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
-            print(f"The network has an estimated {network_space_terabytes_estimate:.2f}TiB")
+            if network_space_terabytes_estimate > 1024:
+                print(f"The network has an estimated {network_space_terabytes_estimate / 1024:.3f} PiB")
+            else:
+                print(f"The network has an estimated {network_space_terabytes_estimate:.3f} TiB")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

@@ -71,6 +71,8 @@ module.exports = {
     "unicorn/prevent-abbreviations": "off",
     "unicorn/no-lonely-if": "off",
     "unicorn/no-array-reduce": "off",
+    "unicorn/no-new-array": "off",
+    "unicorn/consistent-destructuring": "off",
     "unicorn/filename-case": ["error", {
       "cases": {
         "camelCase": true,

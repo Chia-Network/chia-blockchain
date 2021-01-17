@@ -1,4 +1,6 @@
 network_id: testnet  # testnet/mainnet
+min_mainnet_k_size: 32
+
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
@@ -23,6 +25,7 @@ harvester:
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8560
+  num_threads: 30
 
   logging: *logging
 
