@@ -34,15 +34,16 @@ def _get_blocks_at_height(
         max_num_sub_blocks: max number of sub-blocks to fetch (although less might be fetched)
 
     """
-    header_hash = sub_blocks.sub_height_to_hash(prev_sb.sub_block_height)
-    if header_hash == prev_sb.header_hash:
-        # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
-        return [
-            sub_blocks.height_to_sub_block_record(uint32(h))
-            for h in range(target_sub_block_height, target_sub_block_height + max_num_sub_blocks)
-            if sub_blocks.contains_sub_height(uint32(h))
-        ]
-    # slow fetching, goes back one by one
+    if sub_blocks.contains_sub_height(prev_sb.sub_block_height):
+        header_hash = sub_blocks.sub_height_to_hash(prev_sb.sub_block_height)
+        if header_hash == prev_sb.header_hash:
+            # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
+            block_list: List[SubBlockRecord] = []
+            for h in range(target_sub_block_height, target_sub_block_height + max_num_sub_blocks):
+                if sub_blocks.contains_sub_height(uint32(h)):
+                    block_list.append(sub_blocks.height_to_sub_block_record(uint32(h)))
+            return block_list
+        # slow fetching, goes back one by one
     curr_b: SubBlockRecord = prev_sb
     target_blocks = []
     while curr_b.sub_block_height >= target_sub_block_height:
