@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+# Based on this specification from Pieter Wuille:
+# https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
+
 """Reference implementation for Bech32m and segwit addresses."""
 from src.types.sized_bytes import bytes32
 
@@ -41,8 +44,6 @@ def bech32_hrp_expand(hrp):
     return [ord(x) >> 5 for x in hrp] + [0] + [ord(x) & 31 for x in hrp]
 
 
-# Follows specification here for bech32m.
-# https://gist.github.com/sipa/14c248c288c3880a3b191f978a34508e
 M = 0x2BC830A3
 
 
