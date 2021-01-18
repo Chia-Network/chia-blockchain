@@ -52,7 +52,9 @@ def help_message():
         chia configure [arguments] [inputs]
             --set-node-introducer [IP:Port] (Set the introducer for node),
             --set-fullnode-port [Port] (Set the full node default port, useful for beta testing),
-            --set-log-level [LogLevel] (Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET)
+            --set-log-level [LogLevel] (Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET),
+            --enable-upnp,
+            --upnp {True,False} (Enable or disable uPnP. Can be True or False)
         """
     )
 

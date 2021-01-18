@@ -72,30 +72,14 @@ steps:
       npm run locale:compile
     displayName: "Build Electron/React UI"
 
-#  install-timelord.sh in venv
-#  - script: |
-#      . ./activate
-#      brew install boost
-#      sh install-timelord.sh
-#    displayName: "Install timelord"
-
-#  - script: |
-#      . ./activate
-#      python -m pip install -r requirements-dev.txt
-#    displayName: "Install dev dependencies"
-
-#  - script: |
-#      . ./activate
-#      pip install pytest pytest-azurepipelines
-#      py.test tests -s -v
-#    displayName: "pytest"
-
   - bash: |
       . ./activate
-      export NOTARIZE="true"
-      export APPLE_NOTARIZE_USERNAME="$(APPLE_NOTARIZE_USERNAME)"
-      export APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
-      cd build_scripts
+      APPLE_NOTARIZE_USERNAME="$(APPLE_NOTARIZE_USERNAME)"
+      export APPLE_NOTARIZE_USERNAME
+      APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
+      export APPLE_NOTARIZE_PASSWORD
+      if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
+      cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
