@@ -11,7 +11,6 @@ from src.util.keychain import Keychain
 from src.util.config import config_path_for_filename, load_config
 from src.util.path import mkdir
 from src.plotting.plot_tools import (
-    get_plot_filenames,
     stream_plot_info,
     add_plot_directory,
 )
@@ -92,7 +91,6 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     mkdir(args.final_dir)
 
     finished_filenames = []
-    plot_filenames = get_plot_filenames(config["harvester"])
     for i in range(num):
         # Generate a random master secret key
         if test_private_keys is not None:
@@ -123,10 +121,9 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             filename = f"plot-k{args.size}-{plot_id}.plot"
         full_path: Path = args.final_dir / filename
 
-        if args.final_dir.resolve() not in plot_filenames:
-            if str(args.final_dir.resolve()) not in config["harvester"]["plot_directories"]:
-                # Adds the directory to the plot directories if it is not present
-                config = add_plot_directory(str(args.final_dir.resolve()), root_path)
+        if str(args.final_dir.resolve()) not in config["harvester"]["plot_directories"]:
+            # Adds the directory to the plot directories if it is not present
+            config = add_plot_directory(str(args.final_dir.resolve()), root_path)
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")
