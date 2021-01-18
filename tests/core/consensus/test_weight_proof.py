@@ -6,12 +6,9 @@ from typing import Dict, Optional, List, Tuple, Mapping, Container
 
 import aiosqlite
 import pytest
-
-from src.consensus import default_constants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.full_node.block_store import BlockStore
-from src.util.path import path_from_root
-from tests.core.consensus.block_cache import BlockCache
+from src.util.block_cache import BlockCache
 
 try:
     from reprlib import repr
@@ -19,7 +16,7 @@ except ImportError:
     pass
 
 from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
-from src.consensus.pot_iterations import calculate_iterations_quality, calculate_ip_iters
+from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
@@ -29,7 +26,6 @@ from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.types.weight_proof import ProofBlockHeader
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32, uint64
 from src.util.logging import initialize_logging

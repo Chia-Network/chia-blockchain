@@ -2,6 +2,8 @@ import asyncio
 import dataclasses
 import logging
 from concurrent.futures.process import ProcessPoolExecutor
+
+from src.util.block_cache import BlockCache
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -486,13 +488,13 @@ class Blockchain(BlockchainInterface):
         diff_ssis: List[Tuple[uint64, uint64]] = []
         for sub_block in blocks:
             if sub_block.sub_block_height != 0 and prev_sb is None:
-                prev_sb = self.__sub_blocks[sub_block.prev_header_hash]
+                prev_sb = self.sub_block_record(sub_block.prev_header_hash)
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(self.constants, sub_block, prev_sb, self)
             overflow = is_overflow_sub_block(self.constants, sub_block.reward_chain_sub_block.signage_point_index)
             challenge = get_block_challenge(
                 self.constants,
                 sub_block,
-                self,
+                BlockCache(recent_sub_blocks),
                 prev_sb is None,
                 overflow,
                 False,
@@ -641,8 +643,6 @@ class Blockchain(BlockchainInterface):
 
     def height_to_sub_block_record(self, sub_height: uint32, check_db: bool = False) -> SubBlockRecord:
         header_hash = self.sub_height_to_hash(sub_height)
-        if header_hash not in self.__sub_blocks:
-            self.block_store.get_sub_block_record(header_hash)
         return self.sub_block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
@@ -660,9 +660,6 @@ class Blockchain(BlockchainInterface):
         return ses_l
 
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        if height not in self.__sub_height_to_hash:
-            log.warning(f"could not find height {height} in cache")
-            return None
         return self.__sub_height_to_hash[height]
 
     def contains_sub_height(self, height: uint32) -> bool:
