@@ -48,10 +48,12 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
---hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
---entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
---no-gatekeeper-assess
+if [ "$NOTARIZE" ]
+  electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
+  --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
+  --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
+  --no-gatekeeper-assess
+fi
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-osx-sign failed!"
@@ -79,7 +81,7 @@ if [ "$NOTARIZE" ]; then
 	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
   echo "Notarization step complete"
 else
-	echo "Not on ci so skipping Notarize"
+	echo "Not on ci or no secrets so skipping Notarize"
 fi
 
 # Notes on how to manually notarize
