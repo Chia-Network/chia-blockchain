@@ -5,7 +5,7 @@ from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.coin import Coin
 from src.types.peer_info import PeerInfo
-from src.util.chech32 import encode_puzzle_hash
+from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16
 from src.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import setup_simulators_and_wallets
