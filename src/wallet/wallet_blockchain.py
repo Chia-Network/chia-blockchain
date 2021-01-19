@@ -109,36 +109,20 @@ class WalletBlockchain(BlockchainInterface):
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.__sub_blocks, peak = await self.block_store.get_sub_block_records()
-        self.__sub_height_to_hash = {}
-        self.__sub_epoch_summaries = {}
+        height_to_hash, sub_epoch_summaries = await self.block_store.get_sub_block_dicts()
+        self.__sub_height_to_hash = height_to_hash
+        self.__sub_epoch_summaries = sub_epoch_summaries
+        self.__sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
         self.__sub_heights_in_cache = {}
 
         if len(self.__sub_blocks) == 0:
             assert peak is None
-            log.info("Initializing empty blockchain")
             self.peak_sub_height = None
             return
 
         assert peak is not None
         self.peak_sub_height = self.__sub_blocks[peak].sub_block_height
-
-        # Sets the other state variables (peak_height and height_to_hash)
-
-        curr: SubBlockRecord = self.__sub_blocks[peak]
-        while True:
-            self.__sub_height_to_hash[curr.sub_block_height] = curr.header_hash
-            if curr.sub_epoch_summary_included is not None:
-                self.__sub_epoch_summaries[curr.sub_block_height] = curr.sub_epoch_summary_included
-            if curr.height == 0:
-                break
-            #  only keep last SUB_BLOCKS_CACHE_SIZE in mem
-            if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
-                curr = self.__sub_blocks[curr.prev_hash]
-            self.__sub_heights_in_cache[curr.sub_block_height] = [curr.header_hash]
-            curr = self.__sub_blocks[curr.prev_hash]
-
-        assert len(self.__sub_blocks) == len(self.__sub_height_to_hash) == self.peak_sub_height + 1
+        assert len(self.__sub_height_to_hash) == self.peak_sub_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
         """
@@ -225,6 +209,7 @@ class WalletBlockchain(BlockchainInterface):
 
         await self.block_store.add_block_record(block_record, sub_block)
         self.__sub_blocks[sub_block.header_hash] = sub_block
+        self.log.info(f"added {sub_block.sub_block_height}")
         if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
             self.__sub_heights_in_cache[sub_block.sub_block_height] = []
         self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
@@ -255,11 +240,11 @@ class WalletBlockchain(BlockchainInterface):
                 assert block is not None
                 for removed in block.removals:
                     self.log.info(f"Removed: {removed.name()}")
+                self.__sub_height_to_hash[uint32(0)] = block.header_hash
+                self.peak_sub_height = uint32(0)
                 await self.coins_of_interest_received(
                     block.removals, block.additions, block.height, block.sub_block_height
                 )
-                self.__sub_height_to_hash[uint32(0)] = block.header_hash
-                self.peak_sub_height = uint32(0)
                 return uint32(0)
             return None
 
@@ -305,6 +290,7 @@ class WalletBlockchain(BlockchainInterface):
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
+                self.log.info(f"added {fetched_sub_block.sub_block_height} to heights")
                 self.__sub_height_to_hash[fetched_sub_block.sub_block_height] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
                     await self.coins_of_interest_received(
@@ -401,8 +387,6 @@ class WalletBlockchain(BlockchainInterface):
 
     def height_to_sub_block_record(self, sub_height: uint32, check_db: bool = False) -> SubBlockRecord:
         header_hash = self.sub_height_to_hash(sub_height)
-        if header_hash not in self.__sub_blocks:
-            self.block_store.get_sub_block_record(header_hash)
         return self.sub_block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
@@ -420,9 +404,6 @@ class WalletBlockchain(BlockchainInterface):
         return ses_l
 
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        if height not in self.__sub_height_to_hash:
-            log.warning(f"could not find height {height} in cache")
-            return None
         return self.__sub_height_to_hash[height]
 
     def contains_sub_height(self, height: uint32) -> bool:
