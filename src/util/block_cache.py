@@ -55,3 +55,6 @@ class BlockCache(BlockchainInterface):
 
     async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return self._sub_blocks
+
+    async def get_sub_block_from_db(self, header_hash: bytes32) -> SubBlockRecord:
+        return self._sub_blocks[header_hash]
