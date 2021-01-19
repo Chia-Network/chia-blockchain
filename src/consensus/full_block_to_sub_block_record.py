@@ -20,7 +20,7 @@ def block_to_sub_block_record(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
     required_iters: uint64,
-    full_block: Optional[FullBlock],
+    full_block: Optional[Union[FullBlock, HeaderBlock]],
     header_block: Optional[HeaderBlock],
 ):
 

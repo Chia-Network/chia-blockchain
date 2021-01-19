@@ -8,6 +8,7 @@ import socket
 import logging
 from blspy import PrivateKey
 
+from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.wallet_protocol import (
@@ -29,6 +30,7 @@ from src.consensus.constants import ConsensusConstants
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message
 from src.server.node_discovery import WalletPeers
+from src.util.errors import ValidationError, Err
 from src.util.ints import uint32, uint128
 from src.types.sized_bytes import bytes32
 from src.util.merkle_set import (
@@ -532,7 +534,16 @@ class WalletNode:
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
 
-        for header_block in header_blocks:
+        pre_validation_results: Optional[
+            List[PreValidationResult]
+        ] = await self.wallet_state_manager.blockchain.pre_validate_blocks_multiprocessing(header_blocks)
+        if pre_validation_results is None:
+            return False
+        assert len(header_blocks) == len(pre_validation_results)
+        for i in range(len(header_blocks)):
+            header_block = header_blocks[i]
+            if pre_validation_results[i].error is not None:
+                raise ValidationError(Err(pre_validation_results[i].error))
             if header_block.is_block:
                 # Find additions and removals
                 (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
@@ -557,7 +568,7 @@ class WalletNode:
                 result,
                 error,
                 fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record)
+            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record, pre_validation_results[i])
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:

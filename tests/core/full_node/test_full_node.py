@@ -161,7 +161,7 @@ class TestFullNodeProtocol:
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(
-                [TimestampedPeerInfo(self_hostname, uint16(1000), uint64(int(time.time())) - 1000)],
+                [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
                 None,
             )
             msg = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
@@ -169,7 +169,7 @@ class TestFullNodeProtocol:
             if msg is not None and not (len(msg.data.peer_list) == 1):
                 return False
             peer = msg.data.peer_list[0]
-            return peer.host == self_hostname and peer.port == 1000
+            return (peer.host == self_hostname or peer.host == "127.0.0.1") and peer.port == 1000
 
         await time_out_assert_custom_interval(10, 1, have_msgs, True)
         full_node_1.full_node.full_node_peers.address_manager = AddressManager()

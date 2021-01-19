@@ -232,6 +232,7 @@ class Blockchain:
                 return ReceiveBlockResult.INVALID_BLOCK, error.code, None
         else:
             required_iters = pre_validation_result.required_iters
+            assert pre_validation_result.error is None
         assert required_iters is not None
 
         error_code = await validate_block_body(
