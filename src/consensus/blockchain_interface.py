@@ -13,7 +13,7 @@ class BlockchainInterface:
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         pass
 
-    def height_to_sub_block_record(self, height: uint32, check_db=False) -> SubBlockRecord:
+    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
         pass
 
     def get_ses_heights(self) -> List[uint32]:
