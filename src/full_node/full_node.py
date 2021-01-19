@@ -589,18 +589,23 @@ class FullNode:
                     f"Failed to validate sub_block {sub_block.header_hash} sub-height {sub_block.sub_block_height}"
                 )
             if pre_validation_results[0].error is not None:
-                raise ValueError(
-                    f"Failed to validate sub_block {sub_block.header_hash} sub-height {sub_block.sub_block_height}: "
-                    f"{pre_validation_results[0].error}"
+                if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
+                    added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
+                    error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
+                    fork_height: Optional[uint32] = None
+                else:
+                    raise ValueError(
+                        f"Failed to validate sub_block {sub_block.header_hash} sub-height "
+                        f"{sub_block.sub_block_height}: {pre_validation_results[0].error}"
+                    )
+            else:
+                added, error_code, fork_height = await self.blockchain.receive_block(
+                    sub_block, pre_validation_results[0]
                 )
-
-            added, error_code, fork_height = await self.blockchain.receive_block(sub_block, pre_validation_results[0])
             if added == ReceiveBlockResult.NEW_PEAK:
                 await self.mempool_manager.new_peak(self.blockchain.get_peak())
                 self._state_changed("new_peak")
-            self.log.info(
-                f"Validation of sub_block {sub_block.sub_block_height} took {time.time() - validation_start} seconds"
-            )
+            validation_time = time.time() - validation_start
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return None
@@ -663,18 +668,21 @@ class FullNode:
             new_peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
             assert new_peak is not None
             assert fork_height is not None
+
+            difficulty = self.blockchain.get_next_difficulty(new_peak.header_hash, False)
+            sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak.header_hash, False)
+
             self.log.info(
                 f"🌱 Updated peak to height {new_peak.sub_block_height}, weight {new_peak.weight}, "
                 f"hh {new_peak.header_hash}, "
                 f"forked at {fork_height}, rh: {new_peak.reward_infusion_new_challenge}, "
                 f"total iters: {new_peak.total_iters}, "
                 f"overflow: {new_peak.overflow}, "
-                f"deficit: {new_peak.deficit}"
+                f"deficit: {new_peak.deficit}, "
+                f"validation time: {validation_time}, "
+                f"difficulty: {difficulty}, "
+                f"sub slot iters: {sub_slot_iters}"
             )
-
-            difficulty = self.blockchain.get_next_difficulty(new_peak.header_hash, False)
-            sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak.header_hash, False)
-            self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
             sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
             assert sub_slots is not None

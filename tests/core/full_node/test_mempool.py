@@ -26,13 +26,13 @@ WALLET_A = bt.get_pool_wallet_tool()
 def generate_test_spend_bundle(
     coin: Coin,
     condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]] = None,
-    fee: int = 0,
-    amount: int = 1000,
-    newpuzzlehash=BURN_PUZZLE_HASH,
+    fee: uint64 = uint64(0),
+    amount: uint64 = uint64(1000),
+    new_puzzle_hash=BURN_PUZZLE_HASH,
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
-    transaction = WALLET_A.generate_signed_transaction(amount, newpuzzlehash, coin, condition_dic, fee)
+    transaction = WALLET_A.generate_signed_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
     assert transaction is not None
     return transaction
 
@@ -103,7 +103,7 @@ class TestMempool:
 
         spend_bundle2 = generate_test_spend_bundle(
             list(blocks[-1].get_included_reward_coins())[0],
-            newpuzzlehash=BURN_PUZZLE_HASH_2,
+            new_puzzle_hash=BURN_PUZZLE_HASH_2,
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
@@ -137,7 +137,7 @@ class TestMempool:
 
         await full_node_1.respond_transaction(tx1, peer)
 
-        spend_bundle2 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], fee=1)
+        spend_bundle2 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], fee=uint64(1))
 
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
@@ -491,7 +491,7 @@ class TestMempool:
         cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, 10)
+        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, uint64(10))
 
         assert spend_bundle1 is not None
 
@@ -523,7 +523,7 @@ class TestMempool:
         cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
 
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, 9)
+        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, uint64(9))
 
         assert spend_bundle1 is not None
 
@@ -565,7 +565,7 @@ class TestMempool:
         for coin in list(blocks[-1].get_included_reward_coins()):
             if coin.amount == coin_1.amount:
                 coin_2 = coin
-        spend_bundle1 = generate_test_spend_bundle(coin_1, dic, fee)
+        spend_bundle1 = generate_test_spend_bundle(coin_1, dic, uint64(fee))
 
         steal_fee_spendbundle = WALLET_A.generate_signed_transaction(
             coin_1.amount + fee - 4, receiver_puzzlehash, coin_2
@@ -609,7 +609,7 @@ class TestMempool:
 
         spend_bundle2 = generate_test_spend_bundle(
             coin,
-            newpuzzlehash=BURN_PUZZLE_HASH_2,
+            new_puzzle_hash=BURN_PUZZLE_HASH_2,
         )
 
         assert spend_bundle2 is not None

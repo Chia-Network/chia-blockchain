@@ -11,7 +11,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
@@ -53,7 +53,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_sub_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
@@ -101,7 +101,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
@@ -146,7 +146,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -188,7 +188,7 @@ class TestWalletSimulator:
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
 
         # wallet0 <-> sever0
-        await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_0._port)), None)
+        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
@@ -211,12 +211,12 @@ class TestWalletSimulator:
         await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever1
-        await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), wallet_0.on_connect)
+        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), wallet_0.on_connect)
 
         await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever2
-        await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_2._port)), wallet_0.on_connect)
+        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_2._port)), wallet_0.on_connect)
 
         await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
@@ -234,9 +234,9 @@ class TestWalletSimulator:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         ph = await wallet_0.get_new_puzzlehash()
 
-        await wallet_0_server.start_client(PeerInfo("localhost", uint16(server_0._port)), None)
+        await wallet_0_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
-        await wallet_1_server.start_client(PeerInfo("localhost", uint16(server_0._port)), None)
+        await wallet_1_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
@@ -340,7 +340,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_1.full_node.server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))

@@ -28,7 +28,6 @@ from src.types.vdf import VDFInfo, VDFProof
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
-from src.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
 

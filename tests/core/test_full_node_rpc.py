@@ -7,7 +7,7 @@ from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants, bt, self_hostname
 from tests.time_out_assert import time_out_assert
 
 
@@ -45,7 +45,7 @@ class TestRpc:
         )
 
         try:
-            client = await FullNodeRpcClient.create("localhost", test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]
@@ -101,7 +101,7 @@ class TestRpc:
 
             assert len(await client.get_connections()) == 0
 
-            await client.open_connection("localhost", server_2._port)
+            await client.open_connection(self_hostname, server_2._port)
 
             async def num_connections():
                 return len(await client.get_connections())

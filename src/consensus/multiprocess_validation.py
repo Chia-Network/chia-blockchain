@@ -99,6 +99,8 @@ async def pre_validate_blocks_multiprocessing(
     num_sub_slots_found = 0
     num_blocks_seen = 0
     if blocks[0].sub_block_height > 0:
+        if blocks[0].prev_header_hash not in sub_blocks:
+            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
         curr = sub_blocks[blocks[0].prev_header_hash]
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
