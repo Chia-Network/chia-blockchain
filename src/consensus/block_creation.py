@@ -13,7 +13,7 @@ from src.consensus.block_rewards import (
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.full_node.bundle_tools import best_solution_program
-from src.consensus.cost_calculator import calculate_cost_of_program
+from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
@@ -148,7 +148,8 @@ def create_foliage(
 
         # Calculate the cost of transactions
         if solution_program is not None:
-            _, _, cost = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
+            result: CostResult = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
+            cost = result.cost
         # TODO: prev generators root
         reward_claims_incorporated = []
         if sub_height > 0:

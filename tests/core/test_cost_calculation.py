@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from src.consensus.cost_calculator import calculate_cost_of_program
+from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.mempool_check_conditions import (
     get_name_puzzle_conditions,
@@ -48,7 +48,10 @@ class TestCostCalculation:
 
         ratio = test_constants.CLVM_COST_RATIO_CONSTANT
 
-        error, npc_list, clvm_cost = calculate_cost_of_program(program, ratio)
+        result: CostResult = calculate_cost_of_program(program, ratio)
+        error = result.error
+        npm_list = result.npc_list
+        clvm_cost = result.cost
 
         error, npc_list, cost = get_name_puzzle_conditions(program, False)
         coin_name = npc_list[0].coin_name

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Tuple, Optional, List
 
 from src.consensus.condition_costs import ConditionCost
@@ -7,11 +8,18 @@ from src.types.name_puzzle_condition import NPC
 from src.util.errors import Err
 from src.util.ints import uint64
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from src.util.streamable import Streamable, streamable
 
 
-def calculate_cost_of_program(
-    program: Program, clvm_cost_ratio_constant: int, strict_mode: bool = False
-) -> Tuple[Optional[Err], List[NPC], uint64]:
+@dataclass(frozen=True)
+@streamable
+class CostResult(Streamable):
+    error: Optional[Err]
+    npc_list: List[NPC]
+    cost: uint64
+
+
+def calculate_cost_of_program(program: Program, clvm_cost_ratio_constant: int, strict_mode: bool = False) -> CostResult:
     """
     This function calculates the total cost of either block or a spendbundle
     """
@@ -51,4 +59,4 @@ def calculate_cost_of_program(
 
     total_clvm_cost += total_vbyte_cost * clvm_cost_ratio_constant
 
-    return error, npc_list, uint64(total_clvm_cost)
+    return CostResult(error, npc_list, uint64(total_clvm_cost))
