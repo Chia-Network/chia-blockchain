@@ -1,6 +1,6 @@
 import pytest
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.setup_nodes import setup_full_system, test_constants
+from tests.setup_nodes import setup_full_system, test_constants, self_hostname
 from src.util.ints import uint16
 from tests.time_out_assert import time_out_assert
 from src.types.peer_info import PeerInfo
@@ -30,7 +30,7 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation):
         node1, node2, _, _, _, _, _, server1 = simulation
-        await server1.start_client(PeerInfo("localhost", uint16(21238)))
+        await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(1000, node_height_at_least, True, node2, 7)
 

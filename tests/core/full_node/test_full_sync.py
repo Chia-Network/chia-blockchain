@@ -1,13 +1,14 @@
 # flake8: noqa: F811, F401
 import asyncio
+import time
 
 import pytest
 
-from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
+from src.util.hash import std_hash
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants, bt, setup_n_nodes, self_hostname
 from tests.time_out_assert import time_out_assert
 from tests.core.fixtures import (
     empty_blockchain,
@@ -35,24 +36,13 @@ class TestFullSync:
         async for _ in setup_two_nodes(test_constants):
             yield _
 
-    @pytest.mark.asyncio
-    async def test_basic_sync(self, two_nodes):
-        # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = 60
-        blocks = bt.get_consecutive_blocks(num_blocks)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-
-        for block in blocks:
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-
-        # The second node should eventually catch up to the first one, and have the
-        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+    @pytest.fixture(scope="function")
+    async def three_nodes(self):
+        async for _ in setup_n_nodes(test_constants, 3):
+            yield _
 
     @pytest.mark.asyncio
-    async def test_sync_with_sub_epochs(self, two_nodes, default_400_blocks):
+    async def test_sync_from_zero(self, two_nodes, default_400_blocks):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
         blocks = default_400_blocks
@@ -61,30 +51,70 @@ class TestFullSync:
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
-    async def test_sync_from_forkpoint(self, two_nodes, default_1000_blocks):
+    async def test_sync_from_fork_point_and_weight_proof(self, three_nodes, default_1000_blocks, default_400_blocks):
+        start = time.time()
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_1000_blocks)
-        blocks = default_1000_blocks
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        num_blocks_initial = len(default_1000_blocks) - 50
+        blocks_950 = default_1000_blocks[:num_blocks_initial]
+        blocks_rest = default_1000_blocks[num_blocks_initial:]
+        blocks_400 = default_400_blocks
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
 
-        for block in blocks:
+        for block in blocks_950:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
+        # Node 2 syncs from halfway
         for i in range(int(len(default_1000_blocks) / 2)):
             await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(default_1000_blocks[i]))
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        # Node 3 syncs from a different blockchain
+        for block in blocks_400:
+            await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        # Also test request proof of weight
+        # Have the request header hash
+        res = await full_node_1.request_proof_of_weight(
+            full_node_protocol.RequestProofOfWeight(blocks_950[-1].sub_block_height + 1, blocks_950[-1].header_hash)
+        )
+        assert res is not None
+        validated, _ = full_node_1.full_node.weight_proof_handler.validate_weight_proof(res.data.wp)
+        assert validated
+
+        # Don't have the request header hash
+        res = await full_node_1.request_proof_of_weight(
+            full_node_protocol.RequestProofOfWeight(blocks_950[-1].sub_block_height + 1, std_hash(b"12"))
+        )
+        assert res is None
+
+        print("Here1: ", time.time() - start)
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(120, node_height_at_least, True, full_node_2, num_blocks - 1)
+        await time_out_assert(180, node_height_at_least, True, full_node_2, num_blocks_initial - 1)
+        print("Here2: ", time.time() - start)
+        await time_out_assert(180, node_height_at_least, True, full_node_3, num_blocks_initial - 1)
+
+        print("Here3: ", time.time() - start)
+        for block in blocks_rest:
+            await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        print("Here4: ", time.time() - start)
+        await time_out_assert(120, node_height_at_least, True, full_node_1, 999)
+        print("Here5: ", time.time() - start)
+        await time_out_assert(120, node_height_at_least, True, full_node_2, 999)
+        print("Here6: ", time.time() - start)
 
     @pytest.mark.asyncio
     async def test_short_sync(self, two_nodes):
@@ -104,7 +134,7 @@ class TestFullSync:
             await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(
-            PeerInfo("localhost", uint16(server_1._port)),
+            PeerInfo(self_hostname, uint16(server_1._port)),
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
@@ -121,7 +151,7 @@ class TestFullSync:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(
-            PeerInfo("localhost", uint16(server_1._port)),
+            PeerInfo(self_hostname, uint16(server_1._port)),
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
@@ -137,45 +167,7 @@ class TestFullSync:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(
-            PeerInfo("localhost", uint16(server_1._port)),
+            PeerInfo(self_hostname, uint16(server_1._port)),
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_at_least, True, full_node_2, 1)
-
-    @pytest.mark.asyncio
-    async def test_sync_different_chains(self, two_nodes, default_1000_blocks, default_400_blocks):
-        # Must be larger than "sync_block_behind_threshold" in the config
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-
-        for block in default_1000_blocks:
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-
-        for block in default_400_blocks:
-            await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-
-        # The second node should eventually catch up to the first one, and have the
-        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(360, node_height_at_least, True, full_node_2, len(default_1000_blocks) - 1)
-
-    @pytest.mark.skip("broken, peer 1 closes before the last 50 blocks are synced")
-    @pytest.mark.asyncio
-    async def test_sync_keep_in_sync(self, two_nodes, default_1000_blocks, default_400_blocks):
-        # Must be larger than "sync_block_behind_threshold" in the config
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-
-        for block in default_400_blocks[:-50]:
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-
-        # The second node should eventually catch up to the first one, and have the
-        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        full_node_1.full_node.log.info("start extending")
-        for block in default_400_blocks[-50:]:
-            full_node_1.full_node.log.info(f"block {block.reward_chain_sub_block.sub_block_height}")
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await time_out_assert(180, node_height_at_least, True, full_node_2, len(default_1000_blocks) - 1)

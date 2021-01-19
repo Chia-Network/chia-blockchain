@@ -16,6 +16,7 @@ def _expected_plot_size(k: int) -> uint64:
     is necessary to store the entries in the plot.
     """
 
+    # TODO(mariano): fix formula
     return ((2 * k) + 1) * (2 ** k - 1)
 
 

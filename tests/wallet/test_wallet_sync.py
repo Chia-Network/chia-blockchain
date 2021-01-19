@@ -10,7 +10,7 @@ from src.protocols import full_node_protocol
 from src.util.ints import uint16, uint32
 from src.wallet.wallet_state_manager import WalletStateManager
 from tests.core.fixtures import default_400_blocks, default_1000_blocks
-from tests.setup_nodes import setup_node_and_wallet, test_constants, bt, setup_simulators_and_wallets
+from tests.setup_nodes import setup_node_and_wallet, test_constants, bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
 
@@ -52,7 +52,7 @@ class TestWalletSync:
         for block in default_400_blocks:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
@@ -76,7 +76,7 @@ class TestWalletSync:
         for block in default_1000_blocks:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
@@ -104,7 +104,7 @@ class TestWalletSync:
         wallet = wsm.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
 
         # Insert 400 blocks
         for block in default_400_blocks:
@@ -147,7 +147,7 @@ class TestWalletSync:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
 
         # Insert 400 blocks
         for block in default_400_blocks:

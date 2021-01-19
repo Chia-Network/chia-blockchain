@@ -119,8 +119,11 @@ class WalletRpcApi:
         Logs in the wallet with a specific key.
         """
 
-        await self._stop_wallet()
         fingerprint = request["fingerprint"]
+        if self.service.logged_in_fingerprint == fingerprint:
+            return {}
+
+        await self._stop_wallet()
         log_in_type = request["type"]
         recovery_host = request["host"]
         testing = False

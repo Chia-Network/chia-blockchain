@@ -8,7 +8,7 @@ from src.server.outbound_message import Message, NodeType
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.core.full_node.test_full_node import connect_and_get_peer
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants, bt, self_hostname
 from tests.time_out_assert import time_out_assert
 from tests.core.full_node.test_full_sync import node_height_at_least
 
@@ -33,7 +33,7 @@ class TestNodeLoad:
         peer = await connect_and_get_peer(server_1, server_2)
         await full_node_1.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[0]), peer)
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         async def num_connections():
             return len(server_2.get_connections())

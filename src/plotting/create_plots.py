@@ -11,7 +11,6 @@ from src.util.keychain import Keychain
 from src.util.config import config_path_for_filename, load_config
 from src.util.path import mkdir
 from src.plotting.plot_tools import (
-    get_plot_filenames,
     stream_plot_info,
     add_plot_directory,
 )
@@ -92,7 +91,6 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     mkdir(args.final_dir)
 
     finished_filenames = []
-    plot_filenames = get_plot_filenames(config["harvester"])
     for i in range(num):
         # Generate a random master secret key
         if test_private_keys is not None:
@@ -123,10 +121,18 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             filename = f"plot-k{args.size}-{plot_id}.plot"
         full_path: Path = args.final_dir / filename
 
-        if args.final_dir.resolve() not in plot_filenames:
-            if str(args.final_dir.resolve()) not in config["harvester"]["plot_directories"]:
+        resolved_final_dir: str = str(Path(args.final_dir).resolve())
+        plot_directories_list: str = config["harvester"]["plot_directories"]
+
+        if args.exclude_final_dir:
+            log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
+            if resolved_final_dir in plot_directories_list:
+                log.warn(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
+        else:
+            if resolved_final_dir not in plot_directories_list:
                 # Adds the directory to the plot directories if it is not present
-                config = add_plot_directory(str(args.final_dir.resolve()), root_path)
+                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
+                config = add_plot_directory(resolved_final_dir, root_path)
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")

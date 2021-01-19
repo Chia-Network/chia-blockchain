@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from src.consensus.cost_calculator import CostResult
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
@@ -10,7 +11,7 @@ class MempoolItem:
     spend_bundle: SpendBundle
     fee_per_cost: float
     fee: uint64
-    cost: uint64
+    cost_result: CostResult
 
     def __lt__(self, other):
         # TODO test to see if it's < or >

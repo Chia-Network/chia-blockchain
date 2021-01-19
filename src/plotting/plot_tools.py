@@ -6,6 +6,8 @@ from dataclasses import dataclass
 import time
 import logging
 import traceback
+
+from src.consensus.pos_quality import _expected_plot_size, UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from src.types.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
@@ -148,6 +150,15 @@ def load_plots(
                     continue
             try:
                 prover = DiskProver(str(filename))
+                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR / 2.0
+                stat_info = filename.stat()
+                if stat_info.st_size < 0.95 * expected_size:
+                    log.warning(
+                        f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
+                        f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                    )
+                    continue
+
                 (
                     pool_public_key,
                     farmer_public_key,

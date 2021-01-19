@@ -35,7 +35,7 @@ async def empty_blockchain():
 
 @pytest.fixture(scope="function")
 async def default_400_blocks():
-    yield persistent_blocks(400, "test_blocks_400.db")
+    yield persistent_blocks(400, "test_blocks_400_2.db", seed=b"alternate2")
 
 
 @pytest.fixture(scope="function")
@@ -53,7 +53,7 @@ async def default_20000_blocks():
     yield persistent_blocks(20000, "test_blocks_20000.db")
 
 
-def persistent_blocks(num_of_blocks, db_name):
+def persistent_blocks(num_of_blocks: int, db_name: str, seed: bytes = b""):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     block_path_dir = Path("~/.chia/blocks").expanduser()
@@ -75,12 +75,12 @@ def persistent_blocks(num_of_blocks, db_name):
         except EOFError:
             print("\n error reading db file")
 
-    return new_test_db(file_path, num_of_blocks)
+    return new_test_db(file_path, num_of_blocks, seed)
 
 
-def new_test_db(path: Path, num_of_blocks):
+def new_test_db(path: Path, num_of_blocks: int, seed: bytes):
     print(f"create {path} with {num_of_blocks} blocks")
-    blocks: List[FullBlock] = bt.get_consecutive_blocks(num_of_blocks)
+    blocks: List[FullBlock] = bt.get_consecutive_blocks(num_of_blocks, seed=seed)
     block_bytes_list: List[bytes] = []
     for block in blocks:
         block_bytes_list.append(bytes(block))

@@ -27,6 +27,7 @@ def help_message():
         + " -t [tmp dir] -2 [tmp dir 2] -d [final dir] (creates plots)"
     )
     print("-e disables bitfield plotting")
+    print("-x skips adding [final dir] to harvester for farming")
     print("-i [plotid] -m [memo] are available for debugging")
     print("chia plots check -n [num checks] -g [string] (checks plots)")
     print("  Default: check all plots in every directory")
@@ -104,6 +105,13 @@ def make_parser(parser):
         "-e",
         "--nobitfield",
         help="Disable bitfield",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "-x",
+        "--exclude_final_dir",
+        help="Skips adding [final dir] to harvester for farming",
         default=False,
         action="store_true",
     )

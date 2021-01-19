@@ -147,14 +147,14 @@ def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
                     cond_var_list = []
                     for cond_1 in cond.rest().as_iter():
                         cond_var_list.append(cond_1.as_atom())
-                    cvl = ConditionVarPair(opcode, *cond_var_list)
+                    cvl = ConditionVarPair(opcode, cond_var_list)
                 else:
-                    cvl = ConditionVarPair(opcode)
+                    cvl = ConditionVarPair(opcode, [])
                 conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
                 conditions_dict = {}
-            npc_list.append(NPC(name, puzzle_hash, conditions_dict))
+            npc_list.append(NPC(name, puzzle_hash, [(a, b) for a, b in conditions_dict.items()]))
         return None, npc_list, uint64(cost)
     except Exception:
         tb = traceback.format_exc()
