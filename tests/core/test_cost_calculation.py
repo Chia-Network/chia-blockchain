@@ -122,9 +122,9 @@ class TestCostCalculation:
         solution = "(() (q ((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10) (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))) ())"  # noqa: E501
         time_start = time.time()
         total_cost = 0
+        puzzle_program = Program.to(binutils.assemble(puzzle))
+        solution_program = Program.to(binutils.assemble(solution))
         for i in range(0, 1000):
-            puzzle_program = Program.to(binutils.assemble(puzzle))
-            solution_program = Program.to(binutils.assemble(solution))
             cost, result = puzzle_program.run_with_cost(solution_program)
             total_cost += cost
 
