@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import logging
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
@@ -12,16 +13,18 @@ from src.consensus.difficulty_adjustment import (
     get_sub_slot_iters_and_difficulty,
 )
 from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
+from src.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-from src.util.errors import Err
+from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint64
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import validate_finished_header_block
+from src.util.streamable import recurse_jsonify
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.wallet_coin_store import WalletCoinStore
 from src.wallet.wallet_block_store import WalletBlockStore
@@ -45,6 +48,7 @@ class ReceiveBlockResult(Enum):
 
 class WalletBlockchain:
     constants: ConsensusConstants
+    constants_json: Dict
     # peak of the blockchain
     peak_sub_height: Optional[uint32]
     # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
@@ -88,8 +92,11 @@ class WalletBlockchain:
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
+        num_workers = max(cpu_count - 2, 1)
+        log.info(f"Starting {num_workers} processes for block validation")
+        self.pool = ProcessPoolExecutor(max_workers=num_workers)
         self.constants = consensus_constants
+        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self.block_store = block_store
         self._shut_down = False
         self.coins_of_interest_received = coins_of_interest_received
@@ -175,7 +182,7 @@ class WalletBlockchain:
     async def receive_block(
         self,
         block_record: HeaderBlockRecord,
-        pre_validated: bool = False,
+        pre_validation_result: Optional[PreValidationResult] = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -203,10 +210,18 @@ class WalletBlockchain:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants, block, self.sub_height_to_hash, prev_sb, self.sub_blocks
         )
-        required_iters, error = validate_finished_header_block(
-            self.constants, self.sub_blocks, block, False, difficulty, sub_slot_iters
-        )
 
+        if pre_validation_result is None:
+            required_iters, error = validate_finished_header_block(
+                self.constants, self.sub_blocks, block, False, difficulty, sub_slot_iters
+            )
+        else:
+            required_iters = pre_validation_result.required_iters
+            error = (
+                ValidationError(Err(pre_validation_result.error)) if pre_validation_result.error is not None else None
+            )
+
+        assert required_iters is not None
         if error is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
         assert required_iters is not None
@@ -221,7 +236,6 @@ class WalletBlockchain:
         )
 
         # Always add the block to the database
-
         await self.block_store.add_block_record(block_record, sub_block)
         self.sub_blocks[sub_block.header_hash] = sub_block
 
@@ -388,3 +402,11 @@ class WalletBlockchain:
         if len(curr.finished_sub_slots) == 0:
             return None, ip_sub_slot
         return curr.finished_sub_slots[-1], ip_sub_slot
+
+    async def pre_validate_blocks_multiprocessing(
+        self,
+        blocks: List[HeaderBlock],
+    ) -> Optional[List[PreValidationResult]]:
+        return await pre_validate_blocks_multiprocessing(
+            self.constants, self.constants_json, self.sub_blocks, self.sub_height_to_hash, blocks, self.pool
+        )
