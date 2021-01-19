@@ -111,6 +111,8 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
+        if not (await self.full_node.synced()):
+            return None
         # Ignore if already seen
         if self.full_node.mempool_manager.seen(transaction.transaction_id):
             return None
@@ -148,6 +150,8 @@ class FullNodeAPI:
         """
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
+            return None
+        if not (await self.full_node.synced()):
             return None
 
         async with self.full_node.blockchain.lock:
@@ -971,6 +975,8 @@ class FullNodeAPI:
     async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
+            return None
+        if not (await self.full_node.synced()):
             return None
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
