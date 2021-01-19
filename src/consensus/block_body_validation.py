@@ -16,7 +16,7 @@ from src.consensus.block_root_validation import validate_block_merkle_roots
 from src.full_node.block_store import BlockStore
 from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.coin_store import CoinStore
-from src.consensus.cost_calculator import calculate_cost_of_program
+from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
@@ -150,15 +150,15 @@ async def validate_block_body(
 
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = calculate_cost_of_program(
-            block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT
-        )
+        result: CostResult = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
+        cost = result.cost
+        npc_list = result.npc_list
 
         # 8. Check that cost <= MAX_BLOCK_COST_CLVM
         if cost > constants.MAX_BLOCK_COST_CLVM:
             return Err.BLOCK_COST_EXCEEDS_MAX
-        if error:
-            return error
+        if result.error is not None:
+            return result.error
 
         for npc in npc_list:
             removals.append(npc.coin_name)
