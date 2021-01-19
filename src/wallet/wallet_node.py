@@ -108,6 +108,7 @@ class WalletNode:
         self.wsm_close_task = None
         self.sync_task: Optional[Task] = None
         self.new_peak_lock: Optional[asyncio.Lock] = None
+        self.logged_in_fingerprint: Optional[int] = None
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
@@ -132,6 +133,8 @@ class WalletNode:
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
     ) -> bool:
+        if self.logged_in_fingerprint == fingerprint:
+            return True
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             return False
@@ -182,10 +185,12 @@ class WalletNode:
         self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
         self.log.info("self.sync_job")
+        self.logged_in_fingerprint = fingerprint
         return True
 
     def _close(self):
         self.log.info("self._close")
+        self.logged_in_fingerprint = None
         self._shut_down = True
 
     async def _await_closed(self):
@@ -421,7 +426,8 @@ class WalletNode:
                         f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                         f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                     )
-                    return None
+                    # TODO: re-enable
+                    # return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
                     header_block.header_hash, uint32(fork_point)

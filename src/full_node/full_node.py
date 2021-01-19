@@ -452,6 +452,19 @@ class FullNode:
                         batch_added = True
                         break
 
+            peak = self.blockchain.get_peak()
+            assert peak is not None
+            msg = Message(
+                "new_peak",
+                wallet_protocol.NewPeak(
+                    peak.header_hash,
+                    peak.sub_block_height,
+                    peak.weight,
+                    uint32(max(peak.sub_block_height - 1, uint32(0))),
+                ),
+            )
+            await self.server.send_to_all([msg], NodeType.WALLET)
+
             for peer in to_remove:
                 peers_with_peak.remove(peer)
 
