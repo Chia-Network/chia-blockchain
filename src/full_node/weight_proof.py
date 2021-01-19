@@ -394,7 +394,7 @@ class WeightProofHandler:
     ) -> Optional[List[SubEpochChallengeSegment]]:
         segments: List[SubEpochChallengeSegment] = []
         sub_blocks = await self.blockchain.get_sub_blocks_in_range(
-            se_start.sub_block_height, ses_block.sub_block_height
+            se_start.sub_block_height, ses_block.sub_block_height + self.constants.MAX_SUB_SLOT_SUB_BLOCKS
         )
         curr: Optional[SubBlockRecord] = se_start
         sub_height = se_start.sub_block_height
@@ -466,6 +466,7 @@ class WeightProofHandler:
                 cc_proofs.append(curr.challenge_chain_sp_proof)
             if curr.challenge_chain_ip_proof is not None:
                 cc_proofs.append(curr.challenge_chain_ip_proof)
+            self.log.info(f"curr {curr.sub_block_height + 1}  {len(sub_blocks)}")
             curr = sub_blocks[self.blockchain.sub_height_to_hash(uint32(curr.sub_block_height + 1))]
         self.log.debug(f"slot end vdf end height {curr.sub_block_height}")
         return sub_slots_data, curr.sub_block_height
