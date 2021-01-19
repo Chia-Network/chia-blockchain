@@ -209,7 +209,6 @@ class WalletBlockchain(BlockchainInterface):
 
         await self.block_store.add_block_record(block_record, sub_block)
         self.__sub_blocks[sub_block.header_hash] = sub_block
-        self.log.info(f"added {sub_block.sub_block_height}")
         if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
             self.__sub_heights_in_cache[sub_block.sub_block_height] = []
         self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
@@ -290,7 +289,6 @@ class WalletBlockchain(BlockchainInterface):
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
-                self.log.info(f"added {fetched_sub_block.sub_block_height} to heights")
                 self.__sub_height_to_hash[fetched_sub_block.sub_block_height] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
                     await self.coins_of_interest_received(
