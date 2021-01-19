@@ -280,6 +280,19 @@ class FullNode:
             msg = Message("new_peak", timelord_new_peak)
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
+    async def synced(self) -> bool:
+        full_peak = await self.blockchain.get_block_peak()
+        now = time.time()
+        if (
+            full_peak is None
+            or full_peak.foliage_block is None
+            or full_peak.foliage_block.timestamp < now - 60 * 20
+            or self.sync_store.sync_mode
+        ):
+            return False
+        else:
+            return True
+
     async def on_connect(self, connection: ws.WSChiaConnection):
         """
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
@@ -291,12 +304,14 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
         if connection.connection_type is NodeType.FULL_NODE:
-            # Send filter to node and request mempool items that are not in it
-            my_filter = self.mempool_manager.get_filter()
-            mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
+            # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
+            synced = await self.synced()
+            if synced:
+                my_filter = self.mempool_manager.get_filter()
+                mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
-            msg = Message("request_mempool_transactions", mempool_request)
-            await connection.send_message(msg)
+                msg = Message("request_mempool_transactions", mempool_request)
+                await connection.send_message(msg)
 
         peak_full: Optional[FullBlock] = await self.blockchain.get_full_peak()
 
