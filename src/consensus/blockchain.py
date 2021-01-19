@@ -509,9 +509,7 @@ class Blockchain(BlockchainInterface):
         self,
         blocks: List[FullBlock],
     ) -> Optional[List[PreValidationResult]]:
-        return await pre_validate_blocks_multiprocessing(
-            self.constants, self.constants_json, self.sub_blocks, self.sub_height_to_hash, blocks, self.pool
-        )
+        return await pre_validate_blocks_multiprocessing(self.constants, self.constants_json, self, blocks, self.pool)
 
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         return self.__sub_blocks[header_hash]
@@ -582,3 +580,9 @@ class Blockchain(BlockchainInterface):
         if header_hash in self.__sub_blocks:
             return self.__sub_blocks[header_hash]
         return await self.block_store.get_sub_block_record(header_hash)
+
+    def remove_sub_block(self, header_hash: bytes32):
+        del self.__sub_blocks[header_hash]
+
+    def add_sub_block(self, sub_block: SubBlockRecord):
+        self.__sub_blocks[sub_block.header_hash] = sub_block

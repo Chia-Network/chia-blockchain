@@ -58,3 +58,9 @@ class BlockCache(BlockchainInterface):
 
     async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         return self._sub_blocks[header_hash]
+
+    def remove_sub_block(self, header_hash: bytes32):
+        del self._sub_blocks[header_hash]
+
+    def add_sub_block(self, sub_block: SubBlockRecord):
+        self._sub_blocks[sub_block] = sub_block

@@ -31,6 +31,12 @@ class BlockchainInterface:
     def contains_sub_block(self, header_hash: bytes32) -> bool:
         pass
 
+    def remove_sub_block(self, header_hash: bytes32):
+        pass
+
+    def add_sub_block(self, sub_block: SubBlockRecord):
+        pass
+
     def contains_sub_height(self, height: uint32) -> bool:
         pass
 

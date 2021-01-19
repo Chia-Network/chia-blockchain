@@ -693,9 +693,7 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
 
-        blocks = bt.get_consecutive_blocks(
-            5,
-        )
+        blocks = bt.get_consecutive_blocks(5)
         block: FullBlock = blocks[0]
         unf = UnfinishedBlock(
             block.finished_sub_slots,
@@ -712,7 +710,6 @@ class TestFullNodeProtocol:
         res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
         assert res is None
         await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), peer)
-
         # Have
         res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
         assert res is not None
