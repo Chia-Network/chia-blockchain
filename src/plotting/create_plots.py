@@ -125,12 +125,13 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         plot_directories_list: str = config["harvester"]["plot_directories"]
 
         if args.exclude_final_dir:
-            log.info(f"Not adding directory {resolved_final_dir} to harvester for farming")
+            log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
             if resolved_final_dir in plot_directories_list:
                 log.warn(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
         else:
             if resolved_final_dir not in plot_directories_list:
                 # Adds the directory to the plot directories if it is not present
+                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
                 config = add_plot_directory(resolved_final_dir, root_path)
 
         if not full_path.exists():
