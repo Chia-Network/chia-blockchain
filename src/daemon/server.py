@@ -467,7 +467,7 @@ class WebSocketServer:
                 "service_name": service_name,
                 "command_args": self._build_plotting_command_args(request, True),
                 "parallel": parallel,
-                "delay": delay,
+                "delay": delay * k if parallel is True else delay,
                 "state": PlotState.SUBMITTED,
                 "error": None,
                 "log": None,
@@ -480,7 +480,7 @@ class WebSocketServer:
             can_start_serial_plotting = k == 0 and self._is_serial_plotting_running() is False
 
             if parallel is True or can_start_serial_plotting:
-                log.info(f"Plotting will start in {delay} seconds")
+                log.info(f"Plotting will start in {config['delay']} seconds")
                 loop = asyncio.get_event_loop()
                 loop.create_task(self._start_plotting(id, loop))
             else:
