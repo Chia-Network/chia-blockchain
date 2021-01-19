@@ -113,3 +113,22 @@ class TestCostCalculation:
         assert len(npc) == 687
         # TODO make this instant
         assert duration < 120
+
+    @pytest.mark.asyncio
+    async def test_standard_tx(self):
+
+        puzzle = "((c (q ((c (q ((c (i 11 (q ((c (i (= 5 (point_add 11 (pubkey_for_exp (sha256 11 ((c 6 (c 2 (c 23 (q ()))))))))) (q ((c 23 47))) (q (x))) 1))) (q (c (c 4 (c 5 (c ((c 6 (c 2 (c 23 (q ()))))) (q ())))) ((c 23 47))))) 1))) (c (q (57 (c (i (l 5) (q (sha256 (q 2) ((c 6 (c 2 (c 9 (q ()))))) ((c 6 (c 2 (c 13 (q ()))))))) (q (sha256 (q 1) 5))) 1))) 1)))) (c (q 0xaf949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21) 1)))"  # noqa: E501
+
+        solution = "(() (q ((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10) (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))) ())"  # noqa: E501
+        time_start = time.time()
+        total_cost = 0
+        for i in range(0, 1000):
+            puzzle_program = Program.to(binutils.assemble(puzzle))
+            solution_program = Program.to(binutils.assemble(solution))
+            cost, result = puzzle_program.run_with_cost(solution_program)
+            total_cost += cost
+
+        time_end = time.time()
+        duration = time_end - time_start
+
+        assert duration < 30
