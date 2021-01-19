@@ -113,11 +113,7 @@ if __name__ == "__main__":
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
-            {
-                ConditionOpcode.ASSERT_MY_COIN_ID: [
-                    ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, token_bytes(), None)
-                ]
-            }
+            {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
         )
         puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)

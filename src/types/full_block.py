@@ -86,11 +86,11 @@ class FullBlock(Streamable):
         )
         return pool_coin, farmer_coin
 
-    async def get_block_header(self) -> HeaderBlock:
+    def get_block_header(self) -> HeaderBlock:
         # Create filter
         if self.is_block():
             byte_array_tx: List[bytes32] = []
-            removals_names, addition_coins = await self.tx_removals_and_additions()
+            removals_names, addition_coins = self.tx_removals_and_additions()
 
             for coin in addition_coins:
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
@@ -139,7 +139,7 @@ class FullBlock(Streamable):
 
         return additions
 
-    async def tx_removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
+    def tx_removals_and_additions(self) -> Tuple[List[bytes32], List[Coin]]:
         """
         Doesn't return farmer and pool reward.
         This call assumes that this block has been validated already,

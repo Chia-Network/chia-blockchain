@@ -2,6 +2,9 @@ import asyncio
 import dataclasses
 import logging
 from concurrent.futures.process import ProcessPoolExecutor
+
+from src.consensus.cost_calculator import CostResult
+from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -9,8 +12,6 @@ from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.block_body_validation import validate_block_body
-from src.consensus.get_block_challenge import get_block_challenge
-from src.consensus.pot_iterations import is_overflow_sub_block, calculate_iterations_quality
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.difficulty_adjustment import (
@@ -31,7 +32,6 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import (
     validate_finished_header_block,
     validate_unfinished_header_block,
-    batch_validate_finished_header_block_pickled,
 )
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
@@ -71,7 +71,6 @@ class Blockchain:
     block_store: BlockStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
-    batch_size: int
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -95,10 +94,9 @@ class Blockchain:
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
-        log.info(f"Cpu count {cpu_count}")
-        self.batch_size = 4
-        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count, 1))
+        num_workers = max(cpu_count - 2, 1)
+        log.info(f"Starting {num_workers} processes for block validation")
+        self.pool = ProcessPoolExecutor(max_workers=num_workers)
 
         self.constants = consensus_constants
         self.coin_store = coin_store
@@ -193,8 +191,7 @@ class Blockchain:
     async def receive_block(
         self,
         block: FullBlock,
-        pre_validated: bool = False,
-        required_iters: Optional[uint64] = None,
+        pre_validation_result: Optional[PreValidationResult] = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         This method must be called under the blockchain lock
@@ -215,7 +212,7 @@ class Blockchain:
                 None,
             )
 
-        if not pre_validated:
+        if pre_validation_result is None:
             if block.sub_block_height == 0:
                 prev_sb: Optional[SubBlockRecord] = None
             else:
@@ -226,7 +223,7 @@ class Blockchain:
             required_iters, error = validate_finished_header_block(
                 self.constants,
                 self.sub_blocks,
-                await block.get_block_header(),
+                block.get_block_header(),
                 False,
                 difficulty,
                 sub_slot_iters,
@@ -234,6 +231,8 @@ class Blockchain:
 
             if error is not None:
                 return ReceiveBlockResult.INVALID_BLOCK, error.code, None
+        else:
+            required_iters = pre_validation_result.required_iters
         assert required_iters is not None
 
         error_code = await validate_block_body(
@@ -246,6 +245,7 @@ class Blockchain:
             block,
             block.sub_block_height,
             block.height if block.is_block() else None,
+            pre_validation_result.cost_result if pre_validation_result is not None else None,
         )
 
         if error_code is not None:
@@ -448,142 +448,6 @@ class Blockchain:
             curr = self.sub_blocks.get(curr.prev_hash, None)
         return list(reversed(recent_rc))
 
-    async def pre_validate_blocks_multiprocessing(self, blocks: List[FullBlock]) -> Optional[List[uint64]]:
-        """
-        This method must be called under the blockchain lock
-        If all the full blocks pass pre-validation, (only validates header), returns the list of required iters.
-        if any validation issue occurs, returns False.
-
-        Args:
-            blocks: list of full blocks to validate (must be connected to current chain)
-        """
-        prev_sb: Optional[SubBlockRecord] = None
-        # Collects all the recent sub-blocks (up to the previous sub-epoch)
-        recent_sub_blocks: Dict[bytes32, SubBlockRecord] = {}
-        recent_sub_blocks_compressed: Dict[bytes32, SubBlockRecord] = {}
-        num_sub_slots_found = 0
-        num_blocks_seen = 0
-        if blocks[0].sub_block_height > 0:
-            curr = self.sub_blocks[blocks[0].prev_header_hash]
-            num_sub_slots_to_look_for = 3 if curr.overflow else 2
-            while (
-                curr.sub_epoch_summary_included is None
-                or num_blocks_seen < self.constants.NUMBER_OF_TIMESTAMPS
-                or num_sub_slots_found < num_sub_slots_to_look_for
-            ) and curr.sub_block_height > 0:
-                if (
-                    num_blocks_seen < self.constants.NUMBER_OF_TIMESTAMPS
-                    or num_sub_slots_found < num_sub_slots_to_look_for
-                ):
-                    recent_sub_blocks_compressed[curr.header_hash] = curr
-
-                if curr.first_in_sub_slot:
-                    assert curr.finished_challenge_slot_hashes is not None
-                    num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
-                recent_sub_blocks[curr.header_hash] = curr
-                if curr.is_block:
-                    num_blocks_seen += 1
-                curr = self.sub_blocks[curr.prev_hash]
-            recent_sub_blocks[curr.header_hash] = curr
-            recent_sub_blocks_compressed[curr.header_hash] = curr
-        sub_block_was_present = []
-        for block in blocks:
-            sub_block_was_present.append(block.header_hash in self.sub_blocks)
-
-        diff_ssis: List[Tuple[uint64, uint64]] = []
-        for sub_block in blocks:
-            if sub_block.sub_block_height != 0 and prev_sb is None:
-                prev_sb = self.sub_blocks[sub_block.prev_header_hash]
-            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.constants, sub_block, self.sub_height_to_hash, prev_sb, self.sub_blocks
-            )
-            overflow = is_overflow_sub_block(self.constants, sub_block.reward_chain_sub_block.signage_point_index)
-            challenge = get_block_challenge(
-                self.constants,
-                sub_block,
-                recent_sub_blocks,
-                prev_sb is None,
-                overflow,
-                False,
-            )
-            if sub_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-                cc_sp_hash: bytes32 = challenge
-            else:
-                cc_sp_hash = sub_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
-            q_str: Optional[bytes32] = sub_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-                self.constants, challenge, cc_sp_hash
-            )
-            if q_str is None:
-                for i, block_i in enumerate(blocks):
-                    if not sub_block_was_present[i] and block_i.header_hash in self.sub_blocks:
-                        del self.sub_blocks[block_i.header_hash]
-                return None
-
-            required_iters: uint64 = calculate_iterations_quality(
-                q_str,
-                sub_block.reward_chain_sub_block.proof_of_space.size,
-                difficulty,
-                cc_sp_hash,
-            )
-
-            sub_block_rec = block_to_sub_block_record(
-                self.constants,
-                self.sub_blocks,
-                self.sub_height_to_hash,
-                required_iters,
-                sub_block,
-                None,
-            )
-            recent_sub_blocks[sub_block_rec.header_hash] = sub_block_rec
-            recent_sub_blocks_compressed[sub_block_rec.header_hash] = sub_block_rec
-            self.sub_blocks[sub_block_rec.header_hash] = sub_block_rec  # Temporarily add sub block to dict
-            prev_sb = sub_block_rec
-            diff_ssis.append((difficulty, sub_slot_iters))
-
-        for i, block in enumerate(blocks):
-            if not sub_block_was_present[i]:
-                del self.sub_blocks[block.header_hash]
-
-        recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks_compressed.items()}
-
-        futures = []
-        # Pool of workers to validate blocks concurrently
-        for i in range(0, len(blocks), self.batch_size):
-            end_i = min(i + self.batch_size, len(blocks))
-            blocks_to_validate = blocks[i:end_i]
-            if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
-                final_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks.items()}
-            else:
-                final_pickled = recent_sb_compressed_pickled
-
-            if self._shut_down:
-                return None
-            futures.append(
-                asyncio.get_running_loop().run_in_executor(
-                    self.pool,
-                    batch_validate_finished_header_block_pickled,
-                    self.constants_json,
-                    final_pickled,
-                    [bytes(await block.get_block_header()) for block in blocks_to_validate],
-                    True,
-                    [diff_ssis[j][0] for j in range(i, end_i)],
-                    [diff_ssis[j][1] for j in range(i, end_i)],
-                )
-            )
-        results = await asyncio.gather(*futures)
-        returned_iters = []
-
-        i = 0
-        for block_batch in results:
-            for it, error in block_batch:
-                if error is not None:
-                    log.error(f"Validation error on sb: {blocks[i].sub_block_height} {blocks[i].header_hash}, {error}")
-                    return None
-                returned_iters.append(it)
-                i += 1
-        assert len(blocks) == len(returned_iters)
-        return returned_iters
-
     async def validate_unfinished_block(
         self, block: UnfinishedBlock, skip_overflow_ss_validation=True
     ) -> Tuple[Optional[uint64], Optional[Err]]:
@@ -646,3 +510,11 @@ class Blockchain:
             return None, error_code
 
         return required_iters, None
+
+    async def pre_validate_blocks_multiprocessing(
+        self,
+        blocks: List[FullBlock],
+    ) -> Optional[List[PreValidationResult]]:
+        return await pre_validate_blocks_multiprocessing(
+            self.constants, self.constants_json, self.sub_blocks, self.sub_height_to_hash, blocks, self.pool
+        )

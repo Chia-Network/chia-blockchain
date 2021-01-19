@@ -72,7 +72,7 @@ class TestCoinStore:
             should_be_included.add(pool_coin)
             if block.is_block():
                 last_block_height = block.height
-                removals, additions = await block.tx_removals_and_additions()
+                removals, additions = block.tx_removals_and_additions()
 
                 assert block.get_included_reward_coins() == should_be_included_prev
 

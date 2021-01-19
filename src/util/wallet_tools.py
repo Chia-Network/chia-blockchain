@@ -119,29 +119,29 @@ class WalletTool:
     def generate_unsigned_transaction(
         self,
         amount: uint64,
-        newpuzzlehash: bytes32,
+        new_puzzle_hash: bytes32,
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]],
         fee: int = 0,
-        secretkey=None,
+        secret_key=None,
     ) -> List[CoinSolution]:
         spends = []
         spend_value = coin.amount
         puzzle_hash = coin.puzzle_hash
-        if secretkey is None:
-            secretkey = self.get_private_key_for_puzzle_hash(puzzle_hash)
-        pubkey = secretkey.get_g1()
+        if secret_key is None:
+            secret_key = self.get_private_key_for_puzzle_hash(puzzle_hash)
+        pubkey = secret_key.get_g1()
         puzzle = puzzle_for_pk(bytes(pubkey))
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
 
-        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, newpuzzlehash, int_to_bytes(amount))
+        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [new_puzzle_hash, int_to_bytes(amount)])
         condition_dic[output.opcode].append(output)
         amount_total = sum(int_from_bytes(cvp.vars[1]) for cvp in condition_dic[ConditionOpcode.CREATE_COIN])
         change = spend_value - amount_total - fee
         if change > 0:
-            changepuzzlehash = self.get_new_puzzlehash()
-            change_output = ConditionVarPair(ConditionOpcode.CREATE_COIN, changepuzzlehash, int_to_bytes(change))
+            change_puzzle_hash = self.get_new_puzzlehash()
+            change_output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
             condition_dic[output.opcode].append(change_output)
             solution = self.make_solution(condition_dic)
         else:
@@ -152,12 +152,12 @@ class WalletTool:
         return spends
 
     def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
-        sigs = []
+        signatures = []
         solution: Program
         puzzle: Program
         for coin_solution in coin_solutions:  # type: ignore # noqa
-            secretkey = self.get_private_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
-            synthetic_secret_key = calculate_synthetic_secret_key(secretkey, DEFAULT_HIDDEN_PUZZLE_HASH)
+            secret_key = self.get_private_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
+            synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
             err, con, cost = conditions_for_solution(coin_solution.solution)
             if not con:
                 raise ValueError(err)
@@ -165,21 +165,21 @@ class WalletTool:
 
             for _, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_solution.coin.name())):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
-                sigs.append(signature)
-        aggsig = AugSchemeMPL.aggregate(sigs)
+                signatures.append(signature)
+        aggsig = AugSchemeMPL.aggregate(signatures)
         spend_bundle = SpendBundle(coin_solutions, aggsig)
         return spend_bundle
 
     def generate_signed_transaction(
         self,
-        amount,
-        newpuzzlehash,
+        amount: uint64,
+        new_puzzle_hash: bytes32,
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]] = None,
         fee: int = 0,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
-        transaction = self.generate_unsigned_transaction(amount, newpuzzlehash, coin, condition_dic, fee)
+        transaction = self.generate_unsigned_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
         assert transaction is not None
         return self.sign_transaction(transaction)

@@ -49,8 +49,6 @@ class TestCostCalculation:
         ratio = test_constants.CLVM_COST_RATIO_CONSTANT
 
         result: CostResult = calculate_cost_of_program(program, ratio)
-        error = result.error
-        npm_list = result.npc_list
         clvm_cost = result.cost
 
         error, npc_list, cost = get_name_puzzle_conditions(program, False)

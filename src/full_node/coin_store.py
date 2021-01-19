@@ -60,7 +60,7 @@ class CoinStore:
         if block.is_block() is False:
             return
         assert block.foliage_block is not None
-        removals, additions = await block.tx_removals_and_additions()
+        removals, additions = block.tx_removals_and_additions()
 
         for coin in additions:
             record: CoinRecord = CoinRecord(

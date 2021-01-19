@@ -1618,9 +1618,11 @@ class TestPreValidation:
             times_pv.append(end_pv - start_pv)
             assert res is not None
             for n in range(end_i - i):
+                assert res[n] is not None
+                assert res[n][0] is not None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
-                result, err, _ = await empty_blockchain.receive_block(block, True, res[n])
+                result, err, _ = await empty_blockchain.receive_block(block, res[n])
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None

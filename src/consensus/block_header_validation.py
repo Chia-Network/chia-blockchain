@@ -1,7 +1,6 @@
 import dataclasses
 import logging
 import time
-import traceback
 from typing import Dict, Optional, List, Tuple
 
 from blspy import AugSchemeMPL
@@ -993,34 +992,3 @@ def validate_finished_header_block(
         return None, ValidationError(Err.INVALID_FOLIAGE_BLOCK_PRESENCE)
 
     return required_iters, None
-
-
-def batch_validate_finished_header_block_pickled(
-    constants: Dict,
-    sub_blocks_pickled: Dict[bytes, bytes],
-    header_blocks_pickled: List[bytes],
-    check_filter: bool,
-    expected_difficulty: List[uint64],
-    expected_sub_slot_iters: List[uint64],
-) -> List[Tuple[Optional[uint64], Optional[ValidationError]]]:
-    sub_blocks = {}
-    for k, v in sub_blocks_pickled.items():
-        sub_blocks[k] = SubBlockRecord.from_bytes(v)
-    results = []
-    for i in range(len(header_blocks_pickled)):
-        try:
-            header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
-            res = validate_finished_header_block(
-                dataclass_from_dict(ConsensusConstants, constants),
-                sub_blocks,
-                header_block,
-                check_filter,
-                expected_difficulty[i],
-                expected_sub_slot_iters[i],
-            )
-            results.append(res)
-        except Exception:
-            error_stack = traceback.format_exc()
-            log.error(f"Exception: {error_stack}")
-            results.append((None, ValidationError(Err.UNKNOWN)))
-    return results

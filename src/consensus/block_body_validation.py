@@ -46,6 +46,7 @@ async def validate_block_body(
     block: Union[FullBlock, UnfinishedBlock],
     sub_height: uint32,
     height: Optional[uint32],
+    cached_cost_result: Optional[CostResult] = None,
 ) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
@@ -150,7 +151,10 @@ async def validate_block_body(
 
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        result: CostResult = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
+        if cached_cost_result is not None:
+            result: CostResult = cached_cost_result
+        else:
+            result = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
         cost = result.cost
         npc_list = result.npc_list
 
@@ -158,7 +162,7 @@ async def validate_block_body(
         if cost > constants.MAX_BLOCK_COST_CLVM:
             return Err.BLOCK_COST_EXCEEDS_MAX
         if result.error is not None:
-            return result.error
+            return Err(result.error)
 
         for npc in npc_list:
             removals.append(npc.coin_name)
@@ -239,7 +243,7 @@ async def validate_block_body(
         assert curr is not None
 
         while curr.sub_block_height > fork_sub_h:
-            removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
+            removals_in_curr, additions_in_curr = curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
                 removals_since_fork.add(c_name)
             for c in additions_in_curr:

@@ -166,11 +166,7 @@ class TestMempool:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS,
-            uint64(4).to_bytes(4, "big"),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, [uint64(4).to_bytes(4, "big")])
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -199,11 +195,7 @@ class TestMempool:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS,
-            uint64(1).to_bytes(4, "big"),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, [uint64(1).to_bytes(4, "big")])
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -233,7 +225,7 @@ class TestMempool:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(5).to_bytes(4, "big"), None)
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, [uint64(5).to_bytes(4, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -262,7 +254,7 @@ class TestMempool:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, 3)
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(1).to_bytes(4, "big"), None)
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, [uint64(1).to_bytes(4, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-2].get_included_reward_coins())[0], dic)
@@ -293,7 +285,7 @@ class TestMempool:
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
         coin = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, coin.name(), None)
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name()])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(coin, dic)
@@ -325,11 +317,7 @@ class TestMempool:
 
         coin = list(blocks[-1].get_included_reward_coins())[0]
         coin_2 = list(blocks[-2].get_included_reward_coins())[0]
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID,
-            coin_2.name(),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [coin_2.name()])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(coin, dic)
@@ -361,7 +349,7 @@ class TestMempool:
 
         time_now = uint64(int(time() * 1000))
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now.to_bytes(8, "big"), None)
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, [time_now.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -394,11 +382,7 @@ class TestMempool:
         time_now = uint64(int(time() * 1000))
         time_now_plus_3 = time_now + 3000
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_TIME_EXCEEDS,
-            time_now_plus_3.to_bytes(8, "big"),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, [time_now_plus_3.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -436,11 +420,7 @@ class TestMempool:
 
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            coin_2.name(),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_CONSUMED, [coin_2.name()])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
@@ -478,11 +458,7 @@ class TestMempool:
 
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            coin_2.name(),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_CONSUMED, [coin_2.name()])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
@@ -512,11 +488,7 @@ class TestMempool:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE,
-            int_to_bytes(10),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, 10)
@@ -548,11 +520,7 @@ class TestMempool:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE,
-            int_to_bytes(10),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic, 9)
@@ -587,11 +555,7 @@ class TestMempool:
 
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_FEE,
-            int_to_bytes(10),
-            None,
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
 
         fee = 9
