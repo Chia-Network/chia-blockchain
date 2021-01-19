@@ -18,10 +18,9 @@ class Err(Enum):
     PEERS_DONT_HAVE_BLOCK = -12
     MAX_INBOUND_CONNECTIONS_REACHED = -13
 
-    UNKNOWN = -9999
+    UNKNOWN = 1
 
     # permanent errors. Block is un-salvageable garbage.
-    BAD_COINBASE_SIGNATURE = 1
     INVALID_BLOCK_SOLUTION = 2
     INVALID_COIN_SOLUTION = 3
     DUPLICATE_OUTPUT = 4
@@ -129,6 +128,7 @@ class Err(Enum):
     INVALID_CC_CHALLENGE = 103
     INVALID_PREFARM = 104
     ASSERT_RELATIVE_TIME_EXCEEDS_FAILED = 105
+    BAD_COINBASE_SIGNATURE = 106
 
 
 class ValidationError(Exception):

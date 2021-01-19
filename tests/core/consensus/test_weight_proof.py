@@ -110,7 +110,7 @@ async def load_blocks_dont_validate(
         sub_block = block_to_sub_block_record(test_constants, sub_blocks, height_to_hash, required_iters, block, None)
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.sub_block_height] = block.header_hash
-        header_cache[block.header_hash] = await block.get_block_header()
+        header_cache[block.header_hash] = block.get_block_header()
         if sub_block.sub_epoch_summary_included is not None:
             sub_epoch_summaries[block.sub_block_height] = sub_block.sub_epoch_summary_included
         prev_block = block

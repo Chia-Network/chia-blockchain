@@ -404,7 +404,7 @@ class TestFullNodeProtocol:
         for _ in range(mempool_size + 1):
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             puzzle_hashes.append(receiver_puzzlehash)
-            output = ConditionVarPair(ConditionOpcode.CREATE_COIN, receiver_puzzlehash, int_to_bytes(1000))
+            output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
             conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         spend_bundle = wallet_a.generate_signed_transaction(

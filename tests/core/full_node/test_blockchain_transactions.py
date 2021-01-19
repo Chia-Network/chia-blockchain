@@ -489,13 +489,9 @@ class TestBlockchainTransactions:
         for coin in list(bad_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 bad_spend_coin = coin
-        valid_cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, spend_coin.name(), None)
+        valid_cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [spend_coin.name()])
         valid_dic = {valid_cvp.opcode: [valid_cvp]}
-        bad_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID,
-            bad_spend_coin.name(),
-            None,
-        )
+        bad_cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [bad_spend_coin.name()])
 
         bad_dic = {bad_cvp.opcode: [bad_cvp]}
         bad_spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin, bad_dic)
@@ -565,22 +561,14 @@ class TestBlockchainTransactions:
                 spend_coin_block_2 = coin
 
         # This condition requires block2 coinbase to be spent
-        block1_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            spend_coin_block_2.name(),
-            None,
-        )
+        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_CONSUMED, [spend_coin_block_2.name()])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
         )
 
         # This condition requires block1 coinbase to be spent
-        block2_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            spend_coin_block_1.name(),
-            None,
-        )
+        block2_cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_CONSUMED, [spend_coin_block_1.name()])
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_2, block2_dic
@@ -644,7 +632,7 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires block1 coinbase to be spent after index 10
-        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, int_to_bytes(10), None)
+        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS, [int_to_bytes(10)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -713,7 +701,7 @@ class TestBlockchainTransactions:
         # This condition requires block1 coinbase to be spent after index 10
         # This condition requires block1 coinbase to be spent more than 10 block after it was farmed
         # block index has to be greater than (1 + 9 = 10)
-        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, int_to_bytes(9), None)
+        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, [int_to_bytes(9)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -782,7 +770,7 @@ class TestBlockchainTransactions:
 
         # This condition requires block1 coinbase to be spent after 30 seconds from now
         current_time_plus3 = uint64(blocks[-1].foliage_block.timestamp + 30)
-        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, int_to_bytes(current_time_plus3), None)
+        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, [int_to_bytes(current_time_plus3)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -842,7 +830,7 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires fee to be 10 mojo
-        cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
+        cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, [int_to_bytes(10)])
         # This spend bundle has 9 mojo as fee
         block1_dic_bad = {cvp_fee.opcode: [cvp_fee]}
         block1_dic_good = {cvp_fee.opcode: [cvp_fee]}

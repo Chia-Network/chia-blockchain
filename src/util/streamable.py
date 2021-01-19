@@ -41,6 +41,7 @@ size_hints = {
     "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
     "G1Element": G1Element.SIZE,
     "G2Element": G2Element.SIZE,
+    "ConditionOpcode": 1,
 }
 unhashable_types = [
     PrivateKey,

@@ -1,20 +1,19 @@
 from dataclasses import dataclass
-from typing import Tuple, Optional, List
+from typing import Optional, List
 
 from src.consensus.condition_costs import ConditionCost
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.name_puzzle_condition import NPC
-from src.util.errors import Err
-from src.util.ints import uint64
+from src.util.ints import uint64, uint16
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from src.util.streamable import Streamable, streamable
+from src.util.streamable import streamable, Streamable
 
 
 @dataclass(frozen=True)
 @streamable
 class CostResult(Streamable):
-    error: Optional[Err]
+    error: Optional[uint16]
     npc_list: List[NPC]
     cost: uint64
 

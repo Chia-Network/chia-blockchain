@@ -36,7 +36,7 @@ class BlockCache:
                 block = await self.block_store.get_full_block(header_hash)
                 if block is not None:
                     self.log.debug(f"cache miss {block.sub_block_height} {block.header_hash}")
-                    return await block.get_block_header()
+                    return block.get_block_header()
             self.log.error("could not find header hash in cache")
             return None
 
@@ -128,7 +128,7 @@ async def init_header_cache(block_store: BlockStore, start: uint32, stop: uint32
     # convert to FullBlocks HeaderBlocks
     header_blocks: Dict[bytes32, HeaderBlock] = {}
     for block in full_blocks:
-        header_blocks[block.header_hash] = await block.get_block_header()
+        header_blocks[block.header_hash] = block.get_block_header()
     return header_blocks
 
 

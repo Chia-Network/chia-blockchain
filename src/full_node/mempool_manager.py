@@ -128,8 +128,8 @@ class MempoolManager:
         npc_list = cached_result.npc_list
         cost = cached_result.cost
 
-        if fail_reason:
-            return None, MempoolInclusionStatus.FAILED, fail_reason
+        if fail_reason is not None:
+            return None, MempoolInclusionStatus.FAILED, Err(fail_reason)
 
         # build removal list
         removal_names: List[bytes32] = new_spend.removal_names()

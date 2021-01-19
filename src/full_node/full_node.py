@@ -18,6 +18,7 @@ from src.consensus.difficulty_adjustment import (
     can_finish_sub_and_full_epoch,
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.pot_iterations import is_overflow_sub_block, calculate_sp_iters
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.block_cache import BlockCache
@@ -45,7 +46,7 @@ from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 
-from src.util.errors import ConsensusError
+from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
 
@@ -464,20 +465,27 @@ class FullNode:
 
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+            pre_validation_results: Optional[
+                List[PreValidationResult]
+            ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+            if pre_validation_results is None:
+                return False
             for i, block in enumerate(blocks):
-                if pre_validation_results is None:
+                if pre_validation_results[i].error is not None:
+                    self.log.error(
+                        f"Invalid block from peer: {peer.get_peer_info()} {Err(pre_validation_results[i].error)}"
+                    )
                     return False
-                req_iters = pre_validation_results[i]
-                assert req_iters is not None
+
+                assert pre_validation_results[i].required_iters is not None
                 (
                     result,
                     error,
                     fork_height,
-                ) = await self.blockchain.receive_block(block, True, req_iters)
+                ) = await self.blockchain.receive_block(block, pre_validation_results[i])
                 if result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     if error is not None:
-                        self.log.info(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
+                        self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                     return False
         self._state_changed("new_peak")
         return True
@@ -571,11 +579,28 @@ class FullNode:
                 sub_block = dataclasses.replace(sub_block, transactions_generator=unf_block.transactions_generator)
 
         async with self.blockchain.lock:
+            validation_start = time.time()
             # Tries to add the block to the blockchain
-            added, error_code, fork_height = await self.blockchain.receive_block(sub_block, False)
+            pre_validation_results: Optional[
+                List[PreValidationResult]
+            ] = await self.blockchain.pre_validate_blocks_multiprocessing([sub_block])
+            if pre_validation_results is None:
+                raise ValueError(
+                    f"Failed to validate sub_block {sub_block.header_hash} sub-height {sub_block.sub_block_height}"
+                )
+            if pre_validation_results[0].error is not None:
+                raise ValueError(
+                    f"Failed to validate sub_block {sub_block.header_hash} sub-height {sub_block.sub_block_height}: "
+                    f"{pre_validation_results[0].error}"
+                )
+
+            added, error_code, fork_height = await self.blockchain.receive_block(sub_block, pre_validation_results[0])
             if added == ReceiveBlockResult.NEW_PEAK:
                 await self.mempool_manager.new_peak(self.blockchain.get_peak())
                 self._state_changed("new_peak")
+            self.log.info(
+                f"Validation of sub_block {sub_block.sub_block_height} took {time.time() - validation_start} seconds"
+            )
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return None
