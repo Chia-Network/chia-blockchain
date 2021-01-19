@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## [1.0beta22] aka Beta 1.22 - 2021-01-??
+
+### Added
+- `chia plot create -x` skips adding [final dir] to harvester for farming
+
+### Fixed
+- Removed loading plot file names when starting `chia plots create`; decreases plotter time when there are a lot of plots on the machine
+
 ## [1.0beta21] aka Beta 1.21 - 2021-01-16
 
 ### Added
