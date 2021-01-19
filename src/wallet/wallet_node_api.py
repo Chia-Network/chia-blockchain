@@ -101,3 +101,11 @@ class WalletNodeAPI:
     @api_request
     async def reject_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
         pass
+
+    @api_request
+    async def respond_header_blocks(self, request: wallet_protocol.RespondHeaderBlocks):
+        pass
+
+    @api_request
+    async def reject_header_blocks_request(self, request: wallet_protocol.RejectHeaderBlocks):
+        pass
