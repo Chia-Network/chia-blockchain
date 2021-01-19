@@ -754,7 +754,7 @@ class TestFullNodeProtocol:
 
         sp = get_signage_point(
             test_constants,
-            blockchain.sub_blocks,
+            blockchain,
             peak,
             peak.ip_sub_slot_total_iters(test_constants),
             uint8(11),

@@ -224,9 +224,9 @@ class FullNodeAPI:
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
-        header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
-        if header_hash is None:
+        if not self.full_node.blockchain.contains_sub_height(request.sub_height):
             return None
+        header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block:
@@ -240,7 +240,7 @@ class FullNodeAPI:
         if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
             return None
         for i in range(request.start_sub_height, request.end_sub_height + 1):
-            if self.full_node.blockchain.sub_height_to_hash(uint32(i)) is None:
+            if not self.full_node.blockchain.contains_sub_height(uint32(i)):
                 reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
                 msg = Message("reject_sub_blocks", reject)
                 return msg
