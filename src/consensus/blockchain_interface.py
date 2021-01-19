@@ -37,7 +37,7 @@ class BlockchainInterface:
     async def warmup(self, fork_point: uint32):
         pass
 
-    async def get_sub_block_from_db(self, header_hash: bytes32) -> SubBlockRecord:
+    async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         pass
 
     async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:

@@ -450,7 +450,7 @@ class WalletBlockchain(BlockchainInterface):
     async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return await self.block_store.get_sub_block_in_range(start, stop)
 
-    async def get_sub_block_from_db(self, header_hash: bytes32) -> SubBlockRecord:
+    async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         if header_hash in self.__sub_blocks:
             return self.__sub_blocks[header_hash]
         return await self.block_store.get_sub_block_record(header_hash)
