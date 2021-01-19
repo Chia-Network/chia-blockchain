@@ -1,8 +1,7 @@
 import dataclasses
 import logging
 import time
-import traceback
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Tuple
 
 from blspy import AugSchemeMPL
 
@@ -27,7 +26,6 @@ from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.types.vdf import VDFInfo, VDFProof
-from src.util.block_cache import BlockCache
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8

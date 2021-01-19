@@ -3,8 +3,6 @@ import dataclasses
 import logging
 from concurrent.futures.process import ProcessPoolExecutor
 
-from src.util.block_cache import BlockCache
-
 from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
 from src.util.streamable import recurse_jsonify
 from enum import Enum

@@ -152,7 +152,7 @@ async def pre_validate_blocks_multiprocessing(
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):
-                if not sub_block_was_present[i] and block_i.header_hash in sub_blocks:
+                if not sub_block_was_present[i] and sub_blocks.contains_sub_block(block_i.header_hash):
                     sub_blocks.remove_sub_block(block_i.header_hash)
             return None
 
