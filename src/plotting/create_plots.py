@@ -121,9 +121,17 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             filename = f"plot-k{args.size}-{plot_id}.plot"
         full_path: Path = args.final_dir / filename
 
-        if str(args.final_dir.resolve()) not in config["harvester"]["plot_directories"]:
-            # Adds the directory to the plot directories if it is not present
-            config = add_plot_directory(str(args.final_dir.resolve()), root_path)
+        resolved_final_dir: str = str(Path(args.final_dir).resolve())
+        plot_directories_list: str = config["harvester"]["plot_directories"]
+
+        if args.exclude_final_dir:
+            log.info(f"Not adding directory {resolved_final_dir} to harvester for farming")
+            if resolved_final_dir in plot_directories_list:
+                log.warn(f"Directory {resolved_final_dir} already exists for harvester, you will need to remove it manually")
+        else:
+            if resolved_final_dir not in plot_directories_list:
+                # Adds the directory to the plot directories if it is not present
+                config = add_plot_directory(resolved_final_dir, root_path)
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")
