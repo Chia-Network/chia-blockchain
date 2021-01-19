@@ -87,7 +87,6 @@ class WalletNode:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
-
         # Normal operation data
         self.cached_blocks: Dict = {}
         self.future_block_hashes: Dict = {}
@@ -133,8 +132,6 @@ class WalletNode:
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
     ) -> bool:
-        if self.logged_in_fingerprint == fingerprint:
-            return True
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             return False
@@ -426,8 +423,7 @@ class WalletNode:
                         f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                         f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                     )
-                    # TODO: re-enable
-                    # return None
+                    return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
                     header_block.header_hash, uint32(fork_point)
