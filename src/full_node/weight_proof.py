@@ -128,7 +128,7 @@ class WeightProofHandler:
         if weight_to_check is None:
             self.log.warning("math error while sampling sub epochs")
 
-        prev_ses_block = self.blockchain.height_to_sub_block_record(uint32(0), True)
+        prev_ses_block = self.blockchain.height_to_sub_block_record(uint32(0))
         if prev_ses_block is None:
             return None
 
@@ -136,7 +136,7 @@ class WeightProofHandler:
         summary_heights = self.blockchain.get_ses_heights()
         for idx, ses_height in enumerate(summary_heights):
             # next sub block
-            ses_block = self.blockchain.height_to_sub_block_record(ses_height, True)
+            ses_block = self.blockchain.height_to_sub_block_record(ses_height)
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
                 self.log.error("error while building proof")
                 return None
