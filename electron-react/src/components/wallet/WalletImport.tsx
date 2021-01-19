@@ -6,6 +6,7 @@ import {
   Container,
   Button,
   Grid,
+  TextFieldProps,
 } from '@material-ui/core';
 import { Autocomplete } from '@material-ui/lab';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
@@ -26,24 +27,31 @@ const filterOptions = (options: string[], { inputValue }: { inputValue: string }
     threshold: matchSorter.rankings.STARTS_WITH,
   });
 
-function MnemonicField(props: any) {
+type MnemonicFieldProps = {
+  onChangeValue: (value: string) => void;
+};
+
+function MnemonicField(props: TextFieldProps & MnemonicFieldProps) {
+  const { onChangeValue, error, autoFocus, label } = props;
+
   return (
     <Grid item xs={2}>
       <Autocomplete
         id={props.id}
         options={options}
         filterOptions={filterOptions}
+        onChange={(_e, newValue) => onChangeValue(newValue || '')}
         renderInput={(params) => (
           <TextField
             autoComplete="off"
             variant="outlined"
             margin="normal"
             color="primary"
-            label={props.index}
-            error={props.error}
-            autoFocus={props.autofocus}
+            label={label}
+            error={error}
+            autoFocus={autoFocus}
             defaultValue={props.value}
-            onChange={props.onChange}
+            onChange={(e) => onChangeValue(e.target.value)}
             {...params}
           />
         )}
@@ -63,41 +71,28 @@ function Iterator(props: any) {
     (state: RootState) => state.mnemonic_state.incorrect_word,
   );
 
-  function handleTextFieldChange(
-    e: InputEvent & { target: { id: number; value: string } },
-  ) {
-    /* TODO: (Zlatko)
-    Pre fill Trie (src/util/trie.js) with words from english.txt
-    Find current input in trie and either show mnemonic suggestion | error 
-    */
-    if (!e.target) {
-      return;
-    }
-
-    const id = `${e.target.id}`;
-    const clean_id = id.replace('id_', '');
-    const int_val = Number.parseInt(clean_id, 10) - 1;
-    const data = {
-      word: e.target.value,
-      id: int_val,
-    };
-    dispatch(mnemonic_word_added(data));
+  function handleTextFieldChange(id: number, word: string) {
+    dispatch(mnemonic_word_added({
+      word,
+      id,
+    }));
   }
+
   const indents = [];
   for (let i = 0; i < 24; i += 1) {
     const focus = i === 0;
     indents.push(
       <MnemonicField
-        onChange={handleTextFieldChange}
+        onChangeValue={(value) => handleTextFieldChange(i, value)}
         key={i}
         error={
           (props.submitted && mnemonic_state.mnemonic_input[i] === '') ||
           mnemonic_state.mnemonic_input[i] === incorrect_word
         }
         value={mnemonic_state.mnemonic_input[i]}
-        autofocus={focus}
+        autoFocus={focus}
         id={`id_${i + 1}`}
-        index={i + 1}
+        label={i + 1}
       />,
     );
   }
