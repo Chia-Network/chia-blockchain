@@ -179,7 +179,10 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
 
         incoming_queue, _ = await add_dummy_connection(server_1, 12312)
-        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
         peer = await connect_and_get_peer(server_1, server_2)
         blocks = bt.get_consecutive_blocks(1)
         for block in blocks[:1]:
@@ -199,8 +202,10 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
-
-        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
         peer = await connect_and_get_peer(server_1, server_2)
 
@@ -250,8 +255,10 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
-
-        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
 
         peer = await connect_and_get_peer(server_1, server_2)
 
@@ -341,7 +348,10 @@ class TestFullNodeProtocol:
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
         dummy_peer = server_1.all_connections[dummy_node_id]
-        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        expected_requests = 0
+        if await full_node_1.full_node.synced():
+            expected_requests = 1
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", expected_requests))
         peer = await connect_and_get_peer(server_1, server_2)
 
         blocks = bt.get_consecutive_blocks(10)
