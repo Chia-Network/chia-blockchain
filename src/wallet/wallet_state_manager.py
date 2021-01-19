@@ -653,7 +653,7 @@ class WalletStateManager:
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             # TODO(straya): should this use height to hash instead of sub_height to hash
-            header_hash: bytes32 = self.blockchain.sub_height_to_hash(height)
+            header_hash: bytes32 = self.blockchain.sub_height_to_hash(sub_height)
             block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
             assert block.removals is not None

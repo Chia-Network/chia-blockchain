@@ -133,10 +133,15 @@ class WalletBlockchain(BlockchainInterface):
         return self.__sub_blocks[self.__sub_height_to_hash[self.peak_sub_height]]
 
     async def get_full_peak(self) -> Optional[HeaderBlock]:
+        """ Return a peak transaction block"""
         if self.peak_sub_height is None:
             return None
-        """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_header_block(self.__sub_height_to_hash[self.peak_sub_height])
+        curr: Optional[SubBlockRecord] = self.__sub_blocks[self.sub_height_to_hash(self.peak_sub_height)]
+        while curr is not None and not curr.is_block:
+            curr = self.try_sub_block(curr.prev_hash)
+        if curr is None:
+            return None
+        block = await self.block_store.get_header_block(curr.header_hash)
         assert block is not None
         return block
 
@@ -237,13 +242,13 @@ class WalletBlockchain(BlockchainInterface):
                     sub_block.header_hash
                 )
                 assert block is not None
+                self.__sub_height_to_hash[uint32(0)] = block.header_hash
                 for removed in block.removals:
                     self.log.info(f"Removed: {removed.name()}")
-                self.__sub_height_to_hash[uint32(0)] = block.header_hash
-                self.peak_sub_height = uint32(0)
                 await self.coins_of_interest_received(
                     block.removals, block.additions, block.height, block.sub_block_height
                 )
+                self.peak_sub_height = uint32(0)
                 return uint32(0)
             return None
 
@@ -264,7 +269,7 @@ class WalletBlockchain(BlockchainInterface):
             else:
                 fork_hash = self.__sub_height_to_hash[uint32(fork_h)]
                 fork_block = self.__sub_blocks[fork_hash]
-                await self.reorg_rollback(fork_block.height)
+                await self.reorg_rollback(fork_block.sub_block_height)
 
             # Rollback sub_epoch_summaries
             heights_to_delete = []
