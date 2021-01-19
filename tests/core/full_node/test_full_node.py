@@ -26,7 +26,7 @@ from src.util.hash import std_hash
 from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from tests.setup_nodes import setup_two_nodes, test_constants, bt, self_hostname
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
 from tests.core.full_node.test_full_sync import node_height_at_least
@@ -56,7 +56,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     session = aiohttp.ClientSession(timeout=timeout)
     incoming_queue: asyncio.Queue = asyncio.Queue()
     ssl_context = ssl_context_for_client(server._private_cert_path, server._private_key_path, False)
-    url = f"wss://127.0.0.1:{server._port}/ws"
+    url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
         NodeType.FULL_NODE,
@@ -65,7 +65,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
         log,
         True,
         False,
-        "127.0.0.1",
+        self_hostname,
         incoming_queue,
         lambda x: x,
     )
@@ -81,7 +81,7 @@ async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer) -> WS
     """
     Connect server_2 to server_1, and get return the connection in server_1.
     """
-    await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
+    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
 
     async def connected():
         for node_id_c, _ in server_1.all_connections.items():
@@ -157,11 +157,11 @@ class TestFullNodeProtocol:
     async def test_request_peers(self, two_empty_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
         full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
-        await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(
-                [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
+                [TimestampedPeerInfo(self_hostname, uint16(1000), uint64(int(time.time())) - 1000)],
                 None,
             )
             msg = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
@@ -169,7 +169,7 @@ class TestFullNodeProtocol:
             if msg is not None and not (len(msg.data.peer_list) == 1):
                 return False
             peer = msg.data.peer_list[0]
-            return peer.host == "127.0.0.1" and peer.port == 1000
+            return peer.host == self_hostname and peer.port == 1000
 
         await time_out_assert_custom_interval(10, 1, have_msgs, True)
         full_node_1.full_node.full_node_peers.address_manager = AddressManager()
@@ -558,27 +558,6 @@ class TestFullNodeProtocol:
 
         await asyncio.sleep(1)
         assert incoming_queue.qsize() == 0
-
-    @pytest.mark.asyncio
-    async def test_request_proof_of_weight(self, two_nodes, default_1000_blocks):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-
-        for block in default_1000_blocks:
-            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
-
-        # Have the request header hash
-        res = await full_node_1.request_proof_of_weight(
-            fnp.RequestProofOfWeight(default_1000_blocks[-1].sub_block_height + 1, default_1000_blocks[-1].header_hash)
-        )
-        assert res is not None
-        validated, _ = full_node_1.full_node.weight_proof_handler.validate_weight_proof(res.data.wp)
-        assert validated
-
-        # Don't have the request header hash
-        res = await full_node_1.request_proof_of_weight(
-            fnp.RequestProofOfWeight(default_1000_blocks[-1].sub_block_height + 1, std_hash(b"12"))
-        )
-        assert res is None
 
     @pytest.mark.asyncio
     async def test_request_sub_block(self, two_nodes, wallet_blocks):

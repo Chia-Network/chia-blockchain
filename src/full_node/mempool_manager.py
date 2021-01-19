@@ -23,7 +23,7 @@ from src.util.clvm import int_from_bytes
 from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
-from src.util.ints import uint64, uint32
+from src.util.ints import uint64, uint32, uint16
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
 
@@ -124,12 +124,11 @@ class MempoolManager:
             program = best_solution_program(new_spend)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             cached_result = calculate_cost_of_program(program, self.constants.CLVM_COST_RATIO_CONSTANT, True)
-        fail_reason = cached_result.error
         npc_list = cached_result.npc_list
         cost = cached_result.cost
 
-        if fail_reason is not None:
-            return None, MempoolInclusionStatus.FAILED, Err(fail_reason)
+        if cached_result.error is not None:
+            return None, MempoolInclusionStatus.FAILED, Err(cached_result.error)
 
         # build removal list
         removal_names: List[bytes32] = new_spend.removal_names()
@@ -289,7 +288,7 @@ class MempoolManager:
         else:
             validates = AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature)
         if not validates:
-            log.warning(f"{pks} {msgs} {new_spend}")
+            log.warning(f"Aggsig validation error {pks} {msgs} {new_spend}")
             return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
         # Remove all conflicting Coins and SpendBundles

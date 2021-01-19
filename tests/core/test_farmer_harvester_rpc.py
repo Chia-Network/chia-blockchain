@@ -14,7 +14,7 @@ from src.plotting.plot_tools import stream_plot_info
 from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 
-from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
+from tests.setup_nodes import setup_farmer_harvester, test_constants, bt, self_hostname
 from src.util.block_tools import get_plot_dir
 from tests.time_out_assert import time_out_assert
 
@@ -66,8 +66,8 @@ class TestRpc:
         )
 
         try:
-            client = await FarmerRpcClient.create("localhost", test_rpc_port, bt.root_path, config)
-            client_2 = await HarvesterRpcClient.create("localhost", test_rpc_port_2, bt.root_path, config)
+            client = await FarmerRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client_2 = await HarvesterRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
 
             async def have_connections():
                 return len(await client.get_connections()) > 0

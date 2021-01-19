@@ -64,7 +64,7 @@ class TestGenesisBlock:
     async def test_non_overflow_genesis(self, empty_blockchain):
         assert empty_blockchain.get_peak() is None
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
-        result, err, _ = await empty_blockchain.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
         assert empty_blockchain.get_peak().sub_block_height == 0
@@ -72,21 +72,21 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_overflow_genesis(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=True)[0]
-        result, err, _ = await empty_blockchain.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=3)[0]
-        result, err, _ = await empty_blockchain.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(1, force_overflow=True, skip_slots=3)[0]
-        result, err, _ = await empty_blockchain.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
@@ -95,7 +95,7 @@ class TestGenesisBlock:
         genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         bad_prev = bytes([1] * 32)
         genesis = recursive_replace(genesis, "foliage_sub_block.prev_sub_block_hash", bad_prev)
-        result, err, _ = await empty_blockchain.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err == Err.INVALID_PREV_BLOCK_HASH
 
 
@@ -1460,7 +1460,7 @@ class TestReorgs:
         assert b.get_peak().sub_block_height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain):
+    async def test_long_reorg(self, empty_blockchain, default_10000_blocks):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
@@ -1468,7 +1468,8 @@ class TestReorgs:
         num_blocks_chain_2_start = test_constants.EPOCH_SUB_BLOCKS - 20
         num_blocks_chain_2 = 3 * test_constants.EPOCH_SUB_BLOCKS + test_constants.MAX_SUB_SLOT_SUB_BLOCKS + 8
 
-        blocks = bt.get_consecutive_blocks(num_blocks_chain_1)
+        assert num_blocks_chain_1 < 10000
+        blocks = default_10000_blocks[:num_blocks_chain_1]
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1600,13 +1601,14 @@ class TestPreValidation:
             blocks[-1], "reward_chain_sub_block.total_iters", blocks[-1].reward_chain_sub_block.total_iters + 1
         )
         res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad])
-        assert res is None
+        assert res[0].error is None
+        assert res[1].error is not None
 
     @pytest.mark.asyncio
     async def test_pre_validation(self, empty_blockchain, default_1000_blocks):
-        blocks = default_1000_blocks
+        blocks = default_1000_blocks[:100]
         start = time.time()
-        n_at_a_time = multiprocessing.cpu_count()
+        n_at_a_time = min(multiprocessing.cpu_count(), 32)
         times_pv = []
         times_rb = []
         for i in range(0, len(blocks), n_at_a_time):
@@ -1619,7 +1621,7 @@ class TestPreValidation:
             assert res is not None
             for n in range(end_i - i):
                 assert res[n] is not None
-                assert res[n][0] is not None
+                assert res[n].error is None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
                 result, err, _ = await empty_blockchain.receive_block(block, res[n])

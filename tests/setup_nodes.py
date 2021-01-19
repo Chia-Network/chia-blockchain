@@ -58,7 +58,7 @@ async def setup_full_node(
     config["send_uncompact_interval"] = send_uncompact_interval
     config["peer_connect_interval"] = 3
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = "localhost"
+        config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port
     else:
         config["introducer_peer"] = None
@@ -115,7 +115,7 @@ async def setup_wallet_node(
     config["database_path"] = str(db_name)
     config["testing"] = True
 
-    config["introducer_peer"]["host"] = "127.0.0.1"
+    config["introducer_peer"]["host"] = self_hostname
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
         config["peer_connect_interval"] = 10
@@ -263,7 +263,6 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants):
-
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -276,6 +275,25 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     fn2 = await node_iters[1].__anext__()
 
     yield fn1, fn2, fn1.full_node.server, fn2.full_node.server
+
+    await _teardown_nodes(node_iters)
+
+
+async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
+    """
+    Setup and teardown of two full nodes, with blockchains and separate DBs.
+    """
+    port_start = 21244
+    node_iters = []
+    for i in range(n):
+        node_iters.append(
+            setup_full_node(consensus_constants, f"blockchain_test_{i}.db", port_start + i, simulator=False)
+        )
+    nodes = []
+    for ni in node_iters:
+        nodes.append(await ni.__anext__())
+
+    yield nodes
 
     await _teardown_nodes(node_iters)
 
