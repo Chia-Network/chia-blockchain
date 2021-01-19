@@ -15,8 +15,8 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_FEE = bytes([58])
     ASSERT_TIME_EXCEEDS = bytes([59])
 
-    def __bytes__(self):
-        return self.value
+    def __bytes__(self) -> bytes:
+        return bytes(self.value)
 
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:
