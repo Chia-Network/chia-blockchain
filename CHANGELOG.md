@@ -9,7 +9,7 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta22] aka Beta 1.22 - 2021-01-??
 
 ### Added
-- `chia plot create -x` skips adding [final dir] to harvester for farming
+- `chia plots create -x` skips adding [final dir] to harvester for farming
 
 ### Fixed
 - Removed loading plot file names when starting `chia plots create`; decreases plotter time when there are a lot of plots on the machine
