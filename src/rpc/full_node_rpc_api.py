@@ -1,5 +1,3 @@
-import time
-
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
@@ -103,16 +101,7 @@ class FullNodeRpcApi:
         else:
             space = {"space": uint128(0)}
 
-        now = time.time()
-        if (
-            full_peak is None
-            or full_peak.foliage_block is None
-            or full_peak.foliage_block.timestamp < now - 60 * 10
-            or sync_mode
-        ):
-            synced = False
-        else:
-            synced = True
+        synced = await self.service.synced()
 
         assert space is not None
         response: Dict = {

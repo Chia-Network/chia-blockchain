@@ -24,7 +24,7 @@ def node_height_at_least(node, h):
     return False
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop

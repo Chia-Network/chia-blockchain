@@ -31,12 +31,14 @@ def service_kwargs_for_wallet(
 ) -> Dict:
     node = WalletNode(config, keychain, root_path, consensus_constants=consensus_constants)
     peer_api = WalletNodeAPI(node)
-
     fnp = config.get("full_node_peer")
+
     if fnp:
         connect_peers = [PeerInfo(fnp["host"], fnp["port"])]
+        node.full_node_peer = PeerInfo(fnp["host"], fnp["port"])
     else:
         connect_peers = []
+        node.full_node_peer = None
 
     kwargs = dict(
         root_path=root_path,

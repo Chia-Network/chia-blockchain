@@ -6,13 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## [1.0beta22] aka Beta 1.22 - 2021-01-??
+## [1.0beta22] aka Beta 1.22 - 2021-01-19
 
 ### Added
+- Node now attempts to pre-validate and cache transactions.
+- The harvester will try to not load a plot file that is too small for its k size. This should help keep from partial plots being found when they are copied into a harvester directory. Harvester will check again on the next challenge and find a completed copy of a plot file then.
 - `chia plots create -x` skips adding [final dir] to harvester for farming
 
+### Changed
+- We now use bech32m and have added the bech32m tests from Pieter Wuille (@sipa) outlined [here](https://gist.github.com/sipa/14c248c288c3880a3b191f978a34508e) with thanks.
+- In the GUI, choosing to parallel plot with a delay now is a delay between the start of the parallel plots started in one session.
+- Removed loading plot file names when starting `chia plots create`; decreases plotter time when there are a lot of plots on the machine. Huge thanks to @eFishCent for this PR!
+
 ### Fixed
-- Removed loading plot file names when starting `chia plots create`; decreases plotter time when there are a lot of plots on the machine
+- Various fixes to improve node's ability to sync. There are still plenty of additional performance improvements coming for node so expect it to get easier to run on less powerful devices.
+- Wallet now handles large amounts of coins much better and generally syncs better.
+- Thanks to @nup002 for the PR to use scientific notation in the logs for address_manager.select_peer timings.
+- `chia show -h` now correctly states that you use the first 8 characters of the node id to remove a node on the cli.
+- Thank you to @wallentx for adding better help for `chia configure --enable-upnp`.
+- Pull requests from forks won't have failures on CI.
 
 ## [1.0beta21] aka Beta 1.21 - 2021-01-16
 

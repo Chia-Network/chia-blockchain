@@ -82,6 +82,7 @@ class WalletRpcApi:
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
+            "/get_transaction_count": self.get_transaction_count,
         }
 
     async def _state_changed(self, *args) -> List[str]:
@@ -364,14 +365,12 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        balance = await wallet.get_confirmed_balance()
-        pending_balance = await wallet.get_unconfirmed_balance()
-        spendable_balance = await wallet.get_spendable_balance()
+        unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        balance = await wallet.get_confirmed_balance(unspent_records)
+        pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
+        spendable_balance = await wallet.get_spendable_balance(unspent_records)
         pending_change = await wallet.get_pending_change_balance()
-        if wallet.type() == WalletType.COLOURED_COIN:
-            frozen_balance = 0
-        else:
-            frozen_balance = await wallet.get_frozen_amount()
+        frozen_balance = 0
 
         wallet_balance = {
             "wallet_id": wallet_id,
@@ -400,7 +399,16 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
-        transactions = await self.service.wallet_state_manager.get_all_transactions(wallet_id)
+        if "start" in request:
+            start = request["start"]
+        else:
+            start = 0
+        if "end" in request:
+            end = request["end"]
+        else:
+            end = 50
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
         formatted_transactions = []
 
         for tx in transactions:
@@ -459,6 +467,11 @@ class WalletRpcApi:
             "transaction": tx,
             "transaction_id": tx.name,
         }
+
+    async def get_transaction_count(self, request):
+        wallet_id = int(request["wallet_id"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
+        return {"wallet_id": wallet_id, "count": count}
 
     async def create_backup(self, request):
         assert self.service.wallet_state_manager is not None

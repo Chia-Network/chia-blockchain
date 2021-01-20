@@ -234,9 +234,7 @@ function BalanceCard(props: BalanceCardProps) {
   const balance_pending = useSelector(
     (state: RootState) => state.wallet_state.wallets[id].balance_pending,
   );
-  const balance_frozen = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].balance_frozen,
-  );
+
   const balance_change = useSelector(
     (state: RootState) => state.wallet_state.wallets[id].balance_change,
   );
@@ -317,21 +315,6 @@ function BalanceCard(props: BalanceCardProps) {
                         This is the sum of the incoming and outgoing pending
                         transactions (not yet included into the blockchain).
                         This does not include farming rewards.
-                      </Trans>
-                    }
-                  />
-                  <BalanceCardSubSection
-                    title={
-                      <Trans id="BalanceCard.pendingFarmingRewards">
-                        Pending Farming Rewards
-                      </Trans>
-                    }
-                    balance={balance_frozen}
-                    tooltip={
-                      <Trans id="BalanceCard.pendingFarmingRewardsTooltip">
-                        This is the total amount of farming rewards farmed
-                        recently, that have been confirmed but are not yet
-                        spendable.
                       </Trans>
                     }
                   />

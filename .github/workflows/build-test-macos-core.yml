@@ -6,7 +6,7 @@ jobs:
   build:
     name: Build and test MacOS Core
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4

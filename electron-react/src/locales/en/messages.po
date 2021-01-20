@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:392
+#: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "AddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:396
+#: src/components/wallet/standard/WalletStandard.tsx:388
 msgid "AddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/standard/WalletStandard.tsx:406
+#: src/components/wallet/standard/WalletStandard.tsx:398
 msgid "AddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:388
+#: src/components/wallet/standard/WalletStandard.tsx:380
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
@@ -49,59 +49,59 @@ msgstr "Connecting to wallet"
 msgid "Application.loggingIn"
 msgstr "Logging in"
 
-#: src/components/wallet/standard/WalletStandard.tsx:194
+#: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "BalanceCard.balance"
 msgstr "Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:226
 msgid "BalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:229
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
-#: src/components/wallet/standard/WalletStandard.tsx:241
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingChange"
 msgstr "Pending Change"
 
-#: src/components/wallet/standard/WalletStandard.tsx:243
+#: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
-msgid "BalanceCard.pendingFarmingRewards"
-msgstr "Pending Farming Rewards"
+#~ msgid "BalanceCard.pendingFarmingRewards"
+#~ msgstr "Pending Farming Rewards"
 
 #: src/components/wallet/standard/WalletStandard.tsx:236
-msgid "BalanceCard.pendingFarmingRewardsTooltip"
-msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable."
+#~ msgid "BalanceCard.pendingFarmingRewardsTooltip"
+#~ msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable."
 
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:219
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:222
+#: src/components/wallet/standard/WalletStandard.tsx:221
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "BalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:195
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "BalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:195
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
-#: src/components/wallet/standard/WalletStandard.tsx:213
+#: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
@@ -1707,43 +1707,43 @@ msgstr "Sign In"
 msgid "SelectKey.title"
 msgstr "Select Key"
 
-#: src/components/wallet/standard/WalletStandard.tsx:342
+#: src/components/wallet/standard/WalletStandard.tsx:334
 msgid "SendCard.address"
 msgstr "Address / Puzzle hash"
 
-#: src/components/wallet/standard/WalletStandard.tsx:352
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "SendCard.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:313
+#: src/components/wallet/standard/WalletStandard.tsx:305
 msgid "SendCard.enterValidAddress"
 msgstr "Error: Cannot send chia to coloured address. Please enter a chia address."
 
-#: src/components/wallet/standard/WalletStandard.tsx:295
+#: src/components/wallet/standard/WalletStandard.tsx:287
 msgid "SendCard.enterValidAmount"
 msgstr "Please enter a valid numeric amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:303
+#: src/components/wallet/standard/WalletStandard.tsx:295
 msgid "SendCard.enterValidFee"
 msgstr "Please enter a valid numeric fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:365
+#: src/components/wallet/standard/WalletStandard.tsx:357
 msgid "SendCard.farm"
 msgstr "Farm"
 
-#: src/components/wallet/standard/WalletStandard.tsx:357
+#: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "SendCard.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:283
+#: src/components/wallet/standard/WalletStandard.tsx:275
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr "Please finish syncing before making a transaction"
 
-#: src/components/wallet/standard/WalletStandard.tsx:370
+#: src/components/wallet/standard/WalletStandard.tsx:362
 msgid "SendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/standard/WalletStandard.tsx:333
+#: src/components/wallet/standard/WalletStandard.tsx:325
 msgid "SendCard.title"
 msgstr "Create Transaction"
 
@@ -2097,15 +2097,15 @@ msgstr "History"
 msgid "WalletHistory.type"
 msgstr "Type"
 
-#: src/components/wallet/WalletImport.tsx:77
+#: src/components/wallet/WalletImport.tsx:67
 msgid "WalletImport.description"
 msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 
-#: src/components/wallet/WalletImport.tsx:87
+#: src/components/wallet/WalletImport.tsx:77
 msgid "WalletImport.next"
 msgstr "Next"
 
-#: src/components/wallet/WalletImport.tsx:74
+#: src/components/wallet/WalletImport.tsx:64
 msgid "WalletImport.title"
 msgstr "Import Wallet from Mnemonics"
 
