@@ -479,4 +479,4 @@ class WalletBlockchain(BlockchainInterface):
         del self.__sub_blocks[header_hash]
 
     def add_sub_block(self, sub_block: SubBlockRecord):
-        self.__sub_blocks[sub_block] = sub_block
+        self.__sub_blocks[sub_block.header_hash] = sub_block
