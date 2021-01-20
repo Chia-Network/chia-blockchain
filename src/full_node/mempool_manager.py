@@ -365,9 +365,7 @@ class MempoolManager:
         for item in old_pool.spends.values():
             await self.add_spendbundle(item.spend_bundle, item.cost_result)
 
-        self.potential_txs_copy = self.potential_txs.copy()
-        self.potential_txs = {}
-        for tx, cached_result in self.potential_txs_copy.values():
+        for tx, cached_result in self.potential_txs.values():
             await self.add_spendbundle(tx, cached_result)
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158) -> List[MempoolItem]:

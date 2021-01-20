@@ -121,7 +121,7 @@ class WebSocketServer:
             self.safe_handle,
             self.self_hostname,
             self.daemon_port,
-            max_size=50 * 1000 * 1000,
+            max_size=None,
             ping_interval=500,
             ping_timeout=300,
             ssl=self.ssl_context,

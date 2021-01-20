@@ -29,7 +29,7 @@ from tests.core.fixtures import default_10000_blocks  # noqa: F401
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
@@ -53,7 +53,7 @@ class TestGenesisBlock:
             raise Exception("invalid proof")
 
     @pytest.mark.asyncio
-    async def test_block_tools_proofs(self):
+    async def test_block_tools_proofs_10000(self, default_10000_blocks):
         vdf, proof = get_vdf_info_and_proof(
             test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
         )

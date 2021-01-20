@@ -28,8 +28,6 @@ def make_parser(parser: ArgumentParser):
 
     parser.add_argument(
         "--set-log-level",
-        "--log-level",
-        "-log-level",
         help="Set the instance log level, Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET",
         type=str,
         nargs="?",
@@ -39,7 +37,6 @@ def make_parser(parser: ArgumentParser):
     parser.add_argument(
         "--enable-upnp",
         "--upnp",
-        "-upnp",
         help="Enable or disable uPnP. Can be True or False",
         type=str,
         nargs="?",
