@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, Optional, List, Set
 import aiosqlite
 from src.types.coin import Coin
@@ -15,6 +16,7 @@ class WalletCoinStore:
     db_connection: aiosqlite.Connection
     coin_record_cache: Dict[bytes32, WalletCoinRecord]
     coin_wallet_record_cache: Dict[int, Dict[bytes32, WalletCoinRecord]]
+    wallet_cache_lock: asyncio.Lock
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection):
@@ -65,6 +67,8 @@ class WalletCoinStore:
         all_coins = await self.get_all_coins()
         for coin_record in all_coins:
             self.coin_record_cache[coin_record.coin.name()] = coin_record
+
+        self.wallet_cache_lock = asyncio.Lock()
         return self
 
     async def _clear_database(self):
@@ -75,34 +79,35 @@ class WalletCoinStore:
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord) -> None:
         # update wallet cache
-        if record.wallet_id in self.coin_wallet_record_cache:
-            cache_dict = self.coin_wallet_record_cache[record.wallet_id]
-            if record.coin.name() in cache_dict and record.spent:
-                cache_dict.pop(record.coin.name())
-            else:
-                cache_dict[record.coin.name()] = record
+        async with self.wallet_cache_lock:
+            if record.wallet_id in self.coin_wallet_record_cache:
+                cache_dict = self.coin_wallet_record_cache[record.wallet_id]
+                if record.coin.name() in cache_dict and record.spent:
+                    cache_dict.pop(record.coin.name())
+                else:
+                    cache_dict[record.coin.name()] = record
 
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                record.coin.name().hex(),
-                record.confirmed_block_sub_height,
-                record.confirmed_block_height,
-                record.spent_block_sub_height,
-                record.spent_block_height,
-                int(record.spent),
-                int(record.coinbase),
-                str(record.coin.puzzle_hash.hex()),
-                str(record.coin.parent_coin_info.hex()),
-                record.coin.amount,
-                record.wallet_type,
-                record.wallet_id,
-            ),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record.coin.name().hex(),
+                    record.confirmed_block_sub_height,
+                    record.confirmed_block_height,
+                    record.spent_block_sub_height,
+                    record.spent_block_height,
+                    int(record.spent),
+                    int(record.coinbase),
+                    str(record.coin.puzzle_hash.hex()),
+                    str(record.coin.parent_coin_info.hex()),
+                    record.coin.amount,
+                    record.wallet_type,
+                    record.wallet_id,
+                ),
+            )
+            await cursor.close()
+            await self.db_connection.commit()
 
-        self.coin_record_cache[record.coin.name()] = record
+            self.coin_record_cache[record.coin.name()] = record
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, sub_height: uint32, height: uint32):
@@ -172,29 +177,30 @@ class WalletCoinStore:
 
     async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have not been spent yet for a wallet. """
-        if wallet_id in self.coin_wallet_record_cache:
-            wallet_coins: Dict[bytes32, WalletCoinRecord] = self.coin_wallet_record_cache[wallet_id]
-            return set(wallet_coins.values())
+        async with self.wallet_cache_lock:
+            if wallet_id in self.coin_wallet_record_cache:
+                wallet_coins: Dict[bytes32, WalletCoinRecord] = self.coin_wallet_record_cache[wallet_id]
+                return set(wallet_coins.values())
 
-        coin_set = set()
+            coin_set = set()
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
-            (wallet_id,),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        cache_dict = {}
-        for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
-            coin_record = WalletCoinRecord(
-                coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11]
+            cursor = await self.db_connection.execute(
+                "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
+                (wallet_id,),
             )
-            coin_set.add(coin_record)
-            cache_dict[coin.name()] = coin_record
+            rows = await cursor.fetchall()
+            await cursor.close()
+            cache_dict = {}
+            for row in rows:
+                coin = Coin(bytes32(bytes.fromhex(row[8])), bytes32(bytes.fromhex(row[7])), row[9])
+                coin_record = WalletCoinRecord(
+                    coin, row[1], row[2], row[3], row[4], row[5], row[6], WalletType(row[10]), row[11]
+                )
+                coin_set.add(coin_record)
+                cache_dict[coin.name()] = coin_record
 
-        self.coin_wallet_record_cache[wallet_id] = cache_dict
-        return coin_set
+            self.coin_wallet_record_cache[wallet_id] = cache_dict
+            return coin_set
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
         """ Returns set of all CoinRecords."""

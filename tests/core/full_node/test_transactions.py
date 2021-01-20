@@ -87,8 +87,7 @@ class TestTransactions:
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
-        await time_out_assert(15, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
-
+        await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
