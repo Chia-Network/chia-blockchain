@@ -17,7 +17,7 @@ def check_plots(args, root_path):
     if args.num is not None:
         num = args.num
     else:
-        num = 20
+        num = 30
     if args.grep_string is not None:
         match_str = args.grep_string
     else:
