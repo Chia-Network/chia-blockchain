@@ -152,7 +152,7 @@ def load_plots(
                 prover = DiskProver(str(filename))
                 expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR / 2.0
                 stat_info = filename.stat()
-                if stat_info.st_size < 0.95 * expected_size:
+                if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
                     log.warning(
                         f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
                         f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
