@@ -66,7 +66,6 @@ class VDFProof(Streamable):
             log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
-            log.error(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
             return False
         try:
             disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
