@@ -37,7 +37,7 @@ from tests.setup_nodes import test_constants, bt
 from tests.core.fixtures import empty_blockchain, default_1000_blocks, default_400_blocks, default_10000_blocks
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop

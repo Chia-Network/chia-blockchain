@@ -9,7 +9,7 @@ class TestProofOfSpace:
         """
         Tests that the change of getting a correct proof is exactly 1/target_filter.
         """
-        num_trials = 50000
+        num_trials = 100000
         success_count = 0
         target_filter = 2 ** DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER
         for _ in range(num_trials):
@@ -20,4 +20,4 @@ class TestProofOfSpace:
             if ProofOfSpace.passes_plot_filter(DEFAULT_CONSTANTS, plot_id, challenge_hash, sp_output):
                 success_count += 1
 
-        assert abs((success_count * target_filter / num_trials) - 1) < 0.3
+        assert abs((success_count * target_filter / num_trials) - 1) < 0.35
