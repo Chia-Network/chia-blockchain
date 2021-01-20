@@ -55,7 +55,7 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+        await time_out_assert(90, node_height_at_least, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
     async def test_sync_from_fork_point_and_weight_proof(self, three_nodes, default_1000_blocks, default_400_blocks):
