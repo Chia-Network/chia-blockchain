@@ -306,7 +306,7 @@ class FullNode:
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
             synced = await self.synced()
-            if synced:
+            if synced and self.blockchain.peak_height > self.constants.INITIAL_FREEZE_PERIOD:
                 my_filter = self.mempool_manager.get_filter()
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
