@@ -95,7 +95,7 @@ async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer) -> WS
     assert False
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop

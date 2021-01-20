@@ -13,7 +13,7 @@ from tests.time_out_assert import time_out_assert
 from tests.core.full_node.test_full_sync import node_height_at_least
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
