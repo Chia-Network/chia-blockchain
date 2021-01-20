@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:392
+#: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "AddressCard.address"
 msgstr "地址"
 
-#: src/components/wallet/standard/WalletStandard.tsx:396
+#: src/components/wallet/standard/WalletStandard.tsx:388
 msgid "AddressCard.copy"
 msgstr "复制"
 
-#: src/components/wallet/standard/WalletStandard.tsx:406
+#: src/components/wallet/standard/WalletStandard.tsx:398
 msgid "AddressCard.newAddress"
 msgstr "新建地址"
 
-#: src/components/wallet/standard/WalletStandard.tsx:388
+#: src/components/wallet/standard/WalletStandard.tsx:380
 msgid "AddressCard.title"
 msgstr "接收地址"
 
@@ -49,59 +49,59 @@ msgstr "连接到钱包"
 msgid "Application.loggingIn"
 msgstr "登录"
 
-#: src/components/wallet/standard/WalletStandard.tsx:194
+#: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "BalanceCard.balance"
 msgstr "余额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:226
 msgid "BalanceCard.pendingBalance"
 msgstr "未确认的金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:229
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "这是未确认交易中（尚未包含在区块链中）的花费和接收的总金额。这不包括挖矿奖励。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:241
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingChange"
 msgstr "未确认的找零"
 
-#: src/components/wallet/standard/WalletStandard.tsx:243
+#: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "这是未确认的零钱，是您已发送给自己但尚未确认的零钱。"
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
-msgid "BalanceCard.pendingFarmingRewards"
-msgstr "未成熟的挖矿奖励"
+#~ msgid "BalanceCard.pendingFarmingRewards"
+#~ msgstr "未成熟的挖矿奖励"
 
 #: src/components/wallet/standard/WalletStandard.tsx:236
-msgid "BalanceCard.pendingFarmingRewardsTooltip"
-msgstr "这是最近挖到的区块奖励，但是目前还不能使用。挖矿奖励会被冻结200个区块。"
+#~ msgid "BalanceCard.pendingFarmingRewardsTooltip"
+#~ msgstr "这是最近挖到的区块奖励，但是目前还不能使用。挖矿奖励会被冻结200个区块。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:219
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "未确认的总额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:222
+#: src/components/wallet/standard/WalletStandard.tsx:221
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "这是总金额+待处理金额：它是确认所有待处理交易后的余额。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "BalanceCard.spendableBalance"
 msgstr "可用金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "这是您当前可用于进行交易的金额。它不包括未完成的挖矿奖励、未确认的金额和您刚刚使用但尚未打包金额。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:195
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "BalanceCard.totalBalance"
 msgstr "总金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:195
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "这是 LCA 区块（最新的共同祖先）在区块链中的总余额，由您的私钥控制。其中包括冻结的挖矿奖励，但不包括未确认的收入和花费交易。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:213
+#: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.viewPendingBalances"
 msgstr "查看未确认金额"
 
@@ -1707,43 +1707,43 @@ msgstr "登录"
 msgid "SelectKey.title"
 msgstr "选择密钥"
 
-#: src/components/wallet/standard/WalletStandard.tsx:342
+#: src/components/wallet/standard/WalletStandard.tsx:334
 msgid "SendCard.address"
 msgstr "地址 或 Puzzle Hash"
 
-#: src/components/wallet/standard/WalletStandard.tsx:352
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "SendCard.amount"
 msgstr "金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:313
+#: src/components/wallet/standard/WalletStandard.tsx:305
 msgid "SendCard.enterValidAddress"
 msgstr "错误：无法将chia发送到染色币地址。请输入chia地址。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:295
+#: src/components/wallet/standard/WalletStandard.tsx:287
 msgid "SendCard.enterValidAmount"
 msgstr "请输入有效的金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:303
+#: src/components/wallet/standard/WalletStandard.tsx:295
 msgid "SendCard.enterValidFee"
 msgstr "请输入有效的费用"
 
-#: src/components/wallet/standard/WalletStandard.tsx:365
+#: src/components/wallet/standard/WalletStandard.tsx:357
 msgid "SendCard.farm"
 msgstr "挖矿"
 
-#: src/components/wallet/standard/WalletStandard.tsx:357
+#: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "SendCard.fee"
 msgstr "费用"
 
-#: src/components/wallet/standard/WalletStandard.tsx:283
+#: src/components/wallet/standard/WalletStandard.tsx:275
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr "请在先完成同步"
 
-#: src/components/wallet/standard/WalletStandard.tsx:370
+#: src/components/wallet/standard/WalletStandard.tsx:362
 msgid "SendCard.send"
 msgstr "发送"
 
-#: src/components/wallet/standard/WalletStandard.tsx:333
+#: src/components/wallet/standard/WalletStandard.tsx:325
 msgid "SendCard.title"
 msgstr "创建交易"
 
@@ -2097,15 +2097,15 @@ msgstr ""
 msgid "WalletHistory.type"
 msgstr ""
 
-#: src/components/wallet/WalletImport.tsx:77
+#: src/components/wallet/WalletImport.tsx:67
 msgid "WalletImport.description"
 msgstr "输入您保存的24个单词，以恢复您的Chia钱包。"
 
-#: src/components/wallet/WalletImport.tsx:87
+#: src/components/wallet/WalletImport.tsx:77
 msgid "WalletImport.next"
 msgstr "下一步"
 
-#: src/components/wallet/WalletImport.tsx:74
+#: src/components/wallet/WalletImport.tsx:64
 msgid "WalletImport.title"
 msgstr "从助记词导入钱包"
 

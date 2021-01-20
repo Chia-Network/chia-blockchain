@@ -71,6 +71,7 @@ class WalletNode:
     root_path: Path
     state_changed_callback: Optional[Callable]
     syncing: bool
+    full_node_peer: Optional[PeerInfo]
 
     def __init__(
         self,
@@ -192,6 +193,7 @@ class WalletNode:
 
     async def _await_closed(self):
         self.log.info("self._await_closed")
+        await self.server.close_all_connections()
         asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
@@ -535,16 +537,25 @@ class WalletNode:
         header_blocks: List[HeaderBlock] = res.header_blocks
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
+        if (
+            self.full_node_peer is not None
+            and peer.peer_host == self.full_node_peer.host
+            or peer.peer_host == "127.0.0.1"
+        ):
+            trusted = True
+            pre_validation_results: Optional[List[PreValidationResult]] = None
+        else:
+            trusted = False
+            pre_validation_results = await self.wallet_state_manager.blockchain.pre_validate_blocks_multiprocessing(
+                header_blocks
+            )
+            if pre_validation_results is None:
+                return False
+            assert len(header_blocks) == len(pre_validation_results)
 
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await self.wallet_state_manager.blockchain.pre_validate_blocks_multiprocessing(header_blocks)
-        if pre_validation_results is None:
-            return False
-        assert len(header_blocks) == len(pre_validation_results)
         for i in range(len(header_blocks)):
             header_block = header_blocks[i]
-            if pre_validation_results[i].error is not None:
+            if not trusted and pre_validation_results is not None and pre_validation_results[i].error is not None:
                 raise ValidationError(Err(pre_validation_results[i].error))
             if header_block.is_block:
                 # Find additions and removals
@@ -566,11 +577,17 @@ class WalletNode:
             else:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
 
-            (
-                result,
-                error,
-                fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record, pre_validation_results[i])
+            if trusted:
+                (
+                    result,
+                    error,
+                    fork_h,
+                ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record, None, trusted)
+            else:
+                assert pre_validation_results is not None
+                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
+                    header_block_record, pre_validation_results[i], trusted
+                )
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:

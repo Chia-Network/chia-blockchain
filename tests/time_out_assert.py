@@ -43,7 +43,7 @@ def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int =
         for _ in range(count):
             response = (await incoming_queue.get())[0].msg.function
             if response != msg_name:
-                log.error(f"Error, found {response} instead of {msg_name}")
+                # log.warning(f"time_out_message: found {response} instead of {msg_name}")
                 return False
         return True
 

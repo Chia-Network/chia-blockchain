@@ -22,7 +22,7 @@ def wallet_height_at_least(wallet_node, h):
     return False
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
