@@ -29,7 +29,7 @@ def help_message():
     print("-e disables bitfield plotting")
     print("-x skips adding [final dir] to harvester for farming")
     print("-i [plotid] -m [memo] are available for debugging")
-    print("chia plots check -n [num checks] -g [string] (checks plots)")
+    print("chia plots check -n [num challenges] -g [string] (checks plots)")
     print("  Default: check all plots in every directory")
     print("  -g: checks plots with file or directory name containing [string]")
     print("chia plots add -d [directory] (adds a directory of plots)")
@@ -39,7 +39,7 @@ def help_message():
 
 def make_parser(parser):
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=32)
-    parser.add_argument("-n", "--num", help="Number of plots or challenges", type=int, default=1)
+    parser.add_argument("-n", "--num", help="Number of plots or challenges", type=int, default=None)
     parser.add_argument("-b", "--buffer", help="Mebibytes for sort/plot buffer", type=int, default=4608)
     parser.add_argument("-r", "--num_threads", help="Number of threads to use", type=int, default=2)
     parser.add_argument("-u", "--buckets", help="Number of buckets", type=int, default=0)
