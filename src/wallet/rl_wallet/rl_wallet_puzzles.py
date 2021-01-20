@@ -122,16 +122,7 @@ def rl_puzzle_for_pk(
     MODE_TWO_ME_STRING = make_list(hexstr(opcode_myid), sha256(args(5), args(1), args(6)))
     CREATE_LOCK = make_list(
         hexstr(opcode_create_announce),
-        sha256tree(
-            make_list(
-                quote(7),
-                make_list(
-                    quote(5),
-                    make_list(quote(1), sha256(args(2), args(3), args(4))),
-                    quote(make_list()),
-                ),
-            )
-        ),
+        sha256(args(2), args(3), args(4)),
     )
     MODE_TWO = make_if(
         TEMPLATE_SINGLETON_RL_2,
@@ -247,12 +238,7 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     me_is_my_id = make_list(hexstr(opcode_myid), args(0))
 
     # lock_puzzle is the hash of '(r (c (q "merge in ID") (q ())))'
-    lock_puzzle = sha256tree(
-        make_list(
-            quote(7),
-            make_list(quote(5), make_list(quote(1), args(0)), quote(quote(sexp()))),
-        )
-    )
+    lock_puzzle = args(0)
     parent_coin_id = sha256(args(1), hexstr(wallet_puzzle), args(2))
     input_of_lock = make_list(hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0)))
     puz = make_list(me_is_my_id, input_of_lock)
