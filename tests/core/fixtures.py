@@ -35,22 +35,22 @@ async def empty_blockchain():
 
 @pytest.fixture(scope="session")
 async def default_400_blocks():
-    yield persistent_blocks(400, "test_blocks_400_2.db", seed=b"alternate2")
+    return persistent_blocks(400, "test_blocks_400_2.db", seed=b"alternate2")
 
 
 @pytest.fixture(scope="session")
 async def default_1000_blocks():
-    yield persistent_blocks(1000, "test_blocks_1000.db")
+    return persistent_blocks(1000, "test_blocks_1000.db")
 
 
 @pytest.fixture(scope="session")
 async def default_10000_blocks():
-    yield persistent_blocks(10000, "test_blocks_10000.db")
+    return persistent_blocks(10000, "test_blocks_10000.db")
 
 
 @pytest.fixture(scope="session")
 async def default_20000_blocks():
-    yield persistent_blocks(20000, "test_blocks_20000.db")
+    return persistent_blocks(20000, "test_blocks_20000.db")
 
 
 def persistent_blocks(num_of_blocks: int, db_name: str, seed: bytes = b""):
