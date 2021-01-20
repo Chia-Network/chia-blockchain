@@ -291,6 +291,8 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
+            asyncio.create_task(self.close())
+            await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.info(
                 f"Peer closed connection {connection_type_str} {self.peer_host}:"
