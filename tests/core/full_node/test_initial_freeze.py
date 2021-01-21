@@ -1,11 +1,8 @@
 import asyncio
-from secrets import token_bytes
-
 import pytest
 
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain import ReceiveBlockResult
-from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol, wallet_protocol
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -91,8 +88,6 @@ class TestTransactions:
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-
-        incoming_queue, node_id = await add_dummy_connection(full_node_server, 12312)
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         for i in range(num_blocks):

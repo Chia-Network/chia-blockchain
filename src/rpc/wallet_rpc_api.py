@@ -83,6 +83,7 @@ class WalletRpcApi:
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
             "/get_transaction_count": self.get_transaction_count,
+            "get_initial_freeze_period": self.get_initial_freeze_period,
         }
 
     async def _state_changed(self, *args) -> List[str]:
@@ -420,6 +421,15 @@ class WalletRpcApi:
             "transactions": formatted_transactions,
             "wallet_id": wallet_id,
         }
+
+    async def get_transaction_count(self, request: Dict) -> Dict:
+        wallet_id = int(request["wallet_id"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id=wallet_id)
+        return {"wallet_id": wallet_id, "transaction_count": count}
+
+    async def get_initial_freeze_period(self):
+        freeze_period = self.service.constants.INITIAL_FREEZE_PERIOD
+        return {"INITIAL_FREEZE_PERIOD": freeze_period}
 
     async def get_next_address(self, request: Dict) -> Dict:
         """
