@@ -164,9 +164,15 @@ class ChiaServer:
             )
 
             assert handshake is True
-            await self.connection_added(connection, self.on_connect)
-            if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
-                self.introducer_peers.add(connection.get_peer_info())
+            # Limit inbound connections to config's specifications.
+            if not connection.is_outbound and not self.accept_inbound_connections(connection.connection_type):
+                self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
+                await connection.close()
+                close_event.set()
+            else:
+                await self.connection_added(connection, self.on_connect)
+                if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
+                    self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
             await connection.close()
             if e.code == Err.SELF_CONNECTION:
@@ -452,3 +458,23 @@ class ChiaServer:
         if not peer.is_valid():
             return None
         return peer
+
+    def accept_inbound_connections(self, node_type: NodeType):
+        if not self.local_type == NodeType.FULL_NODE:
+            return True
+        inbound_count = len(
+            [
+                conn
+                for _, conn in self.all_connections.items()
+                if not conn.is_outbound and conn.connection_type == node_type
+            ]
+        )
+        if node_type == NodeType.FULL_NODE:
+            return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
+        if node_type == NodeType.WALLET:
+            return inbound_count < self.config["max_inbound_wallet"]
+        if node_type == NodeType.FARMER:
+            return inbound_count < self.config["max_inbound_farmer"]
+        if node_type == NodeType.TIMELORD:
+            return inbound_count < self.config["max_inbound_timelord"]
+        return True
