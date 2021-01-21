@@ -83,7 +83,7 @@ class WalletRpcApi:
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
             "/get_transaction_count": self.get_transaction_count,
-            "get_initial_freeze_period": self.get_initial_freeze_period,
+            "/get_initial_freeze_period": self.get_initial_freeze_period,
         }
 
     async def _state_changed(self, *args) -> List[str]:
