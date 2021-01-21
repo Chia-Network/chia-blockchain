@@ -379,7 +379,7 @@ class FullNode:
             self.sync_peers_handler = None
             self.sync_store.waiting_for_peaks = True
 
-            await asyncio.sleep(60)
+            await asyncio.sleep(10)
             self.log.info("Woke up from 60 second sleep.")
             # Based on responses from peers about the current heads, see which head is the heaviest
             # (similar to longest chain rule).
