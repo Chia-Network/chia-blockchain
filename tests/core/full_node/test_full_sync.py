@@ -111,9 +111,9 @@ class TestFullSync:
             await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         print("Here4: ", time.time() - start)
-        await time_out_assert(120, node_height_at_least, True, full_node_1, 999)
+        await time_out_assert(180, node_height_at_least, True, full_node_1, 999)
         print("Here5: ", time.time() - start)
-        await time_out_assert(120, node_height_at_least, True, full_node_2, 999)
+        await time_out_assert(180, node_height_at_least, True, full_node_2, 999)
         print("Here6: ", time.time() - start)
 
     @pytest.mark.asyncio

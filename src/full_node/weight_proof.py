@@ -222,7 +222,9 @@ class WeightProofHandler:
         if len(weight_proof.sub_epochs) == 0:
             return False, uint32(0)
 
-        self.log.info("validate weight proof")
+        self.log.info(
+            f"validate weight proof peak height {weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height}"
+        )
         summaries = self._validate_sub_epoch_summaries(weight_proof)
         if summaries is None:
             self.log.warning("weight proof failed sub epoch data validation")
