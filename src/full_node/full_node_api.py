@@ -115,7 +115,7 @@ class FullNodeAPI:
             return None
         if (
             self.full_node.blockchain.peak_height is None
-            or self.full_node.blockchain.peak_height < self.full_node.constants.INITIAL_FREEZE_PERIOD
+            or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
         ):
             return None
 
@@ -161,7 +161,7 @@ class FullNodeAPI:
             return None
         if (
             self.full_node.blockchain.peak_height is None
-            or self.full_node.blockchain.peak_height < self.full_node.constants.INITIAL_FREEZE_PERIOD
+            or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
         ):
             return None
 
@@ -991,7 +991,7 @@ class FullNodeAPI:
             return None
         if (
             self.full_node.blockchain.peak_height is None
-            or self.full_node.blockchain.peak_height < self.full_node.constants.INITIAL_FREEZE_PERIOD
+            or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
         ):
             return None
 
