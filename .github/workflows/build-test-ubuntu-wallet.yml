@@ -92,9 +92,9 @@ jobs:
     - name: Check that checked-in clvm and ChiaLisp code matches CI compiled code
       run: |
         . ./activate
-        for f in chia-blockchain/src/wallet/puzzles/*.clvm; do
+        for f in $(ls chia-blockchain/src/wallet/puzzles/*.clvm); do
           run -d "$f" > "$f.ci.hex"
-          if diff $f.hex $f.ci.hex; then
+          if ! diff $f.hex $f.ci.hex; then
              echo "Committed file $f.hex does not match generated file $f.ci.hex"
              echo "Please generate .hex file locally and update your commit"
              exit 1
