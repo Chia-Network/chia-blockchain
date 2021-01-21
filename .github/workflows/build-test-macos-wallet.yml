@@ -77,6 +77,18 @@ jobs:
         . ./activate
         venv/bin/python -m pip install -r requirements-dev.txt
 
+    - name: Check that checked-in clvm and ChiaLisp code matches CI compiled code
+      run: |
+        . ./activate
+        for f in $(ls chia-blockchain/src/wallet/puzzles/*.clvm); do
+          run -d "$f" > "$f.ci.hex"
+          if ! diff $f.hex $f.ci.hex; then
+             echo "Committed file $f.hex does not match generated file $f.ci.hex"
+             echo "Please generate .hex file locally and update your commit"
+             exit 1
+          fi
+        done
+
     - name: Test blockchain code with pytest
       run: |
         . ./activate
