@@ -92,6 +92,7 @@ class SyncStore:
         return list(self.potential_peaks.items())
 
     def add_potential_peak(self, header_hash: bytes32, sub_height: uint32, weight: uint128) -> None:
+        log.info(f"add_potential_peak header_hash {header_hash} sub_height {sub_height} weight {weight}")
         self.potential_peaks[header_hash] = (sub_height, weight)
 
     def get_potential_peak(self, header_hash: bytes32) -> Optional[Tuple[uint32, uint128]]:
@@ -104,9 +105,11 @@ class SyncStore:
         return self.potential_future_blocks
 
     def add_potential_fork_point(self, peak_hash: bytes32, fork_point: uint32):
+        log.info(f"add_potential_fork_point peak_hash {peak_hash} fork_point {fork_point}")
         self.peak_fork_point[peak_hash] = fork_point
 
     def get_potential_fork_point(self, peak_hash) -> uint32:
+        log.info(f"get_potential_fork_point peak_hash {peak_hash} peak_fork_point {self.peak_fork_point}")
         if peak_hash in self.peak_fork_point:
             return self.peak_fork_point[peak_hash]
         else:

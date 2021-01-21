@@ -375,11 +375,12 @@ class FullNode:
         """
         try:
             self.log.info("Starting to perform sync with peers.")
-            self.log.info("Waiting to receive peaks from peers.")
+            self.log.info("Waiting to receive peaks from peers. Sleeping 60 seconds.")
             self.sync_peers_handler = None
             self.sync_store.waiting_for_peaks = True
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(60)
+            self.log.info("Woke up from 60 second sleep.")
             # Based on responses from peers about the current heads, see which head is the heaviest
             # (similar to longest chain rule).
             self.sync_store.waiting_for_peaks = False
