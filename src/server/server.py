@@ -460,7 +460,7 @@ class ChiaServer:
         return peer
 
     def accept_inbound_connections(self, node_type: NodeType):
-        if not self.local_type == NodeType.FULL_NODE:
+        if not self._local_type == NodeType.FULL_NODE:
             return True
         inbound_count = len(
             [
