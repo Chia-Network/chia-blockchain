@@ -213,6 +213,8 @@ class FullNodeAPI:
         if peer.peer_node_id not in self.full_node.pow_pending:
             self.log.warning("weight proof not in pending request list")
             return None
+        self.full_node.pow_pending.remove(peer.peer_node_id)
+        self.full_node.log.info(f"tip {response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height}")
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
         if not validated:
             raise Exception("bad weight proof, disconnecting peer")
