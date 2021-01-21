@@ -1,5 +1,6 @@
 import asyncio
 from secrets import token_bytes
+from typing import Optional
 
 import pytest
 
@@ -92,7 +93,9 @@ class TestTransactions:
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         async def peak_height(fna: FullNodeAPI):
-            peak: SubBlockRecord = fna.full_node.blockchain.get_peak()
+            peak: Optional[SubBlockRecord] = fna.full_node.blockchain.get_peak()
+            if peak is None:
+                return -1
             peak_height = peak.sub_block_height
             return peak_height
 
