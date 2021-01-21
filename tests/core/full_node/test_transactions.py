@@ -4,6 +4,8 @@ from secrets import token_bytes
 import pytest
 
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
@@ -88,6 +90,15 @@ class TestTransactions:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+
+        async def peak_height(fna: FullNodeAPI):
+            peak: SubBlockRecord = fna.full_node.blockchain.get_peak()
+            peak_height = peak.sub_block_height
+            return peak_height
+
+        await time_out_assert(10, peak_height, num_blocks, full_node_api_1)
+        await time_out_assert(10, peak_height, num_blocks, full_node_api_2)
+
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
