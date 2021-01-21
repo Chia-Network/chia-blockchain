@@ -154,7 +154,7 @@ def migrate_from(
 
 
 def initialize_ssl(root_path: Path):
-    cert, key = generate_selfsigned_cert()
+    cert, key = generate_private_self_signed_cert()
     path_crt = config_path_for_filename(root_path, "trusted.crt")
     path_key = config_path_for_filename(root_path, "trusted.key")
     with open(path_crt, "w") as f:
