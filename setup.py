@@ -10,7 +10,7 @@ dependencies = [
     "clvm==0.7",
     "clvm_tools==0.2.0",
     "aiohttp==3.7.3",  # HTTP server for full node rpc
-    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
+    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@247c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
     "cbor2==5.2.0",  # Used for network wire format
