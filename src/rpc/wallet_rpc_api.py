@@ -422,11 +422,6 @@ class WalletRpcApi:
             "wallet_id": wallet_id,
         }
 
-    async def get_transaction_count(self, request: Dict) -> Dict:
-        wallet_id = int(request["wallet_id"])
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id=wallet_id)
-        return {"wallet_id": wallet_id, "transaction_count": count}
-
     async def get_initial_freeze_period(self):
         freeze_period = self.service.constants.INITIAL_FREEZE_PERIOD
         return {"INITIAL_FREEZE_PERIOD": freeze_period}
