@@ -260,7 +260,7 @@ class TestWeightProof:
         last_ses = summaries[last_ses_height]
         del summaries[last_ses_height]
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[last_ses_height - 10].header_hash)
+        wp = await wpf.get_proof_of_weight(blocks[last_ses_height - 50].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash))
         valid, fork_point = wpf.validate_weight_proof(wp)
@@ -273,6 +273,46 @@ class TestWeightProof:
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_extend_multiple_ses(self, default_1000_blocks):
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        # delete last summary
+        last_ses_height = sorted(summaries.keys())[-1]
+        last_ses = summaries[last_ses_height]
+        before_last_ses_height = sorted(summaries.keys())[-2]
+        before_last_ses = summaries[before_last_ses_height]
+        del summaries[last_ses_height]
+        del summaries[before_last_ses_height]
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - 50].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash))
+        valid, fork_point = wpf.validate_weight_proof(wp)
+        assert valid
+        assert fork_point == 0
+        # extend proof with 100 blocks
+        summaries[last_ses_height] = last_ses
+        summaries[before_last_ses_height] = before_last_ses
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
+        valid, fork_point = wpf.validate_weight_proof(new_wp)
+        print(f"{wp.sub_epochs}")
+        assert valid
+        assert fork_point != 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_extend_multiple_ses2(self, default_1000_blocks):
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash))
+        valid, fork_point = wpf.validate_weight_proof(wp)
+        print(f"{wp.sub_epochs}")
+        assert valid
 
     @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio

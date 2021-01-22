@@ -60,27 +60,17 @@ class WeightProofHandler:
         if tip_rec.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             self.log.debug("chain to short for weight proof")
             return None
-        curr: Optional[SubBlockRecord] = tip_rec
+
         await self.lock.acquire()
         if self.proof is not None:
             if tip == self.tip:
                 self.lock.release()
                 return self.proof
-            recent_chain_start = self.proof.recent_chain_data[0].reward_chain_sub_block.sub_block_height
-            while curr is not None:
-                if curr.sub_block_height < recent_chain_start:
-                    self.log.info("this peak is on a fork longer then recent proof chain")
-                    break
-                if curr.header_hash == self.tip:
-                    new_wp = await self._extend_proof_of_weight(self.proof, tip_rec)
-                    self.proof = new_wp
-                    self.tip = tip
-                    self.lock.release()
-                    return new_wp
-                curr = self.blockchain.sub_block_record(curr.prev_hash)
-                if curr is None:
-                    self.lock.release()
-                    return None
+            new_wp = await self._extend_proof_of_weight(self.proof, tip_rec)
+            self.proof = new_wp
+            self.tip = tip
+            self.lock.release()
+            return new_wp
 
         wp = await self._create_proof_of_weight(tip)
         if wp is None:
@@ -103,7 +93,12 @@ class WeightProofHandler:
             return None
         end_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
         sub_epoch_data = weight_proof.sub_epochs
-        for summary in self.blockchain.get_ses_from_height(end_height):
+        heights = self.blockchain.get_ses_heights()
+
+        for height in heights:
+            if height < end_height:
+                continue
+            summary = self.blockchain.get_ses(height)
             sub_epoch_data.append(_make_sub_epoch_data(summary))
 
         # todo handle new sampling
@@ -651,7 +646,7 @@ class WeightProofHandler:
         delta = last_l_weight / total_weight
         prob_of_adv_succeeding = 1 - math.log(self.C, delta)
         if prob_of_adv_succeeding <= 0:
-            self.log.warning(f"sample prob: {prob_of_adv_succeeding}")
+            self.log.debug(f"sample prob: {prob_of_adv_succeeding}")
             return None
         queries = -self.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
         for i in range(int(queries) + 1):

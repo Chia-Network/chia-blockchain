@@ -23,9 +23,6 @@ class BlockchainInterface:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         pass
 
-    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
-        pass
-
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         pass
 

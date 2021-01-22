@@ -523,14 +523,6 @@ class Blockchain(BlockchainInterface):
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self.__sub_epoch_summaries[height]
 
-    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
-        ses_l = []
-        for ses_height in reversed(self.get_ses_heights()):
-            if ses_height <= height:
-                break
-            ses_l.append(self.get_ses(ses_height))
-        return ses_l
-
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         return self.__sub_height_to_hash[height]
 
