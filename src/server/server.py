@@ -462,13 +462,7 @@ class ChiaServer:
     def accept_inbound_connections(self, node_type: NodeType):
         if not self._local_type == NodeType.FULL_NODE:
             return True
-        inbound_count = len(
-            [
-                conn
-                for _, conn in self.connection_by_type[node_type].items()
-                if not conn.is_outbound
-            ]
-        )
+        inbound_count = len([conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound])
         if node_type == NodeType.FULL_NODE:
             return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
         if node_type == NodeType.WALLET:
