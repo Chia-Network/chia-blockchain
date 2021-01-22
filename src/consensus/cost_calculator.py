@@ -20,12 +20,12 @@ class CostResult(Streamable):
 
 def calculate_cost_of_program(program: Program, clvm_cost_ratio_constant: int, strict_mode: bool = False) -> CostResult:
     """
-    This function calculates the total cost of either block or a spendbundle
+    This function calculates the total cost of either a block or a spendbundle
     """
     total_clvm_cost = 0
     error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode)
     if error:
-        raise Exception("get_name_puzzle_conditions raised error" + str(error))
+        raise Exception("get_name_puzzle_conditions raised error:" + str(error))
     total_clvm_cost += cost
 
     # Add cost of conditions

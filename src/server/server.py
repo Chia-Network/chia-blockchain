@@ -236,7 +236,7 @@ class ChiaServer:
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=False, autoping=True, heartbeat=300, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url, autoclose=False, autoping=True, heartbeat=30, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except asyncio.TimeoutError:
                 self.log.info(f"Timeout error connecting to {url}")
