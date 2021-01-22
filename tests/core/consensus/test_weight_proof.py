@@ -302,18 +302,6 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.asyncio
-    async def test_weight_proof_extend_multiple_ses2(self, default_1000_blocks):
-        blocks = default_1000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
-        assert wp is not None
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash))
-        valid, fork_point = wpf.validate_weight_proof(wp)
-        print(f"{wp.sub_epochs}")
-        assert valid
-
     @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
