@@ -10,7 +10,6 @@ from src.wallet.settings.settings_objects import BackupInitialized
 class UserSettings:
     settings: Dict[str, Any]
     basic_store: KeyValStore
-    log: logging
 
     @staticmethod
     async def create(
