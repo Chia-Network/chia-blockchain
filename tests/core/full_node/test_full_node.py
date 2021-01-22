@@ -116,8 +116,24 @@ async def wallet_nodes():
     async for _ in async_gen:
         yield _
 
+@pytest.fixture(scope="function")
+async def setup_five_nodes():
+    async for _ in setup_simulators_and_wallets(5, 0, {}):
+        yield _
 
 class TestFullNodeProtocol:
+    @pytest.mark.asyncio
+    async def test_inbound_connection_limit(self, setup_five_nodes):
+        nodes, _ = setup_five_nodes
+        server_1 = nodes[0].full_node.server
+        server_1.config["target_peer_count"] = 2
+        server_1.config["target_outbound_peer_count"] = 0
+        for i in range(1, 5):
+            full_node_i = nodes[i]
+            server_i = full_node_i.full_node.server
+            await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+        assert len(server_1.get_full_node_connections()) == 2
+
     @pytest.mark.asyncio
     async def test_request_peers(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
