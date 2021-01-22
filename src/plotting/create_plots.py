@@ -109,12 +109,12 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(pool_public_key, plot_public_key)
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
-            plot_id: bytes32 = bytes32(bytes.fromhex(args.plotid))
+            plot_id = bytes32(bytes.fromhex(args.plotid))
 
         plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, sk)
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
-            plot_memo: bytes32 = bytes.fromhex(args.memo)
+            plot_memo = bytes.fromhex(args.memo)
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
