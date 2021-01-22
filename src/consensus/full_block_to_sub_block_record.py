@@ -142,8 +142,4 @@ def block_to_sub_block_record(
         finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,
         ses,
-        block.finished_sub_slots,
-        block.challenge_chain_sp_proof,
-        block.challenge_chain_ip_proof,
-        block.infused_challenge_chain_ip_proof,
     )
