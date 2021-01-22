@@ -103,7 +103,11 @@ class WeightProofHandler:
             return None
         end_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
         sub_epoch_data = weight_proof.sub_epochs
-        for summary in self.block_cache.get_ses_from_height(end_height):
+        heights = self.block_cache.get_ses_heights()
+        for height in heights:
+            if height < end_height:
+                continue
+            summary = self.block_cache.get_ses(height)
             sub_epoch_data.append(_make_sub_epoch_data(summary))
 
         # todo handle new sampling
