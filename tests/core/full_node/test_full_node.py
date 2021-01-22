@@ -116,10 +116,12 @@ async def wallet_nodes():
     async for _ in async_gen:
         yield _
 
+
 @pytest.fixture(scope="function")
 async def setup_five_nodes():
     async for _ in setup_simulators_and_wallets(5, 0, {}):
         yield _
+
 
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
