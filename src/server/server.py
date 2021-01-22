@@ -165,7 +165,7 @@ class ChiaServer:
 
             assert handshake is True
             # Limit inbound connections to config's specifications.
-            if not connection.is_outbound and not self.accept_inbound_connections(connection.connection_type):
+            if not self.accept_inbound_connections(connection.connection_type):
                 self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
                 await connection.close()
                 close_event.set()
@@ -465,8 +465,8 @@ class ChiaServer:
         inbound_count = len(
             [
                 conn
-                for _, conn in self.all_connections.items()
-                if not conn.is_outbound and conn.connection_type == node_type
+                for _, conn in self.connection_by_type[node_type].items()
+                if not conn.is_outbound
             ]
         )
         if node_type == NodeType.FULL_NODE:
