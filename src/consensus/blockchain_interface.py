@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict
 
 from src.consensus.sub_block_record import SubBlockRecord
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32
@@ -46,7 +47,13 @@ class BlockchainInterface:
     async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         pass
 
+    async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
+        pass
+
     async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
+        pass
+
+    async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         pass
 
     def try_sub_block(self, header_hash: bytes32) -> Optional[SubBlockRecord]:

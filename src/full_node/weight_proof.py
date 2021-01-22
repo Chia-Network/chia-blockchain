@@ -11,6 +11,7 @@ from src.consensus.pot_iterations import calculate_iterations_quality, calculate
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, InfusedChallengeChainSubSlot
 from src.types.sub_epoch_summary import SubEpochSummary
@@ -197,11 +198,10 @@ class WeightProofHandler:
                 curr_height = curr_height + uint32(1)  # type: ignore
                 idx += 1
 
-        # await self.block_cache.init_headers(curr_height, tip_height)
-
+        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(curr_height, tip_height)
         while curr_height <= tip_height:
             # add to needed reward chain recent blocks
-            header_block = self.blockchain.height_to_sub_block_record(curr_height)
+            header_block = headers[self.blockchain.sub_height_to_hash(curr_height)]
             if header_block is None:
                 self.log.error("creating recent chain failed")
                 return None
@@ -426,7 +426,9 @@ class WeightProofHandler:
         )
 
         # VDFs from sub slots before challenge block
-        first_sub_slots = await self.__first_sub_slots_data(sub_block, sub_blocks)
+        header_block = await self.blockchain.get_header_block(sub_block.header_hash)
+        assert header_block is not None
+        first_sub_slots = await self.__first_sub_slots_data(sub_block, header_block, sub_blocks)
         if first_sub_slots is None:
             self.log.error("failed building first sub slots")
             return None, uint32(0)
@@ -473,7 +475,7 @@ class WeightProofHandler:
 
     # returns a challenge chain vdf from slot start to signage point
     async def __first_sub_slots_data(
-        self, sub_block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]
+        self, sub_block: SubBlockRecord, header_block: HeaderBlock, sub_blocks: Dict[bytes32, SubBlockRecord]
     ) -> Optional[List[SubSlotData]]:
         # combine cc vdfs of all reward blocks from the start of the sub slot to end
 
@@ -507,12 +509,12 @@ class WeightProofHandler:
         # sub_slots.append(handle_finished_slots(cc_slot_end_vdf, curr, icc_slot_end_vdf))
         self.log.debug(f"add challenge block height {sub_block.sub_block_height}")
         ssd = SubSlotData(
-            sub_block.reward_chain_sub_block.proof_of_space,
-            sub_block.reward_chain_sub_block.challenge_chain_sp_signature,
-            sub_block.challenge_chain_sp_proof,
-            sub_block.challenge_chain_ip_proof,
-            sub_block.reward_chain_sub_block.challenge_chain_sp_vdf,
-            sub_block.reward_chain_sub_block.signage_point_index,
+            header_block.reward_chain_sub_block.proof_of_space,
+            header_block.reward_chain_sub_block.challenge_chain_sp_signature,
+            header_block.challenge_chain_sp_proof,
+            header_block.challenge_chain_ip_proof,
+            header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
+            header_block.reward_chain_sub_block.signage_point_index,
             combine_proofs(cc_slot_end_vdf),
             combine_proofs(icc_slot_end_vdf),
             None,

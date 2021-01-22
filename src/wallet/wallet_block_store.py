@@ -196,6 +196,26 @@ class WalletBlockStore:
             ret[header_hash] = SubBlockRecord.from_bytes(row[3])
         return ret, bytes.fromhex(row[0])
 
+    async def get_headers_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, HeaderBlock]:
+
+        formatted_str = (
+            f"SELECT header_hash,block from header_blocks WHERE sub_height >= {start} and sub_height <= {stop}"
+        )
+
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, HeaderBlock] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            ret[header_hash] = HeaderBlock.from_bytes(row[1])
+
+        return ret
+
     async def get_sub_block_in_range(
         self,
         start: int,

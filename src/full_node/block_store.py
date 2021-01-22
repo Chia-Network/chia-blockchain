@@ -3,6 +3,7 @@ import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32
@@ -139,6 +140,27 @@ class BlockStore:
                 assert peak is None  # Sanity check, only one peak
                 peak = header_hash
         return ret, peak
+
+    async def get_headers_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, HeaderBlock]:
+
+        formatted_str = (
+            f"SELECT header_hash,block from full_blocks WHERE sub_height >= {start} and sub_height <= {stop}"
+        )
+
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, HeaderBlock] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            full_block: FullBlock = FullBlock.from_bytes(row[1])
+            ret[header_hash] = full_block.get_block_header()
+
+        return ret
 
     async def get_sub_block_in_range(
         self,

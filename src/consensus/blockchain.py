@@ -4,6 +4,7 @@ import logging
 from concurrent.futures.process import ProcessPoolExecutor
 
 from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
+from src.types.header_block import HeaderBlock
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -574,6 +575,9 @@ class Blockchain(BlockchainInterface):
     async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return await self.block_store.get_sub_block_in_range(start, stop)
 
+    async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
+        return await self.block_store.get_headers_in_range(start, stop)
+
     async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         if header_hash in self.__sub_blocks:
             return self.__sub_blocks[header_hash]
@@ -584,3 +588,9 @@ class Blockchain(BlockchainInterface):
 
     def add_sub_block(self, sub_block: SubBlockRecord):
         self.__sub_blocks[sub_block.header_hash] = sub_block
+
+    async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
+        block = await self.block_store.get_full_block(header_hash)
+        if block is None:
+            return None
+        return block.get_block_header()
