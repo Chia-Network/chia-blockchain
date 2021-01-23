@@ -37,6 +37,7 @@
     "framer-motion": "^3.2.1",
     "history": "^4.10.1",
     "is-electron": "^2.2.0",
+    "js-yaml": "^4.0.0",
     "lodash": "^4.17.20",
     "make-plural": "^6.2.2",
     "match-sorter": "^6.1.0",
