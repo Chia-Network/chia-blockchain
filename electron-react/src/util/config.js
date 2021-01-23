@@ -1,20 +1,29 @@
 const yaml = require('js-yaml');
 const fs = require('fs');
+const semver = require('semver');
+const homedir = require('os').homedir();
 
 let self_hostname = 'localhost';
 let daemon_port = 55400;
 let daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
 
-const config_path = `C:\\Users\\dkack\\.chia\\beta-1.0b22\\config\\`;
-
 function loadConfig() {
   try {
+    // get the semver out of package.json and format for chia version approach
+    const sv = semver.parse(require('../../package.json').version);
+    let version = sv.version;
+    if (sv.prerelease.length > 0) {
+      version = `beta-${sv.major}.${sv.minor}${sv.prerelease[0]}`;
+    }
+
+    const config_path = `${homedir}/.chia/${version}/config`;
     const doc = yaml.load(fs.readFileSync(`${config_path}/config.yaml`, 'utf8'));
 
     self_hostname = doc.self_hostname;
     const daemon_port = doc.daemon_port;
     daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
 
+    // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = daemon_rpc_ws;
     global.cert_path = `${config_path}/${doc.ssl.crt}`;
     global.key_path = `${config_path}/${doc.ssl.key}`;
