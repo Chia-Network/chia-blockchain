@@ -1,9 +1,11 @@
 # flake8: noqa: F811, F401
 import asyncio
 import time
+from typing import List
 
 import pytest
 
+from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.hash import std_hash
@@ -41,21 +43,67 @@ class TestFullSync:
         async for _ in setup_n_nodes(test_constants, 3):
             yield _
 
-    @pytest.mark.asyncio
-    async def test_sync_from_zero(self, two_nodes, default_400_blocks):
-        # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_400_blocks)
-        blocks = default_400_blocks
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+    @pytest.fixture(scope="function")
+    async def four_nodes(self):
+        async for _ in setup_n_nodes(test_constants, 4):
+            yield _
 
-        for block in blocks:
+    @pytest.mark.asyncio
+    async def test_long_sync_from_zero(self, four_nodes, default_400_blocks):
+        # Must be larger than "sync_sub_block_behind_threshold" in the config
+        num_blocks = len(default_400_blocks)
+        blocks: List[FullBlock] = default_400_blocks
+        full_node_1, full_node_2, full_node_3, full_node_4 = four_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        server_4 = full_node_4.full_node.server
+
+        # Syncs up less than recent blocks
+        for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5]:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
-        # The second node should eventually catch up to the first one, and have the
-        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
+        # The second node should eventually catch up to the first one
+        await time_out_assert(
+            60, node_height_at_least, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
+        )
+
+        for block in blocks[
+            test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 : test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
+        ]:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+
+        # Node 3 and Node 2 sync up to node 1
+        await time_out_assert(
+            60, node_height_at_least, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+        )
+        await time_out_assert(
+            60, node_height_at_least, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+        )
+
+        cons = list(server_1.all_connections.values())[:]
+        for con in cons:
+            await con.close()
+        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_4.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        await server_4.start_client(PeerInfo(self_hostname, uint16(server_3._port)), None)
+        await server_4.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+
+        # All four nodes are synced
+        await time_out_assert(60, node_height_at_least, True, full_node_1, num_blocks - 1)
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+        await time_out_assert(60, node_height_at_least, True, full_node_3, num_blocks - 1)
+        await time_out_assert(60, node_height_at_least, True, full_node_4, num_blocks - 1)
 
     @pytest.mark.asyncio
     async def test_sync_from_fork_point_and_weight_proof(self, three_nodes, default_1000_blocks, default_400_blocks):
@@ -99,28 +147,28 @@ class TestFullSync:
         )
         assert res is None
 
-        print("Here1: ", time.time() - start)
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
         await time_out_assert(180, node_height_at_least, True, full_node_2, num_blocks_initial - 1)
-        print("Here2: ", time.time() - start)
         await time_out_assert(180, node_height_at_least, True, full_node_3, num_blocks_initial - 1)
 
-        print("Here3: ", time.time() - start)
+        cons = list(server_1.all_connections.values())[:]
+        for con in cons:
+            await con.close()
         for block in blocks_rest:
             await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        print("Here4: ", time.time() - start)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
         await time_out_assert(120, node_height_at_least, True, full_node_1, 999)
-        print("Here5: ", time.time() - start)
         await time_out_assert(120, node_height_at_least, True, full_node_2, 999)
-        print("Here6: ", time.time() - start)
 
     @pytest.mark.asyncio
-    async def test_short_sync(self, two_nodes):
+    async def test_batch_sync(self, two_nodes):
         # Must be below "sync_block_behind_threshold" in the config
-        num_blocks = 7
-        num_blocks_2 = 3
+        num_blocks = 20
+        num_blocks_2 = 9
         blocks = bt.get_consecutive_blocks(num_blocks)
         blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -140,7 +188,7 @@ class TestFullSync:
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
-    async def test_short_sync_2(self, two_nodes):
+    async def test_backtrack_sync_1(self, two_nodes):
         blocks = bt.get_consecutive_blocks(1, skip_slots=1)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
@@ -157,9 +205,9 @@ class TestFullSync:
         await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
 
     @pytest.mark.asyncio
-    async def test_short_sync_3(self, two_nodes):
+    async def test_backtrack_sync_2(self, two_nodes):
         blocks = bt.get_consecutive_blocks(1, skip_slots=3)
-        blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(8, blocks, skip_slots=0)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
@@ -170,4 +218,12 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)),
             on_connect=full_node_2.full_node.on_connect,
         )
-        await time_out_assert(60, node_height_at_least, True, full_node_2, 1)
+        await time_out_assert(60, node_height_at_least, True, full_node_2, 8)
+
+    @pytest.mark.asyncio
+    async def test_close_height_but_big_reorg(self, two_nodes):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_medium_height_but_big_reorg(self, two_nodes):
+        pass

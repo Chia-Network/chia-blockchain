@@ -70,14 +70,12 @@ class FullNodeRpcApi:
 
         sync_mode: bool = self.service.sync_store.get_sync_mode()
 
+        sync_tip_height = 0
+        sync_tip_sub_height = 0
         if sync_mode:
-            max_pp = 0
-            for _, potential_peak_tuple in self.service.sync_store.potential_peaks.items():
-                peak_h, peak_w = potential_peak_tuple
-                if peak_h > max_pp:
-                    max_pp = peak_h
-            sync_tip_height = max_pp
-            sync_tip_sub_height = max_pp
+            if self.service.sync_store.sync_height_target is not None:
+                sync_tip_sub_height = self.service.sync_store.sync_height_target
+                sync_tip_height = self.service.sync_store.sync_height_target
             if full_peak is not None:
                 sync_progress_sub_height = full_peak.sub_block_height
                 sync_progress_height = full_peak.height
@@ -85,8 +83,6 @@ class FullNodeRpcApi:
                 sync_progress_sub_height = 0
                 sync_progress_height = 0
         else:
-            sync_tip_height = 0
-            sync_tip_sub_height = 0
             sync_progress_sub_height = 0
             sync_progress_height = uint32(0)
 
