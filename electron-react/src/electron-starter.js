@@ -236,6 +236,10 @@ if (!setupEvents.handleSquirrelEvent()) {
       mainWindow.show();
     });
 
+    mainWindow.webContents.on('did-finish-load', () => {
+      mainWindow.setTitle(`${app.getName()} [${global.daemon_rpc_ws}]`);
+    });
+
     // Uncomment this to open devtools by default
     // if (!guessPackaged()) {
     //   mainWindow.webContents.openDevTools();
