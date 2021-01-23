@@ -28,7 +28,6 @@ def create_parser() -> ArgumentParser:
     )
 
     parser.add_argument(
-        "-r",
         "--root-path",
         help="Config file root (defaults to %s)." % DEFAULT_ROOT_PATH,
         type=pathlib.Path,
