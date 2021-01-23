@@ -514,7 +514,7 @@ class FullNodeAPI:
                 msg = Message("new_signage_point", broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
             else:
-                self.log.warning(
+                self.log.info(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
                     f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
                 )
