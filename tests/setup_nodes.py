@@ -122,6 +122,8 @@ async def setup_wallet_node(
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
         config["peer_connect_interval"] = 10
+    else:
+        config["introducer_peer"] = None
 
     if full_node_port is not None:
         config["full_node_peer"] = {}

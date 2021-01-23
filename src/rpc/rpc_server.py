@@ -9,7 +9,7 @@ import traceback
 
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_server
-from src.server.ssl_context import load_ssl_paths
+from src.server.ssl_context import private_ssl_paths, private_ssl_ca_paths
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
@@ -263,8 +263,9 @@ class RpcServer:
                 if self.shut_down:
                     break
                 session = aiohttp.ClientSession()
-                cert_path, key_path = load_ssl_paths(self.root_path, self.net_config)
-                ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
+                cert_path, key_path = private_ssl_paths(self.root_path, self.net_config)
+                ca_cert_path, ca_key_path = private_ssl_ca_paths(self.root_path, self.net_config)
+                ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, cert_path, key_path)
                 async with session.ws_connect(
                     f"wss://{self_hostname}:{daemon_port}",
                     autoclose=False,
@@ -302,8 +303,11 @@ async def start_rpc_server(
     query the node.
     """
     app = aiohttp.web.Application()
-    cert_path, key_path = load_ssl_paths(root_path, net_config)
-    ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
+    crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+    key_path = root_path / net_config["daemon_ssl"]["private_key"]
+    ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
+    ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+    ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
     rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()

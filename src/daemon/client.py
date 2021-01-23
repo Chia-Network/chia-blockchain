@@ -5,7 +5,6 @@ import asyncio
 import websockets
 
 from src.server.server import ssl_context_for_client
-from src.server.ssl_context import load_ssl_paths
 from src.types.sized_bytes import bytes32
 from src.util.ws_message import create_payload
 from src.util.json_util import dict_to_json_str
@@ -117,6 +116,7 @@ async def connect_to_daemon_and_validate(root_path):
     try:
         net_config = load_config(root_path, "config.yaml")
         cert_path, key_path = load_ssl_paths(root_path, net_config)
+
         ssl_context = ssl_context_for_client(cert_path, key_path, auth=True)
         connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"], ssl_context)
         r = await connection.ping()

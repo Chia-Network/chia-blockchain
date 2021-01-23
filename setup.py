@@ -92,7 +92,7 @@ kwargs = dict(
     },
     package_data={
         "src.util": ["initial-*.yaml", "english.txt"],
-        "src.server": ["dummy.crt", "dummy.key"],
+        "src.ssl": ["chia_ca.crt", "chia_ca.key"]
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
