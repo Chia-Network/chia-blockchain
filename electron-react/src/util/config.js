@@ -3,9 +3,11 @@ const fs = require('fs');
 const semver = require('semver');
 const homedir = require('os').homedir();
 
+// defaults
 let self_hostname = 'localhost';
-let daemon_port = 55400;
-let daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
+global.daemon_rpc_ws = `wss://${self_hostname}:55400`;
+global.cert_path = 'trusted.crt';
+global.key_path = 'trusted.key';
 
 function loadConfig() {
   try {
@@ -21,10 +23,9 @@ function loadConfig() {
 
     self_hostname = doc.self_hostname;
     const daemon_port = doc.daemon_port;
-    daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
 
     // store these in the global object so they can be used by both main and renderer processes
-    global.daemon_rpc_ws = daemon_rpc_ws;
+    global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
     global.cert_path = `${config_path}/${doc.ssl.crt}`;
     global.key_path = `${config_path}/${doc.ssl.key}`;
   } catch (e) {
@@ -40,6 +41,5 @@ function manageDaemonLifetime() {
 module.exports = {
   loadConfig,
   manageDaemonLifetime,
-  self_hostname,
-  daemon_rpc_ws
+  self_hostname
 };

@@ -11,7 +11,6 @@ import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import WebSocketConnection from '../../hocs/WebsocketConnection';
-import { daemon_rpc_ws } from '../../util/config';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
 import catalogEn from '../../locales/en/messages';
@@ -38,8 +37,8 @@ export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
 
-  // this will default to whatever is harrdcoded in ../../config.js
-  let daemon_uri = daemon_rpc_ws;
+  // get the daemon form global storage (put there by loadConfig)
+  let daemon_uri = null;
   if (isElectron()) {
     const electron = window.require('electron');
     const { remote : r } = electron;

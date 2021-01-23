@@ -152,11 +152,11 @@ if (!setupEvents.handleSquirrelEvent()) {
         key: fs.readFileSync(key_path),
         rejectUnauthorized: false
       };
-      ws = new WebSocket(chiaConfig.daemon_rpc_ws, {
+      ws = new WebSocket(global.daemon_rpc_ws, {
         perMessageDeflate: false, options
       });
       ws.on("open", function open() {
-        console.log("Opened websocket with", chiaConfig.daemon_rpc_ws);
+        console.log("Opened websocket with", global.daemon_rpc_ws);
         const msg = {
           command: "exit",
           ack: false,
