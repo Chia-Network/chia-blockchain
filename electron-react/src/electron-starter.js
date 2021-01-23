@@ -1,5 +1,6 @@
 //handle setupevents as quickly as possible
 const setupEvents = require("./setupEvents");
+
 if (!setupEvents.handleSquirrelEvent()) {
   // squirrel event handled and app will exit in 1000ms, so don't do anything else
   const { promisify } = require("util");
@@ -16,12 +17,13 @@ if (!setupEvents.handleSquirrelEvent()) {
   const config = require('./config/config');
   const dev_config = require("./dev_config");
   const WebSocket = require("ws");
-  const daemon_rpc_ws = require("./util/config").daemon_rpc_ws;
+  const chiaConfig = require("./util/config");
   const local_test = config.local_test;
   var url = require("url");
   const os = require("os");
   const crypto = require("crypto");
 
+  chiaConfig.loadConfig();
   global.sharedObj = { local_test: local_test };
 
   /*************************************************************
@@ -37,9 +39,6 @@ if (!setupEvents.handleSquirrelEvent()) {
   let pyProc = null;
   let ws = null;
   let have_cert = null
-
-  global.key_path = null
-  global.cert_path = null
 
   const guessPackaged = () => {
     let packed;
@@ -68,75 +67,73 @@ if (!setupEvents.handleSquirrelEvent()) {
   };
 
   const createPyProc = () => {
-    global.cert_path = 'C:\\Users\\dkack\\.chia\\beta-1.0b22\\config\\trusted.crt';
-    global.key_path = 'C:\\Users\\dkack\\.chia\\beta-1.0b22\\config\\trusted.key';
-    return;
-
-    let script = getScriptPath();
-    let processOptions = {};
-    //processOptions.detached = true;
-    //processOptions.stdio = "ignore";
-    pyProc = null;
-    if (guessPackaged()) {
-      try {
-        console.log("Running python executable: ");
-        const Process = require("child_process").spawn;
-        pyProc = new Process(script, [], processOptions);
-      } catch {
-        console.log("Running python executable: Error: ");
-        console.log("Script " + script);
-      }
-    } else {
-      console.log("Running python script");
-      console.log("Script " + script);
-
-      const Process = require("child_process").spawn;
-      pyProc = new Process("python", [script], processOptions);
-    }
-    if (pyProc != null) {
-      pyProc.stdout.setEncoding("utf8");
-
-      pyProc.stdout.on("data", function(data) {
-        if (!have_cert) {
-          process.stdout.write("No cert\n");
-          // listen for ssl path message
-          try {
-            let str_arr = data.toString().split("\n")
-            for (var i = 0; i < str_arr.length; i++) {
-              let str = str_arr[i]
-              try {
-                let json = JSON.parse(str);
-                global.cert_path = json["cert"]
-                global.key_path = json["key"]
-                if (cert_path && key_path) {
-                  have_cert = true
-                  process.stdout.write("Have cert\n");
-                  return
-                }
-              } catch (e) {
-              }
-            }
-          } catch (e) {
-          }
+    if (chiaConfig.manageDaemonLifetime()) {
+      let script = getScriptPath();
+      let processOptions = {};
+      //processOptions.detached = true;
+      //processOptions.stdio = "ignore";
+      pyProc = null;
+      if (guessPackaged()) {
+        try {
+          console.log("Running python executable: ");
+          const Process = require("child_process").spawn;
+          pyProc = new Process(script, [], processOptions);
+        } catch {
+          console.log("Running python executable: Error: ");
+          console.log("Script " + script);
         }
+      } else {
+        console.log("Running python script");
+        console.log("Script " + script);
 
-        process.stdout.write(data.toString());
-      });
+        const Process = require("child_process").spawn;
+        pyProc = new Process("python", [script], processOptions);
+      }
+      if (pyProc != null) {
+        pyProc.stdout.setEncoding("utf8");
 
-      pyProc.stderr.setEncoding("utf8");
-      pyProc.stderr.on("data", function(data) {
-        //Here is where the error output goes
-        process.stdout.write("stderr: " + data.toString());
-      });
+        pyProc.stdout.on("data", function(data) {
+          if (!have_cert) {
+            process.stdout.write("No cert\n");
+            // listen for ssl path message
+            try {
+              let str_arr = data.toString().split("\n")
+              for (var i = 0; i < str_arr.length; i++) {
+                let str = str_arr[i]
+                try {
+                  let json = JSON.parse(str);
+                  global.cert_path = json["cert"]
+                  global.key_path = json["key"]
+                  if (cert_path && key_path) {
+                    have_cert = true
+                    process.stdout.write("Have cert\n");
+                    return
+                  }
+                } catch (e) {
+                }
+              }
+            } catch (e) {
+            }
+          }
 
-      pyProc.on("close", function(code) {
-        //Here you can get the exit code of the script
-        console.log("closing code: " + code);
-      });
+          process.stdout.write(data.toString());
+        });
 
-      console.log("child process success");
+        pyProc.stderr.setEncoding("utf8");
+        pyProc.stderr.on("data", function(data) {
+          //Here is where the error output goes
+          process.stdout.write("stderr: " + data.toString());
+        });
+
+        pyProc.on("close", function(code) {
+          //Here you can get the exit code of the script
+          console.log("closing code: " + code);
+        });
+
+        console.log("child process success");
+      }
+      //pyProc.unref();
     }
-    //pyProc.unref();
   };
 
   const closeDaemon = callback => {
@@ -155,11 +152,11 @@ if (!setupEvents.handleSquirrelEvent()) {
         key: fs.readFileSync(key_path),
         rejectUnauthorized: false
       };
-      ws = new WebSocket(daemon_rpc_ws, {
+      ws = new WebSocket(chiaConfig.daemon_rpc_ws, {
         perMessageDeflate: false, options
       });
       ws.on("open", function open() {
-        console.log("Opened websocket with", daemon_rpc_ws);
+        console.log("Opened websocket with", chiaConfig.daemon_rpc_ws);
         const msg = {
           command: "exit",
           ack: false,
