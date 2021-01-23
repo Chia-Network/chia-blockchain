@@ -16,13 +16,12 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
-from src.server.ssl_context import private_ssl_paths, private_ssl_ca_paths, chia_ssl_ca_paths, public_ssl_paths
+from src.server.ssl_context import private_ssl_paths, public_ssl_paths
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util.errors import ProtocolError, Err
 from src.util.ints import uint16
-from src.util.network import create_node_id
 from src.protocols.shared_protocol import protocol_version
 import traceback
 
@@ -109,7 +108,7 @@ class ChiaServer:
         self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(root_path, config)
         self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
         self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
-        pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes())
+        pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
         der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
         der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
         self.node_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
@@ -299,7 +298,8 @@ class ChiaServer:
                 return False
             if ws is not None:
                 assert ws._response.connection is not None and ws._response.connection.transport is not None
-                cert_bytes = ws._response.connection.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
+                transport = ws._response.connection.transport  # type: ignore
+                cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
                 der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
                 breakpoint()
                 peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))

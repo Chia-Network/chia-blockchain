@@ -5,8 +5,6 @@ import shutil
 from argparse import Namespace, ArgumentParser
 from typing import List, Dict, Any
 
-from src.server.outbound_message import NodeType
-from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
@@ -15,7 +13,6 @@ from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.ints import uint32
 
 from src.util.config import (
-    config_path_for_filename,
     create_default_chia_config,
     load_config,
     save_config,

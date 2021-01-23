@@ -16,7 +16,6 @@ from websockets import serve, ConnectionClosedOK, WebSocketException
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
-from src.server.ssl_context import private_ssl_ca_paths
 from src.util.setproctitle import setproctitle
 from src.util.ws_message import format_response, create_payload
 from src.util.json_util import dict_to_json_str

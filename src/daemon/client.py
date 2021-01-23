@@ -115,9 +115,11 @@ async def connect_to_daemon_and_validate(root_path):
     """
     try:
         net_config = load_config(root_path, "config.yaml")
-        cert_path, key_path = load_ssl_paths(root_path, net_config)
-
-        ssl_context = ssl_context_for_client(cert_path, key_path, auth=True)
+        crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+        key_path = root_path / net_config["daemon_ssl"]["private_key"]
+        ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
+        ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+        ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"], ssl_context)
         r = await connection.ping()
 
