@@ -14,8 +14,10 @@ function loadConfig() {
     // get the semver out of package.json and format for chia version approach
     const sv = semver.parse(require('../../package.json').version);
     let version = sv.version;
-    if (sv.prerelease.length > 0) {
-      version = `beta-${sv.major}.${sv.minor}${sv.prerelease[0]}`;
+
+    // package major will be 0 until release
+    if (sv.major == 0) {
+      version = `beta-1.0b${sv.patch}`;
     }
 
     const config_path = `${homedir}/.chia/${version}/config`;
