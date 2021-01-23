@@ -38,6 +38,14 @@ export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
 
+  // this will default to whatever is harrdcoded in ../../config.js
+  let daemon_uri = daemon_rpc_ws;
+  if (isElectron()) {
+    const electron = window.require('electron');
+    const { remote : r } = electron;
+    daemon_uri = r.getGlobal('daemon_rpc_ws');
+  }
+
   useEffect(() => {
     i18n.activate(locale);
   }, [locale]);
@@ -57,7 +65,7 @@ export default function App() {
     <Provider store={store}>
       <ConnectedRouter history={history}>
         <I18nProvider i18n={i18n}>
-          <WebSocketConnection host={daemon_rpc_ws}>
+          <WebSocketConnection host={daemon_uri}>
             <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
               <AppRouter />
               <AppModalDialogs />
