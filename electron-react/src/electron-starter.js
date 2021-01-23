@@ -241,27 +241,28 @@ if (!setupEvents.handleSquirrelEvent()) {
     //   mainWindow.webContents.openDevTools();
     // }
     mainWindow.on("close", e => {
-      return;
-      if (decidedToClose) {
-        return;
+      if (chiaConfig.manageDaemonLifetime()) {
+        if (decidedToClose) {
+          return;
+        }
+        e.preventDefault();
+        var choice = dialog.showMessageBoxSync({
+          type: "question",
+          buttons: ["No", "Yes"],
+          title: "Confirm",
+          message:
+            "Are you sure you want to quit? GUI Plotting and farming will stop."
+        });
+        if (choice == 0) {
+          return;
+        }
+        decidedToClose = true;
+        mainWindow.webContents.send("exit-daemon");
+        mainWindow.setBounds({ height: 500, width: 500 });
+        ipcMain.on("daemon-exited", (event, args) => {
+          mainWindow.close();
+        });
       }
-      e.preventDefault();
-      var choice = dialog.showMessageBoxSync({
-        type: "question",
-        buttons: ["No", "Yes"],
-        title: "Confirm",
-        message:
-          "Are you sure you want to quit? GUI Plotting and farming will stop."
-      });
-      if (choice == 0) {
-        return;
-      }
-      decidedToClose = true;
-      mainWindow.webContents.send("exit-daemon");
-      mainWindow.setBounds({ height: 500, width: 500 });
-      ipcMain.on("daemon-exited", (event, args) => {
-        mainWindow.close();
-      });
     });
   };
 
