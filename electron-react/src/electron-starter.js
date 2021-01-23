@@ -68,6 +68,10 @@ if (!setupEvents.handleSquirrelEvent()) {
   };
 
   const createPyProc = () => {
+    global.cert_path = 'C:\\Users\\dkack\\.chia\\beta-1.0b22\\config\\trusted.crt';
+    global.key_path = 'C:\\Users\\dkack\\.chia\\beta-1.0b22\\config\\trusted.key';
+    return;
+
     let script = getScriptPath();
     let processOptions = {};
     //processOptions.detached = true;
@@ -240,6 +244,7 @@ if (!setupEvents.handleSquirrelEvent()) {
     //   mainWindow.webContents.openDevTools();
     // }
     mainWindow.on("close", e => {
+      return;
       if (decidedToClose) {
         return;
       }
