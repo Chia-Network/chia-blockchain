@@ -473,7 +473,7 @@ if (!setupEvents.handleSquirrelEvent()) {
                 bug_report_url:
                   "https://github.com/Chia-Network/chia-blockchain/issues",
                 icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
-                copyright: "Copyright (c) 2020 Chia Network",
+                copyright: "Copyright (c) 2021 Chia Network",
                 license: "Apache 2.0"
               })
           },
@@ -566,7 +566,7 @@ if (!setupEvents.handleSquirrelEvent()) {
               bug_report_url:
                 "https://github.com/Chia-Network/chia-blockchain/issues",
               icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
-              copyright: "Copyright (c) 2020 Chia Network",
+              copyright: "Copyright (c) 2021 Chia Network",
               license: "Apache 2.0"
             })
         }
