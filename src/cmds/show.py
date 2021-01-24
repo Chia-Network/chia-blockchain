@@ -196,8 +196,8 @@ async def show_async(args, parser):
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
-                mb_down = con["bytes_read"] / 1024 * 1024
-                mb_up = con["bytes_written"] / 1024 * 1024
+                mb_down = con["bytes_read"] / (1024 * 1024)
+                mb_up = con["bytes_written"] / (1024 * 1024)
 
                 host = con["peer_host"]
                 # Strip IPv6 brackets
