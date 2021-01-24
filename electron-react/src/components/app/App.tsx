@@ -37,7 +37,7 @@ export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
 
-  // get the daemon form global storage (put there by loadConfig)
+  // get the daemon's uri from global storage (put there by loadConfig)
   let daemon_uri = null;
   if (isElectron()) {
     const electron = window.require('electron');

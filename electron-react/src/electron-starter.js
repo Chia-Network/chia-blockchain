@@ -23,6 +23,7 @@ if (!setupEvents.handleSquirrelEvent()) {
   const os = require("os");
   const crypto = require("crypto");
 
+  // this needs to happen early in startup so all processes sahre the same global config
   chiaConfig.loadConfig();
   global.sharedObj = { local_test: local_test };
 

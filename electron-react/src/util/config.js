@@ -37,6 +37,7 @@ function loadConfig() {
 }
 
 function manageDaemonLifetime() {
+  // only start/stop daemon if it is running locally
   return self_hostname === 'localhost';
 }
 
