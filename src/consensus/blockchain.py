@@ -5,6 +5,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 
 from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
 from src.types.header_block import HeaderBlock
+from src.types.weight_proof import SubEpochSegments
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -508,10 +509,6 @@ class Blockchain(BlockchainInterface):
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         return self.__sub_blocks[header_hash]
 
-    def height_to_sub_block_record(self, sub_height: uint32) -> SubBlockRecord:
-        header_hash = self.sub_height_to_hash(sub_height)
-        return self.sub_block_record(header_hash)
-
     def get_ses_heights(self) -> List[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())
 
@@ -581,3 +578,19 @@ class Blockchain(BlockchainInterface):
         if block is None:
             return None
         return block.get_block_header()
+
+    async def persist_sub_epoch_challenge_segments(
+        self, sub_epoch_summary_sub_height: uint32, segments: SubEpochSegments
+    ):
+        log.info(f"save segments height {sub_epoch_summary_sub_height}")
+        return await self.block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_sub_height, segments)
+
+    async def get_sub_epoch_challenge_segments(
+        self,
+        sub_epoch_summary_sub_height: uint32,
+    ) -> Optional[List[SubEpochSegments]]:
+        segments = await self.block_store.get_sub_epoch_challenge_segments(sub_epoch_summary_sub_height)
+        if segments is None:
+            return None
+        log.info(f"get segments height {sub_epoch_summary_sub_height}")
+        return segments.challenge_segments

@@ -22,6 +22,7 @@ from src.types.weight_proof import (
     SubEpochChallengeSegment,
     SubSlotData,
     ProofBlockHeader,
+    SubEpochSegments,
 )
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8, uint128
@@ -146,10 +147,15 @@ class WeightProofHandler:
 
             # sample sub epoch
             if self._sample_sub_epoch(prev_ses_block, ses_block, weight_to_check):  # type: ignore
-                segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(idx))
+                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.sub_block_height)
                 if segments is None:
-                    self.log.error(f"failed while building segments for sub epoch {idx}, ses height {ses_height} ")
-                    return None
+                    segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(idx))
+                    if segments is None:
+                        self.log.error(f"failed while building segments for sub epoch {idx}, ses height {ses_height} ")
+                        return None
+                    await self.blockchain.persist_sub_epoch_challenge_segments(
+                        ses_block.sub_block_height, SubEpochSegments(segments)
+                    )
                 self.log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
                 sub_epoch_n = uint32(sub_epoch_n + 1)
@@ -192,12 +198,13 @@ class WeightProofHandler:
                 curr_height = curr_height + uint32(1)  # type: ignore
                 idx += 1
 
+        self.log.error(f"get headers in range {curr_height} {tip_height}")
         headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(curr_height, tip_height)
         while curr_height <= tip_height:
             # add to needed reward chain recent blocks
             header_block = headers[self.blockchain.sub_height_to_hash(curr_height)]
             if header_block is None:
-                self.log.error("creating recent chain failed")
+                self.log.error(f"creating recent chain failed")
                 return None
             recent_chain.append(ProofBlockHeader(header_block.finished_sub_slots, header_block.reward_chain_sub_block))
             curr_height = curr_height + uint32(1)  # type: ignore
