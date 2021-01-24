@@ -6,13 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## [1.0beta23] aka Beta 1.23 - 2021-??-??
+## Unreleased [1.0beta23] aka Beta 1.23 - 2021-01-??
 
 ### Added
-- `chia plots check` sets a minimum of `-n 5`
+- `chia plots check` enforces a minimum of `-n 5` to decrease false negatives. Thanks to @eFishCent for these ongoing pull requests!
+- Transaction volume testing added to tests and various tests have been sped up.
+- We have added connection limits for max_inbound_wallet, max_inbound_farmer, and max_inbound_timelord.
+
+### Changed
+- clvm bytecode is now generated and confirmed that the checked-in clvm and ChiaLisp code matches the CI compiled code.
+- We have removed the '-r' flag from `chia` as it was being overridden in most cases by the `-r` for restart flag to `chia start`. Use `chia --root-path` instead.
+- `chia -h` now recommends `chia netspace -d 192` which is approximately one hours worth of sub blocks. Use `-d 1000` to get the same estimate of netspace as the RPC and GUI.
+- `chia show -c` now displays in MiB and should match the GUI.
+- `chia configure` now accepts the shorter `-upnp` and `-log-level` arguments also.
+- `chia plots check` now defaults to `-n 30` instead of `-n 1` - HT @eFishCent.
+- `chia plots create` now enforces a minimum of k=22. As a reminder, anything less than k=32 is just for testing and be careful extrapolating performance of a k less than 30 to a k=32 or larger.
+- We have updated development dependencies for setuptools, yarl, idna, multidict, and chardet.
+- Updated some copyright dates to 2021.
 
 ### Fixed
-- `chia plots check` now defaults to `-n 30` instead of `-n 1`
+- We upgraded our fork of aiosqlite to version 16.0 which has significant performance improvements. Our fixes to aiosqlite are waiting to be upstreamed.
+- Inbound and outbound peer connection limits were not being honored.
+- Weight proofs were not correctly extending.
+- In some cases when closing a p2p connection to another node, there was an infinite "Closing" loop.
 
 ## [1.0beta22] aka Beta 1.22 - 2021-01-19
 
