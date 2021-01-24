@@ -326,9 +326,7 @@ class TestWeightProof:
                 break
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
-        block_cache = BlockCache(
-            sub_blocks, sub_height_to_hash, sub_epoch_summaries=sub_epoch_summaries, block_store=block_store
-        )
+        block_cache = BlockCache(sub_blocks, sub_height_to_hash, sub_epoch_summaries=sub_epoch_summaries)
 
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
