@@ -94,7 +94,6 @@ class WeightProofHandler:
         end_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
         sub_epoch_data = weight_proof.sub_epochs
         heights = self.blockchain.get_ses_heights()
-
         for height in heights:
             if height < end_height:
                 continue
