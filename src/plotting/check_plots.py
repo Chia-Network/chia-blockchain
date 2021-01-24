@@ -20,7 +20,7 @@ def check_plots(args, root_path):
             num = 5
             log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
         if num < 30:
-            log.warning(f"Use 30 challenges (our default) for balance of speed and accurate results")
+            log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
     else:
         num = 30
     if args.grep_string is not None:
