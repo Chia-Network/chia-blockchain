@@ -168,7 +168,7 @@ class BlockStore:
         stop: int,
     ) -> Dict[bytes32, SubBlockRecord]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all sub blocks in range between start and stop
         if present.
         """
 

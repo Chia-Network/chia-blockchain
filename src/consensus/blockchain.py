@@ -256,11 +256,6 @@ class Blockchain(BlockchainInterface):
         await self.block_store.add_full_block(block, sub_block)
 
         self.__sub_blocks[sub_block.header_hash] = sub_block
-        if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
-            self.__sub_heights_in_cache[sub_block.sub_block_height] = []
-        self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
-        self.clean_sub_block_record(sub_block.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
-
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
@@ -546,7 +541,7 @@ class Blockchain(BlockchainInterface):
             return
         blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
         while blocks_to_remove is not None and sub_height >= 0:
-            log.debug(f"delete sub height {sub_height} from sub blocks")
+            log.info(f"delete sub height {sub_height} from sub blocks")
             for header_hash in blocks_to_remove:
                 del self.__sub_blocks[header_hash]  # remove from sub blocks
             del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
@@ -564,7 +559,7 @@ class Blockchain(BlockchainInterface):
             return
         self.clean_sub_block_record(peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
-    async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
+    async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return await self.block_store.get_sub_block_in_range(start, stop)
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:

@@ -47,7 +47,7 @@ class BlockchainInterface:
     async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
         pass
 
-    async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
+    async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         pass
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:

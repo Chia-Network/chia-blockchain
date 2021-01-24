@@ -388,7 +388,7 @@ class WeightProofHandler:
         self, ses_block: SubBlockRecord, se_start: SubBlockRecord, sub_epoch_n: uint32
     ) -> Optional[List[SubEpochChallengeSegment]]:
         segments: List[SubEpochChallengeSegment] = []
-        sub_blocks = await self.blockchain.get_sub_blocks_in_range(
+        sub_blocks = await self.blockchain.get_sub_block_records_in_range(
             se_start.sub_block_height, ses_block.sub_block_height + self.constants.MAX_SUB_SLOT_SUB_BLOCKS
         )
         header_blocks = await self.blockchain.get_header_blocks_in_range(

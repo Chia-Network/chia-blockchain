@@ -56,7 +56,7 @@ class BlockCache(BlockchainInterface):
     def contains_sub_height(self, sub_height: uint32) -> bool:
         return sub_height in self._sub_height_to_hash
 
-    async def get_sub_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
+    async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return self._sub_blocks
 
     async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:

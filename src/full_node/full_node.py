@@ -396,6 +396,7 @@ class FullNode:
             tb = traceback.format_exc()
             self.log.error(f"Error with syncing: {type(e)}{tb}")
         finally:
+            self.blockchain.clean_sub_block_records()
             if self._shut_down:
                 return
             await self._finish_sync()
@@ -491,6 +492,7 @@ class FullNode:
                     error,
                     fork_height,
                 ) = await self.blockchain.receive_block(block, pre_validation_results[i])
+
                 if result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     if error is not None:
                         self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
@@ -612,6 +614,8 @@ class FullNode:
                 )
             if added == ReceiveBlockResult.NEW_PEAK:
                 await self.mempool_manager.new_peak(self.blockchain.get_peak())
+                if not self.sync_store.get_sync_mode():
+                    self.blockchain.clean_sub_block_records()
                 self._state_changed("new_peak")
             validation_time = time.time() - validation_start
 
