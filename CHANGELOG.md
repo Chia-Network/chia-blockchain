@@ -8,6 +8,9 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [1.0beta23] aka Beta 1.23 - 2021-??-??
 
+### Added
+- `chia plots check` sets a minimum of `-n 5`
+
 ### Fixed
 - `chia plots check` now defaults to `-n 30` instead of `-n 1`
 
