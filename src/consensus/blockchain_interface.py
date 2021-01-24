@@ -4,7 +4,7 @@ from src.consensus.sub_block_record import SubBlockRecord
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
+from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.ints import uint32
 
 

@@ -22,7 +22,6 @@ from src.types.weight_proof import (
     SubEpochChallengeSegment,
     SubSlotData,
     ProofBlockHeader,
-    SubEpochSegments,
 )
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8, uint128
@@ -202,7 +201,7 @@ class WeightProofHandler:
             # add to needed reward chain recent blocks
             header_block = headers[self.blockchain.sub_height_to_hash(curr_height)]
             if header_block is None:
-                self.log.error(f"creating recent chain failed")
+                self.log.error("creating recent chain failed")
                 return None
             recent_chain.append(ProofBlockHeader(header_block.finished_sub_slots, header_block.reward_chain_sub_block))
             curr_height = curr_height + uint32(1)  # type: ignore
@@ -388,6 +387,24 @@ class WeightProofHandler:
         )
         self.log.debug(f"rc sub slot {rc_sub_slot}    \n {rc_sub_slot.get_hash()}")
         return rc_sub_slot
+
+    async def create_sub_epoch_segments(self, ses_sub_block: SubBlockRecord):
+        assert ses_sub_block.sub_epoch_summary_included is not None
+        self.log.info("create sub_epoch_segments")
+        heights = self.blockchain.get_ses_heights()
+        height = uint32(0)
+        count = len(heights)
+        for height in reversed(heights):
+            if height < ses_sub_block.sub_block_height:
+                break
+            count -= 1
+        prev_ses_sub_block = self.blockchain.height_to_sub_block_record(height)
+        assert prev_ses_sub_block.sub_epoch_summary_included is not None
+        segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
+        assert segments is not None
+        await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.sub_block_height, segments)
+        self.log.info("sub_epoch_segments done")
+        return
 
     async def __create_sub_epoch_segments(
         self, ses_block: SubBlockRecord, se_start: SubBlockRecord, sub_epoch_n: uint32
