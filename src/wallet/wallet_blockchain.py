@@ -253,7 +253,7 @@ class WalletBlockchain(BlockchainInterface):
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
             self.log.info(
-                f"💰💰💰 Updated wallet peak to height {sub_block.sub_block_height}, weight {sub_block.weight}, "
+                f"💰💰💰 Updated wallet peak to sub height {sub_block.sub_block_height}, weight {sub_block.weight}, "
             )
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:

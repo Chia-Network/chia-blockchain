@@ -53,9 +53,6 @@ class SubBlockRecord(Streamable):
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
 
-    # todo almog remove the hash lists (redundant)
-    # finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
-
     @property
     def is_block(self) -> bool:
         return self.timestamp is not None
