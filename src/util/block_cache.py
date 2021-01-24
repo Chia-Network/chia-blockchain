@@ -7,7 +7,7 @@ from src.full_node.weight_proof import BlockchainInterface
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.types.weight_proof import SubEpochSegments
+from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
 from src.util.ints import uint32
 
 
@@ -15,14 +15,15 @@ class BlockCache(BlockchainInterface):
     def __init__(
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
+        headers: Dict[bytes32, HeaderBlock] = {},
         sub_height_to_hash: Dict[uint32, bytes32] = {},
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
-        block_store: BlockStore = None,
     ):
         self._sub_blocks = sub_blocks
+        self._headers = headers
         self._sub_height_to_hash = sub_height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
-        self._block_store = block_store
+        self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
 
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
@@ -67,15 +68,18 @@ class BlockCache(BlockchainInterface):
         self._sub_blocks[sub_block] = sub_block
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
-        return await self._block_store.get_headers_in_range(start, stop)
+        return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_sub_height: uint32, segments: SubEpochSegments
+        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
-        await self._block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_sub_height, segments)
+        self._sub_epoch_segments[sub_epoch_summary_sub_height] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
         sub_epoch_summary_sub_height: uint32,
-    ) -> Optional[List[SubEpochSegments]]:
-        return await self._block_store.get_sub_epoch_challenge_segments(sub_epoch_summary_sub_height)
+    ) -> Optional[List[SubEpochChallengeSegment]]:
+        segments = self._sub_epoch_segments.get(sub_epoch_summary_sub_height)
+        if segments is None:
+            return None
+        return segments.challenge_segments

@@ -153,9 +153,7 @@ class WeightProofHandler:
                     if segments is None:
                         self.log.error(f"failed while building segments for sub epoch {idx}, ses height {ses_height} ")
                         return None
-                    await self.blockchain.persist_sub_epoch_challenge_segments(
-                        ses_block.sub_block_height, SubEpochSegments(segments)
-                    )
+                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.sub_block_height, segments)
                 self.log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
                 sub_epoch_n = uint32(sub_epoch_n + 1)

@@ -307,6 +307,7 @@ class TestWeightProof:
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
         sub_blocks, peak = await block_store.get_sub_block_records()
+        headers = await block_store.get_headers_in_range(0, 100225)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
         peak = await block_store.get_full_blocks_at([100225])
@@ -326,7 +327,7 @@ class TestWeightProof:
                 break
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
-        block_cache = BlockCache(sub_blocks, sub_height_to_hash, sub_epoch_summaries, block_store)
+        block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
 
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
