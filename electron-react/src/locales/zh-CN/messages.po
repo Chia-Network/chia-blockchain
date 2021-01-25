@@ -105,107 +105,111 @@ msgstr "这是 LCA 区块（最新的共同祖先）在区块链中的总余额�
 msgid "BalanceCard.viewPendingBalances"
 msgstr "查看未确认金额"
 
-#: src/components/block/Block.jsx:206
+#: src/components/block/Block.jsx:212
 msgid "Block.blockVDFIterations"
 msgstr "阻止 VDF 迭代"
 
-#: src/components/block/Block.jsx:209
+#: src/components/block/Block.jsx:215
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "此块上的 VDF（可验证的延迟函数）总数或时间迭代的总数。"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:260
 msgid "Block.coinbaseAmount"
 msgstr "区块奖励"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:263
 msgid "Block.coinbaseAmountTooltip"
 msgstr "区块奖励，转到矿池（或者不在矿池挖矿）"
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:269
 msgid "Block.coinbasePuzzleHash"
 msgstr "区块奖励的 Puzzle Hash"
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:298
 msgid "Block.description"
 msgstr "在区块链中位于高度{0}处的区块"
 
-#: src/components/block/Block.jsx:192
+#: src/components/block/Block.jsx:198
 msgid "Block.difficulty"
 msgstr "难度"
 
-#: src/components/block/Block.jsx:267
+#: src/components/block/Block.jsx:273
 msgid "Block.feesAmount"
 msgstr "手续费"
 
-#: src/components/block/Block.jsx:270
+#: src/components/block/Block.jsx:276
 msgid "Block.feesAmountTooltip"
 msgstr "此区块的所有手续费都归矿工所有"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:282
 msgid "Block.feesPuzzleHash"
 msgstr "手续费的 Puzzle Hash"
 
-#: src/components/block/Block.jsx:159
+#: src/components/block/Block.jsx:161
 msgid "Block.headerHash"
 msgstr "区块头部 Hash"
 
-#: src/components/block/Block.jsx:173
+#: src/components/block/Block.jsx:179
 msgid "Block.height"
 msgstr "高度"
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:132
 msgid "Block.notFound"
 msgstr ""
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:234
 msgid "Block.plotId"
 msgstr "算力 ID"
 
-#: src/components/block/Block.jsx:231
+#: src/components/block/Block.jsx:237
 msgid "Block.plotIdTooltip"
 msgstr "用于创建 算力ID，这取决于 矿池公钥 和 算力公钥"
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:226
 msgid "Block.plotPublicKey"
 msgstr "算力公钥"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:230
 msgid "Block.poolPublicKey"
 msgstr "矿池公钥"
 
-#: src/components/block/Block.jsx:187
-#: src/components/block/Block.jsx:301
+#: src/components/block/Block.jsx:193
+#: src/components/block/Block.jsx:307
 msgid "Block.previousBlock"
 msgstr "前一个区块"
 
-#: src/components/block/Block.jsx:216
+#: src/components/block/Block.jsx:222
 msgid "Block.proofOfSpaceSize"
 msgstr "空间证明"
 
-#: src/components/block/Block.jsx:163
+#: src/components/block/Block.jsx:175
+msgid "Block.subBlockHeight"
+msgstr ""
+
+#: src/components/block/Block.jsx:165
 msgid "Block.timestamp"
 msgstr "时间戳"
 
-#: src/components/block/Block.jsx:166
+#: src/components/block/Block.jsx:168
 msgid "Block.timestampTooltip"
 msgstr "这是矿工创建区块的时间，这是在用时间证明最终确定之前的时间"
 
-#: src/components/block/Block.jsx:103
-#: src/components/block/Block.jsx:115
-#: src/components/block/Block.jsx:127
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:105
+#: src/components/block/Block.jsx:117
+#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:289
 msgid "Block.title"
 msgstr "区块"
 
-#: src/components/block/Block.jsx:196
+#: src/components/block/Block.jsx:202
 msgid "Block.totalVDFIterations"
 msgstr "VDF总迭代次数"
 
-#: src/components/block/Block.jsx:199
+#: src/components/block/Block.jsx:205
 msgid "Block.totalVDFIterationsTooltip"
 msgstr "到该块为止的整个链上的VDF（可验证的延迟函数）总数或时间迭代的总数。"
 
-#: src/components/block/Block.jsx:239
+#: src/components/block/Block.jsx:245
 msgid "Block.transactionsFilterHash"
 msgstr "交易过滤器哈希"
 
@@ -213,11 +217,11 @@ msgstr "交易过滤器哈希"
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr "交易生成器哈希"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:183
 msgid "Block.weight"
 msgstr "权重"
 
-#: src/components/block/Block.jsx:180
+#: src/components/block/Block.jsx:186
 msgid "Block.weightTooltip"
 msgstr "权重是所有区块（包括该区块在内）的累计难度"
 
@@ -226,15 +230,15 @@ msgstr "权重是所有区块（包括该区块在内）的累计难度"
 #~ msgstr "预计完成时间"
 
 #: src/components/fullNode/FullNode.jsx:40
-#: src/components/fullNode/FullNode.jsx:91
+#: src/components/fullNode/FullNode.jsx:100
 msgid "BlocksCard.finished"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:52
+#: src/components/fullNode/FullNode.jsx:54
 msgid "BlocksCard.headerHash"
 msgstr "区块头 Hash"
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:71
 msgid "BlocksCard.height"
 msgstr "高度"
 
@@ -242,23 +246,23 @@ msgstr "高度"
 msgid "BlocksCard.inProgress"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:56
+#: src/components/fullNode/FullNode.jsx:57
 msgid "BlocksCard.sbHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:95
+#: src/components/fullNode/FullNode.jsx:104
 msgid "BlocksCard.state"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:81
+#: src/components/fullNode/FullNode.jsx:91
 msgid "BlocksCard.timeCreated"
 msgstr "创建时间"
 
-#: src/components/fullNode/FullNode.jsx:323
+#: src/components/fullNode/FullNode.jsx:332
 msgid "BlocksCard.title"
 msgstr "区块"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:101
 msgid "BlocksCard.unfinished"
 msgstr ""
 
@@ -791,28 +795,28 @@ msgstr ""
 msgid "FarmCardPlotCount.title"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:23
-#: src/components/farm/card/FarmCardStatus.tsx:28
+#: src/components/farm/card/FarmCardStatus.tsx:20
+#: src/components/farm/card/FarmCardStatus.tsx:25
 msgid "FarmCardStatus.error"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:24
+#: src/components/farm/card/FarmCardStatus.tsx:21
 msgid "FarmCardStatus.farmerIsNotConnected"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:29
+#: src/components/farm/card/FarmCardStatus.tsx:26
 msgid "FarmCardStatus.farmerIsNotRunning"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:12
 msgid "FarmCardStatus.synching"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:14
+#: src/components/farm/card/FarmCardStatus.tsx:11
+#: src/components/farm/card/FarmCardStatus.tsx:16
 #: src/components/farm/card/FarmCardStatus.tsx:19
-#: src/components/farm/card/FarmCardStatus.tsx:22
-#: src/components/farm/card/FarmCardStatus.tsx:27
-#: src/components/farm/card/FarmCardStatus.tsx:31
+#: src/components/farm/card/FarmCardStatus.tsx:24
+#: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "FarmCardStatus.title"
 msgstr ""
 
@@ -832,11 +836,11 @@ msgstr ""
 msgid "FarmCardTotalSizeOfPlots.title"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:47
+#: src/components/farm/FarmFullNodeConnections.tsx:43
 msgid "FarmFullNodeConnections.actions"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:70
+#: src/components/farm/FarmFullNodeConnections.tsx:66
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr ""
 
@@ -844,7 +848,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.date"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:62
+#: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "FarmFullNodeConnections.description"
 msgstr ""
 
@@ -852,7 +856,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.height"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:25
+#: src/components/farm/FarmFullNodeConnections.tsx:24
 msgid "FarmFullNodeConnections.hostName"
 msgstr ""
 
@@ -860,7 +864,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.nodeId"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmFullNodeConnections.tsx:30
 msgid "FarmFullNodeConnections.port"
 msgstr ""
 
@@ -868,11 +872,11 @@ msgstr ""
 msgid "FarmFullNodeConnections.time"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:60
+#: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "FarmFullNodeConnections.title"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:43
+#: src/components/farm/FarmFullNodeConnections.tsx:40
 msgid "FarmFullNodeConnections.upDown"
 msgstr ""
 
@@ -904,8 +908,8 @@ msgstr ""
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:30
-#: src/components/farm/FarmLatestBlockChallenges.tsx:36
+#: src/components/farm/FarmLatestBlockChallenges.tsx:29
+#: src/components/farm/FarmLatestBlockChallenges.tsx:35
 msgid "FarmLatestBlockChallenges.description"
 msgstr ""
 
@@ -913,15 +917,15 @@ msgstr ""
 #~ msgid "FarmLatestBlockChallenges.height"
 #~ msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:20
+#: src/components/farm/FarmLatestBlockChallenges.tsx:19
 msgid "FarmLatestBlockChallenges.index"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:44
+#: src/components/farm/FarmLatestBlockChallenges.tsx:43
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:28
+#: src/components/farm/FarmLatestBlockChallenges.tsx:27
 msgid "FarmLatestBlockChallenges.title"
 msgstr ""
 
@@ -933,19 +937,19 @@ msgstr ""
 msgid "FarmOverviewHero.description"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "FarmYourHarvesterNetwork.actions"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "FarmYourHarvesterNetwork.connectionStatus"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "FarmYourHarvesterNetwork.description"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "FarmYourHarvesterNetwork.hostName"
 msgstr ""
 
@@ -953,15 +957,15 @@ msgstr ""
 msgid "FarmYourHarvesterNetwork.nodeId"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:30
 msgid "FarmYourHarvesterNetwork.port"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:60
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "FarmYourHarvesterNetwork.title"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "FarmYourHarvesterNetwork.upDown"
 msgstr ""
 
@@ -978,12 +982,13 @@ msgstr "挖矿"
 #~ msgid "FarmerStatus.connectionStatus"
 #~ msgstr "连接状态"
 
-#: src/components/farm/FarmerStatus.tsx:38
+#: src/components/farm/FarmerStatus.tsx:30
+#: src/components/farm/FarmerStatus.tsx:31
 msgid "FarmerStatus.error"
 msgstr ""
 
-#: src/components/farm/FarmerStatus.tsx:38
-#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/FarmerStatus.tsx:27
+#: src/components/farm/card/FarmCardStatus.tsx:29
 msgid "FarmerStatus.farming"
 msgstr ""
 
@@ -996,11 +1001,15 @@ msgstr ""
 #~ msgid "FarmerStatus.noBlocksFarmedYet"
 #~ msgstr "尚无区块产出"
 
+#: src/components/farm/FarmerStatus.tsx:29
+msgid "FarmerStatus.notAvailable"
+msgstr ""
+
 #: src/components/farmer/Farmer.jsx:131
 #~ msgid "FarmerStatus.notConnected"
 #~ msgstr "未连接"
 
-#: src/components/farm/FarmerStatus.tsx:38
+#: src/components/farm/FarmerStatus.tsx:28
 msgid "FarmerStatus.synching"
 msgstr ""
 
@@ -1024,11 +1033,11 @@ msgstr ""
 msgid "FormatConnectionStatus.notConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:396
+#: src/components/fullNode/FullNode.jsx:405
 msgid "FullNode.title"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:282
+#: src/components/fullNode/FullNode.jsx:291
 msgid "FullNodeStatus.title"
 msgstr "全节点状态"
 
@@ -1268,47 +1277,47 @@ msgstr ""
 msgid "PlotHero.doYouHavePlot"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:59
+#: src/components/plot/overview/PlotOverviewPlots.tsx:56
 msgid "PlotOverviewPlots.action"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:72
 msgid "PlotOverviewPlots.description"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:36
+#: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "PlotOverviewPlots.harversterId"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+#: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "PlotOverviewPlots.plotKey"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:31
+#: src/components/plot/overview/PlotOverviewPlots.tsx:30
 msgid "PlotOverviewPlots.plotName"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:41
+#: src/components/plot/overview/PlotOverviewPlots.tsx:40
 msgid "PlotOverviewPlots.plotSeed"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:51
+#: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "PlotOverviewPlots.poolKey"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:26
+#: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "PlotOverviewPlots.size"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:53
 msgid "PlotOverviewPlots.status"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/overview/PlotOverviewPlots.tsx:66
 msgid "PlotOverviewPlots.title"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:82
+#: src/components/plot/overview/PlotOverviewPlots.tsx:79
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr ""
 
@@ -1336,15 +1345,33 @@ msgstr ""
 msgid "PlotQueueIndicator.queued"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:24
+#: src/components/plot/PlotStatus.tsx:16
+#: src/components/plot/PlotStatus.tsx:17
 msgid "PlotStatus.error"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:27
+msgid "PlotStatus.farmerIsNotConnected"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:28
+msgid "PlotStatus.farmerIsNotRunning"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:13
 msgid "PlotStatus.farming"
 msgstr ""
 
+#: src/components/plot/PlotStatus.tsx:15
+msgid "PlotStatus.notAvailable"
+msgstr ""
+
 #: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/PlotStatus.tsx:24
+msgid "PlotStatus.notAvailableDescription"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:14
 msgid "PlotStatus.synching"
 msgstr ""
 
@@ -1667,15 +1694,15 @@ msgstr "费率受限的用户钱包设置"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:361
+#: src/components/fullNode/FullNode.jsx:370
 msgid "SearchBlock.blockHash"
 msgstr "区块哈希"
 
-#: src/components/fullNode/FullNode.jsx:372
+#: src/components/fullNode/FullNode.jsx:381
 msgid "SearchBlock.search"
 msgstr "搜索"
 
-#: src/components/fullNode/FullNode.jsx:355
+#: src/components/fullNode/FullNode.jsx:364
 msgid "SearchBlock.title"
 msgstr "按标题哈希搜索块"
 
@@ -1775,27 +1802,27 @@ msgstr "状态："
 msgid "StatusCard.title"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:155
+#: src/components/fullNode/FullNode.jsx:164
 msgid "StatusItem.connectionStatus"
 msgstr "连接状态"
 
-#: src/components/fullNode/FullNode.jsx:157
+#: src/components/fullNode/FullNode.jsx:166
 msgid "StatusItem.connectionStatusConnected"
 msgstr "已连接"
 
-#: src/components/fullNode/FullNode.jsx:159
+#: src/components/fullNode/FullNode.jsx:168
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:210
 msgid "StatusItem.difficulty"
 msgstr "难度"
 
-#: src/components/fullNode/FullNode.jsx:229
+#: src/components/fullNode/FullNode.jsx:238
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "预估的网络空间"
 
-#: src/components/fullNode/FullNode.jsx:235
+#: src/components/fullNode/FullNode.jsx:244
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "网络中矿工的所有已创建的空间的估计总和"
 
@@ -1830,66 +1857,66 @@ msgstr "网络中矿工的所有已创建的空间的估计总和"
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "最小迭代次数"
 
-#: src/components/fullNode/FullNode.jsx:176
+#: src/components/fullNode/FullNode.jsx:185
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:182
+#: src/components/fullNode/FullNode.jsx:191
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/fullNode/FullNode.jsx:197
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:202
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:108
-#: src/components/fullNode/FullNode.jsx:125
-#: src/components/fullNode/FullNode.jsx:141
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:150
+#: src/components/fullNode/FullNode.jsx:176
 msgid "StatusItem.status"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:168
+#: src/components/fullNode/FullNode.jsx:177
 msgid "StatusItem.statusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:127
+#: src/components/fullNode/FullNode.jsx:136
 msgid "StatusItem.statusNotSynced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:142
 msgid "StatusItem.statusNotSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:151
 msgid "StatusItem.statusSynced"
 msgstr "已同步"
 
-#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:154
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "此节点已同步到最新状态"
 
-#: src/components/fullNode/FullNode.jsx:116
+#: src/components/fullNode/FullNode.jsx:125
 msgid "StatusItem.statusTooltip"
 msgstr "该节点正在同步，这意味着它正在从其他节点下载块，以到达链中的最新块"
 
-#: src/components/fullNode/FullNode.jsx:110
+#: src/components/fullNode/FullNode.jsx:119
 msgid "StatusItem.statusValue"
 msgstr "正在同步{progress} / {tip}"
 
-#: src/components/fullNode/FullNode.jsx:209
+#: src/components/fullNode/FullNode.jsx:218
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:217
+#: src/components/fullNode/FullNode.jsx:226
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:221
+#: src/components/fullNode/FullNode.jsx:230
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 
@@ -2041,39 +2068,39 @@ msgstr ""
 msgid "TradingHistory.title"
 msgstr "交易记录"
 
-#: src/components/wallet/WalletHistory.tsx:50
+#: src/components/wallet/WalletHistory.tsx:46
 msgid "TransactionTable.amount"
 msgstr "金额"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "已确认在{0}"
 
-#: src/components/wallet/WalletHistory.tsx:33
+#: src/components/wallet/WalletHistory.tsx:31
 msgid "TransactionTable.date"
 msgstr "日期"
 
-#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/wallet/WalletHistory.tsx:50
 msgid "TransactionTable.fee"
 msgstr "费用"
 
-#: src/components/wallet/WalletHistory.tsx:20
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "TransactionTable.incoming"
 msgstr "传入"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:18
 msgid "TransactionTable.outgoing"
 msgstr "传出"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:38
 msgid "TransactionTable.pending"
 msgstr "待处理"
 
-#: src/components/wallet/WalletHistory.tsx:43
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "TransactionTable.status"
 msgstr "状态"
 
-#: src/components/wallet/WalletHistory.tsx:28
+#: src/components/wallet/WalletHistory.tsx:27
 msgid "TransactionTable.to"
 msgstr "至"
 
@@ -2093,11 +2120,11 @@ msgstr "下一步"
 msgid "WalletAdd.title"
 msgstr "新钱包"
 
-#: src/components/wallet/WalletHistory.tsx:63
+#: src/components/wallet/WalletHistory.tsx:58
 msgid "WalletHistory.title"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:22
+#: src/components/wallet/WalletHistory.tsx:21
 msgid "WalletHistory.type"
 msgstr ""
 
