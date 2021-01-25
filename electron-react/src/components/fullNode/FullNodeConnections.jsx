@@ -98,7 +98,7 @@ export default function Connections(props) {
                   <Trans id="Connections.port">Port</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.upDown">Up/Down</Trans>
+                  <Trans id="Connections.upDown">MiB Up/Down</Trans>
                 </TableCell>
                 <TableCell align="right">
                   <Trans id="Connections.connectionType">
@@ -132,9 +132,9 @@ export default function Connections(props) {
                   </TableCell>
 
                   <TableCell align="right">
-                    <FormatBytes value={item.bytes_written} />
+                    <FormatBytes value={item.bytes_written} unit="MiB" removeUnit fixedDecimals />
                     /
-                    <FormatBytes value={item.bytes_read} />
+                    <FormatBytes value={item.bytes_read} unit="MiB" removeUnit fixedDecimals />
                   </TableCell>
                   <TableCell align="right">
                     {service_connection_types[item.type]}

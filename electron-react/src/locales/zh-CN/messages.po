@@ -226,7 +226,7 @@ msgstr "权重是所有区块（包括该区块在内）的累计难度"
 #~ msgstr "预计完成时间"
 
 #: src/components/fullNode/FullNode.jsx:40
-#: src/components/fullNode/FullNode.jsx:84
+#: src/components/fullNode/FullNode.jsx:91
 msgid "BlocksCard.finished"
 msgstr ""
 
@@ -234,7 +234,7 @@ msgstr ""
 msgid "BlocksCard.headerHash"
 msgstr "区块头 Hash"
 
-#: src/components/fullNode/FullNode.jsx:62
+#: src/components/fullNode/FullNode.jsx:60
 msgid "BlocksCard.height"
 msgstr "高度"
 
@@ -242,19 +242,23 @@ msgstr "高度"
 msgid "BlocksCard.inProgress"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:88
+#: src/components/fullNode/FullNode.jsx:56
+msgid "BlocksCard.sbHeight"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:95
 msgid "BlocksCard.state"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:74
+#: src/components/fullNode/FullNode.jsx:81
 msgid "BlocksCard.timeCreated"
 msgstr "创建时间"
 
-#: src/components/fullNode/FullNode.jsx:316
+#: src/components/fullNode/FullNode.jsx:323
 msgid "BlocksCard.title"
 msgstr "区块"
 
-#: src/components/fullNode/FullNode.jsx:85
+#: src/components/fullNode/FullNode.jsx:92
 msgid "BlocksCard.unfinished"
 msgstr ""
 
@@ -402,11 +406,11 @@ msgstr "创建交易"
 #~ msgid "ColouredTransactionTable.type"
 #~ msgstr "状态"
 
-#: src/components/fullNode/FullNodeConnections.jsx:199
+#: src/components/fullNode/FullNodeConnections.jsx:200
 msgid "Connections.connect"
 msgstr "连接"
 
-#: src/components/fullNode/FullNodeConnections.jsx:175
+#: src/components/fullNode/FullNodeConnections.jsx:176
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "连接到其他节点"
 
@@ -426,7 +430,7 @@ msgstr "删除"
 msgid "Connections.ipAddress"
 msgstr "IP地址"
 
-#: src/components/fullNode/FullNodeConnections.jsx:182
+#: src/components/fullNode/FullNodeConnections.jsx:183
 msgid "Connections.ipAddressHost"
 msgstr "IP地址/域名"
 
@@ -439,7 +443,7 @@ msgid "Connections.nodeId"
 msgstr "节点ID"
 
 #: src/components/fullNode/FullNodeConnections.jsx:98
-#: src/components/fullNode/FullNodeConnections.jsx:188
+#: src/components/fullNode/FullNodeConnections.jsx:189
 msgid "Connections.port"
 msgstr "端口"
 
@@ -1020,11 +1024,11 @@ msgstr ""
 msgid "FormatConnectionStatus.notConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:389
+#: src/components/fullNode/FullNode.jsx:396
 msgid "FullNode.title"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:275
+#: src/components/fullNode/FullNode.jsx:282
 msgid "FullNodeStatus.title"
 msgstr "全节点状态"
 
@@ -1663,15 +1667,15 @@ msgstr "费率受限的用户钱包设置"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:354
+#: src/components/fullNode/FullNode.jsx:361
 msgid "SearchBlock.blockHash"
 msgstr "区块哈希"
 
-#: src/components/fullNode/FullNode.jsx:365
+#: src/components/fullNode/FullNode.jsx:372
 msgid "SearchBlock.search"
 msgstr "搜索"
 
-#: src/components/fullNode/FullNode.jsx:348
+#: src/components/fullNode/FullNode.jsx:355
 msgid "SearchBlock.title"
 msgstr "按标题哈希搜索块"
 
@@ -1771,27 +1775,27 @@ msgstr "状态："
 msgid "StatusCard.title"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:148
+#: src/components/fullNode/FullNode.jsx:155
 msgid "StatusItem.connectionStatus"
 msgstr "连接状态"
 
-#: src/components/fullNode/FullNode.jsx:150
+#: src/components/fullNode/FullNode.jsx:157
 msgid "StatusItem.connectionStatusConnected"
 msgstr "已连接"
 
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:159
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:201
 msgid "StatusItem.difficulty"
 msgstr "难度"
 
-#: src/components/fullNode/FullNode.jsx:222
+#: src/components/fullNode/FullNode.jsx:229
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "预估的网络空间"
 
-#: src/components/fullNode/FullNode.jsx:228
+#: src/components/fullNode/FullNode.jsx:235
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "网络中矿工的所有已创建的空间的估计总和"
 
@@ -1826,66 +1830,66 @@ msgstr "网络中矿工的所有已创建的空间的估计总和"
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "最小迭代次数"
 
-#: src/components/fullNode/FullNode.jsx:169
+#: src/components/fullNode/FullNode.jsx:176
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:175
+#: src/components/fullNode/FullNode.jsx:182
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:181
+#: src/components/fullNode/FullNode.jsx:188
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:186
+#: src/components/fullNode/FullNode.jsx:193
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:101
-#: src/components/fullNode/FullNode.jsx:118
-#: src/components/fullNode/FullNode.jsx:134
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:108
+#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:167
 msgid "StatusItem.status"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:161
+#: src/components/fullNode/FullNode.jsx:168
 msgid "StatusItem.statusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:120
+#: src/components/fullNode/FullNode.jsx:127
 msgid "StatusItem.statusNotSynced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:126
+#: src/components/fullNode/FullNode.jsx:133
 msgid "StatusItem.statusNotSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:142
 msgid "StatusItem.statusSynced"
 msgstr "已同步"
 
-#: src/components/fullNode/FullNode.jsx:138
+#: src/components/fullNode/FullNode.jsx:145
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "此节点已同步到最新状态"
 
-#: src/components/fullNode/FullNode.jsx:109
+#: src/components/fullNode/FullNode.jsx:116
 msgid "StatusItem.statusTooltip"
 msgstr "该节点正在同步，这意味着它正在从其他节点下载块，以到达链中的最新块"
 
-#: src/components/fullNode/FullNode.jsx:103
+#: src/components/fullNode/FullNode.jsx:110
 msgid "StatusItem.statusValue"
 msgstr "正在同步{progress} / {tip}"
 
-#: src/components/fullNode/FullNode.jsx:202
+#: src/components/fullNode/FullNode.jsx:209
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:217
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:214
+#: src/components/fullNode/FullNode.jsx:221
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 
