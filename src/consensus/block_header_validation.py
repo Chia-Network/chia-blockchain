@@ -56,11 +56,9 @@ def validate_unfinished_header_block(
     and lead to other small tweaks in validation.
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
-    prev_sb = None
-    if sub_blocks.contains_sub_block(header_block.prev_header_hash):
-        prev_sb = sub_blocks.sub_block_record(header_block.prev_header_hash)
-    genesis_block = prev_sb is None
 
+    prev_sb = sub_blocks.try_sub_block(header_block.prev_header_hash)
+    genesis_block = prev_sb is None
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
