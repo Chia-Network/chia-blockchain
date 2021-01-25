@@ -13,7 +13,8 @@ export function updateLatestSubBlocks() {
   return async (dispatch, getState) => {
     const state = getState();
     const height =
-      state.full_node_state.blockchain_state?.peak?.reward_chain_sub_block?.sub_block_height;
+      state.full_node_state.blockchain_state?.peak?.reward_chain_sub_block
+        ?.sub_block_height;
     if (height) {
       const subBlocks = await dispatch(getSubBlockRecords(height));
 
