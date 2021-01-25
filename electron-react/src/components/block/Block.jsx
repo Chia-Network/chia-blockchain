@@ -49,7 +49,7 @@ export default function Block() {
   const [error, setError] = useState();
   const [loading, setLoading] = useState(true);
 
-  const hasPreviousBlock = !!blockRecord?.prev_block_hash;
+  const hasPreviousBlock = !!blockRecord?.prev_sub_block_hash;
 
   async function prepareData(headerHash) {
     setLoading(true);
@@ -147,12 +147,12 @@ export default function Block() {
     .to('chia')
     .toString();
     */
-  const chia_fees = chia_formatter(
-    Number.parseFloat(BigInt(blockRecord.fees)),
-    'mojo',
-  )
-    .to('chia')
-    .toString();
+  const chia_fees = blockRecord.fees 
+    ? chia_formatter(
+      Number.parseFloat(BigInt(blockRecord.fees)),
+      'mojo',
+    ).to('chia').toString()
+    : '';
 
   const rows = [
     {
@@ -168,6 +168,10 @@ export default function Block() {
           it is finalized with a proof of time
         </Trans>
       ),
+    },
+    {
+      name: <Trans id="Block.subBlockHeight">Sub Block Height</Trans>,
+      value: blockRecord.sub_block_height,
     },
     {
       name: <Trans id="Block.height">Height</Trans>,
@@ -240,7 +244,7 @@ export default function Block() {
           Transactions Filter Hash
         </Trans>
       ),
-      value: block.foliage_block.filter_hash,
+      value: block.foliage_block?.filter_hash,
     }, /*
     {
       name: (
@@ -290,7 +294,7 @@ export default function Block() {
             </BackIcon>
             <span>
               <Trans id="Block.description">
-                Block at height {blockRecord.height} in the Chia
+                Block at sub height {blockRecord.sub_block_height} in the Chia
                 blockchain
               </Trans>
             </span>

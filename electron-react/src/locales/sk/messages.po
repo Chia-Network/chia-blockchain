@@ -105,107 +105,111 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší sp
 msgid "BalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky"
 
-#: src/components/block/Block.jsx:206
+#: src/components/block/Block.jsx:212
 msgid "Block.blockVDFIterations"
 msgstr "Block VDF iterácii"
 
-#: src/components/block/Block.jsx:209
+#: src/components/block/Block.jsx:215
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v tomto bloku."
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:260
 msgid "Block.coinbaseAmount"
 msgstr "Množstvo coinbase"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:263
 msgid "Block.coinbaseAmountTooltip"
 msgstr "Bloková Chia odmena, ide do poolu (alebo ťaženia, ak sa nepoužíva pool)"
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:269
 msgid "Block.coinbasePuzzleHash"
 msgstr "Coinbase adresa"
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:298
 msgid "Block.description"
 msgstr "Blok na pozícii {0} v Chia blockchaine"
 
-#: src/components/block/Block.jsx:192
+#: src/components/block/Block.jsx:198
 msgid "Block.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/block/Block.jsx:267
+#: src/components/block/Block.jsx:273
 msgid "Block.feesAmount"
 msgstr "Množstvo odmeny"
 
-#: src/components/block/Block.jsx:270
+#: src/components/block/Block.jsx:276
 msgid "Block.feesAmountTooltip"
 msgstr "Celkové poplatky v tomto bloku idú ťažiarovi"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:282
 msgid "Block.feesPuzzleHash"
 msgstr "Poplatky puzzle hash"
 
-#: src/components/block/Block.jsx:159
+#: src/components/block/Block.jsx:161
 msgid "Block.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/block/Block.jsx:173
+#: src/components/block/Block.jsx:179
 msgid "Block.height"
 msgstr "Poradie"
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:132
 msgid "Block.notFound"
 msgstr ""
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:234
 msgid "Block.plotId"
 msgstr "Id poľa"
 
-#: src/components/block/Block.jsx:231
+#: src/components/block/Block.jsx:237
 msgid "Block.plotIdTooltip"
 msgstr "Seedy použité na vytvorenie poľa, záleží to na pk poolu a pk poľa"
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:226
 msgid "Block.plotPublicKey"
 msgstr "Verejný kľúč poľa"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:230
 msgid "Block.poolPublicKey"
 msgstr "Verejný kľúč poolu"
 
-#: src/components/block/Block.jsx:187
-#: src/components/block/Block.jsx:301
+#: src/components/block/Block.jsx:193
+#: src/components/block/Block.jsx:307
 msgid "Block.previousBlock"
 msgstr "Predchádzajúci blok"
 
-#: src/components/block/Block.jsx:216
+#: src/components/block/Block.jsx:222
 msgid "Block.proofOfSpaceSize"
 msgstr "Dôkaz o veľkosti priestoru"
 
-#: src/components/block/Block.jsx:163
+#: src/components/block/Block.jsx:175
+msgid "Block.subBlockHeight"
+msgstr ""
+
+#: src/components/block/Block.jsx:165
 msgid "Block.timestamp"
 msgstr "Časová značka"
 
-#: src/components/block/Block.jsx:166
+#: src/components/block/Block.jsx:168
 msgid "Block.timestampTooltip"
 msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkazom o čase"
 
-#: src/components/block/Block.jsx:103
-#: src/components/block/Block.jsx:115
-#: src/components/block/Block.jsx:127
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:105
+#: src/components/block/Block.jsx:117
+#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:289
 msgid "Block.title"
 msgstr "Bloky"
 
-#: src/components/block/Block.jsx:196
+#: src/components/block/Block.jsx:202
 msgid "Block.totalVDFIterations"
 msgstr "Celkový počet iterácií VDF"
 
-#: src/components/block/Block.jsx:199
+#: src/components/block/Block.jsx:205
 msgid "Block.totalVDFIterationsTooltip"
 msgstr ""
 
-#: src/components/block/Block.jsx:239
+#: src/components/block/Block.jsx:245
 msgid "Block.transactionsFilterHash"
 msgstr ""
 
@@ -213,11 +217,11 @@ msgstr ""
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:183
 msgid "Block.weight"
 msgstr "Veľkosť"
 
-#: src/components/block/Block.jsx:180
+#: src/components/block/Block.jsx:186
 msgid "Block.weightTooltip"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
@@ -226,15 +230,15 @@ msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po ten
 #~ msgstr "Očakávaný čas dokončenia"
 
 #: src/components/fullNode/FullNode.jsx:40
-#: src/components/fullNode/FullNode.jsx:91
+#: src/components/fullNode/FullNode.jsx:100
 msgid "BlocksCard.finished"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:52
+#: src/components/fullNode/FullNode.jsx:54
 msgid "BlocksCard.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:71
 msgid "BlocksCard.height"
 msgstr "Poradie"
 
@@ -242,23 +246,23 @@ msgstr "Poradie"
 msgid "BlocksCard.inProgress"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:56
+#: src/components/fullNode/FullNode.jsx:57
 msgid "BlocksCard.sbHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:95
+#: src/components/fullNode/FullNode.jsx:104
 msgid "BlocksCard.state"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:81
+#: src/components/fullNode/FullNode.jsx:91
 msgid "BlocksCard.timeCreated"
 msgstr "Čas vytvorenia"
 
-#: src/components/fullNode/FullNode.jsx:323
+#: src/components/fullNode/FullNode.jsx:332
 msgid "BlocksCard.title"
 msgstr "Bloky"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:101
 msgid "BlocksCard.unfinished"
 msgstr ""
 
@@ -791,28 +795,28 @@ msgstr "Posledná spracovaná pozícia"
 msgid "FarmCardPlotCount.title"
 msgstr "Počet polí"
 
-#: src/components/farm/card/FarmCardStatus.tsx:23
-#: src/components/farm/card/FarmCardStatus.tsx:28
+#: src/components/farm/card/FarmCardStatus.tsx:20
+#: src/components/farm/card/FarmCardStatus.tsx:25
 msgid "FarmCardStatus.error"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:24
+#: src/components/farm/card/FarmCardStatus.tsx:21
 msgid "FarmCardStatus.farmerIsNotConnected"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:29
+#: src/components/farm/card/FarmCardStatus.tsx:26
 msgid "FarmCardStatus.farmerIsNotRunning"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:15
+#: src/components/farm/card/FarmCardStatus.tsx:12
 msgid "FarmCardStatus.synching"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:14
+#: src/components/farm/card/FarmCardStatus.tsx:11
+#: src/components/farm/card/FarmCardStatus.tsx:16
 #: src/components/farm/card/FarmCardStatus.tsx:19
-#: src/components/farm/card/FarmCardStatus.tsx:22
-#: src/components/farm/card/FarmCardStatus.tsx:27
-#: src/components/farm/card/FarmCardStatus.tsx:31
+#: src/components/farm/card/FarmCardStatus.tsx:24
+#: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "FarmCardStatus.title"
 msgstr "Stav ťažby"
 
@@ -832,11 +836,11 @@ msgstr "Najlepší odhad za poslednú hodinu"
 msgid "FarmCardTotalSizeOfPlots.title"
 msgstr "Celková veľkosť polí"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:47
+#: src/components/farm/FarmFullNodeConnections.tsx:43
 msgid "FarmFullNodeConnections.actions"
 msgstr "Akcie"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:70
+#: src/components/farm/FarmFullNodeConnections.tsx:66
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Stav pripojenia"
 
@@ -844,7 +848,7 @@ msgstr "Stav pripojenia"
 msgid "FarmFullNodeConnections.date"
 msgstr "Dátum"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:62
+#: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "FarmFullNodeConnections.description"
 msgstr "Kombajn je služba bežiaca na stroji, kde sú skutočne uložené polia. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
 
@@ -852,7 +856,7 @@ msgstr "Kombajn je služba bežiaca na stroji, kde sú skutočne uložené polia
 msgid "FarmFullNodeConnections.height"
 msgstr "Pozícia"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:25
+#: src/components/farm/FarmFullNodeConnections.tsx:24
 msgid "FarmFullNodeConnections.hostName"
 msgstr ""
 
@@ -860,7 +864,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.nodeId"
 msgstr ""
 
-#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmFullNodeConnections.tsx:30
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
@@ -868,11 +872,11 @@ msgstr "Port"
 msgid "FarmFullNodeConnections.time"
 msgstr "Čas"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:60
+#: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "FarmFullNodeConnections.title"
 msgstr "Vaše pripojenie k sieti"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:43
+#: src/components/farm/FarmFullNodeConnections.tsx:40
 msgid "FarmFullNodeConnections.upDown"
 msgstr "Odoslané/Stiahnuté"
 
@@ -904,8 +908,8 @@ msgstr ""
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr "Hash"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:30
-#: src/components/farm/FarmLatestBlockChallenges.tsx:36
+#: src/components/farm/FarmLatestBlockChallenges.tsx:29
+#: src/components/farm/FarmLatestBlockChallenges.tsx:35
 msgid "FarmLatestBlockChallenges.description"
 msgstr ""
 
@@ -913,15 +917,15 @@ msgstr ""
 #~ msgid "FarmLatestBlockChallenges.height"
 #~ msgstr "Pozícia"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:20
+#: src/components/farm/FarmLatestBlockChallenges.tsx:19
 msgid "FarmLatestBlockChallenges.index"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:44
+#: src/components/farm/FarmLatestBlockChallenges.tsx:43
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:28
+#: src/components/farm/FarmLatestBlockChallenges.tsx:27
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Najnovšie blokové výzvy"
 
@@ -933,19 +937,19 @@ msgstr "Pridať pole"
 msgid "FarmOverviewHero.description"
 msgstr "Ťažiari zarábajú blokové odmeny a transakčné poplatky tým, že venujú sieti voľný priestor, aby pomohli zabezpečiť transakcie. Toto je miesto, kde bude vaša farma, keď pridáte pole. <0>Ďalšie informácie</0>"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "FarmYourHarvesterNetwork.actions"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "FarmYourHarvesterNetwork.connectionStatus"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "FarmYourHarvesterNetwork.description"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "FarmYourHarvesterNetwork.hostName"
 msgstr ""
 
@@ -953,15 +957,15 @@ msgstr ""
 msgid "FarmYourHarvesterNetwork.nodeId"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:30
 msgid "FarmYourHarvesterNetwork.port"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:60
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "FarmYourHarvesterNetwork.title"
 msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "FarmYourHarvesterNetwork.upDown"
 msgstr ""
 
@@ -978,12 +982,13 @@ msgstr "Ťažba"
 #~ msgid "FarmerStatus.connectionStatus"
 #~ msgstr "Stav pripojenia"
 
-#: src/components/farm/FarmerStatus.tsx:38
+#: src/components/farm/FarmerStatus.tsx:30
+#: src/components/farm/FarmerStatus.tsx:31
 msgid "FarmerStatus.error"
 msgstr "Chyba"
 
-#: src/components/farm/FarmerStatus.tsx:38
-#: src/components/farm/card/FarmCardStatus.tsx:32
+#: src/components/farm/FarmerStatus.tsx:27
+#: src/components/farm/card/FarmCardStatus.tsx:29
 msgid "FarmerStatus.farming"
 msgstr "Prebieha"
 
@@ -996,11 +1001,15 @@ msgstr "Prebieha"
 #~ msgid "FarmerStatus.noBlocksFarmedYet"
 #~ msgstr "Žiadne bloky zatiaľ neboli vyťažené"
 
+#: src/components/farm/FarmerStatus.tsx:29
+msgid "FarmerStatus.notAvailable"
+msgstr ""
+
 #: src/components/farmer/Farmer.jsx:131
 #~ msgid "FarmerStatus.notConnected"
 #~ msgstr "Nepripojené"
 
-#: src/components/farm/FarmerStatus.tsx:38
+#: src/components/farm/FarmerStatus.tsx:28
 msgid "FarmerStatus.synching"
 msgstr "Synchronizácia"
 
@@ -1024,11 +1033,11 @@ msgstr "Pripojené"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:396
+#: src/components/fullNode/FullNode.jsx:405
 msgid "FullNode.title"
 msgstr "Sieť"
 
-#: src/components/fullNode/FullNode.jsx:282
+#: src/components/fullNode/FullNode.jsx:291
 msgid "FullNodeStatus.title"
 msgstr "Stav siete"
 
@@ -1268,47 +1277,47 @@ msgstr "Polia sú pridelené priestory na vašom pevnom disku používanom na ť
 msgid "PlotHero.doYouHavePlot"
 msgstr "Máte na tomto zariadení už nejaké polia? <0>Pridať adresár polí</0>"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:59
+#: src/components/plot/overview/PlotOverviewPlots.tsx:56
 msgid "PlotOverviewPlots.action"
 msgstr "Akcia"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:72
 msgid "PlotOverviewPlots.description"
 msgstr "Chcete zarobiť viac Chia? Pridajte na svoju farmu ďalšie polia."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:36
+#: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "PlotOverviewPlots.harversterId"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+#: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "PlotOverviewPlots.plotKey"
 msgstr "Kľúč poľa"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:31
+#: src/components/plot/overview/PlotOverviewPlots.tsx:30
 msgid "PlotOverviewPlots.plotName"
 msgstr "Meno poľa"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:41
+#: src/components/plot/overview/PlotOverviewPlots.tsx:40
 msgid "PlotOverviewPlots.plotSeed"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:51
+#: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "PlotOverviewPlots.poolKey"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:26
+#: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "PlotOverviewPlots.size"
 msgstr "Veľkosť K"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:53
 msgid "PlotOverviewPlots.status"
 msgstr "Stav"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/overview/PlotOverviewPlots.tsx:66
 msgid "PlotOverviewPlots.title"
 msgstr "Zoznam polí"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:82
+#: src/components/plot/overview/PlotOverviewPlots.tsx:79
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr "Celková veľkosť poľa"
 
@@ -1336,15 +1345,33 @@ msgstr "Vytváranie poľa"
 msgid "PlotQueueIndicator.queued"
 msgstr "V poradí"
 
-#: src/components/plot/PlotStatus.tsx:24
+#: src/components/plot/PlotStatus.tsx:16
+#: src/components/plot/PlotStatus.tsx:17
 msgid "PlotStatus.error"
 msgstr "Chyba"
 
-#: src/components/plot/PlotStatus.tsx:18
+#: src/components/plot/PlotStatus.tsx:27
+msgid "PlotStatus.farmerIsNotConnected"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:28
+msgid "PlotStatus.farmerIsNotRunning"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:13
 msgid "PlotStatus.farming"
 msgstr ""
 
+#: src/components/plot/PlotStatus.tsx:15
+msgid "PlotStatus.notAvailable"
+msgstr ""
+
 #: src/components/plot/PlotStatus.tsx:21
+#: src/components/plot/PlotStatus.tsx:24
+msgid "PlotStatus.notAvailableDescription"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:14
 msgid "PlotStatus.synching"
 msgstr "Synchronizácia"
 
@@ -1667,15 +1694,15 @@ msgstr ""
 msgid "RTIncompleteCard.userPubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:361
+#: src/components/fullNode/FullNode.jsx:370
 msgid "SearchBlock.blockHash"
 msgstr "Hash bloku"
 
-#: src/components/fullNode/FullNode.jsx:372
+#: src/components/fullNode/FullNode.jsx:381
 msgid "SearchBlock.search"
 msgstr "Vyhľadať"
 
-#: src/components/fullNode/FullNode.jsx:355
+#: src/components/fullNode/FullNode.jsx:364
 msgid "SearchBlock.title"
 msgstr "Vyhľadať blok podľa hashu"
 
@@ -1775,27 +1802,27 @@ msgstr "stav:"
 msgid "StatusCard.title"
 msgstr "Stav"
 
-#: src/components/fullNode/FullNode.jsx:155
+#: src/components/fullNode/FullNode.jsx:164
 msgid "StatusItem.connectionStatus"
 msgstr "Stav pripojenia"
 
-#: src/components/fullNode/FullNode.jsx:157
+#: src/components/fullNode/FullNode.jsx:166
 msgid "StatusItem.connectionStatusConnected"
 msgstr "Pripojené"
 
-#: src/components/fullNode/FullNode.jsx:159
+#: src/components/fullNode/FullNode.jsx:168
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:210
 msgid "StatusItem.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/fullNode/FullNode.jsx:229
+#: src/components/fullNode/FullNode.jsx:238
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Odhadovaná velkosť siete"
 
-#: src/components/fullNode/FullNode.jsx:235
+#: src/components/fullNode/FullNode.jsx:244
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
@@ -1830,66 +1857,66 @@ msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ť
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "Minumum iterácii"
 
-#: src/components/fullNode/FullNode.jsx:176
+#: src/components/fullNode/FullNode.jsx:185
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:182
+#: src/components/fullNode/FullNode.jsx:191
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/fullNode/FullNode.jsx:197
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:202
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:108
-#: src/components/fullNode/FullNode.jsx:125
-#: src/components/fullNode/FullNode.jsx:141
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:150
+#: src/components/fullNode/FullNode.jsx:176
 msgid "StatusItem.status"
 msgstr "Stav"
 
-#: src/components/fullNode/FullNode.jsx:168
+#: src/components/fullNode/FullNode.jsx:177
 msgid "StatusItem.statusNotConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:127
+#: src/components/fullNode/FullNode.jsx:136
 msgid "StatusItem.statusNotSynced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:142
 msgid "StatusItem.statusNotSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:151
 msgid "StatusItem.statusSynced"
 msgstr "synchronizované"
 
-#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:154
 msgid "StatusItem.statusSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:116
+#: src/components/fullNode/FullNode.jsx:125
 msgid "StatusItem.statusTooltip"
 msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, aby sa dostal k najnovšiemu bloku v reťazci"
 
-#: src/components/fullNode/FullNode.jsx:110
+#: src/components/fullNode/FullNode.jsx:119
 msgid "StatusItem.statusValue"
 msgstr "Synchronizácia {progress}/{tip}"
 
-#: src/components/fullNode/FullNode.jsx:209
+#: src/components/fullNode/FullNode.jsx:218
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:217
+#: src/components/fullNode/FullNode.jsx:226
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:221
+#: src/components/fullNode/FullNode.jsx:230
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 
@@ -2041,39 +2068,39 @@ msgstr "Predať"
 msgid "TradingHistory.title"
 msgstr "História ponúk"
 
-#: src/components/wallet/WalletHistory.tsx:50
+#: src/components/wallet/WalletHistory.tsx:46
 msgid "TransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Potvrdené na pozícii {0}"
 
-#: src/components/wallet/WalletHistory.tsx:33
+#: src/components/wallet/WalletHistory.tsx:31
 msgid "TransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/WalletHistory.tsx:55
+#: src/components/wallet/WalletHistory.tsx:50
 msgid "TransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/WalletHistory.tsx:20
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "TransactionTable.incoming"
 msgstr "Prichádzajúci"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:18
 msgid "TransactionTable.outgoing"
 msgstr "Odchádzajúci"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:38
 msgid "TransactionTable.pending"
 msgstr "Spracúva sa"
 
-#: src/components/wallet/WalletHistory.tsx:43
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "TransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/WalletHistory.tsx:28
+#: src/components/wallet/WalletHistory.tsx:27
 msgid "TransactionTable.to"
 msgstr "Príjemca"
 
@@ -2093,11 +2120,11 @@ msgstr "Ďalej"
 msgid "WalletAdd.title"
 msgstr "Pridať peňaženku"
 
-#: src/components/wallet/WalletHistory.tsx:63
+#: src/components/wallet/WalletHistory.tsx:58
 msgid "WalletHistory.title"
 msgstr ""
 
-#: src/components/wallet/WalletHistory.tsx:22
+#: src/components/wallet/WalletHistory.tsx:21
 msgid "WalletHistory.type"
 msgstr ""
 
