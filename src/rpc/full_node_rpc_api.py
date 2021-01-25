@@ -30,6 +30,7 @@ class FullNodeRpcApi:
             "/get_unspent_coins": self.get_unspent_coins,
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_blocks": self.get_blocks,
+            "/get_initial_freeze_period": self.get_initial_freeze_period,
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:
@@ -48,6 +49,10 @@ class FullNodeRpcApi:
             )
             return payloads
         return []
+
+    async def get_initial_freeze_period(self):
+        freeze_period = self.service.constants.INITIAL_FREEZE_PERIOD
+        return {"INITIAL_FREEZE_PERIOD": freeze_period}
 
     async def get_blockchain_state(self, _request: Dict):
         """

@@ -55,8 +55,7 @@ class ConsensusConstants:
     WEIGHT_PROOF_THRESHOLD: uint8
     WEIGHT_PROOF_RECENT_BLOCKS: uint32
     MAX_BLOCK_COUNT_PER_REQUESTS: uint32
-    # SUB_BLOCKS_CACHE_SIZE = EPOCH_SUB_BLOCKS + 3*MAX_SUB_SLOT_SUB_BLOCKS
-    SUB_BLOCKS_CACHE_SIZE: uint32
+    INITIAL_FREEZE_PERIOD: uint32
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)

@@ -113,6 +113,12 @@ class FullNodeAPI:
             return None
         if not (await self.full_node.synced()):
             return None
+        if (
+            self.full_node.blockchain.peak_height is None
+            or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
+        ):
+            return None
+
         # Ignore if already seen
         if self.full_node.mempool_manager.seen(transaction.transaction_id):
             return None
@@ -152,6 +158,11 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         if not (await self.full_node.synced()):
+            return None
+        if (
+            self.full_node.blockchain.peak_height is None
+            or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
+        ):
             return None
 
         async with self.full_node.blockchain.lock:
@@ -515,7 +526,7 @@ class FullNodeAPI:
                 msg = Message("new_signage_point", broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
             else:
-                self.log.warning(
+                self.log.info(
                     f"Signage point {request.index_from_challenge} not added, CC challenge: "
                     f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
                 )
@@ -978,6 +989,12 @@ class FullNodeAPI:
             return None
         if not (await self.full_node.synced()):
             return None
+        if (
+            self.full_node.blockchain.peak_height is None
+            or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
+        ):
+            return None
+
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED

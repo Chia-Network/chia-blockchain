@@ -52,6 +52,7 @@ testnet_kwargs = {
     "SUB_BLOCKS_CACHE_SIZE": 5000,  # todo almog SUB_BLOCKS_CACHE_SIZE = EPOCH_SUB_BLOCKS + 3*MAX_SUB_SLOT_SUB_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
+    "INITIAL_FREEZE_PERIOD": 10000,  # Transaction are disabled first 10000 sub blocks
 }
 
 

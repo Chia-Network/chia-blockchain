@@ -246,6 +246,9 @@ def chia_init(root_path: Path):
         "full_node.port",
         "harvester.num_threads",
         "min_mainnet_k_size",
+        "max_inbound_wallet",
+        "max_inbound_farmer",
+        "max_inbound_timelord",
     ]
 
     # These are the files that will be migrated
