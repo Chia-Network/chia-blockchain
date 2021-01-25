@@ -18,7 +18,7 @@ import LayoutMain from '../layout/LayoutMain';
 
 const cols = [
   {
-    minWidth: '200px',
+    minWidth: '250px',
     field(row) {
       const {
         isFinished = false,
@@ -49,14 +49,25 @@ const cols = [
             <Box textOverflow="ellipsis" overflow="hidden">{value}</Box>
           </Tooltip>
         </Flex>
-      )
+      );
     },
     title: <Trans id="BlocksCard.headerHash">Header Hash</Trans>,
   }, {
     field: 'sub_block_height',
     title: <Trans id="BlocksCard.sbHeight">SB Height</Trans>,
   }, {
-    field: 'height',
+    field(row) {
+      const { height, timestamp } = row;
+      const isSubBlock = !timestamp;
+
+      if (isSubBlock) {
+        return (
+          <i>{height}</i>
+        );
+      }
+
+      return height;
+    },
     title: <Trans id="BlocksCard.height">Height</Trans>,
   },
   {
