@@ -43,7 +43,7 @@ class SyncStore:
     def get_sync_target_height(self) -> Optional[bytes32]:
         return self.sync_height_target
 
-    def set_sync_mode(self, sync_mode):
+    def set_sync_mode(self, sync_mode: bool):
         self.sync_mode = sync_mode
 
     def get_sync_mode(self) -> bool:
@@ -90,4 +90,4 @@ class SyncStore:
         return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
 
     async def clear_sync_info(self):
-        pass
+        self.peak_to_peer.clear()

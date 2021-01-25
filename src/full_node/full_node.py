@@ -235,7 +235,7 @@ class FullNode:
         return found_fork_point
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
-        self.sync_store.set_peer_peak(peer.peer_node_id, request.sub_block_height, request.weight, request.header_hash)
+        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height)
         if self.blockchain.contains_sub_block(request.header_hash):
             return None
         # Not interested in less heavy peaks
@@ -261,7 +261,7 @@ class FullNode:
                         )
         else:
             if request.sub_block_height <= curr_peak_sub_height + self.config["short_sync_sub_blocks_behind_threshold"]:
-                self.log.info("Doing backtrack sync")
+                self.log.debug("Doing backtrack sync")
                 # This is the normal case of receiving the next sub-block
                 if await self.short_sync_backtrack(peer, curr_peak_sub_height, request.sub_block_height):
                     return
@@ -269,13 +269,13 @@ class FullNode:
             if request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 # TODO(almog): fix weight proofs so they work at the beginning as well
-                self.log.info("Doing batch sync, no backup")
+                self.log.debug("Doing batch sync, no backup")
                 await self.short_sync_batch(peer, uint32(0), request.sub_block_height)
                 return
 
             if request.sub_block_height < curr_peak_sub_height + self.config["sync_sub_blocks_behind_threshold"]:
                 # This case of being behind but not by so much
-                self.log.info("Doing batch sync")
+                self.log.debug("Doing batch sync")
                 if await self.short_sync_batch(
                     peer, uint32(max(curr_peak_sub_height - 20, 0)), request.sub_block_height
                 ):
@@ -431,7 +431,7 @@ class FullNode:
             # Wait until we have 3 peaks or up to a max of 10 seconds
             current_peer_ids: List[bytes32] = [ws_con.peer_node_id for ws_con in self.server.all_connections.values()]
             peaks = []
-            for i in range(100):
+            for i in range(200):
                 peaks = [tup[0] for tup in self.sync_store.get_peer_peaks(current_peer_ids).values()]
                 if len(self.get_peers_with_peaks(peaks)) < 3:
                     if self._shut_down:
@@ -454,15 +454,22 @@ class FullNode:
 
             self.log.info(f"Selected peak {heaviest_peak_height}, {heaviest_peak_hash}")
             # Check which peers are updated to this height
+
+            peers = []
+            coroutines = []
             for peer in self.server.all_connections.values():
                 if peer.connection_type == NodeType.FULL_NODE:
-                    target_peak_response: Optional[RespondSubBlock] = await peer.request_sub_block(
-                        full_node_protocol.RequestSubBlock(uint32(heaviest_peak_height), True), timeout=3
-                    )
-                    if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
-                        self.sync_store.add_peak_peer(
-                            heaviest_peak_hash, peer.peer_node_id, heaviest_peak_weight, heaviest_peak_height
+                    peers.append(peer.peer_node_id)
+                    coroutines.append(
+                        peer.request_sub_block(
+                            full_node_protocol.RequestSubBlock(uint32(heaviest_peak_height), True), timeout=10
                         )
+                    )
+            for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
+                if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
+                    self.sync_store.add_peak_peer(
+                        heaviest_peak_hash, peers[i], heaviest_peak_weight, heaviest_peak_height
+                    )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
 
             peers_with_peak = self.get_peers_with_peaks([heaviest_peak_hash])
@@ -473,8 +480,6 @@ class FullNode:
             self.log.info(
                 f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to sub-height"
                 f" {heaviest_peak_height}"
-                f" peak: {heaviest_peak_hash}"
-                f" from peer: {peers_with_peak}"
             )
 
             if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
@@ -512,7 +517,6 @@ class FullNode:
 
     def get_peers_with_peaks(self, peak_hashes: List[bytes32]) -> List[ws.WSChiaConnection]:
         filtered_peers: List[ws.WSChiaConnection] = []
-        self.log.warning(f"Called: {peak_hashes} Peak peers: {self.sync_store.peak_to_peer}")
         for peak_hash in peak_hashes:
             peers_with_peak = self.sync_store.get_peak_peers(peak_hash)
             for peer_hash in peers_with_peak:
@@ -833,6 +837,8 @@ class FullNode:
         clear_height = uint32(max(0, peak.sub_block_height - 50))
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
+        if peak.sub_block_height % 1000 == 0 and not self.sync_store.get_sync_mode():
+            await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
         self._state_changed("sub_block")
         return None
 
