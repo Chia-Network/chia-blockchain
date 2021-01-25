@@ -199,8 +199,8 @@ async def show_async(args, parser):
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
-                mb_down = con["bytes_read"] / 1024 * 1024
-                mb_up = con["bytes_written"] / 1024 * 1024
+                mb_down = con["bytes_read"] / (1024 * 1024)
+                mb_up = con["bytes_written"] / (1024 * 1024)
 
                 host = con["peer_host"]
                 # Strip IPv6 brackets
@@ -219,7 +219,7 @@ async def show_async(args, parser):
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
-                        f"{mb_down:7.1f}|{mb_up:<7.1f}"
+                        f"{mb_up:7.1f}|{mb_down:<7.1f}"
                         f"\n                                                 "
                         f"-SB Height: {peak_sub_height:8.0f}    -Hash: {peak_hash[2:10]}..."
                     )

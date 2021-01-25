@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
 from src.wallet.key_val_store import KeyValStore
-import logging
+
 
 from src.wallet.settings.default_settings import default_settings
 from src.wallet.settings.settings_objects import BackupInitialized
@@ -18,10 +18,6 @@ class UserSettings:
     ):
         self = UserSettings()
         self.basic_store = store
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
         self.settings = {}
         await self.load_store()
         return self

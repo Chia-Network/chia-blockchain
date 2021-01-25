@@ -350,7 +350,7 @@ class FullNode:
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
             synced = await self.synced()
-            if synced:
+            if synced and self.blockchain.peak_height > self.constants.INITIAL_FREEZE_PERIOD:
                 my_filter = self.mempool_manager.get_filter()
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
@@ -1197,7 +1197,7 @@ class FullNode:
                 await self.server.send_to_all([msg], NodeType.FARMER)
                 return None, True
             else:
-                self.log.warning(
+                self.log.info(
                     f"End of slot not added CC challenge "
                     f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
                 )

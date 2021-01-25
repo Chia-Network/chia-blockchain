@@ -24,11 +24,10 @@ SUBCOMMANDS = [
 def create_parser() -> ArgumentParser:
     parser: ArgumentParser = ArgumentParser(
         description="Manage chia blockchain infrastructure (%s)." % __version__,
-        epilog="Try 'chia start node', 'chia netspace -d 48', or 'chia show -s'.",
+        epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'.",
     )
 
     parser.add_argument(
-        "-r",
         "--root-path",
         help="Config file root (defaults to %s)." % DEFAULT_ROOT_PATH,
         type=pathlib.Path,
