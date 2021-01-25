@@ -15,6 +15,8 @@ for setuptools_scm/PEP 440 reasons.
 - We have added connection limits for max_inbound_wallet, max_inbound_farmer, and max_inbound_timelord.
 
 ### Changed
+- On starting full node, the weight proof cache does not attempt to load all transactions. Startup times are noticeably improved.
+- Changes to weight proofs and sub block storage and cacheing required a new database schema. This will require a re-sync or obtaining a synced blockchain_v23.db.
 - clvm bytecode is now generated and confirmed that the checked-in clvm and ChiaLisp code matches the CI compiled code.
 - We have removed the '-r' flag from `chia` as it was being overridden in most cases by the `-r` for restart flag to `chia start`. Use `chia --root-path` instead.
 - `chia -h` now recommends `chia netspace -d 192` which is approximately one hours worth of sub blocks. Use `-d 1000` to get the same estimate of netspace as the RPC and GUI.
