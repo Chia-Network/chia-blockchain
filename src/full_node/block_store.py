@@ -3,7 +3,9 @@ import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
+from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32
 from src.consensus.sub_block_record import SubBlockRecord
 
@@ -28,7 +30,7 @@ class BlockStore:
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS sub_block_records(header_hash "
             "text PRIMARY KEY, prev_hash text, sub_height bigint,"
-            "sub_block blob, is_peak tinyint, is_block tinyint)"
+            "sub_block blob,sub_epoch_summary blob, is_peak tinyint, is_block tinyint)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -62,12 +64,13 @@ class BlockStore:
         await cursor_1.close()
 
         cursor_2 = await self.db.execute(
-            "INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?,?, ?, ?)",
             (
                 block.header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.sub_block_height,
                 bytes(sub_block),
+                None if sub_block.sub_epoch_summary_included is None else bytes(sub_block.sub_epoch_summary_included),
                 False,
                 block.is_block(),
             ),
@@ -133,10 +136,118 @@ class BlockStore:
         for row in rows:
             header_hash = bytes.fromhex(row[0])
             ret[header_hash] = SubBlockRecord.from_bytes(row[3])
-            if row[4]:
+            if row[5]:
                 assert peak is None  # Sanity check, only one peak
                 peak = header_hash
         return ret, peak
+
+    async def get_headers_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, HeaderBlock]:
+
+        formatted_str = (
+            f"SELECT header_hash,block from full_blocks WHERE sub_height >= {start} and sub_height <= {stop}"
+        )
+
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, HeaderBlock] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            full_block: FullBlock = FullBlock.from_bytes(row[1])
+            ret[header_hash] = full_block.get_block_header()
+
+        return ret
+
+    async def get_sub_block_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, SubBlockRecord]:
+        """
+        Returns a dictionary with all sub blocks in range between start and stop
+        if present.
+        """
+
+        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {start} and sub_height <= {stop}"
+
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, SubBlockRecord] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+
+        return ret
+
+    async def get_sub_blocks_from_peak(self, blocks_n: int) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+        """
+        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        if present.
+        """
+
+        res = await self.db.execute("SELECT * from sub_block_records WHERE is_peak = 1")
+        row = await res.fetchone()
+        await res.close()
+        if row is None:
+            return {}, None
+
+        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, SubBlockRecord] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+        return ret, bytes.fromhex(row[0])
+
+    async def get_sub_block_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
+        """
+        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        if present.
+        """
+
+        res = await self.db.execute("SELECT * from sub_block_records WHERE is_peak = 1")
+        row = await res.fetchone()
+        await res.close()
+        if row is None:
+            return {}, {}
+
+        peak: bytes32 = bytes.fromhex(row[0])
+        cursor = await self.db.execute(
+            "SELECT header_hash,prev_hash,sub_height,sub_epoch_summary from sub_block_records"
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        hash_to_prev_hash: Dict[bytes32, bytes32] = {}
+        hash_to_height: Dict[bytes32, uint32] = {}
+        hash_to_summary: Dict[bytes32, SubEpochSummary] = {}
+
+        for row in rows:
+            hash_to_prev_hash[bytes.fromhex(row[0])] = bytes.fromhex(row[1])
+            hash_to_height[bytes.fromhex(row[0])] = row[2]
+            if row[3] is not None:
+                hash_to_summary[bytes.fromhex(row[0])] = SubEpochSummary.from_bytes(row[3])
+
+        sub_height_to_hash: Dict[uint32, bytes32] = {}
+        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
+
+        curr_header_hash = peak
+        curr_sub_height = hash_to_height[curr_header_hash]
+        while True:
+            sub_height_to_hash[curr_sub_height] = curr_header_hash
+            if curr_header_hash in hash_to_summary:
+                sub_epoch_summaries[curr_sub_height] = hash_to_summary[curr_header_hash]
+            if curr_sub_height == 0:
+                break
+            curr_header_hash = hash_to_prev_hash[curr_header_hash]
+            curr_sub_height = hash_to_height[curr_header_hash]
+        return sub_height_to_hash, sub_epoch_summaries
 
     async def set_peak(self, header_hash: bytes32) -> None:
         cursor_1 = await self.db.execute("UPDATE sub_block_records SET is_peak=0 WHERE is_peak=1")

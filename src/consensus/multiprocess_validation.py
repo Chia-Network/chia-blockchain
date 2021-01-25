@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict, Union, Sequence
 
 from src.consensus.block_header_validation import validate_finished_header_block
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
@@ -17,8 +18,9 @@ from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
+from src.util.block_cache import BlockCache
 from src.util.errors import Err
-from src.util.ints import uint64, uint32, uint16
+from src.util.ints import uint64, uint16
 from src.util.streamable import dataclass_from_dict, streamable, Streamable
 
 log = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ def batch_pre_validate_sub_blocks(
             generator: Optional[bytes] = transaction_generators[i]
             required_iters, error = validate_finished_header_block(
                 constants,
-                sub_blocks,
+                BlockCache(sub_blocks),
                 header_block,
                 check_filter,
                 expected_difficulty[i],
@@ -78,8 +80,7 @@ def batch_pre_validate_sub_blocks(
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
     constants_json: Dict,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    sub_height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: BlockchainInterface,
     blocks: Sequence[Union[FullBlock, HeaderBlock]],
     pool: ProcessPoolExecutor,
 ) -> Optional[List[PreValidationResult]]:
@@ -91,7 +92,6 @@ async def pre_validate_blocks_multiprocessing(
     Args:
         constants_json:
         pool:
-        sub_height_to_hash:
         constants:
         sub_blocks:
         blocks: list of full blocks to validate (must be connected to current chain)
@@ -104,9 +104,9 @@ async def pre_validate_blocks_multiprocessing(
     num_sub_slots_found = 0
     num_blocks_seen = 0
     if blocks[0].sub_block_height > 0:
-        if blocks[0].prev_header_hash not in sub_blocks:
+        if not sub_blocks.contains_sub_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
-        curr = sub_blocks[blocks[0].prev_header_hash]
+        curr = sub_blocks.sub_block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
             curr.sub_epoch_summary_included is None
@@ -122,25 +122,23 @@ async def pre_validate_blocks_multiprocessing(
             recent_sub_blocks[curr.header_hash] = curr
             if curr.is_block:
                 num_blocks_seen += 1
-            curr = sub_blocks[curr.prev_hash]
+            curr = sub_blocks.sub_block_record(curr.prev_hash)
         recent_sub_blocks[curr.header_hash] = curr
         recent_sub_blocks_compressed[curr.header_hash] = curr
     sub_block_was_present = []
     for block in blocks:
-        sub_block_was_present.append(block.header_hash in sub_blocks)
+        sub_block_was_present.append(sub_blocks.contains_sub_block(block.header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for sub_block in blocks:
         if sub_block.sub_block_height != 0 and prev_sb is None:
-            prev_sb = sub_blocks[sub_block.prev_header_hash]
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            constants, sub_block, sub_height_to_hash, prev_sb, sub_blocks
-        )
+            prev_sb = sub_blocks.sub_block_record(sub_block.prev_header_hash)
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, sub_block, prev_sb, sub_blocks)
         overflow = is_overflow_sub_block(constants, sub_block.reward_chain_sub_block.signage_point_index)
         challenge = get_block_challenge(
             constants,
             sub_block,
-            recent_sub_blocks,
+            BlockCache(recent_sub_blocks),
             prev_sb is None,
             overflow,
             False,
@@ -154,8 +152,8 @@ async def pre_validate_blocks_multiprocessing(
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):
-                if not sub_block_was_present[i] and block_i.header_hash in sub_blocks:
-                    del sub_blocks[block_i.header_hash]
+                if not sub_block_was_present[i] and sub_blocks.contains_sub_block(block_i.header_hash):
+                    sub_blocks.remove_sub_block(block_i.header_hash)
             return None
 
         required_iters: uint64 = calculate_iterations_quality(
@@ -168,20 +166,19 @@ async def pre_validate_blocks_multiprocessing(
         sub_block_rec = block_to_sub_block_record(
             constants,
             sub_blocks,
-            sub_height_to_hash,
             required_iters,
             sub_block,
             None,
         )
         recent_sub_blocks[sub_block_rec.header_hash] = sub_block_rec
         recent_sub_blocks_compressed[sub_block_rec.header_hash] = sub_block_rec
-        sub_blocks[sub_block_rec.header_hash] = sub_block_rec  # Temporarily add sub block to dict
+        sub_blocks.add_sub_block(sub_block_rec)  # Temporarily add sub block to dict
         prev_sb = sub_block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
     for i, block in enumerate(blocks):
         if not sub_block_was_present[i]:
-            del sub_blocks[block.header_hash]
+            sub_blocks.remove_sub_block(block.header_hash)
 
     recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks_compressed.items()}
 

@@ -804,7 +804,7 @@ class TestBlockHeaderValidation:
                         uint8(0),
                     ),
                 )
-                if blockchain.sub_blocks[blocks[-2].header_hash].deficit == 0:
+                if blockchain.sub_block_record(blocks[-2].header_hash).deficit == 0:
                     case_1 = True
                 else:
                     case_2 = True

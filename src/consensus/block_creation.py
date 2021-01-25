@@ -10,6 +10,7 @@ from src.consensus.block_rewards import (
     calculate_pool_reward,
     calculate_base_farmer_reward,
 )
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.full_node.bundle_tools import best_solution_program
@@ -49,7 +50,7 @@ def create_foliage(
     reward_sub_block: RewardChainSubBlockUnfinished,
     spend_bundle: Optional[SpendBundle],
     prev_sub_block: Optional[SubBlockRecord],
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     total_iters_sp: uint128,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
@@ -157,7 +158,7 @@ def create_foliage(
             assert prev_sub_block is not None
             curr: SubBlockRecord = prev_sub_block
             while not curr.is_block:
-                curr = sub_blocks[curr.prev_hash]
+                curr = sub_blocks.sub_block_record(curr.prev_hash)
 
             assert curr.fees is not None
             pool_coin = create_pool_coin(
@@ -175,7 +176,7 @@ def create_foliage(
             reward_claims_incorporated += [pool_coin, farmer_coin]
 
             if curr.sub_block_height > 0:
-                curr = sub_blocks[curr.prev_hash]
+                curr = sub_blocks.sub_block_record(curr.prev_hash)
                 # Prev block is not genesis
                 while not curr.is_block:
                     pool_coin = create_pool_coin(
@@ -189,7 +190,7 @@ def create_foliage(
                         calculate_base_farmer_reward(curr.height),
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
-                    curr = sub_blocks[curr.prev_hash]
+                    curr = sub_blocks.sub_block_record(curr.prev_hash)
         additions: List[Coin] = reward_claims_incorporated.copy()
         npc_list = []
         if solution_program is not None:
@@ -295,10 +296,10 @@ def create_unfinished_block(
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     signage_point: SignagePoint,
     timestamp: uint64,
+    sub_blocks: BlockchainInterface,
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
     prev_sub_block: Optional[SubBlockRecord] = None,
-    sub_blocks: Dict[bytes32, SubBlockRecord] = {},
     finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
 ) -> UnfinishedBlock:
     """
@@ -357,7 +358,7 @@ def create_unfinished_block(
                 assert sub_blocks is not None
                 curr = prev_sub_block
                 while not curr.first_in_sub_slot:
-                    curr = sub_blocks[curr.prev_hash]
+                    curr = sub_blocks.sub_block_record(curr.prev_hash)
                 assert curr.finished_reward_slot_hashes is not None
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
         signage_point = SignagePoint(None, None, None, None)
@@ -418,7 +419,7 @@ def unfinished_block_to_full_block(
     icc_ip_proof: Optional[VDFProof],
     finished_sub_slots: List[EndOfSubSlotBundle],
     prev_sub_block: Optional[SubBlockRecord],
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     total_iters_sp: uint128,
     difficulty: uint64,
 ) -> FullBlock:

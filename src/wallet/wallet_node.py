@@ -393,7 +393,7 @@ class WalletNode:
                 # Fetch blocks backwards until we hit the one that we have,
                 # then complete them with additions / removals going forward
                 while (
-                    top.prev_header_hash not in self.wallet_state_manager.blockchain.sub_blocks
+                    not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash)
                     and top.sub_block_height > 0
                 ):
                     request_prev = wallet_protocol.RequestSubBlockHeader(top.sub_block_height - 1)
@@ -510,7 +510,7 @@ class WalletNode:
         fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
         if fork_height is None:
             fork_height = 0
-
+        await self.wallet_state_manager.blockchain.warmup(fork_height)
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
         for i in range(max(0, fork_height - 1), peak_sub_height, batch_size):
             start_height = i
@@ -518,7 +518,7 @@ class WalletNode:
             peers: List[WSChiaConnection] = self.server.get_full_node_connections()
             for peer in peers:
                 try:
-                    await self.fetch_blocks_and_validate(peer, start_height, end_height)
+                    await self.fetch_blocks_and_validate(peer, uint32(start_height), end_height)
                     break
                 except Exception as e:
                     await peer.close()

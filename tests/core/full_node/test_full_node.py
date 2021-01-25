@@ -703,7 +703,6 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         peer = await connect_and_get_peer(server_1, server_2)
-
         blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, seed=b"12345")
         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[-2]))
         block: FullBlock = blocks[-1]
@@ -722,7 +721,6 @@ class TestFullNodeProtocol:
         res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
         assert res is None
         await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), peer)
-
         # Have
         res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
         assert res is not None
@@ -740,7 +738,7 @@ class TestFullNodeProtocol:
 
         sp = get_signage_point(
             test_constants,
-            blockchain.sub_blocks,
+            blockchain,
             peak,
             peak.ip_sub_slot_total_iters(test_constants),
             uint8(11),

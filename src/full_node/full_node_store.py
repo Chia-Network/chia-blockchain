@@ -2,6 +2,7 @@ import logging
 from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
@@ -175,7 +176,7 @@ class FullNodeStore:
     def new_finished_sub_slot(
         self,
         eos: EndOfSubSlotBundle,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
+        sub_blocks: BlockchainInterface,
         peak: Optional[SubBlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
@@ -249,7 +250,7 @@ class FullNodeStore:
             if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
-                    curr = sub_blocks[curr.prev_hash]
+                    curr = sub_blocks.sub_block_record(curr.prev_hash)
                 if curr.is_challenge_sub_block(self.constants):
                     icc_start_challenge_hash = curr.challenge_block_info_hash
                 else:
@@ -291,7 +292,7 @@ class FullNodeStore:
     def new_signage_point(
         self,
         index: uint8,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
+        sub_blocks: BlockchainInterface,
         peak: Optional[SubBlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
@@ -351,7 +352,7 @@ class FullNodeStore:
                             # Did not find a sub-block where it's iters are before our sp_total_iters, in this ss
                             check_from_start_of_ss = True
                             break
-                        curr = sub_blocks[curr.prev_hash]
+                        curr = sub_blocks.sub_block_record(curr.prev_hash)
 
                 if check_from_start_of_ss:
                     # Check VDFs from start of sub slot
@@ -478,7 +479,7 @@ class FullNodeStore:
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
+        sub_blocks: BlockchainInterface,
     ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
@@ -562,7 +563,7 @@ class FullNodeStore:
     def get_finished_sub_slots(
         self,
         prev_sb: Optional[SubBlockRecord],
-        sub_block_records: Dict[bytes32, SubBlockRecord],
+        sub_block_records: BlockchainInterface,
         pos_ss_challenge_hash: bytes32,
         extra_sub_slot: bool = False,
     ) -> List[EndOfSubSlotBundle]:
@@ -579,8 +580,10 @@ class FullNodeStore:
 
         if prev_sb is not None:
             curr: SubBlockRecord = prev_sb
+            assert curr is not None
             while not curr.first_in_sub_slot:
-                curr = sub_block_records[curr.prev_hash]
+                curr = sub_block_records.sub_block_record(curr.prev_hash)
+            assert curr is not None
             assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
         else:
@@ -606,9 +609,7 @@ class FullNodeStore:
                     final_index = index
 
         if pos_index is None or final_index is None:
-            raise ValueError(
-                f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
-            )
+            raise ValueError(f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} ")
 
         if extra_sub_slot:
             new_final_index = pos_index + 1
