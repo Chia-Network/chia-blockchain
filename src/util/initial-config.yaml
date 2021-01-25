@@ -224,7 +224,7 @@ wallet:
     port: 58444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v22.db
+  database_path: wallet/db/blockchain_wallet_v23.db
   wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging
