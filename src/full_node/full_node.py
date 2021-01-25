@@ -191,7 +191,7 @@ class FullNode:
         if peer.peer_node_id in self.sync_store.batch_syncing:
             return True  # Don't trigger a long sync
         self.sync_store.batch_syncing.add(peer.peer_node_id)
-        self.log.info(f"Starting batch short sync to get up to sub-height {target_sub_height}")
+        self.log.info(f"Starting batch short sync from {start_sub_height} to sub-height {target_sub_height}")
         try:
             for sub_height in range(start_sub_height, target_sub_height + 1, batch_size):
                 end_height = min(target_sub_height, sub_height + batch_size)
@@ -270,7 +270,7 @@ class FullNode:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 # TODO(almog): fix weight proofs so they work at the beginning as well
                 self.log.info("Doing batch sync, no backup")
-                await self.short_sync_batch(peer, uint32(max(curr_peak_sub_height - 20, 0)), request.sub_block_height)
+                await self.short_sync_batch(peer, uint32(0), request.sub_block_height)
                 return
 
             if request.sub_block_height < curr_peak_sub_height + self.config["sync_sub_blocks_behind_threshold"]:
@@ -452,6 +452,7 @@ class FullNode:
             heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight = target_peak
             self.sync_store.set_peak_target(heaviest_peak_hash, heaviest_peak_height)
 
+            self.log.info(f"Selected peak {heaviest_peak_height}, {heaviest_peak_hash}")
             # Check which peers are updated to this height
             for peer in self.server.all_connections.values():
                 if peer.connection_type == NodeType.FULL_NODE:

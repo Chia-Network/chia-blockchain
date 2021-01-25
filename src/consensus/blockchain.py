@@ -390,10 +390,12 @@ class Blockchain:
         curr_sbr: SubBlockRecord = self.sub_blocks[block.header_hash]
         curr: Optional[FullBlock] = block
         assert curr is not None
-        while curr_sbr.sub_block_height > 0:
+        while True:
             if curr_sbr.first_in_sub_slot:
                 curr = await self.block_store.get_full_block(curr_sbr.header_hash)
                 assert curr is not None
+                break
+            if curr_sbr.sub_block_height == 0:
                 break
             curr_sbr = self.sub_blocks[curr_sbr.prev_hash]
 

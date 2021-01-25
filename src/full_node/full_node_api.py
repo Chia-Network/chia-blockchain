@@ -25,7 +25,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
-from src.protocols.full_node_protocol import RejectSubBlocks
+from src.protocols.full_node_protocol import RejectSubBlocks, RejectSubBlock
 from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse, RejectHeaderBlocks
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.coin import Coin, hash_coin_list
@@ -211,7 +211,9 @@ class FullNodeAPI:
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
         if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
-            return None
+            reject = RejectSubBlock(request.sub_height)
+            msg = Message("reject_sub_block", reject)
+            return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
             self.full_node.blockchain.sub_height_to_hash[request.sub_height]
         )
@@ -220,7 +222,9 @@ class FullNodeAPI:
                 block = dataclasses.replace(block, transactions_generator=None)
             msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
             return msg
-        return None
+        reject = RejectSubBlock(request.sub_height)
+        msg = Message("reject_sub_block", reject)
+        return msg
 
     @api_request
     async def request_sub_blocks(self, request: full_node_protocol.RequestSubBlocks) -> Optional[Message]:
@@ -253,8 +257,13 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def reject_sub_blocks(self, request: full_node_protocol.RequestSubBlocks):
-        self.log.info(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
+    async def reject_sub_block(self, request: full_node_protocol.RejectSubBlock):
+        self.log.debug(f"reject_sub_block {request.sub_height}")
+        pass
+
+    @api_request
+    async def reject_sub_blocks(self, request: full_node_protocol.RejectSubBlocks):
+        self.log.debug(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
         pass
 
     @api_request

@@ -71,6 +71,12 @@ class RequestSubBlock:
 
 @dataclass(frozen=True)
 @cbor_message
+class RejectSubBlock:
+    sub_height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
 class RequestSubBlocks:
     start_sub_height: uint32
     end_sub_height: uint32
