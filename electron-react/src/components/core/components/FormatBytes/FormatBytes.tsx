@@ -1,26 +1,39 @@
 import React from 'react';
-// @ts-ignore
-import byteSize from 'byte-size';
+import bytes from 'bytes-iec';
 
 type Props = {
   value: number;
-  units?: string;
+  unit: FormatOptions['unit'];
+  mode: FormatOptions['mode'];
+  unitSeparator: string;
   precision?: number;
+  removeUnit?: boolean;
+  fixedDecimals?: boolean;
 };
 
-export default function FormatBytes(props: Props): JSX.Element {
-  const { value, units, precision } = props;
-  const { value: humanValue, unit } = byteSize(value, { units, precision });
+export default function FormatBytes(props: Props) {
+  const { value, mode, precision, unit, unitSeparator, removeUnit, fixedDecimals } = props;
+  const humanValue = bytes(value, {
+    unit,
+    mode, 
+    decimalPlaces: precision,
+    unitSeparator,
+    fixedDecimals,
+  });
 
-  if (unit === 'B') {
-    const kibValue = value / 1024;
-    return <>{`${kibValue.toPrecision(precision)} KiB`}</>;
+  if (humanValue && removeUnit && unitSeparator) {
+    const [justValue] = humanValue.split(unitSeparator);
+    return <>{justValue}</>;
   }
 
-  return <>{`${humanValue} ${unit}`}</>;
+  return <>{humanValue}</>;
 }
 
 FormatBytes.defaultProps = {
-  units: 'iec',
+  unit: undefined,
+  mode: 'binary',
   precision: 1,
+  unitSeparator: ' ',
+  removeUnit: false,
+  fixedDecimals: false,
 };

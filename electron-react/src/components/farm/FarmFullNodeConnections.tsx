@@ -48,13 +48,13 @@ const cols = [
     field(row: Connection) {
       return (
         <>
-          <FormatBytes value={row.bytes_written} />
+          <FormatBytes value={row.bytes_written} unit="MiB" removeUnit fixedDecimals />
           /
-          <FormatBytes value={row.bytes_read} />
+          <FormatBytes value={row.bytes_read} unit="MiB" removeUnit fixedDecimals />
         </>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.upDown">Up/Down</Trans>,
+    title: <Trans id="FarmFullNodeConnections.upDown">MiB Up/Down</Trans>,
   },
   {
     width: '100px',
