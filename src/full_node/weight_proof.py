@@ -31,7 +31,7 @@ class WeightProofHandler:
 
     LAMBDA_L = 100
     C = 0.5
-    MAX_SAMPLES = 10  # todo switch to 256 after testing / segment size resolved
+    MAX_SAMPLES = 100
     WeightProofHandler = "weight_proof_handler"
 
     def __init__(
