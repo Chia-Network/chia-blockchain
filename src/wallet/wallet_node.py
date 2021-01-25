@@ -359,6 +359,8 @@ class WalletNode:
                 fork_h,
             ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
             if result == ReceiveBlockResult.NEW_PEAK:
+                if not self.wallet_state_manager.sync_mode:
+                    self.wallet_state_manager.blockchain.clean_sub_block_records()
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 self.log.info(f"Invalid block from peer: {peer.get_peer_info()}")
@@ -524,6 +526,7 @@ class WalletNode:
                     await peer.close()
                     exc = traceback.format_exc()
                     self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
+                    self.wallet_state_manager.blockchain.clean_sub_block_record(end_height)
 
     async def fetch_blocks_and_validate(self, peer: WSChiaConnection, sub_height_start: uint32, sub_height_end: uint32):
         if self.wallet_state_manager is None:

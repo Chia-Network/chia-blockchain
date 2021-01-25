@@ -248,7 +248,6 @@ class WalletBlockchain(BlockchainInterface):
         if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
             self.__sub_heights_in_cache[sub_block.sub_block_height] = []
         self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
-        self.clean_sub_block_record(sub_block.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
