@@ -97,6 +97,8 @@ class WeightProofHandler:
         for height in heights:
             if height < end_height:
                 continue
+            if height > new_tip.sub_block_height:
+                break
             summary = self.blockchain.get_ses(height)
             sub_epoch_data.append(_make_sub_epoch_data(summary))
 
@@ -130,6 +132,8 @@ class WeightProofHandler:
         sub_epoch_n = uint32(0)
         summary_heights = self.blockchain.get_ses_heights()
         for idx, ses_height in enumerate(summary_heights):
+            if ses_height > tip_rec.sub_block_height:
+                break
             # next sub block
             ses_block = await self.blockchain.get_sub_block_from_db(self.blockchain.sub_height_to_hash(ses_height))
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
