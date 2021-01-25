@@ -10,6 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 - `chia plots check` enforces a minimum of `-n 5` to decrease false negatives. Thanks to @eFishCent for these ongoing pull requests!
+- Testnets and mainnets will now have an initial period of sub blocks where transactions are blocked.
 - Transaction volume testing added to tests and various tests have been sped up.
 - We have added connection limits for max_inbound_wallet, max_inbound_farmer, and max_inbound_timelord.
 
@@ -29,6 +30,7 @@ for setuptools_scm/PEP 440 reasons.
 - Inbound and outbound peer connection limits were not being honored.
 - Weight proofs were not correctly extending.
 - In some cases when closing a p2p connection to another node, there was an infinite "Closing" loop.
+- `chia show -c` was showing upload MiB in the download column and vice versa. @psydafke deserves credit for insisting it was broken.
 
 ## [1.0beta22] aka Beta 1.22 - 2021-01-19
 
