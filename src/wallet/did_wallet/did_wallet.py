@@ -1,6 +1,6 @@
 import logging
 import time
-
+import json
 import clvm
 from typing import Dict, Optional, List, Any, Set, Tuple
 from clvm.EvalError import EvalError
@@ -64,7 +64,7 @@ class DIDWallet:
         self.did_info = DIDInfo(
             None, backups_ids, num_of_backup_ids_needed, [], None, None
         )
-        info_as_string = bytes(self.did_info).hex()
+        info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
@@ -138,7 +138,7 @@ class DIDWallet:
 
         self.wallet_state_manager = wallet_state_manager
         self.did_info = DIDInfo(None, [], uint64(0), [], None, None)
-        info_as_string = bytes(self.did_info).hex()
+        info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
@@ -169,7 +169,8 @@ class DIDWallet:
         self.wallet_info = wallet_info
         self.wallet_id = wallet_info.id
         self.standard_wallet = wallet
-        self.did_info = DIDInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+        self.wallet_info = wallet_info
+        self.did_info = DIDInfo.from_json_dict(json.loads(wallet_info.data))
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         return self
@@ -923,7 +924,8 @@ class DIDWallet:
     async def save_info(self, did_info: DIDInfo):
         self.did_info = did_info
         current_info = self.wallet_info
-        data_str = bytes(did_info).hex()
+        #breakpoint()
+        data_str = json.dumps(did_info.to_json_dict())
         wallet_info = WalletInfo(
             current_info.id, current_info.name, current_info.type, data_str
         )

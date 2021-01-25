@@ -217,15 +217,17 @@ class Streamable:
         Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
         strings.
         """
-        if isinstance(d, list):
+        if isinstance(d, list) or isinstance(d, tuple):
             new_list = []
             for item in d:
                 if type(item) in unhashable_types or issubclass(type(item), bytes):
                     item = f"0x{bytes(item).hex()}"
                 if isinstance(item, dict):
-                    self.recurse_jsonify(item)
+                    item = self.recurse_jsonify(item)
                 if isinstance(item, list):
-                    self.recurse_jsonify(item)
+                    item = self.recurse_jsonify(item)
+                if isinstance(item, tuple):
+                    item = self.recurse_jsonify(item)
                 if isinstance(item, Enum):
                     item = item.name
                 if isinstance(item, int) and type(item) in big_ints:
@@ -235,12 +237,16 @@ class Streamable:
 
         else:
             for key, value in d.items():
+                if type(key) in unhashable_types or issubclass(type(key), bytes):
+                    key = f"0x{bytes(value).hex()}"
                 if type(value) in unhashable_types or issubclass(type(value), bytes):
                     d[key] = f"0x{bytes(value).hex()}"
                 if isinstance(value, dict):
-                    self.recurse_jsonify(value)
+                    d[key] = self.recurse_jsonify(value)
                 if isinstance(value, list):
-                    self.recurse_jsonify(value)
+                    d[key] = self.recurse_jsonify(value)
+                if isinstance(value, tuple):
+                    d[key] = self.recurse_jsonify(item)
                 if isinstance(value, Enum):
                     d[key] = value.name
                 if isinstance(value, int) and type(value) in big_ints:
