@@ -1,7 +1,7 @@
 enum FullNodeState {
-  SYNCHING,
-  ERROR,
-  SYNCED,
+  SYNCHING = 'SYNCHING',
+  ERROR = 'ERROR',
+  SYNCED = 'SYNCED',
 }
 
 export default FullNodeState;

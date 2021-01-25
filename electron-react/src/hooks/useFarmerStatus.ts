@@ -1,48 +1,33 @@
 import { useSelector } from 'react-redux';
 import type { RootState } from '../modules/rootReducer';
 import FarmerStatus from '../constants/FarmerStatus';
-
-function getFarmerStatus(
-  connected: boolean,
-  running: boolean,
-  blockchainSynced: boolean,
-  blockchainSynching: boolean,
-): FarmerStatus {
-  if (blockchainSynching) {
-    return FarmerStatus.SYNCHING;
-  }
-
-  if (!blockchainSynced) {
-    return FarmerStatus.ERROR;
-  }
-
-  if (!blockchainSynching && blockchainSynced && connected && running) {
-    return FarmerStatus.FARMING;
-  }
-
-  return FarmerStatus.ERROR;
-}
+import FullNodeState from '../constants/FullNodeState';
+import useFullNodeState from './useFullNodeState';
 
 export default function useFarmerStatus(): FarmerStatus {
-  const blockchainSynced = useSelector(
-    (state: RootState) =>
-      !!state.full_node_state.blockchain_state?.sync?.synced,
-  );
-  const blockchainSynching = useSelector(
-    (state: RootState) =>
-      !!state.full_node_state.blockchain_state?.sync?.sync_mode,
-  );
-  const connected = useSelector(
+  const fullNodeState = useFullNodeState();
+  const farmerConnected = useSelector(
     (state: RootState) => state.daemon_state.farmer_connected,
   );
-  const running = useSelector(
+  const farmerRunning = useSelector(
     (state: RootState) => state.daemon_state.farmer_running,
   );
 
-  return getFarmerStatus(
-    connected,
-    running,
-    blockchainSynced,
-    blockchainSynching,
-  );
+  if (fullNodeState === FullNodeState.SYNCHING) {
+    return FarmerStatus.SYNCHING;
+  }
+
+  if (fullNodeState === FullNodeState.ERROR) {
+    return FarmerStatus.NOT_AVAILABLE;
+  }
+
+  if (!farmerConnected) {
+    return FarmerStatus.NOT_CONNECTED;
+  }
+
+  if (!farmerRunning) {
+    return FarmerStatus.NOT_RUNNING;
+  }
+
+  return FarmerStatus.FARMING;
 }

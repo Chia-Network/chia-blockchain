@@ -45,22 +45,21 @@ const cols = [
           <Tooltip title={<span>{tooltip}</span>}>
             <Status color={color} />
           </Tooltip>
-          <span>{value}</span>
+          <Tooltip title={<span>{value}</span>}>
+            <Box textOverflow="ellipsis" overflow="hidden">{value}</Box>
+          </Tooltip>
         </Flex>
       )
     },
     title: <Trans id="BlocksCard.headerHash">Header Hash</Trans>,
   }, {
-    width: '120px',
     field: 'sub_block_height',
     title: <Trans id="BlocksCard.sbHeight">SB Height</Trans>,
   }, {
-    width: '120px',
     field: 'height',
     title: <Trans id="BlocksCard.height">Height</Trans>,
   },
   {
-    width: '180px',
     field(row) {
       const {
         isFinished,
@@ -81,7 +80,6 @@ const cols = [
     title: <Trans id="BlocksCard.timeCreated">Time Created</Trans>,
   },
   {
-    width: '130px',
     field(row) {
       const {
         isFinished = false,
