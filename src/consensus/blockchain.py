@@ -533,7 +533,7 @@ class Blockchain(BlockchainInterface):
         blocks = await self.block_store.get_sub_block_in_range(
             max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), fork_point
         )
-        for block in blocks:
+        for block in blocks.values():
             self.__sub_blocks[block.header_hash] = block
         return
 
