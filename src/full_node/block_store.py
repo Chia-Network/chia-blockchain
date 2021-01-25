@@ -6,7 +6,7 @@ from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.types.weight_proof import SubEpochSegments
+from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
 from src.util.ints import uint32
 from src.consensus.sub_block_record import SubBlockRecord
 
@@ -96,7 +96,7 @@ class BlockStore:
     async def get_sub_epoch_challenge_segments(
         self,
         sub_epoch_summary_sub_height: uint32,
-    ) -> Optional[SubEpochSegments]:
+    ) -> Optional[List[SubEpochChallengeSegment]]:
         cursor = await self.db.execute(
             "SELECT challenge_segments from sub_epoch_segments WHERE ses_sub_height=?", (sub_epoch_summary_sub_height,)
         )
@@ -105,6 +105,10 @@ class BlockStore:
         if row is not None:
             return SubEpochSegments.from_bytes(row[0]).challenge_segments
         return None
+
+    async def delete_sub_epoch_challenge_segments(self, fork_height: uint32):
+        cursor = await self.db.execute("delete from sub_epoch_segments WHERE ses_sub_height>?", (fork_height,))
+        await cursor.close()
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
