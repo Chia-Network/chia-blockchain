@@ -31,7 +31,7 @@ def make_parser(parser: ArgumentParser):
 
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
-public_node_names = {"full_node", "wallet", "farmer", "introducer"}
+public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):

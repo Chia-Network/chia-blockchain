@@ -104,14 +104,16 @@ class ChiaServer:
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
-        self._private_cert_path, self._private_key_path = private_ssl_paths(root_path, config)
-        self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(root_path, config)
+        if self._local_type is not NodeType.INTRODUCER:
+            self._private_cert_path, self._private_key_path = private_ssl_paths(root_path, config)
+        if self._local_type is not NodeType.HARVESTER:
+            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(root_path, config)
+        else:
+            self.p2p_crt_path, self.p2p_key_path = None, None
         self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
         self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
-        pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
-        der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-        der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
-        self.node_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
+        self.node_id = self.my_id()
+
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
         self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
         self.app: Optional[Application] = None
@@ -122,6 +124,16 @@ class ChiaServer:
         self.site_shutdown_task: Optional[asyncio.Task] = None
         self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
+
+    def my_id(self):
+        """ If node has public cert use that one for id, if not use private."""
+        if self.p2p_crt_path is not None:
+            pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
+        else:
+            pem_cert = x509.load_pem_x509_certificate(self._private_cert_path.read_bytes(), default_backend())
+        der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
+        der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
+        return bytes32(der_cert.fingerprint(hashes.SHA256()))
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
@@ -183,6 +195,7 @@ class ChiaServer:
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
             return ws
+
         try:
             connection = WSChiaConnection(
                 self._local_type,
@@ -301,7 +314,6 @@ class ChiaServer:
                 transport = ws._response.connection.transport  # type: ignore
                 cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
                 der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
-                breakpoint()
                 peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
                 assert peer_id != self.node_id
                 connection = WSChiaConnection(

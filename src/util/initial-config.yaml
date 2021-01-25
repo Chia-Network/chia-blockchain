@@ -144,6 +144,8 @@ timelord:
   ssl:
     private_crt:  "config/ssl/timelord/private_timelord.crt"
     private_key:  "config/ssl/timelord/private_timelord.key"
+    public_crt:  "config/ssl/timelord/public_timelord.crt"
+    public_key:  "config/ssl/timelord/public_timelord.key"
 
 full_node:
   # The full node server (if run) will run on this port
