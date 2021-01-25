@@ -1173,7 +1173,7 @@ class FullNode:
                 await self.server.send_to_all([msg], NodeType.FARMER)
                 return None, True
             else:
-                self.log.warning(
+                self.log.info(
                     f"End of slot not added CC challenge "
                     f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
                 )

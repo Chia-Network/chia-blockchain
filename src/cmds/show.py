@@ -216,7 +216,7 @@ async def show_async(args, parser):
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
-                        f"{mb_down:7.1f}|{mb_up:<7.1f}"
+                        f"{mb_up:<7.1f}|{mb_down:7.1f}"
                         f"\n                                                 "
                         f"-SB Height: {peak_sub_height:8.0f}    -Hash: {peak_hash[2:10]}..."
                     )
