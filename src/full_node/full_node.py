@@ -534,7 +534,7 @@ class FullNode:
                 sub_slots[0],
                 sub_slots[1],
                 True,
-                self.blockchain.sub_blocks,
+                self.blockchain,
             )
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             request_wallet = wallet_protocol.NewPeak(
