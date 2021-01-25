@@ -425,7 +425,7 @@ class Blockchain(BlockchainInterface):
         if peak is None:
             return []
         recent_rc: List[Tuple[bytes32, uint128]] = []
-        curr = self.__sub_blocks.get(peak.prev_hash, None)
+        curr = self.try_sub_block(peak.prev_hash)
         while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
             if curr.first_in_sub_slot:
@@ -435,7 +435,7 @@ class Blockchain(BlockchainInterface):
                 for rc in reversed(curr.finished_reward_slot_hashes):
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
-            curr = self.__sub_blocks.get(curr.prev_hash, None)
+            curr = self.try_sub_block(curr.prev_hash)
         return list(reversed(recent_rc))
 
     async def validate_unfinished_block(
@@ -528,9 +528,10 @@ class Blockchain(BlockchainInterface):
         if self.peak_height is None:
             return
         blocks = await self.block_store.get_sub_block_in_range(
-            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), self.peak_height
+            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), fork_point
         )
-        self.__sub_blocks = blocks
+        for block in blocks:
+            self.__sub_blocks[block.header_hash] = block
         return
 
     def clean_sub_block_record(self, sub_height: int):

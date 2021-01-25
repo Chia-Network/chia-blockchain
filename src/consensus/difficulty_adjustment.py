@@ -40,8 +40,8 @@ def _get_blocks_at_height(
             # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
             block_list: List[SubBlockRecord] = []
             for h in range(target_sub_block_height, target_sub_block_height + max_num_sub_blocks):
-                if sub_blocks.contains_sub_height(uint32(h)):
-                    block_list.append(sub_blocks.height_to_sub_block_record(uint32(h)))
+                assert sub_blocks.contains_sub_height(uint32(h))
+                block_list.append(sub_blocks.height_to_sub_block_record(uint32(h)))
             return block_list
         # slow fetching, goes back one by one
     curr_b: SubBlockRecord = prev_sb

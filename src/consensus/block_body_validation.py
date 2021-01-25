@@ -149,6 +149,9 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
+    if sub_height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
+        return Err.INITIAL_TRANSACTION_FREEZE
+
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         if cached_cost_result is not None:
