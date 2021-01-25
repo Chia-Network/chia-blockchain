@@ -36,19 +36,16 @@ const cols = [
     title: <Trans id="FarmYourHarvesterNetwork.nodeId">Node ID</Trans>,
   },
   {
-    width: '150px',
     field: 'peer_host',
     title: <Trans id="FarmYourHarvesterNetwork.hostName">Host Name</Trans>,
   },
   {
-    width: '150px',
     field(row: Connection) {
       return `${row.peer_port}/${row.peer_server_port}`;
     },
     title: <Trans id="FarmYourHarvesterNetwork.port">Port</Trans>,
   },
   {
-    width: '200px',
     field(row: Connection) {
       return (
         <>
@@ -61,7 +58,6 @@ const cols = [
     title: <Trans id="FarmYourHarvesterNetwork.upDown">MiB Up/Down</Trans>,
   },
   {
-    width: '100px',
     title: <Trans id="FarmYourHarvesterNetwork.actions">Actions</Trans>,
     field(row: Connection) {
       return (
