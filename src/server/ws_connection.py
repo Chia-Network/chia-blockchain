@@ -199,12 +199,15 @@ class WSChiaConnection:
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
         async def invoke(*args, **kwargs):
+            timeout = 60
+            if "timeout" in kwargs:
+                timeout = kwargs["timeout"]
             attribute = getattr(class_for_type(self.connection_type), attr_name, None)
             if attribute is None:
                 raise AttributeError(f"bad attribute {attr_name}")
 
             msg = Message(attr_name, args[0])
-            result = await self.create_request(msg, 60)
+            result = await self.create_request(msg, timeout)
             if result is not None:
                 ret_attr = getattr(class_for_type(self.local_type), result.function, None)
 

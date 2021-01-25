@@ -457,7 +457,7 @@ class FullNode:
             for peer in self.server.all_connections.values():
                 if peer.connection_type == NodeType.FULL_NODE:
                     target_peak_response: Optional[RespondSubBlock] = await peer.request_sub_block(
-                        full_node_protocol.RequestSubBlock(uint32(heaviest_peak_height), True)
+                        full_node_protocol.RequestSubBlock(uint32(heaviest_peak_height), True), timeout=3
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
                         self.sync_store.add_peak_peer(

@@ -82,6 +82,7 @@ class FullNodeAPI:
     async def respond_peers(
         self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
+        self.log.debug(f"Peers: {request.peer_list}")
         if self.full_node.full_node_peers is not None:
             if peer.connection_type is NodeType.INTRODUCER:
                 is_full_node = False

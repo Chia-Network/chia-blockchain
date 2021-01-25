@@ -12,6 +12,7 @@ from secrets import token_bytes
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
+from src.protocols.full_node_protocol import RejectSubBlock
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
@@ -575,7 +576,8 @@ class TestFullNodeProtocol:
 
         # Don't have height
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(uint32(1248921), False))
-        assert res is None
+        assert res is not None
+        assert isinstance(res.data, RejectSubBlock)
 
         # Ask without transactions
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, False))
