@@ -255,7 +255,7 @@ def chia_init(root_path: Path):
     MANIFEST: List[str] = [
         "config",
         "db/blockchain_v23.db",
-        #"wallet",
+        #  "wallet",
     ]
 
     for versionnumber in range(chiaMinorReleaseNumber() - 1, 8, -1):
