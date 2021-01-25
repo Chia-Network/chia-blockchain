@@ -396,7 +396,6 @@ class FullNode:
             tb = traceback.format_exc()
             self.log.error(f"Error with syncing: {type(e)}{tb}")
         finally:
-            self.blockchain.clean_sub_block_records()
             if self._shut_down:
                 return
             await self._finish_sync()
@@ -471,6 +470,7 @@ class FullNode:
             if batch_added is False:
                 self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
                 break
+            self.blockchain.clean_sub_block_record(end_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:

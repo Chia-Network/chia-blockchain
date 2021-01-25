@@ -531,9 +531,10 @@ class Blockchain(BlockchainInterface):
         if self.peak_height is None:
             return
         blocks = await self.block_store.get_sub_block_in_range(
-            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), self.peak_height
+            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), fork_point
         )
-        self.__sub_blocks = blocks
+        for block in blocks:
+            self.__sub_blocks[block.header_hash] = block
         return
 
     def clean_sub_block_record(self, sub_height: int):
