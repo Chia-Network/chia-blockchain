@@ -9,6 +9,47 @@ export const fullNodeMessage = (message) => ({
   },
 });
 
+export function updateLatestSubBlocks() {
+  return async (dispatch, getState) => {
+    const state = getState();
+    const height =
+      state.full_node_state.blockchain_state?.peak?.reward_chain_sub_block?.sub_block_height;
+    if (height) {
+      console.log('current sub block height', height);
+      const subBlocks = await dispatch(getSubBlockRecords(height));
+
+      console.log('subBlocks', subBlocks);
+
+      dispatch({
+        type: 'FULL_NODE_SET_LATEST_SUB_BLOCKS',
+        subBlocks,
+      });
+    }
+  };
+}
+
+export function getSubBlockRecords(end, count = 10) {
+  return async (dispatch) => {
+    const start = end - count;
+
+    const {
+      data: { sub_block_records },
+    } = await async_api(
+      dispatch,
+      fullNodeMessage({
+        command: 'get_sub_block_records',
+        data: {
+          start,
+          end,
+        },
+      }),
+      false,
+    );
+
+    return sub_block_records.reverse();
+  };
+}
+
 export function updateLatestBlocks() {
   return async (dispatch, getState) => {
     const state = getState();
@@ -74,6 +115,7 @@ export function getUnfinishedSubBlockHeaders() {
   };
 }
 
+/*
 export function getSubBlockRecords(headerHash, count = 1) {
   return async (dispatch) => {
     const records = [];
@@ -91,6 +133,7 @@ export function getSubBlockRecords(headerHash, count = 1) {
     return records;
   };
 }
+*/
 
 export const pingFullNode = () => {
   const action = fullNodeMessage();

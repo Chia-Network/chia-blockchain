@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Card, Flex, Loading } from '@chia/core';
+import { Card, Flex, FormatBytes, Loading } from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { Paper, TableRow } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
@@ -132,8 +132,9 @@ export default function Connections(props) {
                   </TableCell>
 
                   <TableCell align="right">
-                    {Math.floor(item.bytes_written / 1024)}/
-                    {Math.floor(item.bytes_read / 1024)} KiB
+                    <FormatBytes value={item.bytes_written} />
+                    /
+                    <FormatBytes value={item.bytes_read} />
                   </TableCell>
                   <TableCell align="right">
                     {service_connection_types[item.type]}
