@@ -137,7 +137,7 @@ class FullNodeAPI:
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
 
         msg = Message("respond_transaction", transaction)
-        self.log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
+        self.log.debug(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
         return msg
 
     @peer_required
@@ -161,7 +161,7 @@ class FullNodeAPI:
                 return None
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(tx.transaction)
             if status == MempoolInclusionStatus.SUCCESS:
-                self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
+                self.log.debug(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
@@ -561,7 +561,7 @@ class FullNodeAPI:
             if request.signage_point_index > 0:
                 assert sp_vdfs.rc_vdf is not None
                 if sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
-                    self.log.info(
+                    self.log.debug(
                         f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
                         f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
                     )
@@ -978,7 +978,7 @@ class FullNodeAPI:
             async with self.full_node.blockchain.lock:
                 cost, status, error = await self.full_node.mempool_manager.add_spendbundle(request.transaction)
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.info(f"Added transaction to mempool: {request.transaction.name()}")
+                    self.log.debug(f"Added transaction to mempool: {request.transaction.name()}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = request.transaction.fees()

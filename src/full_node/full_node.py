@@ -512,6 +512,7 @@ class FullNode:
 
     def get_peers_with_peaks(self, peak_hashes: List[bytes32]) -> List[ws.WSChiaConnection]:
         filtered_peers: List[ws.WSChiaConnection] = []
+        self.log.warning(f"Called: {peak_hashes} Peak peers: {self.sync_store.peak_to_peer}")
         for peak_hash in peak_hashes:
             peers_with_peak = self.sync_store.get_peak_peers(peak_hash)
             for peer_hash in peers_with_peak:
@@ -864,7 +865,7 @@ class FullNode:
             block.prev_header_hash
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
-            self.log.info("Received a disconnected unfinished block")
+            self.log.debug("Received a disconnected unfinished block")
             return
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()

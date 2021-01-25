@@ -248,7 +248,7 @@ class WSChiaConnection:
         if payload.id in self.request_results:
             result_payload: Payload = self.request_results[payload.id]
             result = result_payload.msg
-            self.log.info(f"<- {result_payload.msg.function} from: {self.peer_host}:{self.peer_port}")
+            self.log.debug(f"<- {result_payload.msg.function} from: {self.peer_host}:{self.peer_port}")
             self.request_results.pop(payload.id)
 
         return result
@@ -270,7 +270,7 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
-        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.debug(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
@@ -289,7 +289,7 @@ class WSChiaConnection:
         else:
             connection_type_str = ""
         if message.type == WSMsgType.CLOSING:
-            self.log.info(
+            self.log.debug(
                 f"Closing connection to {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
@@ -297,7 +297,7 @@ class WSChiaConnection:
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
-            self.log.info(
+            self.log.debug(
                 f"Peer closed connection {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"

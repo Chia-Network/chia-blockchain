@@ -103,10 +103,11 @@ class RpcServer:
             for con in connections:
 
                 if con.peer_node_id in peak_store:
-                    peak_sub_height, peak_hash = peak_store[con.peer_node_id]
+                    peak_hash, peak_sub_height, peak_weight = peak_store[con.peer_node_id]
                 else:
                     peak_sub_height = None
                     peak_hash = None
+                    peak_weight = None
                 con_dict = {
                     "type": con.connection_type,
                     "local_port": con.local_port,
@@ -119,6 +120,7 @@ class RpcServer:
                     "bytes_written": con.bytes_written,
                     "last_message_time": con.last_message_time,
                     "peak_sub_height": peak_sub_height,
+                    "peak_weight": peak_weight,
                     "peak_hash": peak_hash,
                 }
                 con_info.append(con_dict)
