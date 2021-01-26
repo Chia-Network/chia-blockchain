@@ -31,7 +31,7 @@ export function getSubBlockRecords(end, count = 10) {
     const start = end - count;
 
     const {
-      data: { sub_block_records, ...rest },
+      data: { sub_block_records },
     } = await async_api(
       dispatch,
       fullNodeMessage({
