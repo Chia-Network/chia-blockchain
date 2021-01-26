@@ -290,7 +290,7 @@ class WalletBlockchain(BlockchainInterface):
 
             # Rollback to fork
             # TODO(straya): reorg coins based on height not sub-block height
-            self.log.info(
+            self.log.debug(
                 f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, "
                 f"{peak.height}"
             )

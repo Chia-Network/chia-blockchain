@@ -9,6 +9,7 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased [1.0beta23] aka Beta 1.23 - 2021-01-??
 
 ### Added
+- The GUI now displays sub blocks as well as transaction blocks on the Full Node page.
 - `chia plots check` enforces a minimum of `-n 5` to decrease false negatives. Thanks to @eFishCent for these ongoing pull requests!
 - Testnets and mainnets will now have an initial period of sub blocks where transactions are blocked.
 - Transaction volume testing added to tests and various tests have been sped up.
@@ -20,7 +21,7 @@ for setuptools_scm/PEP 440 reasons.
 - clvm bytecode is now generated and confirmed that the checked-in clvm and ChiaLisp code matches the CI compiled code.
 - We have removed the '-r' flag from `chia` as it was being overridden in most cases by the `-r` for restart flag to `chia start`. Use `chia --root-path` instead.
 - `chia -h` now recommends `chia netspace -d 192` which is approximately one hours worth of sub blocks. Use `-d 1000` to get the same estimate of netspace as the RPC and GUI.
-- `chia show -c` now displays in MiB and should match the GUI.
+- `chia show -c` now displays in MiB and the GUI has been changed to MiB to match.
 - `chia configure` now accepts the shorter `-upnp` and `-log-level` arguments also.
 - `chia plots check` now defaults to `-n 30` instead of `-n 1` - HT @eFishCent.
 - `chia plots create` now enforces a minimum of k=22. As a reminder, anything less than k=32 is just for testing and be careful extrapolating performance of a k less than 30 to a k=32 or larger.
@@ -29,10 +30,11 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 - We upgraded our fork of aiosqlite to version 16.0 which has significant performance improvements. Our fixes to aiosqlite are waiting to be upstreamed.
+- The Plots tab in the GUI will no longer show red/error when the node is still syncing.
 - Inbound and outbound peer connection limits were not being honored.
 - Weight proofs were not correctly extending.
 - In some cases when closing a p2p connection to another node, there was an infinite "Closing" loop.
-- `chia show -c` was showing upload MiB in the download column and vice versa. @psydafke deserves credit for insisting it was broken.
+- `chia show -c` was showing upload MiB in the download column and vice versa. @pyl and @psydafke deserves credit for insisting it was broken.
 
 ## [1.0beta22] aka Beta 1.22 - 2021-01-19
 
