@@ -309,7 +309,7 @@ class Blockchain(BlockchainInterface):
                 if ses_included_height > fork_sub_block_height:
                     heights_to_delete.append(ses_included_height)
             for sub_height in heights_to_delete:
-                log.info(f"delete ses height {sub_height}")
+                log.info(f"delete ses at height {sub_height}")
                 del self.__sub_epoch_summaries[sub_height]
 
             if len(heights_to_delete) > 0:
@@ -632,8 +632,7 @@ class Blockchain(BlockchainInterface):
         self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
         log.info(f"save segments height {sub_epoch_summary_sub_height}")
-        return await self.block_store.persist_sub_epoch_challenge_segments(
-            sub_epoch_summary_sub_height, segments)
+        return await self.block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_sub_height, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,

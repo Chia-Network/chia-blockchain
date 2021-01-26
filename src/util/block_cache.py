@@ -14,33 +14,31 @@ class BlockCache(BlockchainInterface):
     def __init__(
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
-        headers: Optional[Dict[bytes32, HeaderBlock]] = None,
-        sub_height_to_hash: Optional[Dict[uint32, bytes32]] = None,
-        sub_epoch_summaries: Optional[Dict[uint32, SubEpochSummary]] = None,
+        headers: Dict[bytes32, HeaderBlock] = {},
+        sub_height_to_hash: Dict[uint32, bytes32] = {},
+        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
     ):
         self._sub_blocks = sub_blocks
         self._headers = headers
         self._sub_height_to_hash = sub_height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
         self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
-        self.log = logging.getLogger("BlockCache")
+        self.log = logging.getLogger(__name__)
 
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         return self._sub_blocks[header_hash]
 
+    def height_to_sub_block_record(self, height: uint32, check_db=False) -> SubBlockRecord:
+        header_hash = self.sub_height_to_hash(height)
+        return self.sub_block_record(header_hash)
+
     def get_ses_heights(self) -> List[uint32]:
-        if self._headers is None:
-            self.log.error("sub_epoch_summaries not initialized")
         return sorted(self._sub_epoch_summaries.keys())
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
-        if self._headers is None:
-            self.log.error("sub_epoch_summaries not initialized")
         return self._sub_epoch_summaries[height]
 
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        if self._sub_height_to_hash is None:
-            self.log.error("sub_height_to_hash not initialized")
         if height not in self._sub_height_to_hash:
             self.log.warning(f"could not find height in cache {height}")
             return None
@@ -50,14 +48,9 @@ class BlockCache(BlockchainInterface):
         return header_hash in self._sub_blocks
 
     def contains_sub_height(self, sub_height: uint32) -> bool:
-        if self._sub_height_to_hash is None:
-            self.log.error("sub_height_to_hash not initialized")
-            return False
         return sub_height in self._sub_height_to_hash
 
     async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
-        if self._sub_height_to_hash is None:
-            self.log.error("sub_height_to_hash not initialized")
         return self._sub_blocks
 
     async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
@@ -70,8 +63,6 @@ class BlockCache(BlockchainInterface):
         self._sub_blocks[sub_block] = sub_block
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
-        if self._headers is None:
-            self.log.error("headers not initialized")
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(

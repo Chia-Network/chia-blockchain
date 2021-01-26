@@ -88,7 +88,8 @@ class BlockStore:
         self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
         cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO sub_epoch_segments VALUES(?, ?)", (sub_epoch_summary_sub_height, bytes(SubEpochSegments(segments)))
+            "INSERT OR REPLACE INTO sub_epoch_segments VALUES(?, ?)",
+            (sub_epoch_summary_sub_height, bytes(SubEpochSegments(segments))),
         )
         await cursor_1.close()
         await self.db.commit()
@@ -169,7 +170,7 @@ class BlockStore:
             header_hash = bytes.fromhex(row[0])
             ret[header_hash] = SubBlockRecord.from_bytes(row[3])
             if row[5]:
-                # assert peak is None  # Sanity check, only one peak
+                assert peak is None  # Sanity check, only one peak
                 peak = header_hash
         return ret, peak
 
