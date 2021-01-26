@@ -2,6 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex, Indicator, StateColor, TooltipIcon } from '@chia/core';
 import type Plot from '../../types/Plot';
+import useFarmerStatus from '../../hooks/useFarmerStatus';
 import FarmerStatus from '../../constants/FarmerStatus';
 
 const Color = {
@@ -42,7 +43,7 @@ type Props = {
 
 export default function PlotStatus(props: Props) {
   const { plot } = props;
-  const farmerStatus = FarmerStatus.NOT_AVAILABLE// useFarmerStatus();
+  const farmerStatus = useFarmerStatus();
   const color = Color[farmerStatus];
   const title = Title[farmerStatus];
   const description = Description[farmerStatus];
