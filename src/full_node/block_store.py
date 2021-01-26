@@ -85,10 +85,10 @@ class BlockStore:
         await self.db.commit()
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_sub_height: uint32, segments: SubEpochSegments
+        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
         cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO sub_epoch_segments VALUES(?, ?)", (sub_epoch_summary_sub_height, bytes(segments))
+            "INSERT OR REPLACE INTO sub_epoch_segments VALUES(?, ?)", (sub_epoch_summary_sub_height, bytes(SubEpochSegments(segments)))
         )
         await cursor_1.close()
         await self.db.commit()
@@ -204,7 +204,9 @@ class BlockStore:
         if present.
         """
 
-        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {start} and sub_height <= {stop}"
+        formatted_str = (
+            f"SELECT header_hash,sub_block from sub_block_records WHERE sub_height >= {start} and sub_height <= {stop}"
+        )
 
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
@@ -212,7 +214,7 @@ class BlockStore:
         ret: Dict[bytes32, SubBlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[1])
 
         return ret
 
@@ -228,14 +230,14 @@ class BlockStore:
         if row is None:
             return {}, None
 
-        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
+        formatted_str = f"SELECT header_hash,sub_block  from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
         ret: Dict[bytes32, SubBlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[1])
         return ret, bytes.fromhex(row[0])
 
     async def get_sub_block_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:

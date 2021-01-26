@@ -621,7 +621,7 @@ class FullNode:
                     self.blockchain.clean_sub_block_records()
                 sub_block_record = self.blockchain.sub_block_record(sub_block.header_hash)
                 if sub_block_record.sub_epoch_summary_included is not None:
-                    await self.weight_proof_handler.create_prev_sub_epoch_segments(sub_block_record)
+                    await self.weight_proof_handler.create_prev_sub_epoch_segments()
                 self._state_changed("new_peak")
             validation_time = time.time() - validation_start
 

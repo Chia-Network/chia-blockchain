@@ -393,7 +393,7 @@ class WeightProofHandler:
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
             return
-        count = len(heights) - 1
+        count = len(heights) - 2
         ses_sub_block = self.blockchain.height_to_sub_block_record(heights[-2])
         prev_ses_sub_block = self.blockchain.height_to_sub_block_record(heights[-3])
         assert prev_ses_sub_block.sub_epoch_summary_included is not None

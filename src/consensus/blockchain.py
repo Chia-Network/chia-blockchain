@@ -5,7 +5,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 
 from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
 from src.types.header_block import HeaderBlock
-from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
+from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -257,6 +257,10 @@ class Blockchain(BlockchainInterface):
         await self.block_store.add_full_block(block, sub_block)
 
         self.__sub_blocks[sub_block.header_hash] = sub_block
+        if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
+            self.__sub_heights_in_cache[sub_block.sub_block_height] = []
+        self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
+
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
@@ -536,7 +540,7 @@ class Blockchain(BlockchainInterface):
         blocks = await self.block_store.get_sub_block_in_range(
             max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), fork_point
         )
-        for block in blocks:
+        for block in blocks.values():
             self.__sub_blocks[block.header_hash] = block
         return
 
@@ -545,7 +549,7 @@ class Blockchain(BlockchainInterface):
             return
         blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
         while blocks_to_remove is not None and sub_height >= 0:
-            log.info(f"delete sub height {sub_height} from sub blocks")
+            log.debug(f"delete sub height {sub_height} from sub blocks")
             for header_hash in blocks_to_remove:
                 del self.__sub_blocks[header_hash]  # remove from sub blocks
             del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
@@ -591,8 +595,7 @@ class Blockchain(BlockchainInterface):
     ):
         log.info(f"save segments height {sub_epoch_summary_sub_height}")
         return await self.block_store.persist_sub_epoch_challenge_segments(
-            sub_epoch_summary_sub_height, SubEpochSegments(segments)
-        )
+            sub_epoch_summary_sub_height, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,

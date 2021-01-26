@@ -186,14 +186,14 @@ class WalletBlockStore:
         if row is None:
             return {}, None
 
-        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
+        formatted_str = f"SELECT header_hash,sub_block from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
         ret: Dict[bytes32, SubBlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[1])
         return ret, bytes.fromhex(row[0])
 
     async def get_headers_in_range(
@@ -226,7 +226,9 @@ class WalletBlockStore:
         if present.
         """
 
-        formatted_str = f"SELECT * from sub_block_records WHERE sub_height >= {start} and sub_height <= {stop}"
+        formatted_str = (
+            f"SELECT header_hash,sub_block from sub_block_records WHERE sub_height >= {start} and sub_height <= {stop}"
+        )
 
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
@@ -234,7 +236,7 @@ class WalletBlockStore:
         ret: Dict[bytes32, SubBlockRecord] = {}
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[1])
 
         return ret
 
