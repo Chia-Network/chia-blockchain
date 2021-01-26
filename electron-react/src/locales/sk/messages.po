@@ -105,111 +105,111 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší sp
 msgid "BalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky"
 
-#: src/components/block/Block.jsx:212
+#: src/components/block/Block.jsx:210
 msgid "Block.blockVDFIterations"
 msgstr "Block VDF iterácii"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:213
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v tomto bloku."
 
-#: src/components/block/Block.jsx:260
+#: src/components/block/Block.jsx:258
 msgid "Block.coinbaseAmount"
 msgstr "Množstvo coinbase"
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:261
 msgid "Block.coinbaseAmountTooltip"
 msgstr "Bloková Chia odmena, ide do poolu (alebo ťaženia, ak sa nepoužíva pool)"
 
-#: src/components/block/Block.jsx:269
+#: src/components/block/Block.jsx:267
 msgid "Block.coinbasePuzzleHash"
 msgstr "Coinbase adresa"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Block.description"
 msgstr "Blok na pozícii {0} v Chia blockchaine"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:196
 msgid "Block.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:271
 msgid "Block.feesAmount"
 msgstr "Množstvo odmeny"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:274
 msgid "Block.feesAmountTooltip"
 msgstr "Celkové poplatky v tomto bloku idú ťažiarovi"
 
-#: src/components/block/Block.jsx:282
+#: src/components/block/Block.jsx:280
 msgid "Block.feesPuzzleHash"
 msgstr "Poplatky puzzle hash"
 
-#: src/components/block/Block.jsx:161
+#: src/components/block/Block.jsx:159
 msgid "Block.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:177
 msgid "Block.height"
 msgstr "Poradie"
 
-#: src/components/block/Block.jsx:132
+#: src/components/block/Block.jsx:130
 msgid "Block.notFound"
 msgstr ""
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:232
 msgid "Block.plotId"
 msgstr "Id poľa"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:235
 msgid "Block.plotIdTooltip"
 msgstr "Seedy použité na vytvorenie poľa, záleží to na pk poolu a pk poľa"
 
-#: src/components/block/Block.jsx:226
+#: src/components/block/Block.jsx:224
 msgid "Block.plotPublicKey"
 msgstr "Verejný kľúč poľa"
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:228
 msgid "Block.poolPublicKey"
 msgstr "Verejný kľúč poolu"
 
-#: src/components/block/Block.jsx:193
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:305
 msgid "Block.previousBlock"
 msgstr "Predchádzajúci blok"
 
-#: src/components/block/Block.jsx:222
+#: src/components/block/Block.jsx:220
 msgid "Block.proofOfSpaceSize"
 msgstr "Dôkaz o veľkosti priestoru"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:173
 msgid "Block.subBlockHeight"
 msgstr ""
 
-#: src/components/block/Block.jsx:165
+#: src/components/block/Block.jsx:163
 msgid "Block.timestamp"
 msgstr "Časová značka"
 
-#: src/components/block/Block.jsx:168
+#: src/components/block/Block.jsx:166
 msgid "Block.timestampTooltip"
 msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkazom o čase"
 
-#: src/components/block/Block.jsx:105
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:129
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:103
+#: src/components/block/Block.jsx:115
+#: src/components/block/Block.jsx:127
+#: src/components/block/Block.jsx:287
 msgid "Block.title"
 msgstr "Bloky"
 
-#: src/components/block/Block.jsx:202
+#: src/components/block/Block.jsx:200
 msgid "Block.totalVDFIterations"
 msgstr "Celkový počet iterácií VDF"
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:203
 msgid "Block.totalVDFIterationsTooltip"
 msgstr ""
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:243
 msgid "Block.transactionsFilterHash"
 msgstr ""
 
@@ -217,11 +217,11 @@ msgstr ""
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "Block.weight"
 msgstr "Veľkosť"
 
-#: src/components/block/Block.jsx:186
+#: src/components/block/Block.jsx:184
 msgid "Block.weightTooltip"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 

@@ -105,111 +105,111 @@ msgstr "This is the total amount of chia in the blockchain at the current peak s
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
-#: src/components/block/Block.jsx:212
+#: src/components/block/Block.jsx:210
 msgid "Block.blockVDFIterations"
 msgstr "Block VDF Iterations"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:213
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 
-#: src/components/block/Block.jsx:260
+#: src/components/block/Block.jsx:258
 msgid "Block.coinbaseAmount"
 msgstr "Coinbase Amount"
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:261
 msgid "Block.coinbaseAmountTooltip"
 msgstr "This is the chia block reward which goes to the pool (or farmer if not pooling)"
 
-#: src/components/block/Block.jsx:269
+#: src/components/block/Block.jsx:267
 msgid "Block.coinbasePuzzleHash"
 msgstr "Coinbase Puzzle Hash"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Block.description"
 msgstr "Block at sub height {0} in the Chia blockchain"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:196
 msgid "Block.difficulty"
 msgstr "Difficulty"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:271
 msgid "Block.feesAmount"
 msgstr "Fees Amount"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:274
 msgid "Block.feesAmountTooltip"
 msgstr "The total transactions fees in this block. Rewarded to the farmer."
 
-#: src/components/block/Block.jsx:282
+#: src/components/block/Block.jsx:280
 msgid "Block.feesPuzzleHash"
 msgstr "Fees Puzzle Hash"
 
-#: src/components/block/Block.jsx:161
+#: src/components/block/Block.jsx:159
 msgid "Block.headerHash"
 msgstr "Header hash"
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:177
 msgid "Block.height"
 msgstr "Height"
 
-#: src/components/block/Block.jsx:132
+#: src/components/block/Block.jsx:130
 msgid "Block.notFound"
 msgstr "Block with hash {headerHash} does not exists."
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:232
 msgid "Block.plotId"
 msgstr "Plot Id"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:235
 msgid "Block.plotIdTooltip"
 msgstr "The seed used to create the plot. This depends on the pool pk and plot pk."
 
-#: src/components/block/Block.jsx:226
+#: src/components/block/Block.jsx:224
 msgid "Block.plotPublicKey"
 msgstr "Plot Public Key"
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:228
 msgid "Block.poolPublicKey"
 msgstr "Pool Public Key"
 
-#: src/components/block/Block.jsx:193
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:305
 msgid "Block.previousBlock"
 msgstr "Previous Block"
 
-#: src/components/block/Block.jsx:222
+#: src/components/block/Block.jsx:220
 msgid "Block.proofOfSpaceSize"
 msgstr "Proof of Space Size"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:173
 msgid "Block.subBlockHeight"
 msgstr "Sub Block Height"
 
-#: src/components/block/Block.jsx:165
+#: src/components/block/Block.jsx:163
 msgid "Block.timestamp"
 msgstr "Timestamp"
 
-#: src/components/block/Block.jsx:168
+#: src/components/block/Block.jsx:166
 msgid "Block.timestampTooltip"
 msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 
-#: src/components/block/Block.jsx:105
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:129
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:103
+#: src/components/block/Block.jsx:115
+#: src/components/block/Block.jsx:127
+#: src/components/block/Block.jsx:287
 msgid "Block.title"
 msgstr "Block"
 
-#: src/components/block/Block.jsx:202
+#: src/components/block/Block.jsx:200
 msgid "Block.totalVDFIterations"
 msgstr "Total VDF Iterations"
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:203
 msgid "Block.totalVDFIterationsTooltip"
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:243
 msgid "Block.transactionsFilterHash"
 msgstr "Transactions Filter Hash"
 
@@ -217,11 +217,11 @@ msgstr "Transactions Filter Hash"
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr "Transactions Generator Hash"
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "Block.weight"
 msgstr "Weight"
 
-#: src/components/block/Block.jsx:186
+#: src/components/block/Block.jsx:184
 msgid "Block.weightTooltip"
 msgstr "Weight is the total added difficulty of all sub blocks up to and including this one"
 
