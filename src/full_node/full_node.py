@@ -497,6 +497,9 @@ class FullNode:
                     if error is not None:
                         self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                     return False
+                sub_block = self.blockchain.sub_block_record(block.header_hash)
+                if sub_block.sub_epoch_summary_included is not None:
+                    await self.weight_proof_handler.create_prev_sub_epoch_segments()
         self._state_changed("new_peak")
         return True
 
@@ -616,6 +619,9 @@ class FullNode:
                 await self.mempool_manager.new_peak(self.blockchain.get_peak())
                 if not self.sync_store.get_sync_mode():
                     self.blockchain.clean_sub_block_records()
+                sub_block_record = self.blockchain.sub_block_record(sub_block.header_hash)
+                if sub_block_record.sub_epoch_summary_included is not None:
+                    await self.weight_proof_handler.create_prev_sub_epoch_segments(sub_block_record)
                 self._state_changed("new_peak")
             validation_time = time.time() - validation_start
 

@@ -5,6 +5,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 
 from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
 from src.types.header_block import HeaderBlock
+from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -254,11 +255,8 @@ class Blockchain(BlockchainInterface):
 
         # Always add the block to the database
         await self.block_store.add_full_block(block, sub_block)
-        self.__sub_blocks[sub_block.header_hash] = sub_block
-        if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
-            self.__sub_heights_in_cache[sub_block.sub_block_height] = []
-        self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
 
+        self.__sub_blocks[sub_block.header_hash] = sub_block
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
@@ -306,7 +304,13 @@ class Blockchain(BlockchainInterface):
                 if ses_included_height > fork_sub_block_height:
                     heights_to_delete.append(ses_included_height)
             for sub_height in heights_to_delete:
+                log.info(f"delete ses height {sub_height}")
                 del self.__sub_epoch_summaries[sub_height]
+
+            if len(heights_to_delete) > 0:
+                # remove segments from prev fork
+                log.info(f"remove segments for se above {fork_sub_block_height}")
+                await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_sub_block_height))
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
@@ -511,10 +515,6 @@ class Blockchain(BlockchainInterface):
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         return self.__sub_blocks[header_hash]
 
-    def height_to_sub_block_record(self, sub_height: uint32) -> SubBlockRecord:
-        header_hash = self.sub_height_to_hash(sub_height)
-        return self.sub_block_record(header_hash)
-
     def get_ses_heights(self) -> List[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())
 
@@ -536,7 +536,7 @@ class Blockchain(BlockchainInterface):
         blocks = await self.block_store.get_sub_block_in_range(
             max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, 0), fork_point
         )
-        for block in blocks.values():
+        for block in blocks:
             self.__sub_blocks[block.header_hash] = block
         return
 
@@ -585,3 +585,23 @@ class Blockchain(BlockchainInterface):
         if block is None:
             return None
         return block.get_block_header()
+
+    async def persist_sub_epoch_challenge_segments(
+        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
+    ):
+        log.info(f"save segments height {sub_epoch_summary_sub_height}")
+        return await self.block_store.persist_sub_epoch_challenge_segments(
+            sub_epoch_summary_sub_height, SubEpochSegments(segments)
+        )
+
+    async def get_sub_epoch_challenge_segments(
+        self,
+        sub_epoch_summary_sub_height: uint32,
+    ) -> Optional[List[SubEpochChallengeSegment]]:
+        segments: Optional[List[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
+            sub_epoch_summary_sub_height
+        )
+        if segments is None:
+            return None
+        log.info(f"get segments height {sub_epoch_summary_sub_height}")
+        return segments

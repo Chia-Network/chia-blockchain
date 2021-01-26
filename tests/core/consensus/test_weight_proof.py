@@ -301,23 +301,24 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
+    # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("path to db")
+        connection = await aiosqlite.connect("/Users/almog/.chia/beta-1.0b19.dev895/db/blockchain_v22.db")
         block_store: BlockStore = await BlockStore.create(connection)
         sub_blocks, peak = await block_store.get_sub_block_records()
+        headers = await block_store.get_headers_in_range(0, 1547)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
-
+        peak = await block_store.get_full_blocks_at([1547])
         if len(sub_blocks) == 0:
             return None, None
 
         assert peak is not None
-        peak_height = sub_blocks[peak].sub_block_height
+        peak_height = sub_blocks[peak[0].header_hash].sub_block_height
 
         # Sets the other state variables (peak_height and height_to_hash)
-        curr: SubBlockRecord = sub_blocks[peak]
+        curr: SubBlockRecord = sub_blocks[peak[0].header_hash]
         while True:
             sub_height_to_hash[curr.sub_block_height] = curr.header_hash
             if curr.sub_epoch_summary_included is not None:
@@ -326,14 +327,15 @@ class TestWeightProof:
                 break
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
-        block_cache = BlockCache(sub_blocks, sub_height_to_hash, sub_epoch_summaries=sub_epoch_summaries)
+        block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
 
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
-        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
-        valid, fork_point = wpf.validate_weight_proof(wp)
-
-        await connection.close()
-        assert valid
+        await wpf.blockchain.get_sub_epoch_challenge_segments(1547)
+        # wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
+        # valid, fork_point = wpf.validate_weight_proof(wp)
+        #
+        # await connection.close()
+        # assert valid
 
 
 def get_size(obj, seen=None):
