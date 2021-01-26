@@ -300,7 +300,7 @@ class WeightProofHandler:
         prev_ses: Optional[SubEpochSummary] = None
         for idx, segment in enumerate(weight_proof.sub_epoch_segments):
             if curr_sub_epoch_n < segment.sub_epoch_n:
-                self.log.info(f"handle sub epoch {segment.sub_epoch_n}")
+                self.log.debug(f"handle sub epoch {segment.sub_epoch_n}")
                 # recreate RewardChainSubSlot for next ses rc_hash
                 if segment.sub_epoch_n > 0:
                     rc_sub_slot_hash = self.__get_rc_sub_slot_hash(segment, summaries).get_hash()

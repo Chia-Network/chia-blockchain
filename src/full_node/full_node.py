@@ -279,7 +279,7 @@ class FullNode:
                 # Don't ask if we already know this peer has the peak
                 if peer.peer_node_id not in peak_peers:
                     target_peak_response: Optional[RespondSubBlock] = await peer.request_sub_block(
-                        full_node_protocol.RequestSubBlock(uint32(peak_sync_height), False)
+                        full_node_protocol.RequestSubBlock(uint32(peak_sync_height), False), timeout=10
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
                         self.sync_store.add_peak_peer(

@@ -529,7 +529,6 @@ class WalletNode:
                         await peer.close()
                         exc = traceback.format_exc()
                         self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
-                        self.wallet_state_manager.blockchain.clean_sub_block_record(end_height)
                 if not added:
                     raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
 
