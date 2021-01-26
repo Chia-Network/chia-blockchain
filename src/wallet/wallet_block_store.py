@@ -159,7 +159,7 @@ class WalletBlockStore:
         for row in rows:
             header_hash = bytes.fromhex(row[0])
             ret[header_hash] = SubBlockRecord.from_bytes(row[6])
-            if row[7]:
+            if row[8]:
                 assert peak is None  # Sanity check, only one peak
                 peak = header_hash
         return ret, peak

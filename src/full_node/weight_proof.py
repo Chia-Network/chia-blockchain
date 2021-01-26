@@ -161,7 +161,7 @@ class WeightProofHandler:
                 sub_epoch_segments.extend(segments)
                 sub_epoch_n = uint32(sub_epoch_n + 1)
             prev_ses_block = ses_block
-        self.log.info(f"sub_epochs: {len(sub_epoch_data)}")
+        self.log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
     def _sample_sub_epoch(
