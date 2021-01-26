@@ -57,8 +57,21 @@ const cols = [
     title: <Trans id="BlocksCard.sbHeight">SB Height</Trans>,
   }, {
     field(row) {
-      const { height, timestamp } = row;
+      const { 
+        height, 
+        timestamp,
+        isFinished,
+        foliage_block: {
+          height: foliageHeight,
+        } = {},
+      } = row;
       const isSubBlock = !timestamp;
+
+      if (!isFinished) {
+        return (
+          <i>{foliageHeight}</i>
+        );
+      }
 
       if (isSubBlock) {
         return (

@@ -44,9 +44,6 @@ export function getSubBlockRecords(end, count = 10) {
       false,
     );
 
-    console.log('sub_block_records', sub_block_records);
-    console.log('rest', rest);
-
     return sub_block_records.reverse();
   };
 }
