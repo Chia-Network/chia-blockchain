@@ -258,6 +258,10 @@ class FullNode:
             peer: peer that sent the message
 
         """
+
+        # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
+        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height)
+
         if self.blockchain.contains_sub_block(request.header_hash):
             return None
 
@@ -266,9 +270,6 @@ class FullNode:
         curr_peak_sub_height = uint32(0) if peak is None else peak.sub_block_height
         if peak is not None and peak.weight > request.weight:
             return None
-
-        # Store this peak/peer combination in case we want to sync to it
-        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height)
 
         if self.sync_store.get_sync_mode():
             # If peer connects while we are syncing, check if they have the block we are syncing towards
