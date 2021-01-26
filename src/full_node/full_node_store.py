@@ -9,7 +9,6 @@ from src.consensus.sub_block_record import SubBlockRecord
 from src.protocols import timelord_protocol
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo
@@ -26,9 +25,6 @@ class FullNodeStore:
 
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
-
-    # Blocks which we have received but our blockchain does not reach, old ones are cleared
-    disconnected_blocks: Dict[bytes32, FullBlock]
 
     # Unfinished blocks, keyed from reward hash
     unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
@@ -54,7 +50,6 @@ class FullNodeStore:
     def __init__(self):
         self.candidate_blocks = {}
         self.seen_unfinished_blocks = set()
-        self.disconnected_blocks = {}
         self.unfinished_blocks = {}
         self.finished_sub_slots = []
         self.future_eos_cache = {}
@@ -102,23 +97,6 @@ class FullNodeStore:
 
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
-
-    def add_disconnected_block(self, block: FullBlock) -> None:
-        self.disconnected_blocks[block.header_hash] = block
-
-    def get_disconnected_block_by_prev(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
-        for _, block in self.disconnected_blocks.items():
-            if block.prev_header_hash == prev_header_hash:
-                return block
-        return None
-
-    def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        return self.disconnected_blocks.get(header_hash, None)
-
-    def clear_disconnected_blocks_below(self, sub_height: uint32) -> None:
-        for key in list(self.disconnected_blocks.keys()):
-            if self.disconnected_blocks[key].sub_block_height < sub_height:
-                del self.disconnected_blocks[key]
 
     def add_unfinished_block(self, sub_height: uint32, unfinished_block: UnfinishedBlock) -> None:
         self.unfinished_blocks[unfinished_block.partial_hash] = (
@@ -526,7 +504,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
-            log.info(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
+            log.debug(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,

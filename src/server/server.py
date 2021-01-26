@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import ssl
+import time
 from ipaddress import ip_address, IPv6Address
 from pathlib import Path
 from typing import Any, List, Dict, Callable, Optional, Set
@@ -239,13 +240,13 @@ class ChiaServer:
                 pass
 
             url = f"wss://{target_node.host}:{target_node.port}/ws"
-            self.log.info(f"Connecting: {url}, Peer info: {target_node}")
+            self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
                     url, autoclose=False, autoping=True, heartbeat=300, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except asyncio.TimeoutError:
-                self.log.info(f"Timeout error connecting to {url}")
+                self.log.debug(f"Timeout error connecting to {url}")
                 await session.close()
                 return False
             if ws is not None:
@@ -281,7 +282,7 @@ class ChiaServer:
                 await session.close()
                 return False
         except client_exceptions.ClientConnectorError as e:
-            self.log.warning(f"{e}")
+            self.log.info(f"{e}")
         except ProtocolError as e:
             await connection.close()
             if e.code == Err.SELF_CONNECTION:
@@ -321,6 +322,7 @@ class ChiaServer:
                 await self.received_message_callback(connection_inc)
 
             async def api_call(payload: Payload, connection: WSChiaConnection):
+                start_time = time.time()
                 try:
                     full_message = payload.msg
                     connection.log.info(
@@ -345,6 +347,10 @@ class ChiaServer:
                         response: Optional[Message] = await f(full_message.data, connection)
                     else:
                         response = await f(full_message.data)
+                    connection.log.debug(
+                        f"Time taken to process {full_message.function} from {connection.peer_node_id} is "
+                        f"{time.time() - start_time} seconds"
+                    )
 
                     if response is not None:
                         payload_id = payload.id
@@ -355,7 +361,7 @@ class ChiaServer:
                         tb = traceback.format_exc()
                         connection.log.error(f"Exception: {e}, closing connection {connection}. {tb}")
                     else:
-                        connection.log.info(f"Exception: {e} while closing connection")
+                        connection.log.debug(f"Exception: {e} while closing connection")
                         pass
                     await connection.close()
 
@@ -431,7 +437,7 @@ class ChiaServer:
             self.incoming_task.cancel()
 
     async def await_closed(self):
-        self.log.info("Await Closed")
+        self.log.debug("Await Closed")
         await self.shut_down_event.wait()
         if self.connection_close_task is not None:
             await self.connection_close_task

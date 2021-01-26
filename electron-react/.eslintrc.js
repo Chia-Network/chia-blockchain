@@ -72,6 +72,8 @@ module.exports = {
     "unicorn/no-lonely-if": "off",
     "unicorn/no-array-reduce": "off",
     "unicorn/no-new-array": "off",
+    "unicorn/no-array-for-each": "off",
+    "unicorn/prefer-spread": "off",
     "unicorn/consistent-destructuring": "off",
     "unicorn/filename-case": ["error", {
       "cases": {

@@ -332,40 +332,40 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return
         header_block_records: List[HeaderBlockRecord] = []
-        for block in header_blocks:
-            if block.is_block:
-                # Find additions and removals
+        async with self.wallet_state_manager.blockchain.lock:
+            for block in header_blocks:
+                if block.is_block:
+                    # Find additions and removals
+                    (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
+                        block, block.transactions_filter, None
+                    )
+
+                    # Get Additions
+                    added_coins = await self.get_additions(peer, block, additions)
+                    if added_coins is None:
+                        raise ValueError("Failed to fetch additions")
+
+                    # Get removals
+                    removed_coins = await self.get_removals(peer, block, added_coins, removals)
+                    if removed_coins is None:
+                        raise ValueError("Failed to fetch removals")
+                    hbr = HeaderBlockRecord(block, added_coins, removed_coins)
+                else:
+                    hbr = HeaderBlockRecord(block, [], [])
+                    header_block_records.append(hbr)
                 (
-                    additions,
-                    removals,
-                ) = await self.wallet_state_manager.get_filter_additions_removals(block, block.transactions_filter)
-
-                # Get Additions
-                added_coins = await self.get_additions(peer, block, additions)
-                if added_coins is None:
-                    raise ValueError("Failed to fetch additions")
-
-                # Get removals
-                removed_coins = await self.get_removals(peer, block, added_coins, removals)
-                if removed_coins is None:
-                    raise ValueError("Failed to fetch removals")
-                hbr = HeaderBlockRecord(block, added_coins, removed_coins)
-            else:
-                hbr = HeaderBlockRecord(block, [], [])
-                header_block_records.append(hbr)
-            (
-                result,
-                error,
-                fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
-            if result == ReceiveBlockResult.NEW_PEAK:
-                if not self.wallet_state_manager.sync_mode:
-                    self.wallet_state_manager.blockchain.clean_sub_block_records()
-                self.wallet_state_manager.state_changed("new_block")
-            elif result == ReceiveBlockResult.INVALID_BLOCK:
-                self.log.info(f"Invalid block from peer: {peer.get_peer_info()}")
-                await peer.close()
-                return
+                    result,
+                    error,
+                    fork_h,
+                ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
+                if result == ReceiveBlockResult.NEW_PEAK:
+                    if not self.wallet_state_manager.sync_mode:
+                        self.wallet_state_manager.blockchain.clean_sub_block_records()
+                    self.wallet_state_manager.state_changed("new_block")
+                elif result == ReceiveBlockResult.INVALID_BLOCK:
+                    self.log.info(f"Invalid block from peer: {peer.get_peer_info()}")
+                    await peer.close()
+                    return
 
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
@@ -509,26 +509,45 @@ class WalletNode:
             self.log.info("No peers to sync to")
             return
 
-        fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
-        if fork_height is None:
-            fork_height = 0
-        await self.wallet_state_manager.blockchain.warmup(fork_height)
-        batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        for i in range(max(0, fork_height - 1), peak_sub_height, batch_size):
-            start_height = i
-            end_height = min(peak_sub_height, start_height + batch_size)
-            peers: List[WSChiaConnection] = self.server.get_full_node_connections()
-            for peer in peers:
-                try:
-                    await self.fetch_blocks_and_validate(peer, uint32(start_height), end_height)
-                    break
-                except Exception as e:
-                    await peer.close()
-                    exc = traceback.format_exc()
-                    self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
-                    self.wallet_state_manager.blockchain.clean_sub_block_record(end_height)
+        async with self.wallet_state_manager.blockchain.lock:
+            fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
+            if fork_height is None:
+                fork_height = 0
+            await self.wallet_state_manager.blockchain.warmup(fork_height)
+            batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+            for i in range(max(0, fork_height - 1), peak_sub_height, batch_size):
+                start_height = i
+                end_height = min(peak_sub_height, start_height + batch_size)
+                peers: List[WSChiaConnection] = self.server.get_full_node_connections()
+                added = False
+                for peer in peers:
+                    try:
+                        await self.fetch_blocks_and_validate(peer, uint32(start_height), end_height, fork_height)
+                        added = True
+                        break
+                    except Exception as e:
+                        await peer.close()
+                        exc = traceback.format_exc()
+                        self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
+                if not added:
+                    raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
 
-    async def fetch_blocks_and_validate(self, peer: WSChiaConnection, sub_height_start: uint32, sub_height_end: uint32):
+                peak = self.wallet_state_manager.blockchain.get_peak()
+                assert peak is not None
+                self.wallet_state_manager.blockchain.clean_sub_block_record(
+                    min(
+                        end_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                        peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                    )
+                )
+
+    async def fetch_blocks_and_validate(
+        self,
+        peer: WSChiaConnection,
+        sub_height_start: uint32,
+        sub_height_end: uint32,
+        fork_point_with_peak: uint32,
+    ):
         if self.wallet_state_manager is None:
             return
 
@@ -538,6 +557,7 @@ class WalletNode:
         if res is None or not isinstance(res, RespondHeaderBlocks):
             raise ValueError("Peer returned no response")
         header_blocks: List[HeaderBlock] = res.header_blocks
+        advanced_peak = False
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
         if (
@@ -560,10 +580,12 @@ class WalletNode:
             header_block = header_blocks[i]
             if not trusted and pre_validation_results is not None and pre_validation_results[i].error is not None:
                 raise ValidationError(Err(pre_validation_results[i].error))
+
+            fork_point_with_old_peak = None if advanced_peak else fork_point_with_peak
             if header_block.is_block:
                 # Find additions and removals
                 (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
-                    header_block, header_block.transactions_filter
+                    header_block, header_block.transactions_filter, fork_point_with_old_peak
                 )
 
                 # Get Additions
@@ -581,17 +603,16 @@ class WalletNode:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
 
             if trusted:
-                (
-                    result,
-                    error,
-                    fork_h,
-                ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record, None, trusted)
+                (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
+                    header_block_record, None, trusted, fork_point_with_old_peak
+                )
             else:
                 assert pre_validation_results is not None
                 (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
-                    header_block_record, pre_validation_results[i], trusted
+                    header_block_record, pre_validation_results[i], trusted, fork_point_with_old_peak
                 )
             if result == ReceiveBlockResult.NEW_PEAK:
+                advanced_peak = True
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 raise ValueError("Value error peer sent us invalid block")

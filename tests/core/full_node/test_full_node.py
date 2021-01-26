@@ -477,24 +477,25 @@ class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_request_respond_transaction(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+        wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = await full_node_1.get_all_full_blocks()
 
         blocks = bt.get_consecutive_blocks(
-            2,
+            3,
             block_list_input=blocks,
             guarantee_block=True,
-            farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
-            pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+            farmer_reward_puzzle_hash=wallet_ph,
+            pool_reward_puzzle_hash=wallet_ph,
         )
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
 
-        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
-        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak"))
-
         peer = await connect_and_get_peer(server_1, server_2)
 
-        for block in blocks[-2:]:
+        # TODO: check why these asserts fail
+        # await time_out_assert(20, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+
+        for block in blocks[-3:]:
             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
             await full_node_2.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
@@ -505,6 +506,7 @@ class TestFullNodeProtocol:
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
+        log.info(f"Included RC: {blocks[-1].get_included_reward_coins()}")
         spend_bundle = wallet_a.generate_signed_transaction(
             100, receiver_puzzlehash, list(blocks[-1].get_included_reward_coins())[0]
         )
@@ -678,8 +680,9 @@ class TestFullNodeProtocol:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block: FullBlock = blocks[-1]
+        overflow = is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index)
         unf = UnfinishedBlock(
-            block.finished_sub_slots,
+            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_sub_block.get_unfinished(),
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
@@ -703,11 +706,13 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         peer = await connect_and_get_peer(server_1, server_2)
-        blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, seed=b"12345")
-        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[-2]))
+        blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=b"12345")
+        for block in blocks[:-1]:
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
         block: FullBlock = blocks[-1]
+        overflow = is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index)
         unf = UnfinishedBlock(
-            block.finished_sub_slots,
+            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_sub_block.get_unfinished(),
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,

@@ -57,4 +57,4 @@ pyparsing~=2.4.7
 pycparser~=2.20
 packaging~=20.8
 zipp~=3.4.0
-portalocker~=2.0.0
+portalocker~=2.1.0

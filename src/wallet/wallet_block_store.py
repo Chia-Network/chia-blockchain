@@ -185,6 +185,7 @@ class WalletBlockStore:
         await res.close()
         if row is None:
             return {}, None
+        peak: bytes32 = bytes32(bytes.fromhex(row[0]))
 
         formatted_str = f"SELECT header_hash,sub_block from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
         cursor = await self.db.execute(formatted_str)
@@ -194,7 +195,7 @@ class WalletBlockStore:
         for row in rows:
             header_hash = bytes.fromhex(row[0])
             ret[header_hash] = SubBlockRecord.from_bytes(row[1])
-        return ret, bytes.fromhex(row[0])
+        return ret, peak
 
     async def get_headers_in_range(
         self,
