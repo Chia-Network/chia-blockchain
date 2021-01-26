@@ -188,8 +188,8 @@ class BlockStore:
 
     async def get_sub_blocks_from_peak(self, blocks_n: int) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
-        if present.
+        Returns a dictionary with all sub_blocks that have sub_height >= peak sub_height - blocks_n, as well as the
+        peak header hash.
         """
 
         res = await self.db.execute("SELECT * from sub_block_records WHERE is_peak = 1")

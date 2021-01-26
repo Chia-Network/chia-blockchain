@@ -594,8 +594,7 @@ class TestFullNodeProtocol:
 
         # Don't have height
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(uint32(1248921), False))
-        assert res is not None
-        assert isinstance(res.data, RejectSubBlock)
+        assert res is None
 
         # Ask without transactions
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, False))
