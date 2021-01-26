@@ -482,25 +482,28 @@ class WalletStateManager:
             trade_additions,
         ) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
-        sub_block: SubBlockRecord = self.blockchain.height_to_sub_block_record(sub_height)
+        sub_block: Optional[SubBlockRecord] = await self.blockchain.get_sub_block_from_db(
+            self.blockchain.sub_height_to_hash(sub_height)
+        )
+        assert sub_block is not None
 
         pool_rewards = set()
         farmer_rewards = set()
 
-        prev = self.blockchain.try_sub_block(sub_block.prev_hash)
+        prev = await self.blockchain.get_sub_block_from_db(sub_block.prev_hash)
         # [sub 1] [sub 2] [block 3] [sub 4] [sub 5] [block6]
         # [block 6] will contain rewards for [sub 1] [sub 2] [block 3]
         while prev is not None:
             # step 1 find previous block
             if prev.is_block:
                 break
-            prev = self.blockchain.sub_block_record(prev.prev_hash)
+            prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
 
         if prev is not None:
             # include last block
             pool_rewards.add(bytes32(prev.sub_block_height.to_bytes(32, "big")))
             farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
-            prev = self.blockchain.try_sub_block(prev.prev_hash)
+            prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
 
         while prev is not None:
             # step 2 traverse from previous block to the block before it
@@ -508,7 +511,7 @@ class WalletStateManager:
             farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
             if prev.is_block:
                 break
-            prev = self.blockchain.sub_block_record(prev.prev_hash)
+            prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
 
         for coin in coins:
             if coin.name() in trade_additions:
@@ -707,7 +710,7 @@ class WalletStateManager:
         return await self.tx_store.get_transaction_record(tx_id)
 
     async def get_filter_additions_removals(
-        self, new_block: HeaderBlock, transactions_filter: bytes
+        self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
         # assert new_block.prev_header_hash in self.blockchain.sub_blocks
@@ -715,7 +718,9 @@ class WalletStateManager:
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
-        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
+        if fork_point_with_peak is not None:
+            fork_h: int = fork_point_with_peak
+        elif new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
                 self.blockchain,

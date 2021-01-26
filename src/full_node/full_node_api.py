@@ -82,6 +82,7 @@ class FullNodeAPI:
     async def respond_peers(
         self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
+        self.log.debug(f"Received {len(request.peer_list)} peers")
         if self.full_node.full_node_peers is not None:
             if peer.connection_type is NodeType.INTRODUCER:
                 is_full_node = False
@@ -142,7 +143,7 @@ class FullNodeAPI:
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
 
         msg = Message("respond_transaction", transaction)
-        self.log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
+        self.log.debug(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
         return msg
 
     @peer_required
@@ -171,7 +172,7 @@ class FullNodeAPI:
                 return None
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(tx.transaction)
             if status == MempoolInclusionStatus.SUCCESS:
-                self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
+                self.log.debug(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
@@ -215,33 +216,16 @@ class FullNodeAPI:
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp, request.tip))
 
     @api_request
-    @peer_required
-    async def respond_proof_of_weight(
-        self,
-        response: full_node_protocol.RespondProofOfWeight,
-        peer: ws.WSChiaConnection,
-    ) -> Optional[Message]:
-        if peer.peer_node_id not in self.full_node.pow_pending:
-            self.log.warning("weight proof not in pending request list")
-            return None
-        self.full_node.pow_pending.remove(peer.peer_node_id)
-        self.full_node.log.info(f"tip {response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height}")
-        validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
-        if not validated:
-            raise Exception("bad weight proof, disconnecting peer")
-        # get tip params
-        tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
-        tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
-        self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
-        self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
-        return Message(
-            "request_sub_block",
-            full_node_protocol.RequestSubBlock(uint32(tip_height), True),
-        )
+    async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
+        self.log.warning("Received proof of weight too late.")
+        return None
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_sub_height(request.sub_height):
+            # reject = RejectSubBlock(request.sub_height)
+            # msg = Message("reject_sub_block", reject)
+            # return msg
             return None
         header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
@@ -250,6 +234,9 @@ class FullNodeAPI:
                 block = dataclasses.replace(block, transactions_generator=None)
             msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
             return msg
+        # reject = RejectSubBlock(request.sub_height)
+        # msg = Message("reject_sub_block", reject)
+        # return msg
         return None
 
     @api_request
@@ -283,9 +270,12 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def reject_sub_blocks(self, request: full_node_protocol.RequestSubBlocks):
-        self.log.info(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
-        pass
+    async def reject_sub_block(self, request: full_node_protocol.RejectSubBlock):
+        self.log.debug(f"reject_sub_block {request.sub_height}")
+
+    @api_request
+    async def reject_sub_blocks(self, request: full_node_protocol.RejectSubBlocks):
+        self.log.debug(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
 
     @api_request
     async def respond_sub_blocks(self, request: full_node_protocol.RespondSubBlocks):
@@ -567,6 +557,9 @@ class FullNodeAPI:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+
         async with self.full_node.timelord_lock:
             if request.pool_target is None or request.pool_signature is None:
                 raise ValueError("Adaptable pool protocol not yet available.")
@@ -581,7 +574,7 @@ class FullNodeAPI:
             if request.signage_point_index > 0:
                 assert sp_vdfs.rc_vdf is not None
                 if sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
-                    self.log.info(
+                    self.log.debug(
                         f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
                         f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
                     )
@@ -998,12 +991,12 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
-            error: Optional[Err] = Err.UNKNOWN
+            error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
             async with self.full_node.blockchain.lock:
                 cost, status, error = await self.full_node.mempool_manager.add_spendbundle(request.transaction)
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.info(f"Added transaction to mempool: {request.transaction.name()}")
+                    self.log.debug(f"Added transaction to mempool: {request.transaction.name()}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = request.transaction.fees()

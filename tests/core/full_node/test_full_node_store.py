@@ -64,13 +64,6 @@ class TestFullNodeStore:
         store.clear_seen_unfinished_blocks()
         assert not store.seen_unfinished_block(h_hash_1)
 
-        # Disconnected blocks
-        assert store.get_disconnected_block(blocks[0].prev_header_hash) is None
-        for block in blocks:
-            store.add_disconnected_block(block)
-            assert store.get_disconnected_block_by_prev(block.prev_header_hash) == block
-            assert store.get_disconnected_block(block.header_hash) == block
-
         # Add/get unfinished block
         for height, unf_block in enumerate(unfinished_blocks):
             assert store.get_unfinished_block(unf_block.partial_hash) is None

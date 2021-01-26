@@ -300,7 +300,7 @@ class WeightProofHandler:
         prev_ses: Optional[SubEpochSummary] = None
         for idx, segment in enumerate(weight_proof.sub_epoch_segments):
             if curr_sub_epoch_n < segment.sub_epoch_n:
-                self.log.info(f"handle sub epoch {segment.sub_epoch_n}")
+                self.log.debug(f"handle sub epoch {segment.sub_epoch_n}")
                 # recreate RewardChainSubSlot for next ses rc_hash
                 if segment.sub_epoch_n > 0:
                     rc_sub_slot_hash = self.__get_rc_sub_slot_hash(segment, summaries).get_hash()
@@ -376,7 +376,7 @@ class WeightProofHandler:
             None if slot_idx != 0 else ses.new_sub_slot_iters,
             None if slot_idx != 0 else ses.new_difficulty,
         )
-        self.log.debug(f"cc sub slot {cc_sub_slot}    \n {cc_sub_slot.get_hash()}")
+        # self.log.debug(f"cc sub slot {cc_sub_slot}    \n {cc_sub_slot.get_hash()}")
 
         assert first_slot.rc_slot_end_info is not None
         rc_sub_slot = RewardChainSubSlot(
@@ -385,7 +385,7 @@ class WeightProofHandler:
             icc_sub_slot_hash,
             self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
         )
-        self.log.debug(f"rc sub slot {rc_sub_slot}    \n {rc_sub_slot.get_hash()}")
+        # self.log.debug(f"rc sub slot {rc_sub_slot}    \n {rc_sub_slot.get_hash()}")
         return rc_sub_slot
 
     async def __create_sub_epoch_segments(

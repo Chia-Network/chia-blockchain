@@ -16,7 +16,6 @@ from tests.time_out_assert import time_out_assert
 
 def wallet_height_at_least(wallet_node, h):
     height = wallet_node.wallet_state_manager.blockchain.peak_sub_height
-    wallet_node.log.info(f"Peak h is {height}")
     if height == h:
         return True
     return False
@@ -69,20 +68,26 @@ class TestWalletSync:
         )
 
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks):
+    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks, default_400_blocks):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
-        for block in default_1000_blocks:
+        for block in default_400_blocks:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
+
+        # Tests a long reorg
+        for block in default_1000_blocks:
+            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
-        # Tests a reorg with the wallet
+        # Tests a short reorg
         num_blocks = 30
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
 

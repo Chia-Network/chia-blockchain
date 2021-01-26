@@ -47,6 +47,7 @@ async def validate_block_body(
     sub_height: uint32,
     height: Optional[uint32],
     cached_cost_result: Optional[CostResult] = None,
+    fork_point_with_peak: Optional[uint32] = None,
 ) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
@@ -224,13 +225,16 @@ async def validate_block_body(
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     if peak is None or sub_height == 0:
         fork_sub_h: int = -1
+    elif fork_point_with_peak is not None:
+        fork_sub_h = fork_point_with_peak
     else:
         fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks.sub_block_record(block.prev_header_hash))
 
     if fork_sub_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = sub_blocks.height_to_sub_block_record(uint32(fork_sub_h))
+        last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.sub_height_to_hash(uint32(fork_sub_h)))
+        assert last_sb_in_common is not None
         if last_sb_in_common.is_block:
             coin_store_reorg_height = last_sb_in_common.height
         else:

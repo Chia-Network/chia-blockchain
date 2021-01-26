@@ -35,7 +35,7 @@ class FullNodeRpcApi:
 
     async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
-        if change == "new_peak":
+        if change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
@@ -75,14 +75,12 @@ class FullNodeRpcApi:
 
         sync_mode: bool = self.service.sync_store.get_sync_mode()
 
+        sync_tip_height = 0
+        sync_tip_sub_height = 0
         if sync_mode:
-            max_pp = 0
-            for _, potential_peak_tuple in self.service.sync_store.potential_peaks.items():
-                peak_h, peak_w = potential_peak_tuple
-                if peak_h > max_pp:
-                    max_pp = peak_h
-            sync_tip_height = max_pp
-            sync_tip_sub_height = max_pp
+            if self.service.sync_store.sync_height_target is not None:
+                sync_tip_sub_height = self.service.sync_store.sync_height_target
+                sync_tip_height = self.service.sync_store.sync_height_target
             if full_peak is not None:
                 sync_progress_sub_height = full_peak.sub_block_height
                 sync_progress_height = full_peak.height
@@ -90,8 +88,6 @@ class FullNodeRpcApi:
                 sync_progress_sub_height = 0
                 sync_progress_height = 0
         else:
-            sync_tip_height = 0
-            sync_tip_sub_height = 0
             sync_progress_sub_height = 0
             sync_progress_height = uint32(0)
 
@@ -221,12 +217,19 @@ class FullNodeRpcApi:
         header_hash_str = request["header_hash"]
         header_hash = hexstr_to_bytes(header_hash_str)
         record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        full = await self.service.blockchain.block_store.get_full_block(header_hash)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
-        if record is None:
+        if record is None or full is None:
             raise ValueError(f"Sub block {header_hash.hex()} does not exist")
-        return {"sub_block_record": record}
+
+        json = record.to_json_dict()
+        if full.transactions_info is not None:
+            json["reward_claims_incorporated"] = full.transactions_info.reward_claims_incorporated
+        else:
+            json["reward_claims_incorporated"] = []
+        return {"sub_block_record": json}
 
     async def get_unfinished_sub_block_headers(self, request: Dict) -> Optional[Dict]:
 

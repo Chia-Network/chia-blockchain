@@ -142,46 +142,49 @@ async def show_async(args, parser):
                 print("\nSearching for an initial chain.")
                 print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
                 print("Errors that follow can be safely ignored:\n")
-            if peak is not None and peak.is_block():
-                peak_time = peak.foliage_block.timestamp
-            else:
-                peak_hash = peak.header_hash
-                curr = await client.get_sub_block_record(peak_hash)
-                while curr is not None and not curr.is_block:
+
+            if peak is not None:
+                if peak.is_block():
+                    peak_time = peak.foliage_block.timestamp
+                else:
+                    peak_hash = peak.header_hash
+                    curr = await client.get_sub_block_record(peak_hash)
+                    while curr is not None and not curr.is_block:
+                        curr = await client.get_sub_block_record(curr.prev_hash)
+                    peak_time = curr.timestamp
+                peak_time = struct_time(localtime(peak_time))
+
+                # Should auto format the align right of LCA height
+                print(
+                    "      Time:",
+                    f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
+                    f"Height: {peak.height:>7}",
+                    f"SB height: {peak.sub_block_height:>8}\n",
+                )
+
+                print("Estimated network space: ", end="")
+                network_space_human_readable = blockchain_state["space"] / 1024 ** 4
+                if network_space_human_readable >= 1024:
+                    network_space_human_readable = network_space_human_readable / 1024
+                    print(f"{network_space_human_readable:.3f} PiB")
+                else:
+                    print(f"{network_space_human_readable:.3f} TiB")
+                print(f"Current difficulty: {difficulty}")
+                print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
+                print("Total iterations since the start of the blockchain:", total_iters)
+                print("")
+                print("SB Height |   Height  | Hash:")
+
+                added_blocks: List[SubBlockRecord] = []
+                curr = await client.get_sub_block_record(peak.header_hash)
+                while curr is not None and len(added_blocks) < num_blocks:
+                    added_blocks.append(curr)
                     curr = await client.get_sub_block_record(curr.prev_hash)
-                peak_time = curr.timestamp
 
-            peak_time = struct_time(localtime(peak_time))
-
-            # Should auto format the align right of LCA height
-            print(
-                "      Time:",
-                f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
-                f"Height: {peak.height:>7}",
-                f"SB height: {peak.sub_block_height:>8}\n",
-            )
-
-            print("Estimated network space: ", end="")
-            network_space_human_readable = blockchain_state["space"] / 1024 ** 4
-            if network_space_human_readable >= 1024:
-                network_space_human_readable = network_space_human_readable / 1024
-                print(f"{network_space_human_readable:.3f} PiB")
+                for b in added_blocks:
+                    print(f"{b.sub_block_height:>8}  | {b.height:>7}   | {b.header_hash}")
             else:
-                print(f"{network_space_human_readable:.3f} TiB")
-            print(f"Current difficulty: {difficulty}")
-            print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
-            print("Total iterations since the start of the blockchain:", total_iters)
-            print("")
-            print("SB Height |   Height  | Hash:")
-
-            added_blocks: List[SubBlockRecord] = []
-            curr = await client.get_sub_block_record(peak.header_hash)
-            while curr is not None and len(added_blocks) < num_blocks:
-                added_blocks.append(curr)
-                curr = await client.get_sub_block_record(curr.prev_hash)
-
-            for b in added_blocks:
-                print(f"{b.sub_block_height:>8}  | {b.height:>7}   | {b.header_hash}")
+                print("Blockchain has no blocks yet")
 
             # if called together with connections, leave a blank line
             if args.connections:
