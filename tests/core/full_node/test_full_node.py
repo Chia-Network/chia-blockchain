@@ -490,10 +490,10 @@ class TestFullNodeProtocol:
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
 
-        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
-        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak"))
-
         peer = await connect_and_get_peer(server_1, server_2)
+
+        await time_out_assert(20, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak"))
 
         for block in blocks[-2:]:
             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
