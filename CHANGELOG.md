@@ -6,9 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased [1.0beta23] aka Beta 1.23 - 2021-01-??
+## [1.0beta23] aka Beta 1.23 - 2021-01-26
 
 ### Added
+
 - The GUI now displays sub blocks as well as transaction blocks on the Full Node page.
 - `chia plots check` enforces a minimum of `-n 5` to decrease false negatives. Thanks to @eFishCent for these ongoing pull requests!
 - Testnets and mainnets will now have an initial period of sub blocks where transactions are blocked.
@@ -16,7 +17,8 @@ for setuptools_scm/PEP 440 reasons.
 - We have added connection limits for max_inbound_wallet, max_inbound_farmer, and max_inbound_timelord.
 
 ### Changed
-- On starting full node, the weight proof cache does not attempt to load all transactions. Startup times are noticeably improved.
+
+- On starting full node, the weight proof cache does not attempt to load all sub blocks. Startup times are noticeably improved though there remains a hesitation when validating the mempool. Our clvm Rust implementation, which will likely ship in the next release, will drop example processing times from 180 to 3 seconds.
 - Changes to weight proofs and sub block storage and cacheing required a new database schema. This will require a re-sync or obtaining a synced blockchain_v23.db.
 - clvm bytecode is now generated and confirmed that the checked-in clvm and ChiaLisp code matches the CI compiled code.
 - We have removed the '-r' flag from `chia` as it was being overridden in most cases by the `-r` for restart flag to `chia start`. Use `chia --root-path` instead.
@@ -29,26 +31,31 @@ for setuptools_scm/PEP 440 reasons.
 - Updated some copyright dates to 2021.
 
 ### Fixed
+
 - We upgraded our fork of aiosqlite to version 16.0 which has significant performance improvements. Our fixes to aiosqlite are waiting to be upstreamed.
 - The Plots tab in the GUI will no longer show red/error when the node is still syncing.
 - Inbound and outbound peer connection limits were not being honored.
 - Weight proofs were not correctly extending.
 - In some cases when closing a p2p connection to another node, there was an infinite "Closing" loop.
-- `chia show -c` was showing upload MiB in the download column and vice versa. @pyl and @psydafke deserves credit for insisting it was broken.
+- `chia show -c` was showing upload MiB in the download column and vice versa. @pyl and @psydafke deserves credit for insisting it was broken and @kd637xx for the PR assist.
+- `chia show` handles sub block 0 better.
 
 ## [1.0beta22] aka Beta 1.22 - 2021-01-19
 
 ### Added
+
 - Node now attempts to pre-validate and cache transactions.
 - The harvester will try to not load a plot file that is too small for its k size. This should help keep from partial plots being found when they are copied into a harvester directory. Harvester will check again on the next challenge and find a completed copy of a plot file then.
 - `chia plots create -x` skips adding [final dir] to harvester for farming
 
 ### Changed
+
 - We now use bech32m and have added the bech32m tests from Pieter Wuille (@sipa) outlined [here](https://gist.github.com/sipa/14c248c288c3880a3b191f978a34508e) with thanks.
 - In the GUI, choosing to parallel plot with a delay now is a delay between the start of the parallel plots started in one session.
 - Removed loading plot file names when starting `chia plots create`; decreases plotter time when there are a lot of plots on the machine. Huge thanks to @eFishCent for this PR!
 
 ### Fixed
+
 - Various fixes to improve node's ability to sync. There are still plenty of additional performance improvements coming for node so expect it to get easier to run on less powerful devices.
 - Wallet now handles large amounts of coins much better and generally syncs better.
 - Thanks to @nup002 for the PR to use scientific notation in the logs for address_manager.select_peer timings.
@@ -59,17 +66,20 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta21] aka Beta 1.21 - 2021-01-16
 
 ### Added
+
 - The cli now warns if you attempt to create a plot smaller than k=32.
 - `chia configure` now lets you enable or disable uPnP.
 - If a peer gives a bad weight proof it will now be disconnected.
 
 ### Changed
+
 - Harvester now only checks every 2 minutes for new files and otherwise caches the plot listing in memory and logs how long it took to load all plot files at INFO level.
 - Harvester multithreading is now configureable in config.yaml.
 - Websocket heartbeat timeout was increased from 30 seconds to 300 seconds.
 - Bumped Colorlog to 4.7.2, and pyinstaller to 4.2.
 
 ### Fixed
+
 - Weight proofs were failing to verify contributing to a chain stall. This release gets things moving again but nodes are using too much CPU and can pause/lag at times. This may resolve as people upgrade to Beta 21.
 - A toxic combination of transaction limits set too high and a non performant clvm kept the chain stalled. A faster rust implementation of clvm is already nearing completion.
 - `chia netspace -s` would not correctly look up the start block height by block hash. Additionally netspace now flips to PiB above 1024 TiB. To compare netspace to `chia show` of the GUI use `chia netspace -d 1000` as `chia netspace` defaults to `-d 192` which is one hour.
@@ -77,10 +87,12 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta20] aka Beta 1.20 - 2021-01-14
 
 ### Added
+
 - Plotting now checks to see if there are MacOS created `._` plot files and ignores them.
 - Mnemonics now autocomplete in the GUI.
 
 ### Changed
+
 - Node sync is now multithreaded and much quicker.
 - Peer gossip is faster and smarter. It also will no longer accidentally gossip a private IP address to another peer.
 - When syncing in the GUI, estimated time to win just shows syncing until synced.
@@ -88,6 +100,7 @@ for setuptools_scm/PEP 440 reasons.
 - The Rate Limited wallet has been updated to work in new consensus.
 
 ### Fixed
+
 - There was a bug in block reorg code that would keep a peer with a lower weight chain from validating and syncing to a higher weight chain when the node thought it had a double spend in the other chain. This caused a persistent chain split.
 - The Farm page in the GUI should not report just error when initially starting to sync.
 
