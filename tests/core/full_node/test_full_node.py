@@ -680,8 +680,9 @@ class TestFullNodeProtocol:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block: FullBlock = blocks[-1]
+        overflow = is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index)
         unf = UnfinishedBlock(
-            block.finished_sub_slots,
+            block.finished_sub_slots if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_sub_block.get_unfinished(),
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
@@ -708,8 +709,9 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, seed=b"12345")
         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[-2]))
         block: FullBlock = blocks[-1]
+        overflow = is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index)
         unf = UnfinishedBlock(
-            block.finished_sub_slots,
+            block.finished_sub_slots if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_sub_block.get_unfinished(),
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
