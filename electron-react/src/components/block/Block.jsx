@@ -18,7 +18,7 @@ import {
   getSubBlock,
 } from '../../modules/fullnodeMessages';
 import { chia_formatter } from '../../util/chia';
-// import { calculate_block_reward } from '../../util/block_rewards';
+import { calculatePoolReward, calculateBaseFarmerReward } from '../../util/blockRewards';
 import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */
@@ -45,11 +45,13 @@ export default function Block() {
   const [blockRecord, setBlockRecord] = useState();
   const [prevBlockRecord, setPrevBlockRecord] = useState();
   const [newPlotId, setNewPlotId] = useState();
+  const [nextSubBlocks, setNextSubBlocks] = useState([]);
 
   const [error, setError] = useState();
   const [loading, setLoading] = useState(true);
 
-  const hasPreviousBlock = !!blockRecord?.prev_sub_block_hash;
+  const hasPreviousSubBlock = !!blockRecord?.prev_hash;
+  const hasNextSubBlock = !!nextSubBlocks.length;
 
   async function prepareData(headerHash) {
     setLoading(true);
@@ -81,14 +83,35 @@ export default function Block() {
     }
   }
 
-
   useEffect(() => {
     prepareData(headerHash);
   }, [headerHash]);
 
+  function handleShowPreviousSubBlock() {
+    const prevHash = blockRecord?.prev_hash;
+    if (prevHash) {
+      // save current hash
+      setNextSubBlocks([headerHash, ...nextSubBlocks]);
+
+      history.push(`/dashboard/block/${prevHash}`);
+    }
+  }
+
+  function handleShowNextSubBlock() {
+    const [nextSubBlock, ...rest] = nextSubBlocks;
+    if (nextSubBlock) {
+      setNextSubBlocks(rest);
+
+      history.push(`/dashboard/block/${nextSubBlock}`);
+    }
+  }
+
   function handleShowPreviousBlock() {
     const prevBlockHash = blockRecord?.prev_block_hash;
     if (prevBlockHash) {
+      // save current hash
+      setNextSubBlocks([headerHash, ...nextSubBlocks]);
+
       history.push(`/dashboard/block/${prevBlockHash}`);
     }
   }
@@ -140,13 +163,16 @@ export default function Block() {
     ? blockRecord.weight - prevBlockRecord.weight
     : blockRecord?.weight ?? 0;
 
-  const chia_cb = '';/*chia_formatter(
-    Number.parseFloat(calculate_block_reward(blockRecord.height)),
+  const poolReward = chia_formatter(
+    Number.parseFloat(calculatePoolReward(blockRecord.height)),
     'mojo',
-  )
-    .to('chia')
-    .toString();
-    */
+  ).to('chia').toString();
+
+  const baseFarmerReward = chia_formatter(
+    Number.parseFloat(calculateBaseFarmerReward(blockRecord.height)),
+    'mojo',
+  ).to('chia').toString();
+
   const chia_fees = blockRecord.fees 
     ? chia_formatter(
       Number.parseFloat(BigInt(blockRecord.fees)),
@@ -161,7 +187,7 @@ export default function Block() {
     },
     {
       name: <Trans id="Block.timestamp">Timestamp</Trans>,
-      value: unix_to_short_date(blockRecord.timestamp),
+      value: blockRecord.timestamp ? unix_to_short_date(blockRecord.timestamp) : null,
       tooltip: (
         <Trans id="Block.timestampTooltip">
           This is the time the block was created by the farmer, which is before
@@ -188,9 +214,14 @@ export default function Block() {
       ),
     },
     {
-      name: <Trans id="Block.previousBlock">Previous Block</Trans>,
+      name: <Trans id="Block.previousSubBlockHash">Previous Sub Block Hash</Trans>,
+      value: blockRecord.prev_hash,
+      onClick: handleShowPreviousSubBlock,
+    },
+    {
+      name: <Trans id="Block.previousBlockHash">Previous Block Hash</Trans>,
       value: blockRecord.prev_block_hash,
-      previousBlock: true,
+      onClick: handleShowPreviousBlock,
     },
     {
       name: <Trans id="Block.difficulty">Difficulty</Trans>,
@@ -229,6 +260,14 @@ export default function Block() {
       value: block.reward_chain_sub_block.proof_of_space.pool_public_key,
     },
     {
+      name: <Trans id="Block.farmerPuzzleHash">Farmer Puzzle Hash</Trans>,
+      value: blockRecord.farmer_puzzle_hash,
+    },
+    {
+      name: <Trans id="Block.poolPuzzleHash">Pool Puzzle Hash</Trans>,
+      value: blockRecord.pool_puzzle_hash,
+    },
+    {
       name: <Trans id="Block.plotId">Plot Id</Trans>,
       value: newPlotId,
       tooltip: (
@@ -245,15 +284,8 @@ export default function Block() {
         </Trans>
       ),
       value: block.foliage_block?.filter_hash,
-    }, /*
-    {
-      name: (
-        <Trans id="Block.transactionsGeneratorHash">
-          Transactions Generator Hash
-        </Trans>
-      ),
-      value: block.foliage_block.generator_hash,
-    }, */
+    },
+    /*
     {
       name: <Trans id="Block.coinbaseAmount">Coinbase Amount</Trans>,
       value: `${chia_cb} TXCH`,
@@ -267,9 +299,19 @@ export default function Block() {
       name: <Trans id="Block.coinbasePuzzleHash">Coinbase Puzzle Hash</Trans>,
       value: blockRecord.pool_puzzle_hash,
     },
+    */
+   
+    {
+      name: <Trans id="Block.poolRewardAmount">Pool Reward Amount</Trans>,
+      value: `${poolReward} TXCH`,
+    },
+    {
+      name: <Trans id="Block.baseFarmerRewardAmount">Base Farmer Reward Amount</Trans>,
+      value: `${baseFarmerReward} TXCH`,
+    },
     {
       name: <Trans id="Block.feesAmount">Fees Amount</Trans>,
-      value: `${chia_fees} TXCH`,
+      value: chia_fees ? `${chia_fees} TXCH` : '',
       tooltip: (
         <Trans id="Block.feesAmountTooltip">
           The total transactions fees in this block. Rewarded to the farmer.
@@ -293,20 +335,27 @@ export default function Block() {
               {' '}
             </BackIcon>
             <span>
-              <Trans id="Block.description">
-                Block at sub height {blockRecord.sub_block_height} in the Chia
+              <Trans id="Block.descriptionSubBlock">
+                Sub Block at height {blockRecord.sub_block_height} in the Chia
                 blockchain
               </Trans>
             </span>
           </Flex>
         )}
-        action={hasPreviousBlock ? (
-          <Button onClick={handleShowPreviousBlock}>
-            <Trans id="Block.previousBlock">
-              Previous Block
-            </Trans>
-          </Button>
-        ) : null}
+        action={(
+          <Flex gap={1}>
+            <Button onClick={handleShowPreviousSubBlock} disabled={!hasPreviousSubBlock}>
+              <Trans id="Block.previous">
+                Previous
+              </Trans>
+            </Button>
+            <Button onClick={handleShowNextSubBlock} disabled={!hasNextSubBlock}>
+              <Trans id="Block.next">
+                Next
+              </Trans>
+            </Button>
+          </Flex>
+        )}
       >
         <TableContainer component={Paper}>
           <Table>
@@ -322,7 +371,7 @@ export default function Block() {
                     )}
                   </TableCell>
                   <TableCell
-                    onClick={row.previousBlock ? handleShowPreviousBlock : undefined}
+                    onClick={row.onClick}
                     align="right"
                   >
                     {row.value}

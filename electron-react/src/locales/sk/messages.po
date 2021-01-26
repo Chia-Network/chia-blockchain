@@ -105,111 +105,154 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší sp
 msgid "BalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:312
+msgid "Block.baseFarmerRewardAmount"
+msgstr ""
+
+#: src/components/block/Block.jsx:244
 msgid "Block.blockVDFIterations"
 msgstr "Block VDF iterácii"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:247
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v tomto bloku."
 
-#: src/components/block/Block.jsx:258
-msgid "Block.coinbaseAmount"
-msgstr "Množstvo coinbase"
+#: src/components/block/Block.jsx:286
+#~ msgid "Block.coinbaseAmount"
+#~ msgstr "Množstvo coinbase"
 
-#: src/components/block/Block.jsx:261
-msgid "Block.coinbaseAmountTooltip"
-msgstr "Bloková Chia odmena, ide do poolu (alebo ťaženia, ak sa nepoužíva pool)"
+#: src/components/block/Block.jsx:289
+#~ msgid "Block.coinbaseAmountTooltip"
+#~ msgstr "Bloková Chia odmena, ide do poolu (alebo ťaženia, ak sa nepoužíva pool)"
 
-#: src/components/block/Block.jsx:267
-msgid "Block.coinbasePuzzleHash"
-msgstr "Coinbase adresa"
+#: src/components/block/Block.jsx:295
+#~ msgid "Block.coinbasePuzzleHash"
+#~ msgstr "Coinbase adresa"
 
 #: src/components/block/Block.jsx:296
-msgid "Block.description"
-msgstr "Blok na pozícii {0} v Chia blockchaine"
+#~ msgid "Block.description"
+#~ msgstr "Blok na pozícii {0} v Chia blockchaine"
 
-#: src/components/block/Block.jsx:196
+#: src/components/block/Block.jsx:325
+#~ msgid "Block.descriptionBlock"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:341
+msgid "Block.descriptionSubBlock"
+msgstr ""
+
+#: src/components/block/Block.jsx:230
 msgid "Block.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/block/Block.jsx:271
+#: src/components/block/Block.jsx:266
+msgid "Block.farmerPuzzleHash"
+msgstr ""
+
+#: src/components/block/Block.jsx:316
 msgid "Block.feesAmount"
 msgstr "Množstvo odmeny"
 
-#: src/components/block/Block.jsx:274
+#: src/components/block/Block.jsx:319
 msgid "Block.feesAmountTooltip"
 msgstr "Celkové poplatky v tomto bloku idú ťažiarovi"
 
-#: src/components/block/Block.jsx:280
+#: src/components/block/Block.jsx:325
 msgid "Block.feesPuzzleHash"
 msgstr "Poplatky puzzle hash"
 
-#: src/components/block/Block.jsx:159
+#: src/components/block/Block.jsx:188
 msgid "Block.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:206
 msgid "Block.height"
 msgstr "Poradie"
 
-#: src/components/block/Block.jsx:130
+#: src/components/block/Block.jsx:356
+msgid "Block.next"
+msgstr ""
+
+#: src/components/block/Block.jsx:156
 msgid "Block.notFound"
 msgstr ""
 
-#: src/components/block/Block.jsx:232
+#: src/components/block/Block.jsx:274
 msgid "Block.plotId"
 msgstr "Id poľa"
 
-#: src/components/block/Block.jsx:235
+#: src/components/block/Block.jsx:277
 msgid "Block.plotIdTooltip"
 msgstr "Seedy použité na vytvorenie poľa, záleží to na pk poolu a pk poľa"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:258
 msgid "Block.plotPublicKey"
 msgstr "Verejný kľúč poľa"
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:262
 msgid "Block.poolPublicKey"
 msgstr "Verejný kľúč poolu"
 
-#: src/components/block/Block.jsx:191
-#: src/components/block/Block.jsx:305
-msgid "Block.previousBlock"
-msgstr "Predchádzajúci blok"
+#: src/components/block/Block.jsx:270
+msgid "Block.poolPuzzleHash"
+msgstr ""
+
+#: src/components/block/Block.jsx:308
+msgid "Block.poolRewardAmount"
+msgstr ""
+
+#: src/components/block/Block.jsx:351
+msgid "Block.previous"
+msgstr ""
+
+#: src/components/block/Block.jsx:219
+#~ msgid "Block.previousBlock"
+#~ msgstr "Predchádzajúci blok"
+
+#: src/components/block/Block.jsx:225
+msgid "Block.previousBlockHash"
+msgstr ""
+
+#: src/components/block/Block.jsx:214
+#~ msgid "Block.previousHash"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:220
+msgid "Block.previousSubBlockHash"
+msgstr ""
+
+#: src/components/block/Block.jsx:254
 msgid "Block.proofOfSpaceSize"
 msgstr "Dôkaz o veľkosti priestoru"
 
-#: src/components/block/Block.jsx:173
+#: src/components/block/Block.jsx:202
 msgid "Block.subBlockHeight"
 msgstr ""
 
-#: src/components/block/Block.jsx:163
+#: src/components/block/Block.jsx:192
 msgid "Block.timestamp"
 msgstr "Časová značka"
 
-#: src/components/block/Block.jsx:166
+#: src/components/block/Block.jsx:195
 msgid "Block.timestampTooltip"
 msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkazom o čase"
 
-#: src/components/block/Block.jsx:103
-#: src/components/block/Block.jsx:115
-#: src/components/block/Block.jsx:127
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:141
+#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:332
 msgid "Block.title"
 msgstr "Bloky"
 
-#: src/components/block/Block.jsx:200
+#: src/components/block/Block.jsx:234
 msgid "Block.totalVDFIterations"
 msgstr "Celkový počet iterácií VDF"
 
-#: src/components/block/Block.jsx:203
+#: src/components/block/Block.jsx:237
 msgid "Block.totalVDFIterationsTooltip"
 msgstr ""
 
-#: src/components/block/Block.jsx:243
+#: src/components/block/Block.jsx:285
 msgid "Block.transactionsFilterHash"
 msgstr ""
 
@@ -217,11 +260,11 @@ msgstr ""
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:210
 msgid "Block.weight"
 msgstr "Veľkosť"
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:213
 msgid "Block.weightTooltip"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
@@ -1345,33 +1388,33 @@ msgstr "Vytváranie poľa"
 msgid "PlotQueueIndicator.queued"
 msgstr "V poradí"
 
-#: src/components/plot/PlotStatus.tsx:16
 #: src/components/plot/PlotStatus.tsx:17
+#: src/components/plot/PlotStatus.tsx:18
 msgid "PlotStatus.error"
 msgstr "Chyba"
 
-#: src/components/plot/PlotStatus.tsx:27
+#: src/components/plot/PlotStatus.tsx:28
 msgid "PlotStatus.farmerIsNotConnected"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:28
+#: src/components/plot/PlotStatus.tsx:29
 msgid "PlotStatus.farmerIsNotRunning"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:13
+#: src/components/plot/PlotStatus.tsx:14
 msgid "PlotStatus.farming"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:15
+#: src/components/plot/PlotStatus.tsx:16
 msgid "PlotStatus.notAvailable"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:21
-#: src/components/plot/PlotStatus.tsx:24
+#: src/components/plot/PlotStatus.tsx:22
+#: src/components/plot/PlotStatus.tsx:25
 msgid "PlotStatus.notAvailableDescription"
 msgstr ""
 
-#: src/components/plot/PlotStatus.tsx:14
+#: src/components/plot/PlotStatus.tsx:15
 msgid "PlotStatus.synching"
 msgstr "Synchronizácia"
 

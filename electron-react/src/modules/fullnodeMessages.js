@@ -31,7 +31,7 @@ export function getSubBlockRecords(end, count = 10) {
     const start = end - count;
 
     const {
-      data: { sub_block_records },
+      data: { sub_block_records, ...rest },
     } = await async_api(
       dispatch,
       fullNodeMessage({
@@ -43,6 +43,9 @@ export function getSubBlockRecords(end, count = 10) {
       }),
       false,
     );
+
+    console.log('sub_block_records', sub_block_records);
+    console.log('rest', rest);
 
     return sub_block_records.reverse();
   };
