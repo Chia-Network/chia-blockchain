@@ -550,6 +550,12 @@ class Blockchain(BlockchainInterface):
             self.add_sub_block(sub_block)
 
     def clean_sub_block_record(self, sub_height: int):
+        """
+        Clears all sub block records in the cache which have sub_block < sub_height.
+        Args:
+            sub_height: Minimum sub-height that we need to keep in the cache
+        """
+
         if sub_height < 0:
             return
         blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
@@ -563,6 +569,11 @@ class Blockchain(BlockchainInterface):
             blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
 
     def clean_sub_block_records(self):
+        """
+        Cleans the cache so that we only maintain relevant sub-blocks. This removes sub-block records that have sub
+        height < peak - SUB_BLOCKS_CACHE_SIZE. These blocks are necessary for calculating future difficulty adjustments.
+        """
+
         if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
             return
 
@@ -584,9 +595,15 @@ class Blockchain(BlockchainInterface):
         return await self.block_store.get_sub_block_record(header_hash)
 
     def remove_sub_block(self, header_hash: bytes32):
+        sbr = self.sub_block_record(header_hash)
         del self.__sub_blocks[header_hash]
+        self.__sub_heights_in_cache[sbr.sub_block_height].remove(header_hash)
 
     def add_sub_block(self, sub_block: SubBlockRecord):
+        """
+        Adds a sub block record to the cache.
+        """
+
         self.__sub_blocks[sub_block.header_hash] = sub_block
         if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
             self.__sub_heights_in_cache[sub_block.sub_block_height] = []

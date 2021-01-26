@@ -272,12 +272,10 @@ class FullNodeAPI:
     @api_request
     async def reject_sub_block(self, request: full_node_protocol.RejectSubBlock):
         self.log.debug(f"reject_sub_block {request.sub_height}")
-        pass
 
     @api_request
     async def reject_sub_blocks(self, request: full_node_protocol.RejectSubBlocks):
         self.log.debug(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
-        pass
 
     @api_request
     async def respond_sub_blocks(self, request: full_node_protocol.RespondSubBlocks):

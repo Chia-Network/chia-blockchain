@@ -128,14 +128,8 @@ class FullNode:
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         if peak is not None:
-            sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
-            self.full_node_store.new_peak(
-                peak,
-                sp_sub_slot,
-                ip_sub_slot,
-                False,
-                self.blockchain,
-            )
+            full_peak = await self.blockchain.get_full_peak()
+            await self.peak_post_processing(full_peak, peak, peak.sub_block_height - 1, None)
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -164,7 +158,20 @@ class FullNode:
     async def short_sync_batch(
         self, peer: ws.WSChiaConnection, start_sub_height: uint32, target_sub_height: uint32
     ) -> bool:
-        # Returns true if we were able to sync successfully, false if not, and we should do a long sync
+        """
+        Tries to sync to a chain which is not too far in the future, by downloading batches of blocks. If the first
+        block that we download is not connected to our chain, we return False and do an expensive long sync instead.
+        Long sync is not preferred because it requires downloading and validating a weight proof.
+
+        Args:
+            peer: peer to sync from
+            start_sub_height: sub_height that we should start downloading at. (Our peak is higher)
+            target_sub_height: target to sync to
+
+        Returns:
+            False if the fork point was not found, and we need to do a long sync. True otherwise.
+
+        """
         if start_sub_height > 0:
             first = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(start_sub_height), False))
             if first is None or not isinstance(first, full_node_protocol.RespondSubBlock):
@@ -190,17 +197,18 @@ class FullNode:
                 response = await peer.request_sub_blocks(request)
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {sub_height}-{end_height}")
-                success, advanced_peak, fork_height = await self.receive_sub_block_batch(response.sub_blocks, peer)
-                if not success:
-                    raise ValueError(
-                        f"Error short batch syncing, failed to validate sub-blocks {sub_height}-{end_height}"
-                    )
-                if advanced_peak:
-                    peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
-                    peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
-                    assert peak is not None and peak_fb is not None and fork_height is not None
-                    await self.peak_post_processing(peak_fb, peak, fork_height, peer)
-                    self.log.info(f"Added sub-blocks {sub_height}-{end_height}")
+                async with self.blockchain.lock:
+                    success, advanced_peak, fork_height = await self.receive_sub_block_batch(response.sub_blocks, peer)
+                    if not success:
+                        raise ValueError(
+                            f"Error short batch syncing, failed to validate sub-blocks {sub_height}-{end_height}"
+                        )
+                    if advanced_peak:
+                        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+                        peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
+                        assert peak is not None and peak_fb is not None and fork_height is not None
+                        await self.peak_post_processing(peak_fb, peak, fork_height, peer)
+                        self.log.info(f"Added sub-blocks {sub_height}-{end_height}")
         except Exception:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
             raise
@@ -208,6 +216,19 @@ class FullNode:
         return True
 
     async def short_sync_backtrack(self, peer: ws.WSChiaConnection, peak_sub_height: uint32, target_sub_height: uint32):
+        """
+        Performs a backtrack sync, where sub-blocks are downloaded one at a time from newest to oldest. If we do not
+        find the fork point 5 deeper than our peak, we return False and do a long sync instead.
+
+        Args:
+            peer: peer to sync from
+            peak_sub_height: sub-height of our peak
+            target_sub_height: target sub_height
+
+        Returns:
+            True iff we found the fork point, and we do not need to long sync.
+        """
+
         curr_sub_height: int = target_sub_height
         found_fork_point = False
         responses = []
@@ -226,17 +247,29 @@ class FullNode:
         return found_fork_point
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
-        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height)
+        """
+        We have received a notification of a new peak from a peer. This happens either when we have just connected,
+        or when the peer has updated their peak.
+
+        Args:
+            request: information about the new peak
+            peer: peer that sent the message
+
+        """
         if self.blockchain.contains_sub_block(request.header_hash):
             return None
+
         # Not interested in less heavy peaks
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         curr_peak_sub_height = uint32(0) if peak is None else peak.sub_block_height
         if peak is not None and peak.weight > request.weight:
             return None
 
+        # Store this peak/peer combination in case we want to sync to it
+        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height)
+
         if self.sync_store.get_sync_mode():
-            # If peer connect while we are syncing, check if they have the block we are syncing towards
+            # If peer connects while we are syncing, check if they have the block we are syncing towards
             peak_sync_hash = self.sync_store.get_sync_target_hash()
             peak_sync_height = self.sync_store.get_sync_target_height()
             if peak_sync_hash is not None and request.header_hash != peak_sync_hash and peak_sync_height is not None:
@@ -435,7 +468,6 @@ class FullNode:
             # (similar to longest chain rule).
             current_peer_ids = [ws_con.peer_node_id for ws_con in self.server.all_connections.values()]
             target_peak = self.sync_store.get_heaviest_peak(current_peer_ids)
-            assert target_peak is not None
 
             if target_peak is None:
                 raise RuntimeError("Not performing sync, no peaks collected")
@@ -507,6 +539,10 @@ class FullNode:
             await self._finish_sync()
 
     def get_peers_with_peaks(self, peak_hashes: List[bytes32]) -> List[ws.WSChiaConnection]:
+        """
+        Returns a list of all peers which have one of the peak_hashes.
+        """
+
         filtered_peers: List[ws.WSChiaConnection] = []
         for peak_hash in peak_hashes:
             peers_with_peak = self.sync_store.get_peak_peers(peak_hash)
@@ -517,7 +553,7 @@ class FullNode:
         return filtered_peers
 
     async def sync_from_fork_point(self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32):
-        self.log.info(f"start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
+        self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak = self.get_peers_with_peaks([peak_hash])
 
         if len(peers_with_peak) == 0:
@@ -579,43 +615,43 @@ class FullNode:
                 break
             else:
                 self.log.info(f"Added sub-blocks {start_height} to {end_height}")
-                self.blockchain.clean_sub_block_record(
-                    min(
-                        end_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
-                        peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                async with self.blockchain.lock:
+                    self.blockchain.clean_sub_block_record(
+                        min(
+                            end_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                            peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                        )
                     )
-                )
 
     async def receive_sub_block_batch(
         self, blocks: List[FullBlock], peer: ws.WSChiaConnection
     ) -> Tuple[bool, bool, Optional[uint32]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
-        async with self.blockchain.lock:
-            pre_validation_results: Optional[
-                List[PreValidationResult]
-            ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
-            if pre_validation_results is None:
-                return False, False, None
-            for i, block in enumerate(blocks):
-                if pre_validation_results[i].error is not None:
-                    self.log.error(
-                        f"Invalid block from peer: {peer.get_peer_info()} {Err(pre_validation_results[i].error)}"
-                    )
-                    return False, advanced_peak, fork_height
+        pre_validation_results: Optional[
+            List[PreValidationResult]
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+        if pre_validation_results is None:
+            return False, False, None
+        for i, block in enumerate(blocks):
+            if pre_validation_results[i].error is not None:
+                self.log.error(
+                    f"Invalid block from peer: {peer.get_peer_info()} {Err(pre_validation_results[i].error)}"
+                )
+                return False, advanced_peak, fork_height
 
-                assert pre_validation_results[i].required_iters is not None
-                (
-                    result,
-                    error,
-                    fork_height,
-                ) = await self.blockchain.receive_block(block, pre_validation_results[i])
-                if result == ReceiveBlockResult.NEW_PEAK:
-                    advanced_peak = True
-                elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
-                    if error is not None:
-                        self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
-                    return False, advanced_peak, fork_height
+            assert pre_validation_results[i].required_iters is not None
+            (
+                result,
+                error,
+                fork_height,
+            ) = await self.blockchain.receive_block(block, pre_validation_results[i])
+            if result == ReceiveBlockResult.NEW_PEAK:
+                advanced_peak = True
+            elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
+                if error is not None:
+                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
+                return False, advanced_peak, fork_height
         if advanced_peak:
             self._state_changed("new_peak")
         return True, advanced_peak, fork_height
@@ -629,13 +665,15 @@ class FullNode:
         if self.server is None:
             return
 
+        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         async with self.blockchain.lock:
             await self.sync_store.clear_sync_info()
 
-        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
-        peak_fb: FullBlock = await self.blockchain.get_full_peak()
+            peak_fb: FullBlock = await self.blockchain.get_full_peak()
+            if peak is not None:
+                await self.peak_post_processing(peak_fb, peak, peak.sub_block_height - 1, None)
+
         if peak is not None:
-            await self.peak_post_processing(peak_fb, peak, peak.sub_block_height - 1, None)
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             self._state_changed("sub_block")
 
@@ -656,6 +694,11 @@ class FullNode:
     async def peak_post_processing(
         self, sub_block: FullBlock, record: SubBlockRecord, fork_height: uint32, peer: Optional[ws.WSChiaConnection]
     ):
+        """
+        Must be called under self.blockchain.lock. This updates the internal state of the full node with the
+        latest peak information. It also notifies peers about the new peak.
+        """
+
         difficulty = self.blockchain.get_next_difficulty(record.header_hash, False)
         sub_slot_iters = self.blockchain.get_next_slot_iters(record.header_hash, False)
 
@@ -669,8 +712,13 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}"
         )
+        self.log.debug(f"Peak detail: {record}")
+
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
         assert sub_slots is not None
+
+        if not self.sync_store.get_sync_mode():
+            self.blockchain.clean_sub_block_records()
 
         added_eos, _, _ = self.full_node_store.new_peak(
             record,
@@ -694,6 +742,9 @@ class FullNode:
                 sub_block.reward_chain_sp_proof,
             ),
         )
+
+        # Update the mempool
+        await self.mempool_manager.new_peak(self.blockchain.get_peak())
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
         if added_eos is not None:
@@ -742,6 +793,8 @@ class FullNode:
             ),
         )
         await self.server.send_to_all([msg], NodeType.WALLET)
+
+        self._state_changed("new_peak")
 
     async def respond_sub_block(
         self,
@@ -792,41 +845,37 @@ class FullNode:
                 added, error_code, fork_height = await self.blockchain.receive_block(
                     sub_block, pre_validation_results[0]
                 )
-            if added == ReceiveBlockResult.NEW_PEAK:
-                await self.mempool_manager.new_peak(self.blockchain.get_peak())
-                if not self.sync_store.get_sync_mode():
-                    self.blockchain.clean_sub_block_records()
-                self._state_changed("new_peak")
+
             validation_time = time.time() - validation_start
 
-        if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
-            return None
-        elif added == ReceiveBlockResult.INVALID_BLOCK:
-            assert error_code is not None
-            self.log.error(
-                f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}."
-            )
-            raise ConsensusError(error_code, header_hash)
+            if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
+                return None
+            elif added == ReceiveBlockResult.INVALID_BLOCK:
+                assert error_code is not None
+                self.log.error(
+                    f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}."
+                )
+                raise ConsensusError(error_code, header_hash)
 
-        elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
-            self.log.warning(f"Disconnected block {header_hash} at height {sub_block.sub_block_height}")
-            return None
-        elif added == ReceiveBlockResult.NEW_PEAK:
-            # Only propagate blocks which extend the blockchain (becomes one of the heads)
-            new_peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
-            assert new_peak is not None and fork_height is not None
-            self.log.debug(f"Validation time for peak: {validation_time}")
+            elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
+                self.log.warning(f"Disconnected block {header_hash} at height {sub_block.sub_block_height}")
+                return None
+            elif added == ReceiveBlockResult.NEW_PEAK:
+                # Only propagate blocks which extend the blockchain (becomes one of the heads)
+                new_peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+                assert new_peak is not None and fork_height is not None
+                self.log.debug(f"Validation time for peak: {validation_time}")
 
-            await self.peak_post_processing(sub_block, new_peak, fork_height, peer)
+                await self.peak_post_processing(sub_block, new_peak, fork_height, peer)
 
-        elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
-            self.log.warning(
-                f"Received orphan block of height {sub_block.sub_block_height} rh "
-                f"{sub_block.reward_chain_sub_block.get_hash()}"
-            )
-        else:
-            # Should never reach here, all the cases are covered
-            raise RuntimeError(f"Invalid result from receive_block {added}")
+            elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
+                self.log.warning(
+                    f"Received orphan block of height {sub_block.sub_block_height} rh "
+                    f"{sub_block.reward_chain_sub_block.get_hash()}"
+                )
+            else:
+                # Should never reach here, all the cases are covered
+                raise RuntimeError(f"Invalid result from receive_block {added}")
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
         peak = self.blockchain.get_peak()
