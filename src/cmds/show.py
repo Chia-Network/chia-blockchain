@@ -229,7 +229,7 @@ async def show_async(args, parser):
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
-                        f"{mb_down:7.1f}|{mb_up:<7.1f}"
+                        f"{mb_up:7.1f}|{mb_down:<7.1f}"
                     )
                 print(con_str)
             # if called together with state, leave a blank line
