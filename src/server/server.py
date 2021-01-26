@@ -325,7 +325,7 @@ class ChiaServer:
                 start_time = time.time()
                 try:
                     full_message = payload.msg
-                    connection.log.debug(
+                    connection.log.info(
                         f"<- {full_message.function} from peer {connection.peer_node_id} {connection.peer_host}"
                     )
                     if len(full_message.function) == 0 or full_message.function.startswith("_"):

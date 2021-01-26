@@ -707,7 +707,7 @@ class WalletStateManager:
         return await self.tx_store.get_transaction_record(tx_id)
 
     async def get_filter_additions_removals(
-        self, new_block: HeaderBlock, transactions_filter: bytes
+        self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
         # assert new_block.prev_header_hash in self.blockchain.sub_blocks
@@ -715,7 +715,9 @@ class WalletStateManager:
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
-        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
+        if fork_point_with_peak is not None:
+            fork_h: int = fork_point_with_peak
+        elif new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
                 self.blockchain,

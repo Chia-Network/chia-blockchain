@@ -248,7 +248,7 @@ class WSChiaConnection:
         if payload.id in self.request_results:
             result_payload: Payload = self.request_results[payload.id]
             result = result_payload.msg
-            self.log.debug(f"<- {result_payload.msg.function} from: {self.peer_host}:{self.peer_port}")
+            self.log.info(f"<- {result_payload.msg.function} from: {self.peer_host}:{self.peer_port}")
             self.request_results.pop(payload.id)
 
         return result
@@ -270,7 +270,7 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
-        self.log.debug(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:

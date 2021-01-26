@@ -8,7 +8,7 @@ from src.types.header_block import HeaderBlock
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
@@ -62,7 +62,7 @@ class Blockchain(BlockchainInterface):
     # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
     __sub_blocks: Dict[bytes32, SubBlockRecord]
     # all hashes of sub blocks in sub_block_record by height, used for garbage collection
-    __sub_heights_in_cache: Dict[uint32, List[bytes32]]
+    __sub_heights_in_cache: Dict[uint32, Set[bytes32]]
     # Defines the path from genesis to the peak, no orphan sub-blocks
     __sub_height_to_hash: Dict[uint32, bytes32]
     # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
@@ -98,8 +98,8 @@ class Blockchain(BlockchainInterface):
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         num_workers = max(cpu_count - 2, 1)
-        log.info(f"Starting {num_workers} processes for block validation")
         self.pool = ProcessPoolExecutor(max_workers=num_workers)
+        log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
         self.coin_store = coin_store
@@ -123,7 +123,7 @@ class Blockchain(BlockchainInterface):
         self.__sub_blocks = {}
         self.__sub_heights_in_cache = {}
         sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
-        for sub_block in sub_blocks:
+        for sub_block in sub_blocks.values():
             self.add_sub_block(sub_block)
 
         if len(sub_blocks) == 0:
@@ -183,6 +183,7 @@ class Blockchain(BlockchainInterface):
         self,
         block: FullBlock,
         pre_validation_result: Optional[PreValidationResult] = None,
+        fork_point_with_peak: Optional[uint32] = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         This method must be called under the blockchain lock
@@ -224,7 +225,6 @@ class Blockchain(BlockchainInterface):
             required_iters = pre_validation_result.required_iters
             assert pre_validation_result.error is None
         assert required_iters is not None
-
         error_code = await validate_block_body(
             self.constants,
             self,
@@ -235,8 +235,8 @@ class Blockchain(BlockchainInterface):
             block.sub_block_height,
             block.height if block.is_block() else None,
             pre_validation_result.cost_result if pre_validation_result is not None else None,
+            fork_point_with_peak,
         )
-
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
@@ -247,18 +247,20 @@ class Blockchain(BlockchainInterface):
             block,
             None,
         )
-
         # Always add the block to the database
         await self.block_store.add_full_block(block, sub_block)
         self.add_sub_block(sub_block)
 
-        fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
+        fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis, fork_point_with_peak)
+
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
-    async def _reconsider_peak(self, sub_block: SubBlockRecord, genesis: bool) -> Optional[uint32]:
+    async def _reconsider_peak(
+        self, sub_block: SubBlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
+    ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -281,11 +283,17 @@ class Blockchain(BlockchainInterface):
         if sub_block.weight > peak.weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            fork_sub_block_height: int = find_fork_point_in_chain(self, sub_block, peak)
+            if fork_point_with_peak is not None:
+                fork_sub_block_height: int = fork_point_with_peak
+            else:
+                fork_sub_block_height = find_fork_point_in_chain(self, sub_block, peak)
             if fork_sub_block_height == -1:
                 coin_store_reorg_height = -1
             else:
-                last_sb_in_common = self.height_to_sub_block_record(uint32(fork_sub_block_height))
+                last_sb_in_common = await self.get_sub_block_from_db(
+                    self.sub_height_to_hash(uint32(fork_sub_block_height))
+                )
+                assert last_sb_in_common is not None
                 if last_sb_in_common.is_block:
                     coin_store_reorg_height = last_sb_in_common.height
                 else:
@@ -304,6 +312,7 @@ class Blockchain(BlockchainInterface):
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
+
             while fork_sub_block_height < 0 or curr != self.sub_height_to_hash(uint32(fork_sub_block_height)):
                 fetched_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
                 fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block_record(curr)
@@ -490,6 +499,7 @@ class Blockchain(BlockchainInterface):
             block,
             uint32(prev_sub_height + 1),
             height,
+            None,
         )
 
         if error_code is not None:
@@ -555,14 +565,13 @@ class Blockchain(BlockchainInterface):
         Args:
             sub_height: Minimum sub-height that we need to keep in the cache
         """
-
         if sub_height < 0:
             return
         blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
         while blocks_to_remove is not None and sub_height >= 0:
             log.debug(f"delete sub height {sub_height} from sub blocks")
-            for header_hash in blocks_to_remove:
-                self.remove_sub_block(header_hash)
+            for header_hash in list(blocks_to_remove):
+                del self.__sub_blocks[header_hash]
             del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
 
             sub_height = sub_height - 1
@@ -606,8 +615,8 @@ class Blockchain(BlockchainInterface):
 
         self.__sub_blocks[sub_block.header_hash] = sub_block
         if sub_block.sub_block_height not in self.__sub_heights_in_cache.keys():
-            self.__sub_heights_in_cache[sub_block.sub_block_height] = []
-        self.__sub_heights_in_cache[sub_block.sub_block_height].append(sub_block.header_hash)
+            self.__sub_heights_in_cache[sub_block.sub_block_height] = set()
+        self.__sub_heights_in_cache[sub_block.sub_block_height].add(sub_block.header_hash)
 
     async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
         block = await self.block_store.get_full_block(header_hash)
