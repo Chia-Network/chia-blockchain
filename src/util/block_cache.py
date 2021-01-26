@@ -6,6 +6,7 @@ from src.full_node.weight_proof import BlockchainInterface
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
 from src.util.ints import uint32
 
 
@@ -21,6 +22,7 @@ class BlockCache(BlockchainInterface):
         self._headers = headers
         self._sub_height_to_hash = sub_height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
+        self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
 
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
@@ -35,14 +37,6 @@ class BlockCache(BlockchainInterface):
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self._sub_epoch_summaries[height]
-
-    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
-        ses_l = []
-        for ses_height in reversed(self.get_ses_heights()):
-            if ses_height <= height:
-                break
-            ses_l.append(self.get_ses(ses_height))
-        return ses_l
 
     def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if height not in self._sub_height_to_hash:
@@ -71,5 +65,16 @@ class BlockCache(BlockchainInterface):
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         return self._headers
 
-    async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
-        return self._headers[header_hash]
+    async def persist_sub_epoch_challenge_segments(
+        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
+    ):
+        self._sub_epoch_segments[sub_epoch_summary_sub_height] = SubEpochSegments(segments)
+
+    async def get_sub_epoch_challenge_segments(
+        self,
+        sub_epoch_summary_sub_height: uint32,
+    ) -> Optional[List[SubEpochChallengeSegment]]:
+        segments = self._sub_epoch_segments.get(sub_epoch_summary_sub_height)
+        if segments is None:
+            return None
+        return segments.challenge_segments

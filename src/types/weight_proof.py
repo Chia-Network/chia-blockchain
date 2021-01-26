@@ -71,6 +71,13 @@ class SubEpochChallengeSegment(Streamable):
 
 @dataclass(frozen=True)
 @streamable
+# this is used only for serialization to database
+class SubEpochSegments(Streamable):
+    challenge_segments: List[SubEpochChallengeSegment]
+
+
+@dataclass(frozen=True)
+@streamable
 class ProofBlockHeader(Streamable):
     finished_sub_slots: List[EndOfSubSlotBundle]
     reward_chain_sub_block: RewardChainSubBlock

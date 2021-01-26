@@ -5,6 +5,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 
 from src.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing, PreValidationResult
 from src.types.header_block import HeaderBlock
+from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.streamable import recurse_jsonify
 from enum import Enum
 import multiprocessing
@@ -249,6 +250,7 @@ class Blockchain(BlockchainInterface):
         )
         # Always add the block to the database
         await self.block_store.add_full_block(block, sub_block)
+
         self.add_sub_block(sub_block)
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis, fork_point_with_peak)
@@ -307,7 +309,13 @@ class Blockchain(BlockchainInterface):
                 if ses_included_height > fork_sub_block_height:
                     heights_to_delete.append(ses_included_height)
             for sub_height in heights_to_delete:
+                log.info(f"delete ses at height {sub_height}")
                 del self.__sub_epoch_summaries[sub_height]
+
+            if len(heights_to_delete) > 0:
+                # remove segments from prev fork
+                log.info(f"remove segments for se above {fork_sub_block_height}")
+                await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_sub_block_height))
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
@@ -569,8 +577,9 @@ class Blockchain(BlockchainInterface):
             return
         blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
         while blocks_to_remove is not None and sub_height >= 0:
-            for header_hash in list(blocks_to_remove):
-                del self.__sub_blocks[header_hash]
+            log.debug(f"delete sub height {sub_height} from sub blocks")
+            for header_hash in blocks_to_remove:
+                del self.__sub_blocks[header_hash]  # remove from sub blocks
             del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
 
             sub_height = sub_height - 1
@@ -622,3 +631,19 @@ class Blockchain(BlockchainInterface):
         if block is None:
             return None
         return block.get_block_header()
+
+    async def persist_sub_epoch_challenge_segments(
+        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
+    ):
+        return await self.block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_sub_height, segments)
+
+    async def get_sub_epoch_challenge_segments(
+        self,
+        sub_epoch_summary_sub_height: uint32,
+    ) -> Optional[List[SubEpochChallengeSegment]]:
+        segments: Optional[List[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
+            sub_epoch_summary_sub_height
+        )
+        if segments is None:
+            return None
+        return segments

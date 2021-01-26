@@ -659,6 +659,9 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                 return False, advanced_peak, fork_height
+            sub_block = self.blockchain.sub_block_record(block.header_hash)
+            if sub_block.sub_epoch_summary_included is not None:
+                await self.weight_proof_handler.create_prev_sub_epoch_segments()
         self._state_changed("new_peak")
         return True, advanced_peak, fork_height
 
