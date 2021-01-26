@@ -717,7 +717,6 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}"
         )
-        self.log.debug(f"Peak detail: {record}")
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
         assert sub_slots is not None

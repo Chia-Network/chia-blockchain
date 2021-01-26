@@ -82,7 +82,7 @@ class FullNodeAPI:
     async def respond_peers(
         self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
-        self.log.debug(f"Peers: {request.peer_list}")
+        self.log.debug(f"Received {len(request.peer_list)} peers")
         if self.full_node.full_node_peers is not None:
             if peer.connection_type is NodeType.INTRODUCER:
                 is_full_node = False
@@ -557,6 +557,9 @@ class FullNodeAPI:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+
         async with self.full_node.timelord_lock:
             if request.pool_target is None or request.pool_signature is None:
                 raise ValueError("Adaptable pool protocol not yet available.")
@@ -988,7 +991,7 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
-            error: Optional[Err] = Err.UNKNOWN
+            error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
             async with self.full_node.blockchain.lock:
                 cost, status, error = await self.full_node.mempool_manager.add_spendbundle(request.transaction)

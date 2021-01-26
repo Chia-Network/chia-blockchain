@@ -282,7 +282,7 @@ class ChiaServer:
                 await session.close()
                 return False
         except client_exceptions.ClientConnectorError as e:
-            self.log.warning(f"{e}")
+            self.log.info(f"{e}")
         except ProtocolError as e:
             await connection.close()
             if e.code == Err.SELF_CONNECTION:
