@@ -392,6 +392,10 @@ class WalletBlockchain(BlockchainInterface):
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         return self.__sub_blocks[header_hash]
 
+    def height_to_sub_block_record(self, height: uint32, check_db=False) -> SubBlockRecord:
+        header_hash = self.sub_height_to_hash(height)
+        return self.sub_block_record(header_hash)
+
     def get_ses_heights(self) -> List[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())
 
