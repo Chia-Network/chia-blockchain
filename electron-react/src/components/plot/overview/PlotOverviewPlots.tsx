@@ -21,7 +21,6 @@ const StyledTableRowQueue = styled(TableRow)`
 `;
 
 const cols = [{
-  minWidth: '130px',
   field: ({ file_size, size }: Plot) => (
     <>
       {`K-${size}, `}
@@ -55,11 +54,9 @@ const cols = [{
   tooltip: 'pool_public_key',
   title: <Trans id="PlotOverviewPlots.poolKey">Pool Key</Trans>,
 }, {
-  minWidth: '90px',
   field: (plot: Plot) => <PlotStatus plot={plot} />,
   title: <Trans id="PlotOverviewPlots.status">Status</Trans>,
 }, {
-  minWidth: '80px',
   field: (plot: Plot) => <PlotAction plot={plot} />,
   title: <Trans id="PlotOverviewPlots.action">Action</Trans>,
 }];

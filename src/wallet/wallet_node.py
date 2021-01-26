@@ -359,6 +359,8 @@ class WalletNode:
                 fork_h,
             ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
             if result == ReceiveBlockResult.NEW_PEAK:
+                if not self.wallet_state_manager.sync_mode:
+                    self.wallet_state_manager.blockchain.clean_sub_block_records()
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 self.log.info(f"Invalid block from peer: {peer.get_peer_info()}")
@@ -393,7 +395,7 @@ class WalletNode:
                 # Fetch blocks backwards until we hit the one that we have,
                 # then complete them with additions / removals going forward
                 while (
-                    top.prev_header_hash not in self.wallet_state_manager.blockchain.sub_blocks
+                    not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash)
                     and top.sub_block_height > 0
                 ):
                     request_prev = wallet_protocol.RequestSubBlockHeader(top.sub_block_height - 1)
@@ -510,20 +512,34 @@ class WalletNode:
         fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
         if fork_height is None:
             fork_height = 0
-
+        await self.wallet_state_manager.blockchain.warmup(fork_height)
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
         for i in range(max(0, fork_height - 1), peak_sub_height, batch_size):
             start_height = i
             end_height = min(peak_sub_height, start_height + batch_size)
             peers: List[WSChiaConnection] = self.server.get_full_node_connections()
+            added = False
             for peer in peers:
                 try:
-                    await self.fetch_blocks_and_validate(peer, start_height, end_height)
+                    await self.fetch_blocks_and_validate(peer, uint32(start_height), end_height)
+                    added = True
                     break
                 except Exception as e:
                     await peer.close()
                     exc = traceback.format_exc()
                     self.log.error(f"Error while trying to fetch from peer:{e} {exc}")
+                    self.wallet_state_manager.blockchain.clean_sub_block_record(end_height)
+            if not added:
+                raise RuntimeError(f"Was not able to add blocks {start_height}-{end_height}")
+
+            peak = self.wallet_state_manager.blockchain.get_peak()
+            assert peak is not None
+            self.wallet_state_manager.blockchain.clean_sub_block_record(
+                min(
+                    end_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                    peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                )
+            )
 
     async def fetch_blocks_and_validate(self, peer: WSChiaConnection, sub_height_start: uint32, sub_height_end: uint32):
         if self.wallet_state_manager is None:

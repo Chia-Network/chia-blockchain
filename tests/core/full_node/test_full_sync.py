@@ -133,10 +133,10 @@ class TestFullSync:
         )
 
         # All four nodes are synced
-        await time_out_assert(60, node_height_exactly, True, full_node_1, num_blocks - 1)
-        await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
-        await time_out_assert(60, node_height_exactly, True, full_node_3, num_blocks - 1)
-        await time_out_assert(60, node_height_exactly, True, full_node_4, num_blocks - 1)
+        await time_out_assert(90, node_height_exactly, True, full_node_1, num_blocks - 1)
+        await time_out_assert(90, node_height_exactly, True, full_node_2, num_blocks - 1)
+        await time_out_assert(90, node_height_exactly, True, full_node_3, num_blocks - 1)
+        await time_out_assert(90, node_height_exactly, True, full_node_4, num_blocks - 1)
 
         # Deep reorg, fall back from batch sync to long sync
         blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
@@ -145,8 +145,8 @@ class TestFullSync:
         await server_5.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
         )
-        await time_out_assert(60, node_height_exactly, True, full_node_5, 409)
-        await time_out_assert(60, node_height_exactly, True, full_node_1, 409)
+        await time_out_assert(90, node_height_exactly, True, full_node_5, 409)
+        await time_out_assert(90, node_height_exactly, True, full_node_1, 409)
 
     @pytest.mark.asyncio
     async def test_sync_from_fork_point_and_weight_proof(self, three_nodes, default_1000_blocks, default_400_blocks):
@@ -205,8 +205,8 @@ class TestFullSync:
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_2._port)), full_node_3.full_node.on_connect)
-        await time_out_assert(120, node_height_exactly, True, full_node_1, 999)
-        await time_out_assert(120, node_height_exactly, True, full_node_2, 999)
+        await time_out_assert(180, node_height_exactly, True, full_node_1, 999)
+        await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
     async def test_batch_sync(self, two_nodes):

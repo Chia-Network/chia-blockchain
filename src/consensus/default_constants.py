@@ -1,5 +1,5 @@
 from .constants import ConsensusConstants
-
+from ..types.sized_bytes import bytes32
 
 testnet_kwargs = {
     "SLOT_SUB_BLOCKS_TARGET": 32,
@@ -23,13 +23,13 @@ testnet_kwargs = {
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
-    "FIRST_CC_CHALLENGE": bytes([0x00] * 32),
-    "FIRST_RC_CHALLENGE": bytes([0x00] * 32),
+    "FIRST_CC_CHALLENGE": bytes32([0x00] * 32),
+    "FIRST_RC_CHALLENGE": bytes32([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
         "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
     ),
-    "GENESIS_PREV_HASH": bytes([0x00] * 32),
-    "GENESIS_SES_HASH": bytes([0x00] * 32),
+    "GENESIS_PREV_HASH": bytes32([0x00] * 32),
+    "GENESIS_SES_HASH": bytes32([0x00] * 32),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
     "TX_PER_SEC": 20,
@@ -49,6 +49,7 @@ testnet_kwargs = {
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     "MAX_BLOCK_COST_CLVM": 225359496,
     "WEIGHT_PROOF_THRESHOLD": 2,
+    "SUB_BLOCKS_CACHE_SIZE": 5000,  # todo almog SUB_BLOCKS_CACHE_SIZE = EPOCH_SUB_BLOCKS + 3*MAX_SUB_SLOT_SUB_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "INITIAL_FREEZE_PERIOD": 10000,  # Transaction are disabled first 10000 sub blocks

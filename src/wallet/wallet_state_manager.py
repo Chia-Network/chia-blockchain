@@ -15,7 +15,6 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import BlockCache
 from src.full_node.weight_proof import WeightProofHandler
 from src.protocols.wallet_protocol import RespondPuzzleSolution, PuzzleSolutionResponse
 from src.types.coin import Coin
@@ -130,16 +129,7 @@ class WalletStateManager:
             self.coins_of_interest_received,
             self.reorg_rollback,
         )
-
-        self.weight_proof_handler = WeightProofHandler(
-            self.constants,
-            BlockCache(
-                self.blockchain.sub_blocks,
-                self.blockchain.sub_height_to_hash,
-                {},
-                self.blockchain.sub_epoch_summaries,
-            ),
-        )
+        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
@@ -492,26 +482,25 @@ class WalletStateManager:
             trade_additions,
         ) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
-        header_hash = self.blockchain.sub_height_to_hash[sub_height]
-        sub_block: SubBlockRecord = self.blockchain.sub_blocks[header_hash]
+        sub_block: SubBlockRecord = self.blockchain.height_to_sub_block_record(sub_height)
 
         pool_rewards = set()
         farmer_rewards = set()
 
-        prev = self.blockchain.sub_blocks.get(sub_block.prev_hash, None)
+        prev = self.blockchain.try_sub_block(sub_block.prev_hash)
         # [sub 1] [sub 2] [block 3] [sub 4] [sub 5] [block6]
         # [block 6] will contain rewards for [sub 1] [sub 2] [block 3]
         while prev is not None:
             # step 1 find previous block
             if prev.is_block:
                 break
-            prev = self.blockchain.sub_blocks[prev.prev_hash]
+            prev = self.blockchain.sub_block_record(prev.prev_hash)
 
         if prev is not None:
             # include last block
             pool_rewards.add(bytes32(prev.sub_block_height.to_bytes(32, "big")))
             farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
-            prev = self.blockchain.sub_blocks.get(prev.prev_hash, None)
+            prev = self.blockchain.try_sub_block(prev.prev_hash)
 
         while prev is not None:
             # step 2 traverse from previous block to the block before it
@@ -519,7 +508,7 @@ class WalletStateManager:
             farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
             if prev.is_block:
                 break
-            prev = self.blockchain.sub_blocks[prev.prev_hash]
+            prev = self.blockchain.sub_block_record(prev.prev_hash)
 
         for coin in coins:
             if coin.name() in trade_additions:
@@ -658,7 +647,7 @@ class WalletStateManager:
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             # TODO(straya): should this use height to hash instead of sub_height to hash
-            header_hash: bytes32 = self.blockchain.sub_height_to_hash[height]
+            header_hash: bytes32 = self.blockchain.sub_height_to_hash(sub_height)
             block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
             assert block.removals is not None
@@ -729,8 +718,8 @@ class WalletStateManager:
         if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
-                self.blockchain.sub_blocks,
-                self.blockchain.sub_blocks[self.peak.header_hash],
+                self.blockchain,
+                self.blockchain.sub_block_record(self.peak.header_hash),
                 new_block,
             )
         else:
