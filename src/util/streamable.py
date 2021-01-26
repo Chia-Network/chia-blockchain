@@ -50,7 +50,13 @@ def dataclass_from_dict(klass, d):
             return None
         return dataclass_from_dict(klass.__args__[0], d)
     elif is_type_Tuple(klass):
-        return tuple(dataclass_from_dict(klass.__args__[0], item) for item in d)
+        # Type is tuple, can have multiple different types inside
+        i = 0
+        klass_properties = []
+        for item in d:
+            klass_properties.append(dataclass_from_dict(klass.__args__[i], item))
+            i = i + 1
+        return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
         fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
@@ -246,7 +252,7 @@ class Streamable:
                 if isinstance(value, list):
                     d[key] = self.recurse_jsonify(value)
                 if isinstance(value, tuple):
-                    d[key] = self.recurse_jsonify(item)
+                    d[key] = self.recurse_jsonify(value)
                 if isinstance(value, Enum):
                     d[key] = value.name
                 if isinstance(value, int) and type(value) in big_ints:

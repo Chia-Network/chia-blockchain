@@ -1,6 +1,6 @@
 import unittest
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.util.ints import uint32
 from src.types.coin import Coin
@@ -70,13 +70,14 @@ class TestStreamable(unittest.TestCase):
             a: uint32
             b: List[Optional[List[TestClass1]]]
             c: bytes32
+            d: Optional[Tuple[bytes32, TestClass1]]
 
         tc1_a = TestClass1([uint32(1), uint32(2)])
         tc1_b = TestClass1([uint32(4), uint32(5)])
         tc1_c = TestClass1([uint32(7), uint32(8)])
 
         tc2 = TestClass2(
-            uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32))
+            uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32)), (bytes32(bytes([1] * 32)), tc1_a)
         )
         assert TestClass2.from_json_dict(tc2.to_json_dict()) == tc2
 
