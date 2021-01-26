@@ -35,7 +35,7 @@ class FullNodeRpcApi:
 
     async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
-        if change == "new_peak":
+        if change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
@@ -217,12 +217,19 @@ class FullNodeRpcApi:
         header_hash_str = request["header_hash"]
         header_hash = hexstr_to_bytes(header_hash_str)
         record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        full = await self.service.blockchain.block_store.get_full_block(header_hash)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
-        if record is None:
+        if record is None or full is None:
             raise ValueError(f"Sub block {header_hash.hex()} does not exist")
-        return {"sub_block_record": record}
+
+        json = record.to_json_dict()
+        if full.transactions_info is not None:
+            json["reward_claims_incorporated"] = full.transactions_info.reward_claims_incorporated
+        else:
+            json["reward_claims_incorporated"] = []
+        return {"sub_block_record": json}
 
     async def get_unfinished_sub_block_headers(self, request: Dict) -> Optional[Dict]:
 

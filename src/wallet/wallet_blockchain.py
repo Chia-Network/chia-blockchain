@@ -122,7 +122,7 @@ class WalletBlockchain(BlockchainInterface):
         self.__sub_blocks = {}
         self.__sub_heights_in_cache = {}
         sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
-        for sub_block in sub_blocks:
+        for sub_block in sub_blocks.values():
             self.add_sub_block(sub_block)
 
         if len(sub_blocks) == 0:

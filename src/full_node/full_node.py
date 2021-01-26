@@ -448,6 +448,7 @@ class FullNode:
             return
 
         self.sync_store.set_sync_mode(True)
+        self._state_changed("sync_mode")
 
         try:
             self.log.info("Starting to perform sync.")
@@ -657,8 +658,7 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                 return False, advanced_peak, fork_height
-        if advanced_peak:
-            self._state_changed("new_peak")
+        self._state_changed("new_peak")
         return True, advanced_peak, fork_height
 
     async def _finish_sync(self):
@@ -667,6 +667,7 @@ class FullNode:
         blocks that we have finalized recently.
         """
         self.sync_store.set_sync_mode(False)
+        self._state_changed("sync_mode")
         if self.server is None:
             return
 
