@@ -134,6 +134,9 @@ async def pre_validate_blocks_multiprocessing(
         if sub_block.sub_block_height != 0 and prev_sb is None:
             prev_sb = sub_blocks.sub_block_record(sub_block.prev_header_hash)
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, sub_block, prev_sb, sub_blocks)
+
+        if sub_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
+            log.warning(f"Sub block: {sub_block.reward_chain_sub_block}")
         overflow = is_overflow_sub_block(constants, sub_block.reward_chain_sub_block.signage_point_index)
         challenge = get_block_challenge(
             constants,
