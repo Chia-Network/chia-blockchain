@@ -147,7 +147,6 @@ class MempoolManager:
         removal_names: List[bytes32] = new_spend.removal_names()
 
         additions = additions_for_npc(npc_list)
-        # additions = new_spend.additions()
 
         additions_dict: Dict[bytes32, Coin] = {}
         for add in additions:
