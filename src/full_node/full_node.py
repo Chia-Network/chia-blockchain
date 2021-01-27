@@ -708,7 +708,6 @@ class FullNode:
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
         latest peak information. It also notifies peers about the new peak.
         """
-        start = time.time()
         difficulty = self.blockchain.get_next_difficulty(record.header_hash, False)
         sub_slot_iters = self.blockchain.get_next_slot_iters(record.header_hash, False)
 
@@ -722,19 +721,13 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}"
         )
-        self.log.debug(f"Time at 1:  {time.time() - start}")
-        start = time.time()
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
         assert sub_slots is not None
 
-        self.log.debug(f"Time at 2:  {time.time() - start}")
-        start = time.time()
         if not self.sync_store.get_sync_mode():
             self.blockchain.clean_sub_block_records()
 
-        self.log.debug(f"Time at 3:  {time.time() - start}")
-        start = time.time()
         added_eos, _, _ = self.full_node_store.new_peak(
             record,
             sub_slots[0],
@@ -742,8 +735,6 @@ class FullNode:
             fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
             self.blockchain,
         )
-        self.log.debug(f"Time at 4:  {time.time() - start}")
-        start = time.time()
         if sub_slots[1] is None:
             assert record.ip_sub_slot_total_iters(self.constants) == 0
         # Ensure the signage point is also in the store, for consistency
@@ -760,13 +751,9 @@ class FullNode:
             ),
         )
 
-        self.log.debug(f"Time at 5:  {time.time() - start}")
-        start = time.time()
         # Update the mempool
         await self.mempool_manager.new_peak(self.blockchain.get_peak())
 
-        self.log.debug(f"Time at 6:  {time.time() - start}")
-        start = time.time()
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
         if added_eos is not None:
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
@@ -779,13 +766,9 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # TODO: maybe broadcast new SP/IPs as well?
-        self.log.debug(f"Time at 7:  {time.time() - start}")
-        start = time.time()
         if record.sub_block_height % 1000 == 0:
             # Occasionally clear the seen list to keep it small
             self.full_node_store.clear_seen_unfinished_blocks()
-        self.log.debug(f"Time at 8:  {time.time() - start}")
-        start = time.time()
         if self.sync_store.get_sync_mode() is False:
             await self.send_peak_to_timelords()
 
@@ -804,8 +787,6 @@ class FullNode:
                 await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
             else:
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
-        self.log.debug(f"Time at 9:  {time.time() - start}")
-        start = time.time()
 
         # Tell wallets about the new peak
         msg = Message(
@@ -818,9 +799,6 @@ class FullNode:
             ),
         )
         await self.server.send_to_all([msg], NodeType.WALLET)
-
-        self.log.debug(f"Time at 10:  {time.time() - start}")
-        start = time.time()
 
         self._state_changed("new_peak")
 
