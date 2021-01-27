@@ -407,7 +407,7 @@ class FullNodeAPI:
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
-                    self.log.warning(f"Don't have challenge hash {request.challenge_hash}")
+                    self.log.info(f"Don't have challenge hash {request.challenge_hash}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
                 request.challenge_hash,
