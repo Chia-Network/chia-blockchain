@@ -143,6 +143,31 @@ class BlockStore:
         await cursor.close()
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
+    async def get_header_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[HeaderBlock]:
+        """
+        Returns a list of header blocks, ordered by the same order in which header_hashes are passed in.
+        Throws an exception if the blocks are not present
+        """
+
+        if len(header_hashes) == 0:
+            return []
+
+        header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+        formatted_str = f'SELECT block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        cursor = await self.db.execute(formatted_str, header_hashes_db)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        all_headers: Dict[bytes32, HeaderBlock] = {}
+        for row in rows:
+            full_block: FullBlock = FullBlock.from_bytes(row[0])
+            all_headers[full_block.header_hash] = full_block.get_block_header()
+        ret: List[HeaderBlock] = []
+        for hh in header_hashes:
+            if hh not in all_headers:
+                raise ValueError(f"Header hash {hh} not in the blockchain")
+            ret.append(all_headers[hh])
+        return ret
+
     async def get_header_blocks_in_range(
         self,
         start: int,
