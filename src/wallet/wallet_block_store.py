@@ -57,10 +57,6 @@ class WalletBlockStore:
         await cursor_2.close()
         await self.db.commit()
 
-    async def rollback_lca_to_block(self, block_index):
-        # TODO
-        pass
-
     async def add_block_record(self, block_record: HeaderBlockRecord, sub_block: SubBlockRecord):
         """
         Adds a block record to the database. This block record is assumed to be connected
@@ -174,7 +170,9 @@ class WalletBlockStore:
         await cursor_2.close()
         await self.db.commit()
 
-    async def get_sub_blocks_from_peak(self, blocks_n: int) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+    async def get_sub_block_records_close_to_peak(
+        self, blocks_n: int
+    ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all sub blocks, as well as the header hash of the peak,
         if present.
@@ -197,7 +195,7 @@ class WalletBlockStore:
             ret[header_hash] = SubBlockRecord.from_bytes(row[1])
         return ret, peak
 
-    async def get_headers_in_range(
+    async def get_header_blocks_in_range(
         self,
         start: int,
         stop: int,
@@ -217,7 +215,7 @@ class WalletBlockStore:
 
         return ret
 
-    async def get_sub_block_in_range(
+    async def get_sub_block_records_in_range(
         self,
         start: int,
         stop: int,
@@ -241,7 +239,7 @@ class WalletBlockStore:
 
         return ret
 
-    async def get_sub_block_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
+    async def get_peak_sub_heights_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """
         Returns a dictionary with all sub blocks, as well as the header hash of the peak,
         if present.
