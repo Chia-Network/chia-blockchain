@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import traceback
 from asyncio import Task
 from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable, Union
@@ -515,6 +516,7 @@ class WalletNode:
                 fork_height = 0
             await self.wallet_state_manager.blockchain.warmup(fork_height)
             batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+            advanced_peak = False
             for i in range(max(0, fork_height - 1), peak_sub_height, batch_size):
                 start_height = i
                 end_height = min(peak_sub_height, start_height + batch_size)
@@ -522,9 +524,11 @@ class WalletNode:
                 added = False
                 for peer in peers:
                     try:
-                        await self.fetch_blocks_and_validate(peer, uint32(start_height), end_height, fork_height)
-                        added = True
-                        break
+                        added, advanced_peak = await self.fetch_blocks_and_validate(
+                            peer, uint32(start_height), end_height, None if advanced_peak else fork_height
+                        )
+                        if added:
+                            break
                     except Exception as e:
                         await peer.close()
                         exc = traceback.format_exc()
@@ -547,9 +551,13 @@ class WalletNode:
         sub_height_start: uint32,
         sub_height_end: uint32,
         fork_point_with_peak: uint32,
-    ):
+    ) -> Tuple[bool, bool]:
+        """
+        Returns whether the blocks validated, and whether the peak was advanced
+
+        """
         if self.wallet_state_manager is None:
-            return
+            return False, False
 
         self.log.info(f"Requesting blocks {sub_height_start}-{sub_height_end}")
         request = RequestHeaderBlocks(uint32(sub_height_start), uint32(sub_height_end))
@@ -573,7 +581,7 @@ class WalletNode:
                 header_blocks
             )
             if pre_validation_results is None:
-                return False
+                return False, advanced_peak
             assert len(header_blocks) == len(pre_validation_results)
 
         for i in range(len(header_blocks)):
@@ -601,7 +609,7 @@ class WalletNode:
                 header_block_record = HeaderBlockRecord(header_block, added_coins, removed_coins)
             else:
                 header_block_record = HeaderBlockRecord(header_block, [], [])
-
+            start_t = time.time()
             if trusted:
                 (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
                     header_block_record, None, trusted, fork_point_with_old_peak
@@ -611,11 +619,16 @@ class WalletNode:
                 (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(
                     header_block_record, pre_validation_results[i], trusted, fork_point_with_old_peak
                 )
+            self.log.debug(
+                f"Time taken to validate {header_block.sub_block_height} with fork "
+                f"{fork_point_with_old_peak}: {time.time() - start_t}"
+            )
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 raise ValueError("Value error peer sent us invalid block")
+        return True, advanced_peak
 
     def validate_additions(
         self,
