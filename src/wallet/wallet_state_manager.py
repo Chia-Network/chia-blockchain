@@ -731,11 +731,11 @@ class WalletStateManager:
             fork_h = 0
 
         # Get all unspent coins
-        my_coin_records_lca: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(uint32(fork_h))
+        my_coin_records: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(uint32(fork_h))
 
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
-        for coin in my_coin_records_lca:
+        for coin in my_coin_records:
             if coin.confirmed_block_sub_height <= fork_h:
                 unspent_coin_names.add(coin.name())
 
@@ -880,7 +880,7 @@ class WalletStateManager:
     async def get_start_height(self):
         """
         If we have coin use that as starting height next time,
-        otherwise use the lca height - some buffer(100)
+        otherwise use the peak
         """
 
         first_coin_height = await self.coin_store.get_first_coin_height()

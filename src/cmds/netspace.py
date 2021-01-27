@@ -56,9 +56,7 @@ async def netstorge_async(args, parser):
             rpc_port = args.rpc_port
         client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
 
-        # print (args.blocks)
         if args.delta_block_height:
-            # Get lca or newer block
             if args.start == "":
                 blockchain_state = await client.get_blockchain_state()
                 if blockchain_state["peak"] is None:
