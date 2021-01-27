@@ -9,6 +9,7 @@ from src.consensus.block_rewards import (
     calculate_pool_reward,
     calculate_base_farmer_reward,
 )
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
@@ -38,8 +39,7 @@ log = logging.getLogger(__name__)
 
 async def validate_block_body(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    sub_height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: BlockchainInterface,
     block_store: BlockStore,
     coin_store: CoinStore,
     peak: Optional[SubBlockRecord],
@@ -47,6 +47,7 @@ async def validate_block_body(
     sub_height: uint32,
     height: Optional[uint32],
     cached_cost_result: Optional[CostResult] = None,
+    fork_point_with_peak: Optional[uint32] = None,
 ) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
@@ -101,7 +102,7 @@ async def validate_block_body(
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
     if sub_height > 0:
         # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
-        prev_block = sub_blocks[block.foliage_block.prev_block_hash]
+        prev_block = sub_blocks.sub_block_record(block.foliage_block.prev_block_hash)
 
         assert prev_block.fees is not None
         pool_coin = create_pool_coin(
@@ -120,7 +121,7 @@ async def validate_block_body(
 
         # For the second block in the chain, don't go back further
         if prev_block.sub_block_height > 0:
-            curr_sb = sub_blocks[prev_block.prev_hash]
+            curr_sb = sub_blocks.sub_block_record(prev_block.prev_hash)
             curr_height = curr_sb.height
             while not curr_sb.is_block:
                 expected_reward_coins.add(
@@ -137,7 +138,7 @@ async def validate_block_body(
                         calculate_base_farmer_reward(curr_height),
                     )
                 )
-                curr_sb = sub_blocks[curr_sb.prev_hash]
+                curr_sb = sub_blocks.sub_block_record(curr_sb.prev_hash)
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS
@@ -148,6 +149,9 @@ async def validate_block_body(
     npc_list: List[NPC] = []
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
+
+    if sub_height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
+        return Err.INITIAL_TRANSACTION_FREEZE
 
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
@@ -221,13 +225,16 @@ async def validate_block_body(
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     if peak is None or sub_height == 0:
         fork_sub_h: int = -1
+    elif fork_point_with_peak is not None:
+        fork_sub_h = fork_point_with_peak
     else:
-        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
+        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks.sub_block_record(block.prev_header_hash))
 
     if fork_sub_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = sub_blocks[sub_height_to_hash[uint32(fork_sub_h)]]
+        last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.sub_height_to_hash(uint32(fork_sub_h)))
+        assert last_sb_in_common is not None
         if last_sb_in_common.is_block:
             coin_store_reorg_height = last_sb_in_common.height
         else:

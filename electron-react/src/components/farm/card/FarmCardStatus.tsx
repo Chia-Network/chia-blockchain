@@ -1,23 +1,15 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
 import { StateIndicator, State } from '@chia/core';
-import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
-import useFullNodeState from '../../../hooks/useFullNodeState';
-import FullNodeState from '../../../constants/FullNodeState';
 import FarmCardNotAvailable from './FarmCardNotAvailable';
+import useFarmerStatus from '../../../hooks/useFarmerStatus';
+import FarmerStatus from '../../../constants/FarmerStatus';
 
 export default function FarmCardStatus() {
-  const fullNodeState = useFullNodeState();
-  const farmerConnected = useSelector(
-    (state: RootState) => state.daemon_state.farmer_connected,
-  );
-  const farmerRunning = useSelector(
-    (state: RootState) => state.daemon_state.farmer_running,
-  );
+  const farmerStatus = useFarmerStatus();
 
-  if (fullNodeState === FullNodeState.SYNCHING) {
+  if (farmerStatus === FarmerStatus.SYNCHING) {
     return (
       <FarmCard
         title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
@@ -30,7 +22,7 @@ export default function FarmCardStatus() {
     );
   }
 
-  if (fullNodeState === FullNodeState.ERROR) {
+  if (farmerStatus === FarmerStatus.NOT_AVAILABLE) {
     return (
       <FarmCardNotAvailable
         title={
@@ -40,7 +32,7 @@ export default function FarmCardStatus() {
     );
   }
 
-  if (!farmerConnected) {
+  if (farmerStatus === FarmerStatus.NOT_CONNECTED) {
     return (
       <FarmCard
         title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
@@ -54,7 +46,7 @@ export default function FarmCardStatus() {
     );
   }
 
-  if (!farmerRunning) {
+  if (farmerStatus === FarmerStatus.NOT_RUNNING) {
     return (
       <FarmCard
         title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}

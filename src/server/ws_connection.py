@@ -183,7 +183,7 @@ class WSChiaConnection:
                 else:
                     continue
         except asyncio.CancelledError:
-            self.log.info("task canceled")
+            self.log.debug("Inbound_handler task cancelled")
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
@@ -199,12 +199,15 @@ class WSChiaConnection:
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
         async def invoke(*args, **kwargs):
+            timeout = 60
+            if "timeout" in kwargs:
+                timeout = kwargs["timeout"]
             attribute = getattr(class_for_type(self.connection_type), attr_name, None)
             if attribute is None:
                 raise AttributeError(f"bad attribute {attr_name}")
 
             msg = Message(attr_name, args[0])
-            result = await self.create_request(msg, 60)
+            result = await self.create_request(msg, timeout)
             if result is not None:
                 ret_attr = getattr(class_for_type(self.local_type), result.function, None)
 
@@ -286,7 +289,7 @@ class WSChiaConnection:
         else:
             connection_type_str = ""
         if message.type == WSMsgType.CLOSING:
-            self.log.info(
+            self.log.debug(
                 f"Closing connection to {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
@@ -294,7 +297,7 @@ class WSChiaConnection:
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
-            self.log.info(
+            self.log.debug(
                 f"Peer closed connection {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"

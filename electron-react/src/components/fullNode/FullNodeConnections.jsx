@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Card, Flex, Loading } from '@chia/core';
+import { Card, Flex, FormatBytes, Loading } from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { Paper, TableRow } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
@@ -98,7 +98,7 @@ export default function Connections(props) {
                   <Trans id="Connections.port">Port</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.upDown">Up/Down</Trans>
+                  <Trans id="Connections.upDown">MiB Up/Down</Trans>
                 </TableCell>
                 <TableCell align="right">
                   <Trans id="Connections.connectionType">
@@ -132,8 +132,9 @@ export default function Connections(props) {
                   </TableCell>
 
                   <TableCell align="right">
-                    {Math.floor(item.bytes_written / 1024)}/
-                    {Math.floor(item.bytes_read / 1024)} KiB
+                    <FormatBytes value={item.bytes_written} unit="MiB" removeUnit fixedDecimals />
+                    /
+                    <FormatBytes value={item.bytes_read} unit="MiB" removeUnit fixedDecimals />
                   </TableCell>
                   <TableCell align="right">
                     {service_connection_types[item.type]}

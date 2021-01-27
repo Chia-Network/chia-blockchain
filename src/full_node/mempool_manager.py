@@ -60,8 +60,13 @@ class MempoolManager:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
-        if self.peak is None or self.peak.header_hash != peak_header_hash:
+        if (
+            self.peak is None
+            or self.peak.header_hash != peak_header_hash
+            or self.peak.sub_block_height <= self.constants.INITIAL_FREEZE_PERIOD
+        ):
             return None
+
         cost_sum = 0
         spend_bundles: List[SpendBundle] = []
         for dic in self.mempool.sorted_spends.values():
@@ -357,6 +362,9 @@ class MempoolManager:
             return
         if self.peak == new_peak:
             return
+        if new_peak.sub_block_height <= self.constants.INITIAL_FREEZE_PERIOD:
+            return
+
         self.peak = new_peak
 
         old_pool = self.mempool

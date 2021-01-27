@@ -32,32 +32,28 @@ const cols = [
     title: <Trans id="FarmFullNodeConnections.nodeId">Node ID</Trans>,
   },
   {
-    width: '150px',
     field: 'peer_host',
     title: <Trans id="FarmFullNodeConnections.hostName">Host Name</Trans>,
   },
   {
-    width: '150px',
     field(row: Connection) {
       return `${row.peer_port}/${row.peer_server_port}`;
     },
     title: <Trans id="FarmFullNodeConnections.port">Port</Trans>,
   },
   {
-    width: '200px',
     field(row: Connection) {
       return (
         <>
-          <FormatBytes value={row.bytes_written} />
+          <FormatBytes value={row.bytes_written} unit="MiB" removeUnit fixedDecimals />
           /
-          <FormatBytes value={row.bytes_read} />
+          <FormatBytes value={row.bytes_read} unit="MiB" removeUnit fixedDecimals />
         </>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.upDown">Up/Down</Trans>,
+    title: <Trans id="FarmFullNodeConnections.upDown">MiB Up/Down</Trans>,
   },
   {
-    width: '100px',
     title: <Trans id="FarmFullNodeConnections.actions">Actions</Trans>,
     field(row: Connection) {
       return (
