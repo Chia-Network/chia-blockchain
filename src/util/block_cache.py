@@ -60,7 +60,7 @@ class BlockCache(BlockchainInterface):
         del self._sub_blocks[header_hash]
 
     def add_sub_block(self, sub_block: SubBlockRecord):
-        self._sub_blocks[sub_block] = sub_block
+        self._sub_blocks[sub_block.header_hash] = sub_block
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         return self._headers
