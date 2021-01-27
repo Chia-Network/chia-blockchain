@@ -10,9 +10,15 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
+- We now use our own faster primarily test based on Baillie-PSW. The new primality test is based on the 2020 paper ["Strengthening the Baillie-PSW primality test" by Robert Baillie, Andrew Fiori, Samuel S. Wagstaff Jr](https://arxiv.org/abs/2006.14425). The new test works approximately 20% faster than GMP library's mpz_probab_prime_p() function when generating random 1024-bit primes.
+
 ### Changed
 
+- Improved mempool parsing perfromance in node.
+
 ### Fixed
+
+- There was a bug in adding a sub block to weight proofs.
 
 ## [1.0beta23] aka Beta 1.23 - 2021-01-26
 
