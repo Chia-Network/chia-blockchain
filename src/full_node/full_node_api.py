@@ -157,22 +157,18 @@ class FullNodeAPI:
         """
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
-            self.log.warning("0")
             return None
         if not test and not (await self.full_node.synced()):
-            self.log.warning("1")
             return None
         if (
             self.full_node.blockchain.peak_height is None
             or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
         ):
-            self.log.warning("2")
             return None
 
         async with self.full_node.blockchain.lock:
             # Ignore if we have already added this transaction
             if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
-                self.log.warning("3")
                 return None
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(tx.transaction)
             if status == MempoolInclusionStatus.SUCCESS:
