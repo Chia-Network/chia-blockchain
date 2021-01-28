@@ -103,6 +103,6 @@
            args)
         (c (aggsig-solution-with-key pubkey)
            (if (= mode RATE_LIMITED_MODE)
-               (rate-limited-puzzle)
+               (a rate-limited-puzzle args)
                (mode-two))))
 )
