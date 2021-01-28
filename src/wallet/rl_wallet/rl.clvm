@@ -41,8 +41,12 @@
             (nth (- n 1) obj)))
 
     (defun mode-two-me-string ()
-        (list opcode_myid (sha256 (nth 4 args) (nth 0 args) (nth 5 args))))
-    (defun create-lock () 1)
+        (list opcode_myid (sha256 (nth 4 args) c (nth 5 args))))
+    (defun create-lock ()
+        (list opcode_create
+              (sha256tree (list r (list c (list q (sha256 (nth 1 args) (nth 2 args) (nth 3 args)))
+                                          (q (list)))))
+              0))
     (defun create-consolidated ()
         (list opcode_create (nth 0 args) (+ (nth 3 args) (nth 5 args))))
 
