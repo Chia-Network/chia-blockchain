@@ -1,13 +1,17 @@
 import React from "react";
 import {
-  makeStyles,
   Typography,
+  Paper,
+  Grid,
   Button,
   Box,
   TextField,
   Backdrop,
   CircularProgress
 } from "@material-ui/core";
+import CssBaseline from "@material-ui/core/CssBaseline";
+import Container from "@material-ui/core/Container";
+import { makeStyles } from "@material-ui/core/styles";
 
 import {
   createState,
@@ -17,7 +21,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
-import { recover_did_wallet } from "../modules/message";
+import { recover_did_action } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
 import { openDialog } from "../modules/dialogReducer";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
@@ -93,26 +97,81 @@ export const customStyles = makeStyles(theme => ({
     marginBottom: theme.spacing(2),
     width: 50,
     height: 56
+  },
+  root: {
+    display: "flex",
+    paddingLeft: "0px"
+  },
+  content: {
+    flexGrow: 1,
+    height: "calc(100vh - 64px)",
+    overflowX: "hidden"
+  },
+  container: {
+    paddingTop: theme.spacing(0),
+    paddingBottom: theme.spacing(0),
+    paddingRight: theme.spacing(0),
+    paddingLeft: theme.spacing(0)
+  },
+  balancePaper: {
+    margin: theme.spacing(3)
+  },
+  cardTitle: {
+    paddingLeft: theme.spacing(1),
+    paddingTop: theme.spacing(1),
+    marginBottom: theme.spacing(4)
+  },
+  dragContainer: {
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingBottom: 20
+  },
+  dragBox: {
+    height: 300,
+    width: "100%",
+    margin: theme.spacing(3)
+  },
+  drag: {
+    backgroundColor: "#888888",
+    height: 300,
+    width: "100%"
+  },
+  dragText: {
+    margin: 0,
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)"
   }
 }));
 
 export const RecoverDIDWallet = () => {
   const classes = useStyles();
-  const custom = customStyles();
   const dispatch = useDispatch();
-  var backup_file_input = null;
-  var pending = useSelector(state => state.create_options.pending);
-  var created = useSelector(state => state.create_options.created);
+  const handleDragEnter = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDragLeave = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDragOver = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDrop = e => {
+    e.preventDefault();
+    e.stopPropagation();
 
+    const recovery_file_path = e.dataTransfer.files[0].path;
+    const recovery_name = recovery_file_path.replace(/^.*[\\/]/, "");
+
+    dispatch(recover_did_action(recovery_file_path));
+  };
   function goBack() {
     dispatch(changeCreateWallet(CREATE_DID_WALLET_OPTIONS));
   }
-
-  function recover() {
-    dispatch(createState(true, true));
-    dispatch(recover_did_wallet());
-  }
-
   return (
     <div>
       <div className={classes.cardTitle}>
@@ -124,47 +183,28 @@ export const RecoverDIDWallet = () => {
           </Box>
           <Box flexGrow={1} className={classes.title}>
             <Typography component="h6" variant="h6">
-              Recover Distributed Identity Wallet
+              View DID Recovery File
             </Typography>
           </Box>
         </Box>
       </div>
-      <div className={custom.titleCard}>
-        <Box display="flex">
-          <Box flexGrow={6} className={custom.inputTitleLeft}>
-            <Typography variant="subtitle1">Backup File:</Typography>
-          </Box>
+      <div>
+        <Box flexGrow={1} className={classes.dragBox}>
+          <div
+            onDrop={e => handleDrop(e)}
+            onDragOver={e => handleDragOver(e)}
+            onDragEnter={e => handleDragEnter(e)}
+            onDragLeave={e => handleDragLeave(e)}
+            className={classes.dragContainer}
+          >
+            <Paper className={classes.drag}>
+              <div className={classes.dragText}>
+                Drag and drop offer file
+              </div>
+            </Paper>
+          </div>
         </Box>
       </div>
-      <div className={custom.subCard}>
-        <Box display="flex">
-          <Box flexGrow={6}>
-            <TextField
-              className={custom.input}
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                backup_file_input = input;
-              }}
-              label="Backup File"
-            />
-          </Box>
-          <Box>
-            <Button
-              onClick={recover}
-              className={custom.sendButton}
-              variant="contained"
-              color="primary"
-            >
-              Recover
-            </Button>
-          </Box>
-        </Box>
-      </div>
-      <Backdrop className={classes.backdrop} open={pending && created}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
     </div>
   );
 };

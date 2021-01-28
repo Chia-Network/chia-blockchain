@@ -293,6 +293,11 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         }
         wallet.did_attest = attest;
         return { ...state };
+      } else if (command === "did_create_backup_file") {
+        id = data.wallet_id;
+        success = data.success;
+      } else if (command === "create_new_wallet") {
+        id = data.wallet_id;
       }
       if (command === "state_changed" && data.state === "tx_update") {
         const id = data.wallet_id;

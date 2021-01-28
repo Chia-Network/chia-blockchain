@@ -36,7 +36,6 @@ export const customStyles = makeStyles(theme => ({
     height: 56
   },
   send: {
-    paddingLeft: "0px",
     marginLeft: theme.spacing(6),
     marginRight: theme.spacing(2),
     height: 56,

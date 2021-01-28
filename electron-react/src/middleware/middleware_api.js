@@ -311,7 +311,7 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
-    debugger;
+    //debugger;
     if (
       payload.data.error.includes("already running") ||
       payload.data.error === "not_initialized"

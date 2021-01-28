@@ -146,11 +146,20 @@ const useStyles = makeStyles(theme => ({
     width: 150,
     height: 50
   },
+  sendButtonSide: {
+    marginLeft: theme.spacing(6),
+    marginRight: theme.spacing(2),
+    height: 56,
+    width: 150
+  },
   copyButton: {
     marginTop: theme.spacing(0),
     marginBottom: theme.spacing(0),
     width: 70,
     height: 56
+  },
+  subCard: {
+    height: 100
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
@@ -173,6 +182,10 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(3),
     paddingTop: theme.spacing(2),
     paddingBottom: theme.spacing(0)
+  },
+  input: {
+    marginLeft: theme.spacing(3),
+    height: 56
   },
   inputLeft: {
     marginLeft: theme.spacing(3),
@@ -262,16 +275,75 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const MyDIDCard = props => {
-  let id = props.wallet_id;
+const RecoveryCard = props => {
+  const id = props.wallet_id;
   console.log(id)
-  let mydid = useSelector(state => state.wallet_state.wallets[id].mydid);
+  const mydid = useSelector(state => state.wallet_state.wallets[id].mydid);
   console.log(mydid)
+  let backup_did_list = useSelector(state => state.wallet_state.wallets[id].backup_dids);
+  let dids_num_req = useSelector(state => state.wallet_state.wallets[id].dids_num_req);
   const classes = useStyles();
-  const dispatch = useDispatch;
+  const dispatch = useDispatch();
 
-  const GenerateBackup = () => {
-    dispatch(did_generate_backup_file(id));
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Recover DID Wallet
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                <Typography variant="subtitle1">My DID:</Typography>
+              </Box>
+              <Box
+                style={{
+                  paddingLeft: 20,
+                  width: "80%",
+                  overflowWrap: "break-word"
+                }}
+              >
+                <Typography variant="subtitle1">{mydid}</Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1} style={{ marginBottom: 10 }}>
+                <Typography variant="subtitle1">Input Attest Packets:</Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <ViewDIDsSubsection
+          backup_did_list={backup_did_list}
+          dids_num_req={dids_num_req}
+        />
+      </Grid>
+    </Paper>
+  );
+};
+
+const MyDIDCard = props => {
+  const id = props.wallet_id;
+  console.log(id)
+  const mydid = useSelector(state => state.wallet_state.wallets[id].mydid);
+  console.log(mydid)
+  let filename_input = null;
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function generateBackup() {
+    let filename = filename_input.value
+    console.log(filename)
+    dispatch(did_generate_backup_file(id, filename));
   };
 
   return (
@@ -305,19 +377,31 @@ const MyDIDCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                <Typography variant="subtitle1">Generate a backup file:</Typography>
+              <Box flexGrow={6} className={classes.inputTitleLeft} style={{ marginBottom: 10 }}>
+                <Typography variant="subtitle1">
+                  Generate a backup file:
+                </Typography>
               </Box>
-              <Box
-                style={{
-                  paddingLeft: 20,
-                  width: "80%",
-                  overflowWrap: "break-word"
-                }}
-              >
+            </Box>
+          </div>
+          <div className={classes.subCard}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  className={classes.input}
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    filename_input = input;
+                  }}
+                  label="Filename"
+                />
+              </Box>
+              <Box>
                 <Button
-                  onClick={GenerateBackup}
-                  className={classes.sendButton}
+                  onClick={generateBackup}
+                  className={classes.sendButtonSide}
                   variant="contained"
                   color="primary"
                 >
@@ -445,7 +529,6 @@ const BalanceCard = props => {
 
 const ViewDIDsSubsection = props => {
   const classes = useStyles();
-  let testthing = "123"
   let backup_list = props.backup_did_list
   let dids_num_req = props.dids_num_req
   let dids_length = backup_list.length;
@@ -930,21 +1013,40 @@ const TransactionTable = props => {
 
 const DistributedIDWallet = props => {
   const classes = useStyles();
-  var id = props.wallet_id;
+  const id = useSelector(state => state.wallet_menu.id);
   const wallets = useSelector(state => state.wallet_state.wallets);
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  console.log("DID DATA PARSED")
+  console.log(data_parsed)
+  let temp_coin = data_parsed["temp_coin"]
+  console.log("TEMP COIN")
+  console.log(temp_coin);
 
-  return wallets.length > props.wallet_id ? (
-    <Grid className={classes.walletContainer} item xs={12}>
-      <MyDIDCard wallet_id={id}></MyDIDCard>
-      <BalanceCard wallet_id={id}></BalanceCard>
-      <ManageDIDsCard wallet_id={id}></ManageDIDsCard>
-      <CreateAttest wallet_id={id}></CreateAttest>
-      <CashoutCard wallet_id={id}></CashoutCard>
-      <HistoryCard wallet_id={id}></HistoryCard>
-    </Grid>
-  ) : (
-    ""
-  );
+  if (temp_coin) {
+    console.log("YES TEMP COIN")
+    return wallets.length > props.wallet_id ? (
+      <Grid className={classes.walletContainer} item xs={12}>
+        <RecoveryCard wallet_id={id}></RecoveryCard>
+      </Grid>
+    ) : (
+      ""
+    );
+  } else {
+    console.log("NO TEMP COIN")
+    return wallets.length > props.wallet_id ? (
+      <Grid className={classes.walletContainer} item xs={12}>
+        <MyDIDCard wallet_id={id}></MyDIDCard>
+        <BalanceCard wallet_id={id}></BalanceCard>
+        <ManageDIDsCard wallet_id={id}></ManageDIDsCard>
+        <CreateAttest wallet_id={id}></CreateAttest>
+        <CashoutCard wallet_id={id}></CashoutCard>
+        <HistoryCard wallet_id={id}></HistoryCard>
+      </Grid>
+    ) : (
+      ""
+    );
+  }
 };
 
 export default withRouter(connect()(DistributedIDWallet));
