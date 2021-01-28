@@ -38,7 +38,7 @@
             0))
 
     (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
-        (list opcode_create
+        (list CREATE_COIN
               (sha256tree (list r (list c (list q (sha256 consolidating_primary_input
                                                           consolidating_coin_puzzle_hash
                                                           outgoing_amount))
@@ -64,7 +64,7 @@
         (or (> a b)
             (= a b)))
 
-    (defun generate-block-age-condition  (min_block_time outgoing_amount)
+    (defun generate-block-age-condition (min_block_time outgoing_amount)
         (assert (>= (* min_block_time rate_amount)
                     (* outgoing_amount interval_time))
             (list ASSERT_BLOCK_AGE_EXCEEDS min_block_time)))
