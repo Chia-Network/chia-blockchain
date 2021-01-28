@@ -76,7 +76,8 @@
     (defun generate-assert-id-condition (my_parent_id my_puzzlehash my_amount)
         (list ASSERT_MY_COIN_ID (sha256 my_parent_id my_puzzlehash my_amount)))
 
-    (defun create-new-coin () ())
+    (defun create-new-coin (outgoing_puzzle_hash outgoing_amount)
+        (list CREATE_COIN outgoing_puzzle_hash outgoing_amount))
 
     (defun rate-limited-puzzle
            (my_parent_id          ; 0
@@ -94,7 +95,7 @@
                 (list (generate-block-age-condition min_block_time outgoing_amount)
                       (create-change my_puzzlehash my_amount outgoing_amount fee)
                       (generate-assert-id-condition my_parent_id my_puzzlehash my_amount)
-                      (create-new-coin))))
+                      (create-new-coin outgoing_puzzle_hash outgoing_amount))))
 
     (if (= mode CLAWBACK_MODE)
         (c (aggsig-solution-with-key clawback_pubkey)
