@@ -37,11 +37,6 @@
                     (unquote (c or (r args)))))
             0))
 
-    (defun nth (n obj)
-        (if (= n 0)
-            (f obj)
-            (nth (- n 1) obj)))
-
     (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
         (list opcode_create
               (sha256tree (list r (list c (list q (sha256 consolidating_primary_input
