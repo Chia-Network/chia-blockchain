@@ -42,25 +42,28 @@
             (f obj)
             (nth (- n 1) obj)))
 
-    (defun mode-two-me-string ()
-        (list opcode_myid (sha256 (nth 4 args) c (nth 5 args))))
-
-    (defun create-lock ()
+    (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
         (list opcode_create
-              (sha256tree (list r (list c (list q (sha256 (nth 1 args) (nth 2 args) (nth 3 args)))
+              (sha256tree (list r (list c (list q (sha256 consolidating_primary_input
+                                                          consolidating_coin_puzzle_hash
+                                                          outgoing_amount))
                                           (q (list)))))
               0))
 
-    (defun create-consolidated ()
-        (list opcode_create (nth 0 args) (+ (nth 3 args) (nth 5 args))))
-
-    (defun mode-two ()
-        (assert (or (= (sha256 (nth 7 args) (nth 0 args) (nth 6 args))
-                       (nth 4 args))
-                    (= origin_id (nth 4 args)))
-                (list (mode-two-me-string)
-                      (create-lock)
-                      (create-consolidated))))
+    (defun aggregation (my_puzzle_hash
+                        consolidating_primary_input
+                        consolidating_coin_puzzle_hash
+                        outgoing_amount
+                        primary_input
+                        incoming_amount
+                        parent_amount
+                        my_parent_parent_id)
+        (assert (or (= (sha256 my_parent_parent_id my_puzzle_hash parent_amount)
+                       primary_input)
+                    (= origin_id primary_input))
+                (list (generate-assert-id-condition primary_input my_puzzle_hash incoming_amount)
+                      (create-lock consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
+                      (create-new-coin my_puzzle_hash (+ outgoing_amount incoming_amount)))))
 
     (defun >= (a b)
         (or (> a b)
@@ -104,5 +107,5 @@
         (c (aggsig-solution-with-key pubkey)
            (if (= mode RATE_LIMITED_MODE)
                (a rate-limited-puzzle args)
-               (mode-two))))
+               (a aggregation args))))
 )
