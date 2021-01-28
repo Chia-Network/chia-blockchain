@@ -1,0 +1,66 @@
+(mod (pubkey
+      rate_amount
+      interval_time
+      origin_id
+      clawback_pubkey
+      mode
+      . args)
+
+    (defconstant RATE_LIMITED_MODE 1)
+    (defconstant AGGREGATE_MODE 2)
+    (defconstant CLAWBACK_MODE 3)
+    (defconstant AGGSIG 50)
+
+     (defun sha256tree (TREE)
+           (if (l TREE)
+               (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+               (sha256 1 TREE)))
+
+
+    (defun-inline aggsig-solution-with-key (key)
+        (list AGGSIG key (sha256tree (c mode args)))
+    )
+
+    (defmacro assert items
+        (if (r items)
+            (list if (f items) (c assert (r items)) (q (x)))
+            (f items)
+        )
+    )
+
+    (defmacro or args
+        (if args
+            (qq (if (unquote (f args))
+                    1
+                    (unquote (c or (r args)))))
+            0))
+
+    (defun nth (n obj)
+        (if (= n 0)
+            (f obj)
+            (nth (- n 1) obj)))
+
+    (defun mode-two-me-string ()
+        (list opcode_myid (sha256 (nth 4 args) (nth 0 args) (nth 5 args))))
+    (defun create-lock () 1)
+    (defun create-consolidated ()
+        (list opcode_create (nth 0 args) (+ (nth 3 args) (nth 5 args))))
+
+    (defun mode-two ()
+        (assert (or (= (sha256 (nth 7 args) (nth 0 args) (nth 6 args))
+                       (nth 4 args))
+                    (= origin_id (nth 4 args)))
+                (list (mode-two-me-string)
+                      (create-lock)
+                      (create-consolidated))))
+
+    (defun rate-limited-puzzle () 1)
+
+    (if (= mode CLAWBACK_MODE)
+        (c (aggsig-solution-with-key clawback_pubkey)
+           args)
+        (c (aggsig-solution-with-key pubkey)
+           (if (= mode RATE_LIMITED_MODE)
+               (rate-limited-puzzle)
+               (mode-two))))
+)
