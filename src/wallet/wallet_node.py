@@ -559,7 +559,7 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return False, False
 
-        self.log.info(f"Requesting blocks {sub_height_start}-{sub_height_end}")
+        self.log.info(f"Requesting sub blocks {sub_height_start}-{sub_height_end}")
         request = RequestHeaderBlocks(uint32(sub_height_start), uint32(sub_height_end))
         res: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(request)
         if res is None or not isinstance(res, RespondHeaderBlocks):
