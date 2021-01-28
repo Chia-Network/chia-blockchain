@@ -11,6 +11,7 @@
     (defconstant CLAWBACK_MODE 3)
     (defconstant AGGSIG 50)
     (defconstant CREATE_COIN 51)
+    (defconstant ASSERT_MY_COIN_ID 53)
     (defconstant ASSERT_BLOCK_AGE_EXCEEDS 56)
 
      (defun sha256tree (TREE)
@@ -72,7 +73,8 @@
     (defun create-change (my_puzzlehash my_amount outgoing_amount fee)
         (list CREATE_COIN my_puzzlehash (- my_amount (+ outgoing_amount fee))))
 
-    (defun template-my-id () ())
+    (defun generate-assert-id-condition (my_parent_id my_puzzlehash my_amount)
+        (list ASSERT_MY_COIN_ID (sha256 my_parent_id my_puzzlehash my_amount)))
 
     (defun create-new-coin () ())
 
@@ -91,7 +93,7 @@
                     (= origin_id my_parent_id))
                 (list (generate-block-age-condition min_block_time outgoing_amount)
                       (create-change my_puzzlehash my_amount outgoing_amount fee)
-                      (template-my-id)
+                      (generate-assert-id-condition my_parent_id my_puzzlehash my_amount)
                       (create-new-coin))))
 
     (if (= mode CLAWBACK_MODE)
