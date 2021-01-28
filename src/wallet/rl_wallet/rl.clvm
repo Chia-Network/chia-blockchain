@@ -19,7 +19,6 @@
                (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
                (sha256 1 TREE)))
 
-
     (defun-inline aggsig-solution-with-key (key)
         (list AGGSIG key (sha256tree (c mode args)))
     )
@@ -45,11 +44,13 @@
 
     (defun mode-two-me-string ()
         (list opcode_myid (sha256 (nth 4 args) c (nth 5 args))))
+
     (defun create-lock ()
         (list opcode_create
               (sha256tree (list r (list c (list q (sha256 (nth 1 args) (nth 2 args) (nth 3 args)))
                                           (q (list)))))
               0))
+
     (defun create-consolidated ()
         (list opcode_create (nth 0 args) (+ (nth 3 args) (nth 5 args))))
 
@@ -80,15 +81,15 @@
         (list CREATE_COIN outgoing_puzzle_hash outgoing_amount))
 
     (defun rate-limited-puzzle
-           (my_parent_id          ; 0
-            my_puzzlehash         ; 1
-            my_amount             ; 2
-            outgoing_puzzle_hash  ; 3
-            outgoing_amount       ; 4
-            min_block_time        ; 5
-            parent_parent_id      ; 6
-            parent_amount         ; 7
-            fee)                  ; 8
+           (my_parent_id
+            my_puzzlehash
+            my_amount
+            outgoing_puzzle_hash
+            outgoing_amount
+            min_block_time
+            parent_parent_id
+            parent_amount
+            fee)
         (assert (or (= (sha256 parent_parent_id my_puzzlehash parent_amount)
                        my_parent_id)
                     (= origin_id my_parent_id))
