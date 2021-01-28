@@ -58,6 +58,14 @@
                       (create-lock)
                       (create-consolidated))))
 
+    (defun template-block-age () ())
+
+    (defun create-change () ())
+
+    (defun template-my-id () ())
+
+    (defun create-new-coin () ())
+
     (defun rate-limited-puzzle
            (my_parent_id          ; 0
             my_puzzlehash         ; 1
@@ -71,7 +79,10 @@
         (assert (or (= (sha256 parent_parent_id my_puzzlehash parent_amount)
                        my_parent_id)
                     (= origin_id my_parent_id))
-                1))
+                (list (template-block-age)
+                      (create-change)
+                      (template-my-id)
+                      (create-new-coin))))
 
     (if (= mode CLAWBACK_MODE)
         (c (aggsig-solution-with-key clawback_pubkey)
