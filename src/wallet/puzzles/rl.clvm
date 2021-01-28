@@ -45,7 +45,8 @@
                                           (q (list)))))
               0))
 
-    (defun aggregation (my_puzzle_hash
+    (defun aggregation (origin_id
+                        my_puzzle_hash
                         consolidating_primary_input
                         consolidating_coin_puzzle_hash
                         outgoing_amount
@@ -64,7 +65,7 @@
         (or (> a b)
             (= a b)))
 
-    (defun generate-block-age-condition (min_block_time outgoing_amount)
+    (defun generate-block-age-condition (min_block_time outgoing_amount rate_amount interval_time)
         (assert (>= (* min_block_time rate_amount)
                     (* outgoing_amount interval_time))
             (list ASSERT_BLOCK_AGE_EXCEEDS min_block_time)))
@@ -79,7 +80,10 @@
         (list CREATE_COIN outgoing_puzzle_hash outgoing_amount))
 
     (defun rate-limited-puzzle
-           (my_parent_id
+           (rate_amount
+            interval_time
+            origin_id
+            my_parent_id
             my_puzzlehash
             my_amount
             outgoing_puzzle_hash
@@ -91,7 +95,7 @@
         (assert (or (= (sha256 parent_parent_id my_puzzlehash parent_amount)
                        my_parent_id)
                     (= origin_id my_parent_id))
-                (list (generate-block-age-condition min_block_time outgoing_amount)
+                (list (generate-block-age-condition min_block_time outgoing_amount rate_amount interval_time)
                       (create-change my_puzzlehash my_amount outgoing_amount fee)
                       (generate-assert-id-condition my_parent_id my_puzzlehash my_amount)
                       (create-new-coin outgoing_puzzle_hash outgoing_amount))))
@@ -101,6 +105,6 @@
            args)
         (c (aggsig-solution-with-key pubkey)
            (if (= mode RATE_LIMITED_MODE)
-               (a rate-limited-puzzle args)
-               (a aggregation args))))
+               (a rate-limited-puzzle (c rate_amount (c interval_time (c origin_id args))))
+               (a aggregation (c origin_id args)))))
 )
