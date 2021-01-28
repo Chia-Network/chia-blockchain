@@ -658,7 +658,7 @@ class WalletNode:
                     # Verify exclusion proof for puzzle hash
                     not_included = confirm_not_included_already_hashed(
                         root,
-                        coins[i],
+                        coins[i][0],
                         puzzle_hash_proof,
                     )
                     if not_included is False:
