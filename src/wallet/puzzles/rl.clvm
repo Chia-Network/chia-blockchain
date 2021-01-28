@@ -14,10 +14,10 @@
     (defconstant ASSERT_MY_COIN_ID 53)
     (defconstant ASSERT_BLOCK_AGE_EXCEEDS 56)
 
-     (defun sha256tree (TREE)
-           (if (l TREE)
-               (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-               (sha256 1 TREE)))
+    (defun sha256tree (tree)
+        (if (l tree)
+            (sha256 2 (sha256tree (f tree)) (sha256tree (r tree)))
+            (sha256 1 tree)))
 
     (defun-inline aggsig-solution-with-key (key)
         (list AGGSIG key (sha256tree (c mode args)))
