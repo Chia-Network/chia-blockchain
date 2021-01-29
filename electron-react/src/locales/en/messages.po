@@ -1090,7 +1090,7 @@ msgstr "Full Node Status"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
 msgid "LocaleToggle.helpToTranslate"
-msgstr "Help to translate"
+msgstr "Help translate"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
 msgid "MainWalletList.colouredCoin"
