@@ -55,7 +55,7 @@ steps:
       . ./activate
       clang --version
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
-      pip install --only-binary --find-links=./wheels/ chia-blockchain
+      pip install --find-links=./wheels/ --only-binary chia-blockchain
     displayName: "Build and install wheels"
 
   - task: NodeTool@0
