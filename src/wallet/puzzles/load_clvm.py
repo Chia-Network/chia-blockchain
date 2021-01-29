@@ -4,10 +4,10 @@ import pkg_resources
 
 from clvm_tools.clvmc import compile_clvm
 
-from src.types.program import Program
+from src.types.program import Program, SerializedProgram
 
 
-def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
+def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
     This function takes a .clvm file in the given package and compiles it to a
     .clvm.hex file if the .hex file is missing or older than the .clvm file, then
@@ -31,4 +31,8 @@ def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
 
     clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
     clvm_blob = bytes.fromhex(clvm_hex)
-    return Program.from_bytes(clvm_blob)
+    return SerializedProgram.from_bytes(clvm_blob)
+
+
+def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
+    return Program.from_bytes(bytes(load_serialized_clvm(clvm_filename, package_or_requirement=__name__)))

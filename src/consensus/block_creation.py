@@ -28,7 +28,7 @@ from src.types.foliage import (
 )
 from src.types.full_block import additions_for_npc, FullBlock
 from src.types.pool_target import PoolTarget
-from src.types.program import Program
+from src.types.program import SerializedProgram
 from src.types.proof_of_space import ProofOfSpace
 from src.types.reward_chain_sub_block import (
     RewardChainSubBlockUnfinished,
@@ -58,7 +58,7 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     seed: bytes32 = b"",
-) -> Tuple[FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[Program]]:
+) -> Tuple[FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
     """
     Creates a foliage for a given reward chain sub block. This may or may not be a block. In the case of a block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -136,7 +136,7 @@ def create_foliage(
         assert prev_sub_block is not None
         prev_sub_block_hash = prev_sub_block.header_hash
 
-    solution_program: Optional[Program] = None
+    solution_program: Optional[SerializedProgram] = None
     if is_block:
         spend_bundle_fees: int = 0
         aggregate_sig: G2Element = G2Element.infinity()
