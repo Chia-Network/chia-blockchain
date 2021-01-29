@@ -194,8 +194,9 @@ class WeightProofHandler:
                     break
                 idx += 1
 
-            while curr_height <= wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height:
-                recent_chain.append(wp.recent_chain_data[idx])
+            for block in wp.recent_chain_data[idx:]:
+                recent_chain.append(block)
+                assert curr_height == block.reward_chain_sub_block.sub_block_height
                 curr_height = curr_height + uint32(1)  # type: ignore
                 idx += 1
 
