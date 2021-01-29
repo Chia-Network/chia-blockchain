@@ -1,12 +1,12 @@
 name: Windows Installer on Windows 10 and Python 3.7
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   build:
     name: Windows Installer on Windows 10 and Python 3.7
     runs-on: [windows-latest]
-    timeout-minutes: 90
+    timeout-minutes: 30
 
     steps:
       - name: Cancel previous runs on the same branch
