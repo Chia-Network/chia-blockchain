@@ -19,6 +19,9 @@ on:
   push:
     branches-ignore:
       - 'master'
+  pull:
+    branches-ignore:
+      - 'master'
 
 ###############
 # Set the Job #
