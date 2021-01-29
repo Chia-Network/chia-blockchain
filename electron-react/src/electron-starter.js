@@ -182,7 +182,27 @@ if (!setupEvents.handleSquirrelEvent()) {
       clearTimeoutCallback(e);
     }
   };
+  
+  const ensureSingleInstance = () => {
+    const gotTheLock = app.requestSingleInstanceLock();
 
+    if (!gotTheLock) {
+      app.quit();
+    } else {
+      app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, we should focus our window.
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) {
+            mainWindow.restore();
+          }
+          mainWindow.focus();
+        }
+      });
+    }
+  };
+  
+  ensureSingleInstance();
+  
   const exitPyProc = e => {};
 
   app.on("will-quit", exitPyProc);
