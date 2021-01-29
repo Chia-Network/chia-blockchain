@@ -65,9 +65,9 @@ jobs:
           destination-file: .\electron-react\win_code_sign_cert.p12
 
       - uses: actions/setup-python@v2
-        name: Install Python 3.7
+        name: Install Python 3.8
         with:
-          python-version: "3.7"
+          python-version: "3.8"
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
         env:
