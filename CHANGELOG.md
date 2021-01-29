@@ -14,11 +14,13 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
-- Improved mempool parsing perfromance in node.
+- Improved mempool parsing performance in node.
 
 ### Fixed
 
 - There was a bug in adding a sub block to weight proofs.
+- There was a potential bug in Python 3.9.0 that required us to update blspy, chiapos, chiavdf, and chiabip158.
+- There was an edge case in bip158 handling.
 
 ## [1.0beta23] aka Beta 1.23 - 2021-01-26
 
