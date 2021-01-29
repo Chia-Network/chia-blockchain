@@ -19,7 +19,7 @@ on:
   push:
     branches-ignore:
       - 'master'
-  pull:
+  pull_request:
     branches-ignore:
       - 'master'
 
