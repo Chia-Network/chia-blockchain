@@ -42,7 +42,7 @@
               (sha256tree (list r (list c (list q (sha256 consolidating_primary_input
                                                           consolidating_coin_puzzle_hash
                                                           outgoing_amount))
-                                          (q (list)))))
+                                          (q ()))))
               0))
 
     (defun aggregation (origin_id
