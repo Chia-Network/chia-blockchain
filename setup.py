@@ -7,7 +7,8 @@ dependencies = [
     "chiavdf==0.13.3",  # timelord and vdf verification
     "chiabip158==0.18",  # bip158-style wallet filters
     "chiapos==0.12.42b2",  # proof of space
-    "clvm==0.7",
+    "clvm>=0.7.1",
+    "clvm_rs>=0.1.0",
     "clvm_tools==0.2.0",
     "aiohttp==3.7.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",

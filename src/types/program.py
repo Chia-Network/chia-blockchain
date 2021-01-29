@@ -1,5 +1,5 @@
 import io
-from typing import Any, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from src.types.sized_bytes import bytes32
 from src.util.hash import std_hash
@@ -7,10 +7,12 @@ from src.util.hash import std_hash
 from clvm import run_program as default_run_program, KEYWORD_TO_ATOM, SExp
 from clvm.casts import int_from_bytes
 from clvm.operators import OPERATOR_LOOKUP
-from clvm.serialize import sexp_from_stream, sexp_to_stream
+from clvm.serialize import sexp_from_stream, sexp_buffer_from_stream, sexp_to_stream
 from clvm.EvalError import EvalError
 
 from clvm_tools.curry import curry, uncurry
+
+from clvm_rs import serialize_and_run_program
 
 
 def run_program(
@@ -46,7 +48,7 @@ class Program(SExp):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> Any:
+    def from_bytes(cls, blob: bytes) -> "Program":
         f = io.BytesIO(blob)
         return cls.parse(f)  # type: ignore # noqa
 
@@ -102,3 +104,71 @@ class Program(SExp):
         return type(self).from_bytes(bytes(self))
 
     EvalError = EvalError
+
+
+def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
+    """
+    Hash values in `precalculated` are presumed to have been hashed already.
+    """
+    if node.listp():
+        left = _tree_hash(node.first(), precalculated)
+        right = _tree_hash(node.rest(), precalculated)
+        s = b"\2" + left + right
+    else:
+        atom = node.as_atom()
+        if atom in precalculated:
+            return bytes32(atom)
+        s = b"\1" + atom
+    return bytes32(std_hash(s))
+
+
+class SerializedProgram:
+    """
+    An opaque representation of a clvm program. It has a more limited interface than a full SExp
+    """
+
+    _buf: bytes = b""
+
+    @classmethod
+    def parse(cls, f) -> "SerializedProgram":
+        tmp = sexp_buffer_from_stream(f)
+        return SerializedProgram.from_bytes(tmp)
+
+    def stream(self, f):
+        f.write(self._buf)
+
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> "SerializedProgram":
+        ret = SerializedProgram()
+        ret._buf = bytes(blob)
+        return ret
+
+    def __bytes__(self) -> bytes:
+        return self._buf
+
+    def __str__(self) -> str:
+        return bytes(self).hex()
+
+    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+        """
+        Any values in `args` that appear in the tree
+        are presumed to have been hashed already.
+        """
+        tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
+        return _tree_hash(tmp, set(args))
+
+    def run_with_cost(self, args) -> Tuple[int, SExp]:
+        assert type(self._buf) == bytes
+        if type(args) == SerializedProgram:
+            prog_args = args._buf
+            assert type(args._buf) == bytes
+        else:
+            prog_args = SExp.to(args).as_bin()
+        max_cost = 0
+        cost, ret = serialize_and_run_program(self._buf, prog_args, 1, 3, max_cost)
+        # TODO this could be parsed lazily
+        return cost, sexp_from_stream(io.BytesIO(ret), SExp.to)
+
+    def run(self, args) -> "Program":
+        cost, r = self.run_with_cost(args)
+        return Program.to(r)
