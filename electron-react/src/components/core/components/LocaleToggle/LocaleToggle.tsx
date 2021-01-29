@@ -9,7 +9,7 @@ import useLocale from '../../../../hooks/useLocale';
 const locales: { [char: string]: string } = {
   en: 'English',
   sk: 'Slovenčina',
-  "zh-CN": '中文 (中国)', 
+  "zh-CN": '中文 (中国)',
 };
 
 export default function LocaleToggle() {
@@ -66,7 +66,7 @@ export default function LocaleToggle() {
           target="_blank"
           onClick={() => handleClose()}
         >
-          <Trans id="LocaleToggle.helpToTranslate">Help to translate</Trans>
+          <Trans id="LocaleToggle.helpToTranslate">Help translate</Trans>
         </MenuItem>
       </Menu>
     </>
