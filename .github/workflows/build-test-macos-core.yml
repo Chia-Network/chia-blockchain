@@ -1,12 +1,12 @@
 name: Build and test MacOS Core
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   build:
     name: Build and test MacOS Core
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4

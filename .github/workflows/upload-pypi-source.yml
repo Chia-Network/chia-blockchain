@@ -1,12 +1,12 @@
 name: Lint and upload source distribution
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   upload_source_dist:
     name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -55,7 +55,7 @@ jobs:
         python -m build --sdist --outdir dist .
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2.2.2
+      uses: actions/upload-artifact@v2
       with:
         name: dist
         path: ./dist
