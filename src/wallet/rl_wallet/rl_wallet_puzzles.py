@@ -10,6 +10,10 @@ from src.util.ints import uint64
 from src.wallet.chialisp import sexp
 from src.wallet.puzzles.load_clvm import load_clvm
 
+RATE_LIMITED_MODE = 1
+AGGREGATION_MODE = 2
+CLAWBACK_MODE = 3
+
 
 def rl_puzzle_for_pk(
     pubkey: bytes,
@@ -44,7 +48,7 @@ def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_am
 
 def make_clawback_solution(puzzlehash, amount, fee):
     opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
-    solution = sexp(3, sexp("0x" + opcode_create, "0x" + str(puzzlehash), amount - fee))
+    solution = sexp(CLAWBACK_MODE, sexp("0x" + opcode_create, "0x" + str(puzzlehash), amount - fee))
     return Program.to(binutils.assemble(solution))
 
 
@@ -63,7 +67,7 @@ def rl_make_solution_mode_2(
     consolidating_coin_puzzle_hash = hexlify(consolidating_coin_puzzle_hash).decode("ascii")
     primary_input = hexlify(my_primary_input).decode("ascii")
     sol = sexp(
-        2,
+        AGGREGATION_MODE,
         "0x" + my_puzzle_hash,
         "0x" + consolidating_primary_input,
         "0x" + consolidating_coin_puzzle_hash,
@@ -96,7 +100,7 @@ def solution_for_rl(
 
     min_block_count = math.ceil((out_amount * interval) / limit)
     solution = sexp(
-        1,
+        RATE_LIMITED_MODE,
         "0x" + my_parent_id.hex(),
         "0x" + my_puzzlehash.hex(),
         my_amount,
