@@ -116,12 +116,14 @@ class WalletBlockchain(BlockchainInterface):
         """
         Initializes the state of the Blockchain class from the database.
         """
-        height_to_hash, sub_epoch_summaries = await self.block_store.get_sub_block_dicts()
+        height_to_hash, sub_epoch_summaries = await self.block_store.get_peak_sub_heights_dicts()
         self.__sub_height_to_hash = height_to_hash
         self.__sub_epoch_summaries = sub_epoch_summaries
         self.__sub_blocks = {}
         self.__sub_heights_in_cache = {}
-        sub_blocks, peak = await self.block_store.get_sub_blocks_from_peak(self.constants.SUB_BLOCKS_CACHE_SIZE)
+        sub_blocks, peak = await self.block_store.get_sub_block_records_close_to_peak(
+            self.constants.SUB_BLOCKS_CACHE_SIZE
+        )
         for sub_block in sub_blocks.values():
             self.add_sub_block(sub_block)
 
@@ -423,7 +425,7 @@ class WalletBlockchain(BlockchainInterface):
 
         if self.peak_sub_height is None:
             return
-        sub_blocks = await self.block_store.get_sub_block_in_range(
+        sub_blocks = await self.block_store.get_sub_block_records_in_range(
             fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, self.peak_sub_height
         )
         for sub_block in sub_blocks.values():
@@ -463,10 +465,10 @@ class WalletBlockchain(BlockchainInterface):
         self.clean_sub_block_record(peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE)
 
     async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
-        return await self.block_store.get_sub_block_in_range(start, stop)
+        return await self.block_store.get_sub_block_records_in_range(start, stop)
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
-        return await self.block_store.get_headers_in_range(start, stop)
+        return await self.block_store.get_header_blocks_in_range(start, stop)
 
     async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         if header_hash in self.__sub_blocks:

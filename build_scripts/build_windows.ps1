@@ -6,10 +6,9 @@ mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
 Write-Output "   ---"
-Write-Output "curl miniupnpc, setproctitle"
+Write-Output "curl miniupnpc"
 Write-Output "   ---"
 Invoke-WebRequest -Uri "https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl" -OutFile "miniupnpc-2.1-cp37-cp37m-win_amd64.whl"
-Invoke-WebRequest -Uri "https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl" -OutFile "setproctitle-1.1.10-cp37-cp37m-win_amd64.whl"
 Write-Output "Using win_amd64 python 3.7 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
 Set-Location -Path - -PassThru
 
@@ -48,8 +47,9 @@ Write-Output "   ---"
 Write-Output "pip install miniupnpc"
 Set-Location -Path ".\build_scripts" -PassThru
 pip install --no-index --find-links=.\win_build\ miniupnpc
-Write-Output "pip install setproctitle"
-pip install --no-index --find-links=.\win_build\ setproctitle
+# Write-Output "pip install setproctitle"
+# pip install setproctitle==1.2.2
+
 Write-Output "pip install chia-blockchain"
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 

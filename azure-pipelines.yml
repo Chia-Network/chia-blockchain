@@ -39,7 +39,7 @@ steps:
       keychain: temp
       deleteCert: true
 
-  #  since we're installing miniupnpc & setproctitle below,
+  #  since we're installing miniupnpc below,
   #  only cbor2 will end up in wheels/
   - script: |
       python -m venv venv
@@ -48,7 +48,7 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10
+      pip install -i https://download.chia.net/simple/ miniupnpc==2.1
     displayName: "Install dependencies"
 
   - script: |

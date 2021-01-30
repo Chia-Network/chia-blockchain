@@ -116,10 +116,10 @@ class BlockTools:
         create_default_chia_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)
         self.keychain.delete_all_keys()
-        self.farmer_master_sk = self.keychain.add_private_key(
-            bytes_to_mnemonic(std_hash(b"block_tools farmer key")), ""
-        )
-        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(std_hash(b"block_tools pool key")), "")
+        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
+        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+        self.farmer_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
+        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
         self.init_plots(root_path)
