@@ -29,9 +29,9 @@ export const StyledTableRow = styled(TableRow)`
 const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
   <TableCell {...rest} />
 ))`
-  max-width: ${({ maxWidth, width }) => ((maxWidth || width) ?? '0')};
+  max-width: ${({ minWidth, maxWidth, width }) => ((maxWidth || width || minWidth) ?? 'none')};
   min-width: ${({ minWidth }) => (minWidth || '0')};
-  width: ${({ width }) => (width || 'auto')};
+  width: ${({ width, minWidth }) => width || minWidth ? width : 'auto'}};
 `;
 
 const StyledTableCellContent = styled.div`

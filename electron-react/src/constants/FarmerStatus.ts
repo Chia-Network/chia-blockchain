@@ -1,7 +1,9 @@
 enum FarmerStatus {
-  FARMING,
-  SYNCHING,
-  ERROR,
+  FARMING = 'FARMING',
+  SYNCHING = 'SYNCHING',
+  NOT_AVAILABLE = 'NOT_AVAILABLE',
+  NOT_CONNECTED = 'NOT_CONNECTED',
+  NOT_RUNNING = 'NOT_RUNNING',
 }
 
 export default FarmerStatus;

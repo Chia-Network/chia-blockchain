@@ -45,7 +45,7 @@ class TestBlockStore:
             # Save/get block
             for block in blocks:
                 await bc.receive_block(block)
-                sub_block = bc.sub_blocks[block.header_hash]
+                sub_block = bc.sub_block_record(block.header_hash)
                 sub_block_hh = sub_block.header_hash
                 await store.add_full_block(block, sub_block)
                 await store.add_full_block(block, sub_block)
@@ -103,7 +103,7 @@ class TestBlockStore:
         sub_block_records = []
         for block in blocks:
             await bc.receive_block(block)
-            sub_block_records.append(bc.sub_blocks[block.header_hash])
+            sub_block_records.append(bc.sub_block_record(block.header_hash))
         tasks = []
 
         for i in range(10000):

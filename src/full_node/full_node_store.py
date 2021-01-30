@@ -2,13 +2,13 @@ import logging
 from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
 from src.protocols import timelord_protocol
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo
@@ -25,9 +25,6 @@ class FullNodeStore:
 
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
-
-    # Blocks which we have received but our blockchain does not reach, old ones are cleared
-    disconnected_blocks: Dict[bytes32, FullBlock]
 
     # Unfinished blocks, keyed from reward hash
     unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
@@ -53,7 +50,6 @@ class FullNodeStore:
     def __init__(self):
         self.candidate_blocks = {}
         self.seen_unfinished_blocks = set()
-        self.disconnected_blocks = {}
         self.unfinished_blocks = {}
         self.finished_sub_slots = []
         self.future_eos_cache = {}
@@ -101,23 +97,6 @@ class FullNodeStore:
 
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
-
-    def add_disconnected_block(self, block: FullBlock) -> None:
-        self.disconnected_blocks[block.header_hash] = block
-
-    def get_disconnected_block_by_prev(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
-        for _, block in self.disconnected_blocks.items():
-            if block.prev_header_hash == prev_header_hash:
-                return block
-        return None
-
-    def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        return self.disconnected_blocks.get(header_hash, None)
-
-    def clear_disconnected_blocks_below(self, sub_height: uint32) -> None:
-        for key in list(self.disconnected_blocks.keys()):
-            if self.disconnected_blocks[key].sub_block_height < sub_height:
-                del self.disconnected_blocks[key]
 
     def add_unfinished_block(self, sub_height: uint32, unfinished_block: UnfinishedBlock) -> None:
         self.unfinished_blocks[unfinished_block.partial_hash] = (
@@ -175,7 +154,7 @@ class FullNodeStore:
     def new_finished_sub_slot(
         self,
         eos: EndOfSubSlotBundle,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
+        sub_blocks: BlockchainInterface,
         peak: Optional[SubBlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
@@ -249,7 +228,7 @@ class FullNodeStore:
             if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
-                    curr = sub_blocks[curr.prev_hash]
+                    curr = sub_blocks.sub_block_record(curr.prev_hash)
                 if curr.is_challenge_sub_block(self.constants):
                     icc_start_challenge_hash = curr.challenge_block_info_hash
                 else:
@@ -291,7 +270,7 @@ class FullNodeStore:
     def new_signage_point(
         self,
         index: uint8,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
+        sub_blocks: BlockchainInterface,
         peak: Optional[SubBlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
@@ -351,7 +330,7 @@ class FullNodeStore:
                             # Did not find a sub-block where it's iters are before our sp_total_iters, in this ss
                             check_from_start_of_ss = True
                             break
-                        curr = sub_blocks[curr.prev_hash]
+                        curr = sub_blocks.sub_block_record(curr.prev_hash)
 
                 if check_from_start_of_ss:
                     # Check VDFs from start of sub slot
@@ -478,7 +457,7 @@ class FullNodeStore:
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
+        sub_blocks: BlockchainInterface,
     ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
@@ -525,7 +504,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
-            log.info(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
+            log.debug(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,
@@ -562,7 +541,7 @@ class FullNodeStore:
     def get_finished_sub_slots(
         self,
         prev_sb: Optional[SubBlockRecord],
-        sub_block_records: Dict[bytes32, SubBlockRecord],
+        sub_block_records: BlockchainInterface,
         pos_ss_challenge_hash: bytes32,
         extra_sub_slot: bool = False,
     ) -> List[EndOfSubSlotBundle]:
@@ -579,8 +558,10 @@ class FullNodeStore:
 
         if prev_sb is not None:
             curr: SubBlockRecord = prev_sb
+            assert curr is not None
             while not curr.first_in_sub_slot:
-                curr = sub_block_records[curr.prev_hash]
+                curr = sub_block_records.sub_block_record(curr.prev_hash)
+            assert curr is not None
             assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
         else:
@@ -606,9 +587,7 @@ class FullNodeStore:
                     final_index = index
 
         if pos_index is None or final_index is None:
-            raise ValueError(
-                f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
-            )
+            raise ValueError(f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} ")
 
         if extra_sub_slot:
             new_final_index = pos_index + 1

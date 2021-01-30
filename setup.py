@@ -3,10 +3,10 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.3.1",  # Signature library
-    "chiavdf==0.13.2",  # timelord and vdf verification
+    "blspy==0.3.3",  # Signature library
+    "chiavdf==0.13.3",  # timelord and vdf verification
     "chiabip158==0.17",  # bip158-style wallet filters
-    "chiapos==0.12.41",  # proof of space
+    "chiapos==0.12.42b2",  # proof of space
     "clvm==0.7",
     "clvm_tools==0.2.0",
     "aiohttp==3.7.3",  # HTTP server for full node rpc
@@ -20,6 +20,7 @@ dependencies = [
     "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.3.1",  # Used for config file format
+    "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
 ]

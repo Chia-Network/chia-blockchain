@@ -12,7 +12,6 @@ import WalletType from '../../constants/WalletType';
 
 const getCols = (type: WalletType) => [
   {
-    width: '120px',
     field(row: Row) {
       const isOutgoing = [
         TransactionType.OUTGOING, 
@@ -32,12 +31,10 @@ const getCols = (type: WalletType) => [
     title: <Trans id="TransactionTable.to">To</Trans>,
   },
   {
-    width: '180px',
     field: (row: Row) => unix_to_short_date(row.created_at_time),
     title: <Trans id="TransactionTable.date">Date</Trans>,
   },
   {
-    minWidth: '180px',
     field: (row: Row) => {
       return row.confirmed 
         ? (
@@ -49,14 +46,12 @@ const getCols = (type: WalletType) => [
     title: <Trans id="TransactionTable.status">Status</Trans>,
   },
   {
-    minWidth: '130px',
     field: (row: Row) => type === WalletType.COLOURED_COIN
       ? mojo_to_colouredcoin_string(row.amount)
       : mojo_to_chia_string(row.amount),
     title: <Trans id="TransactionTable.amount">Amount</Trans>,
   },
   {
-    minWidth: '130px',
     field: (row: Row) => mojo_to_chia_string(row.fee_amount),
     title: <Trans id="TransactionTable.fee">Fee</Trans>,
   },

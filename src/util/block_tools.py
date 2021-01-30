@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable
 
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
+
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.deficit import calculate_deficit
 
 from src.cmds.init import create_default_chia_config, initialize_ssl
@@ -51,6 +53,7 @@ from src.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block,
 )
+from src.util.block_cache import BlockCache
 from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -65,7 +68,6 @@ from src.wallet.derive_keys import (
 )
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 
-
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 2 ** 12,
@@ -76,6 +78,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "EPOCH_SUB_BLOCKS": 280,
+        "SUB_BLOCKS_CACHE_SIZE": 280 + 3 * 50,  # Coordinate with the above values
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
@@ -85,6 +88,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MEMPOOL_BLOCK_BUFFER": 6,
         "TX_PER_SEC": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
+        "INITIAL_FREEZE_PERIOD": 0,
     }
 )
 
@@ -112,10 +116,10 @@ class BlockTools:
         create_default_chia_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)
         self.keychain.delete_all_keys()
-        self.farmer_master_sk = self.keychain.add_private_key(
-            bytes_to_mnemonic(std_hash(b"block_tools farmer key")), ""
-        )
-        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(std_hash(b"block_tools pool key")), "")
+        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
+        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+        self.farmer_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
+        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
         self.init_plots(root_path)
@@ -313,7 +317,7 @@ class BlockTools:
 
                     signage_point: SignagePoint = get_signage_point(
                         constants,
-                        sub_blocks,
+                        BlockCache(sub_blocks),
                         latest_sub_block,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -442,8 +446,7 @@ class BlockTools:
             else:
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    sub_blocks,
-                    height_to_hash,
+                    BlockCache(sub_blocks, height_to_hash),
                     latest_sub_block.required_iters,
                     block_list[-1],
                     False,
@@ -532,7 +535,7 @@ class BlockTools:
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
                         constants,
-                        sub_blocks,
+                        BlockCache(sub_blocks),
                         latest_sub_block_eos,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -645,7 +648,7 @@ class BlockTools:
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
-                    {},
+                    BlockCache({}, {}),
                     None,
                     sub_slot_total_iters,
                     uint8(signage_point_index),
@@ -732,7 +735,7 @@ class BlockTools:
                             None,
                             finished_sub_slots,
                             None,
-                            {},
+                            BlockCache({}),
                             total_iters_sp,
                             constants.DIFFICULTY_STARTING,
                         )
@@ -797,7 +800,7 @@ class BlockTools:
                         None,
                         finished_sub_slots,
                         None,
-                        {},
+                        BlockCache({}),
                         total_iters_sp,
                         constants.DIFFICULTY_STARTING,
                     )
@@ -856,7 +859,7 @@ class BlockTools:
 
 def get_signage_point(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     latest_sub_block: Optional[SubBlockRecord],
     sub_slot_start_total_iters: uint128,
     signage_point_index: uint8,
@@ -975,14 +978,12 @@ def finish_sub_block(
         icc_ip_proof,
         finished_sub_slots,
         latest_sub_block,
-        sub_blocks,
+        BlockCache(sub_blocks),
         sp_total_iters,
         difficulty,
     )
 
-    sub_block_record = block_to_sub_block_record(
-        constants, sub_blocks, height_to_hash, required_iters, full_block, None
-    )
+    sub_block_record = block_to_sub_block_record(constants, BlockCache(sub_blocks), required_iters, full_block, None)
     return full_block, sub_block_record
 
 
@@ -1044,8 +1045,7 @@ def load_block_list(
 
         sub_blocks[full_block.header_hash] = block_to_sub_block_record(
             constants,
-            sub_blocks,
-            height_to_hash,
+            BlockCache(sub_blocks),
             required_iters,
             full_block,
             None,
@@ -1153,10 +1153,10 @@ def get_full_block_and_sub_record(
         get_pool_signature,
         signage_point,
         uint64(start_timestamp + int((prev_sub_block.sub_block_height + 1 - start_height) * time_per_sub_block)),
+        BlockCache(sub_blocks),
         seed,
         transaction_data,
         prev_sub_block,
-        sub_blocks,
         finished_sub_slots,
     )
 
