@@ -26,7 +26,6 @@ const cols = [
     ),
   },
   {
-    width: '150px',
     field: (row: Row) => row.sp.signage_point_index,
     title: <Trans id="FarmLatestBlockChallenges.index">Index</Trans>,
   }, /*

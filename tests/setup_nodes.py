@@ -8,6 +8,7 @@ from src.full_node.full_node_api import FullNodeAPI
 from src.timelord.timelord_launcher import spawn_process, kill_processes
 from src.util.block_tools import BlockTools, test_constants
 from src.types.peer_info import PeerInfo
+from src.util.hash import std_hash
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from src.server.start_farmer import service_kwargs_for_farmer
@@ -104,7 +105,9 @@ async def setup_wallet_node(
 
     entropy = token_bytes(32)
     keychain = Keychain(entropy.hex(), True)
-    keychain.add_private_key(bytes_to_mnemonic(entropy), "")
+    if key_seed is None:
+        key_seed = entropy
+    keychain.add_private_key(bytes_to_mnemonic(key_seed), "")
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
     db_path_key_suffix = str(first_pk.get_fingerprint())
@@ -298,10 +301,10 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None):
+async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None, key_seed=None):
     node_iters = [
         setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
-        setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height),
+        setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height, key_seed=key_seed),
     ]
 
     full_node_api = await node_iters[0].__anext__()
@@ -313,10 +316,7 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int,
-    wallet_count: int,
-    dic: Dict,
-    starting_height=None,
+    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None, key_seed=None
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
@@ -331,7 +331,10 @@ async def setup_simulators_and_wallets(
         node_iters.append(sim)
 
     for index in range(0, wallet_count):
-        seed = bytes(uint32(index))
+        if key_seed is None:
+            seed = std_hash(uint32(index))
+        else:
+            seed = key_seed
         port = 55000 + index
         wlt = setup_wallet_node(
             port,

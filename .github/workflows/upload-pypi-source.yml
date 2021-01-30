@@ -1,15 +1,16 @@
 name: Lint and upload source distribution
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   upload_source_dist:
     name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
     - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/dev' }}
       uses: styfle/cancel-workflow-action@0.7.0
       with:
         access_token: ${{ github.token }}
@@ -23,7 +24,7 @@ jobs:
     - uses: actions/setup-python@v2
       name: Install Python
       with:
-        python-version: '3.7'
+        python-version: '3.8'
 
     - name: Test for secrets access
       id: check_secrets
@@ -54,7 +55,7 @@ jobs:
         python -m build --sdist --outdir dist .
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2.2.2
+      uses: actions/upload-artifact@v2
       with:
         name: dist
         path: ./dist

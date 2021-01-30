@@ -29,6 +29,7 @@ import {
   getBlockChainState,
   getFullNodeConnections,
   updateLatestBlocks,
+  updateLatestSubBlocks,
   updateUnfinishedSubBlockHeaders,
 } from '../modules/fullnodeMessages';
 import {
@@ -179,6 +180,7 @@ export const handle_message = async (store, payload) => {
         ?.sub_block_height
     ) {
       dispatch(updateLatestBlocks());
+      dispatch(updateLatestSubBlocks());
       dispatch(updateUnfinishedSubBlockHeaders());
     }
   } else if (payload.command === 'ping') {

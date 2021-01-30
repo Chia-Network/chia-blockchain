@@ -2,6 +2,7 @@ import { service_full_node } from '../util/service_names';
 import type Connection from '../types/Connection';
 import type Header from '../types/Header';
 import type Block from '../types/Block';
+import type SubBlock from '../types/SubBlock';
 import type FoliageBlock from '../types/FoliageBlock';
 import type FoliageSubBlock from '../types/FoliageSubBlock';
 
@@ -28,6 +29,7 @@ type FullNodeState = {
   header?: string | null;
   unfinished_sub_block_headers?: any[];
   latest_blocks?: Block[];
+  latest_sub_blocks?: SubBlock[];
 };
 
 const initialState: FullNodeState = {
@@ -46,6 +48,11 @@ export default function fullnodeReducer(
       return {
         ...state,
         latest_blocks: action.blocks,
+      };
+    case 'FULL_NODE_SET_LATEST_SUB_BLOCKS':
+      return {
+        ...state,
+        latest_sub_blocks: action.subBlocks,
       };
     case 'FULL_NODE_SET_UNFINISHED_SUB_BLOCK_HEADERS':
       return {

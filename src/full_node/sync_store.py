@@ -1,8 +1,7 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
-from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint128
 
@@ -12,40 +11,26 @@ log = logging.getLogger(__name__)
 class SyncStore:
     # Whether or not we are syncing
     sync_mode: bool
-    # Whether we are waiting for peaks (at the start of sync) or already syncing
-    waiting_for_peaks: bool
-    # Potential new peaks that we have received from others.
-    potential_peaks: Dict[bytes32, Tuple[uint32, uint128]]
-    # Blocks received from other peers during sync
-    potential_blocks: Dict[uint32, FullBlock]
-    # Blocks that we have finalized during sync, queue them up for adding after sync is done
-    potential_future_blocks: List[FullBlock]
-    # A map from sub height to header hash of sub-blocks added to the chain
-    header_hashes_added: Dict[uint32, bytes32]
-    # map from potential peak to fork point
-    peak_fork_point: Dict[bytes32, uint32]
     peak_to_peer: Dict[bytes32, List[bytes32]]  # Header hash : peer node id
-    peer_to_peak: Dict[bytes32, Tuple[uint32, bytes32]]  # peer node id : [height, header_hash]
+    peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]  # peer node id : [header_hash, height, weight]
     sync_hash_target: Optional[bytes32]  # Peak hash we are syncing towards
     sync_height_target: Optional[uint32]  # Peak height we are syncing towards
     peers_changed: asyncio.Event
+    batch_syncing: Set[bytes32]  # Set of nodes which we are batch syncing from
 
     @classmethod
     async def create(cls):
         self = cls()
 
         self.sync_mode = False
-        self.waiting_for_peaks = True
         self.sync_hash_target = None
         self.sync_height_target = None
-        self.potential_peaks = {}
-        self.potential_blocks = {}
-        self.potential_future_blocks = []
-        self.header_hashes_added = {}
         self.peak_fork_point = {}
         self.peak_to_peer = {}
         self.peer_to_peak = {}
         self.peers_changed = asyncio.Event()
+
+        self.batch_syncing = set()
         return self
 
     def set_peak_target(self, peak_hash: bytes32, target_sub_height: uint32):
@@ -58,20 +43,23 @@ class SyncStore:
     def get_sync_target_height(self) -> Optional[bytes32]:
         return self.sync_height_target
 
-    def set_sync_mode(self, sync_mode: bool) -> None:
+    def set_sync_mode(self, sync_mode: bool):
         self.sync_mode = sync_mode
 
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    def add_peak_peer(self, peak_hash: bytes32, peer_id: bytes32, height: uint32):
+    def add_peak_peer(self, peak_hash: bytes32, peer_id: bytes32, weight: uint128, sub_height: uint32):
         if peak_hash == self.sync_hash_target:
             self.peers_changed.set()
         if peak_hash in self.peak_to_peer:
             self.peak_to_peer[peak_hash].append(peer_id)
         else:
             self.peak_to_peer[peak_hash] = [peer_id]
-        self.peer_to_peak[peer_id] = (height, peak_hash)
+        self.set_peer_peak(peer_id, sub_height, weight, peak_hash)
+
+    def set_peer_peak(self, peer_id: bytes32, sub_height: uint32, weight: uint128, peak_hash: bytes32):
+        self.peer_to_peak[peer_id] = (peak_hash, sub_height, weight)
 
     def get_peak_peers(self, header_hash) -> List[bytes32]:
         if header_hash in self.peak_to_peer:
@@ -79,38 +67,27 @@ class SyncStore:
         else:
             return []
 
+    def get_peer_peaks(self, current_peers: List[bytes32]) -> Dict[bytes32, Tuple[bytes32, uint32, uint128]]:
+        ret = {}
+        for peer_id, v in self.peer_to_peak.items():
+            if peer_id in current_peers:
+                ret[peer_id] = v
+        return ret
+
+    def get_heaviest_peak(self, current_peers: List[bytes32]) -> Optional[Tuple[bytes32, uint32, uint128]]:
+        if len(self.get_peer_peaks(current_peers)) == 0:
+            return None
+        heaviest_peak_hash: Optional[bytes32] = None
+        heaviest_peak_weight: uint128 = uint128(0)
+        heaviest_peak_height: Optional[uint32] = None
+        for peer_id, (peak_hash, sub_height, weight) in self.peer_to_peak.items():
+            if peer_id in current_peers:
+                if heaviest_peak_hash is None or weight > heaviest_peak_weight:
+                    heaviest_peak_hash = peak_hash
+                    heaviest_peak_weight = weight
+                    heaviest_peak_height = sub_height
+        assert heaviest_peak_hash is not None and heaviest_peak_weight is not None and heaviest_peak_height is not None
+        return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
+
     async def clear_sync_info(self):
-        self.potential_peaks.clear()
-        self.potential_blocks.clear()
-        self.potential_future_blocks.clear()
-        self.header_hashes_added.clear()
-        self.waiting_for_peaks = True
-        self.peak_fork_point.clear()
-
-    # todo dont use tuple
-    def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, Tuple[uint32, uint128]]]:
-        return list(self.potential_peaks.items())
-
-    def add_potential_peak(self, header_hash: bytes32, sub_height: uint32, weight: uint128) -> None:
-        log.info(f"add_potential_peak header_hash {header_hash} sub_height {sub_height} weight {weight}")
-        self.potential_peaks[header_hash] = (sub_height, weight)
-
-    def get_potential_peak(self, header_hash: bytes32) -> Optional[Tuple[uint32, uint128]]:
-        return self.potential_peaks.get(header_hash, None)
-
-    def add_potential_future_block(self, block: FullBlock):
-        self.potential_future_blocks.append(block)
-
-    def get_potential_future_blocks(self):
-        return self.potential_future_blocks
-
-    def add_potential_fork_point(self, peak_hash: bytes32, fork_point: uint32):
-        log.info(f"add_potential_fork_point peak_hash {peak_hash} fork_point {fork_point}")
-        self.peak_fork_point[peak_hash] = fork_point
-
-    def get_potential_fork_point(self, peak_hash) -> uint32:
-        log.info(f"get_potential_fork_point peak_hash {peak_hash} peak_fork_point {self.peak_fork_point}")
-        if peak_hash in self.peak_fork_point:
-            return self.peak_fork_point[peak_hash]
-        else:
-            return uint32(0)
+        self.peak_to_peer.clear()
