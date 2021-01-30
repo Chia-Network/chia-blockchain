@@ -90,4 +90,5 @@ class SyncStore:
         return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
 
     async def clear_sync_info(self):
-        self.peak_to_peer.clear()
+        self.peak_to_peer = {}
+        self.peer_to_peak = {}
