@@ -553,6 +553,8 @@ class FullNode:
         filtered_peers: List[ws.WSChiaConnection] = []
         for peak_hash in peak_hashes:
             peers_with_peak = self.sync_store.get_peak_peers(peak_hash)
+            if not peers_with_peak:
+                self.log.error(f"peak_hash {peak_hash} hash no peers!!")
             for peer_hash in peers_with_peak:
                 if peer_hash in self.server.all_connections:
                     peer = self.server.all_connections[peer_hash]
