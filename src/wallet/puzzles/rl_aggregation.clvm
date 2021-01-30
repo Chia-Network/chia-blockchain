@@ -1,0 +1,34 @@
+(mod (wallet_puzzle
+      my-id
+      wallet-coin-primary-input
+      wallet-coin-amount)
+
+    (defconstant ASSERT_COIN_CONSUMED 52)
+    (defconstant ASSERT_MY_COIN_ID 53)
+
+    (defun sha256tree (tree)
+        (if (l tree)
+            (sha256 2 (sha256tree (f tree)) (sha256tree (r tree)))
+            (sha256 1 tree)))
+
+    (defun-inline create-my-id-condition ()
+        (list ASSERT_MY_COIN_ID my-id))
+
+    (defun-inline create-lock-puzzlehash (consolidating_primary_input
+                                          consolidating_coin_puzzle_hash
+                                          outgoing_amount)
+        (sha256tree (list r
+                          (list c
+                                (list q
+                                      my-id)
+                                (q (q ()))))))
+
+    (defun-inline parent-coin-id ()
+        (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
+
+    (defun-inline input-of-lock ()
+        (list ASSERT_COIN_CONSUMED (sha256 (parent-coin-id) (create-lock-puzzlehash ) 0)))
+
+    (list (create-my-id-condition)
+          (input-of-lock))
+)
