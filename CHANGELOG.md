@@ -14,7 +14,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
-- Improved mempool parsing performance in node.
+- Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by about 2x.
+- We have upgraded to py-setproctitle 1.2.2 and now have binary wheels for all platforms and make it a requirement in setup.py. It is technically optional if you wish to override it.
 
 ### Fixed
 
