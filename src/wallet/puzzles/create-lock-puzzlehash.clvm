@@ -1,5 +1,5 @@
 (
-    (defun-inline create-lock-puzzlehash ()
+    (defun-inline create-lock-puzzlehash (my-id)
         (sha256tree (list r
                           (list c
                                 (list q
