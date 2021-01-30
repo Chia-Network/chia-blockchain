@@ -79,7 +79,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                 for condition_programs in conditions.values():
                     print()
                     for c in condition_programs:
-                        as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                        as_prog = Program.to([c.opcode] + c.vars)
                         print(f"  {disassemble(as_prog)}")
                 print()
                 for _ in conditions.get(ConditionOpcode.ASSERT_COIN_CONSUMED, []):
