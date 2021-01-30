@@ -14,9 +14,7 @@
     (defun-inline create-my-id-condition ()
         (list ASSERT_MY_COIN_ID my-id))
 
-    (defun-inline create-lock-puzzlehash (consolidating_primary_input
-                                          consolidating_coin_puzzle_hash
-                                          outgoing_amount)
+    (defun-inline create-lock-puzzlehash ()
         (sha256tree (list r
                           (list c
                                 (list q
@@ -27,7 +25,7 @@
         (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
 
     (defun-inline input-of-lock ()
-        (list ASSERT_COIN_CONSUMED (sha256 (parent-coin-id) (create-lock-puzzlehash ) 0)))
+        (list ASSERT_COIN_CONSUMED (sha256 (parent-coin-id) (create-lock-puzzlehash) 0)))
 
     (list (create-my-id-condition)
           (input-of-lock))
