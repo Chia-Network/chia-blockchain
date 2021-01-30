@@ -7,15 +7,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from src.wallet.chialisp import (
-    sexp,
-    sha256,
-    args,
-    quote,
-    hexstr,
-    make_list,
-    sha256tree,
-)
+from src.wallet.chialisp import sexp
 from src.wallet.puzzles.load_clvm import load_clvm
 
 
@@ -123,19 +115,6 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     If Wallet A wants to send further funds to Wallet B then they can lock them up using this code
     Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)
     """
-    opcode_myid = hexlify(ConditionOpcode.ASSERT_MY_COIN_ID).decode("ascii")
-    opcode_consumed = hexlify(ConditionOpcode.ASSERT_COIN_CONSUMED).decode("ascii")
-    me_is_my_id = make_list(hexstr(opcode_myid), args(0))
 
-    # lock_puzzle is the hash of '(r (c (q "merge in ID") (q ())))'
-    lock_puzzle = sha256tree(
-        make_list(
-            quote(7),
-            make_list(quote(5), make_list(quote(1), args(0)), quote(quote(sexp()))),
-        )
-    )
-    parent_coin_id = sha256(args(1), hexstr(wallet_puzzle), args(2))
-    input_of_lock = make_list(hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0)))
-    puz = make_list(me_is_my_id, input_of_lock)
-
-    return Program.to(binutils.assemble(puz))
+    MOD = load_clvm("../puzzles/rl_aggregation.clvm")
+    return MOD.curry(wallet_puzzle)
