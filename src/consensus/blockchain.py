@@ -171,7 +171,7 @@ class Blockchain(BlockchainInterface):
 
     def is_child_of_peak(self, block: UnfinishedBlock) -> bool:
         """
-        True iff the block is the direct ancestor of the peak
+        True if the block is the direct ancestor of the peak
         """
         peak = self.get_peak()
         if peak is None:
