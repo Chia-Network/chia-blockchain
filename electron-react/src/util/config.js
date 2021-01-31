@@ -25,7 +25,7 @@ function loadConfig() {
     const doc = yaml.load(fs.readFileSync(path.join(config_path, 'config.yaml'), 'utf8'));
 
     self_hostname = typeof doc.ui.daemon_host !== "undefined" ? doc.ui.daemon_host : 'localhost';
-    const daemon_port = typeof doc.ui.daemon_port !== "undefined" ? doc.ui.daemon_host : 55400;
+    const daemon_port = typeof doc.ui.daemon_port !== "undefined" ? doc.ui.daemon_port : 55400;
 
     // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
