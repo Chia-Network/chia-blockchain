@@ -70,6 +70,9 @@ class SyncStore:
     def get_peer_peaks(self, current_peers: List[bytes32]) -> Dict[bytes32, Tuple[bytes32, uint32, uint128]]:
         ret = {}
         for peer_id, v in self.peer_to_peak.items():
+            if v[0] not in self.peak_to_peer:
+                # log.info(f"get_peer_peaks filter {v[0]} not in self.peak_to_peer {self.peak_to_peer}")
+                continue
             if peer_id in current_peers:
                 ret[peer_id] = v
         return ret
@@ -81,6 +84,9 @@ class SyncStore:
         heaviest_peak_weight: uint128 = uint128(0)
         heaviest_peak_height: Optional[uint32] = None
         for peer_id, (peak_hash, sub_height, weight) in self.peer_to_peak.items():
+            if peak_hash not in self.peak_to_peer:
+                # log.info(f"get_heaviest_peak filter {peak_hash} not in self.peak_to_peer {self.peak_to_peer}")
+                continue
             if peer_id in current_peers:
                 if heaviest_peak_hash is None or weight > heaviest_peak_weight:
                     heaviest_peak_hash = peak_hash
@@ -90,4 +96,4 @@ class SyncStore:
         return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
 
     async def clear_sync_info(self):
-        self.peak_to_peer.clear()
+        self.peak_to_peer = {}
