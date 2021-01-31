@@ -193,6 +193,10 @@ ui:
   ssh_filename: config/ssh_host_key
   logging: *logging
 
+  # The host and port at which the electron ui finds the daemon to manage
+  daemon_host: localhost
+  daemon_port: 55400
+
 introducer:
   host: *self_hostname
   port: 8445

@@ -1,7 +1,8 @@
 const yaml = require('js-yaml');
 const fs = require('fs');
 const semver = require('semver');
-const homedir = require('os').homedir();
+const os = require('os');
+const path = require("path");
 
 // defaults
 let self_hostname = 'localhost';
@@ -20,11 +21,11 @@ function loadConfig() {
       version = `beta-1.0b${sv.patch}`;
     }
 
-    const config_path = `${homedir}/.chia/${version}/config`;
-    const doc = yaml.load(fs.readFileSync(`${config_path}/config.yaml`, 'utf8'));
+    const config_path = path.join(os.homedir(), '.chia', version, 'config');
+    const doc = yaml.load(fs.readFileSync(path.join(config_path, 'config.yaml'), 'utf8'));
 
-    self_hostname = doc.self_hostname;
-    const daemon_port = doc.daemon_port;
+    self_hostname = typeof doc.ui.daemon_host !== "undefined" ? doc.ui.daemon_host : 'localhost';
+    const daemon_port = typeof doc.ui.daemon_port !== "undefined" ? doc.ui.daemon_host : 55400;
 
     // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
