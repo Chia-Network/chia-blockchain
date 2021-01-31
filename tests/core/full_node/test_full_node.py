@@ -492,9 +492,6 @@ class TestFullNodeProtocol:
 
         peer = await connect_and_get_peer(server_1, server_2)
 
-        # TODO: check why these asserts fail
-        # await time_out_assert(20, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
-
         for block in blocks[-3:]:
             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
             await full_node_2.respond_sub_block(fnp.RespondSubBlock(block), peer)
@@ -506,7 +503,6 @@ class TestFullNodeProtocol:
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        log.info(f"Included RC: {blocks[-1].get_included_reward_coins()}")
         spend_bundle = wallet_a.generate_signed_transaction(
             100, receiver_puzzlehash, list(blocks[-1].get_included_reward_coins())[0]
         )

@@ -194,10 +194,12 @@ class WeightProofHandler:
                     break
                 idx += 1
 
-            while curr_height <= wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height:
-                recent_chain.append(wp.recent_chain_data[idx])
-                curr_height = curr_height + uint32(1)  # type: ignore
-                idx += 1
+            if idx < len(wp.recent_chain_data):
+                for block in wp.recent_chain_data[idx:]:
+                    recent_chain.append(block)
+                    assert curr_height == block.reward_chain_sub_block.sub_block_height
+                    curr_height = curr_height + uint32(1)  # type: ignore
+                    idx += 1
 
         headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(curr_height, tip_height)
         while curr_height <= tip_height:

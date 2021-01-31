@@ -149,7 +149,7 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_transaction(
-        self, tx: full_node_protocol.RespondTransaction, peer: ws.WSChiaConnection
+        self, tx: full_node_protocol.RespondTransaction, peer: ws.WSChiaConnection, test: bool = False
     ) -> Optional[Message]:
         """
         Receives a full transaction from peer.
@@ -158,7 +158,7 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
-        if not (await self.full_node.synced()):
+        if not test and not (await self.full_node.synced()):
             return None
         if (
             self.full_node.blockchain.peak_height is None
@@ -1062,27 +1062,19 @@ class FullNodeAPI:
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
         if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
             return None
+
+        header_hashes = []
         for i in range(request.start_sub_height, request.end_sub_height + 1):
             if not self.full_node.blockchain.contains_sub_height(uint32(i)):
                 reject = RejectHeaderBlocks(request.start_sub_height, request.end_sub_height)
                 msg = Message("reject_header_blocks_request", reject)
                 return msg
+            header_hashes.append(self.full_node.blockchain.sub_height_to_hash(uint32(i)))
 
-        blocks: List[HeaderBlock] = []
-
-        for i in range(request.start_sub_height, request.end_sub_height + 1):
-            block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-                self.full_node.blockchain.sub_height_to_hash(uint32(i))
-            )
-            if block is None:
-                reject = RejectHeaderBlocks(request.start_sub_height, request.end_sub_height)
-                msg = Message("reject_header_blocks_request", reject)
-                return msg
-
-            blocks.append(block.get_block_header())
+        header_blocks = await self.full_node.block_store.get_header_blocks_by_hash(header_hashes)
 
         msg = Message(
             "respond_header_blocks",
-            wallet_protocol.RespondHeaderBlocks(request.start_sub_height, request.end_sub_height, blocks),
+            wallet_protocol.RespondHeaderBlocks(request.start_sub_height, request.end_sub_height, header_blocks),
         )
         return msg

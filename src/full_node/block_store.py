@@ -143,6 +143,52 @@ class BlockStore:
         await cursor.close()
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
+    async def get_header_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[HeaderBlock]:
+        """
+        Returns a list of header blocks, ordered by the same order in which header_hashes are passed in.
+        Throws an exception if the blocks are not present
+        """
+
+        if len(header_hashes) == 0:
+            return []
+
+        header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+        formatted_str = f'SELECT block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        cursor = await self.db.execute(formatted_str, header_hashes_db)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        all_headers: Dict[bytes32, HeaderBlock] = {}
+        for row in rows:
+            full_block: FullBlock = FullBlock.from_bytes(row[0])
+            all_headers[full_block.header_hash] = full_block.get_block_header()
+        ret: List[HeaderBlock] = []
+        for hh in header_hashes:
+            if hh not in all_headers:
+                raise ValueError(f"Header hash {hh} not in the blockchain")
+            ret.append(all_headers[hh])
+        return ret
+
+    async def get_header_blocks_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> Dict[bytes32, HeaderBlock]:
+
+        formatted_str = (
+            f"SELECT header_hash,block from full_blocks WHERE sub_height >= {start} and sub_height <= {stop}"
+        )
+
+        cursor = await self.db.execute(formatted_str)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, HeaderBlock] = {}
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            full_block: FullBlock = FullBlock.from_bytes(row[1])
+            ret[header_hash] = full_block.get_block_header()
+
+        return ret
+
     async def get_sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         cursor = await self.db.execute(
             "SELECT sub_block from sub_block_records WHERE header_hash=?",
@@ -174,28 +220,7 @@ class BlockStore:
                 peak = header_hash
         return ret, peak
 
-    async def get_headers_in_range(
-        self,
-        start: int,
-        stop: int,
-    ) -> Dict[bytes32, HeaderBlock]:
-
-        formatted_str = (
-            f"SELECT header_hash,block from full_blocks WHERE sub_height >= {start} and sub_height <= {stop}"
-        )
-
-        cursor = await self.db.execute(formatted_str)
-        rows = await cursor.fetchall()
-        await cursor.close()
-        ret: Dict[bytes32, HeaderBlock] = {}
-        for row in rows:
-            header_hash = bytes.fromhex(row[0])
-            full_block: FullBlock = FullBlock.from_bytes(row[1])
-            ret[header_hash] = full_block.get_block_header()
-
-        return ret
-
-    async def get_sub_block_in_range(
+    async def get_sub_block_records_in_range(
         self,
         start: int,
         stop: int,
@@ -219,7 +244,9 @@ class BlockStore:
 
         return ret
 
-    async def get_sub_blocks_from_peak(self, blocks_n: int) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+    async def get_sub_block_records_close_to_peak(
+        self, blocks_n: int
+    ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all sub_blocks that have sub_height >= peak sub_height - blocks_n, as well as the
         peak header hash.
@@ -241,7 +268,7 @@ class BlockStore:
             ret[header_hash] = SubBlockRecord.from_bytes(row[1])
         return ret, bytes.fromhex(row[0])
 
-    async def get_sub_block_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
+    async def get_peak_sub_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """
         Returns a dictionary with all sub blocks, as well as the header hash of the peak,
         if present.

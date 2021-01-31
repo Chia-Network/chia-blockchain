@@ -112,7 +112,7 @@ class TestCostCalculation:
         assert err is None
         assert len(npc) == 687
         # TODO make this instant
-        assert duration < 120
+        assert duration < 150
 
     @pytest.mark.asyncio
     async def test_standard_tx(self):
