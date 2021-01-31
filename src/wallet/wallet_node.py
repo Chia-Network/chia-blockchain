@@ -428,6 +428,7 @@ class WalletNode:
                         f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                         f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                     )
+                    self.log.error(f"{weight_proof}")
                     return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
