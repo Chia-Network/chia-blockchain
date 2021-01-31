@@ -15,6 +15,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by about 2x.
+- The Rate Limited Wallet has been ported to new consensus and update Chialisp methods.
 - We have upgraded to py-setproctitle 1.2.2 and now have binary wheels for all platforms and make it a requirement in setup.py. It is technically optional if you wish to override it.
 
 ### Fixed
