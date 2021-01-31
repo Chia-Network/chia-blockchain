@@ -196,6 +196,9 @@ ui:
   # The host and port at which the electron ui finds the daemon to manage
   daemon_host: localhost
   daemon_port: 55400
+  ssl:
+    crt: "trusted.crt"
+    key: "trusted.key"
 
 introducer:
   host: *self_hostname
