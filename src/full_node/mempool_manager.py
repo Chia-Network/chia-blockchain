@@ -142,6 +142,10 @@ class MempoolManager:
         npc_list = cached_result.npc_list
         cost = cached_result.cost
 
+        # TODO: remove. This is only temporary until CLVM gets fast
+        if cost > 10000000:
+            return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
+
         if cached_result.error is not None:
             return None, MempoolInclusionStatus.FAILED, Err(cached_result.error)
         # build removal list
