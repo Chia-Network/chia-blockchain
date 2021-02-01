@@ -8,12 +8,12 @@ import {
   Link as RouterLink,
   LinkProps as RouterLinkProps,
 } from 'react-router-dom';
+import useOpenExternal from '../../../../hooks/useOpenExternal';
 
-type Props = BaseLinkProps &
-  RouterLinkProps & {
-    to?: string | Object;
-    fullWidth?: boolean;
-  };
+type Props = BaseLinkProps & ({
+  to?: string | Object;
+  fullWidth?: boolean;
+} | RouterLinkProps);
 
 const StyledBadeLink = styled(({ fullWidth, ...rest }) => (
   <BaseLink {...rest} />
@@ -22,5 +22,22 @@ const StyledBadeLink = styled(({ fullWidth, ...rest }) => (
 `;
 
 export default function Link(props: Props) {
-  return <StyledBadeLink component={RouterLink} {...props} fullWidth />;
+  const { target, href } = props;
+  const openExternal = useOpenExternal();
+  const newProps = {
+    ...props,
+  };
+
+  function handleOpenExternal() {
+    console.log('href', href);
+    if (href) {
+      openExternal(href);
+    }
+  }
+
+  if (target === '_blank') {
+    newProps.onClick = handleOpenExternal;
+  }
+
+  return <StyledBadeLink component={RouterLink} {...newProps} fullWidth />;
 }

@@ -1,9 +1,9 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router-dom';
-import { Button, Grid, Typography, Link } from '@material-ui/core';
+import { Button, Grid, Typography } from '@material-ui/core';
 import styled from 'styled-components';
-import { CardHero } from '@chia/core';
+import { CardHero, Link } from '@chia/core';
 import heroSrc from './images/hero.svg';
 
 const StyledImage = styled('img')`
