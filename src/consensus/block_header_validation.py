@@ -43,7 +43,6 @@ def validate_unfinished_header_block(
     expected_sub_slot_iters: uint64,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
-    check_timestamp: bool = True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -754,7 +753,7 @@ def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26. The timestamp in Foliage Block must comply with the timestamp rules
-        if prev_sb is not None and check_timestamp:
+        if prev_sb is not None:
             last_timestamps: List[uint64] = []
             curr_sb = sub_blocks.sub_block_record(header_block.foliage_block.prev_block_hash)
             assert curr_sb.timestamp is not None
@@ -783,7 +782,6 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
-    check_timestamp: bool = True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a sub-block. A header block is the same  as a full block, but
@@ -807,7 +805,6 @@ def validate_finished_header_block(
         expected_difficulty,
         expected_sub_slot_iters,
         False,
-        check_timestamp=check_timestamp,
     )
 
     genesis_block = False

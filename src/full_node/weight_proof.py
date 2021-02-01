@@ -250,12 +250,14 @@ class WeightProofHandler:
     def _validate_recent_blocks(self, weight_proof: WeightProof, summaries: List[SubEpochSummary]):
         sub_blocks = BlockCache({})
         recent_chain_ses_idx = _get_ses_idx(self.constants, weight_proof.recent_chain_data)
-        curr_summary_idx = len(summaries) - len(recent_chain_ses_idx)
+        next_ses = len(summaries) - len(recent_chain_ses_idx)
         ssi: Optional[uint64] = self.constants.SUB_SLOT_ITERS_STARTING
         diff: Optional[uint64] = self.constants.DIFFICULTY_STARTING
-        for summary in summaries[:curr_summary_idx]:
+        for summary in summaries[:next_ses]:
             if summary.new_sub_slot_iters is not None:
                 ssi = summary.new_sub_slot_iters
+            if summary.new_difficulty is not None:
+                diff = summary.new_difficulty
 
         sub_slots: int = 0
         deficit = None
@@ -263,79 +265,88 @@ class WeightProofHandler:
         prev_challenge = None
         last_ses_height = None
         height = None
+        full_blocks = 0
         for idx, block in enumerate(weight_proof.recent_chain_data):
-            if idx == 1:
-                continue
-            curr_summary = None
             if block.height is not None:
                 height = block.height
+            if block.is_block:
+                full_blocks += 1
             if len(block.finished_sub_slots) > 0:
                 for sub_slot in block.finished_sub_slots:
                     prev_challenge = challenge
                     challenge = sub_slot.challenge_chain.get_hash()
                     deficit = sub_slot.reward_chain.deficit
                     if sub_slot.challenge_chain.subepoch_summary_hash is not None:
-                        curr_summary = summaries[curr_summary_idx]
-                        curr_summary_idx += 1
-                        if challenge and prev_challenge:
-                            last_ses_height = block.sub_block_height
-                        assert curr_summary.get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
+                        last_ses_height = block.sub_block_height
+                        next_ses += 1
+                        assert summaries[next_ses - 1].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
                     if sub_slot.challenge_chain.new_sub_slot_iters is not None:
                         ssi = sub_slot.challenge_chain.new_sub_slot_iters
                     if sub_slot.challenge_chain.new_difficulty is not None:
                         diff = sub_slot.challenge_chain.new_difficulty
 
-            if challenge is None or prev_challenge is None or deficit is None or height is None:
+            if challenge is None or prev_challenge is None or deficit is None or height is None or full_blocks < 11:
+                self.log.debug(
+                    f"skip block {block.sub_block_height} "
+                    f"challenge is {challenge} "
+                    f"prev_challenge is {prev_challenge} "
+                    f"deficit {deficit} "
+                    f"height {height} "
+                    f"full blocks skipped {full_blocks} "
+                )
                 continue
 
             overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
             if deficit >= 1 and not overflow:
                 deficit -= 1
+
             if last_ses_height and block.sub_block_height > last_ses_height and sub_slots > 2:
-                self.log.info(f"wp recent blocks, validate {block.sub_block_height}")
+                self.log.info(f"wp, validate header block {block.sub_block_height} ")
                 required_iters, error = validate_finished_header_block(
-                    self.constants,
-                    sub_blocks,
-                    block,
-                    False,
-                    diff,
-                    ssi,
-                    False,
+                    self.constants, sub_blocks, block, False, diff, ssi
                 )
                 if error is not None:
                     self.log.error(f"block {block.header_hash} failed validation {error}")
                     return False
             else:
-                if block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-                    # Edge case of first sp (start of slot), where sp_iters == 0
-                    cc_sp_hash: bytes32 = challenge
-                else:
-                    cc_sp_hash = block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
-                assert cc_sp_hash is not None
-                q_str = block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-                    self.constants,
-                    challenge if not overflow else prev_challenge,
-                    cc_sp_hash,
-                )
-                if q_str is None:
-                    self.log.error(f"could not verify proof of space block {block.sub_block_height} {overflow}")
+                self.log.info(f"wp, validate pospace for block {block.sub_block_height}  ")
+                required_iters = self.validate_pospase_recent_chain(block, challenge, diff, overflow, prev_challenge)
+                if required_iters is None:
                     return False
-                required_iters = calculate_iterations_quality(
-                    q_str,
-                    block.reward_chain_sub_block.proof_of_space.size,
-                    diff,
-                    cc_sp_hash,
-                )
 
             sub_blocks.add_sub_block(
                 header_block_to_sub_block_record(
-                    self.constants, required_iters, block, ssi, overflow, deficit, height, curr_summary
+                    self.constants, required_iters, block, ssi, overflow, deficit, height, summaries[next_ses - 1]
                 )
             )
+
             if block.first_in_sub_slot:
                 sub_slots = 1 + sub_slots
 
         return True
+
+    def validate_pospase_recent_chain(self, block, challenge, diff, overflow, prev_challenge):
+        if block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
+            # Edge case of first sp (start of slot), where sp_iters == 0
+            cc_sp_hash: bytes32 = challenge
+        else:
+            cc_sp_hash = block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+        assert cc_sp_hash is not None
+        q_str = block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+            self.constants,
+            challenge if not overflow else prev_challenge,
+            cc_sp_hash,
+        )
+        if q_str is None:
+            self.log.error(f"could not verify proof of space block {block.sub_block_height} {overflow}")
+            return None
+        required_iters = calculate_iterations_quality(
+            q_str,
+            block.reward_chain_sub_block.proof_of_space.size,
+            diff,
+            cc_sp_hash,
+        )
+        return required_iters
 
     def _validate_sub_epoch_summaries(
         self,
