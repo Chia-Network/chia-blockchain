@@ -1,5 +1,8 @@
+import asyncio
 import collections
+import dataclasses
 import time
+from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, Optional, Tuple, List, Set
 import logging
 
@@ -28,12 +31,26 @@ from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
 
+from src.util.streamable import recurse_jsonify, dataclass_from_dict
+
 log = logging.getLogger(__name__)
+
+
+def validate_transaction_multiprocess(
+    constants_dict: Dict,
+    spend_bundle_bytes: bytes,
+) -> bytes:
+    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+    # Calculate the cost and fees
+    program = best_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
+    # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+    return bytes(calculate_cost_of_program(program, constants.CLVM_COST_RATIO_CONSTANT, True))
 
 
 class MempoolManager:
     def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
         self.constants: ConsensusConstants = consensus_constants
+        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, Tuple[SpendBundle, CostResult, bytes32]] = {}
@@ -52,10 +69,14 @@ class MempoolManager:
         self.mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
         self.potential_cache_size = 300
         self.seen_cache_size = 10000
+        self.pool = ProcessPoolExecutor(max_workers=1)
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[SubBlockRecord] = None
         self.mempool: Mempool = Mempool.create(self.mempool_size)
+
+    def shut_down(self):
+        self.pool.shutdown(wait=True)
 
     async def create_bundle_from_mempool(self, peak_header_hash: bytes32) -> Optional[SpendBundle]:
         """
@@ -135,14 +156,19 @@ class MempoolManager:
         self.maybe_pop_seen()
 
         if cached_result is None:
-            # Calculate the cost and fees
-            program = best_solution_program(new_spend)
-            # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            cached_result = calculate_cost_of_program(program, self.constants.CLVM_COST_RATIO_CONSTANT, True)
+            # This runs in another process so we don't block the main thread
+            cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
+                self.pool, validate_transaction_multiprocess, self.constants_json, bytes(new_spend)
+            )
+            cached_result = CostResult.from_bytes(cached_result_bytes)
+
         npc_list = cached_result.npc_list
         cost = cached_result.cost
 
+        log.debug(f"Cost: {cost}")
+
         # TODO: remove. This is only temporary until CLVM gets fast
+        # cost > self.constants.MAX_BLOCK_COST_CLVM:
         if cost > 10000000:
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
