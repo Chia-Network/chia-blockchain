@@ -31,6 +31,7 @@ testnet_kwargs = {
     "GENESIS_PREV_HASH": bytes32([0x00] * 32),
     "GENESIS_SES_HASH": bytes32([0x00] * 32),
     "MAX_VDF_WITNESS_SIZE": 64,
+    "NUM_BLOCKS_HALVING": 1843 * 365 * 5,  # 5 years, 1843 blocks per day: 24*3600 / ((600 * 3/64) + (600 * 1/32))
     # Target tx count per sec
     "TX_PER_SEC": 20,
     # Size of mempool = 10x the size of block

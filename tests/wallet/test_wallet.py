@@ -11,7 +11,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
@@ -61,7 +61,8 @@ class TestWalletSimulator:
 
         funds = sum(
             [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
                 for i in range(1, num_blocks + 2)
             ]
         )
@@ -107,7 +108,11 @@ class TestWalletSimulator:
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
@@ -128,7 +133,8 @@ class TestWalletSimulator:
 
         new_funds = sum(
             [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
                 for i in range(1, (2 * num_blocks))
             ]
         )
@@ -151,7 +157,11 @@ class TestWalletSimulator:
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
@@ -160,7 +170,8 @@ class TestWalletSimulator:
 
         funds = sum(
             [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
                 for i in range(1, num_blocks - 2)
             ]
         )
@@ -200,7 +211,11 @@ class TestWalletSimulator:
             await full_node_2.respond_sub_block(RespondSubBlock(block))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
 
         await time_out_assert(5, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
@@ -242,7 +257,11 @@ class TestWalletSimulator:
             await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
 
         await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
@@ -269,7 +288,8 @@ class TestWalletSimulator:
         # here it's num_blocks + 1 because our last reward is included in the first block that we just farmed
         new_funds = sum(
             [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
                 for i in range(1, num_blocks + 1)
             ]
         )
@@ -346,7 +366,11 @@ class TestWalletSimulator:
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
@@ -375,7 +399,8 @@ class TestWalletSimulator:
 
         new_funds = sum(
             [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
                 for i in range(1, num_blocks + 1)
             ]
         )

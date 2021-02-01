@@ -408,7 +408,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             100,
             puzzle_hashes[0],
-            blocks[1].get_future_reward_coins(1)[0],
+            blocks[1].get_future_reward_coins(test_constants, 1)[0],
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None

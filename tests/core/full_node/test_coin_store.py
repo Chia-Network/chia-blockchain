@@ -67,7 +67,7 @@ class TestCoinStore:
         should_be_included: Set[Coin] = set()
         last_block_height = -1
         for block in blocks:
-            farmer_coin, pool_coin = block.get_future_reward_coins(last_block_height + 1)
+            farmer_coin, pool_coin = block.get_future_reward_coins(test_constants, last_block_height + 1)
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
             if block.is_block():
@@ -252,7 +252,7 @@ class TestCoinStore:
                 last_block_height = block.height
         assert b.get_peak().sub_block_height == num_blocks - 1
 
-        pool_coin, farmer_coin = blocks[-2].get_future_reward_coins(last_block_height + 1)
+        pool_coin, farmer_coin = blocks[-2].get_future_reward_coins(test_constants, last_block_height + 1)
 
         coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
         coins_pool = await coin_store.get_coin_records_by_puzzle_hash(pool_coin.puzzle_hash)

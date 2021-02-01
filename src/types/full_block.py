@@ -3,6 +3,7 @@ from typing import Tuple, List, Optional, Set
 
 from chiabip158 import PyBIP158
 
+from src.consensus.constants import ConsensusConstants
 from src.types.header_block import HeaderBlock
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
@@ -68,9 +69,9 @@ class FullBlock(Streamable):
     def is_block(self):
         return self.foliage_block is not None
 
-    def get_future_reward_coins(self, height: uint32) -> Tuple[Coin, Coin]:
-        pool_amount = calculate_pool_reward(height)
-        farmer_amount = calculate_base_farmer_reward(height)
+    def get_future_reward_coins(self, constants: ConsensusConstants, height: uint32) -> Tuple[Coin, Coin]:
+        pool_amount = calculate_pool_reward(constants, height)
+        farmer_amount = calculate_base_farmer_reward(constants, height)
         if self.is_block():
             assert self.transactions_info is not None
             farmer_amount = uint64(farmer_amount + self.transactions_info.fees)

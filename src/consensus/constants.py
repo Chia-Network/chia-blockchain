@@ -34,6 +34,7 @@ class ConsensusConstants:
     GENESIS_PREV_HASH: bytes32  # The prev sub-block and prev block of the genesis block
     GENESIS_SES_HASH: bytes32  # The sub epoch summary "hash" of the sub-epoch that end at height -
     MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
+    NUM_BLOCKS_HALVING: uint32  # The number of blocks after which the rewards decrease 50%
     # Target tx count per sec
     TX_PER_SEC: int
     # Size of mempool = 10x the size of block

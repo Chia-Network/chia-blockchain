@@ -11,7 +11,7 @@ from src.util.errors import Err
 from src.util.ints import uint16, uint32
 from src.wallet.transaction_record import TransactionRecord
 from tests.core.full_node.test_full_node import add_dummy_connection
-from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, bt
+from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, bt, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -44,7 +44,11 @@ class TestTransactions:
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
         # funds += calculate_base_farmer_reward(0)
         await asyncio.sleep(2)
@@ -94,7 +98,11 @@ class TestTransactions:
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            [
+                calculate_pool_reward(test_constants, uint32(i))
+                + calculate_base_farmer_reward(test_constants, uint32(i))
+                for i in range(1, num_blocks)
+            ]
         )
         # funds += calculate_base_farmer_reward(0)
         await asyncio.sleep(2)
