@@ -123,6 +123,7 @@ class MempoolManager:
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
         Returns true if it's added in any of pools, Returns error if it fails.
         """
+        start_time = time.time()
         if cached_name is not None:
             spend_name = cached_name
         else:
@@ -304,6 +305,7 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cached_result, spend_name)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
+        log.info(f"add_spendbundle took {time.time() - start_time} seconds")
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
