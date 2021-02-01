@@ -82,7 +82,7 @@ pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 pip install --extra-index-url https://download.chia.net/simple/ miniupnpc==2.1
-pip install -e . --extra-index-url https://download.chia.net/simple/ --extra-index-url https://https://www.piwheels.org/simple/
+pip install -e . --extra-index-url https://download.chia.net/simple/
 
 echo ""
 echo "Chia blockchain install.sh complete."
