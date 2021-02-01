@@ -34,9 +34,6 @@ class TestSimulation:
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(1000, node_height_at_least, True, node2, 7)
 
-        # Wait additional 2 minutes to get a compact block.
-        # max_height = node1.full_node.blockchain.lca_block.height
-
 
 #         # async def has_compact(node1, node2, max_height):
 #         #     for h in range(1, max_height):

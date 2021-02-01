@@ -553,6 +553,8 @@ class FullNode:
         filtered_peers: List[ws.WSChiaConnection] = []
         for peak_hash in peak_hashes:
             peers_with_peak = self.sync_store.get_peak_peers(peak_hash)
+            if not peers_with_peak:
+                self.log.error(f"peak_hash {peak_hash} hash no peers!!")
             for peer_hash in peers_with_peak:
                 if peer_hash in self.server.all_connections:
                     peer = self.server.all_connections[peer_hash]
@@ -708,7 +710,6 @@ class FullNode:
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
         latest peak information. It also notifies peers about the new peak.
         """
-
         difficulty = self.blockchain.get_next_difficulty(record.header_hash, False)
         sub_slot_iters = self.blockchain.get_next_slot_iters(record.header_hash, False)
 
@@ -767,11 +768,9 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # TODO: maybe broadcast new SP/IPs as well?
-
         if record.sub_block_height % 1000 == 0:
             # Occasionally clear the seen list to keep it small
             self.full_node_store.clear_seen_unfinished_blocks()
-
         if self.sync_store.get_sync_mode() is False:
             await self.send_peak_to_timelords()
 
