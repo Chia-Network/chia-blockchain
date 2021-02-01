@@ -6,6 +6,8 @@ from typing import Dict, Optional, List, Tuple, Mapping, Container
 
 import aiosqlite
 import pytest
+
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.full_node.block_store import BlockStore
 from src.util.block_cache import BlockCache
@@ -301,16 +303,16 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
+    # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("path to db")
+        connection = await aiosqlite.connect("/Users/almog/.chia/beta-1.0b19.dev895/db/blockchain_v23.db")
         block_store: BlockStore = await BlockStore.create(connection)
-        sub_blocks, peak = await block_store.get_sub_block_records()
-        headers = await block_store.get_headers_in_range(0, 100225)
+        sub_blocks = await block_store.get_sub_block_in_range(0, 3840)
+        headers = await block_store.get_headers_in_range(0, 3840)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
-        peak = await block_store.get_full_blocks_at([100225])
+        peak = await block_store.get_full_blocks_at([3840])
         if len(sub_blocks) == 0:
             return None, None
 
@@ -328,8 +330,8 @@ class TestWeightProof:
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
         block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
+        await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
         valid, fork_point = wpf.validate_weight_proof(wp)
 
