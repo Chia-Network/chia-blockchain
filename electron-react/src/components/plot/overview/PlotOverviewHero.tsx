@@ -1,8 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router-dom';
-import { Button, Grid, Typography, Link, Divider } from '@material-ui/core';
-import { CardHero } from '@chia/core';
+import { Button, Grid, Typography, Divider } from '@material-ui/core';
+import { CardHero, Link } from '@chia/core';
 import { PlotHero as PlotHeroIcon } from '@chia/icons';
 import PlotAddDirectoryDialog from '../PlotAddDirectoryDialog';
 import useOpenDialog from '../../../hooks/useOpenDialog';
