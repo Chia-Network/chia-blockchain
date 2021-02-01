@@ -10,17 +10,19 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- We now use our own faster primarily test based on Baillie-PSW. The new primality test is based on the 2020 paper ["Strengthening the Baillie-PSW primality test" by Robert Baillie, Andrew Fiori, Samuel S. Wagstaff Jr](https://arxiv.org/abs/2006.14425). The new test works approximately 20% faster than GMP library's mpz_probab_prime_p() function when generating random 1024-bit primes.
+- We now use our own faster primality test based on Baillie-PSW. The new primality test is based on the 2020 paper ["Strengthening the Baillie-PSW primality test" by Robert Baillie, Andrew Fiori, Samuel S. Wagstaff Jr](https://arxiv.org/abs/2006.14425). The new test works approximately 20% faster than GMP library's mpz_probab_prime_p() function when generating random 1024-bit primes. This lowers the load on Timelords and speeds up VDF verifications in full node.
 
 ### Changed
 
 - Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by about 2x.
+- We have changed the way we compile the proof of space plotter and added one additional optimization. On many modern processors this will mean that using the plotter with the `-e` flag will be 2-3% faster than the Beta 17 plotter on the same CPU. We have found this to be very sensitive to different CPUs but are now confident that, at worst, the Beta 24 plotter will be the same speed as Beta 17 if not slightly faster on the same hardware.
 - The Rate Limited Wallet has been ported to new consensus and update Chialisp methods.
-- We have upgraded to py-setproctitle 1.2.2 and now have binary wheels for all platforms and make it a requirement in setup.py. It is technically optional if you wish to override it.
+- We have upgraded to py-setproctitle 1.2.2. We now have binary wheels for all four platforms and make it a requirement in setup.py. It is run-time optional if you wish to override it.
 
 ### Fixed
 
-- There was a bug in adding a sub block to weight proofs.
+- There was a bug in adding a sub block to weight proofs and an issue in the weight proof index.
+- Over time the node would think that there were no peers attached with peak sub block heights higher than 0.
 - There was a potential bug in Python 3.9.0 that required us to update blspy, chiapos, chiavdf, and chiabip158.
 - There was an edge case in bip158 handling.
 
