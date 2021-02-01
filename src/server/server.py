@@ -359,7 +359,7 @@ class ChiaServer:
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()
-                        connection.log.error(f"Exception: {e}, closing connection {connection}. {tb}")
+                        connection.log.error(f"Exception: {e}, closing connection {connection.get_peer_info()}. {tb}")
                     else:
                         connection.log.debug(f"Exception: {e} while closing connection")
                         pass
