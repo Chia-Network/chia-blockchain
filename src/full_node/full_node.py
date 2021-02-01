@@ -236,8 +236,12 @@ class FullNode:
         responses = []
         while curr_sub_height > peak_sub_height - 5:
             curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_sub_height), True))
+            if curr is None:
+                raise ValueError(f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}, timed out")
             if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
-                raise ValueError(f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}")
+                raise ValueError(
+                    f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
+                )
             responses.append(curr)
             if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_sub_height == 0:
                 found_fork_point = True
