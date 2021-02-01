@@ -29,7 +29,6 @@ export default function Link(props: Props) {
   };
 
   function handleOpenExternal() {
-    console.log('href', href);
     if (href) {
       openExternal(href);
     }
