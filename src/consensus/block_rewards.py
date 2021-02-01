@@ -29,7 +29,7 @@ def calculate_pool_reward(constants: ConsensusConstants, height: uint32) -> uint
     if height < constants.NUM_BLOCKS_HALVING * 2:
         # Second 5 years
         return uint64(875000000000 // 2)
-    if height < constants.NUM_BLOCKS_HALVING * 4:
+    if height < constants.NUM_BLOCKS_HALVING * 3:
         # Third 5 years
         return uint64(875000000000 // 4)
     # Then and infinity
@@ -47,7 +47,7 @@ def calculate_base_farmer_reward(constants: ConsensusConstants, height: uint32) 
     if height < constants.NUM_BLOCKS_HALVING * 2:
         # Second 5 years
         return uint64(125000000000 // 2)
-    if height < constants.NUM_BLOCKS_HALVING * 4:
+    if height < constants.NUM_BLOCKS_HALVING * 3:
         # Third 5 years
         return uint64(125000000000 // 4)
     # Then and infinity
