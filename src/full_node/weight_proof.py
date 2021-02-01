@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import logging
 import random
 from typing import Optional, List, Tuple, Dict
@@ -9,8 +8,7 @@ import math
 from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty, get_next_sub_slot_iters
-from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record, header_block_to_sub_block_record
+from src.consensus.full_block_to_sub_block_record import header_block_to_sub_block_record
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_ip_iters, is_overflow_sub_block
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
@@ -269,8 +267,6 @@ class WeightProofHandler:
         for idx, block in enumerate(weight_proof.recent_chain_data):
             if block.height is not None:
                 height = block.height
-            if block.is_block:
-                full_blocks += 1
             if len(block.finished_sub_slots) > 0:
                 for sub_slot in block.finished_sub_slots:
                     prev_challenge = challenge
@@ -285,8 +281,8 @@ class WeightProofHandler:
                     if sub_slot.challenge_chain.new_difficulty is not None:
                         diff = sub_slot.challenge_chain.new_difficulty
 
-            if challenge is None or prev_challenge is None or deficit is None or height is None or full_blocks < 11:
-                self.log.debug(
+            if challenge is None or prev_challenge is None or deficit is None or height is None:
+                self.log.info(
                     f"skip block {block.sub_block_height} "
                     f"challenge is {challenge} "
                     f"prev_challenge is {prev_challenge} "
@@ -300,7 +296,7 @@ class WeightProofHandler:
             if deficit >= 1 and not overflow:
                 deficit -= 1
 
-            if last_ses_height and block.sub_block_height > last_ses_height and sub_slots > 2:
+            if last_ses_height and block.sub_block_height > last_ses_height and sub_slots > 2 and full_blocks > 11:
                 self.log.info(f"wp, validate header block {block.sub_block_height} ")
                 required_iters, error = validate_finished_header_block(
                     self.constants, sub_blocks, block, False, diff, ssi
@@ -309,6 +305,8 @@ class WeightProofHandler:
                     self.log.error(f"block {block.header_hash} failed validation {error}")
                     return False
             else:
+                if block.is_block:
+                    full_blocks += 1
                 self.log.info(f"wp, validate pospace for block {block.sub_block_height}  ")
                 required_iters = self.validate_pospase_recent_chain(block, challenge, diff, overflow, prev_challenge)
                 if required_iters is None:
