@@ -16,17 +16,22 @@ def check_plots(args, root_path):
     config = load_config(root_path, "config.yaml")
     if args.num is not None:
         num = args.num
-        if num < 5:
-            num = 5
-            log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
-        if num < 30:
-            log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
+        if num == 0:
+            log.warning("Only listing plot file names")
+        else:
+            if num < 5:
+                num = 5
+                log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
+            if num < 30:
+                log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
     else:
         num = 30
     if args.grep_string is not None:
         match_str = args.grep_string
     else:
         match_str = None
+    if args.list_duplicates:
+        log.warning("Checking for duplicate Plot IDs, this will take more time")
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
