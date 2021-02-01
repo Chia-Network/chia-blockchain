@@ -303,10 +303,10 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/.chia/beta-1.0b19.dev895/db/blockchain_v23.db")
+        connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
         sub_blocks = await block_store.get_sub_block_in_range(0, 3840)
         headers = await block_store.get_headers_in_range(0, 3840)
