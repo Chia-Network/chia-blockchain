@@ -247,79 +247,70 @@ class WeightProofHandler:
 
     def _validate_recent_blocks(self, weight_proof: WeightProof, summaries: List[SubEpochSummary]):
         sub_blocks = BlockCache({})
-        recent_chain_ses_idx = _get_ses_idx(self.constants, weight_proof.recent_chain_data)
-        next_ses = len(summaries) - len(recent_chain_ses_idx)
+        first_ses_idx = _get_ses_idx(self.constants, weight_proof.recent_chain_data)
+        ses_idx = len(summaries) - len(first_ses_idx)
         ssi: Optional[uint64] = self.constants.SUB_SLOT_ITERS_STARTING
         diff: Optional[uint64] = self.constants.DIFFICULTY_STARTING
-        for summary in summaries[:next_ses]:
+        for summary in summaries[:ses_idx]:
             if summary.new_sub_slot_iters is not None:
                 ssi = summary.new_sub_slot_iters
             if summary.new_difficulty is not None:
                 diff = summary.new_difficulty
 
-        sub_slots: int = 0
-        deficit = None
-        challenge = None
-        prev_challenge = None
-        last_ses_height = None
+        ses_blocks, sub_slots, full_blocks = 0, 0, 0
+        challenge, prev_challenge, deficit = None, None, None
         height = None
-        full_blocks = 0
         for idx, block in enumerate(weight_proof.recent_chain_data):
+            ses = False
             if block.height is not None:
                 height = block.height
-            if len(block.finished_sub_slots) > 0:
-                for sub_slot in block.finished_sub_slots:
-                    prev_challenge = challenge
-                    challenge = sub_slot.challenge_chain.get_hash()
-                    deficit = sub_slot.reward_chain.deficit
-                    if sub_slot.challenge_chain.subepoch_summary_hash is not None:
-                        last_ses_height = block.sub_block_height
-                        next_ses += 1
-                        assert summaries[next_ses - 1].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
-                    if sub_slot.challenge_chain.new_sub_slot_iters is not None:
-                        ssi = sub_slot.challenge_chain.new_sub_slot_iters
-                    if sub_slot.challenge_chain.new_difficulty is not None:
-                        diff = sub_slot.challenge_chain.new_difficulty
+            for sub_slot in block.finished_sub_slots:
+                prev_challenge = challenge
+                challenge = sub_slot.challenge_chain.get_hash()
+                deficit = sub_slot.reward_chain.deficit
+                if sub_slot.challenge_chain.subepoch_summary_hash is not None:
+                    ses = True
+                    assert summaries[ses_idx].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
+                    ses_idx += 1
+                if sub_slot.challenge_chain.new_sub_slot_iters is not None:
+                    ssi = sub_slot.challenge_chain.new_sub_slot_iters
+                if sub_slot.challenge_chain.new_difficulty is not None:
+                    diff = sub_slot.challenge_chain.new_difficulty
 
-            if challenge is None or prev_challenge is None or deficit is None or height is None:
-                self.log.info(
-                    f"skip block {block.sub_block_height} "
-                    f"challenge is {challenge} "
-                    f"prev_challenge is {prev_challenge} "
-                    f"deficit {deficit} "
-                    f"height {height} "
-                    f"full blocks skipped {full_blocks} "
-                )
+            if challenge is None or prev_challenge is None:
+                self.log.debug(f"skip block {block.sub_block_height}")
                 continue
 
             overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
             if deficit >= 1 and not overflow:
                 deficit -= 1
 
-            if last_ses_height and block.sub_block_height > last_ses_height and sub_slots > 2 and full_blocks > 11:
-                self.log.info(f"wp, validate header block {block.sub_block_height} ")
+            self.log.info(f"wp, validate block {block.sub_block_height}  ")
+            if sub_slots > 2 and full_blocks > 11:
                 required_iters, error = validate_finished_header_block(
-                    self.constants, sub_blocks, block, False, diff, ssi
+                    self.constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
                 )
                 if error is not None:
                     self.log.error(f"block {block.header_hash} failed validation {error}")
                     return False
             else:
-                if block.is_block:
-                    full_blocks += 1
-                self.log.info(f"wp, validate pospace for block {block.sub_block_height}  ")
                 required_iters = self.validate_pospase_recent_chain(block, challenge, diff, overflow, prev_challenge)
                 if required_iters is None:
                     return False
 
-            sub_blocks.add_sub_block(
-                header_block_to_sub_block_record(
-                    self.constants, required_iters, block, ssi, overflow, deficit, height, summaries[next_ses - 1]
-                )
+            curr_block_ses = None if not ses else summaries[ses_idx - 1]
+            sub_block = header_block_to_sub_block_record(
+                self.constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
             )
+            self.log.debug(f"add block {sub_block.sub_block_height} to tmp sub blocks")
+            sub_blocks.add_sub_block(sub_block)
 
             if block.first_in_sub_slot:
-                sub_slots = 1 + sub_slots
+                sub_slots += 1
+            if block.is_block:
+                full_blocks += 1
+            if ses:
+                ses_blocks += 1
 
         return True
 
