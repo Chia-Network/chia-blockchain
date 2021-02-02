@@ -579,7 +579,6 @@ class Blockchain(BlockchainInterface):
             return
         blocks_to_remove = self.__sub_heights_in_cache.get(uint32(sub_height), None)
         while blocks_to_remove is not None and sub_height >= 0:
-            log.debug(f"delete sub height {sub_height} from sub blocks")
             for header_hash in blocks_to_remove:
                 del self.__sub_blocks[header_hash]  # remove from sub blocks
             del self.__sub_heights_in_cache[uint32(sub_height)]  # remove height from heights in cache
