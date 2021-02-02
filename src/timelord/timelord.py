@@ -166,7 +166,7 @@ class Timelord:
                 found_index = index
                 break
         if found_index == -1:
-            log.warning(f"Will not infuse {block.rc_prev} because it's reward chain challenge is not in the chain")
+            log.warning(f"Will not infuse {block.rc_prev} because its reward chain challenge is not in the chain")
             return None
 
         new_block_iters = uint64(block_ip_iters - ip_iters)
@@ -174,13 +174,13 @@ class Timelord:
             if self.last_state.reward_challenge_cache[found_index + 1][1] < block_sp_total_iters:
                 log.warning(
                     f"Will not infuse unfinished block {block.rc_prev} sp total iters {block_sp_total_iters}, "
-                    f"because there is another infusion before it's SP"
+                    f"because there is another infusion before its SP"
                 )
                 return None
             if self.last_state.reward_challenge_cache[found_index][1] > block_sp_total_iters:
                 log.error(
                     f"Will not infuse unfinished block {block.rc_prev}, sp total iters: {block_sp_total_iters}, "
-                    f"because it's iters are too low"
+                    f"because its iters are too low"
                 )
                 return None
 
