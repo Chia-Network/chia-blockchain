@@ -5,7 +5,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, Union
+from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, Union, Set
 
 import aiosqlite
 from blspy import AugSchemeMPL
@@ -264,7 +264,9 @@ class FullNode:
         """
 
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
-        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height)
+        self.sync_store.peer_has_sub_block(
+            request.header_hash, peer.peer_node_id, request.weight, request.sub_block_height, True
+        )
 
         if self.blockchain.contains_sub_block(request.header_hash):
             return None
@@ -278,17 +280,21 @@ class FullNode:
         if self.sync_store.get_sync_mode():
             # If peer connects while we are syncing, check if they have the block we are syncing towards
             peak_sync_hash = self.sync_store.get_sync_target_hash()
-            peak_sync_height = self.sync_store.get_sync_target_height()
+            peak_sync_height = self.sync_store.get_sync_target_sub_height()
             if peak_sync_hash is not None and request.header_hash != peak_sync_hash and peak_sync_height is not None:
-                peak_peers = self.sync_store.get_peak_peers(peak_sync_hash)
+                peak_peers: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_sync_hash])
                 # Don't ask if we already know this peer has the peak
                 if peer.peer_node_id not in peak_peers:
                     target_peak_response: Optional[RespondSubBlock] = await peer.request_sub_block(
                         full_node_protocol.RequestSubBlock(uint32(peak_sync_height), False), timeout=10
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
-                        self.sync_store.add_peak_peer(
-                            peak_sync_hash, peer.peer_node_id, target_peak_response.sub_block.weight, peak_sync_height
+                        self.sync_store.peer_has_sub_block(
+                            peak_sync_hash,
+                            peer.peer_node_id,
+                            target_peak_response.sub_block.weight,
+                            peak_sync_height,
+                            False,
                         )
         else:
             if request.sub_block_height <= curr_peak_sub_height + self.config["short_sync_sub_blocks_behind_threshold"]:
@@ -415,6 +421,7 @@ class FullNode:
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
+        self.sync_store.peer_disconnected(connection.peer_node_id)
         self._state_changed("close_connection")
 
     def _num_needed_peers(self) -> int:
@@ -461,11 +468,10 @@ class FullNode:
             self.log.info("Waiting to receive peaks from peers.")
 
             # Wait until we have 3 peaks or up to a max of 10 seconds
-            current_peer_ids: List[bytes32] = [ws_con.peer_node_id for ws_con in self.server.all_connections.values()]
             peaks = []
             for i in range(200):
-                peaks = [tup[0] for tup in self.sync_store.get_peer_peaks(current_peer_ids).values()]
-                if len(self.get_peers_with_peaks(peaks)) < 3:
+                peaks = [tup[0] for tup in self.sync_store.get_peak_of_each_peer().values()]
+                if len(self.sync_store.get_peers_that_have_peak(peaks)) < 3:
                     if self._shut_down:
                         return
                     await asyncio.sleep(0.1)
@@ -475,8 +481,7 @@ class FullNode:
 
             # Based on responses from peers about the current peaks, see which peak is the heaviest
             # (similar to longest chain rule).
-            current_peer_ids = [ws_con.peer_node_id for ws_con in self.server.all_connections.values()]
-            target_peak = self.sync_store.get_heaviest_peak(current_peer_ids)
+            target_peak = self.sync_store.get_heaviest_peak()
 
             if target_peak is None:
                 raise RuntimeError("Not performing sync, no peaks collected")
@@ -498,12 +503,13 @@ class FullNode:
                     )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
                 if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
-                    self.sync_store.add_peak_peer(
-                        heaviest_peak_hash, peers[i], heaviest_peak_weight, heaviest_peak_height
+                    self.sync_store.peer_has_sub_block(
+                        heaviest_peak_hash, peers[i], heaviest_peak_weight, heaviest_peak_height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
 
-            peers_with_peak = self.get_peers_with_peaks([heaviest_peak_hash])
+            peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([heaviest_peak_hash])
+            peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
 
             # Request weight proof from a random peer
             self.log.info(f"Total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
@@ -550,25 +556,10 @@ class FullNode:
                 return
             await self._finish_sync()
 
-    def get_peers_with_peaks(self, peak_hashes: List[bytes32]) -> List[ws.WSChiaConnection]:
-        """
-        Returns a list of all peers which have one of the peak_hashes.
-        """
-
-        filtered_peers: List[ws.WSChiaConnection] = []
-        for peak_hash in peak_hashes:
-            peers_with_peak = self.sync_store.get_peak_peers(peak_hash)
-            if not peers_with_peak:
-                self.log.error(f"peak_hash {peak_hash} hash no peers!!")
-            for peer_hash in peers_with_peak:
-                if peer_hash in self.server.all_connections:
-                    peer = self.server.all_connections[peer_hash]
-                    filtered_peers.append(peer)
-        return filtered_peers
-
     async def sync_from_fork_point(self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32):
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
-        peers_with_peak = self.get_peers_with_peaks([peak_hash])
+        peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
+        peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
 
         if len(peers_with_peak) == 0:
             raise RuntimeError(f"Not syncing, no peers with header_hash {peak_hash} ")
@@ -621,7 +612,8 @@ class FullNode:
                 peers_with_peak.remove(peer)
 
             if self.sync_store.peers_changed.is_set():
-                peers_with_peak = self.get_peers_with_peaks([peak_hash])
+                peer_ids = self.sync_store.get_peers_that_have_peak([peak_hash])
+                peers_with_peak = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
                 self.log.info(f"Number of peers we are syncing from: {len(peers_with_peak)}")
                 self.sync_store.peers_changed.clear()
 
