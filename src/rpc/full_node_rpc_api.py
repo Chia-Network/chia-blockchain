@@ -75,12 +75,14 @@ class FullNodeRpcApi:
 
         sync_mode: bool = self.service.sync_store.get_sync_mode()
 
-        sync_tip_height = 0
-        sync_tip_sub_height = 0
+        sync_tip_height: Optional[uint32] = uint32(0)
+        sync_tip_sub_height: Optional[uint32] = uint32(0)
         if sync_mode:
-            if self.service.sync_store.sync_height_target is not None:
-                sync_tip_sub_height = self.service.sync_store.sync_height_target
-                sync_tip_height = self.service.sync_store.sync_height_target
+            if self.service.sync_store.get_sync_target_sub_height() is not None:
+                sync_tip_sub_height = self.service.sync_store.get_sync_target_sub_height()
+                sync_tip_height = self.service.sync_store.get_sync_target_sub_height()
+                assert sync_tip_sub_height is not None
+                assert sync_tip_height is not None
             if full_peak is not None:
                 sync_progress_sub_height = full_peak.sub_block_height
                 sync_progress_height = full_peak.height
@@ -93,9 +95,9 @@ class FullNodeRpcApi:
 
         if full_peak is not None and full_peak.height > 1:
             newer_block_hex = full_peak.header_hash.hex()
-            hash = self.service.blockchain.sub_height_to_hash(uint32(max(1, full_peak.sub_block_height - 1000)))
-            assert hash is not None
-            older_block_hex = hash.hex()
+            header_hash = self.service.blockchain.sub_height_to_hash(uint32(max(1, full_peak.sub_block_height - 1000)))
+            assert header_hash is not None
+            older_block_hex = header_hash.hex()
             space = await self.get_network_space(
                 {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
