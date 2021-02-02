@@ -1066,125 +1066,122 @@ class FullNode:
 
     async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> Optional[Message]:
         # Lookup unfinished blocks
-        async with self.timelord_lock:
-            unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(
-                request.unfinished_reward_hash
-            )
+        unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(
+            request.unfinished_reward_hash
+        )
 
-            if unfinished_block is None:
-                self.log.warning(
-                    f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
-                )
+        if unfinished_block is None:
+            self.log.warning(
+                f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
+            )
+            return None
+
+        prev_sb: Optional[SubBlockRecord] = None
+
+        target_rc_hash = request.reward_chain_ip_vdf.challenge
+
+        # Backtracks through end of slot objects, should work for multiple empty sub slots
+        for eos, _, _ in reversed(self.full_node_store.finished_sub_slots):
+            if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
+                target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
+        if target_rc_hash == self.constants.FIRST_RC_CHALLENGE:
+            prev_sb = None
+        else:
+            # Find the prev block, starts looking backwards from the peak
+            # TODO: should we look at end of slots too?
+            curr: Optional[SubBlockRecord] = self.blockchain.get_peak()
+
+            for _ in range(10):
+                if curr is None:
+                    break
+                if curr.reward_infusion_new_challenge == target_rc_hash:
+                    # Found our prev block
+                    prev_sb = curr
+                    break
+                curr = self.blockchain.try_sub_block(curr.prev_hash)
+
+            # If not found, cache keyed on prev block
+            if prev_sb is None:
+                self.full_node_store.add_to_future_ip(request)
+                self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                 return None
 
-            prev_sb: Optional[SubBlockRecord] = None
+        # TODO: finished slots is not correct
+        overflow = is_overflow_sub_block(
+            self.constants,
+            unfinished_block.reward_chain_sub_block.signage_point_index,
+        )
+        finished_sub_slots = self.full_node_store.get_finished_sub_slots(
+            prev_sb,
+            self.blockchain,
+            unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
+            overflow,
+        )
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+            self.constants,
+            dataclasses.replace(unfinished_block, finished_sub_slots=finished_sub_slots),
+            prev_sb,
+            self.blockchain,
+        )
 
-            target_rc_hash = request.reward_chain_ip_vdf.challenge
-
-            # Backtracks through end of slot objects, should work for multiple empty sub slots
-            for eos, _, _ in reversed(self.full_node_store.finished_sub_slots):
-                if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
-                    target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
-            if target_rc_hash == self.constants.FIRST_RC_CHALLENGE:
-                prev_sb = None
-            else:
-                # Find the prev block, starts looking backwards from the peak
-                # TODO: should we look at end of slots too?
-                curr: Optional[SubBlockRecord] = self.blockchain.get_peak()
-
-                for _ in range(10):
-                    if curr is None:
-                        break
-                    if curr.reward_infusion_new_challenge == target_rc_hash:
-                        # Found our prev block
-                        prev_sb = curr
-                        break
-                    curr = self.blockchain.try_sub_block(curr.prev_hash)
-
-                # If not found, cache keyed on prev block
-                if prev_sb is None:
-                    self.full_node_store.add_to_future_ip(request)
-                    self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
-                    return None
-
-            # TODO: finished slots is not correct
-            overflow = is_overflow_sub_block(
+        if unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
+            sub_slot_start_iters = uint128(0)
+        else:
+            ss_res = self.full_node_store.get_sub_slot(unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash)
+            if ss_res is None:
+                self.log.warning(
+                    f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
+                )
+                return None
+            _, _, sub_slot_start_iters = ss_res
+        sp_total_iters = uint128(
+            sub_slot_start_iters
+            + calculate_sp_iters(
                 self.constants,
+                sub_slot_iters,
                 unfinished_block.reward_chain_sub_block.signage_point_index,
             )
-            finished_sub_slots = self.full_node_store.get_finished_sub_slots(
-                prev_sb,
-                self.blockchain,
-                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
-                overflow,
-            )
-            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.constants,
-                dataclasses.replace(unfinished_block, finished_sub_slots=finished_sub_slots),
-                prev_sb,
-                self.blockchain,
-            )
+        )
 
-            if unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
-                sub_slot_start_iters = uint128(0)
-            else:
-                ss_res = self.full_node_store.get_sub_slot(
-                    unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
-                )
-                if ss_res is None:
-                    self.log.warning(
-                        f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
-                    )
-                    return None
-                _, _, sub_slot_start_iters = ss_res
-            sp_total_iters = uint128(
-                sub_slot_start_iters
-                + calculate_sp_iters(
-                    self.constants,
-                    sub_slot_iters,
-                    unfinished_block.reward_chain_sub_block.signage_point_index,
-                )
-            )
-
-            block: FullBlock = unfinished_block_to_full_block(
-                unfinished_block,
-                request.challenge_chain_ip_vdf,
-                request.challenge_chain_ip_proof,
-                request.reward_chain_ip_vdf,
-                request.reward_chain_ip_proof,
-                request.infused_challenge_chain_ip_vdf,
-                request.infused_challenge_chain_ip_proof,
-                finished_sub_slots,
-                prev_sb,
-                self.blockchain,
-                sp_total_iters,
-                difficulty,
-            )
-            first_ss_new_epoch = False
-            if not self.has_valid_pool_sig(block):
-                self.log.warning("Trying to make a pre-farm block but height is not 0")
-                return None
-            if len(block.finished_sub_slots) > 0:
-                if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                    first_ss_new_epoch = True
-            else:
-                curr = prev_sb
-                while (curr is not None) and not curr.first_in_sub_slot:
-                    curr = self.blockchain.sub_block_record(curr.prev_hash)
-                if (
-                    curr is not None
-                    and curr.first_in_sub_slot
-                    and curr.sub_epoch_summary_included is not None
-                    and curr.sub_epoch_summary_included.new_difficulty is not None
-                ):
-                    first_ss_new_epoch = True
-            if first_ss_new_epoch and overflow:
-                # No overflow sub-blocks in the first sub-slot of each epoch
-                return None
-            try:
-                await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-            except ConsensusError as e:
-                self.log.warning(f"Consensus error validating sub-block: {e}")
+        block: FullBlock = unfinished_block_to_full_block(
+            unfinished_block,
+            request.challenge_chain_ip_vdf,
+            request.challenge_chain_ip_proof,
+            request.reward_chain_ip_vdf,
+            request.reward_chain_ip_proof,
+            request.infused_challenge_chain_ip_vdf,
+            request.infused_challenge_chain_ip_proof,
+            finished_sub_slots,
+            prev_sb,
+            self.blockchain,
+            sp_total_iters,
+            difficulty,
+        )
+        first_ss_new_epoch = False
+        if not self.has_valid_pool_sig(block):
+            self.log.warning("Trying to make a pre-farm block but height is not 0")
+            return None
+        if len(block.finished_sub_slots) > 0:
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                first_ss_new_epoch = True
+        else:
+            curr = prev_sb
+            while (curr is not None) and not curr.first_in_sub_slot:
+                curr = self.blockchain.sub_block_record(curr.prev_hash)
+            if (
+                curr is not None
+                and curr.first_in_sub_slot
+                and curr.sub_epoch_summary_included is not None
+                and curr.sub_epoch_summary_included.new_difficulty is not None
+            ):
+                first_ss_new_epoch = True
+        if first_ss_new_epoch and overflow:
+            # No overflow sub-blocks in the first sub-slot of each epoch
+            return None
+        try:
+            await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+        except ConsensusError as e:
+            self.log.warning(f"Consensus error validating sub-block: {e}")
         return None
 
     async def respond_end_of_sub_slot(
