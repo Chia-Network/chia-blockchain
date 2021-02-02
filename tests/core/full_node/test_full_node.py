@@ -612,6 +612,7 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
+        # create more blocks than constants.MAX_BLOCK_COUNT_PER_REQUEST (32)
         blocks = bt.get_consecutive_blocks(
             33,
             block_list_input=blocks,
@@ -647,8 +648,8 @@ class TestFullNodeProtocol:
         )
         assert isinstance(res.data, fnp.RejectSubBlocks)
 
-        # Too many
-        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(0), uint32(peak_height), False))
+        # Try fetching more blocks than constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(0), uint32(33), False))
         assert res is None
 
         # Ask without transactions
