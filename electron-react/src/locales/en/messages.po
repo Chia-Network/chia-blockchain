@@ -1088,7 +1088,7 @@ msgstr "Full Node Status"
 #~ msgid "HistoryCard.title"
 #~ msgstr "History"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "LocaleToggle.helpToTranslate"
 msgstr "Help translate"
 
@@ -1120,11 +1120,11 @@ msgstr "Rate Limited"
 msgid "MainWalletList.title"
 msgstr "Select Wallet Type"
 
-#: src/components/trading/ViewOffer.jsx:183
+#: src/components/trading/ViewOffer.jsx:41
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "Drag and drop offer file"
 
-#: src/components/trading/ViewOffer.jsx:173
+#: src/components/trading/ViewOffer.jsx:38
 msgid "OfferDropView.selectOffer"
 msgstr "Select Offer"
 
@@ -1140,7 +1140,7 @@ msgstr "Select Offer"
 #~ msgid "OfferRow.sell"
 #~ msgstr "Sell"
 
-#: src/components/trading/ViewOffer.jsx:232
+#: src/components/trading/ViewOffer.jsx:85
 msgid "OfferView.accept"
 msgstr "Accept"
 
@@ -1148,7 +1148,7 @@ msgstr "Accept"
 msgid "OfferView.amount"
 msgstr "Amount"
 
-#: src/components/trading/ViewOffer.jsx:225
+#: src/components/trading/ViewOffer.jsx:78
 msgid "OfferView.cancel"
 msgstr "Cancel"
 
@@ -1164,7 +1164,7 @@ msgstr "Side"
 #~ msgid "OfferView.title"
 #~ msgstr "View Offer"
 
-#: src/components/trading/ViewOffer.jsx:218
+#: src/components/trading/ViewOffer.jsx:71
 msgid "OfferView.title2"
 msgstr "Offer"
 

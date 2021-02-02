@@ -11,12 +11,16 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 - We now use our own faster primality test based on Baillie-PSW. The new primality test is based on the 2020 paper ["Strengthening the Baillie-PSW primality test" by Robert Baillie, Andrew Fiori, Samuel S. Wagstaff Jr](https://arxiv.org/abs/2006.14425). The new test works approximately 20% faster than GMP library's mpz_probab_prime_p() function when generating random 1024-bit primes. This lowers the load on Timelords and speeds up VDF verifications in full node.
+- The GUI now checks for an an already running GUI and stops the new launch. Thank you for that PR to @dkackman !
+- Transactions are now validated in a separate process in full node.
 
 ### Changed
 
-- Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by about 2x.
+- Significant improvements have been made to how the full node handles the mempool. This generally cuts CPU usage of node by 2x or more. Part of this increase is that we have temporarily significantly limited the size of transactions. If you want to test sending a transaction you should keep the value of your transaction below 20 TXCH as new consensus will cause you to use a lot of inputs. This will be returned to the expected level as soon as the integration of clvm-rust is complete.
 - We have changed the way we compile the proof of space plotter and added one additional optimization. On many modern processors this will mean that using the plotter with the `-e` flag will be 2-3% faster than the Beta 17 plotter on the same CPU. We have found this to be very sensitive to different CPUs but are now confident that, at worst, the Beta 24 plotter will be the same speed as Beta 17 if not slightly faster on the same hardware.
+- We have made it easier to click the "Help Translate" button in the GUI and added instructions for adding new translations and more phrases in existing translations. Try the "Help Translate" option on the language selection pull down to the left of the dark/light mode selection in the top right of the GUI.
 - The Rate Limited Wallet has been ported to new consensus and update Chialisp methods.
+- We are down to only one sub dependency that does not ship binary wheels for all four platforms. The only platform still impacted is ARM64 (generally Raspberry Pi) but that only means that you still need the minor build tools outlined on the wiki.
 - We have upgraded to py-setproctitle 1.2.2. We now have binary wheels for all four platforms and make it a requirement in setup.py. It is run-time optional if you wish to override it.
 
 ### Fixed
@@ -24,6 +28,7 @@ for setuptools_scm/PEP 440 reasons.
 - There was a bug in adding a sub block to weight proofs and an issue in the weight proof index.
 - Over time the node would think that there were no peers attached with peak sub block heights higher than 0.
 - There was a potential bug in Python 3.9.0 that required us to update blspy, chiapos, chiavdf, and chiabip158.
+- An off by one issue could cause syncing to ask for 1 sub block when it should ask for e.g. 32.
 - There was an edge case in bip158 handling.
 
 ## [1.0beta23] aka Beta 1.23 - 2021-01-26
