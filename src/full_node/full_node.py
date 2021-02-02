@@ -517,7 +517,7 @@ class FullNode:
                 raise ValueError("Not performing sync, already caught up.")
 
             request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
-            response = await weight_proof_peer.request_proof_of_weight(request)
+            response = await weight_proof_peer.request_proof_of_weight(request, timeout=30)
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
@@ -579,7 +579,6 @@ class FullNode:
             end_height = min(target_peak_sb_height, start_height + batch_size)
             request = RequestSubBlocks(uint32(start_height), uint32(end_height), True)
             self.log.info(f"Requesting sub-blocks: {start_height} to {end_height}")
-            peers_to_remove = []
             batch_added = False
             to_remove = []
             for peer in peers_with_peak:
@@ -588,10 +587,11 @@ class FullNode:
                     continue
                 response = await peer.request_sub_blocks(request)
                 if response is None:
-                    peers_to_remove.append(peer)
+                    await peer.close()
+                    to_remove.append(peer)
                     continue
                 if isinstance(response, RejectSubBlocks):
-                    peers_to_remove.append(peer)
+                    to_remove.append(peer)
                     continue
                 elif isinstance(response, RespondSubBlocks):
                     success, advanced_peak, _ = await self.receive_sub_block_batch(

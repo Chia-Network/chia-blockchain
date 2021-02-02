@@ -253,12 +253,14 @@ class BlockStore:
         """
 
         res = await self.db.execute("SELECT * from sub_block_records WHERE is_peak = 1")
-        row = await res.fetchone()
+        peak_row = await res.fetchone()
         await res.close()
-        if row is None:
+        if peak_row is None:
             return {}, None
 
-        formatted_str = f"SELECT header_hash,sub_block  from sub_block_records WHERE sub_height >= {row[2] - blocks_n}"
+        formatted_str = (
+            f"SELECT header_hash,sub_block  from sub_block_records WHERE sub_height >= {peak_row[2] - blocks_n}"
+        )
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
@@ -266,7 +268,7 @@ class BlockStore:
         for row in rows:
             header_hash = bytes.fromhex(row[0])
             ret[header_hash] = SubBlockRecord.from_bytes(row[1])
-        return ret, bytes.fromhex(row[0])
+        return ret, bytes.fromhex(peak_row[0])
 
     async def get_peak_sub_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """

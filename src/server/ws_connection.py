@@ -207,7 +207,12 @@ class WSChiaConnection:
                 raise AttributeError(f"bad attribute {attr_name}")
 
             msg = Message(attr_name, args[0])
+            request_start_t = time.time()
             result = await self.create_request(msg, timeout)
+            self.log.debug(
+                f"Time for request {attr_name}: {self.get_peer_info()} = {time.time() - request_start_t}, "
+                f"None? {result is None}"
+            )
             if result is not None:
                 ret_attr = getattr(class_for_type(self.local_type), result.function, None)
 
