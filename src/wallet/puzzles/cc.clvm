@@ -200,8 +200,8 @@
      )
 
      ;; calculate the puzzle hash for a lock coin
-     (defun puzzle-hash-for-lock (prev-coin-info left-subtotal)
-       (sha256tree1 (curry (lambda ARGS ()) prev-coin-info left-subtotal))
+     (defun-inline puzzle-hash-for-lock (prev-coin-info left-subtotal)
+       (sha256tree1 prev-coin-info left-subtotal)
      )
 
      ;; here we commit to O_k, I_{k+1} and S_k
