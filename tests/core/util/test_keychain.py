@@ -86,7 +86,7 @@ class TesKeychain(unittest.TestCase):
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors_trezor(self):
-        with open(pathlib.Path().absolute() / "bip39_test_vectors.json") as f:
+        with open("tests/core/util/bip39_test_vectors.json") as f:
             all_vectors = json.loads(f.read())
 
         for vector_list in all_vectors["english"]:
