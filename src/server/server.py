@@ -75,8 +75,6 @@ class ChiaServer:
 
         self._ping_interval = ping_interval
         self._network_id = network_id
-        # Open connection tasks. These will be cancelled if
-        self._oc_tasks: List[asyncio.Task] = []
 
         # Taks list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
@@ -104,7 +102,8 @@ class ChiaServer:
         self._private_cert_path = cert_path
         self._private_key_path = key_path
 
-        self.incoming_task = asyncio.create_task(self.incoming_api_task())
+        self.incoming_task: asyncio.Task = asyncio.create_task(self.incoming_api_task())
+        self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
         self.app: Optional[Application] = None
         self.runner: Optional[web.AppRunner] = None
         self.site: Optional[TCPSite] = None
@@ -116,6 +115,22 @@ class ChiaServer:
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
+
+    async def garbage_collect_connections_task(self):
+        """
+        Periodically checks for connections with no activity (have not sent us any data), and removes them,
+        to allow room for other peers.
+        """
+        while True:
+            await asyncio.sleep(600)
+            to_remove: List[WSChiaConnection] = []
+            for connection in self.all_connections.values():
+                if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
+                    if time.time() - connection.last_message_time > 1 * 3600:
+                        to_remove.append(connection)
+            for connection in to_remove:
+                self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
+                await connection.close()
 
     async def start_server(self, on_connect: Callable = None):
         self.app = web.Application()
@@ -300,7 +315,7 @@ class ChiaServer:
         return False
 
     def connection_closed(self, connection: WSChiaConnection):
-        self.log.info(f"Connection closed: {connection.peer_host}")
+        self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
         if connection.connection_type is not None:
@@ -433,8 +448,8 @@ class ChiaServer:
             self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
 
         self.shut_down_event.set()
-        if self.incoming_task is not None:
-            self.incoming_task.cancel()
+        self.incoming_task.cancel()
+        self.gc_task.cancel()
 
     async def await_closed(self):
         self.log.debug("Await Closed")
