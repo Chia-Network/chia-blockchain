@@ -1,12 +1,14 @@
 export { default as Accordion } from './Accordion';
 export { default as AdvancedOptions } from './AdvancedOptions';
 export { default as AlertDialog } from './AlertDialog';
+export { default as AspectRatio } from './AspectRatio';
 export { default as Button } from './Button';
 export { default as ButtonSelected } from './ButtonSelected';
 export { default as Card } from './Card';
 export { default as CardHero } from './CardHero';
 export { default as CardStep } from './CardStep';
 export { default as Checkbox } from './Checkbox';
+export { default as Dropzone } from './Dropzone';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
 export { default as Flex } from './Flex';

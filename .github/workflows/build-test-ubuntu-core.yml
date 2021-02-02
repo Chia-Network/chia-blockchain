@@ -6,7 +6,7 @@ jobs:
   build:
     name: Build and test Ubuntu Core
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 70
     strategy:
       fail-fast: false
       max-parallel: 4
