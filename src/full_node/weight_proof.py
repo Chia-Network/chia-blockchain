@@ -749,13 +749,12 @@ class WeightProofHandler:
     def _get_weights_for_sampling(
         self, rng: random.Random, total_weight: uint128, recent_chain: List[HeaderBlock]
     ) -> Optional[List[uint128]]:
+        if recent_chain[-1].sub_block_height / self.constants.SUB_EPOCH_SUB_BLOCKS < self.MAX_SAMPLES:
+            return None
         weight_to_check = []
         last_l_weight = recent_chain[-1].reward_chain_sub_block.weight - recent_chain[0].reward_chain_sub_block.weight
         delta = last_l_weight / total_weight
         prob_of_adv_succeeding = 1 - math.log(self.C, delta)
-        if prob_of_adv_succeeding <= 0:
-            self.log.debug(f"sample prob: {prob_of_adv_succeeding}")
-            return None
         queries = -self.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
         for i in range(int(queries) + 1):
             u = rng.random()
