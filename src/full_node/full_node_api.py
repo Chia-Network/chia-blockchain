@@ -801,7 +801,8 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         # Lookup unfinished blocks
-        return await self.full_node.new_infusion_point_vdf(request)
+        async with self.full_node.timelord_lock:
+            return await self.full_node.new_infusion_point_vdf(request)
 
     @peer_required
     @api_request
