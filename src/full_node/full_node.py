@@ -644,9 +644,11 @@ class FullNode:
     ) -> Tuple[bool, bool, Optional[uint32]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
+        pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
         ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+        self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
         for i, block in enumerate(blocks):
@@ -670,6 +672,9 @@ class FullNode:
             if sub_block.sub_epoch_summary_included is not None:
                 await self.weight_proof_handler.create_prev_sub_epoch_segments()
         self._state_changed("new_peak")
+        self.log.debug(
+            f"Total time for {len(blocks)} sub blocks: {time.time() - pre_validate_start}, advanced: {advanced_peak}"
+        )
         return True, advanced_peak, fork_height
 
     async def _finish_sync(self):
