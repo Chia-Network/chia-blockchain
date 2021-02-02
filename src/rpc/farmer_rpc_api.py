@@ -2,7 +2,6 @@ from typing import Callable, Dict, List
 
 from src.farmer.farmer import Farmer
 from src.protocols.farmer_protocol import DeclareProofOfSpace
-from src.protocols.harvester_protocol import NewProofOfSpace
 from src.types.proof_of_space import ProofOfSpace
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ws_message import create_payload
