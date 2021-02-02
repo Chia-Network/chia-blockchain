@@ -248,7 +248,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
-        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
+        new_wp = await wpf._create_proof_of_weight(sub_blocks[blocks[-1].header_hash], wp)
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point == 0
@@ -271,7 +271,7 @@ class TestWeightProof:
         # extend proof with 100 blocks
         summaries[last_ses_height] = last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
+        new_wp = await wpf._create_proof_of_weight(sub_blocks[blocks[-1].header_hash], wp)
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
@@ -298,7 +298,7 @@ class TestWeightProof:
         summaries[last_ses_height] = last_ses
         summaries[before_last_ses_height] = before_last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
+        new_wp = await wpf._create_proof_of_weight(sub_blocks[blocks[-1].header_hash], wp)
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
@@ -308,7 +308,7 @@ class TestWeightProof:
     async def test_weight_proof_from_database(self):
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
-        sub_blocks = await block_store.get_sub_block_in_range(0, 3840)
+        sub_blocks = await block_store.get_sub_block_records_in_range(0, 3840)
         headers = await block_store.get_header_blocks_in_range(0, 3840)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
@@ -337,6 +337,9 @@ class TestWeightProof:
 
         await connection.close()
         assert valid
+        f = open("wp.txt", "a")
+        f.write(f"{wp}")
+        f.close()
 
 
 def get_size(obj, seen=None):
