@@ -1,6 +1,6 @@
 import isElectron from 'is-electron';
 
-export default function useOpenExternal(): (url: string) => void  {
+export default function useOpenExternal(): (url: string) => void {
   function handleOpen(url: string) {
     if (isElectron()) {
       // @ts-ignore
@@ -8,7 +8,7 @@ export default function useOpenExternal(): (url: string) => void  {
       return;
     }
 
-    window.open(url, "_blank");
+    window.open(url, '_blank');
   }
 
   return handleOpen;

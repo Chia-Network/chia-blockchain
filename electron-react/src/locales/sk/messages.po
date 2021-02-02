@@ -887,7 +887,7 @@ msgstr "Akcie"
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Stav pripojenia"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:17
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
 msgid "FarmFullNodeConnections.date"
 msgstr "Dátum"
 
@@ -895,7 +895,7 @@ msgstr "Dátum"
 msgid "FarmFullNodeConnections.description"
 msgstr "Kombajn je služba bežiaca na stroji, kde sú skutočne uložené polia. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
 msgid "FarmFullNodeConnections.height"
 msgstr "Pozícia"
 
@@ -911,7 +911,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
 msgid "FarmFullNodeConnections.time"
 msgstr "Čas"
 
@@ -923,19 +923,19 @@ msgstr "Vaše pripojenie k sieti"
 msgid "FarmFullNodeConnections.upDown"
 msgstr "Odoslané/Stiahnuté"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:37
+#: src/components/farm/FarmLastAttemptedProof.tsx:38
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:43
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
 msgid "FarmLastAttemptedProof.title"
 msgstr "Posledný pokus o dôkaz"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:33
+#: src/components/farm/FarmLastAttemptedProof.tsx:34
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
