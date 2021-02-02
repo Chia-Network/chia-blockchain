@@ -245,7 +245,7 @@ class WeightProofHandler:
 
         return True, self.get_fork_point(summaries)
 
-    def _validate_recent_blocks(self, weight_proof: WeightProof, summaries: List[SubEpochSummary]):
+    def _validate_recent_blocks(self, weight_proof: WeightProof, summaries: List[SubEpochSummary]) -> bool:
         sub_blocks = BlockCache({})
         first_ses_idx = _get_ses_idx(self.constants, weight_proof.recent_chain_data)
         ses_idx = len(summaries) - len(first_ses_idx)
@@ -268,7 +268,6 @@ class WeightProofHandler:
                 prev_challenge = challenge
                 challenge = sub_slot.challenge_chain.get_hash()
                 deficit = sub_slot.reward_chain.deficit
-                self.log.info(f"slot deficit is {deficit}")
                 if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                     ses = True
                     assert summaries[ses_idx].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
@@ -286,7 +285,7 @@ class WeightProofHandler:
             if deficit >= 1 and not (overflow and deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK):
                 deficit -= 1
 
-            self.log.info(f"wp, validate block {block.sub_block_height}  ")
+            self.log.debug(f"wp, validate block {block.sub_block_height}  ")
             if sub_slots > 2 and full_blocks > 11:
                 required_iters, error = validate_finished_header_block(
                     self.constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
