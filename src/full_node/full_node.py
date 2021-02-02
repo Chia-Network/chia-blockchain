@@ -206,7 +206,7 @@ class FullNode:
                             f"Error short batch syncing, failed to validate sub-blocks {sub_height}-{end_height}"
                         )
                     if advanced_peak:
-                        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+                        peak = self.blockchain.get_peak()
                         peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
                         assert peak is not None and peak_fb is not None and fork_height is not None
                         await self.peak_post_processing(peak_fb, peak, fork_height, peer)
