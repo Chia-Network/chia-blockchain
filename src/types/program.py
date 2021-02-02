@@ -149,6 +149,12 @@ class SerializedProgram:
     def __str__(self) -> str:
         return bytes(self).hex()
 
+    def __eq__(self, other) -> bool:
+        return self._buf == other._buf
+
+    def __ne__(self, other) -> bool:
+        return self._buf != other._buf
+
     def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
         """
         Any values in `args` that appear in the tree
