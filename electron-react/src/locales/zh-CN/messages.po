@@ -1088,7 +1088,7 @@ msgstr "全节点状态"
 #~ msgid "HistoryCard.title"
 #~ msgstr "历史记录"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "LocaleToggle.helpToTranslate"
 msgstr "帮助翻译"
 
@@ -1120,11 +1120,11 @@ msgstr "有限费率"
 msgid "MainWalletList.title"
 msgstr "选择钱包类型"
 
-#: src/components/trading/ViewOffer.jsx:183
+#: src/components/trading/ViewOffer.jsx:41
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "拖放报价文件"
 
-#: src/components/trading/ViewOffer.jsx:173
+#: src/components/trading/ViewOffer.jsx:38
 msgid "OfferDropView.selectOffer"
 msgstr ""
 
@@ -1140,7 +1140,7 @@ msgstr ""
 #~ msgid "OfferRow.sell"
 #~ msgstr "出售"
 
-#: src/components/trading/ViewOffer.jsx:232
+#: src/components/trading/ViewOffer.jsx:85
 msgid "OfferView.accept"
 msgstr "接受"
 
@@ -1148,7 +1148,7 @@ msgstr "接受"
 msgid "OfferView.amount"
 msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:225
+#: src/components/trading/ViewOffer.jsx:78
 msgid "OfferView.cancel"
 msgstr "取消"
 
@@ -1164,7 +1164,7 @@ msgstr ""
 #~ msgid "OfferView.title"
 #~ msgstr "查看报价"
 
-#: src/components/trading/ViewOffer.jsx:218
+#: src/components/trading/ViewOffer.jsx:71
 msgid "OfferView.title2"
 msgstr ""
 
