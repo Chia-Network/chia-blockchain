@@ -82,7 +82,7 @@
     "craco-alias": "^2.1.1",
     "cross-env": "^7.0.3",
     "cypress": "^6.3.0",
-    "electron": "^8.5.5",
+    "electron": "^9.4.2",
     "electron-osx-sign": "github:electron/electron-osx-sign#master",
     "electron-winstaller": "^4.0.1",
     "eslint": "^7.18.0",
