@@ -191,7 +191,7 @@ class FullNode:
         self.sync_store.batch_syncing.add(peer.peer_node_id)
         self.log.info(f"Starting batch short sync from {start_sub_height} to sub-height {target_sub_height}")
         try:
-            for sub_height in range(start_sub_height, target_sub_height + 1, batch_size):
+            for sub_height in range(start_sub_height, target_sub_height, batch_size):
                 end_height = min(target_sub_height, sub_height + batch_size)
                 request = RequestSubBlocks(uint32(sub_height), uint32(end_height), True)
                 response = await peer.request_sub_blocks(request)
