@@ -887,7 +887,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:17
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
 msgid "FarmFullNodeConnections.date"
 msgstr ""
 
@@ -895,7 +895,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.description"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
 msgid "FarmFullNodeConnections.height"
 msgstr ""
 
@@ -911,7 +911,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.port"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
 msgid "FarmFullNodeConnections.time"
 msgstr ""
 
@@ -923,19 +923,19 @@ msgstr ""
 msgid "FarmFullNodeConnections.upDown"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:37
+#: src/components/farm/FarmLastAttemptedProof.tsx:38
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:43
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
 msgid "FarmLastAttemptedProof.title"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:33
+#: src/components/farm/FarmLastAttemptedProof.tsx:34
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
