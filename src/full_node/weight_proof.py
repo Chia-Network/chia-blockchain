@@ -125,8 +125,6 @@ class WeightProofHandler:
             return None
 
         weight_to_check = self._get_weights_for_sampling(random.Random(tip), tip_rec.weight, recent_chain)
-        if weight_to_check is None:
-            self.log.warning("math error while sampling sub epochs")
 
         prev_ses_block = await self.blockchain.get_sub_block_from_db(self.blockchain.sub_height_to_hash(uint32(0)))
         if prev_ses_block is None:
