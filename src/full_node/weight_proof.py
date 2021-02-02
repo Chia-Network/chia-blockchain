@@ -268,6 +268,7 @@ class WeightProofHandler:
                 prev_challenge = challenge
                 challenge = sub_slot.challenge_chain.get_hash()
                 deficit = sub_slot.reward_chain.deficit
+                self.log.info(f"slot deficit is {deficit}")
                 if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                     ses = True
                     assert summaries[ses_idx].get_hash() == sub_slot.challenge_chain.subepoch_summary_hash
@@ -282,7 +283,7 @@ class WeightProofHandler:
                 continue
 
             overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
-            if deficit >= 1 and not overflow:
+            if deficit >= 1 and not (overflow and deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK):
                 deficit -= 1
 
             self.log.info(f"wp, validate block {block.sub_block_height}  ")
