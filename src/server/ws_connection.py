@@ -140,20 +140,31 @@ class WSChiaConnection:
         return True
 
     async def close(self):
-        # Closes the connection
+        """
+        Closes the connection, and finally calls the close_callback on the server, so the connections gets removed
+        from the global list.
+        """
+
         if self.closed:
             return
         self.closed = True
-        if self.ws is not None and self.ws._closed is False:
-            await self.ws.close()
-        if self.inbound_task is not None:
-            self.inbound_task.cancel()
-        if self.outbound_task is not None:
-            self.outbound_task.cancel()
-        if self.session is not None:
-            await self.session.close()
-        if self.close_event is not None:
-            self.close_event.set()
+
+        try:
+            if self.inbound_task is not None:
+                self.inbound_task.cancel()
+            if self.outbound_task is not None:
+                self.outbound_task.cancel()
+            if self.ws is not None and self.ws._closed is False:
+                await self.ws.close()
+            if self.session is not None:
+                await self.session.close()
+            if self.close_event is not None:
+                self.close_event.set()
+        except Exception:
+            error_stack = traceback.format_exc()
+            self.log.warning(f"Exception closing socket: {error_stack}")
+            self.close_callback(self)
+            raise
         self.close_callback(self)
 
     async def outbound_handler(self):
