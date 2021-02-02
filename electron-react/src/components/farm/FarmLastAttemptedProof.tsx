@@ -1,7 +1,6 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import moment from 'moment';
 import { Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
 import type { Row } from '../core/components/Table/Table';
