@@ -4,10 +4,9 @@ import { useSelector } from 'react-redux';
 // import moment from 'moment';
 import {
   Typography,
-  Link,
   Tooltip,
 } from '@material-ui/core';
-import { Table, Card } from '@chia/core';
+import { Link, Table, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/components/Table/Table';
 

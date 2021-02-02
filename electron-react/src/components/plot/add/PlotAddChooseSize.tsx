@@ -2,8 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useFormContext } from 'react-hook-form';
-import { CardStep, Select, StateColor } from '@chia/core';
-import { Grid, Link, FormControl, Typography, InputLabel, MenuItem, FormHelperText } from '@material-ui/core';
+import { CardStep, Link, Select, StateColor } from '@chia/core';
+import { Grid, FormControl, Typography, InputLabel, MenuItem, FormHelperText } from '@material-ui/core';
 import { plotSizeOptions } from '../../../constants/plotSizes';
 
 const MIN_MAINNET_K_SIZE = 32;

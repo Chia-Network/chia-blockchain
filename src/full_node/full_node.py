@@ -191,7 +191,7 @@ class FullNode:
         self.sync_store.batch_syncing.add(peer.peer_node_id)
         self.log.info(f"Starting batch short sync from {start_sub_height} to sub-height {target_sub_height}")
         try:
-            for sub_height in range(start_sub_height, target_sub_height + 1, batch_size):
+            for sub_height in range(start_sub_height, target_sub_height, batch_size):
                 end_height = min(target_sub_height, sub_height + batch_size)
                 request = RequestSubBlocks(uint32(sub_height), uint32(end_height), True)
                 response = await peer.request_sub_blocks(request)
@@ -236,8 +236,12 @@ class FullNode:
         responses = []
         while curr_sub_height > peak_sub_height - 5:
             curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_sub_height), True))
+            if curr is None:
+                raise ValueError(f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}, timed out")
             if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
-                raise ValueError(f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}")
+                raise ValueError(
+                    f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
+                )
             responses.append(curr)
             if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_sub_height == 0:
                 found_fork_point = True
@@ -422,6 +426,7 @@ class FullNode:
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
+        self.mempool_manager.shut_down()
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.close())
 

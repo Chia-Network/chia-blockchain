@@ -46,6 +46,7 @@
     "polished": "^4.1.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
+    "react-dropzone": "^11.2.4",
     "react-hook-form": "^6.14.2",
     "react-redux": "^7.2.2",
     "react-router": "^5.2.0",
