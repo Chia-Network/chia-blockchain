@@ -1088,7 +1088,7 @@ msgstr "Stav siete"
 #~ msgid "HistoryCard.title"
 #~ msgstr "História"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "LocaleToggle.helpToTranslate"
 msgstr "Pomôcť s prekladom"
 
@@ -1120,11 +1120,11 @@ msgstr ""
 msgid "MainWalletList.title"
 msgstr "Vyberte typ peňaženky"
 
-#: src/components/trading/ViewOffer.jsx:183
+#: src/components/trading/ViewOffer.jsx:41
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "Súbor s ponukami presuňte tu"
 
-#: src/components/trading/ViewOffer.jsx:173
+#: src/components/trading/ViewOffer.jsx:38
 msgid "OfferDropView.selectOffer"
 msgstr ""
 
@@ -1140,7 +1140,7 @@ msgstr ""
 #~ msgid "OfferRow.sell"
 #~ msgstr "Predať"
 
-#: src/components/trading/ViewOffer.jsx:232
+#: src/components/trading/ViewOffer.jsx:85
 msgid "OfferView.accept"
 msgstr "Akceptovať"
 
@@ -1148,7 +1148,7 @@ msgstr "Akceptovať"
 msgid "OfferView.amount"
 msgstr "Suma"
 
-#: src/components/trading/ViewOffer.jsx:225
+#: src/components/trading/ViewOffer.jsx:78
 msgid "OfferView.cancel"
 msgstr "Zrušiť"
 
@@ -1164,7 +1164,7 @@ msgstr "Strana"
 #~ msgid "OfferView.title"
 #~ msgstr "Ponuka"
 
-#: src/components/trading/ViewOffer.jsx:218
+#: src/components/trading/ViewOffer.jsx:71
 msgid "OfferView.title2"
 msgstr "Ponuka"
 
