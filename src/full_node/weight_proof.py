@@ -729,6 +729,9 @@ class WeightProofHandler:
         last_l_weight = recent_chain[-1].reward_chain_sub_block.weight - recent_chain[0].reward_chain_sub_block.weight
         delta = last_l_weight / total_weight
         prob_of_adv_succeeding = 1 - math.log(self.C, delta)
+        if prob_of_adv_succeeding <= 0:
+            self.log.debug(f"sample prob: {prob_of_adv_succeeding}")
+            return None
         queries = -self.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
         for i in range(int(queries) + 1):
             u = rng.random()
