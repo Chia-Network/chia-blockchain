@@ -1320,13 +1320,17 @@ msgstr "Plots are allocated space on your hard drive used to farm and earn Chia.
 msgid "PlotHero.doYouHavePlot"
 msgstr "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:56
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "PlotOverviewPlots.action"
 msgstr "Action"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+#: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "PlotOverviewPlots.description"
 msgstr "Want to earn more Chia? Add more plots to your farm."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+msgid "PlotOverviewPlots.filename"
+msgstr "Filename"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "PlotOverviewPlots.harversterId"
@@ -1352,15 +1356,15 @@ msgstr "Pool Key"
 msgid "PlotOverviewPlots.size"
 msgstr "K-Size"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:53
+#: src/components/plot/overview/PlotOverviewPlots.tsx:58
 msgid "PlotOverviewPlots.status"
 msgstr "Status"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:66
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 msgid "PlotOverviewPlots.title"
 msgstr "Local Harvester Plots"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:79
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr "Total Plot Size:"
 

@@ -54,6 +54,11 @@ const cols = [{
   tooltip: 'pool_public_key',
   title: <Trans id="PlotOverviewPlots.poolKey">Pool Key</Trans>,
 }, {
+  minWidth: '100px',
+  field: 'filename',
+  tooltip: 'filename',
+  title: <Trans id="PlotOverviewPlots.filename">Filename</Trans>,
+}, {
   field: (plot: Plot) => <PlotStatus plot={plot} />,
   title: <Trans id="PlotOverviewPlots.status">Status</Trans>,
 }, {

@@ -1320,13 +1320,17 @@ msgstr "Polia sú pridelené priestory na vašom pevnom disku používanom na ť
 msgid "PlotHero.doYouHavePlot"
 msgstr "Máte na tomto zariadení už nejaké polia? <0>Pridať adresár polí</0>"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:56
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "PlotOverviewPlots.action"
 msgstr "Akcia"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+#: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "PlotOverviewPlots.description"
 msgstr "Chcete zarobiť viac Chia? Pridajte na svoju farmu ďalšie polia."
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+msgid "PlotOverviewPlots.filename"
+msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "PlotOverviewPlots.harversterId"
@@ -1352,15 +1356,15 @@ msgstr ""
 msgid "PlotOverviewPlots.size"
 msgstr "Veľkosť K"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:53
+#: src/components/plot/overview/PlotOverviewPlots.tsx:58
 msgid "PlotOverviewPlots.status"
 msgstr "Stav"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:66
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 msgid "PlotOverviewPlots.title"
 msgstr "Zoznam polí"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:79
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr "Celková veľkosť poľa"
 
