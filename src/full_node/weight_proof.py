@@ -69,7 +69,7 @@ class WeightProofHandler:
             if tip == self.tip:
                 self.lock.release()
                 return self.proof
-            new_wp = await self._extend_proof_of_weight(self.proof, tip_rec)
+            new_wp = await self._create_proof_of_weight(tip_rec, self.proof)
             self.proof = new_wp
             self.tip = tip
             self.lock.release()
@@ -84,31 +84,7 @@ class WeightProofHandler:
         self.lock.release()
         return wp
 
-    async def _extend_proof_of_weight(
-        self, weight_proof: WeightProof, new_tip: SubBlockRecord
-    ) -> Optional[WeightProof]:
-        # replace recent chain
-
-        self.log.info(f"extend weight proof peak {new_tip.header_hash} {new_tip.sub_block_height}")
-
-        recent_chain = await self._get_recent_chain(new_tip.sub_block_height, weight_proof)
-        if recent_chain is None:
-            return None
-        end_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
-        sub_epoch_data = weight_proof.sub_epochs
-        heights = self.blockchain.get_ses_heights()
-        for height in heights:
-            if height < end_height:
-                continue
-            if height > new_tip.sub_block_height:
-                break
-            summary = self.blockchain.get_ses(height)
-            sub_epoch_data.append(_make_sub_epoch_data(summary))
-
-        # todo handle new sampling
-        return WeightProof(sub_epoch_data, weight_proof.sub_epoch_segments, recent_chain)
-
-    async def _create_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
+    async def _create_proof_of_weight(self, tip: bytes32, wp: Optional[WeightProof] = None) -> Optional[WeightProof]:
         """
         Creates a weight proof object
         """
@@ -120,7 +96,7 @@ class WeightProofHandler:
             self.log.error("failed not tip in cache")
             return None
         self.log.info(f"create weight proof peak {tip} {tip_rec.sub_block_height}")
-        recent_chain = await self._get_recent_chain(tip_rec.sub_block_height)
+        recent_chain = await self._get_recent_chain(tip_rec.sub_block_height, wp)
         if recent_chain is None:
             return None
 
