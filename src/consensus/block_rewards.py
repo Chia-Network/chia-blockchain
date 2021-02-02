@@ -3,9 +3,7 @@ from src.util.ints import uint32, uint64
 
 """
     These are the rewards, divided into 7/8 for the pool and 1/8 for the farmer.
-    
     First block: TBD
-    
     1 chia - first 5 years
     0.5 chia - second 5 years
     0.25 chia - third 5 years
