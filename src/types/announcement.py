@@ -4,7 +4,7 @@ from src.util.hash import std_hash
 
 
 @dataclass(frozen=True)
-class Announcement():
+class Announcement:
     parent_coin_info: bytes32
     message: bytes
 
