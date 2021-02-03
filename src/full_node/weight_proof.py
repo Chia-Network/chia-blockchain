@@ -213,7 +213,7 @@ class WeightProofHandler:
         if not self._validate_segments(weight_proof, summaries):
             return False, uint32(0)
 
-        self.log.debug("validate weight proof recent blocks")
+        self.log.info("validate weight proof recent blocks")
         if not self._validate_recent_blocks(weight_proof, summaries):
             return False, uint32(0)
 
