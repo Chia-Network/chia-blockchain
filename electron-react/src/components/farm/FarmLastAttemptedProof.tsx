@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
+import moment from 'moment';
 import type { Row } from '../core/components/Table/Table';
 import usePlots from '../../hooks/usePlots';
 import { RootState } from '../../modules/rootReducer';
@@ -10,28 +11,34 @@ import { RootState } from '../../modules/rootReducer';
 const cols = [
   {
     field(row: Row) {
-      return row.signage_point_index;
-    },
-    title: <Trans id="FarmFullNodeConnections.height">Signage Point Index</Trans>,
-  },
-  {
-    field(row: Row) {
       return row.challenge_hash;
     },
-    title: <Trans id="FarmFullNodeConnections.date">Challenge Hash</Trans>,
+    title: <Trans id="FarmFullNodeConnections.challenge">Challenge</Trans>,
   },
   {
     field(row: Row) {
-      return row.plot_identifier;
+      return `${row.passed_filter} / ${row.total_plots}`;
     },
-    title: <Trans id="FarmFullNodeConnections.time">Plot ID</Trans>,
+    title: <Trans id="FarmFullNodeConnections.passed_filter">Plots Passed Filter</Trans>,
+  },
+  {
+    field(row: Row) {
+      return row.proofs;
+    },
+    title: <Trans id="FarmFullNodeConnections.proofs_found">Proofs Found</Trans>,
+  },
+  {
+    field(row: Row) {
+      return moment(row.timestamp * 1000).format('lll');
+    },
+    title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
   },
 ];
 
 export default function FarmLastAttemptedProof() {
   const { size } = usePlots();
 
-  const lastAttemtedProof = useSelector((state: RootState) => state.farming_state.farmer.last_attempted_proofs ?? []);
+  const lastAttemtedProof = useSelector((state: RootState) => state.farming_state.farmer.last_farming_info ?? []);
   const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 5);
   const isEmpty = !reducedLastAttemtedProof.length;
 

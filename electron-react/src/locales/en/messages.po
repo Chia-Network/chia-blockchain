@@ -883,21 +883,25 @@ msgstr "Total Size of Plots"
 msgid "FarmFullNodeConnections.actions"
 msgstr "Actions"
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
+msgid "FarmFullNodeConnections.challenge"
+msgstr "Challenge"
+
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Connection Status:"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:18
+#: src/components/farm/FarmLastAttemptedProof.tsx:36
 msgid "FarmFullNodeConnections.date"
-msgstr "Challenge Hash"
+msgstr "Date"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "FarmFullNodeConnections.description"
 msgstr "The full node that your farmer is connected to is below. <0>Learn more</0>"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:12
-msgid "FarmFullNodeConnections.height"
-msgstr "Signage Point Index"
+#~ msgid "FarmFullNodeConnections.height"
+#~ msgstr "Signage Point Index"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 msgid "FarmFullNodeConnections.hostName"
@@ -907,13 +911,25 @@ msgstr "Host Name"
 msgid "FarmFullNodeConnections.nodeId"
 msgstr "Node ID"
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
+msgid "FarmFullNodeConnections.passed_filter"
+msgstr "Plots Passed Filter"
+
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:30
+msgid "FarmFullNodeConnections.proofs_found"
+msgstr "Proofs Found"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
+msgid "FarmFullNodeConnections.signage_point"
+msgstr "Signage Point"
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:24
-msgid "FarmFullNodeConnections.time"
-msgstr "Plot ID"
+#~ msgid "FarmFullNodeConnections.time"
+#~ msgstr "Plot ID"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "FarmFullNodeConnections.title"
@@ -923,19 +939,19 @@ msgstr "Your Full Node Connection"
 msgid "FarmFullNodeConnections.upDown"
 msgstr "MiB Up/Down"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:38
+#: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:44
+#: src/components/farm/FarmLastAttemptedProof.tsx:56
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr "But you are currently farming <0/>"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:32
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.title"
 msgstr "Last Attempted Proof"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:34
+#: src/components/farm/FarmLastAttemptedProof.tsx:46
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr "This table shows you the last time your farm attempted to win a block challenge."
 

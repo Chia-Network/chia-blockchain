@@ -30,20 +30,11 @@ class FarmerRpcApi:
                     string=False,
                 )
             ]
-        elif change == "proof":
-            proof: DeclareProofOfSpace = change_data["proof"]
-            data = {
-                "proof": {
-                    "challenge_hash": proof.challenge_hash,
-                    "reward_chain_sp": proof.reward_chain_sp,
-                    "plot_identifier": proof.proof_of_space.plot_public_key,
-                    "signage_point_index": proof.signage_point_index,
-                }
-            }
+        elif change == "new_farming_info":
             return [
                 create_payload(
-                    "proof",
-                    data,
+                    "new_farming_info",
+                    change_data,
                     self.service_name,
                     "wallet_ui",
                     string=False,
