@@ -207,3 +207,32 @@ def load_plots(
         f" {time.time()-start_time} seconds"
     )
     return changed, new_provers, failed_to_open_filenames, no_key_filenames
+
+
+def find_duplicate_plot_IDs(all_filenames: List[Path] = []) -> None:
+    plot_IDs_set = set()
+    duplicate_plot_IDs = set()
+    all_filenames_str: List[str] = []
+
+    for filename in all_filenames:
+        filename_str: str = str(filename)
+        all_filenames_str.append(filename_str)
+        filename_parts: List[str] = filename_str.split("-")
+        plot_ID: str = filename_parts[-1]
+        # Skipped parsing and verifying plot ID for faster performance
+        # Skipped checking K size for faster performance
+        # Only checks end of filenames: 64 char plot ID + .plot = 69 characters
+        if len(plot_ID) == 69:
+            if plot_ID in plot_IDs_set:
+                duplicate_plot_IDs.add(plot_ID)
+            else:
+                plot_IDs_set.add(plot_ID)
+        else:
+            log.warning(f"{filename} does not end with -[64 char plot ID].plot")
+
+    for plot_ID in duplicate_plot_IDs:
+        log_message: str = plot_ID + " found in multiple files:\n"
+        duplicate_filenames: List[str] = [filename_str for filename_str in all_filenames_str if plot_ID in filename_str]
+        for filename_str in duplicate_filenames:
+            log_message += "\t" + filename_str + "\n"
+        log.warning(f"{log_message}")
