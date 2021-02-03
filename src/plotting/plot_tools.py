@@ -208,6 +208,7 @@ def load_plots(
     )
     return changed, new_provers, failed_to_open_filenames, no_key_filenames
 
+
 def find_duplicate_plot_IDs(all_filenames: List[Path] = []) -> None:
     plot_IDs_set = set()
     duplicate_plot_IDs = set()
@@ -231,7 +232,7 @@ def find_duplicate_plot_IDs(all_filenames: List[Path] = []) -> None:
 
     for plot_ID in duplicate_plot_IDs:
         log_message: str = plot_ID + " found in multiple files:\n"
-        duplicate_filenames: List[str] = [filename for filename in all_filenames_str if plot_ID in filename]
-        for filename in duplicate_filenames:
-            log_message += "\t" + filename + "\n"
+        duplicate_filenames: List[str] = [filename_str for filename_str in all_filenames_str if plot_ID in filename_str]
+        for filename_str in duplicate_filenames:
+            log_message += "\t" + filename_str + "\n"
         log.warning(f"{log_message}")
