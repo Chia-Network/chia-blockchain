@@ -264,3 +264,19 @@ class FarmerAPI:
 
         msg = Message("request_signatures", request)
         await self.farmer.server.send_to_specific([msg], node_id)
+
+    @api_request
+    async def farming_info(self, request: farmer_protocol.FarmingInfo):
+        self.farmer.state_changed(
+            "new_farming_info",
+            {
+                "farming_info": {
+                    "challenge_hash": request.challenge_hash,
+                    "signage_point": request.sp_hash,
+                    "passed_filter": request.passed,
+                    "proofs": request.proofs,
+                    "total_plots": request.total_plots,
+                    "timestamp": request.timestamp,
+                }
+            },
+        )
