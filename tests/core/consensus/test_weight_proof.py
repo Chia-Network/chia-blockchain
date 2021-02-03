@@ -198,7 +198,7 @@ class TestWeightProof:
 
         wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
 
-        res, _, _, _, _ = wpf._validate_segment_slots(
+        res, _, _, _ = wpf._validate_segment_slots(
             wp.sub_epoch_segments[0],
             test_constants.SUB_SLOT_ITERS_STARTING,
             test_constants.DIFFICULTY_STARTING,

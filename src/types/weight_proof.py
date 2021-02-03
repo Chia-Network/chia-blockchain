@@ -87,4 +87,4 @@ class ProofBlockHeader(Streamable):
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
-    recent_chain_data: List[HeaderBlock]  # todo switch HeaderBlock tp class with only needed field
+    recent_chain_data: List[HeaderBlock]

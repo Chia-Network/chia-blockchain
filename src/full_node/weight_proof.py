@@ -221,7 +221,7 @@ class WeightProofHandler:
 
     def _validate_recent_blocks(self, weight_proof: WeightProof, summaries: List[SubEpochSummary]) -> bool:
         sub_blocks = BlockCache({})
-        first_ses_idx = _get_ses_idx(self.constants, weight_proof.recent_chain_data)
+        first_ses_idx = _get_ses_idx(weight_proof.recent_chain_data)
         ses_idx = len(summaries) - len(first_ses_idx)
         ssi: Optional[uint64] = self.constants.SUB_SLOT_ITERS_STARTING
         diff: Optional[uint64] = self.constants.DIFFICULTY_STARTING
@@ -371,7 +371,7 @@ class WeightProofHandler:
         prev_ses: Optional[SubEpochSummary] = None
         for idx, segment in enumerate(weight_proof.sub_epoch_segments):
             if curr_sub_epoch_n < segment.sub_epoch_n:
-                self.log.debug(f"handle sub epoch {segment.sub_epoch_n}")
+                self.log.debug(f"validate sub epoch {segment.sub_epoch_n}")
                 # recreate RewardChainSubSlot for next ses rc_hash
                 if segment.sub_epoch_n > 0:
                     rc_sub_slot_hash = self.__get_rc_sub_slot_hash(segment, summaries).get_hash()
@@ -382,7 +382,7 @@ class WeightProofHandler:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     return False
 
-            valid_segment, ip_iters, slot_iters, slots, blocks = self._validate_segment_slots(
+            valid_segment, ip_iters, slot_iters, slots = self._validate_segment_slots(
                 segment,
                 curr_ssi,
                 curr_difficulty,
@@ -393,7 +393,7 @@ class WeightProofHandler:
                 self.log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} slots")
                 return False
 
-            total_blocks += blocks
+            total_blocks += 1
             total_slot_iters += slot_iters
             total_slots += slots
             total_ip_iters += ip_iters
@@ -690,8 +690,8 @@ class WeightProofHandler:
         curr_ssi: uint64,
         curr_difficulty: uint64,
         ses: Optional[SubEpochSummary],
-    ) -> Tuple[bool, int, int, int, int]:
-        ip_iters, slot_iters, slots, challenge_blocks = 0, 0, 0, 0
+    ) -> Tuple[bool, int, int, int]:
+        ip_iters, slot_iters, slots = 0, 0, 0
         for idx, sub_slot_data in enumerate(segment.sub_slots):
             slot_iters = slot_iters + curr_ssi  # type: ignore
             slots = slots + uint64(1)  # type: ignore
@@ -699,18 +699,17 @@ class WeightProofHandler:
                 cc_sub_slot_hash = self.get_cc_sub_slot_hash(segment, idx, ses)
                 required_iters = self.__validate_pospace(segment, idx, curr_difficulty, cc_sub_slot_hash)
                 if required_iters is None:
-                    return False, uint64(0), uint64(0), uint64(0), 0
+                    return False, uint64(0), uint64(0), uint64(0)
                 assert sub_slot_data.cc_signage_point_index is not None
                 ip_iters = ip_iters + calculate_ip_iters(  # type: ignore
                     self.constants, curr_ssi, sub_slot_data.cc_signage_point_index, required_iters
                 )
-                challenge_blocks = challenge_blocks + 1
 
             # if not validate_sub_slot_vdfs(self.constants, sub_slot_data, prev_ssd):
             #    self.log.info(f"failed to validate {idx} sub slot vdfs")
             # return False, uint64(0), uint64(0), uint64(0), uint64(0)
 
-        return True, ip_iters, slot_iters, slots, challenge_blocks
+        return True, ip_iters, slot_iters, slots
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
@@ -848,7 +847,7 @@ def _get_last_ses_hash(
     return None, uint32(0)
 
 
-def _get_ses_idx(constants: ConsensusConstants, recent_reward_chain: List[HeaderBlock]) -> List[int]:
+def _get_ses_idx(recent_reward_chain: List[HeaderBlock]) -> List[int]:
     idxs: List[int] = []
     for idx, curr in enumerate(recent_reward_chain):
         if len(curr.finished_sub_slots) > 0:
