@@ -67,13 +67,18 @@ class WeightProofHandler:
                 self.lock.release()
                 return self.proof
             new_wp = await self._extend_proof_of_weight(self.proof, tip_rec)
+            if new_wp is None or not self._validate_sub_epoch_summaries(new_wp):
+                self.log.error("weight proof failed pre send validation")
+                self.lock.release()
+                return None
             self.proof = new_wp
             self.tip = tip
             self.lock.release()
             return new_wp
 
         wp = await self._create_proof_of_weight(tip)
-        if wp is None:
+        if wp is None or not self._validate_sub_epoch_summaries(wp):
+            self.log.error("weight proof failed pre send validation")
             self.lock.release()
             return None
         self.proof = wp
@@ -95,7 +100,7 @@ class WeightProofHandler:
         sub_epoch_data = weight_proof.sub_epochs
         heights = self.blockchain.get_ses_heights()
         for height in heights:
-            if height < end_height:
+            if height <= end_height:
                 continue
             if height > new_tip.sub_block_height:
                 break
