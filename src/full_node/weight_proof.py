@@ -69,7 +69,7 @@ class WeightProofHandler:
             if tip == self.tip:
                 self.lock.release()
                 return self.proof
-            new_wp = await self._create_proof_of_weight(tip_rec, self.proof)
+            new_wp = await self._create_proof_of_weight(tip, self.proof)
             self.proof = new_wp
             self.tip = tip
             self.lock.release()
