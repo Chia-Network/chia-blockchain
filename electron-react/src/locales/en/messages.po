@@ -887,17 +887,17 @@ msgstr "Actions"
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Connection Status:"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:17
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
 msgid "FarmFullNodeConnections.date"
-msgstr "Date"
+msgstr "Challenge Hash"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "FarmFullNodeConnections.description"
 msgstr "The full node that your farmer is connected to is below. <0>Learn more</0>"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
 msgid "FarmFullNodeConnections.height"
-msgstr "Height"
+msgstr "Signage Point Index"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 msgid "FarmFullNodeConnections.hostName"
@@ -911,9 +911,9 @@ msgstr "Node ID"
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
 msgid "FarmFullNodeConnections.time"
-msgstr "Time"
+msgstr "Plot ID"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "FarmFullNodeConnections.title"
@@ -923,19 +923,19 @@ msgstr "Your Full Node Connection"
 msgid "FarmFullNodeConnections.upDown"
 msgstr "MiB Up/Down"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:37
+#: src/components/farm/FarmLastAttemptedProof.tsx:38
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:43
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr "But you are currently farming <0/>"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
 msgid "FarmLastAttemptedProof.title"
 msgstr "Last Attempted Proof"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:33
+#: src/components/farm/FarmLastAttemptedProof.tsx:34
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr "This table shows you the last time your farm attempted to win a block challenge."
 
