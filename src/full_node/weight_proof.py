@@ -449,9 +449,9 @@ class WeightProofHandler:
         )
         # self.log.debug(f"cc sub slot {cc_sub_slot}    \n {cc_sub_slot.get_hash()}")
 
-        assert first_slot.rc_slot_end_info is not None
+        assert segment.rc_slot_end_info is not None
         rc_sub_slot = RewardChainSubSlot(
-            first_slot.rc_slot_end_info,
+            segment.rc_slot_end_info,
             cc_sub_slot.get_hash(),
             icc_sub_slot_hash,
             self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
@@ -487,14 +487,18 @@ class WeightProofHandler:
         curr: Optional[HeaderBlock] = header_blocks[se_start.header_hash]
         sub_height = se_start.sub_block_height
         assert curr is not None
+        first = True
         while curr.sub_block_height < ses_block.sub_block_height:
             if sub_blocks[curr.header_hash].is_challenge_sub_block(self.constants):
                 self.log.debug(f"challenge segment, starts at {curr.sub_block_height} ")
-                seg, sub_height = await self._handle_challenge_segment(curr, sub_epoch_n, header_blocks, sub_blocks)
+                seg, sub_height = await self._handle_challenge_segment(
+                    curr, sub_epoch_n, header_blocks, sub_blocks, first
+                )
                 if seg is None:
                     self.log.error(f"failed creating segment {curr.header_hash} ")
                     return None
                 segments.append(seg)
+                first = False
             else:
                 sub_height = sub_height + uint32(1)  # type: ignore
             curr = header_blocks[self.blockchain.sub_height_to_hash(sub_height)]
@@ -509,6 +513,7 @@ class WeightProofHandler:
         sub_epoch_n: uint32,
         header_blocks: Dict[bytes32, HeaderBlock],
         sub_blocks: Dict[bytes32, SubBlockRecord],
+        first_segment_in_sub_epoch: bool,
     ) -> Tuple[Optional[SubEpochChallengeSegment], uint32]:
         assert self.blockchain is not None
         sub_slots: List[SubSlotData] = []
@@ -518,7 +523,7 @@ class WeightProofHandler:
         )
 
         # VDFs from sub slots before challenge block
-        first_sub_slots = await self.__first_sub_slots_data(header_block, header_blocks)
+        first_sub_slots, first_rc_end_of_slot_vdf = await self.__first_sub_slots_data(header_block, header_blocks)
         if first_sub_slots is None:
             self.log.error("failed building first sub slots")
             return None, uint32(0)
@@ -537,7 +542,12 @@ class WeightProofHandler:
             self.log.error("failed building slot end ")
             return None, uint32(0)
         sub_slots.extend(challenge_slot_end_sub_slots)
-        return SubEpochChallengeSegment(sub_epoch_n, sub_slots), end_height
+        if first_segment_in_sub_epoch:
+            return (
+                SubEpochChallengeSegment(sub_epoch_n, sub_slots, first_rc_end_of_slot_vdf),
+                end_height,
+            )
+        return SubEpochChallengeSegment(sub_epoch_n, sub_slots, None), end_height
 
     async def __get_slot_end_vdf(
         self, start_height: uint32, header_blocks: Dict[bytes32, HeaderBlock], sub_blocks: Dict[bytes32, SubBlockRecord]
@@ -567,18 +577,22 @@ class WeightProofHandler:
         self,
         header_block: HeaderBlock,
         header_blocks: Dict[bytes32, HeaderBlock],
-    ) -> Optional[List[SubSlotData]]:
+    ) -> Tuple[Optional[List[SubSlotData]], Optional[VDFInfo]]:
         # combine cc vdfs of all reward blocks from the start of the sub slot to end
 
         curr_header = header_block
         # find slot start
+
         while not curr_header.first_in_sub_slot and curr_header.sub_block_height > 0:
             curr_header = header_blocks[curr_header.prev_hash]
 
-        # get all finished sub slots
+        first_rc_end_of_slot_vdf: Optional[VDFInfo] = None
         sub_slots: List[SubSlotData] = []
-        for sub_slot in curr_header.finished_sub_slots:
-            sub_slots.append(handle_finished_slots(sub_slot))
+        if len(curr_header.finished_sub_slots) > 0:
+            # get all finished sub slots
+            first_rc_end_of_slot_vdf = curr_header.finished_sub_slots[0].reward_chain.end_of_slot_vdf
+            for sub_slot in curr_header.finished_sub_slots:
+                sub_slots.append(handle_finished_slots(sub_slot))
 
         cc_slot_end_vdf: List[VDFProof] = []
         icc_slot_end_vdf: List[VDFProof] = []
@@ -586,7 +600,7 @@ class WeightProofHandler:
         while curr_header.sub_block_height < header_block.sub_block_height:
             curr_header = header_blocks[self.blockchain.sub_height_to_hash(uint32(curr_header.sub_block_height + 1))]
             if curr_header is None:
-                return None
+                return None, None
 
             if curr_header.challenge_chain_sp_proof is not None:
                 cc_slot_end_vdf.append(curr_header.challenge_chain_sp_proof)
@@ -598,7 +612,6 @@ class WeightProofHandler:
         self.log.debug(f"add challenge block height {header_block.sub_block_height}")
         ssd = SubSlotData(
             header_block.reward_chain_sub_block.proof_of_space,
-            header_block.reward_chain_sub_block.challenge_chain_sp_signature,
             header_block.challenge_chain_sp_proof,
             header_block.challenge_chain_ip_proof,
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
@@ -607,10 +620,9 @@ class WeightProofHandler:
             combine_proofs(icc_slot_end_vdf),
             None,
             None,
-            None,
         )
         sub_slots.append(ssd)
-        return sub_slots
+        return sub_slots, first_rc_end_of_slot_vdf
 
     def __validate_pospace(
         self,
@@ -856,10 +868,8 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle):
         None,
         None,
         None,
-        None,
         end_of_slot.proofs.challenge_chain_slot_proof,
         end_of_slot.proofs.infused_challenge_chain_slot_proof,
         end_of_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
         icc_end_of_slot_info,
-        end_of_slot.reward_chain.end_of_slot_vdf,
     )

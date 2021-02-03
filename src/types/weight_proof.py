@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from blspy import G2Element
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
@@ -38,8 +37,7 @@ class SubEpochData(Streamable):
 class SubSlotData(Streamable):
     # if infused
     proof_of_space: Optional[ProofOfSpace]
-    # Signature of signage point
-    cc_sp_sig: Optional[G2Element]
+
     # VDF to signage point
     cc_signage_point: Optional[VDFProof]
     # VDF from signage to infusion point
@@ -55,7 +53,6 @@ class SubSlotData(Streamable):
     # info from finished slots
     cc_slot_end_info: Optional[VDFInfo]
     icc_slot_end_info: Optional[VDFInfo]
-    rc_slot_end_info: Optional[VDFInfo]
 
     def is_challenge(self):
         if self.proof_of_space is not None:
@@ -68,6 +65,7 @@ class SubSlotData(Streamable):
 class SubEpochChallengeSegment(Streamable):
     sub_epoch_n: uint32
     sub_slots: List[SubSlotData]
+    rc_slot_end_info: Optional[VDFInfo]  # in first segment of each sub_epoch
 
 
 @dataclass(frozen=True)
