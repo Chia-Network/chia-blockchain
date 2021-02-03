@@ -40,6 +40,10 @@ for setuptools_scm/PEP 440 reasons.
 - Short sync and backtrack sync both had various issues.
 - There was an edge case in bip158 handling.
 
+### Known issues
+
+- There is a remaining sync disconnect issue where your synced node will stop hearing responses from the network even though it still gets a few peaks and then stalls. Restarting node should let you quickly short sync back to the blockchain tip.
+
 ## [1.0beta23] aka Beta 1.23 - 2021-01-26
 
 ### Added
