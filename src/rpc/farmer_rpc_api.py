@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List
 
 from src.farmer.farmer import Farmer
-from src.protocols.harvester_protocol import NewProofOfSpace
+from src.protocols.farmer_protocol import DeclareProofOfSpace
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ws_message import create_payload
 
@@ -18,12 +18,12 @@ class FarmerRpcApi:
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[Dict]:
-        if change == "signage_point":
+        if change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
             return [
                 create_payload(
-                    "get_signage_point",
+                    "new_signage_point",
                     data,
                     self.service_name,
                     "wallet_ui",
@@ -31,12 +31,12 @@ class FarmerRpcApi:
                 )
             ]
         elif change == "proof":
-            proof: NewProofOfSpace = change_data["proof"]
+            proof: DeclareProofOfSpace = change_data["proof"]
             data = {
                 "proof": {
                     "challenge_hash": proof.challenge_hash,
-                    "sp_hash": proof.sp_hash,
-                    "plot_identifier": proof.plot_identifier,
+                    "reward_chain_sp": proof.reward_chain_sp,
+                    "plot_identifier": proof.proof_of_space.plot_public_key,
                     "signage_point_index": proof.signage_point_index,
                 }
             }
@@ -77,7 +77,7 @@ class FarmerRpcApi:
                 pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
                 result.append(
                     {
-                        "sp": {
+                        "signage_point": {
                             "challenge_hash": sp.challenge_hash,
                             "challenge_chain_sp": sp.challenge_chain_sp,
                             "reward_chain_sp": sp.reward_chain_sp,

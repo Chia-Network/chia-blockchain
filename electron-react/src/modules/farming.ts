@@ -11,8 +11,8 @@ type SignagePointAndProofsOfSpace = {
 
 type FarmingState = {
   farmer: {
-    signage_points?: SignagePointAndProofsOfSpace[];
-    last_attempted_proofs?: Challenge[];
+    signage_points: SignagePointAndProofsOfSpace[];
+    last_attempted_proofs: Challenge[];
     connections: {
       bytes_read: number;
       bytes_written: number;
@@ -38,6 +38,8 @@ type FarmingState = {
 
 const initialState: FarmingState = {
   farmer: {
+    signage_points: [],
+    last_attempted_proofs: [],
     connections: [],
     open_connection_error: '',
   },
@@ -63,11 +65,25 @@ export default function farmingReducer(
       const { command } = message;
 
       // Farmer API
+      if (command === 'proof') {
+        const last_attempted_proofs = [
+          data.proof,
+          ...state.farmer.last_attempted_proofs,
+        ];
+
+        return {
+          ...state,
+          farmer: {
+            ...state.farmer,
+            last_attempted_proofs,
+          },
+        };
+      }
       if (command === 'get_signage_points') {
         if (data.success === false) {
           return state;
         }
-
+        data.signage_points.reverse();
         const { signage_points } = data;
 
         return {
@@ -78,6 +94,19 @@ export default function farmingReducer(
           },
         };
       }
+      if (command === 'new_signage_point') {
+        const signage_point = data;
+
+        const signage_points = [signage_point, ...state.farmer.signage_points];
+        return {
+          ...state,
+          farmer: {
+            ...state.farmer,
+            signage_points,
+          },
+        };
+      }
+
       if (
         command === 'get_connections' &&
         action.message.origin === service_farmer

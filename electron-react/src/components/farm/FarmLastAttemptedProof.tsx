@@ -1,7 +1,6 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import moment from 'moment';
 import { Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
 import type { Row } from '../core/components/Table/Table';
@@ -10,32 +9,34 @@ import { RootState } from '../../modules/rootReducer';
 
 const cols = [
   {
-    field: 'height',
-    title: <Trans id="FarmFullNodeConnections.height">Height</Trans>,
+    field(row: Row) {
+      return row.signage_point_index;
+    },
+    title: <Trans id="FarmFullNodeConnections.height">Signage Point Index</Trans>,
   },
   {
     field(row: Row) {
-      return moment(row.timestamp).format('L');
+      return row.challenge_hash;
     },
-    title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
+    title: <Trans id="FarmFullNodeConnections.date">Challenge Hash</Trans>,
   },
   {
     field(row: Row) {
-      return moment(row.timestamp).format('LTS');
+      return row.plot_identifier;
     },
-    title: <Trans id="FarmFullNodeConnections.time">Time</Trans>,
+    title: <Trans id="FarmFullNodeConnections.time">Plot ID</Trans>,
   },
 ];
 
 export default function FarmLastAttemptedProof() {
   const { size } = usePlots();
 
-  const lastAttemtedProof = useSelector((state: RootState) => state.local_storage.lastAttepmtedProof ?? []);
-  const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 3);
+  const lastAttemtedProof = useSelector((state: RootState) => state.farming_state.farmer.last_attempted_proofs ?? []);
+  const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 5);
   const isEmpty = !reducedLastAttemtedProof.length;
 
   return (
-    <Card 
+    <Card
       title={(
         <Trans id="FarmLastAttemptedProof.title">
           Last Attempted Proof
@@ -55,7 +56,7 @@ export default function FarmLastAttemptedProof() {
             <Trans id="FarmLastAttemptedProof.emptyDescription">
               None of your plots have passed the plot filter yet.
             </Trans>
-            
+
             {!!size && (
               <>
                 {' '}
