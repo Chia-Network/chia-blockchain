@@ -13,17 +13,12 @@ Write-Output "Using win_amd64 python 3.7 wheel from https://github.com/miniupnp/
 If ($LastExitCode -gt 0){
     Throw "Failed to download miniupnpc!"
 }
-#try
-#{
-#    $Response = Invoke-WebRequest -Uri "https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl" -OutFile "miniupnpc-2.1-cp37-cp37m-win_amd64.whl"
-    # This will only execute if the Invoke-WebRequest is successful.
-#    $StatusCode = $Response.StatusCode
-#}
-#catch
-#{
-#    $StatusCode = $_.Exception.Response.StatusCode.value__
-#}
-Set-Location -Path - -PassThru
+else
+{
+    Set-Location -Path - -PassThru
+    Write-Output "miniupnpc download successful."
+}
+
 
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
