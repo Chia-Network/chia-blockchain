@@ -1,4 +1,3 @@
-import pathlib
 import unittest
 import json
 from secrets import token_bytes
