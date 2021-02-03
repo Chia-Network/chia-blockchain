@@ -883,11 +883,15 @@ msgstr ""
 msgid "FarmFullNodeConnections.actions"
 msgstr ""
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
+msgid "FarmFullNodeConnections.challenge"
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:18
+#: src/components/farm/FarmLastAttemptedProof.tsx:36
 msgid "FarmFullNodeConnections.date"
 msgstr ""
 
@@ -896,8 +900,8 @@ msgid "FarmFullNodeConnections.description"
 msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:12
-msgid "FarmFullNodeConnections.height"
-msgstr ""
+#~ msgid "FarmFullNodeConnections.height"
+#~ msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 msgid "FarmFullNodeConnections.hostName"
@@ -907,13 +911,25 @@ msgstr ""
 msgid "FarmFullNodeConnections.nodeId"
 msgstr ""
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
+msgid "FarmFullNodeConnections.passed_filter"
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 msgid "FarmFullNodeConnections.port"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:24
-msgid "FarmFullNodeConnections.time"
+#: src/components/farm/FarmLastAttemptedProof.tsx:30
+msgid "FarmFullNodeConnections.proofs_found"
 msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
+msgid "FarmFullNodeConnections.signage_point"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
+#~ msgid "FarmFullNodeConnections.time"
+#~ msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "FarmFullNodeConnections.title"
@@ -923,19 +939,19 @@ msgstr ""
 msgid "FarmFullNodeConnections.upDown"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:38
+#: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:44
+#: src/components/farm/FarmLastAttemptedProof.tsx:56
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:32
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.title"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:34
+#: src/components/farm/FarmLastAttemptedProof.tsx:46
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
