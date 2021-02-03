@@ -20,7 +20,7 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
-from src.util.ints import uint8, uint64
+from src.util.ints import uint8, uint64, uint32
 
 
 class HarvesterAPI:
@@ -189,9 +189,14 @@ class HarvesterAPI:
                 msg = Message("new_proof_of_space", response)
                 await peer.send_message(msg)
 
-        now = time.time()
+        now = uint64(int(time.time()))
         farming_info = FarmingInfo(
-            new_challenge.challenge_hash, new_challenge.sp_hash, now, passed, total_proofs_found, total
+            new_challenge.challenge_hash,
+            new_challenge.sp_hash,
+            now,
+            uint32(passed),
+            uint32(total_proofs_found),
+            uint32(total),
         )
         pass_msg = Message("farming_info", farming_info)
         await peer.send_message(pass_msg)

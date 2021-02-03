@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional
 
 from blspy import G2Element
 from src.types.proof_of_space import ProofOfSpace
