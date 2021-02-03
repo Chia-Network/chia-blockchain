@@ -14,12 +14,13 @@ from src.consensus.pot_iterations import (
 from src.harvester.harvester import Harvester
 from src.plotting.plot_tools import PlotInfo
 from src.protocols import harvester_protocol
+from src.protocols.farmer_protocol import FarmingInfo
 from src.server.outbound_message import Message
 from src.server.ws_connection import WSChiaConnection
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
-from src.util.ints import uint8, uint64
+from src.util.ints import uint8, uint64, uint32
 
 
 class HarvesterAPI:
@@ -164,16 +165,20 @@ class HarvesterAPI:
             return all_responses
 
         awaitables = []
+        passed = 0
+        total = 0
         for try_plot_filename, try_plot_info in self.harvester.provers.items():
             if try_plot_filename.exists():
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
+                total += 1
                 if ProofOfSpace.passes_plot_filter(
                     self.harvester.constants,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 ):
+                    passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
@@ -183,6 +188,18 @@ class HarvesterAPI:
                 total_proofs_found += 1
                 msg = Message("new_proof_of_space", response)
                 await peer.send_message(msg)
+
+        now = uint64(int(time.time()))
+        farming_info = FarmingInfo(
+            new_challenge.challenge_hash,
+            new_challenge.sp_hash,
+            now,
+            uint32(passed),
+            uint32(total_proofs_found),
+            uint32(total),
+        )
+        pass_msg = Message("farming_info", farming_info)
+        await peer.send_message(pass_msg)
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
             f" Found {total_proofs_found} proofs. Time: {time.time() - start:.5f} s. "
