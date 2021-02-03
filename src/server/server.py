@@ -2,7 +2,6 @@ import asyncio
 import logging
 import ssl
 import time
-from asyncio.sslproto import _SSLProtocolTransport
 from ipaddress import ip_address, IPv6Address
 from pathlib import Path
 from typing import Any, List, Dict, Callable, Optional, Set, Tuple
