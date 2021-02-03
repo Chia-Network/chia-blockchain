@@ -3,7 +3,6 @@ import asyncio
 from secrets import token_bytes
 import pytest
 from pytest import raises
-import logging
 
 from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.pot_iterations import is_overflow_sub_block
@@ -17,9 +16,6 @@ from src.util.ints import uint32, uint8, uint128
 from tests.setup_nodes import test_constants, bt
 from tests.core.fixtures import empty_blockchain
 from src.util.block_tools import get_signage_point
-
-
-log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -403,7 +399,6 @@ class TestFullNodeStore:
         blocks = bt.get_consecutive_blocks(60)
 
         for block in blocks[:5]:
-            log.info(f"Adding subblock {block.sub_block_height}, finished ss: {len(block.finished_sub_slots)}")
             await blockchain.receive_block(block)
             sb = blockchain.sub_block_record(block.header_hash)
 
@@ -426,9 +421,6 @@ class TestFullNodeStore:
             )
             store.add_to_future_ip(new_ip)
 
-            log.info(
-                f"Adding subblock {prev_block.sub_block_height}. finished ss: {len(prev_block.finished_sub_slots)}"
-            )
             await blockchain.receive_block(prev_block)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
             sb = blockchain.sub_block_record(prev_block.header_hash)
@@ -440,7 +432,6 @@ class TestFullNodeStore:
                 case_1 = True
                 assert res[2] == []
                 found_ips = []
-                log.info(f"finished SS: {block.finished_sub_slots}")
                 for ss in block.finished_sub_slots:
                     found_ips += store.new_finished_sub_slot(ss, blockchain, sb)
                 assert found_ips == [new_ip]

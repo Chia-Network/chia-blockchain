@@ -219,8 +219,6 @@ class FullNodeStore:
                 log.warning(f"Don't have challenge hash {rc_challenge}")
                 return None
             if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
-                log.info(f"Peak: {peak}")
-                log.info(f"Last ss: {self.finished_sub_slots[-1]}")
                 log.error(
                     f"Invalid iterations {peak.total_iters} {eos.reward_chain.end_of_slot_vdf.number_of_iterations} "
                     f"{total_iters}"
