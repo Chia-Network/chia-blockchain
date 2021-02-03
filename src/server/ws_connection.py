@@ -107,6 +107,8 @@ class WSChiaConnection:
             inbound_handshake = Handshake(**payload.msg.data)
             if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
+            if inbound_handshake.version != protocol_version:
+                raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             self.peer_node_id = inbound_handshake.node_id
             self.peer_server_port = int(inbound_handshake.server_port)
             self.connection_type = inbound_handshake.node_type
@@ -116,6 +118,8 @@ class WSChiaConnection:
             inbound_handshake = Handshake(**payload.msg.data)
             if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
+            if inbound_handshake.version != protocol_version:
+                raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             outbound_handshake = Message(
                 "handshake",
                 Handshake(
