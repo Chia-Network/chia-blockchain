@@ -109,13 +109,13 @@ class Farmer:
     def set_server(self, server):
         self.server = server
 
-    def state_changed(self, change: str, sp_hash: bytes32):
+    def state_changed(self, change: str, data: Dict[str, Any]):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change, sp_hash)
+            self.state_changed_callback(change, data)
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
-        self.state_changed("close_connection", bytes32([0] * 32))
+        self.state_changed("close_connection", {})
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]

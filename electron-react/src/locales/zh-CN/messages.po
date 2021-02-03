@@ -887,7 +887,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:17
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
 msgid "FarmFullNodeConnections.date"
 msgstr ""
 
@@ -895,7 +895,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.description"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
 msgid "FarmFullNodeConnections.height"
 msgstr ""
 
@@ -911,7 +911,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.port"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
 msgid "FarmFullNodeConnections.time"
 msgstr ""
 
@@ -923,19 +923,19 @@ msgstr ""
 msgid "FarmFullNodeConnections.upDown"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:37
+#: src/components/farm/FarmLastAttemptedProof.tsx:38
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:43
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:32
 msgid "FarmLastAttemptedProof.title"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:33
+#: src/components/farm/FarmLastAttemptedProof.tsx:34
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
@@ -1088,7 +1088,7 @@ msgstr "全节点状态"
 #~ msgid "HistoryCard.title"
 #~ msgstr "历史记录"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:38
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "LocaleToggle.helpToTranslate"
 msgstr "帮助翻译"
 
@@ -1120,11 +1120,11 @@ msgstr "有限费率"
 msgid "MainWalletList.title"
 msgstr "选择钱包类型"
 
-#: src/components/trading/ViewOffer.jsx:183
+#: src/components/trading/ViewOffer.jsx:41
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "拖放报价文件"
 
-#: src/components/trading/ViewOffer.jsx:173
+#: src/components/trading/ViewOffer.jsx:38
 msgid "OfferDropView.selectOffer"
 msgstr ""
 
@@ -1140,7 +1140,7 @@ msgstr ""
 #~ msgid "OfferRow.sell"
 #~ msgstr "出售"
 
-#: src/components/trading/ViewOffer.jsx:232
+#: src/components/trading/ViewOffer.jsx:85
 msgid "OfferView.accept"
 msgstr "接受"
 
@@ -1148,7 +1148,7 @@ msgstr "接受"
 msgid "OfferView.amount"
 msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:225
+#: src/components/trading/ViewOffer.jsx:78
 msgid "OfferView.cancel"
 msgstr "取消"
 
@@ -1164,7 +1164,7 @@ msgstr ""
 #~ msgid "OfferView.title"
 #~ msgstr "查看报价"
 
-#: src/components/trading/ViewOffer.jsx:218
+#: src/components/trading/ViewOffer.jsx:71
 msgid "OfferView.title2"
 msgstr ""
 
@@ -1320,12 +1320,16 @@ msgstr ""
 msgid "PlotHero.doYouHavePlot"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:56
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "PlotOverviewPlots.action"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+#: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "PlotOverviewPlots.description"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+msgid "PlotOverviewPlots.filename"
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:35
@@ -1352,15 +1356,15 @@ msgstr ""
 msgid "PlotOverviewPlots.size"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:53
+#: src/components/plot/overview/PlotOverviewPlots.tsx:58
 msgid "PlotOverviewPlots.status"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:66
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 msgid "PlotOverviewPlots.title"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:79
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr ""
 

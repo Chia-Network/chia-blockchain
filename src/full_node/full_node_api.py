@@ -166,11 +166,14 @@ class FullNodeAPI:
         ):
             return None
 
+        # Ignore if we have already added this transaction
+        if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
+            return None
+        cost_result, spend_name = await self.full_node.mempool_manager.pre_validate_spendbundle(tx.transaction)
         async with self.full_node.blockchain.lock:
-            # Ignore if we have already added this transaction
-            if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
-                return None
-            cost, status, error = await self.full_node.mempool_manager.add_spendbundle(tx.transaction)
+            cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
+                tx.transaction, cost_result, spend_name
+            )
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
@@ -801,7 +804,8 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
         # Lookup unfinished blocks
-        return await self.full_node.new_infusion_point_vdf(request)
+        async with self.full_node.timelord_lock:
+            return await self.full_node.new_infusion_point_vdf(request)
 
     @peer_required
     @api_request
@@ -993,8 +997,11 @@ class FullNodeAPI:
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
+            cost_result, spend_name = await self.full_node.mempool_manager.pre_validate_spendbundle(request.transaction)
             async with self.full_node.blockchain.lock:
-                cost, status, error = await self.full_node.mempool_manager.add_spendbundle(request.transaction)
+                cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
+                    request.transaction, cost_result, spend_name
+                )
                 if status == MempoolInclusionStatus.SUCCESS:
                     self.log.debug(f"Added transaction to mempool: {request.transaction.name()}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
