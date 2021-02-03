@@ -16,7 +16,7 @@ const cols = [
     field(row: Row) {
       return (
         <Tooltip title={row.challenge}>
-          <span>{row.sp.challenge_hash}</span>
+          <span>{row.signage_point.challenge_hash}</span>
         </Tooltip>
       );
     },
@@ -25,7 +25,7 @@ const cols = [
     ),
   },
   {
-    field: (row: Row) => row.sp.signage_point_index,
+    field: (row: Row) => row.signage_point.signage_point_index,
     title: <Trans id="FarmLatestBlockChallenges.index">Index</Trans>,
   }, /*
   {

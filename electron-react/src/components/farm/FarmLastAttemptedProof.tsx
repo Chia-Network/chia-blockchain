@@ -1,41 +1,49 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import moment from 'moment';
 import { Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
+import moment from 'moment';
 import type { Row } from '../core/components/Table/Table';
 import usePlots from '../../hooks/usePlots';
 import { RootState } from '../../modules/rootReducer';
 
 const cols = [
   {
-    field: 'height',
-    title: <Trans id="FarmFullNodeConnections.height">Height</Trans>,
+    field(row: Row) {
+      return row.challenge_hash;
+    },
+    title: <Trans id="FarmFullNodeConnections.challenge">Challenge</Trans>,
   },
   {
     field(row: Row) {
-      return moment(row.timestamp).format('L');
+      return `${row.passed_filter} / ${row.total_plots}`;
+    },
+    title: <Trans id="FarmFullNodeConnections.passed_filter">Plots Passed Filter</Trans>,
+  },
+  {
+    field(row: Row) {
+      return row.proofs;
+    },
+    title: <Trans id="FarmFullNodeConnections.proofs_found">Proofs Found</Trans>,
+  },
+  {
+    field(row: Row) {
+      return moment(row.timestamp * 1000).format('lll');
     },
     title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
-  },
-  {
-    field(row: Row) {
-      return moment(row.timestamp).format('LTS');
-    },
-    title: <Trans id="FarmFullNodeConnections.time">Time</Trans>,
   },
 ];
 
 export default function FarmLastAttemptedProof() {
   const { size } = usePlots();
 
-  const lastAttemtedProof = useSelector((state: RootState) => state.local_storage.lastAttepmtedProof ?? []);
-  const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 3);
+  const lastAttemtedProof = useSelector((state: RootState) => state.farming_state.farmer.last_farming_info ?? []);
+  const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 5);
   const isEmpty = !reducedLastAttemtedProof.length;
 
   return (
-    <Card 
+    <Card
       title={(
         <Trans id="FarmLastAttemptedProof.title">
           Last Attempted Proof
@@ -55,7 +63,7 @@ export default function FarmLastAttemptedProof() {
             <Trans id="FarmLastAttemptedProof.emptyDescription">
               None of your plots have passed the plot filter yet.
             </Trans>
-            
+
             {!!size && (
               <>
                 {' '}

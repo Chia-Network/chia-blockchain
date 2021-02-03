@@ -51,6 +51,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
+        ref: '0.1.0'
 
     - name: Link home directory
       run: |
