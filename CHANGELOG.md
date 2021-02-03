@@ -24,10 +24,13 @@ for setuptools_scm/PEP 440 reasons.
 - Sync store now tracks all connected peers and removes them as they get removed.
 - The Rate Limited Wallet has been ported to new consensus and updated Chialisp methods.
 - We are down to only one sub dependency that does not ship binary wheels for all four platforms. The only platform still impacted is ARM64 (generally Raspberry Pi) but that only means that you still need the minor build tools as outlined on the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Raspberry-Pi).
+- We upgraded to Electron 9.4.2 for the GUI.
 - We have upgraded to py-setproctitle 1.2.2. We now have binary wheels for setproctitle on all four platforms and make it a requirement in setup.py. It is run-time optional if you wish to disable it.
 
 ### Fixed
 
+- On the Farm paage of the GUI Latest Block Challenge is now populated. This shows you the actual challenge that came from the Timelord. Index is the signage point index in the current slot. There are 64 signage points every 10 minutes on average where 32 sub blocks can be won.
+- Last Attempted Proof is now fixed. This will show you the last time one of your plots passed the [plot filter](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it).
 - Plot filename is now back in the Plots table of the GUI.
 - There was a bug in adding a sub block to weight proofs and an issue in the weight proof index.
 - Over time the node would think that there were no peers attached with peak sub block heights higher than 0.
