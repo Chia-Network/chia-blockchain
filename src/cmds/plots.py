@@ -31,7 +31,7 @@ def help_message():
     print("-i [plotid] -m [memo] are available for debugging")
     print("chia plots check -n [challenges] -g [string] -l (checks plots)")
     print("  Default: check all plots in every directory with 30 challenges")
-    print("  -n: number of challenges; 0=show plot filenames only; can be used with -l")
+    print("  -n: number of challenges; 0 = skip opening plot files; can be used with -l")
     print("  -g: checks plots with file or directory name containing [string]")
     print("  -l: list plots with duplicate IDs")
     print("chia plots add -d [directory] (adds a directory of plots)")
