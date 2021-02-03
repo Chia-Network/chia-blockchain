@@ -612,8 +612,9 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
+        # create more blocks than constants.MAX_BLOCK_COUNT_PER_REQUEST (32)
         blocks = bt.get_consecutive_blocks(
-            30,
+            33,
             block_list_input=blocks,
             guarantee_block=True,
             farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
@@ -625,14 +626,14 @@ class TestFullNodeProtocol:
             wallet_receiver.get_new_puzzlehash(),
             list(blocks[-1].get_included_reward_coins())[0],
         )
-        blocks = bt.get_consecutive_blocks(
+        blocks_t = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
         )
 
-        for block in blocks:
+        for block in blocks_t:
             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 
-        peak_height = blocks[-1].sub_block_height
+        peak_height = blocks_t[-1].sub_block_height
 
         # Start >= End
         res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(4), uint32(4), False))
@@ -647,14 +648,15 @@ class TestFullNodeProtocol:
         )
         assert isinstance(res.data, fnp.RejectSubBlocks)
 
-        # Too many
-        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(0), uint32(peak_height), False))
+        # Try fetching more blocks than constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(0), uint32(33), False))
         assert res is None
 
         # Ask without transactions
         res = await full_node_1.request_sub_blocks(
             fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height), False)
         )
+
         assert len(res.data.sub_blocks) == 6
         for b in res.data.sub_blocks:
             assert b.transactions_generator is None
@@ -665,7 +667,7 @@ class TestFullNodeProtocol:
         )
         assert len(res.data.sub_blocks) == 6
         assert res.data.sub_blocks[-1].transactions_generator is not None
-        assert res.data.sub_blocks[-1] == blocks[-1]
+        assert std_hash(res.data.sub_blocks[-1]) == std_hash(blocks_t[-1])
 
     @pytest.mark.asyncio
     async def test_new_unfinished_sub_block(self, wallet_nodes):

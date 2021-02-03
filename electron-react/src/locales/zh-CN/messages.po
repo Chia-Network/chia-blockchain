@@ -883,11 +883,15 @@ msgstr ""
 msgid "FarmFullNodeConnections.actions"
 msgstr ""
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:13
+msgid "FarmFullNodeConnections.challenge"
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:17
+#: src/components/farm/FarmLastAttemptedProof.tsx:31
 msgid "FarmFullNodeConnections.date"
 msgstr ""
 
@@ -895,9 +899,9 @@ msgstr ""
 msgid "FarmFullNodeConnections.description"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
-msgid "FarmFullNodeConnections.height"
-msgstr ""
+#: src/components/farm/FarmLastAttemptedProof.tsx:12
+#~ msgid "FarmFullNodeConnections.height"
+#~ msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 msgid "FarmFullNodeConnections.hostName"
@@ -907,13 +911,25 @@ msgstr ""
 msgid "FarmFullNodeConnections.nodeId"
 msgstr ""
 
+#: src/components/farm/FarmLastAttemptedProof.tsx:19
+msgid "FarmFullNodeConnections.passed_filter"
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 msgid "FarmFullNodeConnections.port"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
-msgid "FarmFullNodeConnections.time"
+#: src/components/farm/FarmLastAttemptedProof.tsx:25
+msgid "FarmFullNodeConnections.proofs_found"
 msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:18
+#~ msgid "FarmFullNodeConnections.signage_point"
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
+#~ msgid "FarmFullNodeConnections.time"
+#~ msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "FarmFullNodeConnections.title"
@@ -923,19 +939,19 @@ msgstr ""
 msgid "FarmFullNodeConnections.upDown"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:37
+#: src/components/farm/FarmLastAttemptedProof.tsx:45
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:43
+#: src/components/farm/FarmLastAttemptedProof.tsx:51
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "FarmLastAttemptedProof.title"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:33
+#: src/components/farm/FarmLastAttemptedProof.tsx:41
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
@@ -1320,12 +1336,16 @@ msgstr ""
 msgid "PlotHero.doYouHavePlot"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:56
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "PlotOverviewPlots.action"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+#: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "PlotOverviewPlots.description"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+msgid "PlotOverviewPlots.filename"
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:35
@@ -1352,15 +1372,15 @@ msgstr ""
 msgid "PlotOverviewPlots.size"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:53
+#: src/components/plot/overview/PlotOverviewPlots.tsx:58
 msgid "PlotOverviewPlots.status"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:66
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 msgid "PlotOverviewPlots.title"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:79
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr ""
 
