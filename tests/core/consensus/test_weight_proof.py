@@ -278,20 +278,18 @@ class TestWeightProof:
     async def test_weight_proof_extend_multiple_ses(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        # delete last summary
         last_ses_height = sorted(summaries.keys())[-1]
         last_ses = summaries[last_ses_height]
         before_last_ses_height = sorted(summaries.keys())[-2]
         before_last_ses = summaries[before_last_ses_height]
-        del summaries[last_ses_height]
-        del summaries[before_last_ses_height]
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - 50].header_hash)
-        assert wp is not None
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof(wp)
-        assert valid
-        assert fork_point == 0
+        wpf_verify = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        for x in range(50, -1, -1):
+            wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - x].header_hash)
+            assert wp is not None
+            valid, fork_point = wpf_verify.validate_weight_proof(wp)
+            assert valid
+            assert fork_point == 0
         # extend proof with 100 blocks
         summaries[last_ses_height] = last_ses
         summaries[before_last_ses_height] = before_last_ses
@@ -301,22 +299,22 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
+    # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("path to db")
+        connection = await aiosqlite.connect("/Users/almog/Downloads/blockchain_v23.db")
         block_store: BlockStore = await BlockStore.create(connection)
-        sub_blocks, peak = await block_store.get_sub_block_records()
-        headers = await block_store.get_header_blocks_in_range(0, 100225)
+        sub_blocks = await block_store.get_sub_block_records_in_range(0, 65952)
+        headers = await block_store.get_header_blocks_in_range(0, 65952)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
-        peak = await block_store.get_full_blocks_at([100225])
+        peak = await block_store.get_full_blocks_at([65952])
         if len(sub_blocks) == 0:
             return None, None
 
         assert peak is not None
         peak_height = sub_blocks[peak[0].header_hash].sub_block_height
-
+        assert peak_height == 65952
         # Sets the other state variables (peak_height and height_to_hash)
         curr: SubBlockRecord = sub_blocks[peak[0].header_hash]
         while True:
@@ -330,11 +328,14 @@ class TestWeightProof:
         block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
 
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
-        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
+        wp = await wpf._create_proof_of_weight(peak[0].header_hash)
         valid, fork_point = wpf.validate_weight_proof(wp)
 
         await connection.close()
         assert valid
+        f = open("wp.txt", "a")
+        f.write(f"{wp}")
+        f.close()
 
 
 def get_size(obj, seen=None):
