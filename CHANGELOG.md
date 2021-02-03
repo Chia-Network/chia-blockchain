@@ -13,7 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 - We now use our own faster primality test based on Baillie-PSW. The new primality test is based on the 2020 paper ["Strengthening the Baillie-PSW primality test" by Robert Baillie, Andrew Fiori, Samuel S. Wagstaff Jr](https://arxiv.org/abs/2006.14425). The new test works approximately 20% faster than GMP library's mpz_probab_prime_p() function when generating random 1024-bit primes. This lowers the load on Timelords and speeds up VDF verifications in full node.
 - The GUI now checks for an an already running GUI and stops the second launch. Thank you for that PR to @dkackman !
 - Transactions are now validated in a separate process in full node.
-- `chia plots check -l` will list all duplicate plot IDs found on the machine. PR @eFishCent
+- `chia plots check -l` will list all duplicate plot IDs found on the machine. Thanks very much for this PR @eFishCent.
 
 ### Changed
 
@@ -30,7 +30,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
-- On the Farm paage of the GUI Latest Block Challenge is now populated. This shows you the actual challenge that came from the Timelord. Index is the signage point index in the current slot. There are 64 signage points every 10 minutes on average where 32 sub blocks can be won.
+- On the Farm page of the GUI Latest Block Challenge is now populated. This shows you the actual challenge that came from the Timelord. Index is the signage point index in the current slot. There are 64 signage points every 10 minutes on average where 32 sub blocks can be won.
 - Last Attempted Proof is now fixed. This will show you the last time one of your plots passed the [plot filter](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it).
 - Plot filename is now back in the Plots table of the GUI.
 - There was a bug in adding a sub block to weight proofs and an issue in the weight proof index.
