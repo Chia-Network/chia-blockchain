@@ -286,7 +286,7 @@ class TestWeightProof:
         before_last_ses = summaries[before_last_ses_height]
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wpf_verify = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        for x in range(50, -1, -1):
+        for x in range(10, -1, -1):
             wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - x].header_hash)
             assert wp is not None
             valid, fork_point = wpf_verify.validate_weight_proof(wp)

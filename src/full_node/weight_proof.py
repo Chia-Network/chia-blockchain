@@ -337,7 +337,7 @@ class WeightProofHandler:
             return None
 
         last_ses = summaries[-1]
-        self.log.info(f"last ses height {last_ses_sub_height}")
+        self.log.debug(f"last ses sub height {last_ses_sub_height}")
         # validate last ses_hash
         if last_ses.get_hash() != last_ses_hash:
             self.log.error(f"failed to validate ses hashes block height {last_ses_sub_height}")
