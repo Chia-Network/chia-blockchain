@@ -299,22 +299,24 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/Downloads/blockchain_v23.db")
+        connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
-        sub_blocks = await block_store.get_sub_block_records_in_range(0, 65952)
-        headers = await block_store.get_header_blocks_in_range(0, 65952)
+        peak = 30000
+        sub_blocks = await block_store.get_sub_block_records_in_range(0, peak)
+        headers = await block_store.get_header_blocks_in_range(0, peak)
+
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
-        peak = await block_store.get_full_blocks_at([65952])
+        peak = await block_store.get_full_blocks_at([peak])
         if len(sub_blocks) == 0:
             return None, None
 
         assert peak is not None
         peak_height = sub_blocks[peak[0].header_hash].sub_block_height
-        assert peak_height == 65952
+
         # Sets the other state variables (peak_height and height_to_hash)
         curr: SubBlockRecord = sub_blocks[peak[0].header_hash]
         while True:
@@ -328,14 +330,11 @@ class TestWeightProof:
         block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
 
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
-        wp = await wpf._create_proof_of_weight(peak[0].header_hash)
+        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
         valid, fork_point = wpf.validate_weight_proof(wp)
 
         await connection.close()
         assert valid
-        f = open("wp.txt", "a")
-        f.write(f"{wp}")
-        f.close()
 
 
 def get_size(obj, seen=None):
