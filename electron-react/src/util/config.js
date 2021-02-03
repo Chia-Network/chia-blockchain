@@ -24,13 +24,13 @@ function loadConfig() {
     const config_dir = path.join(os.homedir(), '.chia', version, 'config');
     const config = yaml.load(fs.readFileSync(path.join(config_dir, 'config.yaml'), 'utf8'));
 
-    self_hostname = typeof config.ui.daemon_host !== "undefined" ? config.ui.daemon_host : 'localhost';
-    const daemon_port = typeof config.ui.daemon_port !== "undefined" ? config.ui.daemon_port : 55400;
+    self_hostname = config.ui?.daemon_host ?? 'localhost'; // jshint ignore:line
+    const daemon_port = config.ui?.daemon_port ?? 55400; // jshint ignore:line
 
     // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
-    global.cert_path = path.join(config_dir, config.ui.ssl.crt);
-    global.key_path = path.join(config_dir, config.ui.ssl.key);
+    global.cert_path = path.join(config_dir, config.ui?.ssl?.crt ?? 'trusted.crt'); // jshint ignore:line
+    global.key_path = path.join(config_dir, config.ui?.ssl?.key ?? 'trusted.key'); // jshint ignore:line
   } catch (e) {
     console.log('Error loading config');
     console.log(e);    
