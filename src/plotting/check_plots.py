@@ -4,10 +4,9 @@ from collections import Counter
 from blspy import G1Element
 from src.util.keychain import Keychain
 from src.util.config import load_config
-from src.plotting.plot_tools import load_plots
+from src.plotting.plot_tools import load_plots, get_plot_filenames, find_duplicate_plot_IDs
 from src.util.hash import std_hash
 from src.wallet.derive_keys import master_sk_to_farmer_sk
-
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ def check_plots(args, root_path):
     if args.num is not None:
         num = args.num
         if num == 0:
-            log.warning("Only listing plot file names")
+            log.warning("Not opening plot files")
         else:
             if num < 5:
                 num = 5
@@ -31,7 +30,18 @@ def check_plots(args, root_path):
     else:
         match_str = None
     if args.list_duplicates:
-        log.warning("Checking for duplicate Plot IDs, this will take more time")
+        log.warning("Checking for duplicate Plot IDs")
+        log.info("Plot filenames expected to end with -[64 char plot ID].plot")
+
+    if args.list_duplicates:
+        plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config["harvester"])
+        all_filenames: List[Path] = []
+        for paths in plot_filenames.values():
+            all_filenames += paths
+        find_duplicate_plot_IDs(all_filenames)
+
+    if num == 0:
+        return
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
