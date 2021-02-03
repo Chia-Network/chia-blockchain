@@ -228,7 +228,7 @@ def find_duplicate_plot_IDs(all_filenames: List[Path] = []) -> None:
             else:
                 plot_IDs_set.add(plot_ID)
         else:
-            log.warning(f"{filename} does end with -[64 char plot ID].plot")
+            log.warning(f"{filename} does not end with -[64 char plot ID].plot")
 
     for plot_ID in duplicate_plot_IDs:
         log_message: str = plot_ID + " found in multiple files:\n"
