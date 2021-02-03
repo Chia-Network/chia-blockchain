@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { SyntheticEvent } from 'react';
 import styled from 'styled-components';
 import {
   Link as BaseLink,
@@ -28,8 +28,10 @@ export default function Link(props: Props) {
     ...props,
   };
 
-  function handleOpenExternal() {
+  function handleOpenExternal(event: SyntheticEvent) {
     if (href) {
+      event.preventDefault();
+      event.stopPropagation();
       openExternal(href);
     }
   }
