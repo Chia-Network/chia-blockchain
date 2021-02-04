@@ -1,6 +1,9 @@
 name: Lint and upload source distribution
 
-on: [pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
   upload_source_dist:

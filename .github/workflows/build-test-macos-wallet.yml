@@ -1,6 +1,9 @@
 name: Build and test MacOS Wallet
 
-on: [pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
   build:
@@ -51,7 +54,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.1.0'        
+        ref: '0.1.0'
 
     - name: Link home directory
       run: |
