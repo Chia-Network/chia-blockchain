@@ -6,7 +6,7 @@ import asyncio
 from typing import Dict, Optional, List
 
 from src.server.server import ssl_context_for_client
-from src.server.ssl_context import load_ssl_paths
+from src.server.ssl_context import private_ssl_ca_paths
 from src.util.byte_types import hexstr_to_bytes
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
@@ -31,8 +31,10 @@ class RpcClient:
         self = cls()
         self.url = f"https://{self_hostname}:{str(port)}/"
         self.session = aiohttp.ClientSession()
-        cert_path, key_path = load_ssl_paths(root_path, net_config)
-        self.ssl_context = ssl_context_for_client(cert_path, key_path, auth=True)
+        ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
+        crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+        key_path = root_path / net_config["daemon_ssl"]["private_key"]
+        self.ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         self.closing_task = None
         return self
 

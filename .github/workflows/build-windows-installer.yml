@@ -1,6 +1,9 @@
 name: Windows Installer on Windows 10 and Python 3.7
 
-on: [pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
   build:
@@ -65,9 +68,9 @@ jobs:
           destination-file: .\electron-react\win_code_sign_cert.p12
 
       - uses: actions/setup-python@v2
-        name: Install Python 3.8
+        name: Install Python 3.7
         with:
-          python-version: "3.8"
+          python-version: "3.7"
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
         env:
