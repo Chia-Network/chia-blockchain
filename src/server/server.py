@@ -383,12 +383,12 @@ class ChiaServer:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
-            if self.received_message_callback is not None:
-                await self.received_message_callback(connection_inc)
 
             async def api_call(payload: Payload, connection: WSChiaConnection):
                 start_time = time.time()
                 try:
+                    if self.received_message_callback is not None:
+                        await self.received_message_callback(connection)
                     full_message = payload.msg
                     connection.log.info(
                         f"<- {full_message.function} from peer {connection.peer_node_id} {connection.peer_host}"
