@@ -221,6 +221,10 @@ class TestFullNodeProtocol:
                 num_sub_slots_added,
             ),
         )
+        # Already have sub slot
+        await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(blocks[-1].finished_sub_slots[-3]), peer)
+        await asyncio.sleep(2)
+        assert incoming_queue.qsize() == 0
 
         # Add empty slots unsuccessful
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(blocks[-1].finished_sub_slots[-1]), peer)
