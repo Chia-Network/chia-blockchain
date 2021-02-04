@@ -54,7 +54,7 @@ from src.consensus.block_creation import (
     unfinished_block_to_full_block,
 )
 from src.util.block_cache import BlockCache
-from src.util.config import load_config
+from src.util.config import load_config, save_config
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
 from src.util.keychain import Keychain, bytes_to_mnemonic
@@ -142,6 +142,8 @@ class BlockTools:
         _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
         self._config = load_config(self.root_path, "config.yaml")
+        self._config["logging"]["log_stdout"] = True
+        save_config(self.root_path, "config.yaml", self._config)
 
     def init_plots(self, root_path):
         plot_dir = get_plot_dir()

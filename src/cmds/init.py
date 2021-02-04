@@ -4,6 +4,7 @@ import shutil
 
 from argparse import Namespace, ArgumentParser
 from typing import List, Dict, Any
+
 from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
@@ -12,7 +13,6 @@ from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.ints import uint32
 
 from src.util.config import (
-    config_path_for_filename,
     create_default_chia_config,
     load_config,
     save_config,
@@ -21,13 +21,17 @@ from src.util.config import (
 from src.util.path import mkdir
 import yaml
 
-from src.ssl.create_ssl import generate_selfsigned_cert
+from src.ssl.create_ssl import get_chia_ca_crt_key, generate_ca_signed_cert, make_ca_cert
 from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pool_sk
 from src.util.bech32m import encode_puzzle_hash
 
 
 def make_parser(parser: ArgumentParser):
     parser.set_defaults(function=init)
+
+
+private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
+public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
@@ -118,20 +122,18 @@ def migrate_from(
         return 0
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
-    not_found = []
+    copied = []
 
     def copy_files_rec(old_path: Path, new_path: Path):
         if old_path.is_file():
             print(f"{new_path}")
             mkdir(new_path.parent)
             shutil.copy(old_path, new_path)
+            copied.append(new_path)
         elif old_path.is_dir():
             for old_path_child in old_path.iterdir():
                 new_path_child = new_path / old_path_child.name
                 copy_files_rec(old_path_child, new_path_child)
-        else:
-            not_found.append(f)
-            print(f"{old_path} not found, skipping")
 
     for f in manifest:
         old_path = old_root / f
@@ -147,20 +149,77 @@ def migrate_from(
 
     save_config(new_root, "config.yaml", config)
 
-    if "config/trusted.key" in not_found or "config/trusted.key" in not_found:
-        initialize_ssl(new_root)
+    ssl_dir = new_root / "config/ssl"
+    if not ssl_dir.exists():
+        ssl_dir.mkdir()
+    ca_dir = ssl_dir / "ca"
+    if not ca_dir.exists():
+        ca_dir.mkdir()
+
+    private_ca_key_path = ca_dir / "private_ca.key"
+    private_ca_crt_path = ca_dir / "private_ca.crt"
+
+    if private_ca_key_path not in copied or private_ca_crt_path not in copied:
+        # Create private CA
+        make_ca_cert(private_ca_crt_path, private_ca_key_path)
+        # Create private certs for each node
+        ca_key = private_ca_key_path.read_bytes()
+        ca_crt = private_ca_crt_path.read_bytes()
+        generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
+    else:
+        # This is entered when user copied over private CA
+        ca_key = private_ca_key_path.read_bytes()
+        ca_crt = private_ca_crt_path.read_bytes()
+        generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
+
+    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
+    generate_ssl_for_nodes(ssl_dir, chia_ca_crt, chia_ca_key, False, overwrite=False)
 
     return 1
 
 
-def initialize_ssl(root_path: Path):
-    cert, key = generate_selfsigned_cert()
-    path_crt = config_path_for_filename(root_path, "trusted.crt")
-    path_key = config_path_for_filename(root_path, "trusted.key")
-    with open(path_crt, "w") as f:
-        f.write(cert)
-    with open(path_key, "w") as f:
-        f.write(key)
+def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private: bool, overwrite=True):
+    if private:
+        names = private_node_names
+    else:
+        names = public_node_names
+
+    for node_name in names:
+        node_dir = ssl_dir / node_name
+        if not node_dir.exists():
+            node_dir.mkdir()
+        if private:
+            prefix = "private"
+        else:
+            prefix = "public"
+        key_path = node_dir / f"{prefix}_{node_name}.key"
+        crt_path = node_dir / f"{prefix}_{node_name}.crt"
+        if key_path.exists() and crt_path.exists() and overwrite is False:
+            continue
+        generate_ca_signed_cert(ca_crt, ca_key, crt_path, key_path)
+
+
+def initialize_ssl(root: Path):
+    ssl_dir = root / "config/ssl"
+    if not ssl_dir.exists():
+        ssl_dir.mkdir()
+    ca_dir = ssl_dir / "ca"
+    if not ca_dir.exists():
+        ca_dir.mkdir()
+
+    private_ca_key_path = ca_dir / "private_ca.key"
+    private_ca_crt_path = ca_dir / "private_ca.crt"
+
+    make_ca_cert(private_ca_crt_path, private_ca_key_path)
+    ca_key = private_ca_key_path.read_bytes()
+    ca_crt = private_ca_crt_path.read_bytes()
+    generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
+    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
+    chia_ca_crt_path = ca_dir / "chia_ca.crt"
+    chia_ca_key_path = ca_dir / "chia_ca.key"
+    chia_ca_crt_path.write_bytes(chia_ca_crt)
+    chia_ca_key_path.write_bytes(chia_ca_key)
+    generate_ssl_for_nodes(ssl_dir, chia_ca_crt, chia_ca_key, False)
 
 
 def init(args: Namespace, parser: ArgumentParser):
