@@ -5,9 +5,22 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 daemon_port: 55400
-ssl:
-  crt: "trusted.crt"
-  key: "trusted.key"
+
+# public ssl ca is included in source code
+# Privet ssl ca is used for trusted connections between machines user owns
+private_ssl_ca:
+  crt: "config/ssl/ca/private_ca.crt"
+  key: "config/ssl/ca/private_ca.key"
+
+chia_ssl_ca:
+  crt: "config/ssl/ca/chia_ca.crt"
+  key: "config/ssl/ca/chia_ca.key"
+
+
+daemon_ssl:
+  private_crt: "config/ssl/daemon/private_daemon.crt"
+  private_key: "config/ssl/daemon/private_daemon.key"
+
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging
@@ -33,8 +46,16 @@ harvester:
   plot_directories: []
 
   ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
+    private_crt:  "config/ssl/harvester/private_harvester.crt"
+    private_key:  "config/ssl/harvester/private_harvester.key"
+
+  private_ssl_ca:
+    crt: "config/ssl/ca/private_ca.crt"
+    key: "config/ssl/ca/private_ca.key"
+
+  chia_ssl_ca:
+    crt: "config/ssl/ca/chia_ca.crt"
+    key: "config/ssl/ca/chia_ca.key"
 
 pool: {
   # Replace this with a real puzzle hash
@@ -67,9 +88,10 @@ farmer:
   logging: *logging
 
   ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
-
+    private_crt:  "config/ssl/farmer/private_farmer.crt"
+    private_key:  "config/ssl/farmer/private_farmer.key"
+    public_crt:  "config/ssl/farmer/public_farmer.crt"
+    public_key:  "config/ssl/farmer/public_farmer.key"
 
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
@@ -120,8 +142,10 @@ timelord:
   sanitizer_mode: False
 
   ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
+    private_crt:  "config/ssl/timelord/private_timelord.crt"
+    private_key:  "config/ssl/timelord/private_timelord.key"
+    public_crt:  "config/ssl/timelord/public_timelord.crt"
+    public_key:  "config/ssl/timelord/public_timelord.key"
 
 full_node:
   # The full node server (if run) will run on this port
@@ -179,8 +203,10 @@ full_node:
   logging: *logging
 
   ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
+    private_crt:  "config/ssl/full_node/private_full_node.crt"
+    private_key:  "config/ssl/full_node/private_full_node.key"
+    public_crt:  "config/ssl/full_node/public_full_node.crt"
+    public_key:  "config/ssl/full_node/public_full_node.key"
 
 ui:
    # The ui node server (if run) will run on this port
@@ -203,8 +229,8 @@ introducer:
   logging: *logging
 
   ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
+    public_crt:  "config/ssl/full_node/public_full_node.crt"
+    public_key:  "config/ssl/full_node/public_full_node.key"
 
 wallet:
   port: 8449
@@ -239,5 +265,7 @@ wallet:
     port: 58444
 
   ssl:
-    crt: "trusted.crt"
-    key: "trusted.key"
+    private_crt:  "config/ssl/wallet/private_wallet.crt"
+    private_key:  "config/ssl/wallet/private_wallet.key"
+    public_crt:  "config/ssl/wallet/public_wallet.crt"
+    public_key:  "config/ssl/wallet/public_wallet.key"

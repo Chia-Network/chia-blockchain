@@ -9,7 +9,6 @@ import traceback
 
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_server
-from src.server.ssl_context import load_ssl_paths
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
@@ -34,6 +33,11 @@ class RpcServer:
         self.service_name = service_name
         self.root_path = root_path
         self.net_config = net_config
+        self.crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+        self.key_path = root_path / net_config["daemon_ssl"]["private_key"]
+        self.ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
+        self.ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+        self.ssl_context = ssl_context_for_server(self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path)
 
     async def stop(self):
         self.shut_down = True
@@ -263,13 +267,12 @@ class RpcServer:
                 if self.shut_down:
                     break
                 session = aiohttp.ClientSession()
-                cert_path, key_path = load_ssl_paths(self.root_path, self.net_config)
-                ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
+
                 async with session.ws_connect(
                     f"wss://{self_hostname}:{daemon_port}",
                     autoclose=False,
                     autoping=True,
-                    ssl_context=ssl_context,
+                    ssl_context=self.ssl_context,
                     max_msg_size=50 * 1024 * 1024,
                 ) as ws:
                     self.websocket = ws
@@ -302,8 +305,6 @@ async def start_rpc_server(
     query the node.
     """
     app = aiohttp.web.Application()
-    cert_path, key_path = load_ssl_paths(root_path, net_config)
-    ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
     rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
@@ -330,7 +331,7 @@ async def start_rpc_server(
         daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=ssl_context)
+    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
     await site.start()
 
     async def cleanup():

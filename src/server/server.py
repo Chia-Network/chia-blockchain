@@ -4,43 +4,47 @@ import ssl
 import time
 from ipaddress import ip_address, IPv6Address
 from pathlib import Path
-from typing import Any, List, Dict, Callable, Optional, Set
+from typing import Any, List, Dict, Callable, Optional, Set, Tuple
 
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
 from aiohttp import web, ClientTimeout, client_exceptions, ClientSession
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
-from src.server.ssl_context import load_ssl_paths
+from src.server.ssl_context import private_ssl_paths, public_ssl_paths
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util.errors import ProtocolError, Err
 from src.util.ints import uint16
-from src.util.network import create_node_id
 from src.protocols.shared_protocol import protocol_version
 import traceback
 
 
 def ssl_context_for_server(
-    private_cert_path: Path, private_key_path: Path, require_cert: bool = False
+    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
 ) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
-    ssl_context.load_verify_locations(str(private_cert_path))
-    ssl_context.verify_mode = ssl.CERT_REQUIRED if require_cert else ssl.CERT_NONE
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
 
 
-def ssl_context_for_client(private_cert_path: Path, private_key_path: Path, auth: bool) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
+def ssl_context_for_client(
+    ca_cert: Path,
+    ca_key: Path,
+    private_cert_path: Path,
+    private_key_path: Path,
+) -> Optional[ssl.SSLContext]:
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context.check_hostname = False
     ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
-    if auth:
-        ssl_context.verify_mode = ssl.CERT_REQUIRED
-        ssl_context.load_verify_locations(str(private_cert_path))
-    else:
-        ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
     return ssl_context
 
 
@@ -55,9 +59,12 @@ class ChiaServer:
         network_id: str,
         root_path: Path,
         config: Dict,
+        private_ca_crt_key: Tuple[Path, Path],
+        chia_ca_crt_key: Tuple[Path, Path],
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
+        logging.basicConfig(level=logging.DEBUG)
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
@@ -85,7 +92,6 @@ class ChiaServer:
             self.log = logging.getLogger(__name__)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
-        self.node_id = create_node_id()
         self.api = api
         self.node = node
         self.root_path = root_path
@@ -97,12 +103,17 @@ class ChiaServer:
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
-        cert_path, key_path = load_ssl_paths(root_path, config)
+        if self._local_type is not NodeType.INTRODUCER:
+            self._private_cert_path, self._private_key_path = private_ssl_paths(root_path, config)
+        if self._local_type is not NodeType.HARVESTER:
+            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(root_path, config)
+        else:
+            self.p2p_crt_path, self.p2p_key_path = None, None
+        self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
+        self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
+        self.node_id = self.my_id()
 
-        self._private_cert_path = cert_path
-        self._private_key_path = key_path
-
-        self.incoming_task: asyncio.Task = asyncio.create_task(self.incoming_api_task())
+        self.incoming_task = asyncio.create_task(self.incoming_api_task())
         self.gc_task: asyncio.Task = asyncio.create_task(self.garbage_collect_connections_task())
         self.app: Optional[Application] = None
         self.runner: Optional[web.AppRunner] = None
@@ -112,6 +123,16 @@ class ChiaServer:
         self.site_shutdown_task: Optional[asyncio.Task] = None
         self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
+
+    def my_id(self):
+        """ If node has public cert use that one for id, if not use private."""
+        if self.p2p_crt_path is not None:
+            pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
+        else:
+            pem_cert = x509.load_pem_x509_certificate(self._private_cert_path.read_bytes(), default_backend())
+        der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
+        der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
+        return bytes32(der_cert.fingerprint(hashes.SHA256()))
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
@@ -133,30 +154,46 @@ class ChiaServer:
                 await connection.close()
 
     async def start_server(self, on_connect: Callable = None):
+        if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
+            return
+
         self.app = web.Application()
         self.on_connect = on_connect
         routes = [
             web.get("/ws", self.incoming_connection),
         ]
         self.app.add_routes(routes)
-        self.runner = web.AppRunner(self.app, access_log=None)
+        self.runner = web.AppRunner(self.app, access_log=None, logger=self.log)
         await self.runner.setup()
-        require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
-        ssl_context = ssl_context_for_server(self._private_cert_path, self._private_key_path, require_cert)
-        if self._local_type not in [NodeType.WALLET, NodeType.HARVESTER]:
-            self.site = web.TCPSite(
-                self.runner,
-                port=self._port,
-                shutdown_timeout=3,
-                ssl_context=ssl_context,
+        authenticate = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
+        if authenticate:
+            ssl_context = ssl_context_for_server(
+                self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
             )
-            await self.site.start()
-            self.log.info(f"Started listening on port: {self._port}")
+        else:
+            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
+            ssl_context = ssl_context_for_server(
+                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+            )
+
+        self.site = web.TCPSite(
+            self.runner,
+            port=self._port,
+            shutdown_timeout=3,
+            ssl_context=ssl_context,
+        )
+        await self.site.start()
+        self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
         ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
         await ws.prepare(request)
         close_event = asyncio.Event()
+        cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
+        der_cert = x509.load_der_x509_certificate(cert_bytes)
+        peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
+        if peer_id == self.node_id:
+            return ws
 
         try:
             connection = WSChiaConnection(
@@ -169,12 +206,12 @@ class ChiaServer:
                 request.remote,
                 self.incoming_messages,
                 self.connection_closed,
+                peer_id,
                 close_event,
             )
             handshake = await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
-                self.node_id,
                 self._port,
                 self._local_type,
             )
@@ -242,7 +279,14 @@ class ChiaServer:
         if self.is_duplicate_or_self_connection(target_node):
             return False
 
-        ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
+        if auth:
+            ssl_context = ssl_context_for_client(
+                self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
+            )
+        else:
+            ssl_context = ssl_context_for_client(
+                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
+            )
         session = None
         try:
             timeout = ClientTimeout(total=10)
@@ -265,6 +309,12 @@ class ChiaServer:
                 await session.close()
                 return False
             if ws is not None:
+                assert ws._response.connection is not None and ws._response.connection.transport is not None
+                transport = ws._response.connection.transport  # type: ignore
+                cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
+                der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+                peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
+                assert peer_id != self.node_id
                 connection = WSChiaConnection(
                     self._local_type,
                     ws,
@@ -275,12 +325,12 @@ class ChiaServer:
                     target_node.host,
                     self.incoming_messages,
                     self.connection_closed,
+                    peer_id,
                     session=session,
                 )
                 handshake = await connection.perform_handshake(
                     self._network_id,
                     protocol_version,
-                    self.node_id,
                     self._port,
                     self._local_type,
                 )

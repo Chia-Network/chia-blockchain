@@ -17,7 +17,6 @@ Handshake when establishing a connection between two servers.
 class Handshake:
     network_id: str
     version: str
-    node_id: bytes32
     server_port: uint16
     node_type: NodeType
 
