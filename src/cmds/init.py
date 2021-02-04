@@ -5,6 +5,7 @@ import shutil
 from argparse import Namespace, ArgumentParser
 from typing import List, Dict, Any
 
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
@@ -36,12 +37,19 @@ public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
     for k, v in default.items():
-        if isinstance(v, dict) and k in updated:
+        ignore = False
+        if k in do_not_migrate_keys:
+            do_not_data = do_not_migrate_keys[k]
+            if isinstance(do_not_data, dict):
+                ignore = False
+            else:
+                ignore = True
+        if isinstance(v, dict) and k in updated and ignore is False:
             # If there is an intermediate key with empty string value, do not migrate all descendants
             if do_not_migrate_keys.get(k, None) == "":
                 do_not_migrate_keys[k] = v
             dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))
-        elif k not in updated or k in do_not_migrate_keys:
+        elif k not in updated or ignore is True:
             updated[k] = v
 
 
@@ -158,6 +166,11 @@ def migrate_from(
 
     private_ca_key_path = ca_dir / "private_ca.key"
     private_ca_crt_path = ca_dir / "private_ca.crt"
+    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
+    chia_ca_crt_path = ca_dir / "chia_ca.crt"
+    chia_ca_key_path = ca_dir / "chia_ca.key"
+    chia_ca_crt_path.write_bytes(chia_ca_crt)
+    chia_ca_key_path.write_bytes(chia_ca_key)
 
     if private_ca_key_path not in copied or private_ca_crt_path not in copied:
         # Create private CA
@@ -308,11 +321,19 @@ def chia_init(root_path: Path):
         "max_inbound_wallet",
         "max_inbound_farmer",
         "max_inbound_timelord",
+        "ssl.crt",
+        "ssl.key",
+        "harvester.ssl",
+        "farmer.ssl",
+        "timelord.ssl",
+        "full_node.ssl",
+        "introducer.ssl",
+        "wallet.ssl",
     ]
 
     # These are the files that will be migrated
     MANIFEST: List[str] = [
-        "config",
+        "config/config.yaml",
         "db/blockchain_v23.db",
         "wallet",
     ]
@@ -335,3 +356,7 @@ def chia_init(root_path: Path):
         print("To see your keys, run 'chia keys show'")
 
     return 0
+
+
+if __name__ == "__main__":
+    chia_init(DEFAULT_ROOT_PATH)
