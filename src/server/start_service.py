@@ -6,6 +6,8 @@ import signal
 from sys import platform
 from typing import Any, List, Optional, Tuple, Callable
 
+from src.server.ssl_context import private_ssl_ca_paths, chia_ssl_ca_paths
+
 try:
     import uvloop
 except ImportError:
@@ -64,7 +66,8 @@ class Service:
         initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
-
+        private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
+        chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
         self._server = ChiaServer(
             advertised_port,
             node,
@@ -74,6 +77,8 @@ class Service:
             network_id,
             root_path,
             service_config,
+            (private_ca_crt, private_ca_key),
+            (chia_ca_crt, chia_ca_key),
             name=f"{service_name}_server",
         )
         f = getattr(node, "set_server", None)

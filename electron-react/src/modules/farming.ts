@@ -1,6 +1,6 @@
 import { service_farmer, service_harvester } from '../util/service_names';
 import type Plot from '../types/Plot';
-import type Challenge from '../types/Challenge';
+import type FarmingInfo from '../types/FarmingInfo';
 import type SignagePoint from '../types/SignagePoint';
 import type ProofsOfSpace from '../types/ProofsOfSpace';
 
@@ -12,7 +12,7 @@ type SignagePointAndProofsOfSpace = {
 type FarmingState = {
   farmer: {
     signage_points: SignagePointAndProofsOfSpace[];
-    last_attempted_proofs: Challenge[];
+    last_farming_info: FarmingInfo[];
     connections: {
       bytes_read: number;
       bytes_written: number;
@@ -39,7 +39,7 @@ type FarmingState = {
 const initialState: FarmingState = {
   farmer: {
     signage_points: [],
-    last_attempted_proofs: [],
+    last_farming_info: [],
     connections: [],
     open_connection_error: '',
   },
@@ -65,17 +65,16 @@ export default function farmingReducer(
       const { command } = message;
 
       // Farmer API
-      if (command === 'proof') {
-        const last_attempted_proofs = [
-          data.proof,
-          ...state.farmer.last_attempted_proofs,
+      if (command === 'new_farming_info') {
+        const last_farming_info = [
+          data.farming_info,
+          ...state.farmer.last_farming_info,
         ];
-
         return {
           ...state,
           farmer: {
             ...state.farmer,
-            last_attempted_proofs,
+            last_farming_info,
           },
         };
       }

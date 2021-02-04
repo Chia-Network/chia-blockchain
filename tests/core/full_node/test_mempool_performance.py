@@ -1,4 +1,7 @@
 # flake8: noqa: F811, F401
+"""
+Commenting out until clvm_rs is in.
+
 import asyncio
 import time
 
@@ -70,10 +73,11 @@ class XTestMempoolPerformance:
             await con.close()
 
         # TODO: fill up the mempool with many TX
-        # blocks = bt.get_consecutive_blocks(3, blocks)
-        # await full_node_api_1.full_node.respond_sub_block(full_node_protocol.respondsubblock(blocks[-3]))
-        #
-        # for block in blocks[-2:]:
-        #     start_t_2 = time.time()
-        #     await full_node_api_1.full_node.respond_sub_block(full_node_protocol.respondsubblock(block))
-        #     assert time.time() - start_t_2 < 1
+        blocks = bt.get_consecutive_blocks(3, blocks)
+        await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[-3]))
+
+        for block in blocks[-2:]:
+            start_t_2 = time.time()
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            assert time.time() - start_t_2 < 1
+"""

@@ -1,13 +1,14 @@
+from typing import List, Dict
+from pathlib import Path
 import logging
 from chiapos import Verifier
 from collections import Counter
 from blspy import G1Element
 from src.util.keychain import Keychain
 from src.util.config import load_config
-from src.plotting.plot_tools import load_plots
+from src.plotting.plot_tools import load_plots, get_plot_filenames, find_duplicate_plot_IDs
 from src.util.hash import std_hash
 from src.wallet.derive_keys import master_sk_to_farmer_sk
-
 
 log = logging.getLogger(__name__)
 
@@ -16,17 +17,33 @@ def check_plots(args, root_path):
     config = load_config(root_path, "config.yaml")
     if args.num is not None:
         num = args.num
-        if num < 5:
-            num = 5
-            log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
-        if num < 30:
-            log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
+        if num == 0:
+            log.warning("Not opening plot files")
+        else:
+            if num < 5:
+                num = 5
+                log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
+            if num < 30:
+                log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
     else:
         num = 30
     if args.grep_string is not None:
         match_str = args.grep_string
     else:
         match_str = None
+    if args.list_duplicates:
+        log.warning("Checking for duplicate Plot IDs")
+        log.info("Plot filenames expected to end with -[64 char plot ID].plot")
+
+    if args.list_duplicates:
+        plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config["harvester"])
+        all_filenames: List[Path] = []
+        for paths in plot_filenames.values():
+            all_filenames += paths
+        find_duplicate_plot_IDs(all_filenames)
+
+    if num == 0:
+        return
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")

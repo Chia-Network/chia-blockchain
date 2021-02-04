@@ -42,6 +42,7 @@ class WSChiaConnection:
         peer_host,
         incoming_queue,
         close_callback: Callable,
+        peer_id,
         close_event=None,
         session=None,
     ):
@@ -59,7 +60,7 @@ class WSChiaConnection:
         connection_port = peername[1]
         self.peer_port = connection_port
         self.peer_server_port: Optional[uint16] = None
-        self.peer_node_id = None
+        self.peer_node_id = peer_id
 
         self.log = log
 
@@ -89,14 +90,13 @@ class WSChiaConnection:
         self.closed = False
         self.connection_type = None
 
-    async def perform_handshake(self, network_id, protocol_version, node_id, server_port, local_type):
+    async def perform_handshake(self, network_id, protocol_version, server_port, local_type):
         if self.is_outbound:
             outbound_handshake = Message(
                 "handshake",
                 Handshake(
                     network_id,
                     protocol_version,
-                    node_id,
                     uint16(server_port),
                     local_type,
                 ),
@@ -107,7 +107,8 @@ class WSChiaConnection:
             inbound_handshake = Handshake(**payload.msg.data)
             if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            self.peer_node_id = inbound_handshake.node_id
+            if inbound_handshake.version != protocol_version:
+                raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             self.peer_server_port = int(inbound_handshake.server_port)
             self.connection_type = inbound_handshake.node_type
 
@@ -116,24 +117,21 @@ class WSChiaConnection:
             inbound_handshake = Handshake(**payload.msg.data)
             if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
+            if inbound_handshake.version != protocol_version:
+                raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             outbound_handshake = Message(
                 "handshake",
                 Handshake(
                     network_id,
                     protocol_version,
-                    node_id,
                     uint16(server_port),
                     local_type,
                 ),
             )
             payload = Payload(outbound_handshake, None)
             await self._send_message(payload)
-            self.peer_node_id = inbound_handshake.node_id
             self.peer_server_port = int(inbound_handshake.server_port)
             self.connection_type = inbound_handshake.node_type
-
-        if self.peer_node_id == node_id:
-            raise ProtocolError(Err.SELF_CONNECTION)
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())

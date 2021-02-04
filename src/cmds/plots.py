@@ -29,9 +29,11 @@ def help_message():
     print("-e disables bitfield plotting")
     print("-x skips adding [final dir] to harvester for farming")
     print("-i [plotid] -m [memo] are available for debugging")
-    print("chia plots check -n [num challenges] -g [string] (checks plots)")
-    print("  Default: check all plots in every directory")
+    print("chia plots check -n [challenges] -g [string] -l (checks plots)")
+    print("  Default: check all plots in every directory with 30 challenges")
+    print("  -n: number of challenges; 0 = skip opening plot files; can be used with -l")
     print("  -g: checks plots with file or directory name containing [string]")
+    print("  -l: list plots with duplicate IDs")
     print("chia plots add -d [directory] (adds a directory of plots)")
     print("chia plots remove -d [directory] (removes a directory of plots from config)")
     print("chia plots show (shows the directory of current plots)")
@@ -112,6 +114,13 @@ def make_parser(parser):
         "-x",
         "--exclude_final_dir",
         help="Skips adding [final dir] to harvester for farming",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "-l",
+        "--list_duplicates",
+        help="List plots with duplicate IDs",
         default=False,
         action="store_true",
     )
