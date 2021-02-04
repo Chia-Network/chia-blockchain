@@ -26,9 +26,25 @@ from src.ssl.create_ssl import get_chia_ca_crt_key, generate_ca_signed_cert, mak
 from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pool_sk
 from src.util.bech32m import encode_puzzle_hash
 
+def help_message():
+    print("usage: chia init")
+    print(
+        """
+        chia init (migrate previous version configuration to current)
+        chia init -c (creates new SSL certificates signed by your private CA)
+        """
+    )
 
 def make_parser(parser: ArgumentParser):
+    parser.add_argument(
+        "-c",
+        "--create_certs",
+        help="Create new SSL certificates based on CA",
+        default=False,
+        action="store_true",
+    )
     parser.set_defaults(function=init)
+    parser.print_help = lambda self=parser: help_message()
 
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
@@ -236,7 +252,10 @@ def initialize_ssl(root: Path):
 
 
 def init(args: Namespace, parser: ArgumentParser):
-    return chia_init(args.root_path)
+    if args.create_certs:
+        print(f"Creating new SSL certificates signed by your private CA in {args.root_path}")
+    else:
+        return chia_init(args.root_path)
 
 
 def chiaMinorReleaseNumber():
