@@ -9,12 +9,17 @@ import logging
 from typing import Dict, Tuple
 from secrets import token_bytes
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
+from src.ssl.create_ssl import generate_ca_signed_cert
 from src.types.full_block import FullBlock
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
@@ -54,7 +59,17 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     incoming_queue: asyncio.Queue = asyncio.Queue()
-    ssl_context = ssl_context_for_client(server._private_cert_path, server._private_key_path, False)
+    dummy_crt_path = server._private_key_path.parent / "dummy.crt"
+    dummy_key_path = server._private_key_path.parent / "dummy.key"
+    generate_ca_signed_cert(
+        server.chia_ca_crt_path.read_bytes(), server.chia_ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path
+    )
+    ssl_context = ssl_context_for_client(
+        server.chia_ca_crt_path, server.chia_ca_key_path, dummy_crt_path, dummy_key_path
+    )
+    pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
+    der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
+    peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
     url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
@@ -67,13 +82,11 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
         self_hostname,
         incoming_queue,
         lambda x: x,
+        peer_id,
     )
-    node_id = std_hash(b"123")
-    handshake = await wsc.perform_handshake(
-        server._network_id, protocol_version, node_id, dummy_port, NodeType.FULL_NODE
-    )
+    handshake = await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
     assert handshake is True
-    return incoming_queue, node_id
+    return incoming_queue, peer_id
 
 
 async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer) -> WSChiaConnection:

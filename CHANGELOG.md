@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## [1.0beta24] aka Beta 1.24 - 2021-02-05
 
 ### Added
 
@@ -39,6 +39,10 @@ for setuptools_scm/PEP 440 reasons.
 - An off by one issue could cause syncing to ask for 1 sub block when it should ask for e.g. 32.
 - Short sync and backtrack sync both had various issues.
 - There was an edge case in bip158 handling.
+
+### Known issues
+
+- There is a remaining sync disconnect issue where your synced node will stop hearing responses from the network even though it still gets a few peaks and then stalls. Restarting node should let you quickly short sync back to the blockchain tip.
 
 ## [1.0beta23] aka Beta 1.23 - 2021-01-26
 
