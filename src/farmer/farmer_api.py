@@ -230,7 +230,7 @@ class FarmerAPI:
 
     @api_request
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
-        message = harvester_protocol.NewSignagePoint(
+        message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,
             new_signage_point.sub_slot_iters,

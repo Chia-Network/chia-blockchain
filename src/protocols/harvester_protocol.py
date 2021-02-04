@@ -22,7 +22,7 @@ class HarvesterHandshake(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class NewSignagePoint(Streamable):
+class NewSignagePointHarvester(Streamable):
     challenge_hash: bytes32
     difficulty: uint64
     sub_slot_iters: uint64
