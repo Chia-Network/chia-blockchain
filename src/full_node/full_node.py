@@ -1187,6 +1187,11 @@ class FullNode:
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Tuple[Optional[Message], bool]:
 
+        fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
+        if fetched_ss is not None:
+            # Already have the sub-slot
+            return None, True
+
         async with self.timelord_lock:
             fetched_ss = self.full_node_store.get_sub_slot(
                 request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
