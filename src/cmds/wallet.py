@@ -28,7 +28,7 @@ async def print_balances(wallet_client):
         wallet_id = summary["id"]
         balances = await wallet_client.get_wallet_balance(wallet_id)
         typ = WalletType(int(summary["type"])).name
-        if "name" in summary:
+        if typ != "STANDARD_WALLET":
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
             print(f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}")
             print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
