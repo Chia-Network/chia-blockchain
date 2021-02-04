@@ -308,11 +308,25 @@ def chia_init(root_path: Path):
         "max_inbound_wallet",
         "max_inbound_farmer",
         "max_inbound_timelord",
+        "ssl.crt",
+        "ssl.key",
+        "harvester.ssl.cert",
+        "harvester.ssl.key",
+        "farmer.ssl.cert",
+        "farmer.ssl.key",
+        "timelord.ssl.cert",
+        "timelord.ssl.key",
+        "full_node.ssl.cert",
+        "full_node.ssl.key",
+        "introducer.ssl.cert",
+        "introducer.ssl.key",
+        "wallet.ssl.cert",
+        "wallet.ssl.key",
     ]
 
     # These are the files that will be migrated
     MANIFEST: List[str] = [
-        "config",
+        "config/config.yaml",
         "db/blockchain_v23.db",
         "wallet",
     ]
