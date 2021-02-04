@@ -1,9 +1,6 @@
 name: Build and test Ubuntu Wallet
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build:
