@@ -453,56 +453,56 @@ msgstr "Create Transaction"
 #~ msgid "ColouredTransactionTable.type"
 #~ msgstr "Type"
 
-#: src/components/fullNode/FullNodeConnections.jsx:193
+#: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connections.connect"
 msgstr "Connect"
 
-#: src/components/fullNode/FullNodeConnections.jsx:169
+#: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "Connect to other peers"
 
 #: src/components/fullNode/FullNodeConnections.jsx:115
-msgid "Connections.connected"
-msgstr "Connected"
+#~ msgid "Connections.connected"
+#~ msgstr "Connected"
 
-#: src/components/fullNode/FullNodeConnections.jsx:106
+#: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connections.connectionType"
 msgstr "Connection type"
 
-#: src/components/fullNode/FullNodeConnections.jsx:124
+#: src/components/fullNode/FullNodeConnections.jsx:110
 msgid "Connections.delete"
 msgstr "Delete"
 
-#: src/components/fullNode/FullNodeConnections.jsx:97
+#: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "Connections.ipAddress"
 msgstr "IP address"
 
-#: src/components/fullNode/FullNodeConnections.jsx:176
+#: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "Connections.ipAddressHost"
 msgstr "IP address / host"
 
 #: src/components/fullNode/FullNodeConnections.jsx:120
-msgid "Connections.lastMessage"
-msgstr "Last message"
+#~ msgid "Connections.lastMessage"
+#~ msgstr "Last message"
 
-#: src/components/fullNode/FullNodeConnections.jsx:94
+#: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Connections.nodeId"
 msgstr "Node ID"
 
-#: src/components/fullNode/FullNodeConnections.jsx:100
-#: src/components/fullNode/FullNodeConnections.jsx:182
+#: src/components/fullNode/FullNodeConnections.jsx:96
+#: src/components/fullNode/FullNodeConnections.jsx:168
 msgid "Connections.port"
 msgstr "Port"
 
-#: src/components/fullNode/FullNodeConnections.jsx:111
+#: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Connections.sbHeight"
 msgstr "SB Height"
 
-#: src/components/fullNode/FullNodeConnections.jsx:82
+#: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections.title"
 msgstr "Connections"
 
-#: src/components/fullNode/FullNodeConnections.jsx:103
+#: src/components/fullNode/FullNodeConnections.jsx:99
 msgid "Connections.upDown"
 msgstr "MiB Up/Down"
 

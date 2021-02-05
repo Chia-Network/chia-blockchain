@@ -453,56 +453,56 @@ msgstr "Vytvoriť transakciu"
 #~ msgid "ColouredTransactionTable.type"
 #~ msgstr "Typ"
 
-#: src/components/fullNode/FullNodeConnections.jsx:193
+#: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connections.connect"
 msgstr "Pripojiť"
 
-#: src/components/fullNode/FullNodeConnections.jsx:169
+#: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "Pripojiť k iným uzlom"
 
 #: src/components/fullNode/FullNodeConnections.jsx:115
-msgid "Connections.connected"
-msgstr "Pripojené"
+#~ msgid "Connections.connected"
+#~ msgstr "Pripojené"
 
-#: src/components/fullNode/FullNodeConnections.jsx:106
+#: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connections.connectionType"
 msgstr "Typ pripojenia"
 
-#: src/components/fullNode/FullNodeConnections.jsx:124
+#: src/components/fullNode/FullNodeConnections.jsx:110
 msgid "Connections.delete"
 msgstr "Zmazať"
 
-#: src/components/fullNode/FullNodeConnections.jsx:97
+#: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "Connections.ipAddress"
 msgstr "IP Adresa"
 
-#: src/components/fullNode/FullNodeConnections.jsx:176
+#: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "Connections.ipAddressHost"
 msgstr "IP Adresa / host"
 
 #: src/components/fullNode/FullNodeConnections.jsx:120
-msgid "Connections.lastMessage"
-msgstr "Posledná správa"
+#~ msgid "Connections.lastMessage"
+#~ msgstr "Posledná správa"
 
-#: src/components/fullNode/FullNodeConnections.jsx:94
+#: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Connections.nodeId"
 msgstr "Id uzla"
 
-#: src/components/fullNode/FullNodeConnections.jsx:100
-#: src/components/fullNode/FullNodeConnections.jsx:182
+#: src/components/fullNode/FullNodeConnections.jsx:96
+#: src/components/fullNode/FullNodeConnections.jsx:168
 msgid "Connections.port"
 msgstr "Port"
 
-#: src/components/fullNode/FullNodeConnections.jsx:111
+#: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Connections.sbHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNodeConnections.jsx:82
+#: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections.title"
 msgstr "Pripojenia"
 
-#: src/components/fullNode/FullNodeConnections.jsx:103
+#: src/components/fullNode/FullNodeConnections.jsx:99
 msgid "Connections.upDown"
 msgstr "Odoslané/Stiahnuté"
 
