@@ -27,12 +27,37 @@ from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pool_sk
 from src.util.bech32m import encode_puzzle_hash
 
 
-def make_parser(parser: ArgumentParser):
-    parser.set_defaults(function=init)
-
-
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
+
+
+def help_message():
+    print("usage: chia init")
+    print(
+        """
+        chia init (migrate previous version configuration to current)
+        chia init -c (creates new TLS certificates signed by your CA)
+            Follow these steps to create new certifcates for a remote harvester:
+            - Make a copy of your Farming Machine CA directory located in ~/.chia/[version]/config/ssl/ca
+            - Shut down all chia daemon processes with `chia stop all -d`
+            - Replace your remote harvester CA directory with your Farming Machine CA directory
+            - Run `chia init -c` on your remote harvester
+            - Get more details on remote harvester on Chia wiki:
+              https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
+        """
+    )
+
+
+def make_parser(parser):
+    parser.add_argument(
+        "-c",
+        "--create_certs",
+        help="Create new SSL certificates based on CA",
+        default=False,
+        action="store_true",
+    )
+    parser.set_defaults(function=init)
+    parser.print_help = lambda self=parser: help_message()
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
@@ -157,7 +182,13 @@ def migrate_from(
 
     save_config(new_root, "config.yaml", config)
 
-    ssl_dir = new_root / "config/ssl"
+    create_all_ssl(new_root)
+
+    return 1
+
+
+def create_all_ssl(root: Path):
+    ssl_dir = root / "config/ssl"
     if not ssl_dir.exists():
         ssl_dir.mkdir()
     ca_dir = ssl_dir / "ca"
@@ -172,8 +203,9 @@ def migrate_from(
     chia_ca_crt_path.write_bytes(chia_ca_crt)
     chia_ca_key_path.write_bytes(chia_ca_key)
 
-    if private_ca_key_path not in copied or private_ca_crt_path not in copied:
+    if not private_ca_key_path.exists() or not private_ca_crt_path.exists():
         # Create private CA
+        print(f"Can't find private CA, creating a new one in {root} to generate TLS certificates")
         make_ca_cert(private_ca_crt_path, private_ca_key_path)
         # Create private certs for each node
         ca_key = private_ca_key_path.read_bytes()
@@ -181,14 +213,13 @@ def migrate_from(
         generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
     else:
         # This is entered when user copied over private CA
+        print(f"Found private CA in {root}, using it to generate TLS certificates")
         ca_key = private_ca_key_path.read_bytes()
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
 
     chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
     generate_ssl_for_nodes(ssl_dir, chia_ca_crt, chia_ca_key, False, overwrite=False)
-
-    return 1
 
 
 def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private: bool, overwrite=True):
@@ -212,31 +243,12 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
         generate_ca_signed_cert(ca_crt, ca_key, crt_path, key_path)
 
 
-def initialize_ssl(root: Path):
-    ssl_dir = root / "config/ssl"
-    if not ssl_dir.exists():
-        ssl_dir.mkdir()
-    ca_dir = ssl_dir / "ca"
-    if not ca_dir.exists():
-        ca_dir.mkdir()
-
-    private_ca_key_path = ca_dir / "private_ca.key"
-    private_ca_crt_path = ca_dir / "private_ca.crt"
-
-    make_ca_cert(private_ca_crt_path, private_ca_key_path)
-    ca_key = private_ca_key_path.read_bytes()
-    ca_crt = private_ca_crt_path.read_bytes()
-    generate_ssl_for_nodes(ssl_dir, ca_crt, ca_key, True)
-    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
-    chia_ca_crt_path = ca_dir / "chia_ca.crt"
-    chia_ca_key_path = ca_dir / "chia_ca.key"
-    chia_ca_crt_path.write_bytes(chia_ca_crt)
-    chia_ca_key_path.write_bytes(chia_ca_key)
-    generate_ssl_for_nodes(ssl_dir, chia_ca_crt, chia_ca_key, False)
-
-
 def init(args: Namespace, parser: ArgumentParser):
-    return chia_init(args.root_path)
+    if args.create_certs:
+        print(f"Creating new TLS certificates signed by your CA in {args.root_path}")
+        create_all_ssl(args.root_path)
+    else:
+        return chia_init(args.root_path)
 
 
 def chiaMinorReleaseNumber():
@@ -350,7 +362,7 @@ def chia_init(root_path: Path):
             break
     else:
         create_default_chia_config(root_path)
-        initialize_ssl(root_path)
+        create_all_ssl(root_path)
         check_keys(root_path)
         print("")
         print("To see your keys, run 'chia keys show'")
