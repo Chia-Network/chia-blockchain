@@ -138,6 +138,17 @@ def check_keys(new_root):
     save_config(new_root, "config.yaml", config)
 
 
+def copy_files_rec(old_path: Path, new_path: Path):
+    if old_path.is_file():
+        print(f"{new_path}")
+        mkdir(new_path.parent)
+        shutil.copy(old_path, new_path)
+    elif old_path.is_dir():
+        for old_path_child in old_path.iterdir():
+            new_path_child = new_path / old_path_child.name
+            copy_files_rec(old_path_child, new_path_child)
+
+
 def migrate_from(
     old_root: Path,
     new_root: Path,
@@ -155,18 +166,6 @@ def migrate_from(
         return 0
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
-    copied = []
-
-    def copy_files_rec(old_path: Path, new_path: Path):
-        if old_path.is_file():
-            print(f"{new_path}")
-            mkdir(new_path.parent)
-            shutil.copy(old_path, new_path)
-            copied.append(new_path)
-        elif old_path.is_dir():
-            for old_path_child in old_path.iterdir():
-                new_path_child = new_path / old_path_child.name
-                copy_files_rec(old_path_child, new_path_child)
 
     for f in manifest:
         old_path = old_root / f
