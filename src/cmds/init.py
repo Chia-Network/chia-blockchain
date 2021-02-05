@@ -186,14 +186,14 @@ def migrate_from(
 
 
 def create_all_ssl(root: Path):
-    config_dir = root / "config"
     # remove old key and crt
+    config_dir = root / "config"
     old_key_path = config_dir / "trusted.key"
     old_crt_path = config_dir / "trusted.crt"
-    if old_key_path.exists:
+    if old_key_path.exists():
         print(f"Old key not needed anymore, deleting {old_key_path}")
         os.remove(old_key_path)
-    if old_crt_path.exists:
+    if old_crt_path.exists():
         print(f"Old crt not needed anymore, deleting {old_crt_path}")
         os.remove(old_crt_path)
 
