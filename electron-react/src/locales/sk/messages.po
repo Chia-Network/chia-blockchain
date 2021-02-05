@@ -453,52 +453,56 @@ msgstr "Vytvoriť transakciu"
 #~ msgid "ColouredTransactionTable.type"
 #~ msgstr "Typ"
 
-#: src/components/fullNode/FullNodeConnections.jsx:200
+#: src/components/fullNode/FullNodeConnections.jsx:193
 msgid "Connections.connect"
 msgstr "Pripojiť"
 
-#: src/components/fullNode/FullNodeConnections.jsx:176
+#: src/components/fullNode/FullNodeConnections.jsx:169
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "Pripojiť k iným uzlom"
 
-#: src/components/fullNode/FullNodeConnections.jsx:110
+#: src/components/fullNode/FullNodeConnections.jsx:115
 msgid "Connections.connected"
 msgstr "Pripojené"
 
-#: src/components/fullNode/FullNodeConnections.jsx:104
+#: src/components/fullNode/FullNodeConnections.jsx:106
 msgid "Connections.connectionType"
 msgstr "Typ pripojenia"
 
-#: src/components/fullNode/FullNodeConnections.jsx:119
+#: src/components/fullNode/FullNodeConnections.jsx:124
 msgid "Connections.delete"
 msgstr "Zmazať"
 
-#: src/components/fullNode/FullNodeConnections.jsx:95
+#: src/components/fullNode/FullNodeConnections.jsx:97
 msgid "Connections.ipAddress"
 msgstr "IP Adresa"
 
-#: src/components/fullNode/FullNodeConnections.jsx:183
+#: src/components/fullNode/FullNodeConnections.jsx:176
 msgid "Connections.ipAddressHost"
 msgstr "IP Adresa / host"
 
-#: src/components/fullNode/FullNodeConnections.jsx:115
+#: src/components/fullNode/FullNodeConnections.jsx:120
 msgid "Connections.lastMessage"
 msgstr "Posledná správa"
 
-#: src/components/fullNode/FullNodeConnections.jsx:92
+#: src/components/fullNode/FullNodeConnections.jsx:94
 msgid "Connections.nodeId"
 msgstr "Id uzla"
 
-#: src/components/fullNode/FullNodeConnections.jsx:98
-#: src/components/fullNode/FullNodeConnections.jsx:189
+#: src/components/fullNode/FullNodeConnections.jsx:100
+#: src/components/fullNode/FullNodeConnections.jsx:182
 msgid "Connections.port"
 msgstr "Port"
 
-#: src/components/fullNode/FullNodeConnections.jsx:80
+#: src/components/fullNode/FullNodeConnections.jsx:111
+msgid "Connections.sbHeight"
+msgstr ""
+
+#: src/components/fullNode/FullNodeConnections.jsx:82
 msgid "Connections.title"
 msgstr "Pripojenia"
 
-#: src/components/fullNode/FullNodeConnections.jsx:101
+#: src/components/fullNode/FullNodeConnections.jsx:103
 msgid "Connections.upDown"
 msgstr "Odoslané/Stiahnuté"
 
@@ -988,13 +992,17 @@ msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Ex
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Najnovšie blokové výzvy"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:29
+#: src/components/farm/overview/FarmOverviewHero.tsx:35
 msgid "FarmOverviewHero.addAPlot"
 msgstr "Pridať pole"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:21
+#: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "FarmOverviewHero.description"
 msgstr "Ťažiari zarábajú blokové odmeny a transakčné poplatky tým, že venujú sieti voľný priestor, aby pomohli zabezpečiť transakcie. Toto je miesto, kde bude vaša farma, keď pridáte pole. <0>Ďalšie informácie</0>"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:41
+msgid "FarmOverviewHero.doYouHavePlot"
+msgstr ""
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "FarmYourHarvesterNetwork.actions"
