@@ -9,6 +9,7 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased
 
 ### Added
+- `chia init -c` will create new TLS certificates signed by your CA. Use this feature to configure a new remote harvester. Type `chia init -h` get instructions. PR @eFishCent.
 
 ### Changed
 
