@@ -69,6 +69,14 @@ class WeightProofHandler:
             new_wp = await self._extend_proof_of_weight(self.proof, tip_rec)
             if new_wp is None or not self._validate_sub_epoch_summaries(new_wp):
                 self.log.error("weight proof failed pre send validation")
+                self.log.error("weight proof failed pre send validation")
+
+                self.log.info("---------------extended wp--------------------")
+                self.log.info(f" \n {new_wp}")
+                wp = await self._create_proof_of_weight(tip)
+                self.log.info("-----------------new wp--------------------")
+                self.log.info(f" \n {new_wp}")
+
                 self.lock.release()
                 return None
             self.proof = new_wp
