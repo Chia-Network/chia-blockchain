@@ -1,6 +1,14 @@
 name: Build and test MacOS Wallet
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+    tags:
+        - '**'
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   build:
