@@ -6,7 +6,7 @@ from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
-from src.types.program import Program
+from src.types.program import SerializedProgram
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class UnfinishedBlock(Streamable):
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
-    transactions_generator: Optional[Program]  # Program that generates transactions
+    transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
 
     @property
     def prev_header_hash(self):

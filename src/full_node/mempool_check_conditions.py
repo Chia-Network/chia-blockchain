@@ -5,7 +5,7 @@ from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
-from src.types.program import Program
+from src.types.program import SerializedProgram
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
@@ -96,7 +96,7 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
     return None
 
 
-def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
+def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
     # TODO: allow generator mod to take something (future)
     # TODO: check strict mode locations are set correctly
     # TODO: write various tests
@@ -133,7 +133,7 @@ def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
         return tb, None, None
 
 
-def get_puzzle_and_solution_for_coin(block_program: Program, coin_name: bytes):
+def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):
     try:
         cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost([block_program, coin_name])
         puzzle = result.first()

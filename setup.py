@@ -3,11 +3,12 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.3.3",  # Signature library
+    "blspy==0.3.4",  # Signature library
     "chiavdf==0.13.3",  # timelord and vdf verification
     "chiabip158==0.18",  # bip158-style wallet filters
     "chiapos==0.12.42b2",  # proof of space
-    "clvm==0.7",
+    "clvm>=0.7.1",
+    "clvm_rs>=0.1.0",
     "clvm_tools==0.2.0",
     "aiohttp==3.7.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
@@ -90,10 +91,7 @@ kwargs = dict(
             "chia_full_node_simulator = src.simulator.start_simulator:main",
         ]
     },
-    package_data={
-        "src.util": ["initial-*.yaml", "english.txt"],
-        "src.server": ["dummy.crt", "dummy.key"],
-    },
+    package_data={"src.util": ["initial-*.yaml", "english.txt"], "src.ssl": ["chia_ca.crt", "chia_ca.key"]},
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

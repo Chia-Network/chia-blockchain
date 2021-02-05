@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from src.consensus.condition_costs import ConditionCost
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
+from src.types.program import SerializedProgram
 from src.types.name_puzzle_condition import NPC
 from src.util.ints import uint64, uint16
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -18,7 +18,9 @@ class CostResult(Streamable):
     cost: uint64
 
 
-def calculate_cost_of_program(program: Program, clvm_cost_ratio_constant: int, strict_mode: bool = False) -> CostResult:
+def calculate_cost_of_program(
+    program: SerializedProgram, clvm_cost_ratio_constant: int, strict_mode: bool = False
+) -> CostResult:
     """
     This function calculates the total cost of either a block or a spendbundle
     """

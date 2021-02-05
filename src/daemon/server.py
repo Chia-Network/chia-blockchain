@@ -16,7 +16,6 @@ from websockets import serve, ConnectionClosedOK, WebSocketException
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
-from src.server.ssl_context import load_ssl_paths
 from src.util.setproctitle import setproctitle
 from src.util.ws_message import format_response, create_payload
 from src.util.json_util import dict_to_json_str
@@ -90,7 +89,7 @@ async def ping():
 
 
 class WebSocketServer:
-    def __init__(self, root_path):
+    def __init__(self, root_path, ca_crt_path, ca_key_path, crt_path, key_path):
         self.root_path = root_path
         self.log = log
         self.services: Dict = dict()
@@ -102,8 +101,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.websocket_server = None
-        cert_path, key_path = load_ssl_paths(root_path, self.net_config)
-        self.ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
+        self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -849,9 +847,20 @@ async def async_run_daemon(root_path):
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
-    cert_path, key_path = load_ssl_paths(root_path, config)
+    crt_path = root_path / config["daemon_ssl"]["private_crt"]
+    key_path = root_path / config["daemon_ssl"]["private_key"]
+    ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
+    ca_key_path = root_path / config["private_ssl_ca"]["key"]
     sys.stdout.flush()
-    json_msg = dict_to_json_str({"message": "cert_path", "success": True, "cert": f"{cert_path}", "key": f"{key_path}"})
+    json_msg = dict_to_json_str(
+        {
+            "message": "cert_path",
+            "success": True,
+            "cert": f"{crt_path}",
+            "key": f"{key_path}",
+            "ca_crt": f"{ca_crt_path}",
+        }
+    )
     sys.stdout.write("\n" + json_msg + "\n")
     sys.stdout.flush()
     if lockfile is None:
@@ -860,7 +869,7 @@ async def async_run_daemon(root_path):
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    ws_server = WebSocketServer(root_path)
+    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
 
 
