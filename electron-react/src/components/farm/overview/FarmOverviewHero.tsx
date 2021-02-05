@@ -1,10 +1,12 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router-dom';
-import { Button, Grid, Typography } from '@material-ui/core';
+import { Button, Divider, Grid, Typography } from '@material-ui/core';
 import styled from 'styled-components';
 import { CardHero, Link } from '@chia/core';
 import heroSrc from './images/hero.svg';
+import PlotAddDirectoryDialog from '../../plot/PlotAddDirectoryDialog';
+import useOpenDialog from '../../../hooks/useOpenDialog';
 
 const StyledImage = styled('img')`
   max-width: 7rem;
@@ -12,9 +14,16 @@ const StyledImage = styled('img')`
 
 export default function FarmOverviewHero() {
   const history = useHistory();
+  const openDialog = useOpenDialog();
 
   function handleAddPlot() {
     history.push('/dashboard/plot/add');
+  }
+
+  function handleAddPlotDirectory() {
+    openDialog((
+      <PlotAddDirectoryDialog />
+    ));
   }
 
   return (
@@ -37,6 +46,15 @@ export default function FarmOverviewHero() {
           >
             <Trans id="FarmOverviewHero.addAPlot">Add a Plot</Trans>
           </Button>
+
+          <Divider />
+
+          <Typography variant="body1">
+            <Trans id="FarmOverviewHero.doYouHavePlot">
+              {'Do you have existing plots on this machine? '}
+              <Link onClick={handleAddPlotDirectory} variant="body1">Add Plot Directory</Link>
+            </Trans>
+          </Typography>
         </CardHero>
       </Grid>
     </Grid>
