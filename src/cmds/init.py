@@ -36,12 +36,12 @@ def help_message():
     print(
         """
         chia init (migrate previous version configuration to current)
-        chia init -c (creates new TLS certificates signed by your CA)
+        chia init -c [directory] (creates new TLS certificates signed by your CA in [directory])
             Follow these steps to create new certifcates for a remote harvester:
-            - Make a copy of your Farming Machine CA directory located in ~/.chia/[version]/config/ssl/ca
+            - Make a copy of your Farming Machine CA directory: ~/.chia/[version]/config/ssl/ca
             - Shut down all chia daemon processes with `chia stop all -d`
-            - Replace your remote harvester CA directory with your Farming Machine CA directory
-            - Run `chia init -c` on your remote harvester
+            - Run `chia init -c [directory]` on your remote harvester,
+              where [directory] is the the copy of your Farming Machine CA directory
             - Get more details on remote harvester on Chia wiki:
               https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
         """
@@ -52,9 +52,9 @@ def make_parser(parser):
     parser.add_argument(
         "-c",
         "--create_certs",
-        help="Create new SSL certificates based on CA",
-        default=False,
-        action="store_true",
+        help="Create new SSL certificates based on CA in [directory]",
+        type=Path,
+        default=None,
     )
     parser.set_defaults(function=init)
     parser.print_help = lambda self=parser: help_message()
@@ -138,6 +138,17 @@ def check_keys(new_root):
     save_config(new_root, "config.yaml", config)
 
 
+def copy_files_rec(old_path: Path, new_path: Path):
+    if old_path.is_file():
+        print(f"{new_path}")
+        mkdir(new_path.parent)
+        shutil.copy(old_path, new_path)
+    elif old_path.is_dir():
+        for old_path_child in old_path.iterdir():
+            new_path_child = new_path / old_path_child.name
+            copy_files_rec(old_path_child, new_path_child)
+
+
 def migrate_from(
     old_root: Path,
     new_root: Path,
@@ -155,18 +166,6 @@ def migrate_from(
         return 0
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
-    copied = []
-
-    def copy_files_rec(old_path: Path, new_path: Path):
-        if old_path.is_file():
-            print(f"{new_path}")
-            mkdir(new_path.parent)
-            shutil.copy(old_path, new_path)
-            copied.append(new_path)
-        elif old_path.is_dir():
-            for old_path_child in old_path.iterdir():
-                new_path_child = new_path / old_path_child.name
-                copy_files_rec(old_path_child, new_path_child)
 
     for f in manifest:
         old_path = old_root / f
@@ -188,7 +187,18 @@ def migrate_from(
 
 
 def create_all_ssl(root: Path):
-    ssl_dir = root / "config/ssl"
+    # remove old key and crt
+    config_dir = root / "config"
+    old_key_path = config_dir / "trusted.key"
+    old_crt_path = config_dir / "trusted.crt"
+    if old_key_path.exists():
+        print(f"Old key not needed anymore, deleting {old_key_path}")
+        os.remove(old_key_path)
+    if old_crt_path.exists():
+        print(f"Old crt not needed anymore, deleting {old_crt_path}")
+        os.remove(old_crt_path)
+
+    ssl_dir = config_dir / "ssl"
     if not ssl_dir.exists():
         ssl_dir.mkdir()
     ca_dir = ssl_dir / "ca"
@@ -244,9 +254,21 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
 
 
 def init(args: Namespace, parser: ArgumentParser):
-    if args.create_certs:
-        print(f"Creating new TLS certificates signed by your CA in {args.root_path}")
-        create_all_ssl(args.root_path)
+    if args.create_certs is not None:
+        if args.root_path.exists():
+            if os.path.isdir(args.create_certs):
+                ca_dir: Path = args.root_path / "config/ssl/ca"
+                if ca_dir.exists():
+                    print(f"Deleting your OLD CA in {ca_dir}")
+                    shutil.rmtree(ca_dir)
+                print(f"Copying your CA from {args.create_certs} to {ca_dir}")
+                copy_files_rec(args.create_certs, ca_dir)
+                create_all_ssl(args.root_path)
+            else:
+                print(f"** Directory {args.create_certs} does not exist **")
+        else:
+            print(f"** {args.root_path} does not exist **")
+            print("** please run `chia init` to migrate or create new config files **")
     else:
         return chia_init(args.root_path)
 
@@ -345,7 +367,7 @@ def chia_init(root_path: Path):
 
     # These are the files that will be migrated
     MANIFEST: List[str] = [
-        "config/config.yaml",
+        "config",
         "db/blockchain_v23.db",
         "wallet",
     ]
