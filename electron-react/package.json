@@ -6,6 +6,7 @@
   "private": true,
   "homepage": "./",
   "main": "src/electron-starter.js",
+  "version": "0.1.26",
   "scripts": {
     "start": "craco start",
     "build": "craco build",

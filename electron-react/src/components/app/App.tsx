@@ -11,7 +11,6 @@ import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import WebSocketConnection from '../../hocs/WebsocketConnection';
-import { daemon_rpc_ws } from '../../util/config';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
 import catalogEn from '../../locales/en/messages';
@@ -38,6 +37,14 @@ export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
 
+  // get the daemon's uri from global storage (put there by loadConfig)
+  let daemon_uri = null;
+  if (isElectron()) {
+    const electron = window.require('electron');
+    const { remote : r } = electron;
+    daemon_uri = r.getGlobal('daemon_rpc_ws');
+  }
+
   useEffect(() => {
     i18n.activate(locale);
   }, [locale]);
@@ -57,7 +64,7 @@ export default function App() {
     <Provider store={store}>
       <ConnectedRouter history={history}>
         <I18nProvider i18n={i18n}>
-          <WebSocketConnection host={daemon_rpc_ws}>
+          <WebSocketConnection host={daemon_uri}>
             <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
               <AppRouter />
               <AppModalDialogs />

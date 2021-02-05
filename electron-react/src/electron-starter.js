@@ -1,5 +1,6 @@
 //handle setupevents as quickly as possible
 const setupEvents = require("./setupEvents");
+
 if (!setupEvents.handleSquirrelEvent()) {
   // squirrel event handled and app will exit in 1000ms, so don't do anything else
   const { promisify } = require("util");
@@ -16,12 +17,14 @@ if (!setupEvents.handleSquirrelEvent()) {
   const config = require('./config/config');
   const dev_config = require("./dev_config");
   const WebSocket = require("ws");
-  const daemon_rpc_ws = require("./util/config").daemon_rpc_ws;
+  const chiaConfig = require("./util/config");
   const local_test = config.local_test;
   var url = require("url");
   const os = require("os");
   const crypto = require("crypto");
 
+  // this needs to happen early in startup so all processes share the same global config
+  chiaConfig.loadConfig();
   global.sharedObj = { local_test: local_test };
 
   /*************************************************************
@@ -36,10 +39,7 @@ if (!setupEvents.handleSquirrelEvent()) {
 
   let pyProc = null;
   let ws = null;
-  let have_cert = null
-
-  global.key_path = null
-  global.cert_path = null
+  let have_cert = null;
 
   const guessPackaged = () => {
     let packed;
@@ -68,6 +68,11 @@ if (!setupEvents.handleSquirrelEvent()) {
   };
 
   const createPyProc = () => {
+    // if the daemon isn't local we aren't going to try to start/stop it
+    if (!chiaConfig.manageDaemonLifetime()) {
+      return;
+    }
+
     let script = getScriptPath();
     let processOptions = {};
     //processOptions.detached = true;
@@ -151,11 +156,11 @@ if (!setupEvents.handleSquirrelEvent()) {
         key: fs.readFileSync(key_path),
         rejectUnauthorized: false
       };
-      ws = new WebSocket(daemon_rpc_ws, {
+      ws = new WebSocket(global.daemon_rpc_ws, {
         perMessageDeflate: false, options
       });
       ws.on("open", function open() {
-        console.log("Opened websocket with", daemon_rpc_ws);
+        console.log("Opened websocket with", global.daemon_rpc_ws);
         const msg = {
           command: "exit",
           ack: false,
@@ -255,12 +260,17 @@ if (!setupEvents.handleSquirrelEvent()) {
       mainWindow.show();
     });
 
+    mainWindow.webContents.on('did-finish-load', () => {
+      mainWindow.setTitle(`${app.getName()} [${global.daemon_rpc_ws}]`);
+    });
+
     // Uncomment this to open devtools by default
     // if (!guessPackaged()) {
     //   mainWindow.webContents.openDevTools();
     // }
     mainWindow.on("close", e => {
-      if (decidedToClose) {
+      // if the daemon isn't local we aren't going to try to start/stop it
+      if (decidedToClose || !chiaConfig.manageDaemonLifetime()) {
         return;
       }
       e.preventDefault();
