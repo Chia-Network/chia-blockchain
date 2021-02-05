@@ -36,12 +36,12 @@ def help_message():
     print(
         """
         chia init (migrate previous version configuration to current)
-        chia init -c (creates new TLS certificates signed by your CA)
+        chia init -c [directory] (creates new TLS certificates signed by your CA directory)
             Follow these steps to create new certifcates for a remote harvester:
-            - Make a copy of your Farming Machine CA directory located in ~/.chia/[version]/config/ssl/ca
+            - Make a copy of your Farming Machine CA directory: ~/.chia/[version]/config/ssl/ca
             - Shut down all chia daemon processes with `chia stop all -d`
-            - Replace your remote harvester CA directory with your Farming Machine CA directory
-            - Run `chia init -c` on your remote harvester
+            - Run `chia init -c [directory]` on your remote harvester,
+              where [directory] is the the copy of your Farming Machine CA directory
             - Get more details on remote harvester on Chia wiki:
               https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
         """
@@ -52,9 +52,9 @@ def make_parser(parser):
     parser.add_argument(
         "-c",
         "--create_certs",
-        help="Create new SSL certificates based on CA",
-        default=False,
-        action="store_true",
+        help="Create new SSL certificates based on CA in [directory]",
+        type=Path,
+        default=None,
     )
     parser.set_defaults(function=init)
     parser.print_help = lambda self=parser: help_message()
@@ -243,8 +243,8 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
 
 
 def init(args: Namespace, parser: ArgumentParser):
-    if args.create_certs:
-        print(f"Creating new TLS certificates signed by your CA in {args.root_path}")
+    if args.create_certs is not None:
+        print(f"Creating new TLS certificates signed by your CA in {args.create_certs}")
         create_all_ssl(args.root_path)
     else:
         return chia_init(args.root_path)
