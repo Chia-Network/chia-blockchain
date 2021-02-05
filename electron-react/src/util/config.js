@@ -13,6 +13,7 @@ global.key_path = 'trusted.key';
 function loadConfig() {
   try {
     // get the semver out of package.json and format for chia version approach
+    
     const sv = semver.parse(require('../../package.json').version);
     let version = sv.version;
 
@@ -21,19 +22,19 @@ function loadConfig() {
       version = `beta-1.0b${sv.patch}`;
     }
 
-    const config_dir = path.join(os.homedir(), '.chia', version, 'config');
-    const config = yaml.load(fs.readFileSync(path.join(config_dir, 'config.yaml'), 'utf8'));
+    const config_root = path.join(os.homedir(), '.chia', version);
+    const config = yaml.load(fs.readFileSync(path.join(config_root, 'config/config.yaml'), 'utf8'));
 
     self_hostname = config.ui?.daemon_host ?? 'localhost'; // jshint ignore:line
     const daemon_port = config.ui?.daemon_port ?? 55400; // jshint ignore:line
 
     // store these in the global object so they can be used by both main and renderer processes
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
-    global.cert_path = path.join(config_dir, config.ui?.ssl?.crt ?? 'trusted.crt'); // jshint ignore:line
-    global.key_path = path.join(config_dir, config.ui?.ssl?.key ?? 'trusted.key'); // jshint ignore:line
+    global.cert_path = path.join(config_root, config.ui?.daemon_ssl?.private_crt ?? 'config/ssl/daemon/private_daemon.crt'); // jshint ignore:line
+    global.key_path = path.join(config_root, config.ui?.daemon_ssl?.private_key ?? 'config/ssl/daemon/private_daemon.key'); // jshint ignore:line
   } catch (e) {
     console.log('Error loading config');
-    console.log(e);    
+    console.log(e);
   }
 }
 
