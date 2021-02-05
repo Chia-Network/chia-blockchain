@@ -36,7 +36,7 @@ def help_message():
     print(
         """
         chia init (migrate previous version configuration to current)
-        chia init -c [directory] (creates new TLS certificates signed by your CA directory)
+        chia init -c [directory] (creates new TLS certificates signed by your CA in [directory])
             Follow these steps to create new certifcates for a remote harvester:
             - Make a copy of your Farming Machine CA directory: ~/.chia/[version]/config/ssl/ca
             - Shut down all chia daemon processes with `chia stop all -d`
