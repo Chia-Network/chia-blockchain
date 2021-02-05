@@ -16,7 +16,7 @@ from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.deficit import calculate_deficit
 
-from src.cmds.init import create_default_chia_config, initialize_ssl
+from src.cmds.init import create_default_chia_config, create_all_ssl
 from src.cmds.plots import create_plots
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
@@ -124,7 +124,7 @@ class BlockTools:
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
         self.init_plots(root_path)
 
-        initialize_ssl(root_path)
+        create_all_ssl(root_path)
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
         )
