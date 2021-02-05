@@ -30,7 +30,6 @@ from src.util.bech32m import encode_puzzle_hash
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}
 
-
 def help_message():
     print("usage: chia init")
     print(
@@ -187,7 +186,18 @@ def migrate_from(
 
 
 def create_all_ssl(root: Path):
-    ssl_dir = root / "config/ssl"
+    config_dir = root / "config"
+    # remove old key and crt
+    old_key_path = config_dir / "trusted.key"
+    old_crt_path = config_dir / "trusted.crt"
+    if old_key_path.exists:
+        print(f"Old key not needed anymore, deleting {old_key_path}")
+        os.remove(old_key_path)
+    if old_crt_path.exists:
+        print(f"Old crt not needed anymore, deleting {old_crt_path}")
+        os.remove(old_crt_path)
+
+    ssl_dir = config_dir / "ssl"
     if not ssl_dir.exists():
         ssl_dir.mkdir()
     ca_dir = ssl_dir / "ca"
@@ -246,7 +256,7 @@ def init(args: Namespace, parser: ArgumentParser):
     if args.create_certs is not None:
         if os.path.exists(args.root_path):
             ca_dir: Path = args.root_path / "config/ssl/ca"
-            print(f"Copying your CA: {args.create_certs} -> {ca_dir}")
+            print(f"Copying your CA from {args.create_certs} to {ca_dir}")
             if ca_dir.exists():
                 shutil.rmtree(ca_dir)
             copy_files_rec(args.create_certs, ca_dir)
