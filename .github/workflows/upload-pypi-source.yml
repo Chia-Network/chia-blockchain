@@ -2,8 +2,13 @@ name: Lint and upload source distribution
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+    tags:
+        - '**'
   pull_request:
+    branches:
+      - '**'
 
 jobs:
   upload_source_dist:

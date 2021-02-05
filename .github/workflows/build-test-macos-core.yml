@@ -2,8 +2,13 @@ name: Build and test MacOS Core
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+    tags:
+        - '**'
   pull_request:
+    branches:
+      - '**'
 
 jobs:
   build:

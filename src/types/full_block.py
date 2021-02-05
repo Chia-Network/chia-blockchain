@@ -15,7 +15,7 @@ from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
-from src.types.program import Program
+from src.types.program import SerializedProgram
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.block_rewards import (
     calculate_pool_reward,
@@ -37,7 +37,7 @@ class FullBlock(Streamable):
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
-    transactions_generator: Optional[Program]  # Program that generates transactions
+    transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
 
     @property
     def prev_header_hash(self):

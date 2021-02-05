@@ -16,7 +16,7 @@ from src.consensus.pot_iterations import is_overflow_sub_block, calculate_iterat
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.program import Program
+from src.types.program import SerializedProgram
 from src.types.sized_bytes import bytes32
 from src.util.block_cache import BlockCache
 from src.util.errors import Err
@@ -67,7 +67,7 @@ def batch_pre_validate_sub_blocks(
                 error_int = uint16(error.code.value)
             if not error and generator is not None:
                 cost_result = calculate_cost_of_program(
-                    Program.from_bytes(generator), constants.CLVM_COST_RATIO_CONSTANT
+                    SerializedProgram.from_bytes(generator), constants.CLVM_COST_RATIO_CONSTANT
                 )
             results.append(PreValidationResult(error_int, required_iters, cost_result))
         except Exception:
