@@ -255,7 +255,7 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
 def init(args: Namespace, parser: ArgumentParser):
     if args.create_certs is not None:
         if args.root_path.exists():
-            if args.create_certs.exists():
+            if os.path.isdir(args.create_certs):
                 ca_dir: Path = args.root_path / "config/ssl/ca"
                 if ca_dir.exists():
                     print(f"Deleting your OLD CA in {ca_dir}")
@@ -264,7 +264,7 @@ def init(args: Namespace, parser: ArgumentParser):
                 copy_files_rec(args.create_certs, ca_dir)
                 create_all_ssl(args.root_path)
             else:
-                print(f"** {args.create_certs} does not exist **")
+                print(f"** Directory {args.create_certs} does not exist **")
         else:
             print(f"** {args.root_path} does not exist **")
             print("** please run `chia init` to migrate or create new config files **")
