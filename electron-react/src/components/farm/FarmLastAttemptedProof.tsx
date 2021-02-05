@@ -29,7 +29,7 @@ const cols = [
   },
   {
     field(row: Row) {
-      return moment(row.timestamp * 1000).format('lll');
+      return moment(row.timestamp * 1000).format('MMM D, H:mm:ss A');
     },
     title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
   },

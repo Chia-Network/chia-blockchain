@@ -12,7 +12,6 @@ import TableHead from '@material-ui/core/TableHead';
 import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
 import TextField from '@material-ui/core/TextField';
 import SettingsInputAntennaIcon from '@material-ui/icons/SettingsInputAntenna';
-import { unix_to_short_date } from '../../util/utils';
 import { service_connection_types } from '../../util/service_names';
 
 const useStyles = makeStyles((theme) => ({
@@ -52,7 +51,6 @@ export default function Connections(props) {
 
   const { connections } = props;
   const { connectionError } = props;
-  const connectionTime = props.connectionTime ? props.connectionTime : false;
 
   const [host, setHost] = React.useState('');
   const handleChangeHost = (event) => {
@@ -105,16 +103,9 @@ export default function Connections(props) {
                     Connection type
                   </Trans>
                 </TableCell>
-                {connectionTime ? (
-                  <TableCell align="right">
-                    <Trans id="Connections.connected">Connected</Trans>
-                  </TableCell>
-                ) : null}
-                {connectionTime ? (
-                  <TableCell align="right">
-                    <Trans id="Connections.lastMessage">Last message</Trans>
-                  </TableCell>
-                ) : null}
+                <TableCell align="right">
+                  <Trans id="Connections.sbHeight">SB Height</Trans>
+                </TableCell>
                 <TableCell align="right">
                   <Trans id="Connections.delete">Delete</Trans>
                 </TableCell>
@@ -139,21 +130,9 @@ export default function Connections(props) {
                   <TableCell align="right">
                     {service_connection_types[item.type]}
                   </TableCell>
-
-                  {connectionTime ? (
-                    <TableCell align="right">
-                      {unix_to_short_date(
-                        Number.parseInt(item.creation_time),
-                      )}
-                    </TableCell>
-                  ) : null}
-                  {connectionTime ? (
-                    <TableCell align="right">
-                      {unix_to_short_date(
-                        Number.parseInt(item.last_message_time),
-                      )}
-                    </TableCell>
-                  ) : null}
+                  <TableCell align="right">
+                    {item.peak_sub_height}
+                  </TableCell>
                   <TableCell
                     className={classes.clickable}
                     onClick={deleteConnection(item.node_id)}
