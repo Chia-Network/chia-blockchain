@@ -13,7 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 - We now use the rust version of clvm, clvm_rs, to validate transactions. We have additionally published binary wheels for all four platforms and all three supported python versions.
 - Last Attempted Proof on the Farm tab of the GUI now shows hours:minutes:seconds instead of just hours:minutes. It makes it much easier to see that your farmer is responding to challenges recently at a glance.
 - Full Node > Connections in the GUI now shows the peak sub block height your connected peers believe they are at. A node syncing from you will not be at the true peak sub block height until it gets into sync.
-- `chia init -c` will create new TLS certificates signed by your CA. Use this feature to configure a new remote harvester. Type `chia init -h` get instructions. Huge thanks to a very efficient @eFishCent for this quick and thorough pull request.
+- `chia init -c [directory]` will create new TLS certificates signed by your CA located in `[directory]`. Use this feature to configure a new remote harvester. Type `chia init -h` to get instructions. Huge thanks to a very efficient @eFishCent for this quick and thorough pull request.
 - On first run in the GUI (or when there are no plot directories) there is now an "Add Plot Directories" on the Farm tab also.
 
 ### Changed
