@@ -20,9 +20,9 @@ from tests.setup_nodes import (
 
 
 async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context) -> bool:
+    timeout = aiohttp.ClientTimeout(total=10)
+    session = aiohttp.ClientSession(timeout=timeout)
     try:
-        timeout = aiohttp.ClientTimeout(total=10)
-        session = aiohttp.ClientSession(timeout=timeout)
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"
         ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
@@ -39,8 +39,10 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
             None,
         )
         handshake = await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
+        await session.close()
         return handshake
     except Exception:
+        await session.close()
         return False
 
 
