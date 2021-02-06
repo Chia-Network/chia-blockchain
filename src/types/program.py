@@ -153,6 +153,8 @@ class SerializedProgram:
         return bytes(self).hex()
 
     def __eq__(self, other) -> bool:
+        if not isinstance(other, SerializedProgram):
+            return False
         return self._buf == other._buf
 
     def __ne__(self, other) -> bool:

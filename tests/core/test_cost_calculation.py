@@ -106,6 +106,7 @@ class TestCostCalculation:
 
         coin_name = npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        assert error is None
 
     @pytest.mark.asyncio
     async def test_tx_generator_speed(self):
