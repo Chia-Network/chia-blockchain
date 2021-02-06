@@ -42,7 +42,8 @@ class FullNodeSimulator(FullNodeAPI):
 
     @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol):
-        async with self.lock:
+        await self.lock.acquire()
+        try:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -66,6 +67,11 @@ class FullNodeSimulator(FullNodeAPI):
             )
             rr = RespondSubBlock(more[-1])
             await self.full_node.respond_sub_block(rr)
+        except Exception as e:
+            self.log.error("Error while farming block")
+        finally:
+            self.lock.release()
+
 
     @api_request
     async def farm_new_sub_block(self, request: FarmNewBlockProtocol):

@@ -283,7 +283,7 @@ class CCWallet:
         sub_height = response.sub_height
         puzzle: Program = response.puzzle
         r = uncurry_cc(puzzle)
-        header_hash = self.wallet_state_manager.blockchain.sub_block_record(sub_height)
+        header_hash = self.wallet_state_manager.blockchain.sub_height_to_hash(sub_height)
         block: Optional[
             HeaderBlockRecord
         ] = await self.wallet_state_manager.blockchain.block_store.get_header_block_record(header_hash)
