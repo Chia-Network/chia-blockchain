@@ -125,6 +125,7 @@ class ChiaServer:
         self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
         self.api_tasks: Dict[bytes32, asyncio.Task] = {}
+        self.tasks_from_peer: Dict[bytes32, Set[bytes32]] = {}
 
     def my_id(self):
         """ If node has public cert use that one for id, if not use private."""
@@ -379,6 +380,17 @@ class ChiaServer:
         if on_disconnect is not None:
             on_disconnect(connection)
 
+        self.cancel_tasks_from_peer(connection.peer_node_id)
+
+    def cancel_tasks_from_peer(self, peer_id: bytes32):
+        if peer_id not in self.tasks_from_peer:
+            return
+
+        task_ids = self.tasks_from_peer[peer_id]
+        for task_id in task_ids:
+            task = self.api_tasks[task_id]
+            task.cancel()
+
     async def incoming_api_task(self):
         self.tasks = set()
         while True:
@@ -434,10 +446,14 @@ class ChiaServer:
                     await connection.close()
                 finally:
                     self.api_tasks.pop(task_id)
+                    self.tasks_from_peer[connection_inc.peer_id].remove(task_id)
 
             task_id = token_bytes()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
             self.api_tasks[task_id] = api_task
+            if connection_inc.peer_node_id not in self.tasks_from_peer:
+                self.tasks_from_peer[connection_inc.peer_id] = set()
+            self.tasks_from_peer[connection_inc.peer_id].add(task_id)
 
     async def send_to_others(
         self,
