@@ -322,11 +322,12 @@ class FullNode:
             # point being in the past), or we are very far behind. Performs a long sync.
             self._sync_task = asyncio.create_task(self._sync())
 
-    async def send_peak_to_timelords(self):
+    async def send_peak_to_timelords(self, peak_block: Optional[FullBlock] = None):
         """
         Sends current peak to timelords
         """
-        peak_block = await self.blockchain.get_full_peak()
+        if peak_block is None:
+            peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
             peak = self.blockchain.sub_block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
@@ -753,6 +754,7 @@ class FullNode:
                 sub_block.reward_chain_sub_block.reward_chain_sp_vdf,
                 sub_block.reward_chain_sp_proof,
             ),
+            skip_vdf_validation=True,
         )
 
         # Update the mempool
@@ -774,7 +776,7 @@ class FullNode:
             # Occasionally clear the seen list to keep it small
             self.full_node_store.clear_seen_unfinished_blocks()
         if self.sync_store.get_sync_mode() is False:
-            await self.send_peak_to_timelords()
+            await self.send_peak_to_timelords(sub_block)
 
             # Tell full nodes about the new peak
             msg = Message(
