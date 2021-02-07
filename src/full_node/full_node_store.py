@@ -274,6 +274,7 @@ class FullNodeStore:
         peak: Optional[SubBlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
+        skip_vdf_validation=False,
     ) -> bool:
         """
         Returns true if sp successfully added
@@ -365,24 +366,26 @@ class FullNodeStore:
                 else:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
-                if not signage_point.cc_proof.is_valid(
-                    self.constants,
-                    start_ele,
-                    cc_vdf_info_expected,
-                ):
-                    return False
+                if not skip_vdf_validation:
+                    if not signage_point.cc_proof.is_valid(
+                        self.constants,
+                        start_ele,
+                        cc_vdf_info_expected,
+                    ):
+                        return False
 
                 if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
                     # This signage point is probably outdated
                     return False
 
-                if not signage_point.rc_proof.is_valid(
-                    self.constants,
-                    ClassgroupElement.get_default_element(),
-                    signage_point.rc_vdf,
-                    rc_vdf_info_expected,
-                ):
-                    return False
+                if not skip_vdf_validation:
+                    if not signage_point.rc_proof.is_valid(
+                        self.constants,
+                        ClassgroupElement.get_default_element(),
+                        signage_point.rc_vdf,
+                        rc_vdf_info_expected,
+                    ):
+                        return False
 
                 sp_arr[index] = signage_point
                 return True
