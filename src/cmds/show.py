@@ -1,3 +1,5 @@
+import traceback
+
 import aiohttp
 import asyncio
 import time
@@ -334,7 +336,8 @@ async def show_async(args, parser):
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if full node rpc is running at {args.rpc_port}")
         else:
-            print(f"Exception from 'show' {e}")
+            tb = traceback.format_exc()
+            print(f"Exception from 'show' {tb}")
 
     client.close()
     await client.await_closed()
