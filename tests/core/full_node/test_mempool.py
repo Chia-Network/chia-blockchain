@@ -333,7 +333,6 @@ class TestMempool:
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        start_sub_height = blocks[-1].sub_block_height
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
@@ -342,6 +341,7 @@ class TestMempool:
             pool_reward_puzzle_hash=reward_ph,
         )
         peer = await connect_and_get_peer(server_1, server_2)
+        start_sub_height = blocks[-1].sub_block_height
 
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
