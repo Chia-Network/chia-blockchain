@@ -16,6 +16,7 @@ resources:
     type: github
     endpoint: chia-blockchain-gui
     name: Chia-Network/chia-blockchain-gui
+    ref: origin/main
     path: chia-blockchain/chia-blockchain-gui
 
 pool:
