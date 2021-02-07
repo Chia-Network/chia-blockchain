@@ -43,6 +43,7 @@ def validate_unfinished_header_block(
     expected_sub_slot_iters: uint64,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
+    check_ses=True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -382,24 +383,25 @@ def validate_unfinished_header_block(
                     )
 
                 # 3c. Check the actual sub-epoch is correct
-                expected_sub_epoch_summary = make_sub_epoch_summary(
-                    constants,
-                    sub_blocks,
-                    uint32(prev_sb.sub_block_height + 1),
-                    sub_blocks.sub_block_record(prev_sb.prev_hash),
-                    expected_difficulty if can_finish_epoch else None,
-                    expected_sub_slot_iters if can_finish_epoch else None,
-                )
-                expected_hash = expected_sub_epoch_summary.get_hash()
-                if expected_hash != ses_hash:
-                    log.error(f"{expected_sub_epoch_summary}")
-                    return (
-                        None,
-                        ValidationError(
-                            Err.INVALID_SUB_EPOCH_SUMMARY,
-                            f"expected ses hash: {expected_hash} got {ses_hash} ",
-                        ),
+                if check_ses:
+                    expected_sub_epoch_summary = make_sub_epoch_summary(
+                        constants,
+                        sub_blocks,
+                        uint32(prev_sb.sub_block_height + 1),
+                        sub_blocks.sub_block_record(prev_sb.prev_hash),
+                        expected_difficulty if can_finish_epoch else None,
+                        expected_sub_slot_iters if can_finish_epoch else None,
                     )
+                    expected_hash = expected_sub_epoch_summary.get_hash()
+                    if expected_hash != ses_hash:
+                        log.error(f"{expected_sub_epoch_summary}")
+                        return (
+                            None,
+                            ValidationError(
+                                Err.INVALID_SUB_EPOCH_SUMMARY,
+                                f"expected ses hash: {expected_hash} got {ses_hash} ",
+                            ),
+                        )
             elif new_sub_slot and not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
                 if can_finish_se or can_finish_epoch:
@@ -782,6 +784,7 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
+    check_ses=True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a sub-block. A header block is the same  as a full block, but
@@ -805,6 +808,7 @@ def validate_finished_header_block(
         expected_difficulty,
         expected_sub_slot_iters,
         False,
+        check_ses=check_ses,
     )
 
     genesis_block = False

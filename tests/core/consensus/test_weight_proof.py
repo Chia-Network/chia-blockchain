@@ -195,7 +195,7 @@ class TestWeightProof:
 
         wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
 
-        res, _, _, _, _ = wpf._validate_segment_slots(
+        res, _, _, _ = wpf._validate_segment_slots(
             wp.sub_epoch_segments[0],
             test_constants.SUB_SLOT_ITERS_STARTING,
             test_constants.DIFFICULTY_STARTING,
@@ -236,17 +236,17 @@ class TestWeightProof:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         last_ses_height = sorted(summaries.keys())[-1]
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[last_ses_height].header_hash)
+        wpf_synced = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height].header_hash)
         assert wp is not None
         # todo for each sampled sub epoch, validate number of segments
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof(wp)
+        wpf_not_synced = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf_not_synced.validate_weight_proof(wp)
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
-        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
-        valid, fork_point = wpf.validate_weight_proof(new_wp)
+        new_wp = await wpf_synced._create_proof_of_weight(blocks[-1].header_hash, wp)
+        valid, fork_point = wpf_not_synced.validate_weight_proof(new_wp)
         assert valid
         assert fork_point == 0
 
@@ -258,17 +258,17 @@ class TestWeightProof:
         last_ses_height = sorted(summaries.keys())[-1]
         last_ses = summaries[last_ses_height]
         del summaries[last_ses_height]
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[last_ses_height - 10].header_hash)
+        wpf_synced = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height - 10].header_hash)
         assert wp is not None
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, {}))
-        valid, fork_point = wpf.validate_weight_proof(wp)
+        wpf_not_synced = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, {}))
+        valid, fork_point = wpf_not_synced.validate_weight_proof(wp)
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
         summaries[last_ses_height] = last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
+        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash, wp)
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
@@ -283,7 +283,7 @@ class TestWeightProof:
         before_last_ses = summaries[before_last_ses_height]
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wpf_verify = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        for x in range(50, -1, -1):
+        for x in range(10, -1, -1):
             wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - x].header_hash)
             assert wp is not None
             valid, fork_point = wpf_verify.validate_weight_proof(wp)
@@ -293,7 +293,7 @@ class TestWeightProof:
         summaries[last_ses_height] = last_ses
         summaries[before_last_ses_height] = before_last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._extend_proof_of_weight(wp, sub_blocks[blocks[-1].header_hash])
+        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash, wp)
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
@@ -303,13 +303,11 @@ class TestWeightProof:
     async def test_weight_proof_from_database(self):
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
-        peak = 30000
-        sub_blocks = await block_store.get_sub_block_records_in_range(0, peak)
-        headers = await block_store.get_header_blocks_in_range(0, peak)
-
+        sub_blocks, peak = await block_store.get_sub_block_records()
+        headers = await block_store.get_header_blocks_in_range(0, 100225)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
-        peak = await block_store.get_full_blocks_at([peak])
+        peak = await block_store.get_full_blocks_at([100225])
         if len(sub_blocks) == 0:
             return None, None
 
@@ -327,13 +325,16 @@ class TestWeightProof:
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
         block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
+        await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
         valid, fork_point = wpf.validate_weight_proof(wp)
 
         await connection.close()
         assert valid
+        f = open("wp.txt", "a")
+        f.write(f"{wp}")
+        f.close()
 
 
 def get_size(obj, seen=None):

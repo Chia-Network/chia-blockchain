@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, List, Optional
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.weight_proof import BlockchainInterface
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
