@@ -10,14 +10,6 @@ trigger:
   tags:
     include:
     - "*"
-resources:
-  repositories:
-  - repository: chia-blockchain-gui
-    type: github
-    endpoint: chia-blockchain-gui
-    name: Chia-Network/chia-blockchain-gui
-    ref: origin/main
-    path: chia-blockchain/chia-blockchain-gui
 
 pool:
   vmImage: "macOS-10.15"
@@ -36,7 +28,7 @@ steps:
     displayName: "Use Python $(python.version)"
 
   - checkout: self
-  - checkout: chia-blockchain-gui
+  - checkout: github://Chia-Network/chia-blockchain-gui@origin/main
 
   # Install Apple certificate
   # Install an Apple certificate required to build on a macOS agent machine
@@ -50,7 +42,8 @@ steps:
   #  since we're installing miniupnpc below,
   #  only cbor2 will end up in wheels/
   - script: |
-      ls
+      cd chia-blockchain
+      if [ ! -f "chia-blockchain-gui" ]; then ln -s ../chia-blockchain-gui; fi
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
@@ -61,6 +54,7 @@ steps:
     displayName: "Install dependencies"
 
   - script: |
+      cd chia-blockchain
       . ./activate
       clang --version
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
@@ -73,8 +67,9 @@ steps:
     displayName: "Setup Node 12.x"
 
   - script: |
+      cd chia-blockchain
       . ./activate
-      cd ./electron-react
+      cd ./chia-blockchain-gui
       npm install
       npm audit fix
       npm run locale:extract
