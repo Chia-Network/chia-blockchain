@@ -4,11 +4,11 @@ const semver = require('semver');
 const os = require('os');
 const path = require("path");
 
-// defaults
+// defaults used in case of error point to the localhost daemon & its certs
 let self_hostname = 'localhost';
 global.daemon_rpc_ws = `wss://${self_hostname}:55400`;
-global.cert_path = 'trusted.crt';
-global.key_path = 'trusted.key';
+global.cert_path = 'config/ssl/daemon/private_daemon.crt';
+global.key_path = 'config/ssl/daemon/private_daemon.key';
 
 function loadConfig() {
   try {
