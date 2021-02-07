@@ -171,6 +171,8 @@ class FullNodeAPI:
             return None
         cost_result, spend_name = await self.full_node.mempool_manager.pre_validate_spendbundle(tx.transaction)
         async with self.full_node.blockchain.lock:
+            if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
+                return None
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
                 tx.transaction, cost_result, spend_name
             )
