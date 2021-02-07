@@ -768,6 +768,7 @@ def validate_sub_slot_vdfs(constants: ConsensusConstants, sub_slot_idx: int, sub
     if sub_slot.is_challenge():
         sp_input = get_sp_vdf_input(sp_input, sub_slot_idx, sub_slots)
         if sub_slot.cc_signage_point is not None:
+            assert sub_slot.cc_sp_vdf_info
             if not sub_slot.cc_signage_point.is_valid(constants, sp_input, sub_slot.cc_sp_vdf_info):
                 return False
         assert sub_slot.cc_infusion_point
