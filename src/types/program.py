@@ -122,6 +122,13 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
     return bytes32(std_hash(s))
 
 
+def _serialize(node) -> bytes:
+    if type(node) == SerializedProgram:
+        return bytes(node)
+    else:
+        return SExp.to(node).as_bin()
+
+
 class SerializedProgram:
     """
     An opaque representation of a clvm program. It has a more limited interface than a full SExp
@@ -163,18 +170,22 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
-    def run_with_cost(self, args) -> Tuple[int, SExp]:
-        assert type(self._buf) == bytes
-        if type(args) == SerializedProgram:
-            prog_args = args._buf
-            assert type(args._buf) == bytes
+    def run_with_cost(self, *args) -> Tuple[int, SExp]:
+        # when multiple arguments are passed, concatenate them into a serialized
+        # buffer. Some arguments may already be in serialized form (e.g.
+        # SerializedProgram) so we don't want to de-serialize those just to
+        # serialize them back again. This is handled by _serialize()
+        serialized_args = b""
+        if len(args) > 1:
+            # when we have more than one argument, serialize them into a list
+            for a in args:
+                serialized_args += b"\xff"
+                serialized_args += _serialize(a)
+            serialized_args += b"\x80"
         else:
-            prog_args = SExp.to(args).as_bin()
+            serialized_args += _serialize(args[0])
+
         max_cost = 0
-        cost, ret = serialize_and_run_program(self._buf, prog_args, 1, 3, max_cost)
+        cost, ret = serialize_and_run_program(self._buf, serialized_args, 1, 3, max_cost)
         # TODO this could be parsed lazily
         return cost, sexp_from_stream(io.BytesIO(ret), SExp.to)
-
-    def run(self, args) -> "Program":
-        cost, r = self.run_with_cost(args)
-        return Program.to(r)

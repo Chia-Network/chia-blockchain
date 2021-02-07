@@ -135,7 +135,7 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
 
 def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):
     try:
-        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost([block_program, coin_name])
+        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, coin_name)
         puzzle = result.first()
         solution = result.rest().first()
         return None, puzzle, solution
