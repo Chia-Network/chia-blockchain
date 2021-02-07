@@ -14,7 +14,7 @@ trigger:
 resources:
   repositories:
   - repository: chia-blockchain-gui
-    endpoint: chia-blockchain-gui
+    endpoint: azureSubscription
     type: github
     name: Chia-Network/chia-blockchain-gui
     ref: origin/main
