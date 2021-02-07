@@ -11,6 +11,13 @@ trigger:
     include:
     - "*"
 
+resources:
+  repositories:
+  - repository: chia-blockchain-gui
+    type: github
+    name: Chia-Network/chia-blockchain-gui
+    ref: origin/main
+
 pool:
   vmImage: "macOS-10.15"
 strategy:
@@ -28,7 +35,7 @@ steps:
     displayName: "Use Python $(python.version)"
 
   - checkout: self
-  - checkout: github://Chia-Network/chia-blockchain-gui@origin/main
+  - checkout: chia-blockchain-gui
 
   # Install Apple certificate
   # Install an Apple certificate required to build on a macOS agent machine
@@ -83,18 +90,18 @@ steps:
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
       if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
-      cd build_scripts || exit
+      cd chia-blockchain/build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/wheels
+      targetPath: $(System.DefaultWorkingDirectory)/chia-blockchain/wheels
       artifactName: MacOS-wheels
     displayName: "Upload MacOS wheels"
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+      targetPath: $(System.DefaultWorkingDirectory)/chia-blockchain/build_scripts/final_installer/
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"
