@@ -14,6 +14,7 @@ trigger:
 resources:
   repositories:
   - repository: chia-blockchain-gui
+    endpoint: chia-blockchain-gui
     type: github
     name: Chia-Network/chia-blockchain-gui
     ref: origin/main
