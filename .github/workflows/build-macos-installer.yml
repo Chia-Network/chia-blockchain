@@ -31,6 +31,8 @@ jobs:
 
     - name: Checkout Code
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - name: Setup Python environment
       uses: actions/setup-python@v2
@@ -113,6 +115,7 @@ jobs:
         npm install
         npm audit fix
         cd ../build_scripts
+        ls ../
         sh build_macos.sh
 
     - name: Upload MacOS artifacts
