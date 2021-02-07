@@ -61,7 +61,7 @@ jobs:
       - name: Checkout GUI
         uses: actions/checkout@v2
         with:
-          repository: 'chia-blockchain-gui'
+          repository: 'Chia-Network/chia-blockchain-gui'
           ref: 'main'
 
       - name: Test for secrets access
