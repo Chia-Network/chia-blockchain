@@ -47,7 +47,7 @@ from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 
 from src.util.errors import ConsensusError, Err
-from src.util.ints import uint32, uint128, uint8
+from src.util.ints import uint32, uint128, uint8, uint64
 from src.util.path import mkdir, path_from_root
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -362,12 +362,18 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
     async def synced(self) -> bool:
-        full_peak = await self.blockchain.get_block_peak()
+        curr: Optional[SubBlockRecord] = self.blockchain.get_peak()
+        if curr is None:
+            return False
+
+        while curr is not None and not curr.is_block:
+            curr = self.blockchain.try_sub_block(curr.prev_hash)
+
         now = time.time()
         if (
-            full_peak is None
-            or full_peak.foliage_block is None
-            or full_peak.foliage_block.timestamp < int(now - 60 * 20)
+            curr is None
+            or curr.timestamp is None
+            or curr.timestamp < uint64(int(now - 60 * 20))
             or self.sync_store.get_sync_mode()
         ):
             return False
