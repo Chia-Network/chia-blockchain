@@ -8,7 +8,7 @@ import pprint
 from enum import Enum
 from typing import Any, BinaryIO, List, Type, get_type_hints, Dict, Tuple
 from src.util.byte_types import hexstr_to_bytes
-from src.types.program import Program
+from src.types.program import Program, SerializedProgram
 from src.util.hash import std_hash
 
 from blspy import PrivateKey, G1Element, G2Element
@@ -48,6 +48,7 @@ unhashable_types = [
     G1Element,
     G2Element,
     Program,
+    SerializedProgram,
 ]
 # JSON does not support big ints, so these types must be serialized differently in JSON
 big_ints = [uint64, int64, uint128, int512]
