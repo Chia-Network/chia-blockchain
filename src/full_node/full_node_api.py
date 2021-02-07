@@ -169,7 +169,11 @@ class FullNodeAPI:
         # Ignore if we have already added this transaction
         if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
             return None
-        cost_result, spend_name = await self.full_node.mempool_manager.pre_validate_spendbundle(tx.transaction)
+        spend_name = tx.transaction.name()
+        if self.full_node.mempool_manager.seen(spend_name):
+            return None
+        self.full_node.mempool_manager.add_and_maybe_pop_seen(spend_name)
+        cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(tx.transaction)
         async with self.full_node.blockchain.lock:
             if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
                 return None
@@ -993,13 +997,17 @@ class FullNodeAPI:
             or self.full_node.blockchain.peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD
         ):
             return None
-
+        spend_name = request.transaction.name()
+        if self.full_node.mempool_manager.seen(spend_name):
+            return None
+        self.full_node.mempool_manager.add_and_maybe_pop_seen(spend_name)
+        self.log.debug(f"Processing transaction: {request.transaction.name()}")
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
-            cost_result, spend_name = await self.full_node.mempool_manager.pre_validate_spendbundle(request.transaction)
+            cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(request.transaction)
             async with self.full_node.blockchain.lock:
                 cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
                     request.transaction, cost_result, spend_name

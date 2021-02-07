@@ -128,12 +128,13 @@ class MempoolManager:
             return True
         return False
 
-    def maybe_pop_seen(self):
+    def add_and_maybe_pop_seen(self, spend_name: bytes32):
+        self.seen_bundle_hashes[spend_name] = spend_name
         while len(self.seen_bundle_hashes) > self.seen_cache_size:
             first_in = list(self.seen_bundle_hashes.keys())[0]
             self.seen_bundle_hashes.pop(first_in)
 
-    async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> Tuple[CostResult, bytes32]:
+    async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> CostResult:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
@@ -142,8 +143,7 @@ class MempoolManager:
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
             self.pool, validate_transaction_multiprocess, self.constants_json, bytes(new_spend)
         )
-        cached_result = CostResult.from_bytes(cached_result_bytes)
-        return cached_result, new_spend.name()
+        return CostResult.from_bytes(cached_result_bytes)
 
     async def add_spendbundle(
         self,
@@ -159,9 +159,6 @@ class MempoolManager:
         start_time = time.time()
         if self.peak is None:
             return None, MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
-
-        self.seen_bundle_hashes[spend_name] = spend_name
-        self.maybe_pop_seen()
 
         npc_list = cost_result.npc_list
         cost = cost_result.cost
