@@ -10,6 +10,13 @@ trigger:
   tags:
     include:
     - "*"
+resources:
+  repositories:
+  - repository: chia-blockchain-gui
+    type: github
+    endpoint: chia-blockchain-gui
+    name: Chia-Network/chia-blockchain-gui
+    path: chia-blockchain/chia-blockchain-gui
 
 pool:
   vmImage: "macOS-10.15"
@@ -30,6 +37,9 @@ steps:
       versionSpec: "$(python.version)"
     displayName: "Use Python $(python.version)"
 
+  - checkout: self
+  - checkout: chia-blockchain-gui
+
   # Install Apple certificate
   # Install an Apple certificate required to build on a macOS agent machine
   - task: InstallAppleCertificate@2
@@ -42,6 +52,7 @@ steps:
   #  since we're installing miniupnpc below,
   #  only cbor2 will end up in wheels/
   - script: |
+      ls
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
