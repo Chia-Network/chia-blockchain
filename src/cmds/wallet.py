@@ -21,6 +21,7 @@ def help_message():
     print("")
     print("chia wallet send -f [optional fingerprint] -i [optional wallet_id] -a [amount] -f [fee] -t [target address]")
     print("chia wallet show -f [optional fingerprint] -i [optional wallet_id]")
+    print("chia wallet get_transaction -f [optional fingerprint] -i [optional wallet_id] -tx [transaction id]")
 
 
 def make_parser(parser):
