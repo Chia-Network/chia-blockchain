@@ -71,11 +71,11 @@ class WeightProofHandler:
                 self.log.error("weight proof failed pre send validation")
                 self.log.error("weight proof failed pre send validation")
 
-                self.log.info("---------------extended wp--------------------")
-                self.log.info(f" \n {new_wp}")
+                self.log.debug("---------------extended wp--------------------")
+                self.log.debug(f" \n {new_wp}")
                 wp = await self._create_proof_of_weight(tip)
-                self.log.info("-----------------new wp--------------------")
-                self.log.info(f" \n {new_wp}")
+                self.log.debug("-----------------new wp--------------------")
+                self.log.debug(f" \n {new_wp}")
 
                 self.lock.release()
                 return None
@@ -99,7 +99,7 @@ class WeightProofHandler:
     ) -> Optional[WeightProof]:
         # replace recent chain
 
-        self.log.info(f"extend weight proof peak {new_tip.header_hash} {new_tip.sub_block_height}")
+        self.log.debug(f"extend weight proof peak {new_tip.header_hash} {new_tip.sub_block_height}")
 
         recent_chain = await self._get_recent_chain(new_tip.sub_block_height, weight_proof)
         if recent_chain is None:
@@ -129,7 +129,7 @@ class WeightProofHandler:
         if tip_rec is None:
             self.log.error("failed not tip in cache")
             return None
-        self.log.info(f"create weight proof peak {tip} {tip_rec.sub_block_height}")
+        self.log.debug(f"create weight proof peak {tip} {tip_rec.sub_block_height}")
         recent_chain = await self._get_recent_chain(tip_rec.sub_block_height)
         if recent_chain is None:
             return None
@@ -224,7 +224,7 @@ class WeightProofHandler:
             recent_chain.append(ProofBlockHeader(header_block.finished_sub_slots, header_block.reward_chain_sub_block))
             curr_height = curr_height + uint32(1)  # type: ignore
 
-        self.log.info(
+        self.log.debug(
             f"recent chain, "
             f"start: {recent_chain[0].reward_chain_sub_block.sub_block_height} "
             f"end:  {recent_chain[-1].reward_chain_sub_block.sub_block_height} "
@@ -239,13 +239,13 @@ class WeightProofHandler:
             return False, uint32(0)
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
-        self.log.info(f"validate weight proof peak height {peak_height}")
+        self.log.debug(f"validate weight proof peak height {peak_height}")
         summaries = self._validate_sub_epoch_summaries(weight_proof)
         if summaries is None:
             self.log.warning("weight proof failed sub epoch data validation")
             return False, uint32(0)
 
-        self.log.info("validate sub epoch challenge segments")
+        self.log.debug("validate sub epoch challenge segments")
         if not self._validate_segments(weight_proof, summaries):
             return False, uint32(0)
 
@@ -276,7 +276,7 @@ class WeightProofHandler:
             self.constants.DIFFICULTY_STARTING,
         )
 
-        self.log.info(f"validating {len(summaries)} summaries")
+        self.log.debug(f"validating {len(summaries)} summaries")
 
         # validate weight
         if not self._validate_summaries_weight(sub_epoch_data_weight, summaries, weight_proof):
@@ -284,7 +284,7 @@ class WeightProofHandler:
             return None
 
         last_ses = summaries[-1]
-        self.log.info(f"last ses height {last_ses_sub_height}")
+        self.log.debug(f"last ses height {last_ses_sub_height}")
         # validate last ses_hash
         if last_ses.get_hash() != last_ses_hash:
             self.log.error(f"failed to validate ses hashes block height {last_ses_sub_height}")
@@ -645,7 +645,7 @@ class WeightProofHandler:
                 challenge_blocks = challenge_blocks + 1
 
             # if not validate_sub_slot_vdfs(self.constants, sub_slot_data, prev_ssd):
-            #    self.log.info(f"failed to validate {idx} sub slot vdfs")
+            #    self.log.debug(f"failed to validate {idx} sub slot vdfs")
             # return False, uint64(0), uint64(0), uint64(0), uint64(0)
 
         return True, ip_iters, slot_iters, slots, challenge_blocks
