@@ -75,7 +75,7 @@ class WeightProofHandler:
                 self.log.debug("-----------------new wp--------------------")
                 self.log.debug(f" \n {wp}")
                 self.lock.release()
-                return None
+                return wp
             self.proof = new_wp
             self.tip = tip
             self.lock.release()
