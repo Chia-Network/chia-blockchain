@@ -193,6 +193,7 @@ class FullNodeAPI:
                 message = Message("new_transaction", new_tx)
                 await self.server.send_to_all_except([message], NodeType.FULL_NODE, peer.peer_node_id)
             else:
+                self.full_node.mempool_manager.remove_seen(spend_name)
                 self.log.warning(
                     f"Was not able to add transaction with id {tx.transaction.name()}, {status} error: {error}"
                 )
@@ -1036,6 +1037,7 @@ class FullNodeAPI:
         if status == MempoolInclusionStatus.SUCCESS:
             response = wallet_protocol.TransactionAck(request.transaction.name(), status, error_name)
         else:
+            self.full_node.mempool_manager.remove_seen(spend_name)
             # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
             if self.full_node.mempool_manager.get_spendbundle(request.transaction.name()) is not None:
                 response = wallet_protocol.TransactionAck(

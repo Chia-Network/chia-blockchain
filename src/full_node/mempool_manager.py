@@ -134,6 +134,14 @@ class MempoolManager:
             first_in = list(self.seen_bundle_hashes.keys())[0]
             self.seen_bundle_hashes.pop(first_in)
 
+    def seen(self, bundle_hash: bytes32) -> bool:
+        """ Return true if we saw this spendbundle before """
+        return bundle_hash in self.seen_bundle_hashes
+
+    def remove_seen(self, bundle_hash: bytes32):
+        if bundle_hash in self.seen_bundle_hashes:
+            self.seen_bundle_hashes.pop(bundle_hash)
+
     async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> CostResult:
         """
         Errors are included within the cached_result.
@@ -370,10 +378,6 @@ class MempoolManager:
         while len(self.potential_txs) > self.potential_cache_size:
             first_in = list(self.potential_txs.keys())[0]
             self.potential_txs.pop(first_in)
-
-    def seen(self, bundle_hash: bytes32) -> bool:
-        """ Return true if we saw this spendbundle before """
-        return bundle_hash in self.seen_bundle_hashes
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
         """ Returns a full SpendBundle if it's inside one the mempools"""
