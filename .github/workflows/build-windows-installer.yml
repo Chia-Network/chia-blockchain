@@ -63,6 +63,7 @@ jobs:
         with:
           repository: 'Chia-Network/chia-blockchain-gui'
           ref: 'main'
+          path: 'chia-blockchain-gui'
 
       - name: Test for secrets access
         id: check_secrets
