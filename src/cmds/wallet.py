@@ -116,11 +116,11 @@ async def send(args, wallet_client, fingerprint: int):
         tx = await wallet_client.get_transaction(wallet_id, tx_id)
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
-            print(f"Do chia wallet get_transaction -tx 0x{tx_id} to get status")
+            print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
             return
 
     print("Transaction not yet submitted to nodes.")
-    print(f"Do chia wallet get_transaction -tx 0x{tx_id} to get status")
+    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
 
 
 async def print_balances(args, wallet_client, fingerprint: int):
