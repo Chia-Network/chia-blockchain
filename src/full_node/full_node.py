@@ -840,6 +840,9 @@ class FullNode:
                 sub_block = dataclasses.replace(sub_block, transactions_generator=unf_block.transactions_generator)
 
         async with self.blockchain.lock:
+            # After acquiring the lock, check again, because another asyncio thread might have added it
+            if self.blockchain.contains_sub_block(header_hash):
+                return None
             validation_start = time.time()
             # Tries to add the block to the blockchain
             pre_validation_results: Optional[
