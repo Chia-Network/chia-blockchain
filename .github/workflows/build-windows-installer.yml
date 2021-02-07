@@ -25,9 +25,6 @@ jobs:
 
       - name: Checkout Code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          # we need fetch-depth 0 so setuptools_scm can resolve tags
 
       - name: Get npm cache directory
         id: npm-cache
@@ -55,6 +52,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+#  We can't upgrade to Python 3.8 until we have a miniupnpc binary
+      - uses: actions/setup-python@v2
+        name: Install Python 3.7
+        with:
+          python-version: "3.7"
+
+      - name: Checkout GUI
+        uses: actions/checkout@v2
+        with:
+          repository: 'chia-blockchain-gui'
+          ref: 'main'
+
       - name: Test for secrets access
         id: check_secrets
         shell: bash
@@ -70,12 +79,7 @@ jobs:
         uses: kitek/decode-base64-into-file-action@1.0
         with:
           encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-          destination-file: .\electron-react\win_code_sign_cert.p12
-
-      - uses: actions/setup-python@v2
-        name: Install Python 3.7
-        with:
-          python-version: "3.7"
+          destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
 
       - name: Build Windows installer with build_scripts\build_windows.ps1
         env:
@@ -90,10 +94,10 @@ jobs:
         uses: actions/upload-artifact@v2.2.2
         with:
           name: Windows-Exe
-          path: ${{ github.workspace }}\electron-react\Chia-win32-x64\
+          path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
       - name: Upload Installer to artifacts
         uses: actions/upload-artifact@v2.2.2
         with:
           name: Windows-Installers
-          path: ${{ github.workspace }}\electron-react\release-builds\
+          path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\

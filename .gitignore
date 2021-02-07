@@ -91,3 +91,5 @@ electron-react/build
 build_scripts/dist
 build_scripts/*.Dmg
 electron-react/src/locales/_build
+# Ignore GUI Repo
+chia-blockchain-gui/

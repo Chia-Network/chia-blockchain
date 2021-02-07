@@ -31,9 +31,6 @@ jobs:
 
     - name: Checkout Code
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-        # we need fetch-depth 0 so setuptools_scm can resolve tags
 
     - name: Setup Python environment
       uses: actions/setup-python@v2
@@ -84,6 +81,12 @@ jobs:
         p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
+    - name: Checkout GUI
+      uses: actions/checkout@v2
+      with:
+        repository: 'chia-blockchain-gui'
+        ref: 'main'
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -104,7 +107,7 @@ jobs:
       run: |
         . ./activate
         clang --version
-        cd ./electron-react
+        cd ./chia-blockchain-gui
         npm install
         npm audit fix
         cd ../build_scripts

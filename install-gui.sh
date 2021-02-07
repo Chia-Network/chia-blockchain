@@ -55,7 +55,16 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-	cd ./electron-react
+	if [ ! -d "chia-blockchain-gui" ];
+	then
+		echo "Cloning chia-blockchain-gui repository"
+		git clone https://github.com/Chia-Network/chia-blockchain-gui.git
+		cd ./chia-blockchain-gui
+	else
+		echo "Found chia-blockchain-gui repository - updating to origin/main"
+		cd ./chia-blockchain-gui
+		git fetch ; git checkout main; git pull
+	fi
 	npm install
 	npm audit fix
 	npm run locale:extract
@@ -68,4 +77,4 @@ fi
 echo ""
 echo "Chia blockchain install-gui.sh complete."
 echo ""
-echo "Type 'cd electron-react' and then 'npm run electron &' to start the GUI"
+echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI"
