@@ -38,7 +38,7 @@ export default function LocaleToggle() {
   function handleHelpTranslate() {
     handleClose();
 
-    openExternal('https://github.com/Chia-Network/chia-blockchain/tree/main/electron-react/src/locales/README.md');
+    openExternal('https://github.com/Chia-Network/chia-blockchain-gui/tree/main/src/locales/README.md');
   }
 
   return (
