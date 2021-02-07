@@ -1,5 +1,6 @@
 import asyncio
 import time
+import logging
 
 import pytest
 
@@ -15,6 +16,8 @@ from tests.setup_nodes import test_constants, bt
 from clvm_tools import binutils
 
 BURN_PUZZLE_HASH = b"0" * 32
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -114,7 +117,10 @@ class TestCostCalculation:
         duration = end_time - start_time
         assert err is None
         assert len(npc) == 687
-        assert duration < 2
+        log.info(f"Time spent: {duration}")
+
+        # TODO: lower the threshold after this is optimized
+        assert duration < 3
 
     @pytest.mark.asyncio
     async def test_standard_tx(self):
@@ -133,4 +139,5 @@ class TestCostCalculation:
         time_end = time.time()
         duration = time_end - time_start
 
-        assert duration < 30
+        log.info(f"Time spent: {duration}")
+        assert duration < 3
