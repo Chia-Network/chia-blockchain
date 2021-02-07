@@ -465,56 +465,38 @@ class FullNodeStore:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
+
+        Results in either one or two sub-slots in finished_sub_slots.
         """
         assert len(self.finished_sub_slots) >= 1
-        new_finished_sub_slots = []
-        total_iters_peak = peak.ip_sub_slot_total_iters(self.constants)
-        ip_sub_slot_found = False
-        if not reorg:
-            # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
-            for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if sub_slot == sp_sub_slot:
-                    # In the case of a peak overflow sub-block (or first ss), the previous sub-slot is added
-                    if sp_sub_slot is None:
-                        # This is a non-overflow sub block
-                        if (
-                            ip_sub_slot is not None
-                            and ip_sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-                            == self.constants.FIRST_CC_CHALLENGE
-                        ):
-                            new_finished_sub_slots.append((sub_slot, sps, total_iters))
-                            continue
 
-                    else:
-                        # Overflow sub block
-                        new_finished_sub_slots.append((sub_slot, sps, total_iters))
+        if ip_sub_slot is None:
+            # We are still in the first sub-slot, no new sub slots ey
+            self.initialize_genesis_sub_slot()
+        else:
+            # This is not the first sub-slot in the chain
+            sp_sub_slot_sps: List[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
+            ip_sub_slot_sps: List[Optional[SignagePoint]] = [None] * self.constants.NUM_SPS_SUB_SLOT
+            if not reorg:
+                # If it's not a reorg, we can keep signage points that we had before, in the cache
+                for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
+                    if sub_slot is None:
                         continue
-                if sub_slot == ip_sub_slot:
-                    ip_sub_slot_found = True
-                    new_finished_sub_slots.append((sub_slot, sps, total_iters))
-            self.finished_sub_slots = new_finished_sub_slots
-        if reorg or not ip_sub_slot_found:
-            # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
-            # cache, delete the entire cache and add this sub slot.
+
+                    if sub_slot == sp_sub_slot:
+                        sp_sub_slot_sps = sps
+                    if sub_slot == ip_sub_slot:
+                        ip_sub_slot_sps = sps
+
             self.clear_slots()
-            if peak.overflow:
-                prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
-                assert total_iters_peak != prev_sub_slot_total_iters
-                self.finished_sub_slots = [
-                    (
-                        sp_sub_slot,
-                        [None] * self.constants.NUM_SPS_SUB_SLOT,
-                        prev_sub_slot_total_iters,
-                    )
-                ]
-            log.debug(f"5. Adding sub slot {ip_sub_slot is None}, total iters: {total_iters_peak}")
-            self.finished_sub_slots.append(
-                (
-                    ip_sub_slot,
-                    [None] * self.constants.NUM_SPS_SUB_SLOT,
-                    total_iters_peak,
-                )
-            )
+
+            prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
+            if sp_sub_slot is not None or prev_sub_slot_total_iters == 0:
+                assert peak.overflow or prev_sub_slot_total_iters
+                self.finished_sub_slots.append((sp_sub_slot, sp_sub_slot_sps, prev_sub_slot_total_iters))
+
+            ip_sub_slot_total_iters = peak.ip_sub_slot_total_iters(self.constants)
+            self.finished_sub_slots.append((ip_sub_slot, ip_sub_slot_sps, ip_sub_slot_total_iters))
 
         new_eos: Optional[EndOfSubSlotBundle] = None
         new_sps: List[SignagePoint] = []

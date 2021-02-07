@@ -400,6 +400,8 @@ class TestFullNodeStore:
 
         for block in blocks[:5]:
             await blockchain.receive_block(block)
+            sb = blockchain.sub_block_record(block.header_hash)
+
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain)
             assert res[0] is None
