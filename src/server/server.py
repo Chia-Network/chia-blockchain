@@ -409,9 +409,10 @@ class ChiaServer:
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
 
                     if hasattr(f, "peer_required"):
-                        response: Optional[Message] = await f(full_message.data, connection)
+                        coroutine = f(full_message.data, connection)
                     else:
-                        response = await f(full_message.data)
+                        coroutine = f(full_message.data)
+                    response: Optional[Message] = await asyncio.wait_for(coroutine, timeout=300)
                     connection.log.debug(
                         f"Time taken to process {full_message.function} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
