@@ -84,7 +84,7 @@ vdf_bench
 main.sym
 
 # Dev config react
-src/dev_config.js
+# src/dev_config.js
 # React built app
 .eslintcache
 build
