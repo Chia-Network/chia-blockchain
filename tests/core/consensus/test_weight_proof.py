@@ -1,8 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
-import logging
 import sys
-from typing import Dict, Optional, List, Tuple, Mapping, Container
+from typing import Dict, Optional, List, Tuple
 
 import aiosqlite
 import pytest
@@ -26,9 +25,7 @@ from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32, uint64
-from src.util.logging import initialize_logging
 from tests.setup_nodes import test_constants, bt
 from tests.core.fixtures import empty_blockchain, default_1000_blocks, default_400_blocks, default_10000_blocks
 
