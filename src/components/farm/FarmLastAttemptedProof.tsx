@@ -13,25 +13,25 @@ const cols = [
     field(row: Row) {
       return row.challenge_hash;
     },
-    title: <Trans id="FarmFullNodeConnections.challenge">Challenge</Trans>,
+    title: <Trans>Challenge</Trans>,
   },
   {
     field(row: Row) {
       return `${row.passed_filter} / ${row.total_plots}`;
     },
-    title: <Trans id="FarmFullNodeConnections.passed_filter">Plots Passed Filter</Trans>,
+    title: <Trans>Plots Passed Filter</Trans>,
   },
   {
     field(row: Row) {
       return row.proofs;
     },
-    title: <Trans id="FarmFullNodeConnections.proofs_found">Proofs Found</Trans>,
+    title: <Trans>Proofs Found</Trans>,
   },
   {
     field(row: Row) {
       return moment(row.timestamp * 1000).format('MMM D, H:mm:ss A');
     },
-    title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
+    title: <Trans>Date</Trans>,
   },
 ];
 
@@ -45,12 +45,12 @@ export default function FarmLastAttemptedProof() {
   return (
     <Card
       title={(
-        <Trans id="FarmLastAttemptedProof.title">
+        <Trans>
           Last Attempted Proof
         </Trans>
       )}
       tooltip={(
-        <Trans id="FarmLastAttemptedProof.tooltip">
+        <Trans>
           This table shows you the last time your farm attempted to win a block challenge.
         </Trans>
       )}
@@ -60,14 +60,14 @@ export default function FarmLastAttemptedProof() {
         rows={reducedLastAttemtedProof}
         caption={isEmpty && (
           <Typography>
-            <Trans id="FarmLastAttemptedProof.emptyDescription">
+            <Trans>
               None of your plots have passed the plot filter yet.
             </Trans>
 
             {!!size && (
               <>
                 {' '}
-                <Trans id="FarmLastAttemptedProof.emptySubDescription">
+                <Trans>
                   But you are currently farming <FormatBytes value={size} precision={3} />
                 </Trans>
               </>

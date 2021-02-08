@@ -12,10 +12,10 @@ export default function FarmCardStatus() {
   if (farmerStatus === FarmerStatus.SYNCHING) {
     return (
       <FarmCard
-        title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
+        title={<Trans>Farming Status</Trans>}
         value={(
           <StateIndicator state={State.WARNING} indicator>
-            <Trans id="FarmCardStatus.synching">Syncing</Trans>
+            <Trans>Syncing</Trans>
           </StateIndicator>
         )}
       />
@@ -26,7 +26,7 @@ export default function FarmCardStatus() {
     return (
       <FarmCardNotAvailable
         title={
-          <Trans id="FarmCardStatus.title">Farming Status</Trans>
+          <Trans>Farming Status</Trans>
         }
       />
     );
@@ -35,13 +35,13 @@ export default function FarmCardStatus() {
   if (farmerStatus === FarmerStatus.NOT_CONNECTED) {
     return (
       <FarmCard
-        title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
+        title={<Trans>Farming Status</Trans>}
         value={(
           <StateIndicator state={State.ERROR} indicator>
-            <Trans id="FarmCardStatus.error">Error</Trans>
+            <Trans>Error</Trans>
           </StateIndicator>
         )}
-        description={<Trans id="FarmCardStatus.farmerIsNotConnected">Farmer is not connected</Trans>}
+        description={<Trans>Farmer is not connected</Trans>}
       />
     );
   }
@@ -49,23 +49,23 @@ export default function FarmCardStatus() {
   if (farmerStatus === FarmerStatus.NOT_RUNNING) {
     return (
       <FarmCard
-        title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
+        title={<Trans>Farming Status</Trans>}
         value={(
           <StateIndicator state={State.ERROR} indicator>
-            <Trans id="FarmCardStatus.error">Error</Trans>
+            <Trans>Error</Trans>
           </StateIndicator>
         )}
-        description={<Trans id="FarmCardStatus.farmerIsNotRunning">Farmer is not running</Trans>}
+        description={<Trans>Farmer is not running</Trans>}
       />
     );
   }
 
   return (
     <FarmCard
-      title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
+      title={<Trans>Farming Status</Trans>}
       value={(
         <StateIndicator state={State.SUCCESS} indicator>
-          <Trans id="FarmerStatus.farming">Farming</Trans>
+          <Trans>Farming</Trans>
         </StateIndicator>
       )}
     />

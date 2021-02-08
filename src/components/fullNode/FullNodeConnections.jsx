@@ -75,7 +75,7 @@ export default function Connections(props) {
 
   return (
     <Card
-      title={<Trans id="Connections.title">Connections</Trans>}
+      title={<Trans>Connections</Trans>}
     >
       {connections ? (
         <TableContainer component={Paper}>
@@ -87,27 +87,27 @@ export default function Connections(props) {
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <Trans id="Connections.nodeId">Node ID</Trans>
+                  <Trans>Node ID</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.ipAddress">IP address</Trans>
+                  <Trans>IP address</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.port">Port</Trans>
+                  <Trans>Port</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.upDown">MiB Up/Down</Trans>
+                  <Trans>MiB Up/Down</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.connectionType">
+                  <Trans>
                     Connection type
                   </Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.sbHeight">SB Height</Trans>
+                  <Trans>SB Height</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans id="Connections.delete">Delete</Trans>
+                  <Trans>Delete</Trans>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -152,20 +152,20 @@ export default function Connections(props) {
       )}
       
       <h4 className={classes.connect}>
-        <Trans id="Connections.connectToOtherPeersTitle">
+        <Trans>
           Connect to other peers
         </Trans>
       </h4>
       <form className={classes.form} noValidate autoComplete="off">
         <TextField
           label={
-            <Trans id="Connections.ipAddressHost">IP address / host</Trans>
+            <Trans>IP address / host</Trans>
           }
           value={host}
           onChange={handleChangeHost}
         />
         <TextField
-          label={<Trans id="Connections.port">Port</Trans>}
+          label={<Trans>Port</Trans>}
           value={port}
           onChange={handleChangePort}
         />
@@ -176,7 +176,7 @@ export default function Connections(props) {
           className={classes.button}
           startIcon={<SettingsInputAntennaIcon />}
         >
-          <Trans id="Connections.connect">Connect</Trans>
+          <Trans>Connect</Trans>
         </Button>
       </form>
       {connectionError === '' ? (

@@ -14,27 +14,27 @@ const Color = {
 };
 
 const Title = {
-  [FarmerStatus.FARMING]: <Trans id="PlotStatus.farming">Farming</Trans>,
-  [FarmerStatus.SYNCHING]: <Trans id="PlotStatus.synching">Syncing</Trans>,
-  [FarmerStatus.NOT_AVAILABLE]: <Trans id="PlotStatus.notAvailable">Not Available</Trans>,
-  [FarmerStatus.NOT_CONNECTED]: <Trans id="PlotStatus.error">Error</Trans>,
-  [FarmerStatus.NOT_RUNNING]: <Trans id="PlotStatus.error">Error</Trans>,
+  [FarmerStatus.FARMING]: <Trans>Farming</Trans>,
+  [FarmerStatus.SYNCHING]: <Trans>Syncing</Trans>,
+  [FarmerStatus.NOT_AVAILABLE]: <Trans>Not Available</Trans>,
+  [FarmerStatus.NOT_CONNECTED]: <Trans>Error</Trans>,
+  [FarmerStatus.NOT_RUNNING]: <Trans>Error</Trans>,
 };
 
 const Description = {
   [FarmerStatus.FARMING]: null,
   [FarmerStatus.SYNCHING]: (
-    <Trans id="PlotStatus.notAvailableDescription">
+    <Trans>
       Wait for synchronization
     </Trans>
   ),
   [FarmerStatus.NOT_AVAILABLE]: (
-    <Trans id="PlotStatus.notAvailableDescription">
+    <Trans>
       Wait for synchronization
     </Trans>
   ),
-  [FarmerStatus.NOT_CONNECTED]: <Trans id="PlotStatus.farmerIsNotConnected">Farmer is not connected</Trans>,
-  [FarmerStatus.NOT_RUNNING]: <Trans id="PlotStatus.farmerIsNotRunning">Farmer is not running</Trans>,
+  [FarmerStatus.NOT_CONNECTED]: <Trans>Farmer is not connected</Trans>,
+  [FarmerStatus.NOT_RUNNING]: <Trans>Farmer is not running</Trans>,
 };
 
 type Props = {

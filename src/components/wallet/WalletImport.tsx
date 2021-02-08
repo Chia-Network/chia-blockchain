@@ -136,10 +136,10 @@ export default function WalletImport() {
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Logo />
           <Typography variant="h4" component="h1" gutterBottom>
-            <Trans id="WalletImport.title">Import Wallet from Mnemonics</Trans>
+            <Trans>Import Wallet from Mnemonics</Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
-            <Trans id="WalletImport.description">
+            <Trans>
               Enter the 24 word mnemonic that you have saved in order to restore
               your Chia wallet.
             </Trans>
@@ -155,7 +155,7 @@ export default function WalletImport() {
               color="primary"
               fullWidth
             >
-              <Trans id="WalletImport.next">Next</Trans>
+              <Trans>Next</Trans>
             </Button>
           </Container>
         </Flex>

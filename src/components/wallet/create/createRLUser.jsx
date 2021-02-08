@@ -75,7 +75,7 @@ export const CreateRLUserWallet = () => {
           </Box>
           <Box flexGrow={1} className={classes.title}>
             <Typography component="h6" variant="h6">
-              <Trans id="CreateRLUserWallet.title">
+              <Trans>
                 Create Rate Limited User Wallet
               </Trans>
             </Typography>
@@ -86,7 +86,7 @@ export const CreateRLUserWallet = () => {
         <Box display="flex">
           <Box flexGrow={1} className={custom.inputTitleLeft}>
             <Typography variant="subtitle1">
-              <Trans id="CreateRLUserWallet.description">
+              <Trans>
                 Initialize a Rate Limited User Wallet:
               </Trans>
             </Typography>
@@ -100,7 +100,7 @@ export const CreateRLUserWallet = () => {
               variant="contained"
               color="primary"
             >
-              <Trans id="CreateRLUserWallet.create">Create</Trans>
+              <Trans>Create</Trans>
             </Button>
           </Box>
         </Box>

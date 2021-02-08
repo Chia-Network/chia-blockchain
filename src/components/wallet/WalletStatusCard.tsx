@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { Box, Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 
-export default function WalletStatusCard(): JSX.Element {
+export default function WalletStatusCard() {
   const syncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
@@ -18,30 +18,30 @@ export default function WalletStatusCard(): JSX.Element {
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">
-        <Trans id="WalletStatusCard.title">Status</Trans>
+        <Trans>Status</Trans>
       </Typography>
       <div style={{ marginLeft: 8 }}>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans id="WalletStatusCard.status">status:</Trans>
+            <Trans>status:</Trans>
           </Box>
           <Box>
             {syncing ? (
-              <Trans id="WalletStatusCard.syncing">syncing</Trans>
+              <Trans>syncing</Trans>
             ) : (
-              <Trans id="WalletStatusCard.synced">synced</Trans>
+              <Trans>synced</Trans>
             )}
           </Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans id="WalletStatusCard.height">height:</Trans>
+            <Trans>height:</Trans>
           </Box>
           <Box>{height}</Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans id="WalletStatusCard.connections">connections:</Trans>
+            <Trans>connections:</Trans>
           </Box>
           <Box>{connectionCount}</Box>
         </Box>

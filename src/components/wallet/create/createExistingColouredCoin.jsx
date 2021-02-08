@@ -67,7 +67,7 @@ export const CreateExistingCCWallet = () => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateExistingCCWallet.enterValidFee">
+            <Trans>
               Please enter a valid numeric fee
             </Trans>
           </AlertDialog>
@@ -92,7 +92,7 @@ export const CreateExistingCCWallet = () => {
           </Box>
           <Box flexGrow={1} className={classes.title}>
             <Typography component="h6" variant="h6">
-              <Trans id="CreateExistingCCWallet.title">
+              <Trans>
                 Create wallet for colour
               </Trans>
             </Typography>
@@ -112,7 +112,7 @@ export const CreateExistingCCWallet = () => {
                 colour_string = input;
               }}
               label={
-                <Trans id="CreateExistingCCWallet.colourString">
+                <Trans>
                   Colour String
                 </Trans>
               }
@@ -128,7 +128,7 @@ export const CreateExistingCCWallet = () => {
               inputRef={(input) => {
                 fee_input = input;
               }}
-              label={<Trans id="CreateExistingCCWallet.fee">Fee</Trans>}
+              label={<Trans>Fee</Trans>}
             />
           </Box>
           <Box>
@@ -138,7 +138,7 @@ export const CreateExistingCCWallet = () => {
               variant="contained"
               color="primary"
             >
-              <Trans id="CreateExistingCCWallet.create">Create</Trans>
+              <Trans>Create</Trans>
             </Button>
             <Backdrop className={custom.backdrop} open={open} invisible={false}>
               <CircularProgress color="inherit" />

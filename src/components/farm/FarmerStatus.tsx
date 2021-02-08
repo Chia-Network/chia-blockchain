@@ -15,11 +15,11 @@ const Color = {
 };
 
 const Title = {
-  [FarmerStatus.FARMING]: <Trans id="FarmerStatus.farming">Farming</Trans>,
-  [FarmerStatus.SYNCHING]: <Trans id="FarmerStatus.synching">Syncing</Trans>,
-  [FarmerStatus.NOT_AVAILABLE]: <Trans id="FarmerStatus.notAvailable">Not Available</Trans>,
-  [FarmerStatus.NOT_CONNECTED]: <Trans id="FarmerStatus.error">Error</Trans>,
-  [FarmerStatus.NOT_RUNNING]: <Trans id="FarmerStatus.error">Error</Trans>,
+  [FarmerStatus.FARMING]: <Trans>Farming</Trans>,
+  [FarmerStatus.SYNCHING]: <Trans>Syncing</Trans>,
+  [FarmerStatus.NOT_AVAILABLE]: <Trans>Not Available</Trans>,
+  [FarmerStatus.NOT_CONNECTED]: <Trans>Error</Trans>,
+  [FarmerStatus.NOT_RUNNING]: <Trans>Error</Trans>,
 };
 
 const StyledFiberManualRecordIcon = styled(FiberManualRecordIcon)`

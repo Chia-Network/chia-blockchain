@@ -9,11 +9,11 @@ import FarmYourHarvesterNetwork from './FarmYourHarvesterNetwork';
 import FarmLastAttemptedProof from './FarmLastAttemptedProof';
 import usePlots from '../../hooks/usePlots';
 
-export default function Farm(): JSX.Element {
+export default function Farm() {
   const { hasPlots } = usePlots();
 
   return (
-    <LayoutMain title={<Trans id="Farmer.title">Farming</Trans>}>
+    <LayoutMain title={<Trans>Farming</Trans>}>
       <Flex flexDirection="column" gap={3}>
         <FarmOverview />
 

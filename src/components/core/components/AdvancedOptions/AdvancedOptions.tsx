@@ -38,14 +38,14 @@ export default function AdvancedOptions(props: Props) {
         {isExpanded ? (
           <Flex alignItems="center">
             <KeyboardArrowUpIcon />
-            <Trans id="AdvancedOptions.hideAdvancedOptions">
+            <Trans>
               Hide Advanced Options
             </Trans>
           </Flex>
         ) : (
           <Flex alignItems="center">
             <KeyboardArrowDownIcon />
-            <Trans id="AdvancedOptions.showAdvancedOptions">
+            <Trans>
               Show Advanced Options
             </Trans>
           </Flex>

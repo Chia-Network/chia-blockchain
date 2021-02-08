@@ -15,12 +15,12 @@ export default function FarmCardLastHeightFarmed() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardLastHeightFarmed.title">Last Height Farmed</Trans>
+        <Trans>Last Height Farmed</Trans>
       }
       value={biggestHeight}
       description={
         !biggestHeight && (
-          <Trans id="FarmCardLastHeightFarmed.noBlocksFarmedYet">
+          <Trans>
             No blocks farmed yet
           </Trans>
         )

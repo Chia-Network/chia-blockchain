@@ -37,8 +37,8 @@ const cols = [
         : StateColor.WARNING;
 
       const tooltip = isFinished
-        ? <Trans id="BlocksCard.finished">Finished</Trans>
-        : <Trans id="BlocksCard.inProgress">In Progress</Trans>;
+        ? <Trans>Finished</Trans>
+        : <Trans>In Progress</Trans>;
 
       return (
         <Flex gap={1} alignItems="center">
@@ -51,10 +51,10 @@ const cols = [
         </Flex>
       );
     },
-    title: <Trans id="BlocksCard.headerHash">Header Hash</Trans>,
+    title: <Trans>Header Hash</Trans>,
   }, {
     field: 'sub_block_height',
-    title: <Trans id="BlocksCard.sbHeight">SB Height</Trans>,
+    title: <Trans>SB Height</Trans>,
   }, {
     field(row) {
       const { 
@@ -81,7 +81,7 @@ const cols = [
 
       return height;
     },
-    title: <Trans id="BlocksCard.height">Height</Trans>,
+    title: <Trans>Height</Trans>,
   },
   {
     field(row) {
@@ -101,7 +101,7 @@ const cols = [
         ? unix_to_short_date(Number.parseInt(value))
         : '';
     },
-    title: <Trans id="BlocksCard.timeCreated">Time Created</Trans>,
+    title: <Trans>Time Created</Trans>,
   },
   {
     field(row) {
@@ -110,11 +110,11 @@ const cols = [
       } = row;
 
       return isFinished
-        ? <Trans id="BlocksCard.finished">Finished</Trans>
-        : <Trans id="BlocksCard.unfinished">Unfinished</Trans>;
+        ? <Trans>Finished</Trans>
+        : <Trans>Unfinished</Trans>;
     },
     title: (
-      <Trans id="BlocksCard.state">
+      <Trans>
         State
       </Trans>
     ),
@@ -127,15 +127,15 @@ const getStatusItems = (state, connected) => {
     const progress = state.sync.sync_progress_sub_height;
     const tip = state.sync.sync_tip_sub_height;
     const item = {
-      label: <Trans id="StatusItem.status">Status</Trans>,
+      label: <Trans>Status</Trans>,
       value: (
-        <Trans id="StatusItem.statusValue">
+        <Trans>
           Syncing {progress}/{tip}
         </Trans>
       ),
       colour: 'orange',
       tooltip: (
-        <Trans id="StatusItem.statusTooltip">
+        <Trans>
           The node is syncing, which means it is downloading blocks from other
           nodes, to reach the latest block in the chain
         </Trans>
@@ -144,15 +144,15 @@ const getStatusItems = (state, connected) => {
     status_items.push(item);
   } else if (!state.sync.synced){
     const item = {
-      label: <Trans id="StatusItem.status">Status</Trans>,
+      label: <Trans>Status</Trans>,
       value: (
-        <Trans id="StatusItem.statusNotSynced">
+        <Trans>
           Not Synced
         </Trans>
       ),
       colour: 'red',
       tooltip: (
-        <Trans id="StatusItem.statusNotSyncedTooltip">
+        <Trans>
           The node is not synced
         </Trans>
       ),
@@ -160,11 +160,11 @@ const getStatusItems = (state, connected) => {
     status_items.push(item);
   } else {
     const item = {
-      label: <Trans id="StatusItem.status">Status</Trans>,
-      value: <Trans id="StatusItem.statusSynced">Synced</Trans>,
+      label: <Trans>Status</Trans>,
+      value: <Trans>Synced</Trans>,
       colour: '#3AAC59',
       tooltip: (
-        <Trans id="StatusItem.statusSyncedTooltip">
+        <Trans>
           This node is fully caught up and validating the network
         </Trans>
       ),
@@ -174,11 +174,11 @@ const getStatusItems = (state, connected) => {
 
   if (connected) {
     status_items.push({
-      label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
+      label: <Trans>Connection Status</Trans>,
       value: connected ? (
-        <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>
+        <Trans>Connected</Trans>
       ) : (
-        <Trans id="StatusItem.connectionStatusNotConnected">
+        <Trans>
           Not connected
         </Trans>
       ),
@@ -186,8 +186,8 @@ const getStatusItems = (state, connected) => {
     });
   } else {
     const item = {
-      label: <Trans id="StatusItem.status">Status</Trans>,
-      value: <Trans id="StatusItem.statusNotConnected">Not connected</Trans>,
+      label: <Trans>Status</Trans>,
+      value: <Trans>Not connected</Trans>,
       colour: 'black',
     };
     status_items.push(item);
@@ -195,24 +195,24 @@ const getStatusItems = (state, connected) => {
 
   const peakHeight = state.peak?.foliage_block?.height ?? 0;
   status_items.push({
-    label: <Trans id="StatusItem.peakHeight">Peak Height</Trans>,
+    label: <Trans>Peak Height</Trans>,
     value: peakHeight,
   });
 
   const peakSubBlockHeight = state.peak?.reward_chain_sub_block?.sub_block_height ?? 0;
   status_items.push({
-    label: <Trans id="StatusItem.peakSubBlockHeight">Peak Sub-block Height</Trans>,
+    label: <Trans>Peak Sub-block Height</Trans>,
     value: peakSubBlockHeight,
   });
 
   const peakTimestamp = state.peak?.foliage_block?.timestamp;
   status_items.push({
-    label: <Trans id="StatusItem.peakTime">Peak Time</Trans>,
+    label: <Trans>Peak Time</Trans>,
     value: peakTimestamp
       ? unix_to_short_date(Number.parseInt(peakTimestamp))
       : '',
     tooltip: (
-      <Trans id="StatusItem.peakTimeTooltip">
+      <Trans>
         This is the time of the latest peak sub block.
       </Trans>
     ),
@@ -220,7 +220,7 @@ const getStatusItems = (state, connected) => {
 
   const { difficulty } = state;
   const diff_item = {
-    label: <Trans id="StatusItem.difficulty">Difficulty</Trans>,
+    label: <Trans>Difficulty</Trans>,
     value: difficulty,
   };
   status_items.push(diff_item);
@@ -228,7 +228,7 @@ const getStatusItems = (state, connected) => {
   const { sub_slot_iters } = state;
   status_items.push({
     label: (
-      <Trans id="StatusItem.subSlotIters">VDF Sub Slot Iterations</Trans>
+      <Trans>VDF Sub Slot Iterations</Trans>
     ),
     value: sub_slot_iters,
   });
@@ -236,11 +236,11 @@ const getStatusItems = (state, connected) => {
   const totalIters = state.peak?.reward_chain_sub_block?.total_iters ?? 0;
   status_items.push({
     label: (
-      <Trans id="StatusItem.totalIterations">Total Iterations</Trans>
+      <Trans>Total Iterations</Trans>
     ),
     value: totalIters,
     tooltip: (
-      <Trans id="StatusItem.totalIterationsTooltip">
+      <Trans>
         Total iterations since the start of the blockchain
       </Trans>
     ),
@@ -248,13 +248,13 @@ const getStatusItems = (state, connected) => {
 
   const space_item = {
     label: (
-      <Trans id="StatusItem.estimatedNetworkSpace">
+      <Trans>
         Estimated network space
       </Trans>
     ),
     value: <FormatBytes value={state.space} precision={3} />,
     tooltip: (
-      <Trans id="StatusItem.estimatedNetworkSpaceTooltip">
+      <Trans>
         Estimated sum of all the plotted disk space of all farmers in the
         network
       </Trans>
@@ -301,7 +301,7 @@ const FullNodeStatus = (props) => {
 
   return (
     <Card
-      title={<Trans id="FullNodeStatus.title">Full Node Status</Trans>}
+      title={<Trans>Full Node Status</Trans>}
     >
       {statusItems ? (
         <Grid spacing={4} container>
@@ -342,7 +342,7 @@ const BlocksCard = () => {
 
   return (
     <Card
-      title={<Trans id="BlocksCard.title">Blocks</Trans>}
+      title={<Trans>Blocks</Trans>}
     >
       {!!rows.length ? (
         <Table
@@ -374,13 +374,13 @@ function SearchBlock() {
 
   return (
     <Card
-      title={<Trans id="SearchBlock.title">Search block by header hash</Trans>}
+      title={<Trans>Search block by header hash</Trans>}
     >
       <Flex alignItems="stretch">
         <Box flexGrow={1}>
           <TextField
             fullWidth
-            label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
+            label={<Trans>Block hash</Trans>}
             value={searchHash}
             onChange={handleChangeSearchHash}
             variant="outlined"
@@ -391,7 +391,7 @@ function SearchBlock() {
           variant="contained"
           disableElevation
         >
-          <Trans id="SearchBlock.search">Search</Trans>
+          <Trans>Search</Trans>
         </Button>
       </Flex>
     </Card>
@@ -415,7 +415,7 @@ export default function FullNode() {
 
   return (
     <LayoutMain
-      title={<Trans id="FullNode.title">Full Node</Trans>}
+      title={<Trans>Full Node</Trans>}
     >
       <Flex flexDirection="column" gap={3}>
         <FullNodeStatus />

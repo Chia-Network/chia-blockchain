@@ -32,7 +32,7 @@ export default function FarmOverviewHero() {
         <CardHero>
           <StyledImage src={heroSrc} />
           <Typography variant="body1">
-            <Trans id="FarmOverviewHero.description">
+            <Trans>
               Farmers earn block rewards and transaction fees by committing
               spare space to the network to help secure transactions. This
               is where your farm will be once you add a plot.{' '}
@@ -44,13 +44,13 @@ export default function FarmOverviewHero() {
             variant="contained"
             color="primary"
           >
-            <Trans id="FarmOverviewHero.addAPlot">Add a Plot</Trans>
+            <Trans>Add a Plot</Trans>
           </Button>
 
           <Divider />
 
           <Typography variant="body1">
-            <Trans id="FarmOverviewHero.doYouHavePlot">
+            <Trans>
               {'Do you have existing plots on this machine? '}
               <Link onClick={handleAddPlotDirectory} variant="body1">Add Plot Directory</Link>
             </Trans>

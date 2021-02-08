@@ -31,10 +31,10 @@ export default function PlotQueueAction(props: Props) {
   async function handleDeletePlot() {
     const canDelete = await openDialog((
       <ConfirmDialog
-        title={<Trans id="PlotQueueAction.deleteTitle">Delete Plot</Trans>}
-        confirmTitle={<Trans id="PlotQueueAction.deleteButton">Delete</Trans>}
+        title={<Trans>Delete Plot</Trans>}
+        confirmTitle={<Trans>Delete</Trans>}
       >
-        <Trans id="PlotQueueAction.deleteDescription">
+        <Trans>
           Are you sure you want to delete the plot? The plot cannot be
           recovered.
         </Trans>
@@ -63,7 +63,7 @@ export default function PlotQueueAction(props: Props) {
                 <InfoIcon fontSize="small" />
               </ListItemIcon>
               <Typography variant="inherit" noWrap>
-                View Log
+                <Trans>View Log</Trans>
               </Typography>
             </MenuItem>
           )}
@@ -73,7 +73,7 @@ export default function PlotQueueAction(props: Props) {
               <DeleteForeverIcon fontSize="small" />
             </ListItemIcon>
             <Typography variant="inherit" noWrap>
-              Delete
+              <Trans>Delete</Trans>
             </Typography>
           </MenuItem>
         </Box>

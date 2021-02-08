@@ -15,7 +15,7 @@ export default function Plot() {
       title={(
         <>
           <Link to="/dashboard/plot" color="textPrimary">
-            <Trans id="Plot.title">Plot</Trans>
+            <Trans>Plot</Trans>
           </Link>
           <PlotHeaderTarget />
         </>

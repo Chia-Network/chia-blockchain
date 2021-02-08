@@ -97,7 +97,7 @@ export const CreateRLAdminWallet = () => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateRLAdminWallet.enterValidNumericInterval">
+            <Trans>
               Please enter a valid numeric interval length
             </Trans>
           </AlertDialog>
@@ -114,7 +114,7 @@ export const CreateRLAdminWallet = () => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateRLAdminWallet.enterValidSpendableAmount">
+            <Trans>
               Please enter a valid numeric spendable amount
             </Trans>
           </AlertDialog>
@@ -126,7 +126,7 @@ export const CreateRLAdminWallet = () => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateRLAdminWallet.enterValidPubkey">
+            <Trans>
               Please enter a valid pubkey
             </Trans>
           </AlertDialog>
@@ -143,7 +143,7 @@ export const CreateRLAdminWallet = () => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateRLAdminWallet.enterValidInitialCoin">
+            <Trans>
               Please enter a valid initial coin amount
             </Trans>
           </AlertDialog>
@@ -155,7 +155,7 @@ export const CreateRLAdminWallet = () => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateRLAdminWallet.enterValidNumericFee">
+            <Trans>
               Please enter a valid numeric fee
             </Trans>
           </AlertDialog>
@@ -195,7 +195,7 @@ export const CreateRLAdminWallet = () => {
           </Box>
           <Box flexGrow={1} className={classes.title}>
             <Typography component="h6" variant="h6">
-              <Trans id="CreateRLAdminWallet.createRateLimitedAdminWallet">
+              <Trans>
                 Create Rate Limited Admin Wallet
               </Trans>
             </Typography>
@@ -206,14 +206,14 @@ export const CreateRLAdminWallet = () => {
         <Box display="flex">
           <Box flexGrow={6} className={custom.inputTitleLeft}>
             <Typography variant="subtitle1">
-              <Trans id="CreateRLAdminWallet.spendingIntervalLength">
+              <Trans>
                 Spending Interval Length (number of blocks)
               </Trans>
             </Typography>
           </Box>
           <Box flexGrow={6} className={custom.inputTitleRight}>
             <Typography variant="subtitle1">
-              <Trans id="CreateRLAdminWallet.spendableAmountPerInterval">
+              <Trans>
                 Spendable Amount Per Interval
               </Trans>
             </Typography>
@@ -231,7 +231,7 @@ export const CreateRLAdminWallet = () => {
               inputRef={(input) => {
                 interval_input = input;
               }}
-              label={<Trans id="CreateRLAdminWallet.interval">Interval</Trans>}
+              label={<Trans>Interval</Trans>}
             />
           </Box>
           <Box flexGrow={6}>
@@ -244,7 +244,7 @@ export const CreateRLAdminWallet = () => {
                 chiaper_input = input;
               }}
               label={
-                <Trans id="CreateRLAdminWallet.spendableAmount">
+                <Trans>
                   Spendable Amount
                 </Trans>
               }
@@ -256,14 +256,14 @@ export const CreateRLAdminWallet = () => {
         <Box display="flex">
           <Box flexGrow={6} className={custom.inputTitleLeft}>
             <Typography variant="subtitle1">
-              <Trans id="CreateRLAdminWallet.amountForInitialCoin">
+              <Trans>
                 Amount For Initial Coin
               </Trans>
             </Typography>
           </Box>
           <Box flexGrow={6} className={custom.inputTitleRight}>
             <Typography variant="subtitle1">
-              <Trans id="CreateRLAdminWallet.fee">Fee</Trans>
+              <Trans>Fee</Trans>
             </Typography>
           </Box>
         </Box>
@@ -280,7 +280,7 @@ export const CreateRLAdminWallet = () => {
                 amount_input = input;
               }}
               label={
-                <Trans id="CreateRLAdminWallet.initialAmount">
+                <Trans>
                   Initial Amount
                 </Trans>
               }
@@ -295,7 +295,7 @@ export const CreateRLAdminWallet = () => {
               inputRef={(input) => {
                 fee_input = input;
               }}
-              label={<Trans id="CreateRLAdminWallet.fee">Fee</Trans>}
+              label={<Trans>Fee</Trans>}
             />
           </Box>
         </Box>
@@ -304,7 +304,7 @@ export const CreateRLAdminWallet = () => {
         <Box display="flex">
           <Box flexGrow={6} className={custom.inputTitleLeft}>
             <Typography variant="subtitle1">
-              <Trans id="CreateRLAdminWallet.userPubkey">User Pubkey</Trans>
+              <Trans>User Pubkey</Trans>
             </Typography>
           </Box>
         </Box>
@@ -320,7 +320,7 @@ export const CreateRLAdminWallet = () => {
               inputRef={(input) => {
                 userpubkey_input = input;
               }}
-              label={<Trans id="CreateRLAdminWallet.pubkey">Pubkey</Trans>}
+              label={<Trans>Pubkey</Trans>}
             />
           </Box>
           <Box>
@@ -330,7 +330,7 @@ export const CreateRLAdminWallet = () => {
               variant="contained"
               color="primary"
             >
-              <Trans id="CreateRLAdminWallet.create">Create</Trans>
+              <Trans>Create</Trans>
             </Button>
           </Box>
         </Box>

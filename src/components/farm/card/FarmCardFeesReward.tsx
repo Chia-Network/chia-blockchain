@@ -16,7 +16,7 @@ export default function FarmCardFeesReward() {
 
   return (
     <FarmCard
-      title={<Trans id="FarmCardFeesReward.title">TXCH Fees Collected</Trans>}
+      title={<Trans>TXCH Fees Collected</Trans>}
       value={feesReward}
       loading={loading}
     />

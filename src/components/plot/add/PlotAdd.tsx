@@ -73,7 +73,7 @@ export default function PlotAdd() {
       <PlotHeaderSource>
         <Flex alignItems="center">
           <ChevronRightIcon color="secondary" />
-          <Trans id="PlotAdd.title">
+          <Trans>
             Add a Plot
           </Trans>
         </Flex>
@@ -85,7 +85,7 @@ export default function PlotAdd() {
         <PlotAddSelectFinalDirectory />
         <div>
           <Button color="primary" type="submit" variant="contained">
-            <Trans id="PlotAdd.createPlot">
+            <Trans>
               Create Plot
             </Trans>
           </Button>

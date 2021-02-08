@@ -62,10 +62,10 @@ export default function WalletAdd() {
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Logo />
           <Typography variant="h4" component="h1" gutterBottom>
-            <Trans id="WalletAdd.title">New Wallet</Trans>
+            <Trans>New Wallet</Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
-            <Trans id="WalletAdd.description">
+            <Trans>
               Welcome! The following words are used for your wallet backup.
               Without them, you will lose access to your wallet, keep them safe!
               Write down each word along with the order number next to them.
@@ -94,7 +94,7 @@ export default function WalletAdd() {
               color="primary"
               fullWidth
             >
-              <Trans id="WalletAdd.next">Next</Trans>
+              <Trans>Next</Trans>
             </Button>
           </Container>
         </Flex>

@@ -18,7 +18,7 @@ export default function PlotAddNumberOfPlots() {
     <CardStep
       step="2"
       title={(
-        <Trans id="PlotAddNumberOfPlots.title">Choose Number of Plots</Trans>
+        <Trans>Choose Number of Plots</Trans>
       )}
     >
       <Grid spacing={2} direction="column" container>
@@ -28,7 +28,7 @@ export default function PlotAddNumberOfPlots() {
             fullWidth
           >
             <InputLabel required>
-              <Trans id="PlotAddNumberOfPlots.plotCount">Plot Count</Trans>
+              <Trans>Plot Count</Trans>
             </InputLabel>
             <Select name="plotCount">
               {plotCountOptions.map((count) => (
@@ -42,12 +42,12 @@ export default function PlotAddNumberOfPlots() {
 
         <Grid xs={12} md={8} lg={6} item>
           <Typography variant="body1">
-            <Trans id="PlotAddNumberOfPlots.parallelTitle">
+            <Trans>
               Does your machine support parallel plotting?
             </Trans>
           </Typography>
           <Typography variant="body2">
-            <Trans id="PlotAddNumberOfPlots.parallelDescription">
+            <Trans>
               Plotting in parallel can save time. Otherwise, add plot(s) to the queue.
             </Trans>
           </Typography>
@@ -79,7 +79,7 @@ export default function PlotAddNumberOfPlots() {
               variant="filled"
             >
               <Typography variant="subtitle1">
-                <Trans id="PlotAddNumberOfPlots.delayTitle">
+                <Trans>
                   Want to have a delay before the next plot starts?
                 </Trans>
               </Typography>
@@ -87,12 +87,12 @@ export default function PlotAddNumberOfPlots() {
                 name="delay"
                 type="number"
                 variant="filled"
-                label={<Trans id="PlotAddNumberOfPlots.delay">Delay</Trans>}
+                label={<Trans>Delay</Trans>}
                 InputProps={{
                   inputProps: { min: 0 },
                   endAdornment: (
                     <InputAdornment position="end">
-                      <Trans id="CreatePlot.delayDescription">
+                      <Trans>
                         Minutes
                       </Trans>
                     </InputAdornment>
@@ -114,9 +114,9 @@ export default function PlotAddNumberOfPlots() {
                 name="maxRam"
                 type="number"
                 variant="filled"
-                label={<Trans id="PlotAddNumberOfPlots.ramMaxUsage">RAM max usage</Trans>}
+                label={<Trans>RAM max usage</Trans>}
                 helperText={(
-                  <Trans id="CreatePlot.ramMaxUsageDescription">
+                  <Trans>
                     More memory slightly increases speed
                   </Trans>
                 )}
@@ -137,7 +137,7 @@ export default function PlotAddNumberOfPlots() {
                 variant="filled"
                 placeholder="2"
                 label={(
-                  <Trans id="CreatePlot.numberOfThreads">
+                  <Trans>
                     Number of threads
                   </Trans>
                 )}
@@ -158,12 +158,12 @@ export default function PlotAddNumberOfPlots() {
                 variant="filled"
                 placeholder=""
                 label={(
-                  <Trans id="CreatePlot.numberOfBuckets">
+                  <Trans>
                     Number of buckets
                   </Trans>
                 )}
                 helperText={(
-                  <Trans id="CreatePlot.numberOfBucketsDescription">
+                  <Trans>
                     0 automatically chooses bucket count
                   </Trans>
                 )}
@@ -183,7 +183,7 @@ export default function PlotAddNumberOfPlots() {
                 type="number"
                 variant="filled"
                 placeholder="65536"
-                label={<Trans id="CreatePlot.stripeSize">Stripe Size</Trans>}
+                label={<Trans>Stripe Size</Trans>}
                 InputProps={{
                   inputProps: { min: 0 },
                 }}

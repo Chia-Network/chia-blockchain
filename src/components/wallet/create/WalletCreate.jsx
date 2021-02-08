@@ -100,7 +100,7 @@ export const MainWalletList = () => {
           <Box display="flex">
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans id="MainWalletList.title">Select Wallet Type</Trans>
+                <Trans>Select Wallet Type</Trans>
               </Typography>
             </Box>
           </Box>
@@ -112,7 +112,7 @@ export const MainWalletList = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans id="MainWalletList.colouredCoin">Coloured Coin</Trans>
+                <Trans>Coloured Coin</Trans>
               }
             />
           </ListItem>
@@ -122,7 +122,7 @@ export const MainWalletList = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans id="MainWalletList.rateLimited">Rate Limited</Trans>
+                <Trans>Rate Limited</Trans>
               }
             />
           </ListItem>
@@ -160,7 +160,7 @@ export const CCListItems = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans id="CCListItems.title">Coloured Coin Options</Trans>
+                <Trans>Coloured Coin Options</Trans>
               </Typography>
             </Box>
           </Box>
@@ -172,7 +172,7 @@ export const CCListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans id="MainWalletList.createNewColouredCoin">
+                <Trans>
                   Create new coloured coin
                 </Trans>
               }
@@ -184,7 +184,7 @@ export const CCListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans id="MainWalletList.createWalletForExistingColour">
+                <Trans>
                   Create wallet for existing colour
                 </Trans>
               }
@@ -224,7 +224,7 @@ export const RLListItems = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans id="RLListItems.title">Rate Limited Options</Trans>
+                <Trans>Rate Limited Options</Trans>
               </Typography>
             </Box>
           </Box>
@@ -236,7 +236,7 @@ export const RLListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans id="MainWalletList.createAdminWallet">
+                <Trans>
                   Create admin wallet
                 </Trans>
               }
@@ -248,7 +248,7 @@ export const RLListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans id="MainWalletList.createUserWallet">
+                <Trans>
                   Create user wallet
                 </Trans>
               }

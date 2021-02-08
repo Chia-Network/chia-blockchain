@@ -243,13 +243,13 @@ function BalanceCard(props: BalanceCardProps) {
 
   return (
     <Card
-      title={<Trans id="BalanceCard.balance">Balance</Trans>}
+      title={<Trans>Balance</Trans>}
     >
       <BalanceCardSubSection
-        title={<Trans id="BalanceCard.totalBalance">Total Balance</Trans>}
+        title={<Trans>Total Balance</Trans>}
         balance={balance}
         tooltip={
-          <Trans id="BalanceCard.totalBalanceTooltip">
+          <Trans>
             This is the total amount of chia in the blockchain at the current
             peak sub block that is controlled by your private keys.
             It includes frozen farming rewards,
@@ -259,11 +259,11 @@ function BalanceCard(props: BalanceCardProps) {
       />
       <BalanceCardSubSection
         title={
-          <Trans id="BalanceCard.spendableBalance">Spendable Balance</Trans>
+          <Trans>Spendable Balance</Trans>
         }
         balance={balance_spendable}
         tooltip={
-          <Trans id="BalanceCard.spendableBalanceTooltip">
+          <Trans>
             This is the amount of Chia that you can currently use to make
             transactions. It does not include pending farming rewards, pending
             incoming transactions, and Chia that you have just spent but is not
@@ -281,7 +281,7 @@ function BalanceCard(props: BalanceCardProps) {
                 id="panel1a-header"
               >
                 <Typography className={classes.heading}>
-                  <Trans id="BalanceCard.viewPendingBalances">
+                  <Trans>
                     View pending balances
                   </Trans>
                 </Typography>
@@ -290,13 +290,13 @@ function BalanceCard(props: BalanceCardProps) {
                 <Grid container spacing={0}>
                   <BalanceCardSubSection
                     title={
-                      <Trans id="BalanceCard.pendingTotalBalance">
+                      <Trans>
                         Pending Total Balance
                       </Trans>
                     }
                     balance={balance_ptotal}
                     tooltip={
-                      <Trans id="BalanceCard.pendingTotalBalanceTooltip">
+                      <Trans>
                         This is the total balance + pending balance: it is
                         what your balance will be after all pending
                         transactions are confirmed.
@@ -305,13 +305,13 @@ function BalanceCard(props: BalanceCardProps) {
                   />
                   <BalanceCardSubSection
                     title={
-                      <Trans id="BalanceCard.pendingBalance">
+                      <Trans>
                         Pending Balance
                       </Trans>
                     }
                     balance={balance_pending}
                     tooltip={
-                      <Trans id="BalanceCard.pendingBalanceTooltip">
+                      <Trans>
                         This is the sum of the incoming and outgoing pending
                         transactions (not yet included into the blockchain).
                         This does not include farming rewards.
@@ -320,13 +320,13 @@ function BalanceCard(props: BalanceCardProps) {
                   />
                   <BalanceCardSubSection
                     title={
-                      <Trans id="BalanceCard.pendingChange">
+                      <Trans>
                         Pending Change
                       </Trans>
                     }
                     balance={balance_change}
                     tooltip={
-                      <Trans id="BalanceCard.pendingChangeTooltip">
+                      <Trans>
                         This is the pending change, which are change coins
                         which you have sent to yourself, but have not been
                         confirmed yet.
@@ -388,7 +388,7 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="SendCard.finishSyncingBeforeTransaction">
+            <Trans>
               Please finish syncing before making a transaction
             </Trans>
           </AlertDialog>
@@ -407,7 +407,7 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="SendCard.enterValidAmount">
+            <Trans>
               Please enter a valid numeric amount
             </Trans>
           </AlertDialog>
@@ -419,7 +419,7 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="SendCard.enterValidFee">
+            <Trans>
               Please enter a valid numeric fee
             </Trans>
           </AlertDialog>
@@ -434,7 +434,7 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="SendCard.enterValidAddress">
+            <Trans>
               Error: Cannot send chia to coloured address. Please enter a chia
               address.
             </Trans>
@@ -461,7 +461,7 @@ function SendCard(props: SendCardProps) {
 
   return (
     <Card
-      title={<Trans id="SendCard.title">Create Transaction</Trans>}
+      title={<Trans>Create Transaction</Trans>}
     >
       {result_message && (
         <Grid item xs={12}>
@@ -481,7 +481,7 @@ function SendCard(props: SendCardProps) {
                 address_input = input;
               }}
               label={
-                <Trans id="SendCard.address">Address / Puzzle hash</Trans>
+                <Trans>Address / Puzzle hash</Trans>
               }
             />
           </Box>
@@ -502,7 +502,7 @@ function SendCard(props: SendCardProps) {
               inputRef={(input) => {
                 amount_input = input;
               }}
-              label={<Trans id="SendCard.amount">Amount</Trans>}
+              label={<Trans>Amount</Trans>}
             />
           </Box>
           <Box flexGrow={6}>
@@ -516,7 +516,7 @@ function SendCard(props: SendCardProps) {
               inputRef={(input) => {
                 fee_input = input;
               }}
-              label={<Trans id="SendCard.fee">Fee</Trans>}
+              label={<Trans>Fee</Trans>}
             />
           </Box>
         </Box>
@@ -531,7 +531,7 @@ function SendCard(props: SendCardProps) {
               variant="contained"
               color="primary"
             >
-              <Trans id="SendCard.farm">Farm</Trans>
+              <Trans>Farm</Trans>
             </Button>
           </Box>
           <Box>
@@ -542,7 +542,7 @@ function SendCard(props: SendCardProps) {
               color="primary"
               disabled={sending_transaction}
             >
-              <Trans id="SendCard.send">Send</Trans>
+              <Trans>Send</Trans>
             </Button>
           </Box>
         </Box>
@@ -573,7 +573,7 @@ function AddressCard(props: AddressCardProps) {
 
   return (
     <Card
-      title={<Trans id="AddressCard.title">Receive Address</Trans>}
+      title={<Trans>Receive Address</Trans>}
     >
       <Grid item xs={12}>
         <Box display="flex">
@@ -581,7 +581,7 @@ function AddressCard(props: AddressCardProps) {
             <TextField
               disabled
               fullWidth
-              label={<Trans id="AddressCard.address">Address</Trans>}
+              label={<Trans>Address</Trans>}
               value={address}
               variant="outlined"
             />
@@ -594,7 +594,7 @@ function AddressCard(props: AddressCardProps) {
               color="secondary"
               disableElevation
             >
-              <Trans id="AddressCard.copy">Copy</Trans>
+              <Trans>Copy</Trans>
             </Button>
           </Box>
         </Box>
@@ -609,7 +609,7 @@ function AddressCard(props: AddressCardProps) {
               variant="contained"
               color="primary"
             >
-              <Trans id="AddressCard.newAddress">New Address</Trans>
+              <Trans>New Address</Trans>
             </Button>
           </Box>
         </Box>

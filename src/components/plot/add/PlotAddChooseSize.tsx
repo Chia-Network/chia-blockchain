@@ -22,11 +22,11 @@ export default function PlotAddChooseSize() {
     <CardStep
       step="1"
       title={(
-        <Trans id="PlotAddChooseSize.title">Choose Plot Size</Trans>
+        <Trans>Choose Plot Size</Trans>
       )}
     >
       <Typography variant="subtitle1">
-        <Trans id="PlotAddChooseSize.description">
+        <Trans>
           {'Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. '}
           <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes">Learn more</Link>
         </Trans>
@@ -39,7 +39,7 @@ export default function PlotAddChooseSize() {
             fullWidth
           >
             <InputLabel required focused>
-              <Trans id="PlotAddChooseSize.plotSize">Plot Size</Trans>
+              <Trans>Plot Size</Trans>
             </InputLabel>
             <Select name="plotSize">
               {plotSizeOptions.map((option) => (
@@ -50,7 +50,7 @@ export default function PlotAddChooseSize() {
             </Select>
             {isKLow && (
               <StyledFormHelperText>
-                <Trans id="PlotAddChooseSize.kLow">
+                <Trans>
                   The minimum required size for mainnet is k=32
                 </Trans>
               </StyledFormHelperText>

@@ -13,11 +13,11 @@ export default function FarmCardTotalNetworkSpace() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardTotalNetworkSpace.title">Total Network Space</Trans>
+        <Trans>Total Network Space</Trans>
       }
       value={<FormatBytes value={totalNetworkSpace} precision={3} />}
       description={
-        <Trans id="FarmCardTotalNetworkSpace.tooltip">
+        <Trans>
           Best estimate over last 5 hours
         </Trans>
       }

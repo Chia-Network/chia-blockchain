@@ -10,11 +10,11 @@ import type Plot from '../../types/Plot';
 const cols = [{
   field: 'filename',
   tooltip: 'filename',
-  title: <Trans id="PlotsNotFound.filename">Filename</Trans>,
+  title: <Trans>Filename</Trans>,
 }, {
   width: '150px',
   field: (plot: Plot) => <PlotAction plot={plot} />,
-  title: <Trans id="PlotsNotFound.action">Action</Trans>,
+  title: <Trans>Action</Trans>,
 }];
 
 export default function PlotsFailed() {
@@ -32,10 +32,10 @@ export default function PlotsFailed() {
 
   return (
     <Card
-      title={<Trans id="PlotsFailed.title">Failed to open (invalid plots)</Trans>}
+      title={<Trans>Failed to open (invalid plots)</Trans>}
     >
       <Typography component="h6" variant="body2">
-        <Trans id="PlotsFailed.description">
+        <Trans>
           These plots are invalid, you might want to delete them.
         </Trans>
       </Typography>

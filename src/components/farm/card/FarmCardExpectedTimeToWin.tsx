@@ -48,7 +48,7 @@ export default function FarmCardExpectedTimeToWin() {
     return (
       <FarmCardNotAvailable
         title={
-          <Trans id="FarmCardExpectedTimeToWin.title">Expected Time to Win</Trans>
+          <Trans>Expected Time to Win</Trans>
         }
         state={state}
       />
@@ -58,11 +58,11 @@ export default function FarmCardExpectedTimeToWin() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardExpectedTimeToWin.title">Expected Time to Win</Trans>
+        <Trans>Expected Time to Win</Trans>
       }
       value={`${expectedTimeToWin}`}
       tooltip={
-        <Trans id="FarmCardExpectedTimeToWin.tooltip">
+        <Trans>
           You have {(proportion * 100).toFixed(4)}% of the space on the network,
           so farming a block will take {expectedTimeToWin} in expectation.
         </Trans>

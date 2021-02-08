@@ -54,10 +54,10 @@ export default function FormatConnectionStatus(props: Props) {
 
 FormatConnectionStatus.defaultProps = {
   connectedTitle: (
-    <Trans id="FormatConnectionStatus.connected">Connected</Trans>
+    <Trans>Connected</Trans>
   ),
   notConnectedTitle: (
-    <Trans id="FormatConnectionStatus.notConnected">Not connected</Trans>
+    <Trans>Not connected</Trans>
   ),
   variant: 'caption',
   iconSize: 'sm',

@@ -60,7 +60,7 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateOffer.selectCoinType">
+            <Trans>
               Please select coin type
             </Trans>
           </AlertDialog>
@@ -72,7 +72,7 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateOffer.selectAmount">Please select amount</Trans>
+            <Trans>Please select amount</Trans>
           </AlertDialog>
         ),
       );
@@ -82,7 +82,7 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateOffer.selectBuyOrSell">
+            <Trans>
               Please select buy or sell
             </Trans>
           </AlertDialog>
@@ -106,7 +106,7 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateOffer.addTradePair">Please add a trade pair</Trans>
+            <Trans>Please add a trade pair</Trans>
           </AlertDialog>
         ),
       );
@@ -129,7 +129,7 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateOffer.availableOnlyFromElectron">
+            <Trans>
               This feature is available only from the GUI.
             </Trans>
           </AlertDialog>
@@ -143,21 +143,21 @@ export default function CreateOffer() {
 
   return (
     <Card 
-      title={<Trans id="CreateOffer.title">Create Trade Offer</Trans>}
+      title={<Trans>Create Trade Offer</Trans>}
       actions={(
         <>
           <Button
             onClick={handleCancel}
             variant="contained"
           >
-            <Trans id="CreateOffer.cancel">Cancel</Trans>
+            <Trans>Cancel</Trans>
           </Button>
           <Button
             onClick={handleSave}
             variant="contained"
             color="primary"
           >
-            <Trans id="CreateOffer.save">Save</Trans>
+            <Trans>Save</Trans>
           </Button>
         </>
       )}
@@ -171,15 +171,15 @@ export default function CreateOffer() {
               variant="outlined"
             >
               <InputLabel required>
-                <Trans id="CreateOffer.buyOrSell">Side</Trans>
+                <Trans>Side</Trans>
               </InputLabel>
               <Select
                 inputRef={(input) => {
                   buy_or_sell = input;
                 }}
               >
-                <MenuItem value={1}>Buy</MenuItem>
-                <MenuItem value={2}>Sell</MenuItem>
+                <MenuItem value={1}><Trans>Buy</Trans></MenuItem>
+                <MenuItem value={2}><Trans>Sell</Trans></MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -189,7 +189,7 @@ export default function CreateOffer() {
               variant="outlined"
             >
               <InputLabel required>
-                <Trans id="CreateOffer.colour">Colour</Trans>
+                <Trans>Colour</Trans>
               </InputLabel>
               <Select
                 inputRef={(input) => {
@@ -210,7 +210,7 @@ export default function CreateOffer() {
                   inputRef={(input) => {
                     amount_input = input;
                   }}
-                  label={<Trans id="CreateOffer.amount">Amount</Trans>}
+                  label={<Trans>Amount</Trans>}
                   variant="outlined"
                 />
               </Box>
@@ -219,7 +219,7 @@ export default function CreateOffer() {
                 variant="contained"
                 disableElevation
               >
-                <Trans id="CreateOffer.add">Add</Trans>
+                <Trans>Add</Trans>
               </Button>
             </Flex>
           </Grid>

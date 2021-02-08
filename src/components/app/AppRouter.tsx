@@ -23,21 +23,21 @@ export default function AppRouter() {
   if (exiting) {
     return (
       <LayoutLoading>
-        <Trans id="Application.closing">Closing down node and server</Trans>
+        <Trans>Closing down node and server</Trans>
       </LayoutLoading>
     );
   }
   if (!walletConnected) {
     return (
       <LayoutLoading>
-        <Trans id="Application.connectingToWallet">Connecting to wallet</Trans>
+        <Trans>Connecting to wallet</Trans>
       </LayoutLoading>
     );
   }
   if (!loggedInReceived) {
     return (
       <LayoutLoading>
-        <Trans id="Application.loggingIn">Logging in</Trans>
+        <Trans>Logging in</Trans>
       </LayoutLoading>
     );
   }

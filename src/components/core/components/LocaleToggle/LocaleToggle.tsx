@@ -69,7 +69,7 @@ export default function LocaleToggle() {
           </MenuItem>
         ))}
         <MenuItem onClick={handleHelpTranslate}>
-          <Trans id="LocaleToggle.helpToTranslate">Help translate</Trans>
+          <Trans>Help translate</Trans>
         </MenuItem>
       </Menu>
     </>

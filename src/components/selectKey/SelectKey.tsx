@@ -57,12 +57,12 @@ export default function SelectKey() {
   async function handleDeletePrivateKey(fingerprint: Fingerprint) {
     const deletePrivateKey = await openDialog((
       <ConfirmDialog
-        title={<Trans id="DeleteKey.title">Delete key</Trans>}
-        confirmTitle={<Trans id="DeleteKey.delete">Delete</Trans>}
-        cancelTitle={<Trans id="DeleteKey.back">Back</Trans>}
+        title={<Trans>Delete key</Trans>}
+        confirmTitle={<Trans>Delete</Trans>}
+        cancelTitle={<Trans>Back</Trans>}
         confirmColor="default"
       >
-        <Trans id="DeleteKey.description">
+        <Trans>
           Deleting the key will permanently remove the key from your computer,
           make sure you have backups. Are you sure you want to continue?
         </Trans>
@@ -78,12 +78,12 @@ export default function SelectKey() {
   async function handleDeleteAllKeys() {
     const deleteAllKeys = await openDialog((
       <ConfirmDialog
-        title={<Trans id="DeleteAllKeys.title">Delete all keys</Trans>}
-        confirmTitle={<Trans id="DeleteAllKeys.delete">Delete</Trans>}
-        cancelTitle={<Trans id="DeleteAllKeys.back">Back</Trans>}
+        title={<Trans>Delete all keys</Trans>}
+        confirmTitle={<Trans>Delete</Trans>}
+        cancelTitle={<Trans>Back</Trans>}
         confirmColor="default"
       >
-        <Trans id="DeleteAllKeys.description">
+        <Trans>
           Deleting all keys will permanently remove the keys from your
           computer, make sure you have backups. Are you sure you want to
           continue?
@@ -104,15 +104,15 @@ export default function SelectKey() {
           <Logo width={130} />
           {hasFingerprints ? (
             <Typography variant="h5" component="h1" gutterBottom>
-              <Trans id="SelectKey.title">Select Key</Trans>
+              <Trans>Select Key</Trans>
             </Typography>
           ) : (
             <>
               <Typography variant="h5" component="h1" gutterBottom>
-                <Trans id="SelectKey.signInTitle">Sign In</Trans>
+                <Trans>Sign In</Trans>
               </Typography>
               <Typography variant="subtitle1">
-                <Trans id="SelectKey.signInDescription">
+                <Trans>
                   Welcome to Chia. Please log in with an existing key, or create
                   a new key.
                 </Trans>
@@ -136,12 +136,12 @@ export default function SelectKey() {
                     >
                       <ListItemText
                         primary={
-                          <Trans id="SelectKey.selectFingerprint">
+                          <Trans>
                             Private key with public fingerprint {fingerprint}
                           </Trans>
                         }
                         secondary={
-                          <Trans id="SelectKey.selectKeyCanBeBacked">
+                          <Trans>
                             Can be backed up to mnemonic seed
                           </Trans>
                         }
@@ -179,14 +179,14 @@ export default function SelectKey() {
                 size="large"
                 fullWidth
               >
-                <Trans id="SelectKey.createNewPrivateKey">
+                <Trans>
                   Create a new private key
                 </Trans>
               </Button>
             </Link>
             <Link to="/wallet/import">
               <Button type="submit" variant="contained" size="large" fullWidth>
-                <Trans id="SelectKey.importFromMnemonics">
+                <Trans>
                   Import from Mnemonics (24 words)
                 </Trans>
               </Button>
@@ -199,7 +199,7 @@ export default function SelectKey() {
               size="large"
               fullWidth
             >
-              <Trans id="SelectKey.deleteAllKeys">Delete all keys</Trans>
+              <Trans>Delete all keys</Trans>
             </Button>
           </Flex>
         </Flex>

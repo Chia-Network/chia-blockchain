@@ -20,7 +20,7 @@ export default function TradeManager() {
 
   return (
     <LayoutSidebar
-      title={<Trans id="TradeManager.title">Trading</Trans>}
+      title={<Trans>Trading</Trans>}
       sidebar={(
         <List disablePadding>
           <Divider />
@@ -32,7 +32,7 @@ export default function TradeManager() {
             >
               <ListItemText
                 primary={
-                  <Trans id="TradeManager.tradeOverview">Trade Overview</Trans>
+                  <Trans>Trade Overview</Trans>
                 }
                 secondary=""
               />
@@ -46,7 +46,7 @@ export default function TradeManager() {
           >
             <ListItemText
               primary={
-                <Trans id="TradeManager.createTrade">Create Trade</Trans>
+                <Trans>Create Trade</Trans>
               }
               secondary=""
             />
@@ -59,7 +59,7 @@ export default function TradeManager() {
             button
           >
             <ListItemText
-              primary={<Trans id="TradeManager.viewOffer">View Offer</Trans>}
+              primary={<Trans>View Offer</Trans>}
               secondary=""
             />
           </ListItem>

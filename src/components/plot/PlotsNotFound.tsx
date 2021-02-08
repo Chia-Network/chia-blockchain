@@ -10,11 +10,11 @@ import type Plot from '../../types/Plot';
 const cols = [{
   field: 'filename',
   tooltip: 'filename',
-  title: <Trans id="PlotsNotFound.filename">Filename</Trans>,
+  title: <Trans>Filename</Trans>,
 }, {
   width: '150px',
   field: (plot: Plot) => <PlotAction plot={plot} />,
-  title: <Trans id="PlotsNotFound.action">Action</Trans>,
+  title: <Trans>Action</Trans>,
 }];
 
 export default function PlotsNotFound() {
@@ -32,10 +32,10 @@ export default function PlotsNotFound() {
 
   return (
     <Card
-      title={<Trans id="PlotsNotFound.title">Not found Plots</Trans>}
+      title={<Trans>Not found Plots</Trans>}
     >
       <Typography component="h6" variant="body2">
-        <Trans id="PlotsNotFound.description">
+        <Trans>
           Caution, deleting these plots will delete them forever. Check
           that the storage devices are properly connected.
         </Trans>

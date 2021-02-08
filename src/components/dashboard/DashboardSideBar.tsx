@@ -36,34 +36,34 @@ export default function DashboardSideBar() {
         <SideBarItem
           to="/dashboard"
           icon={<HomeIcon fontSize="large" />}
-          title={<Trans id="DashboardSideBar.home">Full Node</Trans>}
+          title={<Trans>Full Node</Trans>}
           exact
         />
         <SideBarItem
           to="/dashboard/wallets"
           icon={<WalletIcon fontSize="large" />}
-          title={<Trans id="DashboardSideBar.wallets">Wallets</Trans>}
+          title={<Trans>Wallets</Trans>}
         />
         <SideBarItem
           to="/dashboard/plot"
           icon={<PlotIcon fontSize="large" />}
-          title={<Trans id="DashboardSideBar.plots">Plots</Trans>}
+          title={<Trans>Plots</Trans>}
         />
         <SideBarItem
           to="/dashboard/farm"
           icon={<FarmIcon fontSize="large" />}
-          title={<Trans id="DashboardSideBar.farm">Farm</Trans>}
+          title={<Trans>Farm</Trans>}
         />
         <SideBarItem
           to="/dashboard/trade"
           icon={<TradeIcon fontSize="large" />}
-          title={<Trans id="DashboardSideBar.trade">Trade</Trans>}
+          title={<Trans>Trade</Trans>}
         />
         <SideBarItem
           to="/"
           icon={<KeysIcon fontSize="large" />}
           onSelect={handleLogOut}
-          title={<Trans id="DashboardSideBar.keys">Keys</Trans>}
+          title={<Trans>Keys</Trans>}
           exact
         />
       </StyledList>

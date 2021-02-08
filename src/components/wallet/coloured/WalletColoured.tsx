@@ -217,13 +217,13 @@ function ColourCard(props: ColourCardProps) {
   const classes = useStyles();
   return (
     <Card
-      title={<Trans id="ColourCard.title">Colour Info</Trans>}
+      title={<Trans>Colour Info</Trans>}
     >
       <Grid item xs={12}>
         <Box display="flex">
           <Box>
             <Typography>
-              <Trans id="ColourCard.colour">Colour:</Trans>
+              <Trans>Colour:</Trans>
             </Typography>
           </Box>
           <Box
@@ -244,7 +244,7 @@ function ColourCard(props: ColourCardProps) {
               variant="filled"
               color="secondary"
               fullWidth
-              label={<Trans id="ColourCard.nickname">Nickname</Trans>}
+              label={<Trans>Nickname</Trans>}
               inputRef={(input) => {
                 name_input = input;
               }}
@@ -260,7 +260,7 @@ function ColourCard(props: ColourCardProps) {
               color="secondary"
               disableElevation
             >
-              <Trans id="ColourCard.rename">Rename</Trans>
+              <Trans>Rename</Trans>
             </Button>
           </Box>
         </Box>
@@ -373,18 +373,18 @@ function BalanceCard(props: BalanceCardProps) {
 
   return (
     <Card
-      title={<Trans id="ColouredBalanceCard.title">Balance</Trans>}
+      title={<Trans>Balance</Trans>}
     >
       <BalanceCardSubSection
         title={
-          <Trans id="ColouredBalanceCard.totalBalance">Total Balance</Trans>
+          <Trans>Total Balance</Trans>
         }
         balance={balance}
         name={name}
       />
       <BalanceCardSubSection
         title={
-          <Trans id="ColouredBalanceCard.spendableBalance">
+          <Trans>
             Spendable Balance
           </Trans>
         }
@@ -396,7 +396,7 @@ function BalanceCard(props: BalanceCardProps) {
           <Box flexGrow={1}>
             <Accordion>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Trans id="ColouredBalanceCard.viewPendingBalances">
+                <Trans>
                   View pending balances...
                 </Trans>
               </AccordionSummary>
@@ -546,7 +546,7 @@ function SendCard(props: SendCardProps) {
 
   return (
     <Card
-      title={<Trans id="ColouredSendCard.title">Create Transaction</Trans>}
+      title={<Trans>Create Transaction</Trans>}
     >
       {result_message && (
         <Grid item xs={12}>
@@ -565,7 +565,7 @@ function SendCard(props: SendCardProps) {
               inputRef={(input) => {
                 address_input = input;
               }}
-              label={<Trans id="ColouredSendCard.address">Address</Trans>}
+              label={<Trans>Address</Trans>}
             />
           </Box>
           <Box />
@@ -586,7 +586,7 @@ function SendCard(props: SendCardProps) {
                 amount_input = input;
               }}
               label={
-                <Trans id="ColouredSendCard.amount">
+                <Trans>
                   Amount ({cc_unit})
                 </Trans>
               }
@@ -603,7 +603,7 @@ function SendCard(props: SendCardProps) {
               inputRef={(input) => {
                 fee_input = input;
               }}
-              label={<Trans id="ColouredSendCard.fee">Fee (TXCH)</Trans>}
+              label={<Trans>Fee (TXCH)</Trans>}
             />
           </Box>
         </Box>
@@ -618,7 +618,7 @@ function SendCard(props: SendCardProps) {
               color="primary"
               style={config.local_test ? {} : { visibility: 'hidden' }}
             >
-              <Trans id="ColouredSendCard.farm">Farm</Trans>
+              <Trans>Farm</Trans>
             </Button>
           </Box>
           <Box>
@@ -628,7 +628,7 @@ function SendCard(props: SendCardProps) {
               variant="contained"
               color="primary"
             >
-              <Trans id="ColouredSendCard.send">Send</Trans>
+              <Trans>Send</Trans>
             </Button>
           </Box>
         </Box>
@@ -659,7 +659,7 @@ function AddressCard(props: AddressCardProps) {
 
   return (
     <Card
-      title={<Trans id="ColouredAddressCard.title">Receive Address</Trans>}
+      title={<Trans>Receive Address</Trans>}
     >
       <Grid item xs={12}>
         <Box display="flex">
@@ -668,7 +668,7 @@ function AddressCard(props: AddressCardProps) {
               disabled
               fullWidth
               label={
-                <Trans id="ColouredAddressCard.address">Address</Trans>
+                <Trans>Address</Trans>
               }
               value={address}
               variant="outlined"
@@ -682,7 +682,7 @@ function AddressCard(props: AddressCardProps) {
               color="secondary"
               disableElevation
             >
-              <Trans id="ColouredAddressCard.copy">Copy</Trans>
+              <Trans>Copy</Trans>
             </Button>
           </Box>
         </Box>
@@ -697,7 +697,7 @@ function AddressCard(props: AddressCardProps) {
               variant="contained"
               color="primary"
             >
-              <Trans id="ColouredAddressCard.newAddress">New Address</Trans>
+              <Trans>New Address</Trans>
             </Button>
           </Box>
         </Box>

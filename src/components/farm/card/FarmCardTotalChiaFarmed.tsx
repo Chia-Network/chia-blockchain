@@ -16,7 +16,7 @@ export default function FarmCardTotalChiaFarmed() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardTotalChiaFarmed.title">Total Chia Farmed</Trans>
+        <Trans>Total Chia Farmed</Trans>
       }
       value={total}
       loading={loading}

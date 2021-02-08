@@ -272,7 +272,7 @@ const IncompleteCard = (props) => {
   return (
     <Card
       title={(
-        <Trans id="RTIncompleteCard.title">
+        <Trans>
           Rate Limited User Wallet Setup
         </Trans>
       )}
@@ -282,7 +282,7 @@ const IncompleteCard = (props) => {
           <Box display="flex">
             <Box flexGrow={1}>
               <Typography variant="subtitle1">
-                <Trans id="RTIncompleteCard.description">
+                <Trans>
                   Send your pubkey to your Rate Limited Wallet admin:
                 </Trans>
               </Typography>
@@ -297,7 +297,7 @@ const IncompleteCard = (props) => {
               disabled
               fullWidth
               label={
-                <Trans id="RTIncompleteCard.userPubkey">User Pubkey</Trans>
+                <Trans>User Pubkey</Trans>
               }
               value={pubkey}
               variant="outlined"
@@ -311,7 +311,7 @@ const IncompleteCard = (props) => {
               color="secondary"
               disableElevation
             >
-              <Trans id="RTIncompleteCard.copy">Copy</Trans>
+              <Trans>Copy</Trans>
             </Button>
           </Box>
         </Box>
@@ -321,7 +321,7 @@ const IncompleteCard = (props) => {
           <Box display="flex">
             <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
               <Typography variant="subtitle1">
-                <Trans id="RTIncompleteCard.description2">
+                <Trans>
                   When you receive the setup info packet from your admin,
                   enter it below to complete your Rate Limited Wallet setup:
                 </Trans>
@@ -339,7 +339,7 @@ const IncompleteCard = (props) => {
                 }}
                 margin="normal"
                 label={
-                  <Trans id="RTIncompleteCard.infoPacket">Info Packet</Trans>
+                  <Trans>Info Packet</Trans>
                 }
               />
             </Box>
@@ -354,7 +354,7 @@ const IncompleteCard = (props) => {
                 variant="contained"
                 color="primary"
               >
-                <Trans id="RTIncompleteCard.submit">Submit</Trans>
+                <Trans>Submit</Trans>
               </Button>
             </Box>
           </Box>
@@ -399,20 +399,20 @@ const RLDetailsCard = (props) => {
   if (type === 'user') {
     return (
       <Card
-        title={<Trans id="RLDetailsCard.title">Rate Limited Info</Trans>}
+        title={<Trans>Rate Limited Info</Trans>}
       >
         <Grid item xs={12}>
           <Box display="flex">
             <Box flexGrow={1}>
               <Typography variant="subtitle1">
-                <Trans id="RLDetailsCard.spendingInterval">
+                <Trans>
                   Spending Interval (number of blocks): {interval}
                 </Trans>
               </Typography>
             </Box>
             <Box flexGrow={1}>
               <Typography variant="subtitle1">
-                <Trans id="RLDetailsCard.spendingLimit">
+                <Trans>
                   Spending Limit (chia per interval):{' '}
                   {mojo_to_chia_string(limit)}
                 </Trans>
@@ -426,7 +426,7 @@ const RLDetailsCard = (props) => {
               <TextField
                 disabled
                 fullWidth
-                label={<Trans id="RLDetailsCard.myPubkey">My Pubkey</Trans>}
+                label={<Trans>My Pubkey</Trans>}
                 value={user_pubkey}
                 variant="outlined"
               />
@@ -439,7 +439,7 @@ const RLDetailsCard = (props) => {
                 color="secondary"
                 disableElevation
               >
-                <Trans id="RLDetailsCard.copy">Copy</Trans>
+                <Trans>Copy</Trans>
               </Button>
             </Box>
           </Box>
@@ -450,20 +450,20 @@ const RLDetailsCard = (props) => {
   if (type === 'admin') {
     return (
       <Card
-        title={<Trans id="RLDetailsCard.title">Rate Limited Info</Trans>}
+        title={<Trans>Rate Limited Info</Trans>}
       >
         <Grid item xs={12}>
           <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
             <Box flexGrow={1}>
               <Typography variant="subtitle1">
-                <Trans id="RLDetailsCard.spendingInterval">
+                <Trans>
                   Spending Interval (number of blocks): {interval}
                 </Trans>
               </Typography>
             </Box>
             <Box flexGrow={1}>
               <Typography variant="subtitle1">
-                <Trans id="RLDetailsCard.spendingLimit">
+                <Trans>
                   Spending Limit (chia per interval):{' '}
                   {mojo_to_chia_string(limit)}
                 </Trans>
@@ -475,7 +475,7 @@ const RLDetailsCard = (props) => {
           <Box display="flex">
             <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
               <Typography variant="subtitle1">
-                <Trans id="RLDetailsCard.description">
+                <Trans>
                   Send this info packet to your Rate Limited Wallet user who
                   must use it to complete setup of their wallet:
                 </Trans>
@@ -488,7 +488,7 @@ const RLDetailsCard = (props) => {
                 disabled
                 fullWidth
                 label={
-                  <Trans id="RLDetailsCard.infoPacket">Info Packet</Trans>
+                  <Trans>Info Packet</Trans>
                 }
                 value={ip_hex}
                 variant="outlined"
@@ -502,7 +502,7 @@ const RLDetailsCard = (props) => {
                 color="secondary"
                 disableElevation
               >
-                <Trans id="RLDetailsCard.copy">Copy</Trans>
+                <Trans>Copy</Trans>
               </Button>
             </Box>
           </Box>
@@ -557,16 +557,16 @@ const BalanceCard = (props) => {
 
   return (
     <Card
-      title={<Trans id="RLBalanceCard.title">Balance</Trans>}
+      title={<Trans>Balance</Trans>}
     >
       <BalanceCardSubSection
-        title={<Trans id="RLBalanceCard.totalBalance">Total Balance</Trans>}
+        title={<Trans>Total Balance</Trans>}
         balance={balance}
         tooltip=""
       />
       <BalanceCardSubSection
         title={
-          <Trans id="RLBalanceCard.spendableBalance">Spendable Balance</Trans>
+          <Trans>Spendable Balance</Trans>
         }
         balance={balance_spendable}
         tooltip=""
@@ -581,7 +581,7 @@ const BalanceCard = (props) => {
                 id="panel1a-header"
               >
                 <Typography className={classes.heading}>
-                  <Trans id="RLBalanceCard.viewPendingBalances">
+                  <Trans>
                     View pending balances
                   </Trans>
                 </Typography>
@@ -590,7 +590,7 @@ const BalanceCard = (props) => {
                 <Grid container spacing={0}>
                   <BalanceCardSubSection
                     title={
-                      <Trans id="RLBalanceCard.pendingTotalBalance">
+                      <Trans>
                         Pending Total Balance
                       </Trans>
                     }
@@ -599,7 +599,7 @@ const BalanceCard = (props) => {
                   />
                   <BalanceCardSubSection
                     title={
-                      <Trans id="RLBalanceCard.pendingBalance">
+                      <Trans>
                         Pending Balance
                       </Trans>
                     }
@@ -608,7 +608,7 @@ const BalanceCard = (props) => {
                   />
                   <BalanceCardSubSection
                     title={
-                      <Trans id="RLBalanceCard.pendingChange">
+                      <Trans>
                         Pending Change
                       </Trans>
                     }
@@ -656,7 +656,7 @@ const SendCard = (props) => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="RLSendCard.waitForSyncing">
+            <Trans>
               Please finish syncing before making a transaction
             </Trans>
           </AlertDialog>
@@ -674,7 +674,7 @@ const SendCard = (props) => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="RLSendCard.enterValidAmount">
+            <Trans>
               Please enter a valid numeric amount
             </Trans>
           </AlertDialog>
@@ -686,7 +686,7 @@ const SendCard = (props) => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="RLSendCard.enterValidFee">
+            <Trans>
               Please enter a valid numeric fee
             </Trans>
           </AlertDialog>
@@ -707,7 +707,7 @@ const SendCard = (props) => {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="RLSendCard.enter0fee">
+            <Trans>
               Please enter 0 fee. Positive fees not supported yet for RL.
             </Trans>
           </AlertDialog>
@@ -724,7 +724,7 @@ const SendCard = (props) => {
 
   return (
     <Card
-      title={<Trans id="RLSendCard.title">Create Transaction</Trans>}
+      title={<Trans>Create Transaction</Trans>}
     >
       {result_message && (
         <Grid item xs={12}>
@@ -743,7 +743,7 @@ const SendCard = (props) => {
                 address_input = input;
               }}
               label={
-                <Trans id="RLSendCard.addressPuzzleHash">
+                <Trans>
                   Address / Puzzle hash
                 </Trans>
               }
@@ -765,7 +765,7 @@ const SendCard = (props) => {
               inputRef={(input) => {
                 amount_input = input;
               }}
-              label={<Trans id="RLSendCard.amount">Amount</Trans>}
+              label={<Trans>Amount</Trans>}
             />
           </Box>
           <Box flexGrow={6}>
@@ -778,7 +778,7 @@ const SendCard = (props) => {
               inputRef={(input) => {
                 fee_input = input;
               }}
-              label={<Trans id="RLSendCard.fee">Fee</Trans>}
+              label={<Trans>Fee</Trans>}
             />
           </Box>
         </Box>
@@ -793,7 +793,7 @@ const SendCard = (props) => {
               color="primary"
               disabled={sending_transaction}
             >
-              <Trans id="RLSendCard.send">Send</Trans>
+              <Trans>Send</Trans>
             </Button>
           </Box>
         </Box>

@@ -33,17 +33,17 @@ const cols = [
         </Tooltip>
       );
     },
-    title: <Trans id="FarmYourHarvesterNetwork.nodeId">Node ID</Trans>,
+    title: <Trans>Node ID</Trans>,
   },
   {
     field: 'peer_host',
-    title: <Trans id="FarmYourHarvesterNetwork.hostName">Host Name</Trans>,
+    title: <Trans>Host Name</Trans>,
   },
   {
     field(row: Connection) {
       return `${row.peer_port}/${row.peer_server_port}`;
     },
-    title: <Trans id="FarmYourHarvesterNetwork.port">Port</Trans>,
+    title: <Trans>Port</Trans>,
   },
   {
     field(row: Connection) {
@@ -55,10 +55,10 @@ const cols = [
         </>
       );
     },
-    title: <Trans id="FarmYourHarvesterNetwork.upDown">MiB Up/Down</Trans>,
+    title: <Trans>MiB Up/Down</Trans>,
   },
   {
-    title: <Trans id="FarmYourHarvesterNetwork.actions">Actions</Trans>,
+    title: <Trans>Actions</Trans>,
     field(row: Connection) {
       return (
         <FarmCloseConnection nodeId={row.node_id}>
@@ -88,12 +88,12 @@ export default function FarmYourHarvesterNetwork() {
     <Card
       gap={1}
       title={(
-        <Trans id="FarmYourHarvesterNetwork.title">
+        <Trans>
           Your Harvester Network
         </Trans>
       )}
       tooltip={(
-        <Trans id="FarmYourHarvesterNetwork.description">
+        <Trans>
           A harvester is a service running on a machine where plot(s) are actually stored. 
           A farmer and harvester talk to a full node to see the state of the chain. 
           View your network of connected harvesters below Learn more
@@ -103,7 +103,7 @@ export default function FarmYourHarvesterNetwork() {
     >
       <Flex justifyContent="flex-end" gap={1}>
         <Typography variant="caption" color="textSecondary">
-          <Trans id="FarmYourHarvesterNetwork.connectionStatus">
+          <Trans>
             Connection Status:
           </Trans>
         </Typography>

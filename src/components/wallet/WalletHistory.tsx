@@ -19,41 +19,41 @@ const getCols = (type: WalletType) => [
       ].includes(row.type);
   
       return isOutgoing
-        ? <Trans id="TransactionTable.outgoing">Outgoing</Trans>
-        : <Trans id="TransactionTable.incoming">Incoming</Trans>;
+        ? <Trans>Outgoing</Trans>
+        : <Trans>Incoming</Trans>;
     },
-    title: <Trans id="WalletHistory.type">Type</Trans>,
+    title: <Trans>Type</Trans>,
   },
   {
     minWidth: '150px',
     field: (row: Row) => row.to_address,
     tooltip: true,
-    title: <Trans id="TransactionTable.to">To</Trans>,
+    title: <Trans>To</Trans>,
   },
   {
     field: (row: Row) => unix_to_short_date(row.created_at_time),
-    title: <Trans id="TransactionTable.date">Date</Trans>,
+    title: <Trans>Date</Trans>,
   },
   {
     field: (row: Row) => {
       return row.confirmed 
         ? (
-          <Trans id="TransactionTable.confirmedAtHeight">
+          <Trans>
             Confirmed at height {row.confirmed_at_height}
           </Trans>
-        ) : <Trans id="TransactionTable.pending">Pending</Trans>;
+        ) : <Trans>Pending</Trans>;
     },
-    title: <Trans id="TransactionTable.status">Status</Trans>,
+    title: <Trans>Status</Trans>,
   },
   {
     field: (row: Row) => type === WalletType.COLOURED_COIN
       ? mojo_to_colouredcoin_string(row.amount)
       : mojo_to_chia_string(row.amount),
-    title: <Trans id="TransactionTable.amount">Amount</Trans>,
+    title: <Trans>Amount</Trans>,
   },
   {
     field: (row: Row) => mojo_to_chia_string(row.fee_amount),
-    title: <Trans id="TransactionTable.fee">Fee</Trans>,
+    title: <Trans>Fee</Trans>,
   },
 ];
 
@@ -74,7 +74,7 @@ export default function WalletHistory(props: Props) {
 
   return (
     <Card
-      title={<Trans id="WalletHistory.title">History</Trans>}
+      title={<Trans>History</Trans>}
     >
       {transactions?.length ? (
         <Table
@@ -85,8 +85,10 @@ export default function WalletHistory(props: Props) {
           pages
         />
       ) : (
-        <Typography id="WalletHistory.noPreviousTransactions" variant="body2">
-          No previous transactions
+        <Typography variant="body2">
+          <Trans>
+            No previous transactions
+          </Trans>
         </Typography>
       )}
     </Card>

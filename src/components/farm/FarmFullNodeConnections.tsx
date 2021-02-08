@@ -29,17 +29,17 @@ const cols = [
         </Tooltip>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.nodeId">Node ID</Trans>,
+    title: <Trans>Node ID</Trans>,
   },
   {
     field: 'peer_host',
-    title: <Trans id="FarmFullNodeConnections.hostName">Host Name</Trans>,
+    title: <Trans>Host Name</Trans>,
   },
   {
     field(row: Connection) {
       return `${row.peer_port}/${row.peer_server_port}`;
     },
-    title: <Trans id="FarmFullNodeConnections.port">Port</Trans>,
+    title: <Trans>Port</Trans>,
   },
   {
     field(row: Connection) {
@@ -51,10 +51,10 @@ const cols = [
         </>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.upDown">MiB Up/Down</Trans>,
+    title: <Trans>MiB Up/Down</Trans>,
   },
   {
-    title: <Trans id="FarmFullNodeConnections.actions">Actions</Trans>,
+    title: <Trans>Actions</Trans>,
     field(row: Connection) {
       return (
         <FarmCloseConnection nodeId={row.node_id}>
@@ -83,12 +83,12 @@ export default function FarmFullNodeConnections() {
   return (
     <Card 
       title={(
-        <Trans id="FarmFullNodeConnections.title">
+        <Trans>
           Your Full Node Connection
         </Trans>
       )}
       tooltip={(
-        <Trans id="FarmFullNodeConnections.description">
+        <Trans>
           {'The full node that your farmer is connected to is below. '}
           <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/Network-Architecture">
             Learn more
@@ -99,7 +99,7 @@ export default function FarmFullNodeConnections() {
     >
       <Flex justifyContent="flex-end" gap={1}>
         <Typography variant="caption" color="textSecondary">
-          <Trans id="FarmFullNodeConnections.connectionStatus">
+          <Trans>
             Connection Status:
           </Trans>
         </Typography>

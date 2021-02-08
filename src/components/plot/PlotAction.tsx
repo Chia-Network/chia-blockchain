@@ -29,10 +29,10 @@ export default function PlotAction(props: Props) {
   async function handleDeletePlot() {
     const canDelete = await openDialog((
       <ConfirmDialog
-        title={<Trans id="PlotAction.deleteTitle">Delete Plot</Trans>}
-        confirmTitle={<Trans id="PlotAction.deleteButton">Delete</Trans>}
+        title={<Trans>Delete Plot</Trans>}
+        confirmTitle={<Trans>Delete</Trans>}
       >
-        <Trans id="PlotAction.deleteDescription">
+        <Trans>
           Are you sure you want to delete the plot? The plot cannot be
           recovered.
         </Trans>

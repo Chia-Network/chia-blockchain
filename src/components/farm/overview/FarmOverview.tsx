@@ -16,7 +16,7 @@ export default function FarmOverview() {
   return (
     <>
       <Typography variant="h5" gutterBottom>
-        <Trans id="Farm.title">Your Farm Overview</Trans>
+        <Trans>Your Farm Overview</Trans>
       </Typography>
 
       {loading ? (

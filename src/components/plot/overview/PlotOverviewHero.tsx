@@ -27,7 +27,7 @@ export default function PlotOverviewHero() {
         <CardHero>
           <PlotHeroIcon fontSize="large" />
           <Typography variant="body1">
-            <Trans id="PlotHero.description">
+            <Trans>
               {'Plots are allocated space on your hard drive used to farm and earn Chia. '}
               <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/Network-Architecture">Learn more</Link>
             </Trans>
@@ -37,13 +37,13 @@ export default function PlotOverviewHero() {
             variant="contained"
             color="primary"
           >
-            <Trans id="PlotHero.addAPlot">Add a Plot</Trans>
+            <Trans>Add a Plot</Trans>
           </Button>
 
           <Divider />
 
           <Typography variant="body1">
-            <Trans id="PlotHero.doYouHavePlot">
+            <Trans>
               {'Do you have existing plots on this machine? '}
               <Link onClick={handleAddPlotDirectory} variant="body1">Add Plot Directory</Link>
             </Trans>

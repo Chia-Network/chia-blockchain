@@ -122,10 +122,10 @@ export const TableHeader = () => {
   return (
     <Box display="flex" style={{ minWidth: '100%' }}>
       <Box flexGrow={1}>
-        <Trans id="TradeOverviewTableHeader.tradeId">Trade ID</Trans>
+        <Trans>Trade ID</Trans>
       </Box>
       <Box flexGrow={1}>
-        <Trans id="TradeOverviewTableHeader.status">Status</Trans>
+        <Trans>Status</Trans>
       </Box>
       <Box
         style={{
@@ -134,7 +134,7 @@ export const TableHeader = () => {
           overflowWrap: 'break-word',
         }}
       >
-        <Trans id="TradeOverviewTableHeader.date">Date</Trans>
+        <Trans>Date</Trans>
       </Box>
     </Box>
   );
@@ -150,7 +150,7 @@ export const TradeTable = (props) => {
         <TableHeader />
         <Paper className={classes.empty} style={{ position: 'relative' }}>
           <div className={classes.centerText}>
-            <Trans id="TradeOverviewTable.tradesShowUpHere">
+            <Trans>
               Trades will show up here
             </Trans>
           </div>
@@ -171,51 +171,51 @@ export const TradeTable = (props) => {
 const getDetailItems = (trade) => {
   const detail_items = [];
   const trade_id_item = {
-    label: <Trans id="TradeDetail.tradeId">Trade ID:</Trans>,
+    label: <Trans>Trade ID:</Trans>,
     value: trade.trade_id.slice(0, 16),
     colour: 'black',
-    tooltip: <Trans id="TradeDetail.tradeIdTooltip">Unique identifier</Trans>,
+    tooltip: <Trans>Unique identifier</Trans>,
   };
 
   const status_item = {
-    label: <Trans id="TradeDetail.status">Status:</Trans>,
+    label: <Trans>Status:</Trans>,
     value: trade.status,
     colour: 'black',
-    tooltip: <Trans id="TradeDetail.statusTooltip">Current trade status</Trans>,
+    tooltip: <Trans>Current trade status</Trans>,
   };
 
   const date_item = {
-    label: <Trans id="TradeDetail.createdAt">Created At:</Trans>,
+    label: <Trans>Created At:</Trans>,
     value: unix_to_short_date(trade.created_at_time),
     colour: 'black',
     tooltip: (
-      <Trans id="TradeDetail.createdAtTooltip">
+      <Trans>
         Time this trade was created at this time
       </Trans>
     ),
   };
   let confirmed_string = '';
   const confirmed = trade.confirmed_at_index;
-  confirmed_string = confirmed === 0 ? (<Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>) : trade.confirmed_at_index;
+  confirmed_string = confirmed === 0 ? (<Trans>Not confirmed yet</Trans>) : trade.confirmed_at_index;
 
   const executed_at_item = {
-    label: <Trans id="TradeDetail.confirmedAtBlock">Confirmed at block:</Trans>,
+    label: <Trans>Confirmed at block:</Trans>,
     value: confirmed_string,
     colour: 'black',
     tooltip: (
-      <Trans id="TradeDetail.confirmedAtBlockTooltip">
+      <Trans>
         This trade was included on blockchain at this block height
       </Trans>
     ),
   };
   let our = '';
-  our = trade.my_offer === true ? <Trans id="TradeDetail.yes">Yes</Trans> : <Trans id="TradeDetail.no">No</Trans>;
+  our = trade.my_offer === true ? <Trans>Yes</Trans> : <Trans>No</Trans>;
   const offer_creator_item = {
-    label: <Trans id="TradeDetail.createdByUs">Created by us:</Trans>,
+    label: <Trans>Created by us:</Trans>,
     value: our,
     colour: 'black',
     tooltip: (
-      <Trans id="TradeDetail.createdByUsTooltip">
+      <Trans>
         Indicated if this offer was created by us
       </Trans>
     ),
@@ -224,14 +224,14 @@ const getDetailItems = (trade) => {
   let accepted = '';
   const accepted_time = trade.accepted_at_time;
 
-  accepted = accepted_time === null ? <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans> : unix_to_short_date(trade.accepted_at_time);
+  accepted = accepted_time === null ? <Trans>Not accepted yet</Trans> : unix_to_short_date(trade.accepted_at_time);
 
   const accepted_at_time = {
-    label: <Trans id="TradeDetail.acceptedAtTime">Accepted at time:</Trans>,
+    label: <Trans>Accepted at time:</Trans>,
     value: accepted,
     colour: 'black',
     tooltip: (
-      <Trans id="TradeDetail.acceptedAtTimeTooltip">
+      <Trans>
         Indicated what time this offer was accepted
       </Trans>
     ),
@@ -292,9 +292,9 @@ const OfferRow = (props) => {
 
   const side =
     amount * multiplier < 0 ? (
-      <Trans id="TradeOfferRow.sell">Sell</Trans>
+      <Trans>Sell</Trans>
     ) : (
-      <Trans id="TradeOfferRow.buy">Buy</Trans>
+      <Trans>Buy</Trans>
     );
 
   return (
@@ -357,7 +357,7 @@ export const TradeDetail = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans id="TradeDetail.title">Trade Details</Trans>
+                <Trans>Trade Details</Trans>
               </Typography>
             </Box>
           </Box>
@@ -373,7 +373,7 @@ export const TradeDetail = () => {
         <div>
           <div className={classes.tradeSubSection}>
             <Typography component="subtitle">
-              <Trans id="TradeDetail.coins">Coins:</Trans>
+              <Trans>Coins:</Trans>
             </Typography>
             {Object.keys(presented.offer_dict).map((name) => (
               <OfferRow
@@ -396,7 +396,7 @@ export const TradeDetail = () => {
                 color="primary"
                 style={visible}
               >
-                <Trans id="TradeDetail.cancelAndSpend">Cancel and Spend</Trans>
+                <Trans>Cancel and Spend</Trans>
               </Button>
             </Box>
             <Box>
@@ -407,7 +407,7 @@ export const TradeDetail = () => {
                 color="primary"
                 style={visible}
               >
-                <Trans id="TradeDetail.cancel">Cancel</Trans>
+                <Trans>Cancel</Trans>
               </Button>
             </Box>
           </Box>
@@ -421,7 +421,7 @@ export const PendingTrades = () => {
   const trades = useSelector((state) => state.trade_state.pending_trades);
   return (
     <Card
-      title={<Trans id="PendingTrades.title">Offers Created</Trans>}
+      title={<Trans>Offers Created</Trans>}
     >
       <TradeTable trades={trades} />
     </Card>
@@ -432,7 +432,7 @@ export const TradingHistory = () => {
   const trades = useSelector((state) => state.trade_state.trade_history);
   return (
     <Card
-      title={<Trans id="TradingHistory.title">Trading History</Trans>}
+      title={<Trans>Trading History</Trans>}
     >
       <TradeTable trades={trades} />
     </Card>

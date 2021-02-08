@@ -33,11 +33,11 @@ export default function PlotAddSelectTemporaryDirectory() {
     <CardStep
       step="3"
       title={(
-        <Trans id="PlotAddSelectTemporaryDirectory.title">Select Temporary Directory</Trans>
+        <Trans>Select Temporary Directory</Trans>
       )}
     >
       <Typography variant="subtitle1">
-        <Trans id="PlotAddSelectTemporaryDirectory.description">
+        <Trans>
           Select the temporary destination for the folder where you would like the plot to be stored.
           We recommend you use a fast SSD.
         </Trans>
@@ -48,7 +48,7 @@ export default function PlotAddSelectTemporaryDirectory() {
           onClick={handleSelect}
           fullWidth
           label={
-            <Trans id="PlotAddSelectTemporaryDirectory.workspaceLocation">
+            <Trans>
               Temporary folder location
             </Trans>
           }
@@ -60,20 +60,20 @@ export default function PlotAddSelectTemporaryDirectory() {
           rules={{
             minLength: {
               value: 1,
-              message: <Trans id="PlotAddSelectTemporaryDirectory.specifyTemporaryDirectory">Please specify temporary directory</Trans>,
+              message: <Trans>Please specify temporary directory</Trans>,
             },
             required: {
               value: true,
-              message: <Trans id="PlotAddSelectTemporaryDirectory.specifyTemporaryDirectory">Please specify temporary directory</Trans>,
+              message: <Trans>Please specify temporary directory</Trans>,
             },
           }}
           required
         />
         <ButtonSelected onClick={handleSelect} size="large" variant="contained" selected={hasWorkspaceLocation}>
           {hasWorkspaceLocation ? (
-            <Trans id="PlotAddSelectTemporaryDirectory.selected">Selected</Trans>
+            <Trans>Selected</Trans>
           ) : (
-            <Trans id="PlotAddSelectTemporaryDirectory.browse">Browse</Trans>
+            <Trans>Browse</Trans>
           )}
         </ButtonSelected>
       </Flex>
@@ -81,7 +81,7 @@ export default function PlotAddSelectTemporaryDirectory() {
       <AdvancedOptions>
         <Flex flexDirection="column" gap={2}>
           <Typography variant="h6">
-            <Trans id="PlotAddSelectTemporaryDirectory.selectSecondTemporaryDirectory">
+            <Trans>
               Select 2nd Temporary Directory
             </Trans>
           </Typography>
@@ -90,7 +90,7 @@ export default function PlotAddSelectTemporaryDirectory() {
               onClick={handleSelect2}
               fullWidth
               label={
-                <Trans id="PlotAddSelectTemporaryDirectory.workspaceLocation2">
+                <Trans>
                   Second temporary folder location
                 </Trans>
               }
@@ -102,14 +102,14 @@ export default function PlotAddSelectTemporaryDirectory() {
             />
             <ButtonSelected onClick={handleSelect2} size="large" variant="contained" selected={hasWorkspaceLocation2}>
               {hasWorkspaceLocation2 ? (
-                <Trans id="PlotAddSelectTemporaryDirectory.selected">Selected</Trans>
+                <Trans>Selected</Trans>
               ) : (
-                <Trans id="PlotAddSelectTemporaryDirectory.browse">Browse</Trans>
+                <Trans>Browse</Trans>
               )}
             </ButtonSelected>
           </Flex>
           <Typography>
-            <Trans id="PlotAddSelectTemporaryDirectory.defaultIsFinal">
+            <Trans>
               If none selected, then it will default to the temporary directory.
             </Trans>
           </Typography>

@@ -48,16 +48,16 @@ const WalletItem = (props: any) => {
 
   let mainLabel = <></>;
   if (wallet.type === WalletType.STANDARD_WALLET) {
-    mainLabel = <Trans id="WalletItem.chiaWallet">Chia Wallet</Trans>;
+    mainLabel = <Trans>Chia Wallet</Trans>;
     name = 'Chia';
   } else if (wallet.type === WalletType.COLOURED_COIN) {
-    mainLabel = <Trans id="WalletItem.ccWallet">CC Wallet</Trans>;
+    mainLabel = <Trans>CC Wallet</Trans>;
     if (name.length > 18) {
       name = name.slice(0, 18);
       name = name.concat('...');
     }
   } else if (wallet.type === WalletType.RATE_LIMITED) {
-    mainLabel = <Trans id="WalletItem.rlWallet">RL Wallet</Trans>;
+    mainLabel = <Trans>RL Wallet</Trans>;
     if (name.length > 18) {
       name = name.slice(0, 18);
       name = name.concat('...');
@@ -95,7 +95,7 @@ const CreateWallet = () => {
       <Divider />
       <ListItem button onClick={presentCreateWallet}>
         <ListItemText
-          primary={<Trans id="CreateWallet.addWallet">Add Wallet</Trans>}
+          primary={<Trans>Add Wallet</Trans>}
         />
       </ListItem>
       <Divider />
@@ -121,35 +121,35 @@ export function StatusCard() {
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">
-        <Trans id="StatusCard.title">Status</Trans>
+        <Trans>Status</Trans>
       </Typography>
       <div style={{ marginLeft: 8 }}>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans id="StatusCard.status">status:</Trans>
+            <Trans>status:</Trans>
           </Box>
           <Box>
           {
             (() => {
               if (syncing)
-                 return <Trans id="WalletStatusCard.syncing">syncing</Trans>
+                 return <Trans>syncing</Trans>
               if (synced)
-                 return <Trans id="WalletStatusCard.synced">synced</Trans>
+                 return <Trans>synced</Trans>
               if (!synced)
-                return <Trans id="WalletStatusCard.not_synced">not synced</Trans>
+                return <Trans>not synced</Trans>
           })()
             }
           </Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans id="StatusCard.height">height:</Trans>
+            <Trans>height:</Trans>
           </Box>
           <Box>{height}</Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans id="StatusCard.connections">connections:</Trans>
+            <Trans>connections:</Trans>
           </Box>
           <Box>{connectionCount}</Box>
         </Box>
@@ -166,7 +166,7 @@ export default function Wallets() {
 
   return (
     <LayoutSidebar
-      title={<Trans id="Wallets.title">Wallets</Trans>}
+      title={<Trans>Wallets</Trans>}
       sidebar={(
         <Flex flexDirection="column" height="100%" overflow="hidden">
           <Divider />

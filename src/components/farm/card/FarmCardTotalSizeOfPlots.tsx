@@ -22,7 +22,7 @@ export default function FarmCardTotalSizeOfPlots() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardTotalSizeOfPlots.title">Total Size of Plots</Trans>
+        <Trans>Total Size of Plots</Trans>
       }
       value={<FormatBytes value={farmerSpace} precision={3} />}
     />

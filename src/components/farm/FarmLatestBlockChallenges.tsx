@@ -21,12 +21,12 @@ const cols = [
       );
     },
     title: (
-      <Trans id="FarmLatestBlockChallenges.challengeHash">Challenge Hash</Trans>
+      <Trans>Challenge Hash</Trans>
     ),
   },
   {
     field: (row: Row) => row.signage_point.signage_point_index,
-    title: <Trans id="FarmLatestBlockChallenges.index">Index</Trans>,
+    title: <Trans>Index</Trans>,
   }, /*
   {
     width: '200px',
@@ -41,12 +41,12 @@ const cols = [
     title: (
       <Flex alignItems="center" gap={1}>
         <span>
-          <Trans id="FarmLatestBlockChallenges.bestEstimate">
+          <Trans>
             Best Estimate
           </Trans>
         </span>
         <TooltipIcon>
-          <Trans id="FarmLatestBlockChallenges.bestEstimateTooltip">
+          <Trans>
             Best Estimate is how many seconds of time must be proved for your
             proofs.
           </Trans>
@@ -71,12 +71,12 @@ export default function FarmLatestBlockChallenges() {
   return (
     <Card
       title={(
-        <Trans id="FarmLatestBlockChallenges.title">
+        <Trans>
           Latest Block Challenges
         </Trans>
       )}
       tooltip={hasPlots ? (
-        <Trans id="FarmLatestBlockChallenges.description">
+        <Trans>
           Below are the current block challenges. You may or may not have
           a proof of space for these challenges. These blocks do not
           currently contain a proof of time.
@@ -85,7 +85,7 @@ export default function FarmLatestBlockChallenges() {
     >
       {!hasPlots && (
         <Typography variant="body2">
-          <Trans id="FarmLatestBlockChallenges.description">
+          <Trans>
             Below are the current block challenges. You may or may not have a
             proof of space for these challenges. These blocks do not currently
             contain a proof of time.
@@ -100,7 +100,7 @@ export default function FarmLatestBlockChallenges() {
         pages
       />
       <Typography variant="caption">
-        <Trans id="FarmLatestBlockChallenges.subDescription">
+        <Trans>
           *Want to explore Chia’s blocks further? Check out{' '}
           <Link
             color="primary"

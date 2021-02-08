@@ -35,10 +35,10 @@ export const DropView = () => {
 
   return (
     <Card
-      title={<Trans id="OfferDropView.selectOffer">Select Offer</Trans>}
+      title={<Trans>Select Offer</Trans>}
     >
       <Dropzone onDrop={handleDrop} processing={isParsing}>
-        <Trans id="OfferDropView.dragAndDropOfferFile">
+        <Trans>
           Drag and drop offer file
         </Trans>
       </Dropzone>
@@ -68,21 +68,21 @@ export const OfferView = () => {
 
   return (
     <Card
-      title={<Trans id="OfferView.title2">Offer</Trans>}
+      title={<Trans>Offer</Trans>}
       actions={(
         <>
           <Button
             onClick={handleDecline}
             variant="contained"
           >
-            <Trans id="OfferView.cancel">Cancel</Trans>
+            <Trans>Cancel</Trans>
           </Button>
           <Button
             onClick={handleAccept}
             variant="contained"
             color="primary"
           >
-            <Trans id="OfferView.accept">Accept</Trans>
+            <Trans>Accept</Trans>
           </Button>
         </>
       )}

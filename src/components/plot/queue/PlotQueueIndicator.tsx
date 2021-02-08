@@ -14,17 +14,17 @@ export default function PlotQueueIndicator(props: Props) {
   return (
     <Indicator color="#979797">
       {state === PlotStatusEnum.RUNNING && (
-        <Trans id="PlotQueueIndicator.plotting">
+        <Trans>
           Plotting
         </Trans>
       )}
       {state === PlotStatusEnum.SUBMITTED && (
-        <Trans id="PlotQueueIndicator.queued">
+        <Trans>
           Queued
         </Trans>
       )}
       {state === PlotStatusEnum.ERROR && (
-        <Trans id="PlotQueueIndicator.error">
+        <Trans>
           Error
         </Trans>
       )}

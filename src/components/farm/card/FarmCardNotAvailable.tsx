@@ -16,13 +16,13 @@ export default function FarmCardNotAvailable(props: Props) {
       title={title}
       value={state ? (
         <StateIndicator state={state}>
-          <Trans id="FarmCardExpectedTimeToWin.notAvailable">Not Available</Trans>
+          <Trans>Not Available</Trans>
         </StateIndicator>
       ) : (
-        <Trans id="FarmCardExpectedTimeToWin.notAvailable">Not Available</Trans>
+        <Trans>Not Available</Trans>
       )}
       description={(
-        <Trans id="FarmCardExpectedTimeToWin.notAvailableDescription">
+        <Trans>
           Wait for synchronization
         </Trans>
       )}

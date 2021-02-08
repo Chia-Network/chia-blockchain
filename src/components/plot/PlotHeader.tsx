@@ -43,7 +43,7 @@ export default function PlotHeader() {
         <Flex flexGrow={1} />
         <div>
           <Button color="primary" variant="contained" onClick={handleAddPlot} startIcon={<AddIcon />}>
-            <Trans id="PlotHeader.addAPlot">Add a Plot</Trans>
+            <Trans>Add a Plot</Trans>
           </Button>
           {' '}
           <More>
@@ -54,7 +54,7 @@ export default function PlotHeader() {
                     <RefreshIcon fontSize="small" />
                   </ListItemIcon>
                   <Typography variant="inherit" noWrap>
-                    <Trans id="PlotHeader.refreshPlots">Refresh Plots</Trans>
+                    <Trans>Refresh Plots</Trans>
                   </Typography>
                 </MenuItem>
                 <MenuItem onClick={() => { onClose(); handleAddPlotDirectory(); }}>
@@ -62,7 +62,7 @@ export default function PlotHeader() {
                     <FolderIcon fontSize="small" />
                   </ListItemIcon>
                   <Typography variant="inherit" noWrap>
-                    <Trans id="PlotHeader.addPlotDirectory">Add Plot Directory</Trans>
+                    <Trans>Add Plot Directory</Trans>
                   </Typography>
                 </MenuItem>
               </Box>

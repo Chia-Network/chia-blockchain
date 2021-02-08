@@ -123,7 +123,7 @@ export default function Block() {
   if (loading) {
     return (
       <LayoutMain
-        title={<Trans id="Block.title">Block</Trans>}
+        title={<Trans>Block</Trans>}
       >
         <Flex justifyContent="center">
           <Loading />
@@ -135,7 +135,7 @@ export default function Block() {
   if (error) {
     return (
       <LayoutMain
-        title={<Trans id="Block.title">Block</Trans>}
+        title={<Trans>Block</Trans>}
       >
         <Alert severity="error">
           {error.message}
@@ -147,10 +147,10 @@ export default function Block() {
   if (!block) {
     return (
       <LayoutMain
-        title={<Trans id="Block.title">Block</Trans>}
+        title={<Trans>Block</Trans>}
       >
         <Alert severity="warning">
-          <Trans id="Block.notFound">
+          <Trans>
             Block with hash {headerHash} does not exists.
           </Trans>
         </Alert>
@@ -182,96 +182,96 @@ export default function Block() {
 
   const rows = [
     {
-      name: <Trans id="Block.headerHash">Header hash</Trans>,
+      name: <Trans>Header hash</Trans>,
       value: blockRecord.header_hash,
     },
     {
-      name: <Trans id="Block.timestamp">Timestamp</Trans>,
+      name: <Trans>Timestamp</Trans>,
       value: blockRecord.timestamp ? unix_to_short_date(blockRecord.timestamp) : null,
       tooltip: (
-        <Trans id="Block.timestampTooltip">
+        <Trans>
           This is the time the block was created by the farmer, which is before
           it is finalized with a proof of time
         </Trans>
       ),
     },
     {
-      name: <Trans id="Block.subBlockHeight">Sub Block Height</Trans>,
+      name: <Trans>Sub Block Height</Trans>,
       value: blockRecord.sub_block_height,
     },
     {
-      name: <Trans id="Block.height">Height</Trans>,
+      name: <Trans>Height</Trans>,
       value: blockRecord.height,
     },
     {
-      name: <Trans id="Block.weight">Weight</Trans>,
+      name: <Trans>Weight</Trans>,
       value: BigInt(blockRecord.weight).toLocaleString(),
       tooltip: (
-        <Trans id="Block.weightTooltip">
+        <Trans>
           Weight is the total added difficulty of all sub blocks up to and including
           this one
         </Trans>
       ),
     },
     {
-      name: <Trans id="Block.previousSubBlockHash">Previous Sub Block Hash</Trans>,
+      name: <Trans>Previous Sub Block Hash</Trans>,
       value: blockRecord.prev_hash,
       onClick: handleShowPreviousSubBlock,
     },
     {
-      name: <Trans id="Block.previousBlockHash">Previous Block Hash</Trans>,
+      name: <Trans>Previous Block Hash</Trans>,
       value: blockRecord.prev_block_hash,
       onClick: handleShowPreviousBlock,
     },
     {
-      name: <Trans id="Block.difficulty">Difficulty</Trans>,
+      name: <Trans>Difficulty</Trans>,
       value: BigInt(difficulty).toLocaleString(),
     },
     {
-      name: <Trans id="Block.totalVDFIterations">Total VDF Iterations</Trans>,
+      name: <Trans>Total VDF Iterations</Trans>,
       value: BigInt(blockRecord.total_iters).toLocaleString(),
       tooltip: (
-        <Trans id="Block.totalVDFIterationsTooltip">
+        <Trans>
           The total number of VDF (verifiable delay function) or proof of time
           iterations on the whole chain up to this sub block.
         </Trans>
       ),
     },
     {
-      name: <Trans id="Block.blockVDFIterations">Block VDF Iterations</Trans>,
+      name: <Trans>Block VDF Iterations</Trans>,
       value: BigInt(block.reward_chain_sub_block.challenge_chain_ip_vdf.number_of_iterations).toLocaleString(),
       tooltip: (
-        <Trans id="Block.blockVDFIterationsTooltip">
+        <Trans>
           The total number of VDF (verifiable delay function) or proof of time
           iterations on this block.
         </Trans>
       ),
     },
     {
-      name: <Trans id="Block.proofOfSpaceSize">Proof of Space Size</Trans>,
+      name: <Trans>Proof of Space Size</Trans>,
       value: block.reward_chain_sub_block.proof_of_space.size,
     },
     {
-      name: <Trans id="Block.plotPublicKey">Plot Public Key</Trans>,
+      name: <Trans>Plot Public Key</Trans>,
       value: block.reward_chain_sub_block.proof_of_space.plot_public_key,
     },
     {
-      name: <Trans id="Block.poolPublicKey">Pool Public Key</Trans>,
+      name: <Trans>Pool Public Key</Trans>,
       value: block.reward_chain_sub_block.proof_of_space.pool_public_key,
     },
     {
-      name: <Trans id="Block.farmerPuzzleHash">Farmer Puzzle Hash</Trans>,
+      name: <Trans>Farmer Puzzle Hash</Trans>,
       value: blockRecord.farmer_puzzle_hash,
     },
     {
-      name: <Trans id="Block.poolPuzzleHash">Pool Puzzle Hash</Trans>,
+      name: <Trans>Pool Puzzle Hash</Trans>,
       value: blockRecord.pool_puzzle_hash,
     },
     {
-      name: <Trans id="Block.plotId">Plot Id</Trans>,
+      name: <Trans>Plot Id</Trans>,
       value: newPlotId,
       tooltip: (
-        <Trans id="Block.plotIdTooltip">
+        <Trans>
           The seed used to create the plot.
           This depends on the pool pk and plot pk.
         </Trans>
@@ -279,7 +279,7 @@ export default function Block() {
     },
     {
       name: (
-        <Trans id="Block.transactionsFilterHash">
+        <Trans>
           Transactions Filter Hash
         </Trans>
       ),
@@ -287,46 +287,46 @@ export default function Block() {
     },
     /*
     {
-      name: <Trans id="Block.coinbaseAmount">Coinbase Amount</Trans>,
+      name: <Trans>Coinbase Amount</Trans>,
       value: `${chia_cb} TXCH`,
       tooltip: (
-        <Trans id="Block.coinbaseAmountTooltip">
+        <Trans>
           This is the chia block reward which goes to the pool (or farmer if not pooling)
         </Trans>
       ),
     },
     {
-      name: <Trans id="Block.coinbasePuzzleHash">Coinbase Puzzle Hash</Trans>,
+      name: <Trans>Coinbase Puzzle Hash</Trans>,
       value: blockRecord.pool_puzzle_hash,
     },
     */
    
     {
-      name: <Trans id="Block.poolRewardAmount">Pool Reward Amount</Trans>,
+      name: <Trans>Pool Reward Amount</Trans>,
       value: `${poolReward} TXCH`,
     },
     {
-      name: <Trans id="Block.baseFarmerRewardAmount">Base Farmer Reward Amount</Trans>,
+      name: <Trans>Base Farmer Reward Amount</Trans>,
       value: `${baseFarmerReward} TXCH`,
     },
     {
-      name: <Trans id="Block.feesAmount">Fees Amount</Trans>,
+      name: <Trans>Fees Amount</Trans>,
       value: chia_fees ? `${chia_fees} TXCH` : '',
       tooltip: (
-        <Trans id="Block.feesAmountTooltip">
+        <Trans>
           The total transactions fees in this block. Rewarded to the farmer.
         </Trans>
       ),
     },
     {
-      name: <Trans id="Block.feesPuzzleHash">Fees Puzzle Hash</Trans>,
+      name: <Trans>Fees Puzzle Hash</Trans>,
       value: blockRecord.farmer_puzzle_hash,
     },
   ];
 
   return (
     <LayoutMain
-      title={<Trans id="Block.title">Block</Trans>}
+      title={<Trans>Block</Trans>}
     >
       <Card
         title={(
@@ -335,7 +335,7 @@ export default function Block() {
               {' '}
             </BackIcon>
             <span>
-              <Trans id="Block.descriptionSubBlock">
+              <Trans>
                 Sub Block at height {blockRecord.sub_block_height} in the Chia
                 blockchain
               </Trans>
@@ -345,12 +345,12 @@ export default function Block() {
         action={(
           <Flex gap={1}>
             <Button onClick={handleShowPreviousSubBlock} disabled={!hasPreviousSubBlock}>
-              <Trans id="Block.previous">
+              <Trans>
                 Previous
               </Trans>
             </Button>
             <Button onClick={handleShowNextSubBlock} disabled={!hasNextSubBlock}>
-              <Trans id="Block.next">
+              <Trans>
                 Next
               </Trans>
             </Button>

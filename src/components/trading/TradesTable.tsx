@@ -12,13 +12,13 @@ const Amount = styled(Box)`
 
 const cols = [{
   field: 'side',
-  title: <Trans id="OfferView.side">Side</Trans>,
+  title: <Trans>Side</Trans>,
 }, {
   field: 'amount', 
-  title: <Trans id="OfferView.amount">Amount</Trans>,
+  title: <Trans>Amount</Trans>,
 }, {
   field: 'name',
-  title: <Trans id="OfferView.colour">Colour</Trans>,
+  title: <Trans>Colour</Trans>,
 }];
 
 type Trade = {
@@ -42,8 +42,8 @@ export default function TradesTable(props: Props) {
 
       return {
         side: amount < 0
-          ? <Trans id="TradesTable.sell">Sell</Trans>
-          : <Trans id="TradesTable.buy">Buy</Trans>,
+          ? <Trans>Sell</Trans>
+          : <Trans>Buy</Trans>,
         name: (
           <Amount>{name}</Amount>
         ),

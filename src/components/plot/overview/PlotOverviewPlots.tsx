@@ -27,43 +27,43 @@ const cols = [{
       <FormatBytes value={file_size} />
     </>
   ),
-  title: <Trans id="PlotOverviewPlots.size">K-Size</Trans>,
+  title: <Trans>K-Size</Trans>,
 }, {
   minWidth: '100px',
   field: 'local_sk',
   tooltip: 'local_sk',
-  title: <Trans id="PlotOverviewPlots.plotName">Plot Name</Trans>,
+  title: <Trans>Plot Name</Trans>,
 }, {
   minWidth: '100px',
   field: 'farmer_public_key',
   tooltip: 'farmer_public_key',
-  title: <Trans id="PlotOverviewPlots.harversterId">Harvester ID</Trans>,
+  title: <Trans>Harvester ID</Trans>,
 }, {
   minWidth: '100px',
   field: 'plot-seed',
   tooltip: 'plot-seed',
-  title: <Trans id="PlotOverviewPlots.plotSeed">Plot Seed</Trans>,
+  title: <Trans>Plot Seed</Trans>,
 }, {
   minWidth: '100px',
   field: 'plot_public_key',
   tooltip: 'plot_public_key',
-  title: <Trans id="PlotOverviewPlots.plotKey">Plot Key</Trans>,
+  title: <Trans>Plot Key</Trans>,
 }, {
   minWidth: '100px',
   field: 'pool_public_key',
   tooltip: 'pool_public_key',
-  title: <Trans id="PlotOverviewPlots.poolKey">Pool Key</Trans>,
+  title: <Trans>Pool Key</Trans>,
 }, {
   minWidth: '100px',
   field: 'filename',
   tooltip: 'filename',
-  title: <Trans id="PlotOverviewPlots.filename">Filename</Trans>,
+  title: <Trans>Filename</Trans>,
 }, {
   field: (plot: Plot) => <PlotStatus plot={plot} />,
-  title: <Trans id="PlotOverviewPlots.status">Status</Trans>,
+  title: <Trans>Status</Trans>,
 }, {
   field: (plot: Plot) => <PlotAction plot={plot} />,
-  title: <Trans id="PlotOverviewPlots.action">Action</Trans>,
+  title: <Trans>Action</Trans>,
 }];
 
 export default function PlotOverviewPlots() {
@@ -79,7 +79,7 @@ export default function PlotOverviewPlots() {
       <PlotHeader />
       <Card
         title={(
-          <Trans id="PlotOverviewPlots.title">
+          <Trans>
             Local Harvester Plots
           </Trans>
         )}
@@ -87,14 +87,14 @@ export default function PlotOverviewPlots() {
         <Flex gap={1}>
           <Flex flexGrow={1}>
             <Typography variant="body2">
-              <Trans id="PlotOverviewPlots.description">
+              <Trans>
                 Want to earn more Chia? Add more plots to your farm.
               </Trans>
             </Typography>
           </Flex>
 
           <Typography variant="body2">
-            <Trans id="PlotOverviewPlots.totalPlotSize">
+            <Trans>
               Total Plot Size:
             </Trans>
             {' '}
