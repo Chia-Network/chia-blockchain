@@ -4,7 +4,7 @@ from typing import List, Optional, Set, Tuple
 from src.types.sized_bytes import bytes32
 from src.util.hash import std_hash
 
-from clvm import run_program as default_run_program, KEYWORD_TO_ATOM, SExp
+from clvm import run_program as default_run_program, SExp
 from clvm.casts import int_from_bytes
 from clvm.operators import OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_buffer_from_stream, sexp_to_stream
