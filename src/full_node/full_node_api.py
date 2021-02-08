@@ -246,10 +246,9 @@ class FullNodeAPI:
         header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            if not request.include_transaction_block:
+            if not request.include_transaction_block and block.transactions_generator is not None:
                 block = dataclasses.replace(block, transactions_generator=None)
-            msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
-            return msg
+            return Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
         # reject = RejectSubBlock(request.sub_height)
         # msg = Message("reject_sub_block", reject)
         # return msg
@@ -294,8 +293,9 @@ class FullNodeAPI:
         self.log.debug(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
 
     @api_request
-    async def respond_sub_blocks(self, request: full_node_protocol.RespondSubBlocks):
-        pass
+    async def respond_sub_blocks(self, request: full_node_protocol.RespondSubBlocks) -> None:
+        self.log.warning("Received unsolicited/late sub-blocks")
+        return None
 
     @api_request
     @peer_required
@@ -308,11 +308,8 @@ class FullNodeAPI:
         Receive a full block from a peer full node (or ourselves).
         """
 
-        if self.full_node.sync_store.get_sync_mode():
-            return await self.full_node.respond_sub_block(respond_sub_block, peer)
-        else:
-            async with self.full_node.timelord_lock:
-                return await self.full_node.respond_sub_block(respond_sub_block, peer)
+        self.log.warning(f"Received unsolicited/late sub-block from peer {peer.get_peer_info()}")
+        return None
 
     @api_request
     async def new_unfinished_sub_block(

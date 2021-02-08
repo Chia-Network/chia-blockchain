@@ -217,7 +217,9 @@ class FullNode:
         self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
 
-    async def short_sync_backtrack(self, peer: ws.WSChiaConnection, peak_sub_height: uint32, target_sub_height: uint32):
+    async def short_sync_backtrack(
+        self, peer: ws.WSChiaConnection, peak_sub_height: uint32, target_sub_height: uint32, target_unf_hash: bytes32
+    ):
         """
         Performs a backtrack sync, where sub-blocks are downloaded one at a time from newest to oldest. If we do not
         find the fork point 5 deeper than our peak, we return False and do a long sync instead.
@@ -226,16 +228,22 @@ class FullNode:
             peer: peer to sync from
             peak_sub_height: sub-height of our peak
             target_sub_height: target sub_height
+            target_unf_hash: partial hash of the unfinished sub-block of the target
 
         Returns:
             True iff we found the fork point, and we do not need to long sync.
         """
 
+        unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
         curr_sub_height: int = target_sub_height
         found_fork_point = False
         responses = []
         while curr_sub_height > peak_sub_height - 5:
-            curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_sub_height), True))
+            # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
+            # already have the unfinished block, from when it was broadcast, so we just need to download the header,
+            # but not the transactions
+            fetch_tx: bool = unfinished_block is None and curr_sub_height == target_sub_height
+            curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_sub_height), fetch_tx))
             if curr is None:
                 raise ValueError(f"Failed to fetch sub block {curr_sub_height} from {peer.get_peer_info()}, timed out")
             if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
@@ -300,7 +308,9 @@ class FullNode:
             if request.sub_block_height <= curr_peak_sub_height + self.config["short_sync_sub_blocks_behind_threshold"]:
                 self.log.debug("Doing backtrack sync")
                 # This is the normal case of receiving the next sub-block
-                if await self.short_sync_backtrack(peer, curr_peak_sub_height, request.sub_block_height):
+                if await self.short_sync_backtrack(
+                    peer, curr_peak_sub_height, request.sub_block_height, request.unfinished_reward_block_hash
+                ):
                     return
 
             if request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
@@ -831,7 +841,8 @@ class FullNode:
         if self.blockchain.contains_sub_block(header_hash):
             return None
 
-        if sub_block.transactions_generator is None:
+        self.log.debug(f"RESPONDED SUB_BLOCK: {sub_block.is_block()}, {sub_block.transactions_generator is None}")
+        if sub_block.is_block() and sub_block.transactions_generator is None:
             # This is the case where we already had the unfinished block, and asked for this sub-block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = sub_block.reward_chain_sub_block.get_unfinished().get_hash()
