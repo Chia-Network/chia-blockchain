@@ -59,10 +59,12 @@ if [ ! "$CI" ]; then
 	if [[ $SUBMODULE_STATUS = " "* ]];
 	then
     git submodule update --init --recursive
-		echo "Running git submodule update --init --recursive.\n"
+		echo "Running git submodule update --init --recursive."
+		echo ""
 	else
 		echo "The chia-blockchain-gui submodule is in altered state."
-		echo "Skipping git submodule update.\n"
+		echo "Skipping git submodule update."
+		echo ""
   fi
 	cd chia-blockchain-gui
 	npm install
