@@ -169,7 +169,6 @@ class TestWeightProof:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wpf.log.setLevel(logging.INFO)
         wp = await wpf.get_proof_of_weight(b"sadgfhjhgdgsfadfgh")
         assert wp is None
 
