@@ -55,7 +55,15 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-  git submodule update --init --recursive
+	SUBMODULE_STATUS=$(git submodule status)
+	if [[ $SUBMODULE_STATUS = " "* ]];
+	then
+    git submodule update --init --recursive
+		echo "Running git submodule update --init --recursive.\n"
+	else
+		echo "The chia-blockchain-gui submodule is in altered state."
+		echo "Skipping git submodule update.\n"
+  fi
 	cd chia-blockchain-gui
 	npm install
 	npm audit fix
