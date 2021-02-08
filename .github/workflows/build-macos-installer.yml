@@ -95,7 +95,6 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: |
-        ls
         sh install.sh
 
     - name: Setup Node 12.x
@@ -115,7 +114,6 @@ jobs:
         npm install
         npm audit fix
         cd ../build_scripts
-        ls ../
         sh build_macos.sh
 
     - name: Upload MacOS artifacts
