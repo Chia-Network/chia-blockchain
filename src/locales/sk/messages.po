@@ -1484,11 +1484,3 @@ msgstr ""
 #: src/components/wallet/Wallets.tsx:92
 msgid "syncing"
 msgstr ""
-
-#: src/hooks/useSelectDirectory.tsx:26
-#~ msgid "useSelectDirectory.availableOnlyFromElectron"
-#~ msgstr ""
-
-#: src/hooks/useSelectFile.tsx:26
-#~ msgid "useSelectFile.availableOnlyFromElectron"
-#~ msgstr ""
