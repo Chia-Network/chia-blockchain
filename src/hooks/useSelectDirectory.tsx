@@ -28,7 +28,7 @@ export default function useSelectDirectory(
 
     openDialog(
       <AlertDialog>
-        <Trans id="useSelectDirectory.availableOnlyFromElectron">
+        <Trans>
           This feature is available only from the GUI.
         </Trans>
       </AlertDialog>,

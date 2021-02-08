@@ -1228,6 +1228,8 @@ msgid "These plots are invalid, you might want to delete them."
 msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:132
+#: src/hooks/useSelectDirectory.tsx:26
+#: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
 msgstr ""
 
@@ -1484,9 +1486,9 @@ msgid "syncing"
 msgstr ""
 
 #: src/hooks/useSelectDirectory.tsx:26
-msgid "useSelectDirectory.availableOnlyFromElectron"
-msgstr ""
+#~ msgid "useSelectDirectory.availableOnlyFromElectron"
+#~ msgstr ""
 
 #: src/hooks/useSelectFile.tsx:26
-msgid "useSelectFile.availableOnlyFromElectron"
-msgstr ""
+#~ msgid "useSelectFile.availableOnlyFromElectron"
+#~ msgstr ""
