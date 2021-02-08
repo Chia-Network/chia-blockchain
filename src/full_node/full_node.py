@@ -367,7 +367,7 @@ class FullNode:
                 last_csb_or_eos,
             )
 
-            msg = make_msg(ProtocolMessageTypes.new_peak, timelord_new_peak)
+            msg = make_msg(ProtocolMessageTypes.new_peak_timelord, timelord_new_peak)
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
     async def synced(self) -> bool:
