@@ -844,7 +844,6 @@ class FullNode:
         if self.blockchain.contains_sub_block(header_hash):
             return None
 
-        self.log.debug(f"RESPONDED SUB_BLOCK: {sub_block.is_block()}, {sub_block.transactions_generator is None}")
         if sub_block.is_block() and sub_block.transactions_generator is None:
             # This is the case where we already had the unfinished block, and asked for this sub-block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
