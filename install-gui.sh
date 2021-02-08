@@ -56,6 +56,7 @@ fi
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
   git submodule update --init --recursive
+	cd chia-blockchain-gui
 	npm install
 	npm audit fix
 	npm run locale:extract
