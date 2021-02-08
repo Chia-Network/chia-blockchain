@@ -318,12 +318,13 @@ def chia_version_number() -> Tuple[str, str, str, str]:
     if len(dev_release_number) > 0:
         install_release_number += dev_release_number
 
-    print(f"Install release number: {install_release_number}")
     return major_release_number, minor_release_number, patch_release_number, dev_release_number
 
 
 def chia_minor_release_number():
-    return int(chia_version_number()[2])
+    res = int(chia_version_number()[2])
+    print(f"Install release number: {res}")
+    return res
 
 
 def chia_full_version_str() -> str:

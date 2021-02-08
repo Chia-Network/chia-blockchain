@@ -93,9 +93,7 @@ class MempoolManager:
         spend_bundles: List[SpendBundle] = []
         for dic in self.mempool.sorted_spends.values():
             for item in dic.values():
-                # TODO: re-enable big blocks
-                # if item.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM:
-                if item.cost_result.cost + cost_sum <= 10000000:
+                if item.cost_result.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM:
                     spend_bundles.append(item.spend_bundle)
                     cost_sum += item.cost_result.cost
                 else:

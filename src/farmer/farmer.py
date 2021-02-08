@@ -99,12 +99,12 @@ class Farmer:
 
     async def on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
-        msg = harvester_protocol.HarvesterHandshake(
+        handshake = harvester_protocol.HarvesterHandshake(
             self.get_public_keys(),
             self.pool_public_keys,
         )
         if peer.connection_type is NodeType.HARVESTER:
-            msg = make_msg(ProtocolMessageTypes.harvester_handshake, msg)
+            msg = make_msg(ProtocolMessageTypes.harvester_handshake, handshake)
             await peer.send_message(msg)
 
     def set_server(self, server):

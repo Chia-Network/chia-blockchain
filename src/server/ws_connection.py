@@ -77,17 +77,17 @@ class WSChiaConnection:
         self.incoming_queue: asyncio.Queue = incoming_queue
         self.outgoing_queue: asyncio.Queue = asyncio.Queue()
 
-        self.inbound_task = None
-        self.outbound_task = None
-        self.active = False  # once handshake is successful this will be changed to True
-        self.close_event = close_event
+        self.inbound_task: Optional[asyncio.Task] = None
+        self.outbound_task: Optional[asyncio.Task] = None
+        self.active: bool = False  # once handshake is successful this will be changed to True
+        self.close_event: asyncio.Event = close_event
         self.session = session
         self.close_callback = close_callback
 
         self.pending_requests: Dict[bytes32, asyncio.Event] = {}
         self.request_results: Dict[bytes32, Payload] = {}
         self.closed = False
-        self.connection_type = None
+        self.connection_type: Optional[NodeType] = None
         self.request_nonce: uint16 = uint16(0)
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
@@ -112,7 +112,7 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             if inbound_handshake.protocol_version != protocol_version:
                 raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
-            self.peer_server_port = int(inbound_handshake.server_port)
+            self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
 
         else:
@@ -135,7 +135,7 @@ class WSChiaConnection:
             )
             payload = Payload(outbound_handshake, None)
             await self._send_message(payload)
-            self.peer_server_port = int(inbound_handshake.server_port)
+            self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())

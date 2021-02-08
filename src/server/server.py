@@ -392,7 +392,8 @@ class ChiaServer:
                         await self.received_message_callback(connection)
                     full_message = payload.msg
                     connection.log.info(
-                        f"<- {ProtocolMessageTypes(full_message.type).name} from peer {connection.peer_node_id} {connection.peer_host}"
+                        f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
+                        f"{connection.peer_node_id} {connection.peer_host}"
                     )
                     message_type: str = ProtocolMessageTypes(full_message.type).name
 

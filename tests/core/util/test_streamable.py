@@ -13,6 +13,7 @@ from tests.setup_nodes import test_constants, bt
 
 class TestStreamable(unittest.TestCase):
     def test_basic(self):
+        @dataclass(frozen=True)
         @streamable
         class TestClass(Streamable):
             a: uint32

@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 
-from src.server.outbound_message import NodeType
 from src.util.ints import uint16, uint8
 from src.util.streamable import streamable, Streamable
 
-protocol_version = "0.0.25"
+protocol_version = "0.0.27"
 
 """
 Handshake when establishing a connection between two servers.

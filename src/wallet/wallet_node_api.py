@@ -68,18 +68,19 @@ class WalletNodeAPI:
         """
         assert peer.peer_node_id is not None
         name = peer.peer_node_id.hex()
+        status = MempoolInclusionStatus(ack.status)
         if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
-        if ack.status == MempoolInclusionStatus.SUCCESS:
+        if status == MempoolInclusionStatus.SUCCESS:
             self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
-        elif ack.status == MempoolInclusionStatus.PENDING:
+        elif status == MempoolInclusionStatus.PENDING:
             self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
             self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
-            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, Err[ack.error])
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
         else:
-            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, None)
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
 
     @peer_required
     @api_request

@@ -6,8 +6,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint128
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ints import uint32, uint128, uint8
 from src.util.streamable import Streamable, streamable
 
 """
@@ -55,7 +54,7 @@ class SendTransaction(Streamable):
 @streamable
 class TransactionAck(Streamable):
     txid: bytes32
-    status: MempoolInclusionStatus
+    status: uint8  # MempoolInclusionStatus
     error: Optional[str]
 
 
