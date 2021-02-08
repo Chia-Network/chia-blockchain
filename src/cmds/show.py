@@ -335,6 +335,7 @@ async def show_async(args, parser):
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if full node rpc is running at {args.rpc_port}")
+            print("This is normal if full node is still starting up.")
         else:
             tb = traceback.format_exc()
             print(f"Exception from 'show' {tb}")
