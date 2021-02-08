@@ -445,15 +445,17 @@ class ChiaServer:
                         pass
                     await connection.close()
                 finally:
-                    self.api_tasks.pop(task_id)
-                    self.tasks_from_peer[connection_inc.peer_id].remove(task_id)
+                    if task_id in self.api_tasks:
+                        self.api_tasks.pop(task_id)
+                    if task_id in self.tasks_from_peer[connection.peer_node_id]:
+                        self.tasks_from_peer[connection.peer_node_id].remove(task_id)
 
             task_id = token_bytes()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
             self.api_tasks[task_id] = api_task
             if connection_inc.peer_node_id not in self.tasks_from_peer:
-                self.tasks_from_peer[connection_inc.peer_id] = set()
-            self.tasks_from_peer[connection_inc.peer_id].add(task_id)
+                self.tasks_from_peer[connection_inc.peer_node_id] = set()
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
 
     async def send_to_others(
         self,
