@@ -188,6 +188,7 @@ class FullNodeAPI:
         async with self.full_node.blockchain.lock:
             # Check for unnecessary addition
             if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+                self.full_node.mempool_manager.remove_seen(spend_name)
                 return None
             # Performs DB operations within the lock
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
@@ -262,7 +263,9 @@ class FullNodeAPI:
     @api_request
     async def request_sub_blocks(self, request: full_node_protocol.RequestSubBlocks) -> Optional[Message]:
         if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
-            return None
+            reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
+            msg = make_msg(ProtocolMessageTypes.reject_sub_blocks, reject)
+            return msg
         for i in range(request.start_sub_height, request.end_sub_height + 1):
             if not self.full_node.blockchain.contains_sub_height(uint32(i)):
                 reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)

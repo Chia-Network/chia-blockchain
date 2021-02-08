@@ -173,9 +173,7 @@ class MempoolManager:
 
         log.debug(f"Cost: {cost}")
 
-        # TODO: remove. This is only temporary until CLVM gets fast
-        # cost > self.constants.MAX_BLOCK_COST_CLVM:
-        if cost > 10000000:
+        if cost > self.constants.MAX_BLOCK_COST_CLVM:
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
         if cost_result.error is not None:

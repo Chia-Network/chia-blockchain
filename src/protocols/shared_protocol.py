@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from src.server.outbound_message import NodeType
-from src.util.ints import uint16
+from src.util.ints import uint16, uint8
 from src.util.streamable import streamable, Streamable
 
 protocol_version = "0.0.25"
@@ -19,7 +19,7 @@ class Handshake(Streamable):
     protocol_version: str
     software_version: str
     server_port: uint16
-    node_type: NodeType
+    node_type: uint8
 
 
 @dataclass(frozen=True)

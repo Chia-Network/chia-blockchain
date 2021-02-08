@@ -90,7 +90,7 @@ class WSChiaConnection:
         self.connection_type = None
         self.request_nonce: uint16 = uint16(0)
 
-    async def perform_handshake(self, network_id, protocol_version, server_port, local_type):
+    async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
@@ -99,34 +99,29 @@ class WSChiaConnection:
                     protocol_version,
                     chia_full_version_str(),
                     uint16(server_port),
-                    local_type,
+                    uint8(local_type.value),
                 ),
             )
-            payload = Payload(outbound_handshake, None)
+            payload: Optional[Payload] = Payload(outbound_handshake, None)
+            assert payload is not None
             await self._send_message(payload)
             payload = await self._read_one_message()
+            assert payload is not None
             inbound_handshake = Handshake.from_bytes(payload.msg.data)
-            if (
-                payload.msg.type != ProtocolMessageTypes.handshake
-                or not inbound_handshake
-                or not inbound_handshake.node_type
-            ):
+            if ProtocolMessageTypes(payload.msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            if inbound_handshake.version != protocol_version:
+            if inbound_handshake.protocol_version != protocol_version:
                 raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             self.peer_server_port = int(inbound_handshake.server_port)
-            self.connection_type = inbound_handshake.node_type
+            self.connection_type = NodeType(inbound_handshake.node_type)
 
         else:
             payload = await self._read_one_message()
+            assert payload is not None
             inbound_handshake = Handshake.from_bytes(payload.msg.data)
-            if (
-                payload.msg.type != ProtocolMessageTypes.handshake
-                or not inbound_handshake
-                or not inbound_handshake.node_type
-            ):
+            if ProtocolMessageTypes(payload.msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            if inbound_handshake.version != protocol_version:
+            if inbound_handshake.protocol_version != protocol_version:
                 raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
@@ -135,13 +130,13 @@ class WSChiaConnection:
                     protocol_version,
                     chia_full_version_str(),
                     uint16(server_port),
-                    local_type,
+                    uint8(local_type.value),
                 ),
             )
             payload = Payload(outbound_handshake, None)
             await self._send_message(payload)
             self.peer_server_port = int(inbound_handshake.server_port)
-            self.connection_type = inbound_handshake.node_type
+            self.connection_type = NodeType(inbound_handshake.node_type)
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
@@ -218,7 +213,7 @@ class WSChiaConnection:
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
         async def invoke(*args, **kwargs):
-            timeout = None
+            timeout = 60
             if "timeout" in kwargs:
                 timeout = kwargs["timeout"]
             attribute = getattr(class_for_type(self.connection_type), attr_name, None)
@@ -243,12 +238,12 @@ class WSChiaConnection:
                     else:
                         req = req_annotations[key]
                 assert req is not None
-                result = req(**result.data)
+                result = req.from_bytes(result.data)
             return result
 
         return invoke
 
-    async def create_request(self, message: Message, timeout: int = 60):
+    async def create_request(self, message: Message, timeout: int):
         """ Sends a message and waits for a response. """
         if self.closed:
             return None
@@ -279,7 +274,9 @@ class WSChiaConnection:
         if payload.id in self.request_results:
             result_payload: Payload = self.request_results[payload.id]
             result = result_payload.msg
-            self.log.info(f"<- {result_payload.msg.type} from: {self.peer_host}:{self.peer_port}")
+            self.log.info(
+                f"<- {ProtocolMessageTypes(result_payload.msg.type).name} from: {self.peer_host}:{self.peer_port}"
+            )
             self.request_results.pop(payload.id)
 
         return result
@@ -301,7 +298,7 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
-        self.log.info(f"-> {payload.msg.type} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.info(f"-> {ProtocolMessageTypes(payload.msg.type).name} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
