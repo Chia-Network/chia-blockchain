@@ -55,16 +55,7 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-	if [ ! -d "chia-blockchain-gui" ];
-	then
-		echo "Cloning chia-blockchain-gui repository"
-		git clone https://github.com/Chia-Network/chia-blockchain-gui.git
-		cd ./chia-blockchain-gui
-	else
-		echo "Found chia-blockchain-gui repository - updating to origin/main"
-		cd ./chia-blockchain-gui
-		git fetch ; git checkout main; git pull
-	fi
+  git submodule update --init --recursive
 	npm install
 	npm audit fix
 	npm run locale:extract

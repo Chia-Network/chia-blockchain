@@ -62,7 +62,7 @@ steps:
 
   - script: |
       . ./activate
-      git clone https://github.com/Chia-Network/chia-blockchain-gui.git
+      git submodule update --init --recursive
       cd ./chia-blockchain-gui
       npm install
       npm audit fix

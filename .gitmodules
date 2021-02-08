@@ -1,0 +1,3 @@
+[submodule "chia-blockchain-gui"]
+	path = chia-blockchain-gui
+	url = https://github.com/Chia-Network/chia-blockchain-gui.git
