@@ -114,8 +114,7 @@ class TestCCWallet:
         assert cc_wallet.cc_info.my_genesis_checker is not None
         colour = cc_wallet.get_colour()
 
-        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2,
-        colour)
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
 
         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
@@ -123,7 +122,9 @@ class TestCCWallet:
         tx_record = await cc_wallet.generate_signed_transaction([uint64(60)], [cc_2_hash])
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await time_out_assert(15, self.tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name())
+        await time_out_assert(
+            15, self.tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
@@ -138,7 +139,9 @@ class TestCCWallet:
         tx_record = await cc_wallet_2.generate_signed_transaction([uint64(15)], [cc_hash])
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await time_out_assert(15, self.tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name())
+        await time_out_assert(
+            15, self.tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
@@ -217,8 +220,7 @@ class TestCCWallet:
         assert cc_wallet.cc_info.my_genesis_checker is not None
         colour = cc_wallet.get_colour()
 
-        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2,
-        colour)
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
 
         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
@@ -273,8 +275,7 @@ class TestCCWallet:
         assert cc_wallet.cc_info.my_genesis_checker is not None
         colour = cc_wallet.get_colour()
 
-        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2,
-        colour)
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
 
         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
@@ -334,8 +335,7 @@ class TestCCWallet:
 
         await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
 
-        cc_wallet_0: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0,
-        uint64(100))
+        cc_wallet_0: CCWallet = await CCWallet.create_new_cc(wallet_node_0.wallet_state_manager, wallet_0, uint64(100))
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"0"))

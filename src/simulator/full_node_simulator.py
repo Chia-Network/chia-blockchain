@@ -68,10 +68,9 @@ class FullNodeSimulator(FullNodeAPI):
             rr = RespondSubBlock(more[-1])
             await self.full_node.respond_sub_block(rr)
         except Exception as e:
-            self.log.error("Error while farming block")
+            self.log.error(f"Error while farming block: {e}")
         finally:
             self.lock.release()
-
 
     @api_request
     async def farm_new_sub_block(self, request: FarmNewBlockProtocol):
