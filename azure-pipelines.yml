@@ -17,9 +17,6 @@ strategy:
   matrix:
     Mojave DMG:
       python.version: "3.8"
-#    Python38:
-#      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
-#                               Also, installer can target one verison
 
 variables:
   - group: Apple-Notarize-Variables
@@ -65,7 +62,8 @@ steps:
 
   - script: |
       . ./activate
-      cd ./electron-react
+      git submodule update --init --recursive
+      cd ./chia-blockchain-gui
       npm install
       npm audit fix
       npm run locale:extract

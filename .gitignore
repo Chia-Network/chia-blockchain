@@ -84,10 +84,10 @@ vdf_bench
 main.sym
 
 # Dev config react
-electron-react/src/dev_config.js
+# chia-blockchain-gui/src/dev_config.js
 # React built app
-electron-react/.eslintcache
-electron-react/build
+chia-blockchain-gui/.eslintcache
+chia-blockchain-gui/build
 build_scripts/dist
 build_scripts/*.Dmg
-electron-react/src/locales/_build
+chia-blockchain-gui/src/locales/_build

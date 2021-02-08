@@ -27,7 +27,6 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
-        # we need fetch-depth 0 so setuptools_scm can resolve tags
 
     - uses: actions/setup-python@v2
       name: Install Python

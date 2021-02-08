@@ -24,9 +24,9 @@ mkdir dist
 echo "Create executeables with pyinstaller"
 pip install pyinstaller==4.2
 sudo pyinstaller --log-level=INFO daemon.spec
-cp -r dist/daemon ../electron-react
+cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
-cd electron-react || exit
+cd chia-blockchain-gui || exit
 
 echo "npm build"
 npm install

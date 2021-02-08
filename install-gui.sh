@@ -55,7 +55,8 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-	cd ./electron-react
+  git submodule update --init --recursive
+	cd chia-blockchain-gui
 	npm install
 	npm audit fix
 	npm run locale:extract
@@ -68,4 +69,4 @@ fi
 echo ""
 echo "Chia blockchain install-gui.sh complete."
 echo ""
-echo "Type 'cd electron-react' and then 'npm run electron &' to start the GUI"
+echo "Type 'cd chia-blockchain-gui' and then 'npm run electron &' to start the GUI"
