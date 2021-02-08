@@ -14,7 +14,8 @@ from src.consensus.pot_iterations import (
     is_overflow_sub_block,
 )
 from src.protocols import timelord_protocol
-from src.server.outbound_message import NodeType, Message
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.server.outbound_message import NodeType, make_msg
 from src.server.server import ChiaServer
 from src.timelord.iters_from_sub_block import iters_from_sub_block
 from src.timelord.timelord_state import LastState
@@ -56,7 +57,7 @@ class Timelord:
         # Chains that currently accept iterations.
         self.allows_iters: List[Chain] = []
         # Last peak received, None if it's already processed.
-        self.new_peak: Optional[timelord_protocol.NewPeak] = None
+        self.new_peak: Optional[timelord_protocol.NewPeakTimelord] = None
         # Last end of subslot bundle, None if we built a peak on top of it.
         self.new_subslot_end: Optional[EndOfSubSlotBundle] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
@@ -357,7 +358,7 @@ class Timelord:
                     rc_proof,
                 )
                 if self.server is not None:
-                    msg = Message("new_signage_point_vdf", response)
+                    msg = make_msg(ProtocolMessageTypes.new_signage_point_vdf, response)
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 # Cleanup the signage point from memory.
                 to_remove.append((signage_iter, signage_point_index))
@@ -459,7 +460,7 @@ class Timelord:
                         icc_info,
                         icc_proof,
                     )
-                    msg = Message("new_infusion_point_vdf", response)
+                    msg = make_msg(ProtocolMessageTypes.new_infusion_point_vdf, response)
                     if self.server is not None:
                         await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
@@ -542,7 +543,7 @@ class Timelord:
                     else:
                         new_sub_epoch_summary = block.sub_epoch_summary
 
-                    self.new_peak = timelord_protocol.NewPeak(
+                    self.new_peak = timelord_protocol.NewPeakTimelord(
                         new_reward_chain_sub_block,
                         block.difficulty,
                         new_deficit,
@@ -656,8 +657,8 @@ class Timelord:
                 SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
             )
             if self.server is not None:
-                msg = Message(
-                    "new_end_of_sub_slot_vdf",
+                msg = make_msg(
+                    ProtocolMessageTypes.new_end_of_sub_slot_vdf,
                     timelord_protocol.NewEndOfSubSlotVDF(eos_bundle),
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)

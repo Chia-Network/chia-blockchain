@@ -6,13 +6,14 @@ from typing import Dict, List, Optional, Callable, Tuple, Any
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from blspy import G1Element
 
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.ws_connection import WSChiaConnection
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
 
 from src.protocols import farmer_protocol, harvester_protocol
-from src.server.outbound_message import Message, NodeType
+from src.server.outbound_message import NodeType, make_msg
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
@@ -103,7 +104,7 @@ class Farmer:
             self.pool_public_keys,
         )
         if peer.connection_type is NodeType.HARVESTER:
-            msg = Message("harvester_handshake", msg)
+            msg = make_msg(ProtocolMessageTypes.harvester_handshake, msg)
             await peer.send_message(msg)
 
     def set_server(self, server):

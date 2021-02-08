@@ -12,6 +12,7 @@ from src.util.streamable import Streamable, streamable
 
 """
 Protocol between wallet (SPV node) and full node.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
@@ -60,7 +61,7 @@ class TransactionAck(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class NewPeak(Streamable):
+class NewPeakWallet(Streamable):
     header_hash: bytes32
     sub_block_height: uint32
     weight: uint128
@@ -95,7 +96,7 @@ class RequestRemovals(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RespondRemovals:
+class RespondRemovals(Streamable):
     sub_height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, Optional[Coin]]]
@@ -104,14 +105,14 @@ class RespondRemovals:
 
 @dataclass(frozen=True)
 @streamable
-class RejectRemovalsRequest:
+class RejectRemovalsRequest(Streamable):
     sub_height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
-class RequestAdditions:
+class RequestAdditions(Streamable):
     sub_height: uint32
     header_hash: bytes32
     puzzle_hashes: Optional[List[bytes32]]
@@ -119,7 +120,7 @@ class RequestAdditions:
 
 @dataclass(frozen=True)
 @streamable
-class RespondAdditions:
+class RespondAdditions(Streamable):
     sub_height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, List[Coin]]]
@@ -128,28 +129,28 @@ class RespondAdditions:
 
 @dataclass(frozen=True)
 @streamable
-class RejectAdditionsRequest:
+class RejectAdditionsRequest(Streamable):
     sub_height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestHeaderBlocks:
+@streamable
+class RequestHeaderBlocks(Streamable):
     start_sub_height: uint32
     end_sub_height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RejectHeaderBlocks:
+@streamable
+class RejectHeaderBlocks(Streamable):
     start_sub_height: uint32
     end_sub_height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondHeaderBlocks:
+@streamable
+class RespondHeaderBlocks(Streamable):
     start_sub_height: uint32
     end_sub_height: uint32
     header_blocks: List[HeaderBlock]

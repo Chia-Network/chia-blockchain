@@ -33,11 +33,11 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
+    async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         """
         The full node sent as a new peak
         """
-        await self.wallet_node.new_peak(peak, peer)
+        await self.wallet_node.new_peak_wallet(peak, peer)
 
     @api_request
     async def reject_sub_block_header(self, response: wallet_protocol.RejectHeaderRequest):
@@ -83,7 +83,9 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_peers(self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection):
+    async def respond_peers_introducer(
+        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
+    ):
         if not self.wallet_node.has_full_node():
             await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
         else:
@@ -107,5 +109,5 @@ class WalletNodeAPI:
         pass
 
     @api_request
-    async def reject_header_blocks_request(self, request: wallet_protocol.RejectHeaderBlocks):
+    async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         pass

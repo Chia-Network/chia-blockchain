@@ -1,18 +1,15 @@
 import asyncio
-from typing import AsyncGenerator, List, Optional
+from typing import List, Optional
 
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols.full_node_protocol import RespondSubBlock
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from src.server.outbound_message import OutboundMessage
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-
-OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNodeSimulator(FullNodeAPI):

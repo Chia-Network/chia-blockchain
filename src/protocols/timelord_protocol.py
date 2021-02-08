@@ -15,12 +15,13 @@ from src.util.streamable import streamable, Streamable
 
 """
 Protocol between timelord and full node.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
 @dataclass(frozen=True)
 @streamable
-class NewPeak(Streamable):
+class NewPeakTimelord(Streamable):
     reward_chain_sub_block: RewardChainSubBlock
     difficulty: uint64
     deficit: uint8

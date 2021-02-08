@@ -5,7 +5,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, Union, Set
+from typing import Optional, Dict, Callable, List, Tuple, Any, Union, Set
 
 import aiosqlite
 from blspy import AugSchemeMPL
@@ -36,9 +36,10 @@ from src.protocols import (
     farmer_protocol,
 )
 from src.protocols.full_node_protocol import RequestSubBlocks, RejectSubBlocks, RespondSubBlocks, RespondSubBlock
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 
 from src.server.node_discovery import FullNodePeers
-from src.server.outbound_message import Message, NodeType, OutboundMessage
+from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.pool_target import PoolTarget
@@ -49,8 +50,6 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8, uint64
 from src.util.path import mkdir, path_from_root
-
-OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNode:
@@ -358,7 +357,7 @@ class FullNode:
                 last_csb_or_eos = curr.total_iters
             else:
                 last_csb_or_eos = curr.ip_sub_slot_total_iters(self.constants)
-            timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
+            timelord_new_peak: timelord_protocol.NewPeakTimelord = timelord_protocol.NewPeakTimelord(
                 peak_block.reward_chain_sub_block,
                 difficulty,
                 peak.deficit,
@@ -368,7 +367,7 @@ class FullNode:
                 last_csb_or_eos,
             )
 
-            msg = Message("new_peak", timelord_new_peak)
+            msg = make_msg(ProtocolMessageTypes.new_peak, timelord_new_peak)
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
     async def synced(self) -> bool:
@@ -407,7 +406,7 @@ class FullNode:
                 my_filter = self.mempool_manager.get_filter()
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
-                msg = Message("request_mempool_transactions", mempool_request)
+                msg = make_msg(ProtocolMessageTypes.request_mempool_transactions, mempool_request)
                 await connection.send_message(msg)
 
         peak_full: Optional[FullBlock] = await self.blockchain.get_full_peak()
@@ -422,17 +421,17 @@ class FullNode:
                     peak.sub_block_height,
                     peak_full.reward_chain_sub_block.get_unfinished().get_hash(),
                 )
-                await connection.send_message(Message("new_peak", request_node))
+                await connection.send_message(make_msg(ProtocolMessageTypes.new_peak, request_node))
 
             elif connection.connection_type is NodeType.WALLET:
                 # If connected to a wallet, send the Peak
-                request_wallet = wallet_protocol.NewPeak(
+                request_wallet = wallet_protocol.NewPeakWallet(
                     peak.header_hash,
                     peak.sub_block_height,
                     peak.weight,
                     peak.sub_block_height,
                 )
-                await connection.send_message(Message("new_peak", request_wallet))
+                await connection.send_message(make_msg(ProtocolMessageTypes.new_peak_wallet, request_wallet))
             elif connection.connection_type is NodeType.TIMELORD:
                 await self.send_peak_to_timelords()
 
@@ -484,9 +483,9 @@ class FullNode:
             self.log.info("Starting to perform sync.")
             self.log.info("Waiting to receive peaks from peers.")
 
-            # Wait until we have 3 peaks or up to a max of 10 seconds
+            # Wait until we have 3 peaks or up to a max of 30 seconds
             peaks = []
-            for i in range(200):
+            for i in range(300):
                 peaks = [tup[0] for tup in self.sync_store.get_peak_of_each_peer().values()]
                 if len(self.sync_store.get_peers_that_have_peak(peaks)) < 3:
                     if self._shut_down:
@@ -540,7 +539,7 @@ class FullNode:
                 raise ValueError("Not performing sync, already caught up.")
 
             request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
-            response = await weight_proof_peer.request_proof_of_weight(request, timeout=30)
+            response = await weight_proof_peer.request_proof_of_weight(request, timeout=60)
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
@@ -614,9 +613,9 @@ class FullNode:
 
             peak = self.blockchain.get_peak()
             assert peak is not None
-            msg = Message(
-                "new_peak",
-                wallet_protocol.NewPeak(
+            msg = make_msg(
+                ProtocolMessageTypes.new_peak_wallet,
+                wallet_protocol.NewPeakWallet(
                     peak.header_hash,
                     peak.sub_block_height,
                     peak.weight,
@@ -784,7 +783,7 @@ class FullNode:
                 uint8(0),
                 added_eos.reward_chain.end_of_slot_vdf.challenge,
             )
-            msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
+            msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # TODO: maybe broadcast new SP/IPs as well?
@@ -795,8 +794,8 @@ class FullNode:
             await self.send_peak_to_timelords(sub_block)
 
             # Tell full nodes about the new peak
-            msg = Message(
-                "new_peak",
+            msg = make_msg(
+                ProtocolMessageTypes.new_peak,
                 full_node_protocol.NewPeak(
                     sub_block.header_hash,
                     sub_block.sub_block_height,
@@ -811,9 +810,9 @@ class FullNode:
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # Tell wallets about the new peak
-        msg = Message(
-            "new_peak",
-            wallet_protocol.NewPeak(
+        msg = make_msg(
+            ProtocolMessageTypes.new_peak_wallet,
+            wallet_protocol.NewPeakWallet(
                 sub_block.header_hash,
                 sub_block.sub_block_height,
                 sub_block.weight,
@@ -1072,11 +1071,11 @@ class FullNode:
             rc_prev,
         )
 
-        msg = Message("new_unfinished_sub_block", timelord_request)
+        msg = make_msg(ProtocolMessageTypes.new_unfinished_sub_block, timelord_request)
         await self.server.send_to_all([msg], NodeType.TIMELORD)
 
         full_node_request = full_node_protocol.NewUnfinishedSubBlock(block.reward_chain_sub_block.get_hash())
-        msg = Message("new_unfinished_sub_block", full_node_request)
+        msg = make_msg(ProtocolMessageTypes.new_unfinished_sub_block, full_node_request)
         if peer is not None:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
@@ -1228,7 +1227,7 @@ class FullNode:
                     bytes([0] * 32),
                 )
                 return (
-                    Message("request_signage_point_or_end_of_sub_slot", full_node_request),
+                    make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),
                     False,
                 )
 
@@ -1262,7 +1261,7 @@ class FullNode:
                     uint8(0),
                     request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
                 )
-                msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
+                msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
                 await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
                 for infusion in new_infusions:
@@ -1277,7 +1276,7 @@ class FullNode:
                     next_sub_slot_iters,
                     uint8(0),
                 )
-                msg = Message("new_signage_point", broadcast_farmer)
+                msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
                 return None, True
             else:

@@ -3,6 +3,8 @@ import time
 import logging
 from typing import Callable
 
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+
 log = logging.getLogger(__name__)
 
 
@@ -41,8 +43,8 @@ def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int =
         if incoming_queue.qsize() < count:
             return False
         for _ in range(count):
-            response = (await incoming_queue.get())[0].msg.function
-            if response != msg_name:
+            response = (await incoming_queue.get())[0].msg.type
+            if ProtocolMessageTypes(response).name != msg_name:
                 # log.warning(f"time_out_message: found {response} instead of {msg_name}")
                 return False
         return True

@@ -4,7 +4,8 @@ import time
 import pytest
 
 from src.protocols import full_node_protocol
-from src.server.outbound_message import Message, NodeType
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.server.outbound_message import NodeType, make_msg
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.core.full_node.test_full_node import connect_and_get_peer
@@ -43,7 +44,7 @@ class TestNodeLoad:
         start_unf = time.time()
         for i in range(1, num_blocks):
             await time_out_assert(5, node_height_at_least, True, full_node_2, i - 2)
-            msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(blocks[i]))
+            msg = make_msg(ProtocolMessageTypes.respond_sub_block, full_node_protocol.RespondSubBlock(blocks[i]))
             await server_1.send_to_all([msg], NodeType.FULL_NODE)
         print(f"Time taken to process {num_blocks} is {time.time() - start_unf}")
         assert time.time() - start_unf < 100

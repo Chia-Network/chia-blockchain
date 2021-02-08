@@ -8,6 +8,7 @@ from src.util.streamable import streamable, Streamable
 
 """
 Protocol between farmer and pool.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
