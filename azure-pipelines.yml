@@ -11,14 +11,6 @@ trigger:
     include:
     - "*"
 
-resources:
-  repositories:
-  - repository: chia-blockchain-gui
-    endpoint: azureSubscription
-    type: github
-    name: Chia-Network/chia-blockchain-gui
-    ref: origin/main
-
 pool:
   vmImage: "macOS-10.15"
 strategy:
@@ -35,9 +27,6 @@ steps:
       versionSpec: "$(python.version)"
     displayName: "Use Python $(python.version)"
 
-  - checkout: self
-  - checkout: chia-blockchain-gui
-
   # Install Apple certificate
   # Install an Apple certificate required to build on a macOS agent machine
   - task: InstallAppleCertificate@2
@@ -50,8 +39,6 @@ steps:
   #  since we're installing miniupnpc below,
   #  only cbor2 will end up in wheels/
   - script: |
-      cd chia-blockchain
-      if [ ! -f "chia-blockchain-gui" ]; then ln -s ../chia-blockchain-gui; fi
       python -m venv venv
       ln -s venv/bin/activate .
       . ./activate
@@ -62,7 +49,6 @@ steps:
     displayName: "Install dependencies"
 
   - script: |
-      cd chia-blockchain
       . ./activate
       clang --version
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
@@ -75,8 +61,8 @@ steps:
     displayName: "Setup Node 12.x"
 
   - script: |
-      cd chia-blockchain
       . ./activate
+      git clone https://github.com/Chia-Network/chia-blockchain-gui.git
       cd ./chia-blockchain-gui
       npm install
       npm audit fix
@@ -91,18 +77,18 @@ steps:
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
       if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
-      cd chia-blockchain/build_scripts || exit
+      cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/chia-blockchain/wheels
+      targetPath: $(System.DefaultWorkingDirectory)/wheels
       artifactName: MacOS-wheels
     displayName: "Upload MacOS wheels"
 
   - task: PublishPipelineArtifact@1
     inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/chia-blockchain/build_scripts/final_installer/
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
       artifactName: MacOS-DMG
     displayName: "Upload MacOS DMG"
