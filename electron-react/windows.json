@@ -1,5 +1,0 @@
-{
-  "dest": "dist/installers/",
-  "icon": "src/assets/img/chia.ico",
-  "tags": ["Blockchain"]
-}

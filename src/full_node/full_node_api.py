@@ -143,7 +143,6 @@ class FullNodeAPI:
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
 
         msg = Message("respond_transaction", transaction)
-        self.log.debug(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
         return msg
 
     @peer_required
@@ -167,26 +166,35 @@ class FullNodeAPI:
             return None
 
         # Ignore if we have already added this transaction
-        if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
-            return None
         spend_name = tx.transaction.name()
+        if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+            return None
+
+        # This is important because we might not have added the spend bundle, but we are about to add it, so it
+        # prevents double processing
         if self.full_node.mempool_manager.seen(spend_name):
             return None
+        # Adds it to seen so we don't double process
         self.full_node.mempool_manager.add_and_maybe_pop_seen(spend_name)
+
+        # Do the expensive pre-validation outside the lock
         cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(tx.transaction)
+
         async with self.full_node.blockchain.lock:
-            if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
+            # Check for unnecessary addition
+            if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
                 return None
+            # Performs DB operations within the lock
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
                 tx.transaction, cost_result, spend_name
             )
             if status == MempoolInclusionStatus.SUCCESS:
-                self.log.debug(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
+                self.log.debug(f"Added transaction to mempool: {spend_name} cost: {cost} fees {fees}")
                 assert fees >= 0
                 assert cost is not None
                 new_tx = full_node_protocol.NewTransaction(
-                    tx.transaction.name(),
+                    spend_name,
                     cost,
                     uint64(tx.transaction.fees()),
                 )
@@ -194,9 +202,7 @@ class FullNodeAPI:
                 await self.server.send_to_all_except([message], NodeType.FULL_NODE, peer.peer_node_id)
             else:
                 self.full_node.mempool_manager.remove_seen(spend_name)
-                self.log.warning(
-                    f"Was not able to add transaction with id {tx.transaction.name()}, {status} error: {error}"
-                )
+                self.log.warning(f"Was not able to add transaction with id {spend_name}, {status} error: {error}")
         return None
 
     @api_request
@@ -1002,7 +1008,7 @@ class FullNodeAPI:
         if self.full_node.mempool_manager.seen(spend_name):
             return None
         self.full_node.mempool_manager.add_and_maybe_pop_seen(spend_name)
-        self.log.debug(f"Processing transaction: {request.transaction.name()}")
+        self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
@@ -1014,14 +1020,14 @@ class FullNodeAPI:
                     request.transaction, cost_result, spend_name
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.debug(f"Added transaction to mempool: {request.transaction.name()}")
+                    self.log.debug(f"Added transaction to mempool: {spend_name}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = request.transaction.fees()
                     assert fees >= 0
                     assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(
-                        request.transaction.name(),
+                        spend_name,
                         cost,
                         uint64(request.transaction.fees()),
                     )
@@ -1029,22 +1035,19 @@ class FullNodeAPI:
                     await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
                     self.log.warning(
-                        f"Wasn't able to add transaction with id {request.transaction.name()}, "
-                        f"status {status} error: {error}"
+                        f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
                     )
 
         error_name = error.name if error is not None else None
         if status == MempoolInclusionStatus.SUCCESS:
-            response = wallet_protocol.TransactionAck(request.transaction.name(), status, error_name)
+            response = wallet_protocol.TransactionAck(spend_name, status, error_name)
         else:
             self.full_node.mempool_manager.remove_seen(spend_name)
             # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
-            if self.full_node.mempool_manager.get_spendbundle(request.transaction.name()) is not None:
-                response = wallet_protocol.TransactionAck(
-                    request.transaction.name(), MempoolInclusionStatus.SUCCESS, None
-                )
+            if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+                response = wallet_protocol.TransactionAck(spend_name, MempoolInclusionStatus.SUCCESS, None)
             else:
-                response = wallet_protocol.TransactionAck(request.transaction.name(), status, error_name)
+                response = wallet_protocol.TransactionAck(spend_name, status, error_name)
         msg = Message("transaction_ack", response)
         return msg
 

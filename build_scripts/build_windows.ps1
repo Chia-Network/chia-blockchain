@@ -67,10 +67,10 @@ Write-Output "   ---"
 pyinstaller --log-level INFO daemon_windows.spec
 
 Write-Output "   ---"
-Write-Output "Copy chia executables to electron-react\"
+Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
-Copy-Item "dist\daemon" -Destination "..\electron-react\" -Recurse
-Set-Location -Path "..\electron-react" -PassThru
+Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
+Set-Location -Path "..\chia-blockchain-gui" -PassThru
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"

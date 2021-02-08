@@ -19,6 +19,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
+- The GUI is now in a seperate repository from chia-blockchain, [chia-blockchain-gui](https://github.com/Chia-Network/chia-blockchain-gui). The installers and install scripts have been updated and it continues to follow basically the same install steps. Note that the GUI directory will now be `chia-blockchain-gui`.
 
 ### Fixed
 - The GUI was incorrectly reporting the time frame that the netspace estimate it displays utilizes. It is technically 312.5 minutes, on average, over the trailing 1000 sub blocks.
