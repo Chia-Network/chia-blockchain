@@ -408,6 +408,9 @@ class MempoolManager:
         self.potential_txs = {}
         for tx, cached_result, cached_name in potential_txs_copy.values():
             await self.add_spendbundle(tx, cached_result, cached_name)
+        log.debug(
+            f"Size of mempool: {len(self.mempool.spends)}, minimum fee to get in: {self.mempool.get_min_fee_rate()}"
+        )
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158) -> List[MempoolItem]:
         items: List[MempoolItem] = []
