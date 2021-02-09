@@ -488,19 +488,22 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_announcement_consumed(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        start_sub_height = blocks[-1].sub_block_height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
-            4,
+            3,
+            block_list_input=blocks,
             guarantee_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 3)
+        await time_out_assert(60, node_height_at_least, True, full_node_1, start_sub_height + 3)
 
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
@@ -532,19 +535,22 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_announcement_consumed_two(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        start_sub_height = blocks[-1].sub_block_height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
-            4,
+            3,
+            block_list_input=blocks,
             guarantee_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 3)
+        await time_out_assert(60, node_height_at_least, True, full_node_1, start_sub_height + 3)
 
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]

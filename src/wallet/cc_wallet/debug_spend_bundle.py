@@ -118,6 +118,8 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print()
     print(f"zero_coin_set = {sorted(zero_coin_set)}")
     print()
+    print(f"created announcements = {spend_bundle.announcements()}")
+    print()
     print()
     print("=" * 80)
     print()
