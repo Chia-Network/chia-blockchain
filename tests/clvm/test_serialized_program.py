@@ -12,7 +12,11 @@ SHA256TREE_MOD = load_clvm("sha256tree_module.clvm")
 
 class TestSerializedProgram(TestCase):
     def test_tree_hash(self):
+        p = SHA256TREE_MOD
+        s = SerializedProgram.from_bytes(bytes(SHA256TREE_MOD))
+        self.assertEqual(s.get_tree_hash(), p.get_tree_hash())
 
+    def test_program_execution(self):
         p_result = SHA256TREE_MOD.run(SHA256TREE_MOD)
         sp = SerializedProgram.from_bytes(bytes(SHA256TREE_MOD))
         cost, sp_result = sp.run_with_cost(sp)
