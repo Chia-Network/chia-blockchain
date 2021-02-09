@@ -9,12 +9,14 @@ from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
 from src.util.ints import uint32
 from src.consensus.sub_block_record import SubBlockRecord
+from src.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
 
 class BlockStore:
     db: aiosqlite.Connection
+    block_cache: LRUCache
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection):
@@ -50,11 +52,11 @@ class BlockStore:
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on sub_block_records(is_block)")
 
         await self.db.commit()
-
+        self.block_cache = LRUCache(1000)
         return self
 
     async def add_full_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
-
+        self.block_cache.put(block.header_hash, block)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
             (
@@ -110,6 +112,9 @@ class BlockStore:
         await cursor.close()
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
