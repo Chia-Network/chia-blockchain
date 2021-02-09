@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Set
 import aiosqlite
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint8
@@ -16,6 +16,7 @@ class WalletTransactionStore:
     db_connection: aiosqlite.Connection
     cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
+    tx_wallet_cache: Dict[int, Set[bytes32]]
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
@@ -73,6 +74,7 @@ class WalletTransactionStore:
 
         await self.db_connection.commit()
         self.tx_record_cache = dict()
+        self.tx_wallet_cache = dict()
         return self
 
     async def _init_cache(self):
@@ -109,7 +111,11 @@ class WalletTransactionStore:
         )
         await cursor.close()
         await self.db_connection.commit()
-        self.tx_record_cache[record.name.hex()] = record
+        self.tx_record_cache[record.name] = record
+
+        if record.wallet_id in self.tx_wallet_cache:
+            self.tx_wallet_cache[record.wallet_id].add(record.name)
+
         if len(self.tx_record_cache) > self.cache_size:
             while len(self.tx_record_cache) > self.cache_size:
                 first_in = list(self.tx_record_cache.keys())[0]
@@ -181,12 +187,17 @@ class WalletTransactionStore:
 
         sent_to = current.sent_to.copy()
 
+        current_peers = set()
         err_str = err.name if err is not None else None
         append_data = (name, uint8(send_status.value), err_str)
 
-        # Don't increment count if it's already sent to othis peer
-        if append_data in sent_to:
-            return False
+        for peer_id, status, error in sent_to:
+            current_peers.add(peer_id)
+
+        if name in current_peers:
+            sent_count = uint32(current.sent)
+        else:
+            sent_count = uint32(current.sent + 1)
 
         sent_to.append(append_data)
 
@@ -198,7 +209,7 @@ class WalletTransactionStore:
             amount=current.amount,
             fee_amount=current.fee_amount,
             confirmed=current.confirmed,
-            sent=uint32(current.sent + 1),
+            sent=sent_count,
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
@@ -244,8 +255,8 @@ class WalletTransactionStore:
         """
         Checks DB and cache for TransactionRecord with id: id and returns it.
         """
-        if id.hex() in self.tx_record_cache:
-            return self.tx_record_cache[id.hex()]
+        if id in self.tx_record_cache:
+            return self.tx_record_cache[id]
         cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (id.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
@@ -353,6 +364,13 @@ class WalletTransactionStore:
         """
         Returns all stored transactions.
         """
+        if type is None and wallet_id in self.tx_wallet_cache:
+            wallet_txs = self.tx_wallet_cache[wallet_id]
+            txs = []
+            for tx_id in wallet_txs:
+                txs.append(self.tx_record_cache[tx_id])
+            return txs
+
         if type is None:
             cursor = await self.db_connection.execute(
                 "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
@@ -369,9 +387,14 @@ class WalletTransactionStore:
         await cursor.close()
         records = []
 
+        cache_set = set()
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
+            cache_set.add(record.name)
+
+        if type is None:
+            self.tx_wallet_cache[wallet_id] = cache_set
 
         return records
 
@@ -391,6 +414,7 @@ class WalletTransactionStore:
 
     async def rollback_to_block(self, sub_height):
         # Delete from storage
+        self.tx_wallet_cache = {}
         c1 = await self.db_connection.execute(
             "DELETE FROM transaction_record WHERE confirmed_at_sub_height>?", (sub_height,)
         )
