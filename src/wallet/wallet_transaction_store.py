@@ -88,7 +88,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 bytes(record),
                 record.name,
