@@ -31,7 +31,7 @@ from src.types.slots import (
     SubSlotProofs,
 )
 from src.types.vdf import VDFInfo, VDFProof
-from src.util.ints import uint64, uint8, int512, uint32
+from src.util.ints import uint64, uint8, uint32
 from src.types.sub_epoch_summary import SubEpochSummary
 
 log = logging.getLogger(__name__)
@@ -757,13 +757,10 @@ class Timelord:
                 writer.write((prefix + str(disc)).encode())
                 await writer.drain()
 
-            # Send (a, b) from 'initial_form'.
-            for num in [initial_form.a, initial_form.b]:
-                prefix_l = len(str(num))
-                prefix_len = len(str(prefix_l))
-                async with self.lock:
-                    writer.write((str(prefix_len) + str(prefix_l) + str(num)).encode())
-                    await writer.drain()
+            # Send initial_form prefixed with its length.
+            async with self.lock:
+                writer.write(bytes([len(initial_form.data)]) + initial_form.data)
+                await writer.drain()
             try:
                 ok = await reader.readexactly(2)
             except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
@@ -832,10 +829,8 @@ class Timelord:
                     proof_bytes: bytes = stdout_bytes_io.read()
 
                     # Verifies our own proof just in case
-                    int_size = (self.constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
-                    a = int.from_bytes(y_bytes[:int_size], "big", signed=True)
-                    b = int.from_bytes(y_bytes[int_size:], "big", signed=True)
-                    output = ClassgroupElement(int512(a), int512(b))
+                    form_size = ClassgroupElement.get_size(self.constants)
+                    output = ClassgroupElement(y_bytes[:form_size])
                     time_taken = time.time() - self.chain_start_time[chain]
                     ips = int(iterations_needed / time_taken * 10) / 10
                     log.info(
