@@ -4,6 +4,9 @@ set -e
 echo "This requires the chia python virtual environment."
 echo "Execute '. ./activate' if you have not already, before running."
 
+# Allows overriding the branch or commit to build in chia-blockchain-gui
+SUBMODULE_BRANCH=$1
+
 UBUNTU=false
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
@@ -55,18 +58,19 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-	SUBMODULE_STATUS=$(git submodule status)
-	if [[ $SUBMODULE_STATUS = " "* ]];
+	git submodule update --init --recursive
+	echo "Running git submodule update --init --recursive."
+	echo ""
+	cd chia-blockchain-gui
+	git pull
+	echo ""
+	if [ "$SUBMODULE_BRANCH" ];
 	then
-    git submodule update --init --recursive
-		echo "Running git submodule update --init --recursive."
+		git checkout "$SUBMODULE_BRANCH"
 		echo ""
-	else
-		echo "The chia-blockchain-gui submodule is in altered state."
-		echo "Skipping git submodule update."
+		echo "Building the GUI with branch $SUBMODULE_BRANCH"
 		echo ""
   fi
-	cd chia-blockchain-gui
 	npm install
 	npm audit fix
 	npm run locale:extract
