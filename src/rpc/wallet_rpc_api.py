@@ -268,7 +268,7 @@ class WalletRpcApi:
         if peak is None:
             return {"height": 0}
         else:
-            return {"height": peak.height}
+            return {"height": peak.sub_block_height}
 
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
@@ -372,14 +372,12 @@ class WalletRpcApi:
         pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
         spendable_balance = await wallet.get_spendable_balance(unspent_records)
         pending_change = await wallet.get_pending_change_balance()
-        frozen_balance = 0
 
         wallet_balance = {
             "wallet_id": wallet_id,
             "confirmed_wallet_balance": balance,
             "unconfirmed_wallet_balance": pending_balance,
             "spendable_balance": spendable_balance,
-            "frozen_balance": frozen_balance,
             "pending_change": pending_change,
         }
 

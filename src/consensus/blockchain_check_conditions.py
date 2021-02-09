@@ -29,7 +29,9 @@ def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecor
     return None
 
 
-def blockchain_assert_block_index_exceeds(condition: ConditionVarPair, height: uint32) -> Optional[Err]:
+def blockchain_assert_block_index_exceeds(
+    condition: ConditionVarPair, prev_transaction_block_height: uint32
+) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
     """
@@ -37,14 +39,14 @@ def blockchain_assert_block_index_exceeds(condition: ConditionVarPair, height: u
         expected_block_index = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
-    # + 1 because min block it can be included is +1 from current
-    if height <= expected_block_index:
+
+    if prev_transaction_block_height < expected_block_index:
         return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
     return None
 
 
 def blockchain_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, height: uint32
+    condition: ConditionVarPair, unspent: CoinRecord, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -54,7 +56,7 @@ def blockchain_assert_block_age_exceeds(
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if height <= expected_block_index:
+    if prev_transaction_block_height < expected_block_index:
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
@@ -93,7 +95,7 @@ def blockchain_check_conditions_dict(
     unspent: CoinRecord,
     removed: Dict[bytes32, CoinRecord],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    height: uint32,
+    prev_transaction_block_height: uint32,
     timestamp: uint64,
 ) -> Optional[Err]:
     """
@@ -108,9 +110,9 @@ def blockchain_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = blockchain_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                error = blockchain_assert_block_index_exceeds(cvp, height)
+                error = blockchain_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                error = blockchain_assert_block_age_exceeds(cvp, unspent, height)
+                error = blockchain_assert_block_age_exceeds(cvp, unspent, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
                 error = blockchain_assert_time_exceeds(cvp, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:

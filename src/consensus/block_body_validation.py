@@ -45,7 +45,6 @@ async def validate_block_body(
     peak: Optional[SubBlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
     sub_height: uint32,
-    height: Optional[uint32],
     cached_cost_result: Optional[CostResult] = None,
     fork_point_with_peak: Optional[uint32] = None,
 ) -> Optional[Err]:
@@ -56,11 +55,7 @@ async def validate_block_body(
     """
     if isinstance(block, FullBlock):
         assert sub_height == block.sub_block_height
-        if height is not None:
-            assert height == block.height
-            assert block.is_block()
-        else:
-            assert not block.is_block()
+    prev_transaction_block_height: uint32 = uint32(0)
 
     # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
     # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
@@ -103,17 +98,18 @@ async def validate_block_body(
     if sub_height > 0:
         # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
         prev_block = sub_blocks.sub_block_record(block.foliage_block.prev_block_hash)
+        prev_transaction_block_height = prev_block.sub_block_height
 
         assert prev_block.fees is not None
         pool_coin = create_pool_coin(
             prev_block.sub_block_height,
             prev_block.pool_puzzle_hash,
-            calculate_pool_reward(prev_block.height),
+            calculate_pool_reward(prev_block.sub_block_height),
         )
         farmer_coin = create_farmer_coin(
             prev_block.sub_block_height,
             prev_block.farmer_puzzle_hash,
-            uint64(calculate_base_farmer_reward(prev_block.height) + prev_block.fees),
+            uint64(calculate_base_farmer_reward(prev_block.sub_block_height) + prev_block.fees),
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
@@ -122,20 +118,19 @@ async def validate_block_body(
         # For the second block in the chain, don't go back further
         if prev_block.sub_block_height > 0:
             curr_sb = sub_blocks.sub_block_record(prev_block.prev_hash)
-            curr_height = curr_sb.height
             while not curr_sb.is_block:
                 expected_reward_coins.add(
                     create_pool_coin(
                         curr_sb.sub_block_height,
                         curr_sb.pool_puzzle_hash,
-                        calculate_pool_reward(curr_height),
+                        calculate_pool_reward(curr_sb.sub_block_height),
                     )
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
                         curr_sb.sub_block_height,
                         curr_sb.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr_height),
+                        calculate_base_farmer_reward(curr_sb.sub_block_height),
                     )
                 )
                 curr_sb = sub_blocks.sub_block_record(curr_sb.prev_hash)
@@ -235,10 +230,7 @@ async def validate_block_body(
     else:
         last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.sub_height_to_hash(uint32(fork_sub_h)))
         assert last_sb_in_common is not None
-        if last_sb_in_common.is_block:
-            coin_store_reorg_height = last_sb_in_common.height
-        else:
-            coin_store_reorg_height = last_sb_in_common.height - 1
+        coin_store_reorg_height = last_sb_in_common.sub_block_height
 
     # Get additions and removals since (after) fork_h but not including this block
     additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
@@ -350,13 +342,12 @@ async def validate_block_body(
     pairs_pks = []
     pairs_msgs = []
     for npc in npc_list:
-        assert height is not None
         unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
             unspent,
             removal_coin_records,
             npc.condition_dict,
-            height,
+            prev_transaction_block_height,
             block.foliage_block.timestamp,
         )
         if error:

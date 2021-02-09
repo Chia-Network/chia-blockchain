@@ -43,7 +43,7 @@ def count_sub_epochs(blockchain, last_hash) -> int:
     curr = blockchain._sub_blocks[last_hash]
     count = 0
     while True:
-        if curr.height == 0:
+        if curr.sub_block_height == 0:
             break
         # next sub block
         curr = blockchain._sub_blocks[curr.prev_hash]

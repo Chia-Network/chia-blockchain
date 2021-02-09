@@ -99,14 +99,8 @@ def create_foliage(
 
     if prev_block is None:
         sub_height: uint32 = uint32(0)
-        height: uint32 = uint32(0)
     else:
         sub_height = uint32(prev_block.sub_block_height + 1)
-        prev_is_block = prev_block.is_block
-        if prev_is_block:
-            height = uint32(prev_block.height + 1)
-        else:
-            height = uint32(prev_block.height)
 
     # Create filter
     byte_array_tx: List[bytes32] = []
@@ -164,13 +158,13 @@ def create_foliage(
             pool_coin = create_pool_coin(
                 curr.sub_block_height,
                 curr.pool_puzzle_hash,
-                calculate_pool_reward(curr.height),
+                calculate_pool_reward(curr.sub_block_height),
             )
 
             farmer_coin = create_farmer_coin(
                 curr.sub_block_height,
                 curr.farmer_puzzle_hash,
-                uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
+                uint64(calculate_base_farmer_reward(curr.sub_block_height) + curr.fees),
             )
             assert curr.header_hash == prev_block.header_hash
             reward_claims_incorporated += [pool_coin, farmer_coin]
@@ -182,12 +176,12 @@ def create_foliage(
                     pool_coin = create_pool_coin(
                         curr.sub_block_height,
                         curr.pool_puzzle_hash,
-                        calculate_pool_reward(curr.height),
+                        calculate_pool_reward(curr.sub_block_height),
                     )
                     farmer_coin = create_farmer_coin(
                         curr.sub_block_height,
                         curr.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr.height),
+                        calculate_base_farmer_reward(curr.sub_block_height),
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
                     curr = sub_blocks.sub_block_record(curr.prev_hash)
@@ -254,7 +248,6 @@ def create_foliage(
             additions_root,
             removals_root,
             transactions_info.get_hash(),
-            height,
         )
         assert foliage_block is not None
         foliage_block_hash: Optional[bytes32] = foliage_block.get_hash()

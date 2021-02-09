@@ -108,7 +108,6 @@ class CCWallet:
 
         regular_record = TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
@@ -126,7 +125,6 @@ class CCWallet:
         )
         cc_record = TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
@@ -241,7 +239,7 @@ class CCWallet:
         assert self.cc_info.my_genesis_checker is not None
         return bytes(self.cc_info.my_genesis_checker).hex()
 
-    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin], sub_height: uint32):
+    async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], sub_height: uint32):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that {coin} was added")
 
@@ -366,7 +364,6 @@ class CCWallet:
         if send:
             regular_record = TransactionRecord(
                 confirmed_at_sub_height=uint32(0),
-                confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
@@ -384,7 +381,6 @@ class CCWallet:
             )
             cc_record = TransactionRecord(
                 confirmed_at_sub_height=uint32(0),
-                confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
@@ -479,7 +475,9 @@ class CCWallet:
                     continue
                 sum += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+                self.log.info(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_sub_height}!"
+                )
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -581,7 +579,6 @@ class CCWallet:
         # TODO add support for array in stored records
         return TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],
             amount=uint64(outgoing_amount),

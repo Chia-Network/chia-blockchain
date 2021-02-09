@@ -68,9 +68,6 @@ class Wallet:
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.id())
-
     async def get_spendable_balance(self, unspent_records=None) -> uint64:
         spendable = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.id(), unspent_records
@@ -192,7 +189,9 @@ class Wallet:
                     continue
                 sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+                self.log.info(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_sub_height}!"
+                )
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -276,7 +275,6 @@ class Wallet:
 
         return TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=puzzle_hash,
             amount=uint64(amount),

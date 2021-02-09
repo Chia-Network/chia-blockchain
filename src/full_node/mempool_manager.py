@@ -223,7 +223,7 @@ class MempoolManager:
                 # TODO(straya): what timestamp to use here?
                 removal_record = CoinRecord(
                     removal_coin,
-                    uint32(self.peak.height + 1),
+                    uint32(self.peak.sub_block_height + 1),  # In mempool, so will be included in next sub block height
                     uint32(0),
                     False,
                     False,
@@ -291,6 +291,7 @@ class MempoolManager:
 
         if tmp_error:
             return None, MempoolInclusionStatus.FAILED, tmp_error
+
         # Verify conditions, create hash_key list for aggsig check
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
@@ -303,9 +304,10 @@ class MempoolManager:
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            error = mempool_check_conditions_dict(
-                coin_record, new_spend, npc.condition_dict, uint32(self.peak.height + 1)
+            chialisp_height = (
+                self.peak.prev_transaction_block_height if not self.peak.is_block else self.peak.sub_block_height
             )
+            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, uint32(chialisp_height))
 
             if error:
                 if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:

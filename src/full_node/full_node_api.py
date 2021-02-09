@@ -968,13 +968,13 @@ class FullNodeAPI:
                 proofs = None
             else:
                 proofs = []
-            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
+            response = wallet_protocol.RespondRemovals(block.sub_block_height, block.header_hash, [], proofs)
         elif request.coin_names is None or len(request.coin_names) == 0:
             for removal in all_removals:
                 cr = await self.full_node.coin_store.get_coin_record(removal)
                 assert cr is not None
                 coins_map.append((cr.coin.name(), cr.coin))
-            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
+            response = wallet_protocol.RespondRemovals(block.sub_block_height, block.header_hash, coins_map, None)
         else:
             assert block.transactions_generator
             removal_merkle_set = MerkleSet()
@@ -992,7 +992,7 @@ class FullNodeAPI:
                 else:
                     coins_map.append((coin_name, None))
                     assert not result
-            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, proofs_map)
+            response = wallet_protocol.RespondRemovals(block.sub_block_height, block.header_hash, coins_map, proofs_map)
 
         msg = make_msg(ProtocolMessageTypes.respond_removals, response)
         return msg

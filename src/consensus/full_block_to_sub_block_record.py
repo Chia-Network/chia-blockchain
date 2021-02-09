@@ -32,14 +32,9 @@ def block_to_sub_block_record(
     if block.sub_block_height == 0:
         prev_sb: Optional[SubBlockRecord] = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
-        height = 0
     else:
         prev_sb = sub_blocks.sub_block_record(block.prev_header_hash)
         assert prev_sb is not None
-        if prev_sb.is_block:
-            height = prev_sb.height + 1
-        else:
-            height = prev_sb.height
         sub_slot_iters = get_next_sub_slot_iters(
             constants,
             sub_blocks,
@@ -61,9 +56,9 @@ def block_to_sub_block_record(
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None
-    # reward_claims_incorporated = (
-    #     block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
-    # )
+    reward_claims_incorporated = (
+        block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
+    )
 
     if len(block.finished_sub_slots) > 0:
         finished_challenge_slot_hashes: Optional[List[bytes32]] = [
@@ -116,11 +111,19 @@ def block_to_sub_block_record(
         icc_output: Optional[ClassgroupElement] = block.reward_chain_sub_block.infused_challenge_chain_ip_vdf.output
     else:
         icc_output = None
+
+    prev_transaction_block_height = uint32(0)
+    curr: Optional[SubBlockRecord] = sub_blocks.try_sub_block(block.prev_header_hash)
+    while curr is not None and not curr.is_block:
+        curr = sub_blocks.try_sub_block(curr.prev_hash)
+
+    if curr is not None and curr.is_block:
+        prev_transaction_block_height = curr.sub_block_height
+
     return SubBlockRecord(
         block.header_hash,
         block.prev_header_hash,
         block.sub_block_height,
-        uint32(height),
         block.weight,
         block.total_iters,
         block.reward_chain_sub_block.signage_point_index,
@@ -134,10 +137,11 @@ def block_to_sub_block_record(
         required_iters,
         deficit,
         overflow,
+        prev_transaction_block_height,
         timestamp,
         prev_block_hash,
         fees,
-        # reward_claims_incorporated,
+        reward_claims_incorporated,
         finished_challenge_slot_hashes,
         finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,

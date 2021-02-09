@@ -273,9 +273,7 @@ class WalletBlockchain(BlockchainInterface):
                 self.__sub_height_to_hash[uint32(0)] = block.header_hash
                 for removed in block.removals:
                     self.log.debug(f"Removed: {removed.name()}")
-                await self.coins_of_interest_received(
-                    block.removals, block.additions, block.height, block.sub_block_height
-                )
+                await self.coins_of_interest_received(block.removals, block.additions, block.sub_block_height)
                 self.peak_sub_height = uint32(0)
                 return uint32(0)
             return None
@@ -290,17 +288,8 @@ class WalletBlockchain(BlockchainInterface):
                 fork_h = find_fork_point_in_chain(self, sub_block, peak)
 
             # Rollback to fork
-            self.log.debug(
-                f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, "
-                f"{peak.height}"
-            )
-            if fork_h == -1:
-                await self.reorg_rollback(-1)
-            else:
-                assert fork_h >= 0
-                fork_block = await self.get_sub_block_from_db(self.sub_height_to_hash(uint32(fork_h)))
-                assert fork_block is not None
-                await self.reorg_rollback(fork_block.sub_block_height)
+            self.log.debug(f"fork_h: {fork_h}, SB: {sub_block.sub_block_height}, peak: {peak.sub_block_height}")
+            await self.reorg_rollback(fork_h)
 
             # Rollback sub_epoch_summaries
             heights_to_delete = []
@@ -330,7 +319,6 @@ class WalletBlockchain(BlockchainInterface):
                     await self.coins_of_interest_received(
                         fetched_block.removals,
                         fetched_block.additions,
-                        fetched_block.height,
                         fetched_block.sub_block_height,
                     )
                 if fetched_sub_block.sub_epoch_summary_included is not None:
@@ -349,13 +337,13 @@ class WalletBlockchain(BlockchainInterface):
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_sub_block(header_hash)
         curr = self.sub_block_record(header_hash)
-        if curr.height <= 2:
+        if curr.sub_block_height <= 2:
             return self.constants.DIFFICULTY_STARTING
         return get_next_difficulty(
             self.constants,
             self,
             header_hash,
-            curr.height,
+            curr.sub_block_height,
             uint64(curr.weight - self.__sub_blocks[curr.prev_hash].weight),
             curr.deficit,
             new_slot,
@@ -365,13 +353,13 @@ class WalletBlockchain(BlockchainInterface):
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_sub_block(header_hash)
         curr = self.sub_block_record(header_hash)
-        if curr.height <= 2:
+        if curr.sub_block_height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING
         return get_next_sub_slot_iters(
             self.constants,
             self,
             header_hash,
-            curr.height,
+            curr.sub_block_height,
             curr.sub_slot_iters,
             curr.deficit,
             new_slot,

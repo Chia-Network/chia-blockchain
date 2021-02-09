@@ -1,15 +1,19 @@
 import asyncio
 from pathlib import Path
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Tuple
 
 import aiosqlite
 import pytest
 
+from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
+from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.full_node.coin_store import CoinStore
 from src.full_node.block_store import BlockStore
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
+from src.types.full_block import FullBlock
+from src.util.ints import uint64
 from tests.setup_nodes import test_constants, bt
 from src.util.wallet_tools import WalletTool
 
@@ -23,6 +27,25 @@ def event_loop():
 
 
 constants = test_constants
+
+
+def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
+    pool_amount = calculate_pool_reward(block.sub_block_height)
+    farmer_amount = calculate_base_farmer_reward(block.sub_block_height)
+    if block.is_block():
+        assert block.transactions_info is not None
+        farmer_amount = uint64(farmer_amount + block.transactions_info.fees)
+    pool_coin: Coin = create_pool_coin(
+        block.sub_block_height,
+        block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
+        pool_amount,
+    )
+    farmer_coin: Coin = create_farmer_coin(
+        block.sub_block_height,
+        block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
+        farmer_amount,
+    )
+    return pool_coin, farmer_coin
 
 
 class TestCoinStore:
@@ -65,13 +88,11 @@ class TestCoinStore:
         # Adding blocks to the coin store
         should_be_included_prev: Set[Coin] = set()
         should_be_included: Set[Coin] = set()
-        last_block_height = -1
         for block in blocks:
-            farmer_coin, pool_coin = block.get_future_reward_coins(last_block_height + 1)
+            farmer_coin, pool_coin = get_future_reward_coins(block)
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
             if block.is_block():
-                last_block_height = block.height
                 removals, additions = block.tx_removals_and_additions()
 
                 assert block.get_included_reward_coins() == should_be_included_prev
@@ -118,12 +139,12 @@ class TestCoinStore:
                 records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                 for record in records:
-                    await coin_store._set_spent(record.coin.name(), block.height)
+                    await coin_store._set_spent(record.coin.name(), block.sub_block_height)
 
                 records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                 for record in records:
                     assert record.spent
-                    assert record.spent_block_index == block.height
+                    assert record.spent_block_index == block.sub_block_height
 
         await connection.close()
         Path("fndb_test.db").unlink()
@@ -145,12 +166,12 @@ class TestCoinStore:
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                 for record in records:
-                    await coin_store._set_spent(record.coin.name(), block.height)
+                    await coin_store._set_spent(record.coin.name(), block.sub_block_height)
 
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                 for record in records:
                     assert record.spent
-                    assert record.spent_block_index == block.height
+                    assert record.spent_block_index == block.sub_block_height
 
         reorg_index = 8
         await coin_store.rollback_to_block(reorg_index)
@@ -160,7 +181,7 @@ class TestCoinStore:
                 coins = block.get_included_reward_coins()
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                if block.height <= reorg_index:
+                if block.sub_block_height <= reorg_index:
                     for record in records:
                         assert record is not None
                         assert record.spent
@@ -197,7 +218,7 @@ class TestCoinStore:
                     ]
                     for record in records:
                         assert not record.spent
-                        assert record.confirmed_block_index == block.height
+                        assert record.confirmed_block_index == block.sub_block_height
                         assert record.spent_block_index == 0
 
             blocks_reorg_chain = bt.get_consecutive_blocks(reorg_length, blocks[: initial_block_count - 10], seed=b"2")
@@ -218,7 +239,7 @@ class TestCoinStore:
                         ]
                         for record in records:
                             assert not record.spent
-                            assert record.confirmed_block_index == reorg_block.height
+                            assert record.confirmed_block_index == reorg_block.sub_block_height
                             assert record.spent_block_index == 0
                 assert error_code is None
             assert b.get_peak().sub_block_height == initial_block_count - 10 + reorg_length - 1
@@ -243,16 +264,13 @@ class TestCoinStore:
         coin_store = await CoinStore.create(connection)
         store = await BlockStore.create(connection)
         b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
-        last_block_height = 0
         for block in blocks:
             res, err, _ = await b.receive_block(block)
             assert err is None
             assert res == ReceiveBlockResult.NEW_PEAK
-            if block.is_block() and block.header_hash != blocks[-1].header_hash:
-                last_block_height = block.height
         assert b.get_peak().sub_block_height == num_blocks - 1
 
-        pool_coin, farmer_coin = blocks[-2].get_future_reward_coins(last_block_height + 1)
+        pool_coin, farmer_coin = get_future_reward_coins(blocks[-2])
 
         coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
         coins_pool = await coin_store.get_coin_records_by_puzzle_hash(pool_coin.puzzle_hash)

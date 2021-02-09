@@ -138,7 +138,6 @@ async def print_balances(args, wallet_client, fingerprint: int):
             )
             print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
             print(f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}")
-            print(f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}")
             print(f"   -Pending change: {balances['pending_change']/units['colouredcoin']}")
         else:
             print(f"Wallet ID {wallet_id} type {typ}")

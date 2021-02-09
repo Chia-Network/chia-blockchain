@@ -236,7 +236,6 @@ class Blockchain(BlockchainInterface):
             self.get_peak(),
             block,
             block.sub_block_height,
-            block.height if block.is_block() else None,
             pre_validation_result.cost_result if pre_validation_result is not None else None,
             fork_point_with_peak,
         )
@@ -291,20 +290,9 @@ class Blockchain(BlockchainInterface):
                 fork_sub_block_height: int = fork_point_with_peak
             else:
                 fork_sub_block_height = find_fork_point_in_chain(self, sub_block, peak)
-            if fork_sub_block_height == -1:
-                coin_store_reorg_height = -1
-            else:
-                last_sb_in_common = await self.get_sub_block_from_db(
-                    self.sub_height_to_hash(uint32(fork_sub_block_height))
-                )
-                assert last_sb_in_common is not None
-                if last_sb_in_common.is_block:
-                    coin_store_reorg_height = last_sb_in_common.height
-                else:
-                    coin_store_reorg_height = last_sb_in_common.height - 1
 
             # Rollback to fork
-            await self.coin_store.rollback_to_block(coin_store_reorg_height)
+            await self.coin_store.rollback_to_block(fork_sub_block_height)
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.__sub_epoch_summaries.keys():
@@ -495,11 +483,6 @@ class Blockchain(BlockchainInterface):
             else self.sub_block_record(block.prev_header_hash).sub_block_height
         )
 
-        if block.is_block():
-            assert block.foliage_block is not None
-            height: Optional[uint32] = block.foliage_block.height
-        else:
-            height = None
         error_code = await validate_block_body(
             self.constants,
             self,
@@ -508,7 +491,6 @@ class Blockchain(BlockchainInterface):
             self.get_peak(),
             block,
             uint32(prev_sub_height + 1),
-            height,
             None,
         )
 

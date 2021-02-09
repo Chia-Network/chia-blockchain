@@ -27,10 +27,6 @@ class HeaderBlockRecord(Streamable):
         return self.header.prev_header_hash
 
     @property
-    def height(self):
-        return self.header.height
-
-    @property
     def sub_block_height(self):
         return self.header.sub_block_height
 

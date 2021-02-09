@@ -305,7 +305,6 @@ class RLWallet:
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
         tx_record = TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hash,
             amount=uint64(0),
@@ -329,10 +328,11 @@ class RLWallet:
         if self.rl_coin_record is None:
             return uint64(0)
         peak = await self.wallet_state_manager.blockchain.get_full_peak()
-        height = peak.height if peak else 0
+        height = peak.sub_block_height if peak else 0
         assert self.rl_info.limit is not None
         unlocked = int(
-            ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
+            ((height - self.rl_coin_record.confirmed_block_sub_height) / self.rl_info.interval)
+            * int(self.rl_info.limit)
         )
         total_amount = self.rl_coin_record.coin.amount
         available_amount = min(unlocked, total_amount)
@@ -343,9 +343,6 @@ class RLWallet:
 
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
-
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.id())
 
     async def get_spendable_balance(self, unspent_records=None) -> uint64:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id())
@@ -517,7 +514,6 @@ class RLWallet:
 
         return TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(amount),
@@ -600,7 +596,6 @@ class RLWallet:
 
         return TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(0),

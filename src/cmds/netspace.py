@@ -81,7 +81,6 @@ async def netstorge_async(args, parser):
             print(
                 "Older Sub Block\n"
                 f"Sub Block Height: {older_block_header.sub_block_height}\n"
-                f"Height:           {older_block_header.height}\n"
                 f"Weight:           {older_block_header.weight}\n"
                 f"VDF Iterations:   {older_block_header.total_iters}\n"
                 f"Header Hash:      0x{older_block_header.header_hash}\n"
@@ -89,7 +88,6 @@ async def netstorge_async(args, parser):
             print(
                 "Newer Sub Block\n"
                 f"Sub Block Height: {newer_block_header.sub_block_height}\n"
-                f"Height:           {newer_block_header.height}\n"
                 f"Weight:           {newer_block_header.weight}\n"
                 f"VDF Iterations:   {newer_block_header.total_iters}\n"
                 f"Header Hash:      0x{newer_block_header.header_hash}\n"

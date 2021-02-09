@@ -33,6 +33,7 @@ from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.wallet_tools import WalletTool
+from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
 from src.util.clvm import int_to_bytes
 from tests.core.full_node.test_full_sync import node_height_at_least
@@ -440,7 +441,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             100,
             puzzle_hashes[0],
-            blocks[1].get_future_reward_coins(1)[0],
+            get_future_reward_coins(blocks[1])[0],
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None

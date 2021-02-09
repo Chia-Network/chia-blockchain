@@ -121,32 +121,35 @@ async def show_async(args, parser):
             blockchain_state = await client.get_blockchain_state()
             if blockchain_state is None:
                 return "There is no blockchain found yet. Try again shortly."
-            peak: Optional[FullBlock] = blockchain_state["peak"]
+            peak: Optional[SubBlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]
+            synced = blockchain_state["sync"]["synced"]
             sync_mode = blockchain_state["sync"]["sync_mode"]
             total_iters = peak.total_iters if peak is not None else 0
             num_blocks: int = 10
 
             if sync_mode:
-                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
-                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
+                sync_max_block = blockchain_state["sync"]["sync_tip_sub_height"]
+                sync_current_block = blockchain_state["sync"]["sync_progress_sub_height"]
                 print(
                     "Current Blockchain Status: Full Node syncing to sub block",
                     sync_max_block,
                     "\nCurrently synced to block:",
                     sync_current_block,
                 )
-            elif peak is not None and peak.height > 2:
+            if synced:
                 print("Current Blockchain Status: Full Node Synced")
                 print("\nPeak: Hash:", peak.header_hash)
+            elif peak is not None:
+                print(f"Current Blockchain Status: Not Synced. Peak sub-height: {peak.sub_block_height}")
             else:
                 print("\nSearching for an initial chain.")
                 print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
                 print("Errors that follow can be safely ignored:\n")
 
             if peak is not None:
-                if peak.is_block():
+                if peak.is_block:
                     peak_time = peak.foliage_block.timestamp
                 else:
                     peak_hash = peak.header_hash
@@ -156,11 +159,9 @@ async def show_async(args, parser):
                     peak_time = curr.timestamp
                 peak_time = struct_time(localtime(peak_time))
 
-                # Should auto format the align right of LCA height
                 print(
                     "      Time:",
                     f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
-                    f"Height: {peak.height:>7}",
                     f"SB height: {peak.sub_block_height:>8}\n",
                 )
 
@@ -184,7 +185,7 @@ async def show_async(args, parser):
                     curr = await client.get_sub_block_record(curr.prev_hash)
 
                 for b in added_blocks:
-                    print(f"{b.sub_block_height:>8}  | {b.height:>7}   | {b.header_hash}")
+                    print(f"{b.sub_block_height:>8}  | {b.header_hash}")
             else:
                 print("Blockchain has no blocks yet")
 
@@ -248,12 +249,12 @@ async def show_async(args, parser):
                     ":".join(args.add_connection.split(":")[:-1]),
                     args.add_connection.split(":")[-1],
                 )
-            print(f"Connecting to {ip}, {port}")
-            try:
-                await client.open_connection(ip, int(port))
-            except Exception:
-                # TODO: catch right exception
-                print(f"Failed to connect to {ip}:{port}")
+                print(f"Connecting to {ip}, {port}")
+                try:
+                    await client.open_connection(ip, int(port))
+                except Exception:
+                    # TODO: catch right exception
+                    print(f"Failed to connect to {ip}:{port}")
         if args.remove_connection:
             result_txt = ""
             if len(args.remove_connection) != 8:
@@ -310,7 +311,6 @@ async def show_async(args, parser):
                     f"Header Hash            0x{sub_block.header_hash.hex()}\n"
                     f"Timestamp              {block_time_string}\n"
                     f"Sub-block Height       {sub_block.sub_block_height}\n"
-                    f"Height                 {sub_block.height}\n"
                     f"Weight                 {sub_block.weight}\n"
                     f"Previous Block         0x{sub_block.prev_hash.hex()}\n"
                     f"Difficulty             {difficulty}\n"

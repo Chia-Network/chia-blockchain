@@ -31,7 +31,6 @@ class WalletTransactionStore:
                 " transaction_record blob,"
                 " bundle_id text PRIMARY KEY,"
                 " confirmed_at_sub_height bigint,"
-                " confirmed_at_height bigint,"
                 " created_at_time bigint,"
                 " to_puzzle_hash text,"
                 " amount bigint,"
@@ -47,9 +46,6 @@ class WalletTransactionStore:
         # Useful for reorg lookups
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_sub_height)"
-        )
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_height)"
         )
 
         await self.db_connection.execute(
@@ -97,7 +93,6 @@ class WalletTransactionStore:
                 bytes(record),
                 record.name,
                 record.confirmed_at_sub_height,
-                record.confirmed_at_height,
                 record.created_at_time,
                 record.to_puzzle_hash.hex(),
                 record.amount,
@@ -121,16 +116,15 @@ class WalletTransactionStore:
                 first_in = list(self.tx_record_cache.keys())[0]
                 self.tx_record_cache.pop(first_in)
 
-    async def set_confirmed(self, id: bytes32, sub_height: uint32, height: uint32):
+    async def set_confirmed(self, tx_id: bytes32, sub_height: uint32):
         """
         Updates transaction to be confirmed.
         """
-        current: Optional[TransactionRecord] = await self.get_transaction_record(id)
+        current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_sub_height=sub_height,
-            confirmed_at_height=height,
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
@@ -162,8 +156,8 @@ class WalletTransactionStore:
     async def tx_with_addition_coin(self, removal_id: bytes32, wallet_id: int) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
         result = []
-        all: List[TransactionRecord] = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX)
-        for record in all:
+        all_records: List[TransactionRecord] = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX)
+        for record in all_records:
             for coin in record.additions:
                 if coin.name() == removal_id:
                     result.append(record)
@@ -172,7 +166,7 @@ class WalletTransactionStore:
 
     async def increment_sent(
         self,
-        id: bytes32,
+        tx_id: bytes32,
         name: str,
         send_status: MempoolInclusionStatus,
         err: Optional[Err],
@@ -181,7 +175,7 @@ class WalletTransactionStore:
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
         """
 
-        current: Optional[TransactionRecord] = await self.get_transaction_record(id)
+        current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
         if current is None:
             return False
 
@@ -203,7 +197,6 @@ class WalletTransactionStore:
 
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_sub_height=current.confirmed_at_sub_height,
-            confirmed_at_height=current.confirmed_at_height,
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
@@ -223,17 +216,16 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx)
         return True
 
-    async def tx_reorged(self, id: bytes32):
+    async def tx_reorged(self, tx_id: bytes32):
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
 
-        current: Optional[TransactionRecord] = await self.get_transaction_record(id)
+        current: Optional[TransactionRecord] = await self.get_transaction_record(tx_id)
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_sub_height=uint32(0),
-            confirmed_at_height=uint32(0),
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
@@ -251,13 +243,13 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx)
 
-    async def get_transaction_record(self, id: bytes32) -> Optional[TransactionRecord]:
+    async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
         Checks DB and cache for TransactionRecord with id: id and returns it.
         """
-        if id in self.tx_record_cache:
-            return self.tx_record_cache[id]
-        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (id.hex(),))
+        if tx_id in self.tx_record_cache:
+            return self.tx_record_cache[tx_id]
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (tx_id.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -398,7 +390,9 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_transaction_above(self, sub_height: uint32) -> List[TransactionRecord]:
+    async def get_transaction_above(self, sub_height: int) -> List[TransactionRecord]:
+        # Can be -1 (get all tx)
+
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed_at_sub_height>?", (sub_height,)
         )
@@ -412,7 +406,7 @@ class WalletTransactionStore:
 
         return records
 
-    async def rollback_to_block(self, sub_height):
+    async def rollback_to_block(self, sub_height: int):
         # Delete from storage
         self.tx_wallet_cache = {}
         c1 = await self.db_connection.execute(

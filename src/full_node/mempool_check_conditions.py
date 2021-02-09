@@ -36,32 +36,33 @@ def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) 
     return None
 
 
-def mempool_assert_block_index_exceeds(condition: ConditionVarPair, peak_height: uint32) -> Optional[Err]:
+def mempool_assert_block_index_exceeds(
+    condition: ConditionVarPair, prev_transaction_block_height: uint32
+) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
     """
     try:
-        expected_block_index = int_from_bytes(condition.vars[0])
+        block_index_exceeds_this = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
-    # + 1 because min block it can be included is +1 from current
-    if peak_height + 1 <= expected_block_index:
+    if prev_transaction_block_height < block_index_exceeds_this:
         return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
     return None
 
 
 def mempool_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, peak_height: uint32
+    condition: ConditionVarPair, unspent: CoinRecord, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
     """
     try:
         expected_block_age = int_from_bytes(condition.vars[0])
-        expected_block_index = expected_block_age + unspent.confirmed_block_index
+        block_index_exceeds_this = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if peak_height + 1 <= expected_block_index:
+    if prev_transaction_block_height < block_index_exceeds_this:
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
@@ -150,7 +151,7 @@ def mempool_check_conditions_dict(
     unspent: CoinRecord,
     spend_bundle: SpendBundle,
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    peak_height: uint32,
+    prev_transaction_block_height: uint32,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
@@ -164,9 +165,9 @@ def mempool_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                error = mempool_assert_block_index_exceeds(cvp, peak_height)
+                error = mempool_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                error = mempool_assert_block_age_exceeds(cvp, unspent, peak_height)
+                error = mempool_assert_block_age_exceeds(cvp, unspent, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
                 error = mempool_assert_time_exceeds(cvp)
             elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:

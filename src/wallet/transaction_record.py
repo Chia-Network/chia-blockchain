@@ -17,7 +17,6 @@ class TransactionRecord(Streamable):
     """
 
     confirmed_at_sub_height: uint32
-    confirmed_at_height: uint32
     created_at_time: uint64
     to_puzzle_hash: bytes32
     amount: uint64

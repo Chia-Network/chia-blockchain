@@ -73,12 +73,12 @@ def validate_unfinished_header_block(
     can_finish_se: bool = False
     can_finish_epoch: bool = False
     if genesis_block:
-        height: uint32 = uint32(0)
+        sub_block_height: uint32 = uint32(0)
         assert expected_difficulty == constants.DIFFICULTY_STARTING
         assert expected_sub_slot_iters == constants.SUB_SLOT_ITERS_STARTING
     else:
         assert prev_sb is not None
-        height = uint32(prev_sb.sub_block_height + 1)
+        sub_block_height = uint32(prev_sb.sub_block_height + 1)
         if prev_sb.sub_epoch_summary_included is not None:
             can_finish_se, can_finish_epoch = False, False
         else:
@@ -385,7 +385,7 @@ def validate_unfinished_header_block(
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     constants,
                     sub_blocks,
-                    uint32(prev_sb.sub_block_height + 1),
+                    sub_block_height,
                     sub_blocks.sub_block_record(prev_sb.prev_hash),
                     expected_difficulty if can_finish_epoch else None,
                     expected_sub_slot_iters if can_finish_epoch else None,
@@ -695,7 +695,7 @@ def validate_unfinished_header_block(
     # 19. Check pool target max height
     if (
         header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height != 0
-        and header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height < height
+        and header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height < sub_block_height
     ):
         return None, ValidationError(Err.OLD_POOL_TARGET)
 
