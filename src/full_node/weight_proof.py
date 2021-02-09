@@ -306,7 +306,7 @@ class WeightProofHandler:
         prev_ip_vdf = get_prev_ip_vdf(header_block, header_blocks, sub_rec.sp_total_iters(self.constants))
         if len(curr_header.finished_sub_slots) > 0:
             # get all finished sub slots
-            first_rc_end_of_slot_vdf = curr_header.finished_sub_slots[0].reward_chain.end_of_slot_vdf
+            first_rc_end_of_slot_vdf = curr_header.finished_sub_slots[-1].reward_chain.end_of_slot_vdf
             for idx, sub_slot in enumerate(curr_header.finished_sub_slots):
                 if idx == 0:
                     sub_slots.append(handle_finished_slots(sub_slot, prev_ip_vdf))
