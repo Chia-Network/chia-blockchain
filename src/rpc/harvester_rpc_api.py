@@ -23,6 +23,8 @@ class HarvesterRpcApi:
         if change == "plots":
             data = await self.get_plots({})
             payload = create_payload("get_plots", data, self.service_name, "wallet_ui", string=False)
+            # print("Payload: ", payload)
+            # print(f"Len of payload: {len(payload)}")
             return [payload]
         return []
 

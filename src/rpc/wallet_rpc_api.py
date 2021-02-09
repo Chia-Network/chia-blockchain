@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple, Dict, Callable
 
 from blspy import PrivateKey
 
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.util.byte_types import hexstr_to_bytes
 from src.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
 from src.util.keychain import (
@@ -17,7 +18,7 @@ from src.util.path import path_from_root
 from src.util.ws_message import create_payload
 
 from src.cmds.init import check_keys
-from src.server.outbound_message import NodeType, Message
+from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.types.sized_bytes import bytes32
@@ -272,7 +273,7 @@ class WalletRpcApi:
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
-        msg = Message("farm_new_block", request)
+        msg = make_msg(ProtocolMessageTypes.farm_new_block, request)
 
         await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}

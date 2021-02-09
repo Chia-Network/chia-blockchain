@@ -10,7 +10,8 @@ from src.consensus.pot_iterations import (
 )
 from src.farmer.farmer import Farmer
 from src.protocols import harvester_protocol, farmer_protocol
-from src.server.outbound_message import Message, NodeType
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.server.outbound_message import NodeType, make_msg
 from src.types.pool_target import PoolTarget
 from src.types.proof_of_space import ProofOfSpace
 from src.util.api_decorators import api_request, peer_required
@@ -106,7 +107,7 @@ class FarmerAPI:
             )
             self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
-            return Message("request_signatures", request)
+            return make_msg(ProtocolMessageTypes.request_signatures, request)
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
@@ -185,7 +186,7 @@ class FarmerAPI:
                         pool_target_signature,
                     )
                     self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
-                    msg = Message("declare_proof_of_space", request)
+                    msg = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
                     await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
                     return
 
@@ -221,7 +222,7 @@ class FarmerAPI:
                         foliage_block_agg_sig,
                     )
 
-                    msg = Message("signed_values", request_to_nodes)
+                    msg = make_msg(ProtocolMessageTypes.signed_values, request_to_nodes)
                     await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
 
     """
@@ -230,7 +231,7 @@ class FarmerAPI:
 
     @api_request
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
-        message = harvester_protocol.NewSignagePoint(
+        message = harvester_protocol.NewSignagePointHarvester(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,
             new_signage_point.sub_slot_iters,
@@ -238,7 +239,7 @@ class FarmerAPI:
             new_signage_point.challenge_chain_sp,
         )
 
-        msg = Message("new_signage_point", message)
+        msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
         await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
@@ -262,7 +263,7 @@ class FarmerAPI:
             [full_node_request.foliage_sub_block_hash, full_node_request.foliage_block_hash],
         )
 
-        msg = Message("request_signatures", request)
+        msg = make_msg(ProtocolMessageTypes.request_signatures, request)
         await self.farmer.server.send_to_specific([msg], node_id)
 
     @api_request

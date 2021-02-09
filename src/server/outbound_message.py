@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Optional
-from src.types.sized_bytes import bytes32, bytes8
+from src.util.ints import uint8, uint16
+from src.util.streamable import streamable, Streamable
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 
 
 class NodeType(IntEnum):
@@ -24,33 +26,26 @@ class Delivery(IntEnum):
     RANDOM = 4
     # Pseudo-message to close the current connection
     CLOSE = 5
-    # A message is sent to a speicific peer, specified in OutboundMessage
+    # A message is sent to a speicific peer
     SPECIFIC = 6
 
 
-@dataclass
-class Message:
-    # Function to call
-    function: str
-    # Message data for that function call
-    data: Any
+@dataclass(frozen=True)
+@streamable
+class Message(Streamable):
+    type: uint8  # one of ProtocolMessageTypes
+    # Message data for that type
+    data: bytes
 
 
-@dataclass
-class Payload:
+@dataclass(frozen=True)
+@streamable
+class Payload(Streamable):
     # Message payload
     msg: Message
     # payload id
-    id: Optional[bytes8]
+    id: Optional[uint16]
 
 
-@dataclass
-class OutboundMessage:
-    # Type of the peer, 'farmer', 'harvester', 'full_node', etc.
-    peer_type: NodeType
-    # Message to send
-    message: Message
-    delivery_method: Delivery
-
-    # Node id to send the request to, only applies to SPECIFIC delivery type
-    specific_peer_node_id: Optional[bytes32] = None
+def make_msg(msg_type: ProtocolMessageTypes, data: Any) -> Message:
+    return Message(uint8(msg_type.value), bytes(data))

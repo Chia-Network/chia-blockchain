@@ -101,10 +101,10 @@ class TestFullSync:
 
         # Node 3 and Node 2 sync up to node 1
         await time_out_assert(
-            60, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            90, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
         )
         await time_out_assert(
-            60, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            90, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
         )
 
         cons = list(server_1.all_connections.values())[:]

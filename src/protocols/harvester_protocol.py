@@ -5,24 +5,25 @@ from blspy import G1Element, G2Element
 
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.cbor_message import cbor_message
 from src.util.ints import uint64, uint8
+from src.util.streamable import Streamable, streamable
 
 """
 Protocol between harvester and farmer.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
 @dataclass(frozen=True)
-@cbor_message
-class HarvesterHandshake:
+@streamable
+class HarvesterHandshake(Streamable):
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewSignagePoint:
+@streamable
+class NewSignagePointHarvester(Streamable):
     challenge_hash: bytes32
     difficulty: uint64
     sub_slot_iters: uint64
@@ -31,8 +32,8 @@ class NewSignagePoint:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewProofOfSpace:
+@streamable
+class NewProofOfSpace(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str
@@ -41,8 +42,8 @@ class NewProofOfSpace:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestSignatures:
+@streamable
+class RequestSignatures(Streamable):
     plot_identifier: str
     challenge_hash: bytes32
     sp_hash: bytes32
@@ -50,8 +51,8 @@ class RequestSignatures:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondSignatures:
+@streamable
+class RespondSignatures(Streamable):
     plot_identifier: str
     challenge_hash: bytes32
     sp_hash: bytes32

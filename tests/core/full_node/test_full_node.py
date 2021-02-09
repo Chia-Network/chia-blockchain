@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
@@ -160,11 +161,11 @@ class TestFullNodeProtocol:
                 [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
                 None,
             )
-            msg = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
-
-            if msg is not None and not (len(msg.data.peer_list) == 1):
+            msg_bytes = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
+            msg = fnp.RespondPeers.from_bytes(msg_bytes.data)
+            if msg is not None and not (len(msg.peer_list) == 1):
                 return False
-            peer = msg.data.peer_list[0]
+            peer = msg.peer_list[0]
             return (peer.host == self_hostname or peer.host == "127.0.0.1") and peer.port == 1000
 
         await time_out_assert_custom_interval(10, 1, have_msgs, True)
@@ -182,14 +183,14 @@ class TestFullNodeProtocol:
         peer = await connect_and_get_peer(server_1, server_2)
         blocks = bt.get_consecutive_blocks(1)
         for block in blocks[:1]:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 1))
 
         assert full_node_1.full_node.blockchain.get_peak().sub_block_height == 0
 
         for block in bt.get_consecutive_blocks(30):
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
         assert full_node_1.full_node.blockchain.get_peak().sub_block_height == 29
 
@@ -234,7 +235,7 @@ class TestFullNodeProtocol:
         # Add some blocks
         blocks = bt.get_consecutive_blocks(4, block_list_input=blocks)
         for block in blocks[-5:]:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 5))
         blocks = bt.get_consecutive_blocks(1, skip_slots=2, block_list_input=blocks)
 
@@ -371,7 +372,7 @@ class TestFullNodeProtocol:
             asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_sub_block", 1))
 
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
             # Ignores, already have
             asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_sub_block", 0))
@@ -402,10 +403,24 @@ class TestFullNodeProtocol:
     async def test_new_transaction(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
-        # assert full_node_1.full_node.blockchain.get_peak().sub_block_height == 4
-        start_sub_height = full_node_1.full_node.blockchain.get_peak().sub_block_height
-        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
 
+        wallet_ph = wallet_a.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=wallet_ph,
+            pool_reward_puzzle_hash=wallet_ph,
+        )
+        for block in blocks[-3:]:
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+
+        start_sub_height = (
+            full_node_1.full_node.blockchain.get_peak().sub_block_height
+            if full_node_1.full_node.blockchain.get_peak() is not None
+            else -1
+        )
+        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
         peer = await connect_and_get_peer(server_1, server_2)
 
         # Mempool has capacity of 100, make 110 unspents that we can use
@@ -433,7 +448,7 @@ class TestFullNodeProtocol:
         new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
         msg = await full_node_1.new_transaction(new_transaction)
-        assert msg.data == fnp.RequestTransaction(spend_bundle.get_hash())
+        assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
 
         respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
         await full_node_1.respond_transaction(respond_transaction_2, peer)
@@ -450,7 +465,7 @@ class TestFullNodeProtocol:
         assert msg is None
         # Farm one block
         for block in blocks_new[-2:]:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
         await time_out_assert(10, node_height_at_least, True, full_node_1, start_sub_height + 2)
 
@@ -461,14 +476,14 @@ class TestFullNodeProtocol:
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             fee = random.randint(2, 499)
             spend_bundle = wallet_receiver.generate_signed_transaction(
-                500, receiver_puzzlehash, coin_record.coin, fee=fee
+                uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
             await full_node_1.respond_transaction(respond_transaction, peer)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
-            if req.data == fnp.RespondTransaction(spend_bundle):
+            if req.data == bytes(fnp.RespondTransaction(spend_bundle)):
                 spend_bundles.append(spend_bundle)
 
         # Mempool is full
@@ -484,7 +499,7 @@ class TestFullNodeProtocol:
             guarantee_block=True,
         )
         # Farm one block to clear mempool
-        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)
 
         # No longer full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
@@ -510,8 +525,8 @@ class TestFullNodeProtocol:
         peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks[-3:]:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
-            await full_node_2.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
+            await full_node_2.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
         tx_id = token_bytes(32)
         request_transaction = fnp.RequestTransaction(tx_id)
@@ -534,7 +549,7 @@ class TestFullNodeProtocol:
         request_transaction = fnp.RequestTransaction(spend_bundle.get_hash())
         msg = await full_node_1.request_transaction(request_transaction)
         assert msg is not None
-        assert msg.data == fnp.RespondTransaction(spend_bundle)
+        assert msg.data == bytes(fnp.RespondTransaction(spend_bundle))
 
     @pytest.mark.asyncio
     async def test_respond_transaction_fail(self, wallet_nodes):
@@ -563,8 +578,8 @@ class TestFullNodeProtocol:
         while incoming_queue.qsize() > 0:
             await incoming_queue.get()
 
-        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-2]), peer)
-        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-2]), peer)
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 2))
         # Invalid transaction does not propagate
@@ -608,21 +623,21 @@ class TestFullNodeProtocol:
 
         # Don't have height
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(uint32(1248921), False))
-        assert res is None
+        assert res.type == ProtocolMessageTypes.reject_sub_block.value
 
         # Ask without transactions
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, False))
-        assert res is not None
-        assert res.data.sub_block.transactions_generator is None
+        assert res.type != ProtocolMessageTypes.reject_sub_block.value
+        assert fnp.RespondSubBlock.from_bytes(res.data).sub_block.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, True))
-        assert res is not None
-        assert res.data.sub_block.transactions_generator is not None
+        assert res.type != ProtocolMessageTypes.reject_sub_block.value
+        assert fnp.RespondSubBlock.from_bytes(res.data).sub_block.transactions_generator is not None
 
         # Ask for another one
         res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height - 1, True))
-        assert res is not None
+        assert res.type != ProtocolMessageTypes.reject_sub_block.value
 
     @pytest.mark.asyncio
     async def test_request_sub_blocks(self, wallet_nodes):
@@ -655,36 +670,39 @@ class TestFullNodeProtocol:
         # Start >= End
         res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(4), uint32(4), False))
         assert res is not None
-        assert len(res.data.sub_blocks) == 1
-        assert res.data.sub_blocks[0].header_hash == blocks[4].header_hash
+        sub_blocks = fnp.RespondSubBlocks.from_bytes(res.data).sub_blocks
+        assert len(sub_blocks) == 1
+        assert sub_blocks[0].header_hash == blocks[4].header_hash
         res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(5), uint32(4), False))
-        assert res is None
+        assert res.type == ProtocolMessageTypes.reject_sub_blocks.value
         # Invalid range
         res = await full_node_1.request_sub_blocks(
             fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height + 5), False)
         )
-        assert isinstance(res.data, fnp.RejectSubBlocks)
+        assert res.type == ProtocolMessageTypes.reject_sub_blocks.value
 
         # Try fetching more blocks than constants.MAX_BLOCK_COUNT_PER_REQUESTS
         res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(0), uint32(33), False))
-        assert res is None
+        assert res.type == ProtocolMessageTypes.reject_sub_blocks.value
 
         # Ask without transactions
         res = await full_node_1.request_sub_blocks(
             fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height), False)
         )
 
-        assert len(res.data.sub_blocks) == 6
-        for b in res.data.sub_blocks:
+        sub_blocks = fnp.RespondSubBlocks.from_bytes(res.data).sub_blocks
+        assert len(sub_blocks) == 6
+        for b in sub_blocks:
             assert b.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_sub_blocks(
             fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height), True)
         )
-        assert len(res.data.sub_blocks) == 6
-        assert res.data.sub_blocks[-1].transactions_generator is not None
-        assert std_hash(res.data.sub_blocks[-1]) == std_hash(blocks_t[-1])
+        sub_blocks = fnp.RespondSubBlocks.from_bytes(res.data).sub_blocks
+        assert len(sub_blocks) == 6
+        assert sub_blocks[-1].transactions_generator is not None
+        assert std_hash(sub_blocks[-1]) == std_hash(blocks_t[-1])
 
     @pytest.mark.asyncio
     async def test_new_unfinished_sub_block(self, wallet_nodes):
@@ -769,9 +787,8 @@ class TestFullNodeProtocol:
         res = await full_node_1.new_signage_point_or_end_of_sub_slot(
             fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge)
         )
-        assert res is not None
-        assert isinstance(res.data, fnp.RequestSignagePointOrEndOfSubSlot)
-        assert res.data.index_from_challenge == uint8(11)
+        assert res.type == ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot.value
+        assert fnp.RequestSignagePointOrEndOfSubSlot.from_bytes(res.data).index_from_challenge == uint8(11)
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):
@@ -841,7 +858,7 @@ class TestFullNodeProtocol:
 #             seed=b"another seed 3",
 #         )
 #         # Add one block
-#         await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-2]))
+#         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-2]))
 #
 #         unf_block = FullBlock(
 #             blocks_new[-1].proof_of_space,
@@ -883,7 +900,7 @@ class TestFullNodeProtocol:
 #             seed=b"Another seed 4",
 #         )
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         candidates = []
 #         for i in range(50):
@@ -949,7 +966,7 @@ class TestFullNodeProtocol:
 #         await full_node_1.respond_unfinished_block(get_cand(40))
 #
 #         # Don't propagate at old height
-#         await full_node_1.respond_sub_block(fnp.RespondSubBlock(candidates[0]))
+#         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(candidates[0]))
 #         blocks_new_3 = bt.get_consecutive_blocks(
 #             1,
 #             blocks_new[:] + [candidates[0]],
@@ -1009,7 +1026,7 @@ class TestFullNodeProtocol:
 #         wallet_a, wallet_receiver, blocks = wallet_blocks
 #
 #         # Already seen
-#         res = await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks[0]))
+#         res = await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[0]))
 #         assert res is None
 #
 #         tip_hashes = set([t.header_hash for t in full_node_1.full_node.blockchain.get_current_tips()])
@@ -1024,7 +1041,7 @@ class TestFullNodeProtocol:
 #
 #         # In sync mode
 #         full_node_1.full_node.sync_store.set_sync_mode(True)
-#         res = await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-5]))
+#         res = await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-5]))
 #         assert res is None
 #         full_node_1.full_node.sync_store.set_sync_mode(False)
 #
@@ -1044,22 +1061,22 @@ class TestFullNodeProtocol:
 #         )
 #         threw = False
 #         try:
-#             res = await full_node_1.respond_sub_block(fnp.RespondSubBlock(block_invalid))
+#             res = await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block_invalid))
 #         except ConsensusError:
 #             threw = True
 #         assert threw
 #
 #         # If a few blocks behind, request short sync
-#         res = await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-3]))
+#         res = await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-3]))
 #
 #         # Updates full nodes, farmers, and timelords
 #         tip_hashes_again = set([t.header_hash for t in full_node_1.full_node.blockchain.get_current_tips()])
 #         assert tip_hashes_again == tip_hashes
-#         await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-5]))
+#         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-5]))
 #         # TODO test propagation
 #         """
 #         msgs = [
-#             _ async for _ in full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-5]))
+#             _ async for _ in full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-5]))
 #         ]
 #         assert len(msgs) == 5 or len(msgs) == 6
 #         """
@@ -1074,7 +1091,7 @@ class TestFullNodeProtocol:
 #             10,
 #             seed=b"Another seed 6",
 #         )
-#         res = full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_orphan[-1]))
+#         res = full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_orphan[-1]))
 #
 #
 # class TestWalletProtocol:
@@ -1091,7 +1108,7 @@ class TestFullNodeProtocol:
 #             block_list_input=blocks_list,
 #             seed=b"test_request_additions",
 #         )
-#         await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
+#         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
 #
 #         spend_bundle = wallet_a.generate_signed_transaction(
 #             100,
@@ -1170,7 +1187,7 @@ class TestFullNodeProtocol:
 #         num_blocks = 2
 #         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, seed=b"test_request_header")
 #         for block in blocks[:2]:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_header(wallet_protocol.RequestHeader(uint32(1), blocks[1].header_hash))
 #         assert isinstance(res.data, wallet_protocol.RespondHeader)
@@ -1200,7 +1217,7 @@ class TestFullNodeProtocol:
 #
 #         # Request removals for orphaned block fails
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_removals(
 #             wallet_protocol.RequestRemovals(blocks_new[-1].sub_block_height, blocks_new[-1].header_hash, None)
@@ -1214,7 +1231,7 @@ class TestFullNodeProtocol:
 #             block_list_input=blocks_list,
 #         )
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_removals(
 #             wallet_protocol.RequestRemovals(blocks_new[-4].sub_block_height, blocks_new[-4].header_hash, None)
@@ -1246,7 +1263,7 @@ class TestFullNodeProtocol:
 #             test_constants, 5, block_list_input=blocks_new, transaction_data_at_height=dic_h
 #         )
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         # If no coins requested, respond all coins and NO proof
 #         res = await full_node_1.request_removals(
@@ -1352,7 +1369,7 @@ class TestFullNodeProtocol:
 #
 #         # Request additions for orphaned block fails
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_additions(
 #             wallet_protocol.RequestAdditions(blocks_new[-1].sub_block_height, blocks_new[-1].header_hash, None)
@@ -1366,7 +1383,7 @@ class TestFullNodeProtocol:
 #             block_list_input=blocks_list,
 #         )
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_additions(
 #             wallet_protocol.RequestAdditions(blocks_new[-4].sub_block_height, blocks_new[-4].header_hash, None)
@@ -1398,7 +1415,7 @@ class TestFullNodeProtocol:
 #             test_constants, 5, block_list_input=blocks_new, transaction_data_at_height=dic_h
 #         )
 #         for block in blocks_new:
-#             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+#             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         # If no puzzle hashes requested, respond all coins and NO proof
 #         res = await full_node_1.request_additions(

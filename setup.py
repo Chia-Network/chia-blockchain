@@ -7,14 +7,13 @@ dependencies = [
     "chiavdf==0.13.4",  # timelord and vdf verification
     "chiabip158==0.19",  # bip158-style wallet filters
     "chiapos==0.12.43",  # proof of space
-    "clvm>=0.7.1",
-    "clvm_rs>=0.1.0",
-    "clvm_tools==0.2.0",
+    "clvm==0.8.0",
+    "clvm_rs==0.1.1",
+    "clvm_tools==0.3.0",
     "aiohttp==3.7.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
-    "cbor2==5.2.0",  # Used for network wire format
     "colorlog==4.7.2",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     #  "cryptography==3.4.1",  # Python cryptography library for TLS - keyring conflict

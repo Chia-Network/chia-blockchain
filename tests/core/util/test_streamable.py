@@ -9,7 +9,6 @@ from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable
 from src.protocols.wallet_protocol import RespondRemovals
 from tests.setup_nodes import test_constants, bt
-from src.util import cbor
 
 
 class TestStreamable(unittest.TestCase):
@@ -82,8 +81,7 @@ class TestStreamable(unittest.TestCase):
         coin: Optional[Coin] = None
         l1 = [(bytes32([2] * 32), coin)]
         rr = RespondRemovals(uint32(1), bytes32([1] * 32), l1, None)
-        c = cbor.loads(cbor.dumps(rr))
-        RespondRemovals(c["sub_height"], c["header_hash"], c["coins"], c["proofs"])
+        RespondRemovals(rr.sub_height, rr.header_hash, rr.coins, rr.proofs)
 
 
 if __name__ == "__main__":

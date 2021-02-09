@@ -3,7 +3,7 @@ import json
 import time
 import traceback
 from asyncio import Task
-from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable, Union
+from typing import Dict, Optional, Tuple, List, Callable, Union, Set
 from pathlib import Path
 import socket
 import logging
@@ -12,6 +12,7 @@ from blspy import PrivateKey
 from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.wallet_protocol import (
     RespondSubBlockHeader,
     RequestAdditions,
@@ -29,7 +30,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.protocols import wallet_protocol
 from src.consensus.constants import ConsensusConstants
 from src.server.server import ChiaServer
-from src.server.outbound_message import OutboundMessage, NodeType, Message
+from src.server.outbound_message import make_msg, NodeType, Message
 from src.server.node_discovery import WalletPeers
 from src.util.errors import ValidationError, Err
 from src.util.ints import uint32, uint128
@@ -51,8 +52,6 @@ from src.wallet.wallet_state_manager import WalletStateManager
 from src.types.header_block import HeaderBlock
 from src.util.path import path_from_root, mkdir
 from src.util.keychain import Keychain
-
-OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class WalletNode:
@@ -226,7 +225,10 @@ class WalletNode:
             if action.name == "request_puzzle_solution":
                 coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
                 sub_height = uint32(action_data["sub_height"])
-                msg = Message("request_puzzle_solution", wallet_protocol.RequestPuzzleSolution(coin_name, sub_height))
+                msg = make_msg(
+                    ProtocolMessageTypes.request_puzzle_solution,
+                    wallet_protocol.RequestPuzzleSolution(coin_name, sub_height),
+                )
                 result.append(msg)
 
         return result
@@ -240,7 +242,7 @@ class WalletNode:
         ):
             return
 
-        for msg in await self._messages_to_resend():
+        for msg, sent_peers in await self._messages_to_resend():
             if (
                 self._shut_down
                 or self.server is None
@@ -248,7 +250,11 @@ class WalletNode:
                 or self.backup_initialized is None
             ):
                 return
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            full_nodes = self.server.get_full_node_connections()
+            for peer in full_nodes:
+                if peer.peer_node_id in sent_peers:
+                    continue
+                await peer.send_message(msg)
 
         for msg in await self._action_messages():
             if (
@@ -260,21 +266,24 @@ class WalletNode:
                 return
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-    async def _messages_to_resend(self) -> List[Message]:
+    async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
         if self.wallet_state_manager is None or self.backup_initialized is False or self._shut_down:
             return []
-        messages: List[Message] = []
+        messages: List[Tuple[Message, Set[bytes32]]] = []
 
         records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
 
         for record in records:
             if record.spend_bundle is None:
                 continue
-            msg = Message(
-                "send_transaction",
+            msg = make_msg(
+                ProtocolMessageTypes.send_transaction,
                 wallet_protocol.SendTransaction(record.spend_bundle),
             )
-            messages.append(msg)
+            already_sent = set()
+            for peer, status, _ in record.sent_to:
+                already_sent.add(hexstr_to_bytes(peer))
+            messages.append((msg, already_sent))
 
         return messages
 
@@ -294,8 +303,10 @@ class WalletNode:
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
-        messages = await self._messages_to_resend()
-        for msg in messages:
+        messages_peer_ids = await self._messages_to_resend()
+        for msg, peer_ids in messages_peer_ids:
+            if peer.peer_node_id in peer_ids:
+                continue
             await peer.send_message(msg)
 
     async def _periodically_check_full_node(self):
@@ -368,7 +379,7 @@ class WalletNode:
                     await peer.close()
                     return
 
-    async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
+    async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
             return
 

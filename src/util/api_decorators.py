@@ -6,13 +6,6 @@ log = logging.getLogger(__name__)
 
 
 def api_request(f):
-    """
-    This decorator will log the request.
-    @api_request
-    def new_challenge(challenge):
-        # handle request
-    """
-
     @functools.wraps(f)
     def f_substitute(*args, **kwargs):
         sig = signature(f)
@@ -24,8 +17,8 @@ def api_request(f):
         # specified by the type annotation (signature) of the function that is being called (f)
         # The method can also be called with the target type instead of a dictionary.
         for param_name, param_class in f.__annotations__.items():
-            if param_name != "return" and isinstance(inter[param_name], dict):
-                inter[param_name] = param_class(**inter[param_name])
+            if param_name != "return" and isinstance(inter[param_name], bytes):
+                inter[param_name] = param_class.from_bytes(inter[param_name])
 
         return f(**inter)
 

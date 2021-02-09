@@ -3,33 +3,32 @@ from typing import List, Optional
 
 
 from src.types.proof_of_space import ProofOfSpace
-from src.util.cbor_message import cbor_message
 from src.util.ints import uint32, uint64
-from src.util.streamable import streamable
-
+from src.util.streamable import streamable, Streamable
 
 """
 Protocol between farmer and pool.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
 @dataclass(frozen=True)
 @streamable
-class SignedCoinbase:
+class SignedCoinbase(Streamable):
     pass
     # coinbase_signature: PrependSignature
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestData:
+@streamable
+class RequestData(Streamable):
     min_height: Optional[uint32]
     farmer_id: Optional[str]
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondData:
+@streamable
+class RespondData(Streamable):
     posting_url: str
     # pool_public_key: PublicKey
     partials_threshold: uint64
@@ -37,8 +36,8 @@ class RespondData:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class Partial:
+@streamable
+class Partial(Streamable):
     # challenge: Challenge
     proof_of_space: ProofOfSpace
     farmer_target: str
@@ -47,6 +46,6 @@ class Partial:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class PartialAck:
+@streamable
+class PartialAck(Streamable):
     pass

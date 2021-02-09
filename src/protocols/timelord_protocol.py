@@ -10,17 +10,18 @@ from src.types.reward_chain_sub_block import (
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFInfo, VDFProof
-from src.util.cbor_message import cbor_message
 from src.util.ints import uint8, uint64, uint128
+from src.util.streamable import streamable, Streamable
 
 """
 Protocol between timelord and full node.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewPeak:
+@streamable
+class NewPeakTimelord(Streamable):
     reward_chain_sub_block: RewardChainSubBlock
     difficulty: uint64
     deficit: uint8
@@ -33,8 +34,8 @@ class NewPeak:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewUnfinishedSubBlock:
+@streamable
+class NewUnfinishedSubBlock(Streamable):
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
     difficulty: uint64
     sub_slot_iters: uint64  # SSi in the slot where block is infused
@@ -46,8 +47,8 @@ class NewUnfinishedSubBlock:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewInfusionPointVDF:
+@streamable
+class NewInfusionPointVDF(Streamable):
     unfinished_reward_hash: bytes32
     challenge_chain_ip_vdf: VDFInfo
     challenge_chain_ip_proof: VDFProof
@@ -58,8 +59,8 @@ class NewInfusionPointVDF:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewSignagePointVDF:
+@streamable
+class NewSignagePointVDF(Streamable):
     index_from_challenge: uint8
     challenge_chain_sp_vdf: VDFInfo
     challenge_chain_sp_proof: VDFProof
@@ -68,6 +69,6 @@ class NewSignagePointVDF:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewEndOfSubSlotVDF:
+@streamable
+class NewEndOfSubSlotVDF(Streamable):
     end_of_sub_slot_bundle: EndOfSubSlotBundle

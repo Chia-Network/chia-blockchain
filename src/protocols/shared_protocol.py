@@ -1,39 +1,27 @@
 from dataclasses import dataclass
 
-from src.server.outbound_message import NodeType
-from src.types.sized_bytes import bytes32
-from src.util.cbor_message import cbor_message
-from src.util.ints import uint16
+from src.util.ints import uint16, uint8
+from src.util.streamable import streamable, Streamable
 
-protocol_version = "0.0.24"
+protocol_version = "0.0.27"
 
 """
 Handshake when establishing a connection between two servers.
+Note: When changing this file, also change protocol_message_types.py
 """
 
 
 @dataclass(frozen=True)
-@cbor_message
-class Handshake:
+@streamable
+class Handshake(Streamable):
     network_id: str
-    version: str
+    protocol_version: str
+    software_version: str
     server_port: uint16
-    node_type: NodeType
+    node_type: uint8
 
 
 @dataclass(frozen=True)
-@cbor_message
-class HandshakeAck:
+@streamable
+class HandshakeAck(Streamable):
     pass
-
-
-@dataclass(frozen=True)
-@cbor_message
-class Ping:
-    nonce: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class Pong:
-    nonce: bytes32

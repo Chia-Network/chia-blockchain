@@ -29,7 +29,7 @@ class LastState:
 
     def __init__(self, constants: ConsensusConstants):
         self.state_type: StateType = StateType.FIRST_SUB_SLOT
-        self.peak: Optional[timelord_protocol.NewPeak] = None
+        self.peak: Optional[timelord_protocol.NewPeakTimelord] = None
         self.subslot_end: Optional[EndOfSubSlotBundle] = None
         self.last_ip: uint64 = uint64(0)
         self.deficit: uint8 = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
@@ -45,8 +45,8 @@ class LastState:
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
         self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.FIRST_RC_CHALLENGE, uint128(0))]
 
-    def set_state(self, state: Union[timelord_protocol.NewPeak, EndOfSubSlotBundle]):
-        if isinstance(state, timelord_protocol.NewPeak):
+    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
+        if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state
             self.subslot_end = None
