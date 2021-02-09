@@ -22,7 +22,7 @@ class FullNodeRpcApi:
         return {
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_sub_block": self.get_sub_block,
-            "/get_sub_block_record_by_sub_height": self.get_sub_block_record_by_sub_height,
+            "/get_sub_block_record_by_sub_height": self.get_sub_block_record_by_height,
             "/get_sub_block_record": self.get_sub_block_record,
             "/get_sub_block_records": self.get_sub_block_records,
             "/get_unfinished_sub_block_headers": self.get_unfinished_sub_block_headers,
@@ -101,8 +101,8 @@ class FullNodeRpcApi:
                 "sync": {
                     "sync_mode": sync_mode,
                     "synced": synced,
-                    "sync_tip_sub_height": sync_tip_sub_height,
-                    "sync_progress_sub_height": sync_progress_sub_height,
+                    "sync_tip_height": sync_tip_sub_height,
+                    "sync_progress_height": sync_progress_sub_height,
                 },
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
@@ -174,10 +174,10 @@ class FullNodeRpcApi:
             records.append(record)
         return {"sub_block_records": records}
 
-    async def get_sub_block_record_by_sub_height(self, request: Dict) -> Optional[Dict]:
-        if "sub_height" not in request:
-            raise ValueError("No sub_height in request")
-        sub_block_height = request["sub_height"]
+    async def get_sub_block_record_by_height(self, request: Dict) -> Optional[Dict]:
+        if "height" not in request:
+            raise ValueError("No height in request")
+        sub_block_height = request["height"]
         header_height = uint32(int(sub_block_height))
         peak_height = self.service.blockchain.get_peak_height()
         if peak_height is None or header_height > peak_height:
