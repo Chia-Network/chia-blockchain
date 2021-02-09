@@ -101,7 +101,10 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
     # TODO: check strict mode locations are set correctly
     # TODO: write various tests
     try:
-        cost, result = GENERATOR_MOD.run_with_cost(block_program)
+        if safe_mode:
+            cost, result = GENERATOR_MOD.run_safe_with_cost(block_program)
+        else:
+            cost, result = GENERATOR_MOD.run_with_cost(block_program)
         npc_list = []
         opcodes = set(item.value for item in ConditionOpcode)
         for res in result.as_iter():
