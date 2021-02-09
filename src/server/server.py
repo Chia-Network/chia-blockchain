@@ -4,6 +4,7 @@ import ssl
 import time
 from ipaddress import ip_address, IPv6Address
 from pathlib import Path
+from secrets import token_bytes
 from typing import Any, List, Dict, Callable, Optional, Set, Tuple
 
 from aiohttp.web_app import Application
@@ -123,6 +124,8 @@ class ChiaServer:
         self.site_shutdown_task: Optional[asyncio.Task] = None
         self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
+        self.api_tasks: Dict[bytes32, asyncio.Task] = {}
+        self.tasks_from_peer: Dict[bytes32, Set[bytes32]] = {}
 
     def my_id(self):
         """ If node has public cert use that one for id, if not use private."""
@@ -377,6 +380,17 @@ class ChiaServer:
         if on_disconnect is not None:
             on_disconnect(connection)
 
+        self.cancel_tasks_from_peer(connection.peer_node_id)
+
+    def cancel_tasks_from_peer(self, peer_id: bytes32):
+        if peer_id not in self.tasks_from_peer:
+            return
+
+        task_ids = self.tasks_from_peer[peer_id]
+        for task_id in task_ids:
+            task = self.api_tasks[task_id]
+            task.cancel()
+
     async def incoming_api_task(self):
         self.tasks = set()
         while True:
@@ -384,7 +398,7 @@ class ChiaServer:
             if payload_inc is None or connection_inc is None:
                 continue
 
-            async def api_call(payload: Payload, connection: WSChiaConnection):
+            async def api_call(payload: Payload, connection: WSChiaConnection, task_id):
                 start_time = time.time()
                 try:
                     if self.received_message_callback is not None:
@@ -430,8 +444,18 @@ class ChiaServer:
                         connection.log.debug(f"Exception: {e} while closing connection")
                         pass
                     await connection.close()
+                finally:
+                    if task_id in self.api_tasks:
+                        self.api_tasks.pop(task_id)
+                    if task_id in self.tasks_from_peer[connection.peer_node_id]:
+                        self.tasks_from_peer[connection.peer_node_id].remove(task_id)
 
-            asyncio.create_task(api_call(payload_inc, connection_inc))
+            task_id = token_bytes()
+            api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
+            self.api_tasks[task_id] = api_task
+            if connection_inc.peer_node_id not in self.tasks_from_peer:
+                self.tasks_from_peer[connection_inc.peer_node_id] = set()
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
 
     async def send_to_others(
         self,
@@ -497,6 +521,8 @@ class ChiaServer:
             self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
         if self.app is not None:
             self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
+        for task_id, task in self.api_tasks.items():
+            task.cancel()
 
         self.shut_down_event.set()
         self.incoming_task.cancel()
