@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-08 21:40\n"
+"PO-Revision-Date: 2021-02-09 08:34\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,59 +20,59 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:43
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "Wil je Chia verder verkennen? Kijk dan zeker even naar <0>Chia Explorer</0> dat werd gemaakt door een open-source ontwikkelaar."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "0 automatically chooses bucket count"
-msgstr ""
+msgstr "0 kiest automatisch het aantal buckets"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "Een 'harvester' is een service op een machine waar plot bestanden opgeslagen zijn. Een 'farmer' en 'harvester' communiceren via jou 'node' met het blockchain netwerk. Je vindt een overzicht van jou geconnecteerde 'harvesters' onderaan. Meer info"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Aanvaarden"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Aanvaard op:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Action"
-msgstr ""
+msgstr "Actie"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "Actions"
-msgstr ""
+msgstr "Acties"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Toevoegen"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Voeg een plot-map toe"
 
 #: src/components/wallet/Wallets.tsx:70
 msgid "Add Wallet"
-msgstr ""
+msgstr "Voeg een wallet toe"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Creëer een plot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:404
 #: src/components/wallet/coloured/WalletColoured.tsx:456
 #: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "Address"
-msgstr ""
+msgstr "Adres"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:746
 #: src/components/wallet/standard/WalletStandard.tsx:334
@@ -86,7 +86,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:768
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Amount"
-msgstr ""
+msgstr "Hoeveelheid"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:414
 msgid "Amount ({cc_unit})"
@@ -104,13 +104,13 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Terug"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Balance"
-msgstr ""
+msgstr "Saldo"
 
 #: src/components/block/Block.jsx:309
 msgid "Base Farmer Reward Amount"
@@ -176,7 +176,7 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Annuleer"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
@@ -241,15 +241,15 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Bevestigd in blok:"
 
 #: src/components/wallet/WalletHistory.tsx:36
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Bevestigd op hoogte {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Verbind"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
@@ -258,28 +258,28 @@ msgstr ""
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:179
 msgid "Connected"
-msgstr ""
+msgstr "Verbonden"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Aan het verbinden met de wallet"
 
 #: src/components/fullNode/FullNode.jsx:177
 msgid "Connection Status"
-msgstr ""
+msgstr "Verbindingsstatus"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Verbindingsstatus:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Verbindingstype"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
-msgstr ""
+msgstr "Verbindingen"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:460
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -287,18 +287,18 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
 #: src/components/wallet/standard/WalletStandard.tsx:388
 msgid "Copy"
-msgstr ""
+msgstr "Kopieer"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Creëer"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
-msgstr ""
+msgstr "Creëer Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -380,16 +380,16 @@ msgstr ""
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "Delete Plot"
-msgstr ""
+msgstr "Verwijder plot"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Verwijder alle sleutels"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Verwijder sleutel"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -429,7 +429,7 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "Fout"
 
 #: src/components/wallet/standard/WalletStandard.tsx:305
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
