@@ -49,7 +49,6 @@ def calculate_cost_of_program(
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.ASSERT_FEE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_FEE.value
-            # TODO: give these real values
             elif condition is ConditionOpcode.CREATE_ANNOUNCEMENT:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.ASSERT_ANNOUNCEMENT:

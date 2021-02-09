@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Set
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.coin_record import CoinRecord
@@ -80,12 +80,12 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent
     return None
 
 
-def blockchain_assert_announcement(condition: ConditionVarPair, announcements: List[Announcement]) -> Optional[Err]:
+def blockchain_assert_announcement(condition: ConditionVarPair, announcements: Set[bytes]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
     announcement_hash = condition.vars[0]
-    if announcement_hash not in [a.name() for a in announcements]:
+    if announcement_hash not in announcements:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     return None
@@ -101,6 +101,7 @@ def blockchain_check_conditions_dict(
     """
     Check all conditions against current state.
     """
+    announcement_names = set([a.name() for a in announcements])
     for con_list in conditions_dict.values():
         cvp: ConditionVarPair
         for cvp in con_list:
@@ -116,7 +117,7 @@ def blockchain_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:
                 error = blockchain_assert_relative_time_exceeds(cvp, unspent, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                error = blockchain_assert_announcement(cvp, announcements)
+                error = blockchain_assert_announcement(cvp, announcement_names)
             if error:
                 return error
 

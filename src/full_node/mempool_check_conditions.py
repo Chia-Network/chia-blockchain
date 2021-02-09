@@ -117,7 +117,6 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
                 elif not safe_mode:
                     opcode = ConditionOpcode.UNKNOWN
                 else:
-                    breakpoint()
                     return "Unknown operator in safe mode.", None, None
                 if len(list(cond.as_iter())) > 1:
                     cond_var_list = []
