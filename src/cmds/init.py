@@ -3,7 +3,7 @@ import os
 import shutil
 
 from argparse import Namespace, ArgumentParser
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
@@ -273,7 +273,7 @@ def init(args: Namespace, parser: ArgumentParser):
         return chia_init(args.root_path)
 
 
-def chiaMinorReleaseNumber():
+def chia_version_number() -> Tuple[str, str, str, str]:
     scm_full_version = __version__
     left_full_version = scm_full_version.split("+")
 
@@ -293,10 +293,10 @@ def chiaMinorReleaseNumber():
 
     # If this is a beta dev release - get which beta it is
     if "0b" in scm_minor_version:
-        orignial_minor_ver_list = scm_minor_version.split("0b")
+        original_minor_ver_list = scm_minor_version.split("0b")
         major_release_number = str(1 - int(scm_major_version))  # decrement the major release for beta
         minor_release_number = scm_major_version
-        patch_release_number = orignial_minor_ver_list[1]
+        patch_release_number = original_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
             dev_release_number = "." + smc_patch_version
     elif "0rc" in version[1]:
@@ -318,8 +318,18 @@ def chiaMinorReleaseNumber():
     if len(dev_release_number) > 0:
         install_release_number += dev_release_number
 
-    print(f"Install release number: {install_release_number}")
-    return int(patch_release_number)
+    return major_release_number, minor_release_number, patch_release_number, dev_release_number
+
+
+def chia_minor_release_number():
+    res = int(chia_version_number()[2])
+    print(f"Install release number: {res}")
+    return res
+
+
+def chia_full_version_str() -> str:
+    major, minor, patch, dev = chia_version_number()
+    return f"{major}.{minor}.{patch}{dev}"
 
 
 def chia_init(root_path: Path):
@@ -372,8 +382,8 @@ def chia_init(root_path: Path):
         "wallet",
     ]
 
-    for versionnumber in range(chiaMinorReleaseNumber() - 1, 8, -1):
-        old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % versionnumber))
+    for version_number in range(chia_minor_release_number() - 1, 8, -1):
+        old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % version_number))
         manifest = MANIFEST
         print(f"Checking {old_path}")
         # This is reached if the user has updated the application, and therefore a new configuration

@@ -273,7 +273,7 @@ class RpcServer:
                     autoclose=False,
                     autoping=True,
                     ssl_context=self.ssl_context,
-                    max_msg_size=50 * 1024 * 1024,
+                    max_msg_size=100 * 1024 * 1024,
                 ) as ws:
                     self.websocket = ws
                     await self.connection(ws)

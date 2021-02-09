@@ -7,15 +7,12 @@ import aiosqlite
 import traceback
 from random import Random
 import src.server.ws_connection as ws
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.path import path_from_root, mkdir
-from src.server.outbound_message import (
-    OutboundMessage,
-    Message,
-    NodeType,
-)
+from src.server.outbound_message import NodeType, make_msg
 from src.server.address_manager import ExtendedPeerInfo, AddressManager
 from src.server.address_manager_store import AddressManagerStore
 from src.protocols import (
@@ -24,10 +21,8 @@ from src.protocols import (
 )
 from secrets import randbits
 from src.util.hash import std_hash
-from typing import Dict, Optional, AsyncGenerator
+from typing import Dict, Optional
 from src.util.ints import uint64
-
-OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
 class FullNodeDiscovery:
@@ -109,7 +104,7 @@ class FullNodeDiscovery:
             and self.server._local_type is NodeType.FULL_NODE
             and self.address_manager is not None
         ):
-            msg = Message("request_peers", full_node_protocol.RequestPeers())
+            msg = make_msg(ProtocolMessageTypes.request_peers, full_node_protocol.RequestPeers())
             await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
@@ -151,7 +146,7 @@ class FullNodeDiscovery:
             return
 
         async def on_connect(peer: ws.WSChiaConnection):
-            msg = Message("request_peers", introducer_protocol.RequestPeers())
+            msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
             await peer.send_message(msg)
 
         await self.server.start_client(self.introducer_info, on_connect)
@@ -410,8 +405,8 @@ class FullNodePeers(FullNodeDiscovery):
                         uint64(int(time.time())),
                     )
                 ]
-                msg = Message(
-                    "respond_peers",
+                msg = make_msg(
+                    ProtocolMessageTypes.respond_peers,
                     full_node_protocol.RespondPeers(timestamped_peer),
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -443,8 +438,8 @@ class FullNodePeers(FullNodeDiscovery):
             peers = await self.address_manager.get_peers()
             await self.add_peers_neighbour(peers, peer_info)
 
-            msg = Message(
-                "respond_peers",
+            msg = make_msg(
+                ProtocolMessageTypes.respond_peers,
                 full_node_protocol.RespondPeers(peers),
             )
 
@@ -504,8 +499,8 @@ class FullNodePeers(FullNodeDiscovery):
                         self.neighbour_known_peers[pair].add(relay_peer.host)
                     if connection.peer_node_id is None:
                         continue
-                    msg = Message(
-                        "respond_peers",
+                    msg = make_msg(
+                        ProtocolMessageTypes.respond_peers,
                         full_node_protocol.RespondPeers([relay_peer]),
                     )
                     await connection.send_message(msg)

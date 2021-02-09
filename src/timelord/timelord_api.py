@@ -19,7 +19,7 @@ class TimelordAPI:
         pass
 
     @api_request
-    async def new_peak(self, new_peak: timelord_protocol.NewPeak):
+    async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord):
         async with self.timelord.lock:
             if new_peak.reward_chain_sub_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")

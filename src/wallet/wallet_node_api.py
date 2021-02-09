@@ -33,11 +33,11 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
+    async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         """
         The full node sent as a new peak
         """
-        await self.wallet_node.new_peak(peak, peer)
+        await self.wallet_node.new_peak_wallet(peak, peer)
 
     @api_request
     async def reject_sub_block_header(self, response: wallet_protocol.RejectHeaderRequest):
@@ -68,22 +68,25 @@ class WalletNodeAPI:
         """
         assert peer.peer_node_id is not None
         name = peer.peer_node_id.hex()
+        status = MempoolInclusionStatus(ack.status)
         if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
-        if ack.status == MempoolInclusionStatus.SUCCESS:
+        if status == MempoolInclusionStatus.SUCCESS:
             self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
-        elif ack.status == MempoolInclusionStatus.PENDING:
+        elif status == MempoolInclusionStatus.PENDING:
             self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
             self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
-            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, Err[ack.error])
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
         else:
-            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, None)
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
 
     @peer_required
     @api_request
-    async def respond_peers(self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection):
+    async def respond_peers_introducer(
+        self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
+    ):
         if not self.wallet_node.has_full_node():
             await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
         else:
@@ -107,5 +110,5 @@ class WalletNodeAPI:
         pass
 
     @api_request
-    async def reject_header_blocks_request(self, request: wallet_protocol.RejectHeaderBlocks):
+    async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         pass

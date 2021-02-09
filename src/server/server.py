@@ -14,6 +14,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
 from src.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -405,22 +406,20 @@ class ChiaServer:
                         await self.received_message_callback(connection)
                     full_message = payload.msg
                     connection.log.info(
-                        f"<- {full_message.function} from peer {connection.peer_node_id} {connection.peer_host}"
+                        f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
+                        f"{connection.peer_node_id} {connection.peer_host}"
                     )
-                    if len(full_message.function) == 0 or full_message.function.startswith("_"):
-                        # This prevents remote calling of private methods that start with "_"
-                        self.log.error(f"Non existing function: {full_message.function}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
+                    message_type: str = ProtocolMessageTypes(full_message.type).name
 
-                    f = getattr(self.api, full_message.function, None)
+                    f = getattr(self.api, message_type, None)
 
                     if f is None:
-                        self.log.error(f"Non existing function: {full_message.function}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
+                        self.log.error(f"Non existing function: {message_type}")
+                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
                     if not hasattr(f, "api_function"):
-                        self.log.error(f"Peer trying to call non api function {full_message.function}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
+                        self.log.error(f"Peer trying to call non api function {message_type}")
+                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
@@ -428,7 +427,7 @@ class ChiaServer:
                         coroutine = f(full_message.data)
                     response: Optional[Message] = await asyncio.wait_for(coroutine, timeout=300)
                     connection.log.debug(
-                        f"Time taken to process {full_message.function} from {connection.peer_node_id} is "
+                        f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
                     )
 

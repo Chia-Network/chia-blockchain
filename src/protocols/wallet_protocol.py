@@ -6,19 +6,18 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint128
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.util.ints import uint32, uint128, uint8
 from src.util.streamable import Streamable, streamable
 
 """
 Protocol between wallet (SPV node) and full node.
+Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestPuzzleSolution:
+@streamable
+class RequestPuzzleSolution(Streamable):
     coin_name: bytes32
     sub_height: uint32
 
@@ -33,35 +32,35 @@ class PuzzleSolutionResponse(Streamable):
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondPuzzleSolution:
+@streamable
+class RespondPuzzleSolution(Streamable):
     response: PuzzleSolutionResponse
 
 
 @dataclass(frozen=True)
 @streamable
-class RejectPuzzleSolution:
+class RejectPuzzleSolution(Streamable):
     coin_name: bytes32
     sub_height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class SendTransaction:
+@streamable
+class SendTransaction(Streamable):
     transaction: SpendBundle
 
 
 @dataclass(frozen=True)
-@cbor_message
-class TransactionAck:
+@streamable
+class TransactionAck(Streamable):
     txid: bytes32
-    status: MempoolInclusionStatus
+    status: uint8  # MempoolInclusionStatus
     error: Optional[str]
 
 
 @dataclass(frozen=True)
-@cbor_message
-class NewPeak:
+@streamable
+class NewPeakWallet(Streamable):
     header_hash: bytes32
     sub_block_height: uint32
     weight: uint128
@@ -69,34 +68,34 @@ class NewPeak:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestSubBlockHeader:
+@streamable
+class RequestSubBlockHeader(Streamable):
     sub_height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondSubBlockHeader:
+@streamable
+class RespondSubBlockHeader(Streamable):
     header_block: HeaderBlock
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RejectHeaderRequest:
+@streamable
+class RejectHeaderRequest(Streamable):
     height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestRemovals:
+@streamable
+class RequestRemovals(Streamable):
     sub_height: uint32
     header_hash: bytes32
     coin_names: Optional[List[bytes32]]
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondRemovals:
+@streamable
+class RespondRemovals(Streamable):
     sub_height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, Optional[Coin]]]
@@ -104,23 +103,23 @@ class RespondRemovals:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RejectRemovalsRequest:
+@streamable
+class RejectRemovalsRequest(Streamable):
     sub_height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestAdditions:
+@streamable
+class RequestAdditions(Streamable):
     sub_height: uint32
     header_hash: bytes32
     puzzle_hashes: Optional[List[bytes32]]
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondAdditions:
+@streamable
+class RespondAdditions(Streamable):
     sub_height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, List[Coin]]]
@@ -128,29 +127,29 @@ class RespondAdditions:
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RejectAdditionsRequest:
+@streamable
+class RejectAdditionsRequest(Streamable):
     sub_height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RequestHeaderBlocks:
+@streamable
+class RequestHeaderBlocks(Streamable):
     start_sub_height: uint32
     end_sub_height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RejectHeaderBlocks:
+@streamable
+class RejectHeaderBlocks(Streamable):
     start_sub_height: uint32
     end_sub_height: uint32
 
 
 @dataclass(frozen=True)
-@cbor_message
-class RespondHeaderBlocks:
+@streamable
+class RespondHeaderBlocks(Streamable):
     start_sub_height: uint32
     end_sub_height: uint32
     header_blocks: List[HeaderBlock]

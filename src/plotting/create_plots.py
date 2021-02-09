@@ -71,7 +71,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     else:
         num = 1
 
-    if args.size < config["min_mainnet_k_size"]:
+    if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
         log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
     if args.size < 22:
         log.warning("k under 22 is not supported. Increasing k to 22")
@@ -130,7 +130,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         if args.exclude_final_dir:
             log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
             if resolved_final_dir in plot_directories_list:
-                log.warn(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
+                log.warning(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
         else:
             if resolved_final_dir not in plot_directories_list:
                 # Adds the directory to the plot directories if it is not present

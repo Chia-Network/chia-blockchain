@@ -28,7 +28,7 @@ proofs of space during testing. The next time tests are run, this won't be neces
 . ./activate
 pip install -r requirements-dev.txt
 black src tests && mypy src tests && flake8 src tests
-py.test tests -s -v --durations 0
+py.test tests -v --durations 0
 ```
 
 Black is used as an automatic style formatter to make things easier, and flake8 helps ensure consistent style.

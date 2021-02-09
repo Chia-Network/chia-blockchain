@@ -4,6 +4,7 @@ import pytest
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain import ReceiveBlockResult
 from src.protocols import full_node_protocol, wallet_protocol
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
@@ -71,13 +72,13 @@ class TestTransactions:
         new_spend = full_node_protocol.NewTransaction(tx.spend_bundle.name(), 1, 0)
         response = await full_node_api.new_transaction(new_spend)
         assert response is not None
-        assert isinstance(response.data, full_node_protocol.RequestTransaction)
+        assert ProtocolMessageTypes(response.type) == ProtocolMessageTypes.request_transaction
 
         tx: TransactionRecord = await wallet.generate_signed_transaction(100, ph, 0)
         spend = wallet_protocol.SendTransaction(tx.spend_bundle)
         response = await full_node_api.send_transaction(spend)
         assert response is not None
-        assert isinstance(response.data, wallet_protocol.TransactionAck)
+        assert ProtocolMessageTypes(response.type) == ProtocolMessageTypes.transaction_ack
 
     @pytest.mark.asyncio
     async def test_invalid_block(self, wallet_node_30_freeze):
