@@ -11,9 +11,9 @@
     (defconstant CLAWBACK_MODE 3)
     (defconstant AGGSIG 50)
     (defconstant CREATE_COIN 51)
+    (defconstant CREATE_ANNOUNCEMENT 60)
     (defconstant ASSERT_MY_COIN_ID 53)
     (defconstant ASSERT_BLOCK_AGE_EXCEEDS 56)
-    (defconstant CREATE_ANNOUNCEMENT 60)
 
     (defun sha256tree (tree)
         (if (l tree)

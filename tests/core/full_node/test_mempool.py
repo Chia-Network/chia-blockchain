@@ -444,30 +444,33 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_announcement_consumed(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        start_sub_height = blocks[-1].sub_block_height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
-            4,
+            3,
+            block_list_input=blocks,
             guarantee_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 3)
+        await time_out_assert(60, node_height_at_least, True, full_node_1, start_sub_height + 3)
 
         coin_1 = list(blocks[-2].get_included_reward_coins())[0]
         coin_2 = list(blocks[-1].get_included_reward_coins())[0]
 
         announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name(), None)
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 
-        cvp2 = ConditionVarPair(ConditionOpcode.CREATE_ANNOUNCEMENT, bytes("test", "utf-8"))
+        cvp2 = ConditionVarPair(ConditionOpcode.CREATE_ANNOUNCEMENT, [bytes("test", "utf-8")])
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
 
@@ -504,13 +507,13 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name())
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 
         cvp2 = ConditionVarPair(
             ConditionOpcode.CREATE_ANNOUNCEMENT,
-            bytes("wrong test", "utf-8"),
+            [bytes("wrong test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
@@ -548,13 +551,13 @@ class TestMempool:
 
         announce = Announcement(coin_1.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, announce.name())
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 
         cvp2 = ConditionVarPair(
             ConditionOpcode.CREATE_ANNOUNCEMENT,
-            bytes("test", "utf-8"),
+            [bytes("test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)

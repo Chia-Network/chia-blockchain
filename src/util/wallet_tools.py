@@ -22,6 +22,8 @@ from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
 )
 from src.wallet.puzzles.puzzle_utils import (
+    make_create_announcement,
+    make_assert_announcement,
     make_assert_my_coin_id_condition,
     make_create_coin_condition,
     make_assert_block_index_exceeds_condition,
@@ -29,8 +31,6 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_aggsig_condition,
     make_assert_time_exceeds_condition,
     make_assert_fee_condition,
-    make_create_announcement,
-    make_assert_announcement,
 )
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.types.sized_bytes import bytes32
@@ -100,8 +100,12 @@ class WalletTool:
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN:
                     ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
+                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT:
+                    ret.append(make_create_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                    ret.append(make_assert_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_TIME_EXCEEDS:
                     ret.append(make_assert_time_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
@@ -112,10 +116,6 @@ class WalletTool:
                     ret.append(make_assert_block_age_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
                     ret.append(make_assert_fee_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT:
-                    ret.append(make_create_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                    ret.append(make_assert_announcement(cvp.vars[0]))
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(

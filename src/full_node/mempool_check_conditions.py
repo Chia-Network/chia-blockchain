@@ -15,6 +15,18 @@ from src.util.ints import uint64, uint32
 from src.wallet.puzzles.generator_loader import GENERATOR_MOD, GENERATOR_FOR_SINGLE_COIN_MOD
 
 
+def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
+    """
+    Check if an announcement is included in the list of announcements
+    """
+    announcements = spend_bundle.announcements()
+    announcement_hash = condition.vars[0]
+    if announcement_hash not in [ann.name() for ann in announcements]:
+        return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+
+    return None
+
+
 def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -67,18 +79,6 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     current_time = uint64(int(time.time() * 1000))
     if current_time <= expected_mili_time:
         return Err.ASSERT_TIME_EXCEEDS_FAILED
-    return None
-
-
-def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
-    """
-    Check if an announcement is included in the list of announcements
-    """
-    announcements = spend_bundle.announcements()
-    announcement_hash = condition.vars[0]
-    if announcement_hash not in [ann.name() for ann in announcements]:
-        return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
-
     return None
 
 
@@ -161,6 +161,8 @@ def mempool_check_conditions_dict(
             error = None
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                error = mempool_assert_announcement_consumed(cvp, spend_bundle)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
                 error = mempool_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
@@ -169,8 +171,6 @@ def mempool_check_conditions_dict(
                 error = mempool_assert_time_exceeds(cvp)
             elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:
                 error = mempool_assert_relative_time_exceeds(cvp, unspent)
-            elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                error = mempool_assert_announcement_consumed(cvp, spend_bundle)
             if error:
                 return error
 
