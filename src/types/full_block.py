@@ -151,7 +151,6 @@ def announcements_for_npc(npc_list: List[NPC]) -> List[Announcement]:
     announcements: List[Announcement] = []
 
     for npc in npc_list:
-        for coin in created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name):
-            announcements.append(coin)
+        announcements.extend(created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name))
 
     return announcements

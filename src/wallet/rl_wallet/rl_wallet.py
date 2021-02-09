@@ -659,18 +659,6 @@ class RLWallet:
         agg_spend = CoinSolution(consolidating_coin, Program.to([puzzle, solution]))
 
         list_of_coinsolutions.append(agg_spend)
-        # # Spend lock
-        # puzstring = f"(r (c (q 0x{consolidating_coin.name().hex()}) (q ())))"
-        #
-        # puzzle = Program.to(binutils.assemble(puzstring))
-        # solution = Program.to(binutils.assemble("()"))
-        #
-        # ephemeral = CoinSolution(
-        #     Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)),
-        #     Program.to([puzzle, solution]),
-        # )
-        # list_of_coinsolutions.append(ephemeral)
-
         aggsig = AugSchemeMPL.aggregate([signature])
 
         return SpendBundle(list_of_coinsolutions, aggsig)
