@@ -20,7 +20,7 @@ dependencies = [
     #  "cryptography==3.4.1",  # Python cryptography library for TLS - keyring conflict
     "cryptography==3.3.2",  # Python cryptography library for TLS
     "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
-    "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
+    "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.3.1",  # Used for config file format
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
