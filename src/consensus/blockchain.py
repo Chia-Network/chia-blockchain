@@ -553,7 +553,7 @@ class Blockchain(BlockchainInterface):
         """
         Clears all sub block records in the cache which have sub_block < height.
         Args:
-            height: Minimum sub-height that we need to keep in the cache
+            height: Minimum height that we need to keep in the cache
         """
         if height < 0:
             return

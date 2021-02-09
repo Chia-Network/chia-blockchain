@@ -90,7 +90,8 @@ def check_keys(new_root):
     all_targets = []
     stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
     stop_searching_for_pool = "xch_target_address" not in config["pool"]
-    for i in range(500):
+    number_of_ph_to_search = 500
+    for i in range(number_of_ph_to_search):
         if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
             break
         for sk, _ in all_sks:
@@ -108,11 +109,10 @@ def check_keys(new_root):
         config["farmer"]["xch_target_address"] = all_targets[0]
     elif config["farmer"]["xch_target_address"] not in all_targets:
         print(
-            f"WARNING: farmer using a puzzle hash which we don't have the private"
-            f" keys for. Overriding "
+            f"WARNING: using a farmer address which we don't have the private"
+            f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
             f"{config['farmer']['xch_target_address']} with {all_targets[0]}"
         )
-        config["farmer"]["xch_target_address"] = all_targets[0]
 
     if "pool" not in config:
         config["pool"] = {}
@@ -121,11 +121,10 @@ def check_keys(new_root):
         config["pool"]["xch_target_address"] = all_targets[0]
     elif config["pool"]["xch_target_address"] not in all_targets:
         print(
-            f"WARNING: pool using a puzzle hash which we don't have the private"
-            f" keys for. Overriding "
+            f"WARNING: using a pool address which we don't have the private"
+            f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
             f"{config['pool']['xch_target_address']} with {all_targets[0]}"
         )
-        config["pool"]["xch_target_address"] = all_targets[0]
 
     # Set the pool pks in the farmer
     pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
@@ -378,10 +377,11 @@ def chia_init(root_path: Path):
     # These are the files that will be migrated
     MANIFEST: List[str] = [
         "config",
-        # "db/blockchain_v23.db",
-        # "wallet",
+        "db/blockchain_v27.db",
+        "wallet",
     ]
 
+    # Version 19 is the first version that used the bech32m addresses
     for version_number in range(chia_minor_release_number() - 1, 18, -1):
         old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % version_number))
         manifest = MANIFEST

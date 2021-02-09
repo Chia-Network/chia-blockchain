@@ -61,12 +61,17 @@ async def netstorge_async(args, parser):
                 blockchain_state = await client.get_blockchain_state()
                 if blockchain_state["peak"] is None:
                     print("No sub-blocks in blockchain")
+                    client.close()
+                    await client.await_closed()
+                    return None
 
                 newer_block_height = blockchain_state["peak"].height
             else:
                 newer_sub_block = await client.get_sub_block_record(hexstr_to_bytes(args.start))
                 if newer_sub_block is None:
                     print("Sub block header hash", args.start, "not found.")
+                    client.close()
+                    await client.await_closed()
                     return None
                 else:
                     print("newer_height", newer_sub_block.height)

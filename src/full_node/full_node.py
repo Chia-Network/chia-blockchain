@@ -172,7 +172,7 @@ class FullNode:
         if start_height > 0:
             first = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(start_height), False))
             if first is None or not isinstance(first, full_node_protocol.RespondSubBlock):
-                raise ValueError(f"Error short batch syncing, could not fetch sub-block at sub-height {start_height}")
+                raise ValueError(f"Error short batch syncing, could not fetch sub-block at height {start_height}")
             if not self.blockchain.contains_sub_block(first.sub_block.prev_header_hash):
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 # First sb not connected to our blockchain, do a long sync instead
@@ -184,7 +184,7 @@ class FullNode:
         if peer.peer_node_id in self.sync_store.batch_syncing:
             return True  # Don't trigger a long sync
         self.sync_store.batch_syncing.add(peer.peer_node_id)
-        self.log.info(f"Starting batch short sync from {start_height} to sub-height {target_height}")
+        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
         try:
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
@@ -221,7 +221,7 @@ class FullNode:
 
         Args:
             peer: peer to sync from
-            peak_height: sub-height of our peak
+            peak_height: height of our peak
             target_height: target height
             target_unf_hash: partial hash of the unfinished sub-block of the target
 
@@ -527,7 +527,7 @@ class FullNode:
             self.log.info(f"Total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
             weight_proof_peer = random.choice(peers_with_peak)
             self.log.info(
-                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to sub-height"
+                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height"
                 f" {heaviest_peak_height}"
             )
 
@@ -543,7 +543,7 @@ class FullNode:
                 raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_sub_block.height != heaviest_peak_height:
                 await weight_proof_peer.close()
-                raise RuntimeError(f"Weight proof had the wrong sub-height: {weight_proof_peer.peer_host}")
+                raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_sub_block.weight != heaviest_peak_weight:
                 await weight_proof_peer.close()
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
@@ -854,7 +854,7 @@ class FullNode:
                 List[PreValidationResult]
             ] = await self.blockchain.pre_validate_blocks_multiprocessing([sub_block])
             if pre_validation_results is None:
-                raise ValueError(f"Failed to validate sub_block {sub_block.header_hash} sub-height {sub_block.height}")
+                raise ValueError(f"Failed to validate sub_block {sub_block.header_hash} height {sub_block.height}")
             if pre_validation_results[0].error is not None:
                 if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                     added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -862,7 +862,7 @@ class FullNode:
                     fork_height: Optional[uint32] = None
                 else:
                     raise ValueError(
-                        f"Failed to validate sub_block {sub_block.header_hash} sub-height "
+                        f"Failed to validate sub_block {sub_block.header_hash} height "
                         f"{sub_block.height}: {pre_validation_results[0].error}"
                     )
             else:

@@ -50,7 +50,7 @@ def make_parser(parser):
 
     parser.add_argument(
         "-bh",
-        "--sub-block-header-hash-by-sub-height",
+        "--sub-block-header-hash-by-height",
         help="Look up a sub-block header hash by block height.",
         type=str,
         default="",
@@ -142,11 +142,11 @@ async def show_async(args, parser):
                 print("Current Blockchain Status: Full Node Synced")
                 print("\nPeak: Hash:", peak.header_hash)
             elif peak is not None:
-                print(f"Current Blockchain Status: Not Synced. Peak sub-height: {peak.height}")
+                print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
                 print("\nSearching for an initial chain.")
                 print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
-                print("Errors that follow can be safely ignored:\n")
+                print("Errors that follow can be safely ignored\n")
 
             if peak is not None:
                 if peak.is_block:
@@ -306,7 +306,7 @@ async def show_async(args, parser):
                     block_time_string = "Not a block"
                     cost = "Not a block"
                     tx_filter_hash = "Not a block"
-                print("Sub block at sub-height", sub_block.height, ":")
+                print("Sub block at height", sub_block.height, ":")
                 print(
                     f"Header Hash            0x{sub_block.header_hash.hex()}\n"
                     f"Timestamp              {block_time_string}\n"

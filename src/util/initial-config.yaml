@@ -152,9 +152,9 @@ full_node:
   port: 58444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v24.db
+  database_path: db/blockchain_v27.db
   peer_db_path: db/peer_table_node.db
-  simulator_database_path: sim_db/simulator_blockchain_v24.db
+  simulator_database_path: sim_db/simulator_blockchain_v27.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -249,7 +249,7 @@ wallet:
     port: 58444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v24.db
+  database_path: wallet/db/blockchain_wallet_v27.db
   wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging
