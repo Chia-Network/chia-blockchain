@@ -464,22 +464,22 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], sub_height: uint32):
+    async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32):
         for coin in additions:
             await self.puzzle_hash_created(coin)
-        trade_additions = await self.coins_of_interest_added(additions, sub_height)
-        trade_removals = await self.coins_of_interest_removed(removals, sub_height)
+        trade_additions = await self.coins_of_interest_added(additions, height)
+        trade_removals = await self.coins_of_interest_removed(removals, height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
-            await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, sub_height)
+            await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
 
-    async def coins_of_interest_added(self, coins: List[Coin], sub_height: uint32) -> List[Coin]:
+    async def coins_of_interest_added(self, coins: List[Coin], height: uint32) -> List[Coin]:
         (
             trade_removals,
             trade_additions,
         ) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
         sub_block: Optional[SubBlockRecord] = await self.blockchain.get_sub_block_from_db(
-            self.blockchain.sub_height_to_hash(sub_height)
+            self.blockchain.height_to_hash(height)
         )
         assert sub_block is not None
 
@@ -497,14 +497,14 @@ class WalletStateManager:
 
         if prev is not None:
             # include last block
-            pool_rewards.add(bytes32(prev.sub_block_height.to_bytes(32, "big")))
-            farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
+            pool_rewards.add(bytes32(prev.height.to_bytes(32, "big")))
+            farmer_rewards.add(std_hash(std_hash(prev.height)))
             prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
 
         while prev is not None:
             # step 2 traverse from previous block to the block before it
-            pool_rewards.add(bytes32(prev.sub_block_height.to_bytes(32, "big")))
-            farmer_rewards.add(std_hash(std_hash(prev.sub_block_height)))
+            pool_rewards.add(bytes32(prev.height.to_bytes(32, "big")))
+            farmer_rewards.add(std_hash(std_hash(prev.height)))
             if prev.is_block:
                 break
             prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
@@ -523,11 +523,11 @@ class WalletStateManager:
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
             if info is not None:
                 wallet_id, wallet_type = info
-                await self.coin_added(coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, sub_height)
+                await self.coin_added(coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, height)
 
         return trade_adds
 
-    async def coins_of_interest_removed(self, coins: List[Coin], sub_height: uint32) -> List[Coin]:
+    async def coins_of_interest_removed(self, coins: List[Coin], height: uint32) -> List[Coin]:
         # This gets called when coins of our interest are spent on chain
         (
             trade_removals,
@@ -547,20 +547,20 @@ class WalletStateManager:
                 self.log.info(f"Coin:{coin.name()} NO RECORD")
                 continue
             self.log.info(f"Coin:{coin.name()} Setting removed")
-            await self.coin_removed(coin, sub_height, record.wallet_id)
+            await self.coin_removed(coin, height, record.wallet_id)
 
         return trade_coin_removed
 
-    async def coin_removed(self, coin: Coin, sub_height: uint32, wallet_id: int):
+    async def coin_removed(self, coin: Coin, height: uint32, wallet_id: int):
         """
         Called when coin gets spent
         """
 
-        await self.coin_store.set_spent(coin.name(), sub_height)
+        await self.coin_store.set_spent(coin.name(), height)
 
         unconfirmed_record: List[TransactionRecord] = await self.tx_store.unconfirmed_with_removal_coin(coin.name())
         for unconfirmed in unconfirmed_record:
-            await self.tx_store.set_confirmed(unconfirmed.name, sub_height)
+            await self.tx_store.set_confirmed(unconfirmed.name, height)
 
         self.state_changed("coin_removed", wallet_id)
 
@@ -571,12 +571,12 @@ class WalletStateManager:
         fee_reward: bool,
         wallet_id: uint32,
         wallet_type: WalletType,
-        sub_height: uint32,
+        height: uint32,
     ):
         """
         Adding coin to DB
         """
-        self.log.info(f"Adding coin: {coin} at {sub_height}")
+        self.log.info(f"Adding coin: {coin} at {height}")
         farm_reward = False
         if coinbase or fee_reward:
             farm_reward = True
@@ -586,7 +586,7 @@ class WalletStateManager:
             else:
                 tx_type = TransactionType.FEE_REWARD.value
             tx_record = TransactionRecord(
-                confirmed_at_sub_height=uint32(sub_height),
+                confirmed_at_height=uint32(height),
                 created_at_time=now,
                 to_puzzle_hash=coin.puzzle_hash,
                 amount=coin.amount,
@@ -610,11 +610,11 @@ class WalletStateManager:
                 # This is the change from this transaction
                 for record in records:
                     if record.confirmed is False:
-                        await self.tx_store.set_confirmed(record.name, sub_height)
+                        await self.tx_store.set_confirmed(record.name, height)
             else:
                 now = uint64(int(time.time()))
                 tx_record = TransactionRecord(
-                    confirmed_at_sub_height=uint32(sub_height),
+                    confirmed_at_height=uint32(height),
                     created_at_time=now,
                     to_puzzle_hash=coin.puzzle_hash,
                     amount=coin.amount,
@@ -634,17 +634,17 @@ class WalletStateManager:
                     await self.tx_store.add_transaction_record(tx_record)
 
         coin_record: WalletCoinRecord = WalletCoinRecord(
-            coin, sub_height, uint32(0), False, farm_reward, wallet_type, wallet_id
+            coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
         )
         await self.coin_store.add_coin_record(coin_record)
 
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
-            header_hash: bytes32 = self.blockchain.sub_height_to_hash(sub_height)
+            header_hash: bytes32 = self.blockchain.height_to_hash(height)
             block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
             assert block.removals is not None
-            await wallet.coin_added(coin, header_hash, block.removals, sub_height)
+            await wallet.coin_added(coin, header_hash, block.removals, height)
 
         self.state_changed("coin_added", wallet_id)
 
@@ -652,7 +652,7 @@ class WalletStateManager:
         """
         Called from wallet before new transaction is sent to the full_node
         """
-        if self.peak is None or self.peak.sub_block_height <= self.constants.INITIAL_FREEZE_PERIOD:
+        if self.peak is None or self.peak.height <= self.constants.INITIAL_FREEZE_PERIOD:
             raise ValueError("Initial Freeze Period")
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
         await self.tx_store.add_transaction_record(tx_record)
@@ -726,7 +726,7 @@ class WalletStateManager:
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
         for coin in my_coin_records:
-            if coin.confirmed_block_sub_height <= fork_h:
+            if coin.confirmed_block_height <= fork_h:
                 unspent_coin_names.add(coin.name())
 
         # # Get all blocks after fork point up to but not including this block
@@ -820,15 +820,15 @@ class WalletStateManager:
 
         return result
 
-    async def reorg_rollback(self, sub_height: int):
+    async def reorg_rollback(self, height: int):
         """
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        await self.coin_store.rollback_to_block(sub_height)
+        await self.coin_store.rollback_to_block(height)
 
-        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(sub_height)
-        await self.tx_store.rollback_to_block(sub_height)
+        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
+        await self.tx_store.rollback_to_block(height)
 
         await self.retry_sending_after_reorg(reorged)
 
@@ -1013,8 +1013,8 @@ class WalletStateManager:
             action_data = data["data"]["action_data"]
             if action.name == "request_puzzle_solution":
                 stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                sub_height = uint32(action_data["sub_height"])
-                if stored_coin_name == unwrapped.coin_name and sub_height == unwrapped.sub_height:
+                height = uint32(action_data["height"])
+                if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
                     if action.done:
                         return
                     wallet = self.wallets[uint32(action.wallet_id)]

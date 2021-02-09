@@ -65,7 +65,7 @@ class CoinStore:
         for coin in additions:
             record: CoinRecord = CoinRecord(
                 coin,
-                block.sub_block_height,
+                block.height,
                 uint32(0),
                 False,
                 False,
@@ -74,10 +74,10 @@ class CoinStore:
             await self._add_coin_record(record)
 
         for coin_name in removals:
-            await self._set_spent(coin_name, block.sub_block_height)
+            await self._set_spent(coin_name, block.height)
 
         included_reward_coins = block.get_included_reward_coins()
-        if block.sub_block_height == 0:
+        if block.height == 0:
             assert len(included_reward_coins) == 0
         else:
             assert len(included_reward_coins) >= 2
@@ -85,7 +85,7 @@ class CoinStore:
         for coin in included_reward_coins:
             reward_coin_r: CoinRecord = CoinRecord(
                 coin,
-                block.sub_block_height,
+                block.height,
                 uint32(0),
                 False,
                 True,

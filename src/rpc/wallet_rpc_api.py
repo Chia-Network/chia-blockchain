@@ -268,7 +268,7 @@ class WalletRpcApi:
         if peak is None:
             return {"height": 0}
         else:
-            return {"height": peak.sub_block_height}
+            return {"height": peak.height}
 
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])

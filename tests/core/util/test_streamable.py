@@ -83,7 +83,7 @@ class TestStreamable(unittest.TestCase):
         coin: Optional[Coin] = None
         l1 = [(bytes32([2] * 32), coin)]
         rr = RespondRemovals(uint32(1), bytes32([1] * 32), l1, None)
-        RespondRemovals(rr.sub_height, rr.header_hash, rr.coins, rr.proofs)
+        RespondRemovals(rr.height, rr.header_hash, rr.coins, rr.proofs)
 
     def test_ambiguous_deserialization_optionals(self):
         with raises(AssertionError):

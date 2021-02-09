@@ -5,7 +5,6 @@ from sortedcontainers import SortedDict
 from src.types.coin import Coin
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64
 
 
 class Mempool:
@@ -13,7 +12,6 @@ class Mempool:
     sorted_spends: SortedDict
     additions: Dict[bytes32, MempoolItem]
     removals: Dict[bytes32, MempoolItem]
-    min_fee: uint64
     size: int
 
     # if new min fee is added
@@ -23,7 +21,6 @@ class Mempool:
         self.spends = {}
         self.additions = {}
         self.removals = {}
-        self.min_fee = uint64(0)
         self.sorted_spends = SortedDict()
         self.size = size
         return self

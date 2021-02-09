@@ -20,7 +20,7 @@ class FullNodeRpcClient(RpcClient):
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
         if response["blockchain_state"]["peak"] is not None:
-            response["blockchain_state"]["peak"] = FullBlock.from_json_dict(response["blockchain_state"]["peak"])
+            response["blockchain_state"]["peak"] = SubBlockRecord.from_json_dict(response["blockchain_state"]["peak"])
         return response["blockchain_state"]
 
     async def get_sub_block(self, header_hash) -> Optional[FullBlock]:
@@ -30,9 +30,9 @@ class FullNodeRpcClient(RpcClient):
             return None
         return FullBlock.from_json_dict(response["sub_block"])
 
-    async def get_sub_block_record_by_sub_height(self, sub_height) -> Optional[SubBlockRecord]:
+    async def get_sub_block_record_by_height(self, height) -> Optional[SubBlockRecord]:
         try:
-            response = await self.fetch("get_sub_block_record_by_sub_height", {"sub_height": sub_height})
+            response = await self.fetch("get_sub_block_record_by_height", {"height": height})
         except Exception:
             return None
         return SubBlockRecord.from_json_dict(response["sub_block_record"])

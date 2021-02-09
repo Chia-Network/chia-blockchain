@@ -29,7 +29,7 @@ def block_to_sub_block_record(
         block: Union[HeaderBlock, FullBlock] = header_block
     else:
         block = full_block
-    if block.sub_block_height == 0:
+    if block.height == 0:
         prev_sb: Optional[SubBlockRecord] = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
     else:
@@ -39,7 +39,7 @@ def block_to_sub_block_record(
             constants,
             sub_blocks,
             prev_sb.prev_hash,
-            prev_sb.sub_block_height,
+            prev_sb.height,
             prev_sb.sub_slot_iters,
             prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
@@ -48,7 +48,7 @@ def block_to_sub_block_record(
     overflow = is_overflow_sub_block(constants, block.reward_chain_sub_block.signage_point_index)
     deficit = calculate_deficit(
         constants,
-        block.sub_block_height,
+        block.height,
         prev_sb,
         overflow,
         len(block.finished_sub_slots),
@@ -72,7 +72,7 @@ def block_to_sub_block_record(
             for sub_slot in block.finished_sub_slots
             if sub_slot.infused_challenge_chain is not None
         ]
-    elif block.sub_block_height == 0:
+    elif block.height == 0:
         finished_challenge_slot_hashes = [constants.FIRST_CC_CHALLENGE]
         finished_reward_slot_hashes = [constants.FIRST_RC_CHALLENGE]
         finished_infused_challenge_slot_hashes = None
@@ -93,7 +93,7 @@ def block_to_sub_block_record(
         ses = make_sub_epoch_summary(
             constants,
             sub_blocks,
-            block.sub_block_height,
+            block.height,
             sub_blocks.sub_block_record(prev_sb.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
@@ -118,12 +118,12 @@ def block_to_sub_block_record(
         curr = sub_blocks.try_sub_block(curr.prev_hash)
 
     if curr is not None and curr.is_block:
-        prev_transaction_block_height = curr.sub_block_height
+        prev_transaction_block_height = curr.height
 
     return SubBlockRecord(
         block.header_hash,
         block.prev_header_hash,
-        block.sub_block_height,
+        block.height,
         block.weight,
         block.total_iters,
         block.reward_chain_sub_block.signage_point_index,

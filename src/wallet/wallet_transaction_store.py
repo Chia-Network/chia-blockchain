@@ -30,7 +30,7 @@ class WalletTransactionStore:
                 "CREATE TABLE IF NOT EXISTS transaction_record("
                 " transaction_record blob,"
                 " bundle_id text PRIMARY KEY,"
-                " confirmed_at_sub_height bigint,"
+                " confirmed_at_height bigint,"
                 " created_at_time bigint,"
                 " to_puzzle_hash text,"
                 " amount bigint,"
@@ -45,7 +45,7 @@ class WalletTransactionStore:
 
         # Useful for reorg lookups
         await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_sub_height)"
+            "CREATE INDEX IF NOT EXISTS tx_confirmed_index on transaction_record(confirmed_at_height)"
         )
 
         await self.db_connection.execute(
@@ -92,7 +92,7 @@ class WalletTransactionStore:
             (
                 bytes(record),
                 record.name,
-                record.confirmed_at_sub_height,
+                record.confirmed_at_height,
                 record.created_at_time,
                 record.to_puzzle_hash.hex(),
                 record.amount,
@@ -116,7 +116,7 @@ class WalletTransactionStore:
                 first_in = list(self.tx_record_cache.keys())[0]
                 self.tx_record_cache.pop(first_in)
 
-    async def set_confirmed(self, tx_id: bytes32, sub_height: uint32):
+    async def set_confirmed(self, tx_id: bytes32, height: uint32):
         """
         Updates transaction to be confirmed.
         """
@@ -124,7 +124,7 @@ class WalletTransactionStore:
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            confirmed_at_sub_height=sub_height,
+            confirmed_at_height=height,
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
@@ -196,7 +196,7 @@ class WalletTransactionStore:
         sent_to.append(append_data)
 
         tx: TransactionRecord = TransactionRecord(
-            confirmed_at_sub_height=current.confirmed_at_sub_height,
+            confirmed_at_height=current.confirmed_at_height,
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
@@ -225,7 +225,7 @@ class WalletTransactionStore:
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
@@ -322,10 +322,10 @@ class WalletTransactionStore:
         """
         limit = end - start
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_sub_height not in"
-            f" (select confirmed_at_sub_height from transaction_record order by confirmed_at_sub_height"
+            f"SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
+            f" (select confirmed_at_height from transaction_record order by confirmed_at_height"
             f" ASC LIMIT {start})"
-            f" order by confirmed_at_sub_height DESC LIMIT {limit}",
+            f" order by confirmed_at_height DESC LIMIT {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
@@ -390,11 +390,11 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_transaction_above(self, sub_height: int) -> List[TransactionRecord]:
+    async def get_transaction_above(self, height: int) -> List[TransactionRecord]:
         # Can be -1 (get all tx)
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed_at_sub_height>?", (sub_height,)
+            "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -406,11 +406,9 @@ class WalletTransactionStore:
 
         return records
 
-    async def rollback_to_block(self, sub_height: int):
+    async def rollback_to_block(self, height: int):
         # Delete from storage
         self.tx_wallet_cache = {}
-        c1 = await self.db_connection.execute(
-            "DELETE FROM transaction_record WHERE confirmed_at_sub_height>?", (sub_height,)
-        )
+        c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
         await self.db_connection.commit()

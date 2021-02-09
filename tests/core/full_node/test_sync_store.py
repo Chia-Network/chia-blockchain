@@ -27,7 +27,7 @@ class TestStore:
 
         store.set_peak_target(std_hash(b"1"), 100)
         assert store.get_sync_target_hash() == std_hash(b"1")
-        assert store.get_sync_target_sub_height() == 100
+        assert store.get_sync_target_height() == 100
 
         peer_ids = [std_hash(bytes([a])) for a in range(3)]
 

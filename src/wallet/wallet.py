@@ -173,7 +173,7 @@ class Wallet:
             used_coins: Set = set()
 
             # Use older coins first
-            unspent.sort(key=lambda r: r.confirmed_block_sub_height)
+            unspent.sort(key=lambda r: r.confirmed_block_height)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -189,9 +189,7 @@ class Wallet:
                     continue
                 sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(
-                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_sub_height}!"
-                )
+                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -274,7 +272,7 @@ class Wallet:
         rem_list: List[Coin] = list(spend_bundle.removals())
 
         return TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
+            confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=puzzle_hash,
             amount=uint64(amount),

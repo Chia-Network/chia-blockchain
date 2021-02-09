@@ -30,18 +30,18 @@ constants = test_constants
 
 
 def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
-    pool_amount = calculate_pool_reward(block.sub_block_height)
-    farmer_amount = calculate_base_farmer_reward(block.sub_block_height)
+    pool_amount = calculate_pool_reward(block.height)
+    farmer_amount = calculate_base_farmer_reward(block.height)
     if block.is_block():
         assert block.transactions_info is not None
         farmer_amount = uint64(farmer_amount + block.transactions_info.fees)
     pool_coin: Coin = create_pool_coin(
-        block.sub_block_height,
+        block.height,
         block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
         pool_amount,
     )
     farmer_coin: Coin = create_farmer_coin(
-        block.sub_block_height,
+        block.height,
         block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
         farmer_amount,
     )
@@ -139,12 +139,12 @@ class TestCoinStore:
                 records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                 for record in records:
-                    await coin_store._set_spent(record.coin.name(), block.sub_block_height)
+                    await coin_store._set_spent(record.coin.name(), block.height)
 
                 records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                 for record in records:
                     assert record.spent
-                    assert record.spent_block_index == block.sub_block_height
+                    assert record.spent_block_index == block.height
 
         await connection.close()
         Path("fndb_test.db").unlink()
@@ -166,12 +166,12 @@ class TestCoinStore:
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                 for record in records:
-                    await coin_store._set_spent(record.coin.name(), block.sub_block_height)
+                    await coin_store._set_spent(record.coin.name(), block.height)
 
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                 for record in records:
                     assert record.spent
-                    assert record.spent_block_index == block.sub_block_height
+                    assert record.spent_block_index == block.height
 
         reorg_index = 8
         await coin_store.rollback_to_block(reorg_index)
@@ -181,7 +181,7 @@ class TestCoinStore:
                 coins = block.get_included_reward_coins()
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                if block.sub_block_height <= reorg_index:
+                if block.height <= reorg_index:
                     for record in records:
                         assert record is not None
                         assert record.spent
@@ -208,7 +208,7 @@ class TestCoinStore:
 
             for block in blocks:
                 await b.receive_block(block)
-            assert b.get_peak().sub_block_height == initial_block_count - 1
+            assert b.get_peak().height == initial_block_count - 1
 
             for c, block in enumerate(blocks):
                 if block.is_block():
@@ -218,19 +218,19 @@ class TestCoinStore:
                     ]
                     for record in records:
                         assert not record.spent
-                        assert record.confirmed_block_index == block.sub_block_height
+                        assert record.confirmed_block_index == block.height
                         assert record.spent_block_index == 0
 
             blocks_reorg_chain = bt.get_consecutive_blocks(reorg_length, blocks[: initial_block_count - 10], seed=b"2")
 
             for reorg_block in blocks_reorg_chain:
                 result, error_code, _ = await b.receive_block(reorg_block)
-                print(f"Height {reorg_block.sub_block_height} {initial_block_count - 10} result {result}")
-                if reorg_block.sub_block_height < initial_block_count - 10:
+                print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
+                if reorg_block.height < initial_block_count - 10:
                     assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                elif reorg_block.sub_block_height < initial_block_count - 1:
+                elif reorg_block.height < initial_block_count - 1:
                     assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-                elif reorg_block.sub_block_height >= initial_block_count:
+                elif reorg_block.height >= initial_block_count:
                     assert result == ReceiveBlockResult.NEW_PEAK
                     if reorg_block.is_block():
                         coins = reorg_block.get_included_reward_coins()
@@ -239,10 +239,10 @@ class TestCoinStore:
                         ]
                         for record in records:
                             assert not record.spent
-                            assert record.confirmed_block_index == reorg_block.sub_block_height
+                            assert record.confirmed_block_index == reorg_block.height
                             assert record.spent_block_index == 0
                 assert error_code is None
-            assert b.get_peak().sub_block_height == initial_block_count - 10 + reorg_length - 1
+            assert b.get_peak().height == initial_block_count - 10 + reorg_length - 1
         except Exception as e:
             await connection.close()
             Path("blockchain_test.db").unlink()
@@ -268,7 +268,7 @@ class TestCoinStore:
             res, err, _ = await b.receive_block(block)
             assert err is None
             assert res == ReceiveBlockResult.NEW_PEAK
-        assert b.get_peak().sub_block_height == num_blocks - 1
+        assert b.get_peak().height == num_blocks - 1
 
         pool_coin, farmer_coin = get_future_reward_coins(blocks[-2])
 

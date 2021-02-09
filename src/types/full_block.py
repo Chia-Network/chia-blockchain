@@ -38,8 +38,8 @@ class FullBlock(Streamable):
         return self.foliage_sub_block.prev_sub_block_hash
 
     @property
-    def sub_block_height(self):
-        return self.reward_chain_sub_block.sub_block_height
+    def height(self):
+        return self.reward_chain_sub_block.height
 
     @property
     def weight(self):
