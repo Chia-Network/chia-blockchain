@@ -3,7 +3,7 @@ from typing import Dict, Optional, List, Set
 import aiosqlite
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -33,7 +33,7 @@ class WalletCoinStore:
                 " coinbase int,"
                 " puzzle_hash text,"
                 " coin_parent text,"
-                " amount bigint,"
+                " amount blob,"
                 " wallet_type int,"
                 " wallet_id int)"
             )
@@ -88,7 +88,7 @@ class WalletCoinStore:
                     int(record.coinbase),
                     str(record.coin.puzzle_hash.hex()),
                     str(record.coin.parent_coin_info.hex()),
-                    record.coin.amount,
+                    bytes(record.coin.amount),
                     record.wallet_type,
                     record.wallet_id,
                 ),
@@ -124,7 +124,7 @@ class WalletCoinStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             return WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
         return None
 
@@ -178,7 +178,7 @@ class WalletCoinStore:
             await cursor.close()
             cache_dict = {}
             for row in rows:
-                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
                 coin_record = WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
                 coin_set.add(coin_record)
                 cache_dict[coin.name()] = coin_record
@@ -194,7 +194,7 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return coins
 
@@ -206,7 +206,7 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return list(coins)
 
@@ -218,7 +218,7 @@ class WalletCoinStore:
         if row is None:
             return None
 
-        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
         coin_record = WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
         return coin_record
 

@@ -707,7 +707,7 @@ class FullNode:
         if (
             block.foliage_sub_block.foliage_sub_block_data.pool_target
             == PoolTarget(self.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
-            and block.foliage_sub_block.prev_sub_block_hash != self.constants.GENESIS_PREV_HASH
+            and block.foliage_sub_block.prev_sub_block_hash != self.constants.GENESIS_CHALLENGE
         ):
             if not AugSchemeMPL.verify(
                 block.reward_chain_sub_block.proof_of_space.pool_public_key,
@@ -937,7 +937,7 @@ class FullNode:
         if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
-        if block.prev_header_hash != self.constants.GENESIS_PREV_HASH and not self.blockchain.contains_sub_block(
+        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
             block.prev_header_hash
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
@@ -950,7 +950,7 @@ class FullNode:
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
                 return
 
-        if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
+        if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
             prev_sb = None
         else:
             prev_sb = self.blockchain.sub_block_record(block.prev_header_hash)
@@ -1013,7 +1013,7 @@ class FullNode:
         if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
-        if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
+        if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
             height = uint32(0)
         else:
             height = uint32(self.blockchain.sub_block_record(block.prev_header_hash).height + 1)
@@ -1042,8 +1042,8 @@ class FullNode:
         if block.reward_chain_sub_block.signage_point_index == 0:
             res = self.full_node_store.get_sub_slot(block.reward_chain_sub_block.pos_ss_cc_challenge_hash)
             if res is None:
-                if block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
-                    rc_prev = self.constants.FIRST_RC_CHALLENGE
+                if block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.GENESIS_CHALLENGE:
+                    rc_prev = self.constants.GENESIS_CHALLENGE
                 else:
                     self.log.warning(f"Do not have sub slot {block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
                     return
@@ -1093,7 +1093,7 @@ class FullNode:
         for eos, _, _ in reversed(self.full_node_store.finished_sub_slots):
             if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
                 target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
-        if target_rc_hash == self.constants.FIRST_RC_CHALLENGE:
+        if target_rc_hash == self.constants.GENESIS_CHALLENGE:
             prev_sb = None
         else:
             # Find the prev block, starts looking backwards from the peak
@@ -1133,7 +1133,7 @@ class FullNode:
             self.blockchain,
         )
 
-        if unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
+        if unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash == self.constants.GENESIS_CHALLENGE:
             sub_slot_start_iters = uint128(0)
         else:
             ss_res = self.full_node_store.get_sub_slot(unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash)
@@ -1209,7 +1209,7 @@ class FullNode:
             if (
                 (fetched_ss is None)
                 and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-                != self.constants.FIRST_CC_CHALLENGE
+                != self.constants.GENESIS_CHALLENGE
             ):
                 # If we don't have the prev, request the prev instead
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(

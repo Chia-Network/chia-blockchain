@@ -268,7 +268,7 @@ class WeightProofHandler:
 
         summaries, sub_epoch_data_weight = _map_summaries(
             self.constants.SUB_EPOCH_SUB_BLOCKS,
-            self.constants.GENESIS_SES_HASH,
+            self.constants.GENESIS_CHALLENGE,
             weight_proof.sub_epochs,
             self.constants.DIFFICULTY_STARTING,
         )
@@ -305,7 +305,7 @@ class WeightProofHandler:
         weight_proof: WeightProof,
         summaries: List[SubEpochSummary],
     ):
-        rc_sub_slot_hash = self.constants.FIRST_CC_CHALLENGE
+        rc_sub_slot_hash = self.constants.GENESIS_CHALLENGE
         curr_difficulty = self.constants.DIFFICULTY_STARTING
         curr_ssi = self.constants.SUB_SLOT_ITERS_STARTING
         total_blocks, total_ip_iters = 0, 0
@@ -569,8 +569,8 @@ class WeightProofHandler:
 
         if prev_cc_sub_slot is None:
             # genesis
-            cc_sp_hash: bytes32 = self.constants.FIRST_CC_CHALLENGE
-            challenge = self.constants.FIRST_CC_CHALLENGE
+            cc_sp_hash: bytes32 = self.constants.GENESIS_CHALLENGE
+            challenge = self.constants.GENESIS_CHALLENGE
         else:
             challenge = prev_cc_sub_slot
             if challenge_sub_slot.cc_sp_vdf_info is None:
@@ -598,7 +598,7 @@ class WeightProofHandler:
     def get_cc_sub_slot_hash(self, segment: SubEpochChallengeSegment, idx, ses: Optional[SubEpochSummary]):
         if segment.sub_epoch_n == 0 and idx == 0:
             # genesis
-            return self.constants.FIRST_CC_CHALLENGE
+            return self.constants.GENESIS_CHALLENGE
         prev_sub_slot = segment.sub_slots[idx - 1]
         cc_vdf = prev_sub_slot.cc_slot_end_info
         icc_vdf = prev_sub_slot.icc_slot_end_info

@@ -120,7 +120,7 @@ def create_foliage(
         reward_sub_block.proof_of_space.plot_public_key,
     )
 
-    prev_sub_block_hash: bytes32 = constants.GENESIS_PREV_HASH
+    prev_sub_block_hash: bytes32 = constants.GENESIS_CHALLENGE
     if height != 0:
         assert prev_sub_block is not None
         prev_sub_block_hash = prev_sub_block.header_hash
@@ -231,7 +231,7 @@ def create_foliage(
             reward_claims_incorporated,
         )
         if prev_block is None:
-            prev_block_hash: bytes32 = constants.GENESIS_PREV_HASH
+            prev_block_hash: bytes32 = constants.GENESIS_CHALLENGE
         else:
             prev_block_hash = prev_block.header_hash
 
@@ -340,7 +340,7 @@ def create_unfinished_block(
             rc_sp_hash = finished_sub_slots[-1].reward_chain.get_hash()
         else:
             if is_genesis:
-                rc_sp_hash = constants.FIRST_RC_CHALLENGE
+                rc_sp_hash = constants.GENESIS_CHALLENGE
             else:
                 assert prev_sub_block is not None
                 assert sub_blocks is not None

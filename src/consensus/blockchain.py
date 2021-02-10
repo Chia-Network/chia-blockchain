@@ -445,7 +445,7 @@ class Blockchain(BlockchainInterface):
     ) -> Tuple[Optional[uint64], Optional[Err]]:
         if (
             not self.contains_sub_block(block.prev_header_hash)
-            and not block.prev_header_hash == self.constants.GENESIS_PREV_HASH
+            and not block.prev_header_hash == self.constants.GENESIS_CHALLENGE
         ):
             return None, Err.INVALID_PREV_BLOCK_HASH
 
@@ -477,7 +477,7 @@ class Blockchain(BlockchainInterface):
 
         prev_height = (
             -1
-            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
+            if block.prev_header_hash == self.constants.GENESIS_CHALLENGE
             else self.sub_block_record(block.prev_header_hash).height
         )
 

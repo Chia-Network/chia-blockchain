@@ -59,7 +59,7 @@ def validate_unfinished_header_block(
 
     prev_sb = sub_blocks.try_sub_block(header_block.prev_header_hash)
     genesis_block = prev_sb is None
-    if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
+    if genesis_block and header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
     overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
@@ -107,7 +107,7 @@ def validate_unfinished_header_block(
             if finished_sub_slot_n == 0:
                 if genesis_block:
                     # 2a. check sub-slot challenge hash for genesis block
-                    if challenge_hash != constants.FIRST_CC_CHALLENGE:
+                    if challenge_hash != constants.GENESIS_CHALLENGE:
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
                 else:
                     assert prev_sb is not None
@@ -262,8 +262,8 @@ def validate_unfinished_header_block(
             if genesis_block:
                 if finished_sub_slot_n == 0:
                     # First block, one empty slot. prior_point is the initial challenge
-                    rc_eos_vdf_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
-                    cc_eos_vdf_challenge = constants.FIRST_CC_CHALLENGE
+                    rc_eos_vdf_challenge: bytes32 = constants.GENESIS_CHALLENGE
+                    cc_eos_vdf_challenge = constants.GENESIS_CHALLENGE
                 else:
                     # First block, but have at least two empty slots
                     rc_eos_vdf_challenge = header_block.finished_sub_slots[
@@ -596,7 +596,7 @@ def validate_unfinished_header_block(
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         else:
             if genesis_block:
-                rc_sp_hash = constants.FIRST_RC_CHALLENGE
+                rc_sp_hash = constants.GENESIS_CHALLENGE
             else:
                 assert prev_sb is not None
                 curr = prev_sb
@@ -699,7 +699,7 @@ def validate_unfinished_header_block(
     ):
         return None, ValidationError(Err.OLD_POOL_TARGET)
 
-    # 20a. Check pre-farm puzzle hash for genesis sub-block.
+    # 20a. Check pre-farm puzzle hashes for genesis sub-block.
     if genesis_block:
         if (
             header_block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash
@@ -708,6 +708,11 @@ def validate_unfinished_header_block(
             log.error(
                 f"Pool target {header_block.foliage_sub_block.foliage_sub_block_data.pool_target} hb {header_block}"
             )
+            return None, ValidationError(Err.INVALID_PREFARM)
+        if (
+            header_block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash
+            != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
+        ):
             return None, ValidationError(Err.INVALID_PREFARM)
     else:
         # 20b. Check pool target signature. Should not check this for genesis sub-block.
@@ -849,7 +854,7 @@ def validate_finished_header_block(
         if new_sub_slot:
             rc_vdf_challenge = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         else:
-            rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
+            rc_vdf_challenge = constants.GENESIS_CHALLENGE
     else:
         assert prev_sb is not None
         if new_sub_slot:
@@ -871,7 +876,7 @@ def validate_finished_header_block(
         # Not first sub-block in slot
         if genesis_block:
             # genesis block
-            cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
+            cc_vdf_challenge = constants.GENESIS_CHALLENGE
         else:
             assert prev_sb is not None
             # Not genesis block, go back to first sub-block in slot

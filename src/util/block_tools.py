@@ -702,7 +702,7 @@ class BlockTools:
                         ip_iters,
                         proof_of_space,
                         cc_challenge,
-                        farmer_reward_puzzle_hash,
+                        constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
                         PoolTarget(constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0)),
                         self.get_plot_signature,
                         self.get_pool_key_signature,
@@ -998,7 +998,7 @@ def get_challenges(
 ):
     if len(finished_sub_slots) == 0:
         if prev_header_hash is None:
-            return constants.FIRST_CC_CHALLENGE, constants.FIRST_RC_CHALLENGE
+            return constants.GENESIS_CHALLENGE, constants.GENESIS_CHALLENGE
         curr = sub_blocks[prev_header_hash]
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]

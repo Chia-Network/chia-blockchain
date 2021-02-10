@@ -170,10 +170,10 @@ class FullNodeStore:
 
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
         last_slot_ch = (
-            last_slot.challenge_chain.get_hash() if last_slot is not None else self.constants.FIRST_CC_CHALLENGE
+            last_slot.challenge_chain.get_hash() if last_slot is not None else self.constants.GENESIS_CHALLENGE
         )
         last_slot_rc_hash = (
-            last_slot.reward_chain.get_hash() if last_slot is not None else self.constants.FIRST_RC_CHALLENGE
+            last_slot.reward_chain.get_hash() if last_slot is not None else self.constants.GENESIS_CHALLENGE
         )
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
@@ -298,8 +298,8 @@ class FullNodeStore:
         for sub_slot, sp_arr, start_ss_total_iters in self.finished_sub_slots:
             if sub_slot is None:
                 assert start_ss_total_iters == 0
-                ss_challenge_hash = self.constants.FIRST_CC_CHALLENGE
-                ss_reward_hash = self.constants.FIRST_RC_CHALLENGE
+                ss_challenge_hash = self.constants.GENESIS_CHALLENGE
+                ss_reward_hash = self.constants.GENESIS_CHALLENGE
             else:
                 ss_challenge_hash = sub_slot.challenge_chain.get_hash()
                 ss_reward_hash = sub_slot.reward_chain.get_hash()
@@ -393,7 +393,7 @@ class FullNodeStore:
 
     def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
         assert len(self.finished_sub_slots) >= 1
-        if cc_signage_point == self.constants.FIRST_CC_CHALLENGE:
+        if cc_signage_point == self.constants.GENESIS_CHALLENGE:
             return SignagePoint(None, None, None, None)
 
         for sub_slot, sps, _ in self.finished_sub_slots:
@@ -414,7 +414,7 @@ class FullNodeStore:
             if sub_slot is not None:
                 cc_hash = sub_slot.challenge_chain.get_hash()
             else:
-                cc_hash = self.constants.FIRST_CC_CHALLENGE
+                cc_hash = self.constants.GENESIS_CHALLENGE
 
             if cc_hash == challenge_hash:
                 if index == 0:
@@ -436,7 +436,7 @@ class FullNodeStore:
             if sub_slot is not None:
                 cc_hash = sub_slot.challenge_chain.get_hash()
             else:
-                cc_hash = self.constants.FIRST_CC_CHALLENGE
+                cc_hash = self.constants.GENESIS_CHALLENGE
 
             if cc_hash == challenge_hash:
                 found_rc_hash = False
@@ -550,10 +550,10 @@ class FullNodeStore:
             assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
         else:
-            final_sub_slot_in_chain = self.constants.FIRST_CC_CHALLENGE
+            final_sub_slot_in_chain = self.constants.GENESIS_CHALLENGE
             final_index = 0
 
-        if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
+        if pos_ss_challenge_hash == self.constants.GENESIS_CHALLENGE:
             pos_index = 0
         if prev_sb is None:
             final_index = 0
@@ -568,7 +568,7 @@ class FullNodeStore:
                     pos_index = index
                 if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
                     final_index = index
-                if sub_slot is None and final_sub_slot_in_chain == self.constants.FIRST_CC_CHALLENGE:
+                if sub_slot is None and final_sub_slot_in_chain == self.constants.GENESIS_CHALLENGE:
                     final_index = index
 
         if pos_index is None or final_index is None:
