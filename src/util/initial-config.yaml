@@ -9,7 +9,7 @@ network_genesis_challenges: &network_genesis_challenges
   testnet0: "0000000000000000000000000000000000000000000000000000000000000000"
   testnet1: "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"  # std_hash(b"1")
 
-seelected_network: &selected_network "testnet1"
+selected_network: &selected_network "testnet1"
 
 # public ssl ca is included in source code
 # Privet ssl ca is used for trusted connections between machines user owns
