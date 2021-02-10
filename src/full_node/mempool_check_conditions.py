@@ -15,15 +15,15 @@ from src.util.ints import uint64, uint32
 from src.wallet.puzzles.generator_loader import GENERATOR_MOD, GENERATOR_FOR_SINGLE_COIN_MOD
 
 
-def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
+def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
     """
-    Checks coin consumed conditions
-    Returns None if conditions are met, if not returns the reason why it failed
+    Check if an announcement is included in the list of announcements
     """
-    bundle_removals = spend_bundle.removal_names()
-    coin_name = condition.vars[0]
-    if coin_name not in bundle_removals:
-        return Err.ASSERT_COIN_CONSUMED_FAILED
+    announcements = spend_bundle.announcements()
+    announcement_hash = condition.vars[0]
+    if announcement_hash not in [ann.name() for ann in announcements]:
+        return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+
     return None
 
 
@@ -99,8 +99,7 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
 
 def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
     # TODO: allow generator mod to take something (future)
-    # TODO: check strict mode locations are set correctly
-    # TODO: write various tests
+    # TODO: write more tests
     try:
         if safe_mode:
             cost, result = GENERATOR_MOD.run_safe_with_cost(block_program)
@@ -160,10 +159,10 @@ def mempool_check_conditions_dict(
         cvp: ConditionVarPair
         for cvp in con_list:
             error = None
-            if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = mempool_assert_coin_consumed(cvp, spend_bundle)
-            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+            if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                error = mempool_assert_announcement_consumed(cvp, spend_bundle)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
                 error = mempool_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:

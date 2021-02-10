@@ -5,6 +5,7 @@ from blspy import G1Element
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.coin import Coin
+from src.types.announcement import Announcement
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
@@ -105,6 +106,22 @@ def created_outputs_for_conditions_dict(
         coin = Coin(input_coin_name, puzzle_hash, amount)
         output_coins.append(coin)
     return output_coins
+
+
+def created_announcements_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    input_coin_name: bytes32,
+) -> List[Announcement]:
+    output_announcements = []
+    for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT, []):
+        # TODO: check condition very carefully
+        # (ensure there are the correct number and type of parameters)
+        # maybe write a type-checking framework for conditions
+        # and don't just fail with asserts
+        message = cvp.vars[0]
+        announcement = Announcement(input_coin_name, message)
+        output_announcements.append(announcement)
+    return output_announcements
 
 
 def conditions_dict_for_solution(
