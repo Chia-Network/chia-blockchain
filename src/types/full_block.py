@@ -9,18 +9,12 @@ from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
-from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import SerializedProgram
-from src.consensus.coinbase import create_pool_coin, create_farmer_coin
-from src.consensus.block_rewards import (
-    calculate_pool_reward,
-    calculate_base_farmer_reward,
-)
 
 
 @dataclass(frozen=True)
@@ -45,13 +39,7 @@ class FullBlock(Streamable):
 
     @property
     def height(self):
-        if self.foliage_block is None:
-            raise ValueError("Not a block")
-        return self.foliage_block.height
-
-    @property
-    def sub_block_height(self):
-        return self.reward_chain_sub_block.sub_block_height
+        return self.reward_chain_sub_block.height
 
     @property
     def weight(self):
@@ -67,24 +55,6 @@ class FullBlock(Streamable):
 
     def is_block(self):
         return self.foliage_block is not None
-
-    def get_future_reward_coins(self, height: uint32) -> Tuple[Coin, Coin]:
-        pool_amount = calculate_pool_reward(height)
-        farmer_amount = calculate_base_farmer_reward(height)
-        if self.is_block():
-            assert self.transactions_info is not None
-            farmer_amount = uint64(farmer_amount + self.transactions_info.fees)
-        pool_coin: Coin = create_pool_coin(
-            self.sub_block_height,
-            self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
-            pool_amount,
-        )
-        farmer_coin: Coin = create_farmer_coin(
-            self.sub_block_height,
-            self.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
-            farmer_amount,
-        )
-        return pool_coin, farmer_coin
 
     def get_block_header(self) -> HeaderBlock:
         # Create filter

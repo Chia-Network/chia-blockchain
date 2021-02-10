@@ -67,10 +67,10 @@ class FullNodeStore:
     def add_candidate_block(
         self,
         quality_string: bytes32,
-        sub_height: uint32,
+        height: uint32,
         unfinished_block: UnfinishedBlock,
     ):
-        self.candidate_blocks[quality_string] = (sub_height, unfinished_block)
+        self.candidate_blocks[quality_string] = (height, unfinished_block)
 
     def get_candidate_block(self, quality_string: bytes32) -> Optional[UnfinishedBlock]:
         result = self.candidate_blocks.get(quality_string, None)
@@ -78,10 +78,10 @@ class FullNodeStore:
             return None
         return result[1]
 
-    def clear_candidate_blocks_below(self, sub_height: uint32) -> None:
+    def clear_candidate_blocks_below(self, height: uint32) -> None:
         del_keys = []
         for key, value in self.candidate_blocks.items():
-            if value[0] < sub_height:
+            if value[0] < height:
                 del_keys.append(key)
         for key in del_keys:
             try:
@@ -98,9 +98,9 @@ class FullNodeStore:
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
 
-    def add_unfinished_block(self, sub_height: uint32, unfinished_block: UnfinishedBlock) -> None:
+    def add_unfinished_block(self, height: uint32, unfinished_block: UnfinishedBlock) -> None:
         self.unfinished_blocks[unfinished_block.partial_hash] = (
-            sub_height,
+            height,
             unfinished_block,
         )
 
@@ -113,13 +113,13 @@ class FullNodeStore:
     def get_unfinished_blocks(self) -> Dict[bytes32, Tuple[uint32, UnfinishedBlock]]:
         return self.unfinished_blocks
 
-    def clear_unfinished_blocks_below(self, sub_height: uint32) -> None:
+    def clear_unfinished_blocks_below(self, height: uint32) -> None:
         del_keys: List[bytes32] = []
         for partial_reward_hash, (
             unf_height,
             unfinished_block,
         ) in self.unfinished_blocks.items():
-            if unf_height < sub_height:
+            if unf_height < height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
             del self.unfinished_blocks[del_key]
@@ -281,7 +281,7 @@ class FullNodeStore:
         """
         assert len(self.finished_sub_slots) >= 1
 
-        if peak is None or peak.sub_block_height < 2:
+        if peak is None or peak.height < 2:
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
         else:
             sub_slot_iters = peak.sub_slot_iters

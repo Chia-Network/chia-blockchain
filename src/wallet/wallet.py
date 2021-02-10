@@ -68,9 +68,6 @@ class Wallet:
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.id())
-
     async def get_spendable_balance(self, unspent_records=None) -> uint64:
         spendable = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.id(), unspent_records
@@ -176,7 +173,7 @@ class Wallet:
             used_coins: Set = set()
 
             # Use older coins first
-            unspent.sort(key=lambda r: r.confirmed_block_sub_height)
+            unspent.sort(key=lambda r: r.confirmed_block_height)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -275,7 +272,6 @@ class Wallet:
         rem_list: List[Coin] = list(spend_bundle.removals())
 
         return TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=puzzle_hash,

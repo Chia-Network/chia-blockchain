@@ -26,7 +26,7 @@ class RewardChainSubBlockUnfinished(Streamable):
 @streamable
 class RewardChainSubBlock(Streamable):
     weight: uint128
-    sub_block_height: uint32
+    height: uint32
     total_iters: uint128
     signage_point_index: uint8
     pos_ss_cc_challenge_hash: bytes32

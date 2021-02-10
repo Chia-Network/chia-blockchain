@@ -114,7 +114,7 @@ class TradeStore:
         err_str = err.name if err is not None else None
         append_data = (name, uint8(send_status.value), err_str)
 
-        # Don't increment count if it's already sent to othis peer
+        # Don't increment count if it's already sent to this peer
         if append_data in sent_to:
             return False
 

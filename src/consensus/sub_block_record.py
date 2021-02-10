@@ -3,6 +3,7 @@ from typing import Optional, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters
+from src.types.coin import Coin
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -21,7 +22,6 @@ class SubBlockRecord(Streamable):
 
     header_hash: bytes32
     prev_hash: bytes32  # Header hash of the previous sub-block
-    sub_block_height: uint32
     height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
@@ -38,12 +38,13 @@ class SubBlockRecord(Streamable):
     required_iters: uint64  # The number of iters required for this proof of space
     deficit: uint8  # A deficit of 16 is an overflow block after an infusion. Deficit of 15 is a challenge block
     overflow: bool
+    prev_transaction_block_height: uint32
 
     # Block (present iff is_block)
     timestamp: Optional[uint64]
     prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
     fees: Optional[uint64]
-    # included_reward_coins: Optional[List[Coin]]
+    reward_claims_incorporated: Optional[List[Coin]]
 
     # Slot (present iff this is the first SB in sub slot)
     finished_challenge_slot_hashes: Optional[List[bytes32]]

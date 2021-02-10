@@ -201,6 +201,9 @@ class WalletNode:
         if self.sync_task is not None:
             self.sync_task.cancel()
             self.sync_task = None
+        if self.peer_task is not None:
+            self.peer_task.cancel()
+            self.peer_task = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -224,10 +227,10 @@ class WalletNode:
             action_data = data["data"]["action_data"]
             if action.name == "request_puzzle_solution":
                 coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                sub_height = uint32(action_data["sub_height"])
+                height = uint32(action_data["height"])
                 msg = make_msg(
                     ProtocolMessageTypes.request_puzzle_solution,
-                    wallet_protocol.RequestPuzzleSolution(coin_name, sub_height),
+                    wallet_protocol.RequestPuzzleSolution(coin_name, height),
                 )
                 result.append(msg)
 
@@ -389,7 +392,7 @@ class WalletNode:
         if self.new_peak_lock is None:
             self.new_peak_lock = asyncio.Lock()
         async with self.new_peak_lock:
-            request = wallet_protocol.RequestSubBlockHeader(peak.sub_block_height)
+            request = wallet_protocol.RequestSubBlockHeader(peak.height)
             response: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request)
 
             if response is None or not isinstance(response, RespondSubBlockHeader) or response.header_block is None:
@@ -397,20 +400,18 @@ class WalletNode:
 
             header_block = response.header_block
 
-            if (curr_peak is None and header_block.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
+            if (curr_peak is None and header_block.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
                 curr_peak is not None
-                and curr_peak.sub_block_height
-                > header_block.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS
+                and curr_peak.height > header_block.height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS
             ):
                 top = header_block
                 blocks = [top]
                 # Fetch blocks backwards until we hit the one that we have,
                 # then complete them with additions / removals going forward
                 while (
-                    not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash)
-                    and top.sub_block_height > 0
+                    not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash) and top.height > 0
                 ):
-                    request_prev = wallet_protocol.RequestSubBlockHeader(top.sub_block_height - 1)
+                    request_prev = wallet_protocol.RequestSubBlockHeader(top.height - 1)
                     response_prev: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request_prev)
                     if response_prev is None:
                         return
@@ -426,7 +427,7 @@ class WalletNode:
                 # Sync if PoW validates
                 if self.wallet_state_manager.sync_mode:
                     return
-                weight_request = RequestProofOfWeight(header_block.sub_block_height, header_block.header_hash)
+                weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
                 weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request)
                 if weight_proof_response is None:
                     return
@@ -496,7 +497,7 @@ class WalletNode:
             return
 
         highest_weight: uint128 = uint128(0)
-        peak_sub_height: uint32 = uint32(0)
+        peak_height: uint32 = uint32(0)
         peak: Optional[HeaderBlock] = None
         potential_peaks: List[
             Tuple[bytes32, HeaderBlock]
@@ -507,10 +508,10 @@ class WalletNode:
         for header_hash, potential_peak_block in potential_peaks:
             if potential_peak_block.weight > highest_weight:
                 highest_weight = potential_peak_block.weight
-                peak_sub_height = potential_peak_block.sub_block_height
+                peak_height = potential_peak_block.height
                 peak = potential_peak_block
 
-        if peak_sub_height is None or peak_sub_height == 0:
+        if peak_height is None or peak_height == 0:
             return
 
         if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
@@ -529,9 +530,9 @@ class WalletNode:
             await self.wallet_state_manager.blockchain.warmup(fork_height)
             batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
             advanced_peak = False
-            for i in range(max(0, fork_height - 1), peak_sub_height, batch_size):
+            for i in range(max(0, fork_height - 1), peak_height, batch_size):
                 start_height = i
-                end_height = min(peak_sub_height, start_height + batch_size)
+                end_height = min(peak_height, start_height + batch_size)
                 peers: List[WSChiaConnection] = self.server.get_full_node_connections()
                 added = False
                 for peer in peers:
@@ -553,15 +554,15 @@ class WalletNode:
                 self.wallet_state_manager.blockchain.clean_sub_block_record(
                     min(
                         end_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
-                        peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE,
+                        peak.height - self.constants.SUB_BLOCKS_CACHE_SIZE,
                     )
                 )
 
     async def fetch_blocks_and_validate(
         self,
         peer: WSChiaConnection,
-        sub_height_start: uint32,
-        sub_height_end: uint32,
+        height_start: uint32,
+        height_end: uint32,
         fork_point_with_peak: uint32,
     ) -> Tuple[bool, bool]:
         """
@@ -571,8 +572,8 @@ class WalletNode:
         if self.wallet_state_manager is None:
             return False, False
 
-        self.log.info(f"Requesting sub blocks {sub_height_start}-{sub_height_end}")
-        request = RequestHeaderBlocks(uint32(sub_height_start), uint32(sub_height_end))
+        self.log.info(f"Requesting sub blocks {height_start}-{height_end}")
+        request = RequestHeaderBlocks(uint32(height_start), uint32(height_end))
         res: Optional[RespondHeaderBlocks] = await peer.request_header_blocks(request)
         if res is None or not isinstance(res, RespondHeaderBlocks):
             raise ValueError("Peer returned no response")
@@ -632,7 +633,7 @@ class WalletNode:
                     header_block_record, pre_validation_results[i], trusted, fork_point_with_old_peak
                 )
             self.log.debug(
-                f"Time taken to validate {header_block.sub_block_height} with fork "
+                f"Time taken to validate {header_block.height} with fork "
                 f"{fork_point_with_old_peak}: {time.time() - start_t}"
             )
             if result == ReceiveBlockResult.NEW_PEAK:
@@ -750,7 +751,7 @@ class WalletNode:
 
     async def get_additions(self, peer: WSChiaConnection, block_i, additions) -> Optional[List[Coin]]:
         if len(additions) > 0:
-            additions_request = RequestAdditions(block_i.sub_block_height, block_i.header_hash, additions)
+            additions_request = RequestAdditions(block_i.height, block_i.header_hash, additions)
             additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
                 additions_request
             )
@@ -798,11 +799,9 @@ class WalletNode:
 
         if len(removals) > 0 or request_all_removals:
             if request_all_removals:
-                removals_request = wallet_protocol.RequestRemovals(block_i.sub_block_height, block_i.header_hash, None)
+                removals_request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, None)
             else:
-                removals_request = wallet_protocol.RequestRemovals(
-                    block_i.sub_block_height, block_i.header_hash, removals
-                )
+                removals_request = wallet_protocol.RequestRemovals(block_i.height, block_i.header_hash, removals)
             removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
                 removals_request
             )

@@ -23,7 +23,7 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 @streamable
 class NewPeak(Streamable):
     header_hash: bytes32
-    sub_block_height: uint32
+    height: uint32
     weight: uint128
     fork_point_with_previous_peak: uint32
     unfinished_reward_block_hash: bytes32
@@ -66,36 +66,36 @@ class RespondProofOfWeight(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RequestSubBlock(Streamable):
-    sub_height: uint32
+    height: uint32
     include_transaction_block: bool
 
 
 @dataclass(frozen=True)
 @streamable
 class RejectSubBlock(Streamable):
-    sub_height: uint32
+    height: uint32
 
 
 @dataclass(frozen=True)
 class RequestSubBlocks(Streamable):
-    start_sub_height: uint32
-    end_sub_height: uint32
+    start_height: uint32
+    end_height: uint32
     include_transaction_block: bool
 
 
 @dataclass(frozen=True)
 @streamable
 class RespondSubBlocks(Streamable):
-    start_sub_height: uint32
-    end_sub_height: uint32
+    start_height: uint32
+    end_height: uint32
     sub_blocks: List[FullBlock]
 
 
 @dataclass(frozen=True)
 @streamable
 class RejectSubBlocks(Streamable):
-    start_sub_height: uint32
-    end_sub_height: uint32
+    start_height: uint32
+    end_height: uint32
 
 
 @dataclass(frozen=True)
@@ -164,13 +164,13 @@ class RequestMempoolTransactions(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RequestCompactVDFs(Streamable):
-    sub_height: uint32
+    height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
 class RespondCompactVDFs(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
     end_of_slot_proofs: List[SubSlotProofs]  # List of challenge eos vdf and reward eos vdf
     cc_sp_proof: Optional[VDFProof]  # If not first sp

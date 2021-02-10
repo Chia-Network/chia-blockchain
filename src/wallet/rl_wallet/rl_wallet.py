@@ -304,7 +304,6 @@ class RLWallet:
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
         tx_record = TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hash,
@@ -343,9 +342,6 @@ class RLWallet:
 
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
-
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.id())
 
     async def get_spendable_balance(self, unspent_records=None) -> uint64:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id())
@@ -516,7 +512,6 @@ class RLWallet:
         spend_bundle = await self.rl_sign_transaction(transaction)
 
         return TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
@@ -599,7 +594,6 @@ class RLWallet:
         spend_bundle = await self.clawback_rl_coin(to_puzzle_hash, fee)
 
         return TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,

@@ -14,7 +14,7 @@ class SyncStore:
     peak_to_peer: Dict[bytes32, Set[bytes32]]  # Header hash : peer node id
     peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]  # peer node id : [header_hash, height, weight]
     sync_target_header_hash: Optional[bytes32]  # Peak hash we are syncing towards
-    sync_target_sub_height: Optional[uint32]  # Peak height we are syncing towards
+    sync_target_height: Optional[uint32]  # Peak height we are syncing towards
     peers_changed: asyncio.Event
     batch_syncing: Set[bytes32]  # Set of nodes which we are batch syncing from
 
@@ -24,7 +24,7 @@ class SyncStore:
 
         self.sync_mode = False
         self.sync_target_header_hash = None
-        self.sync_target_sub_height = None
+        self.sync_target_height = None
         self.peak_fork_point = {}
         self.peak_to_peer = {}
         self.peer_to_peak = {}
@@ -33,15 +33,15 @@ class SyncStore:
         self.batch_syncing = set()
         return self
 
-    def set_peak_target(self, peak_hash: bytes32, target_sub_height: uint32):
+    def set_peak_target(self, peak_hash: bytes32, target_height: uint32):
         self.sync_target_header_hash = peak_hash
-        self.sync_target_sub_height = target_sub_height
+        self.sync_target_height = target_height
 
     def get_sync_target_hash(self) -> Optional[bytes32]:
         return self.sync_target_header_hash
 
-    def get_sync_target_sub_height(self) -> Optional[bytes32]:
-        return self.sync_target_sub_height
+    def get_sync_target_height(self) -> Optional[bytes32]:
+        return self.sync_target_height
 
     def set_sync_mode(self, sync_mode: bool):
         self.sync_mode = sync_mode
@@ -50,7 +50,7 @@ class SyncStore:
         return self.sync_mode
 
     def peer_has_sub_block(
-        self, header_hash: bytes32, peer_id: bytes32, weight: uint128, sub_height: uint32, new_peak: bool
+        self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool
     ):
         """
         Adds a record that a certain peer has a sub_block.
@@ -64,7 +64,7 @@ class SyncStore:
             self.peak_to_peer[header_hash] = {peer_id}
 
         if new_peak:
-            self.peer_to_peak[peer_id] = (header_hash, sub_height, weight)
+            self.peer_to_peak[peer_id] = (header_hash, height, weight)
 
     def get_peers_that_have_peak(self, header_hashes: List[bytes32]) -> Set[bytes32]:
         """
@@ -92,7 +92,7 @@ class SyncStore:
 
     def get_heaviest_peak(self) -> Optional[Tuple[bytes32, uint32, uint128]]:
         """
-        Returns: the header_hash, sub_height, and weight of the heaviest sub_block that one of our peers has notified
+        Returns: the header_hash, height, and weight of the heaviest sub_block that one of our peers has notified
         us of.
         """
 
@@ -101,13 +101,13 @@ class SyncStore:
         heaviest_peak_hash: Optional[bytes32] = None
         heaviest_peak_weight: uint128 = uint128(0)
         heaviest_peak_height: Optional[uint32] = None
-        for peer_id, (peak_hash, sub_height, weight) in self.peer_to_peak.items():
+        for peer_id, (peak_hash, height, weight) in self.peer_to_peak.items():
             if peak_hash not in self.peak_to_peer:
                 continue
             if heaviest_peak_hash is None or weight > heaviest_peak_weight:
                 heaviest_peak_hash = peak_hash
                 heaviest_peak_weight = weight
-                heaviest_peak_height = sub_height
+                heaviest_peak_height = height
         assert heaviest_peak_hash is not None and heaviest_peak_weight is not None and heaviest_peak_height is not None
         return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
 

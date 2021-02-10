@@ -78,14 +78,14 @@ def validate_unfinished_header_block(
         assert expected_sub_slot_iters == constants.SUB_SLOT_ITERS_STARTING
     else:
         assert prev_sb is not None
-        height = uint32(prev_sb.sub_block_height + 1)
+        height = uint32(prev_sb.height + 1)
         if prev_sb.sub_epoch_summary_included is not None:
             can_finish_se, can_finish_epoch = False, False
         else:
             if new_sub_slot:
                 can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
                     constants,
-                    prev_sb.sub_block_height,
+                    prev_sb.height,
                     prev_sb.deficit,
                     sub_blocks,
                     prev_sb.prev_hash,
@@ -385,7 +385,7 @@ def validate_unfinished_header_block(
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     constants,
                     sub_blocks,
-                    uint32(prev_sb.sub_block_height + 1),
+                    height,
                     sub_blocks.sub_block_record(prev_sb.prev_hash),
                     expected_difficulty if can_finish_epoch else None,
                     expected_sub_slot_iters if can_finish_epoch else None,
@@ -765,7 +765,7 @@ def validate_unfinished_header_block(
                 curr_sb = fetched
             if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
                 # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr_sb.sub_block_height == 0
+                assert curr_sb.height == 0
             prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
             if header_block.foliage_block.timestamp <= prev_time:
                 return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
@@ -813,7 +813,7 @@ def validate_finished_header_block(
 
     assert required_iters is not None
 
-    if header_block.sub_block_height == 0:
+    if header_block.height == 0:
         prev_sb: Optional[SubBlockRecord] = None
         genesis_block = True
     else:
@@ -829,7 +829,7 @@ def validate_finished_header_block(
     if not genesis_block:
         assert prev_sb is not None
         # 27. Check sub-block height
-        if header_block.sub_block_height != prev_sb.sub_block_height + 1:
+        if header_block.height != prev_sb.height + 1:
             return None, ValidationError(Err.INVALID_HEIGHT)
 
         # 28. Check weight
@@ -837,7 +837,7 @@ def validate_finished_header_block(
             log.error(f"INVALID WEIGHT: {header_block} {prev_sb} {expected_difficulty}")
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
-        if header_block.sub_block_height != uint32(0):
+        if header_block.height != uint32(0):
             return None, ValidationError(Err.INVALID_HEIGHT)
         if header_block.weight != constants.DIFFICULTY_STARTING:
             return None, ValidationError(Err.INVALID_WEIGHT)
@@ -925,7 +925,7 @@ def validate_finished_header_block(
         overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
         deficit = calculate_deficit(
             constants,
-            header_block.sub_block_height,
+            header_block.height,
             prev_sb,
             overflow,
             len(header_block.finished_sub_slots),

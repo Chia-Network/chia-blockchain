@@ -22,13 +22,13 @@ from tests.core.fixtures import (
 
 def node_height_at_least(node, h):
     if node.full_node.blockchain.get_peak() is not None:
-        return node.full_node.blockchain.get_peak().sub_block_height >= h
+        return node.full_node.blockchain.get_peak().height >= h
     return False
 
 
 def node_height_exactly(node, h):
     if node.full_node.blockchain.get_peak() is not None:
-        return node.full_node.blockchain.get_peak().sub_block_height == h
+        return node.full_node.blockchain.get_peak().height == h
     return False
 
 
@@ -178,7 +178,7 @@ class TestFullSync:
         # Also test request proof of weight
         # Have the request header hash
         res = await full_node_1.request_proof_of_weight(
-            full_node_protocol.RequestProofOfWeight(blocks_950[-1].sub_block_height + 1, blocks_950[-1].header_hash)
+            full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
         )
         assert res is not None
         validated, _ = full_node_1.full_node.weight_proof_handler.validate_weight_proof(
@@ -188,7 +188,7 @@ class TestFullSync:
 
         # Don't have the request header hash
         res = await full_node_1.request_proof_of_weight(
-            full_node_protocol.RequestProofOfWeight(blocks_950[-1].sub_block_height + 1, std_hash(b"12"))
+            full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, std_hash(b"12"))
         )
         assert res is None
 

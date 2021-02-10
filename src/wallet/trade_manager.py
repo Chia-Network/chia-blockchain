@@ -102,9 +102,7 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(
-        self, removals: List[Coin], additions: List[Coin], index: uint32, sub_height: uint32
-    ):
+    async def coins_of_interest_farmed(self, removals: List[Coin], additions: List[Coin], height: uint32):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -146,17 +144,17 @@ class TradeManager:
                 checked[coin.name()] = coin
 
             if failed is False:
-                # Mark this trade as succesfull
-                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index)
-                self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {index}")
+                # Mark this trade as successful
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, height)
+                self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
             else:
                 # Either we canceled this trade or this trade failed
                 if trade.status == TradeStatus.PENDING_CANCEL.value:
                     await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED)
-                    self.log.info(f"Trade with id: {trade.trade_id} canceled at height: {index}")
+                    self.log.info(f"Trade with id: {trade.trade_id} canceled at height: {height}")
                 elif trade.status == TradeStatus.PENDING_CONFIRM.value:
                     await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
-                    self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {index}")
+                    self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {height}")
 
     async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
         """ Returns a dictionary of confirmed coins that are locked by a trade. """
@@ -538,7 +536,6 @@ class TradeManager:
             # debug_spend_bundle(spend_bundle)
             if chia_discrepancy < 0:
                 tx_record = TransactionRecord(
-                    confirmed_at_sub_height=uint32(0),
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
                     to_puzzle_hash=token_bytes(),
@@ -557,7 +554,6 @@ class TradeManager:
                 )
             else:
                 tx_record = TransactionRecord(
-                    confirmed_at_sub_height=uint32(0),
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
@@ -580,7 +576,6 @@ class TradeManager:
             wallet = wallets[colour]
             if chia_discrepancy > 0:
                 tx_record = TransactionRecord(
-                    confirmed_at_sub_height=uint32(0),
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
@@ -599,7 +594,6 @@ class TradeManager:
                 )
             else:
                 tx_record = TransactionRecord(
-                    confirmed_at_sub_height=uint32(0),
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=token_bytes(),
@@ -619,7 +613,6 @@ class TradeManager:
             my_tx_records.append(tx_record)
 
         tx_record = TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=token_bytes(),
