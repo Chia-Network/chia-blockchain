@@ -160,7 +160,6 @@ class FullNodeStore:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
         on this sub slot
-        TODO: do full validation here
         """
         assert len(self.finished_sub_slots) >= 1
 
@@ -173,6 +172,7 @@ class FullNodeStore:
             last_slot.reward_chain.get_hash() if last_slot is not None else self.constants.GENESIS_CHALLENGE
         )
         icc_challenge: Optional[bytes32] = None
+        icc_iters: Optional[uint64] = None
 
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
@@ -195,6 +195,7 @@ class FullNodeStore:
             # Peak is in this slot
             rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
             cc_start_element = peak.challenge_vdf_output
+            icc_start_element = peak.infused_challenge_vdf_output
             iters = uint64(total_iters - peak.total_iters)
             if peak.reward_infusion_new_challenge != rc_challenge:
                 # We don't have this challenge hash yet
@@ -210,30 +211,47 @@ class FullNodeStore:
                     curr = sub_blocks.sub_block_record(curr.prev_hash)
                 if curr.is_challenge_sub_block(self.constants):
                     icc_challenge = curr.challenge_block_info_hash
+                    icc_iters = uint64(total_iters - curr.total_iters)
                 else:
                     assert curr.finished_infused_challenge_slot_hashes is not None
                     icc_challenge = curr.finished_infused_challenge_slot_hashes[-1]
+                    icc_iters = sub_slot_iters
                 assert icc_challenge is not None
         else:
             # This is on an empty slot
             cc_start_element = ClassgroupElement.get_default_element()
+            icc_start_element = ClassgroupElement.get_default_element()
             iters = sub_slot_iters
+            icc_iters = sub_slot_iters
 
-            # The icc should only be present if the previous slot had an icc too
+            # The icc should only be present if the previous slot had an icc too, and not deficit 0 (just finished slot)
             icc_challenge = (
                 last_slot.infused_challenge_chain.get_hash()
-                if last_slot is not None and last_slot.infused_challenge_chain is not None
+                if last_slot is not None
+                and last_slot.infused_challenge_chain is not None
+                and last_slot.reward_chain.deficit != self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
                 else None
             )
 
         # Validate cc VDF
+        partial_cc_vdf_info = VDFInfo(
+            cc_challenge,
+            iters,
+            eos.challenge_chain.challenge_chain_end_of_slot_vdf.output,
+        )
+        # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
+        if eos.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
+            partial_cc_vdf_info,
+            number_of_iterations=sub_slot_iters,
+        ):
+            return None
         if not eos.proofs.challenge_chain_slot_proof.is_valid(
             self.constants,
             cc_start_element,
-            eos.challenge_chain.challenge_chain_end_of_slot_vdf,
-            VDFInfo(cc_challenge, iters, eos.challenge_chain.challenge_chain_end_of_slot_vdf.output),
+            partial_cc_vdf_info,
         ):
             return None
+
         # Validate reward chain VDF
         if not eos.proofs.reward_chain_slot_proof.is_valid(
             self.constants,
@@ -244,18 +262,25 @@ class FullNodeStore:
             return None
 
         if icc_challenge is not None:
+            assert icc_start_element is not None
+            assert icc_iters is not None
+            assert eos.infused_challenge_chain is not None
             assert eos.infused_challenge_chain is not None
             assert eos.proofs.infused_challenge_chain_slot_proof is not None
 
+            partial_icc_vdf_info = VDFInfo(
+                icc_challenge,
+                iters,
+                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
+            )
+            # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
+            if eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
+                partial_icc_vdf_info,
+                number_of_iterations=icc_iters,
+            ):
+                return None
             if not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                self.constants,
-                ClassgroupElement.get_default_element(),
-                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                VDFInfo(
-                    icc_challenge,
-                    iters,
-                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
-                ),
+                self.constants, icc_start_element, partial_icc_vdf_info
             ):
                 return None
         else:
