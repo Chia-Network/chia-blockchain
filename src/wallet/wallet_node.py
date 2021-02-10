@@ -201,6 +201,9 @@ class WalletNode:
         if self.sync_task is not None:
             self.sync_task.cancel()
             self.sync_task = None
+        if self.peer_task is not None:
+            self.peer_task.cancel()
+            self.peer_task = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
