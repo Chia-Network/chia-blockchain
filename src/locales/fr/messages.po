@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-08 21:40\n"
+"PO-Revision-Date: 2021-02-10 12:11\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -47,7 +47,7 @@ msgstr ""
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "Actions"
-msgstr ""
+msgstr "Åtgärder"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -59,7 +59,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:70
 msgid "Add Wallet"
-msgstr ""
+msgstr "Lägg till plånbok"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -196,7 +196,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:29
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia-plånbok"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -249,7 +249,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Anslut"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
@@ -258,28 +258,28 @@ msgstr ""
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:179
 msgid "Connected"
-msgstr ""
+msgstr "Ansluten"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Ansluter till plånbok"
 
 #: src/components/fullNode/FullNode.jsx:177
 msgid "Connection Status"
-msgstr ""
+msgstr "Anslutningsstatus"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Anslutningsstatus:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Anslutningstyp"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
-msgstr ""
+msgstr "Anslutningar"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:460
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -336,7 +336,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:251
 msgid "Create user wallet"
-msgstr ""
+msgstr "Skapa användarplånbok"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -375,7 +375,7 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
-msgstr ""
+msgstr "Ta bort"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
@@ -465,7 +465,7 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "Odlaren är inte ansluten"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
@@ -573,15 +573,15 @@ msgstr ""
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "Värdnamn"
 
 #: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "IP address"
-msgstr ""
+msgstr "IP-adress"
 
 #: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "IP address / host"
-msgstr ""
+msgstr "IP-adress/värd"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
@@ -664,7 +664,7 @@ msgstr ""
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.jsx:99
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB upp/ner"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
@@ -685,7 +685,7 @@ msgstr ""
 
 #: src/components/wallet/WalletAdd.tsx:34
 msgid "New Wallet"
-msgstr ""
+msgstr "Ny plånbok"
 
 #: src/components/block/Block.jsx:353
 #: src/components/wallet/WalletAdd.tsx:49
@@ -713,7 +713,7 @@ msgstr ""
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Node ID"
-msgstr ""
+msgstr "Node-ID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 msgid "None of your plots have passed the plot filter yet."
@@ -742,7 +742,7 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:181
 #: src/components/fullNode/FullNode.jsx:190
 msgid "Not connected"
-msgstr ""
+msgstr "Ej ansluten"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
@@ -938,7 +938,7 @@ msgstr ""
 #: src/components/fullNode/FullNodeConnections.jsx:96
 #: src/components/fullNode/FullNodeConnections.jsx:168
 msgid "Port"
-msgstr ""
+msgstr "Port"
 
 #: src/components/block/Block.jsx:348
 msgid "Previous"
@@ -1013,7 +1013,7 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "SB Height"
-msgstr ""
+msgstr "SB-höjd"
 
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
@@ -1053,7 +1053,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:103
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Välj plånbokstyp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1198,7 +1198,7 @@ msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Den fullständiga nod din odlare är ansluten till är nedan.<0>Läs mer</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
@@ -1366,7 +1366,7 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
-msgstr ""
+msgstr "Typ"
 
 #: src/components/fullNode/FullNode.jsx:114
 msgid "Unfinished"
@@ -1374,7 +1374,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Unik identifierare"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -1387,7 +1387,7 @@ msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 msgid "View Log"
-msgstr ""
+msgstr "Visa logg"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
@@ -1411,11 +1411,11 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:120
 msgid "Wallets"
-msgstr ""
+msgstr "Plånböcker"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Vill du tjäna mer Chia? Lägg till fler plottar till din odling."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
@@ -1423,7 +1423,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:207
 msgid "Weight"
-msgstr ""
+msgstr "Vikt"
 
 #: src/components/block/Block.jsx:210
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
@@ -1443,7 +1443,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
-msgstr ""
+msgstr "Ja"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1464,29 +1464,29 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:108
 msgid "connections:"
-msgstr ""
+msgstr "anslutningar:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:102
 msgid "height:"
-msgstr ""
+msgstr "höjd:"
 
 #: src/components/wallet/Wallets.tsx:96
 msgid "not synced"
-msgstr ""
+msgstr "ej synkad"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:87
 msgid "status:"
-msgstr ""
+msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:94
 msgid "synced"
-msgstr ""
+msgstr "synkad"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:92
 msgid "syncing"
-msgstr ""
+msgstr "synkar"
 
