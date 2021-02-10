@@ -23,6 +23,6 @@ def get_vdf_info_and_proof(
         number_iters,
     )
 
-    output = ClassgroupElement(result[:form_size])
+    output = ClassgroupElement.from_bytes(result[:form_size])
     proof_bytes = result[form_size : 2 * form_size]
     return VDFInfo(challenge_hash, number_iters, output), VDFProof(uint8(0), proof_bytes)
