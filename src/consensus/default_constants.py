@@ -23,6 +23,8 @@ testnet_kwargs = {
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
+    # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
+    # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     "GENESIS_CHALLENGE": bytes32([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
         "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
