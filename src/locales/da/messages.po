@@ -8,7 +8,7 @@ msgstr ""
 "Language: da\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-10 13:22\n"
+"PO-Revision-Date: 2021-02-10 14:44\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -585,113 +585,113 @@ msgstr "IP addresse / host"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr ""
+msgstr "Hvis ikke valgt, vil som standard vælge den midlertidlige folder."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr ""
+msgstr "Importer Pung fra mnemonik"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr ""
+msgstr "Importer fra mnemonik (24 ord)"
 
 #: src/components/fullNode/FullNode.jsx:41
 msgid "In Progress"
-msgstr ""
+msgstr "Igangværende"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Incoming"
-msgstr ""
+msgstr "Indgående"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:19
 msgid "Index"
-msgstr ""
+msgstr "Indeks"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "Indikerer hvis dette offer er lavet er os"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "Indikerer hvad tidspunkt dette offer er accepteret"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr ""
+msgstr "Info Pakke"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
-msgstr ""
+msgstr "Start Beløb"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "Initialiser en Takst Begrænset Bruger Pung:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "Interval"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "K-Size"
-msgstr ""
+msgstr "K-Størrelse"
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
-msgstr ""
+msgstr "Nøgler"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "Last Attempted Proof"
-msgstr ""
+msgstr "Sidste Prøvet Løsning"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "Last Height Farmed"
-msgstr ""
+msgstr "Sidste Højde Farmet"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:27
 msgid "Latest Block Challenges"
-msgstr ""
+msgstr "Sidste Blok Udfordring"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:71
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "Lokal Harvester Plotfiler"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
-msgstr ""
+msgstr "Logger ind"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.jsx:99
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB Up/Down"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
-msgstr ""
+msgstr "Minutter"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
-msgstr ""
+msgstr "Mere hukommelse øger hastighed en smule"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr ""
+msgstr "Min Pubkey"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:470
 #: src/components/wallet/standard/WalletStandard.tsx:398
 msgid "New Address"
-msgstr ""
+msgstr "Ny Addresse"
 
 #: src/components/wallet/WalletAdd.tsx:34
 msgid "New Wallet"
-msgstr ""
+msgstr "Ny Pung"
 
 #: src/components/block/Block.jsx:353
 #: src/components/wallet/WalletAdd.tsx:49
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr ""
+msgstr "Næste"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
@@ -899,216 +899,216 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr ""
+msgstr "Plotfiler"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr ""
+msgstr "Plotfiler Passeret Filter"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "Plotfiler er allokeret plads på din harddisk brugt til at farme og tjene Chia. <0>Lær mere</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
-msgstr ""
+msgstr "Plotter"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr ""
+msgstr "Plotte i parallel can spare tid. Ellers tilføj plot til kø."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "Pool Key"
-msgstr ""
+msgstr "Pool Nøgle"
 
 #: src/components/block/Block.jsx:259
 msgid "Pool Public Key"
-msgstr ""
+msgstr "Pool Public Nøgle"
 
 #: src/components/block/Block.jsx:267
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "Pool Puzzle Hash"
 
 #: src/components/block/Block.jsx:305
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "Pool Belønning Beløb"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
 #: src/components/fullNode/FullNodeConnections.jsx:96
 #: src/components/fullNode/FullNodeConnections.jsx:168
 msgid "Port"
-msgstr ""
+msgstr "Port"
 
 #: src/components/block/Block.jsx:348
 msgid "Previous"
-msgstr ""
+msgstr "Tidligere"
 
 #: src/components/block/Block.jsx:222
 msgid "Previous Block Hash"
-msgstr ""
+msgstr "Tidligere Blok Hash"
 
 #: src/components/block/Block.jsx:217
 msgid "Previous Sub Block Hash"
-msgstr ""
+msgstr "Tidligere Under Blok Hash"
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Privat nøgle med public fingeraftryk {fingerprint}"
 
 #: src/components/block/Block.jsx:251
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "Bevis af Plads Størrelse"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:25
 msgid "Proofs Found"
-msgstr ""
+msgstr "Beviser Fundet"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "Pubnøgle"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
-msgstr ""
+msgstr "I kø"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "RAM max forbrug"
 
 #: src/components/wallet/Wallets.tsx:40
 msgid "RL Wallet"
-msgstr ""
+msgstr "RL Pung"
 
 #: src/components/wallet/create/WalletCreate.jsx:125
 msgid "Rate Limited"
-msgstr ""
+msgstr "Takst Begrænset"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Takst Begrænset Info"
 
 #: src/components/wallet/create/WalletCreate.jsx:227
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Takst Begrænset Indstillinger"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Takst Begrænset Bruger Pung Opsætning"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:452
 #: src/components/wallet/standard/WalletStandard.tsx:380
 msgid "Receive Address"
-msgstr ""
+msgstr "Modtager Addresse"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Opdater Plotfiler"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr ""
+msgstr "Omdøb"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "SB Height"
-msgstr ""
+msgstr "SB Højde"
 
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "Gem"
 
 #: src/components/fullNode/FullNode.jsx:394
 msgid "Search"
-msgstr ""
+msgstr "Søg"
 
 #: src/components/fullNode/FullNode.jsx:377
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Søg blok efter header hash"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Sekundær midlertidlig folder placering"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Vælg 2. midlertidlig Folder"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Vælg Endelig Folder"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr ""
+msgstr "Vælg Nøgle"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Vælg Bud"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Vælg Midlertidlig Folder"
 
 #: src/components/wallet/create/WalletCreate.jsx:103
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Vælg Pung Type"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Vælg den endelige folder hvor du vil have plotfilen gemt. Vi foreslår ar du bruger en stor langsom harddisk (såsom en ekstern HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Vælg en midlertidlig folder hvor du vil har plotfilen gemt. Vi foreslår at du bruger en hurtig SSD."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "Valgt"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr ""
+msgstr "Sælg"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:434
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:796
 #: src/components/wallet/standard/WalletStandard.tsx:362
 msgid "Send"
-msgstr ""
+msgstr "Send"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Send denne info pakke til din Takst Begrænset Pung bruger som skal bruge det til at sætte deres pung op:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Send din pubnøgle til din Takst Begrænset Pund adminstrator:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Vis Avanceret Indstillinger"
 
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Side"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "Log Ind"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Brugbart Beløb"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "Brugbart Beløb Per Interval"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:569
