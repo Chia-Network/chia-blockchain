@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-08 21:40\n"
+"PO-Revision-Date: 2021-02-10 10:00\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -32,52 +32,52 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Hyväksy"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Hyväksyntäaika:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Action"
-msgstr ""
+msgstr "Toiminto"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "Actions"
-msgstr ""
+msgstr "Toiminnot"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Lisää"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Lisää Plot-hakemisto"
 
 #: src/components/wallet/Wallets.tsx:70
 msgid "Add Wallet"
-msgstr ""
+msgstr "Lisää Lompakko"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Lisää Plot-tiedosto"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:404
 #: src/components/wallet/coloured/WalletColoured.tsx:456
 #: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "Address"
-msgstr ""
+msgstr "Osoite"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:746
 #: src/components/wallet/standard/WalletStandard.tsx:334
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Osoite / Tehtävätiiviste"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -86,11 +86,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:768
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Amount"
-msgstr ""
+msgstr "Määrä"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:414
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Määrä ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
@@ -104,13 +104,13 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Palaa"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Balance"
-msgstr ""
+msgstr "Saldo"
 
 #: src/components/block/Block.jsx:309
 msgid "Base Farmer Reward Amount"
@@ -130,15 +130,15 @@ msgstr ""
 #: src/components/block/Block.jsx:150
 #: src/components/block/Block.jsx:329
 msgid "Block"
-msgstr ""
+msgstr "Lohko"
 
 #: src/components/block/Block.jsx:241
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "Lohkon VDF-iteraatiot"
 
 #: src/components/fullNode/FullNode.jsx:383
 msgid "Block hash"
-msgstr ""
+msgstr "Lohkon tiiviste"
 
 #: src/components/block/Block.jsx:153
 msgid "Block with hash {headerHash} does not exists."
@@ -146,13 +146,13 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:345
 msgid "Blocks"
-msgstr ""
+msgstr "Lohkot"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Selaa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:51
 msgid "But you are currently farming <0/>"
@@ -162,11 +162,11 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:32
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Osta"
 
 #: src/components/wallet/Wallets.tsx:33
 msgid "CC Wallet"
-msgstr ""
+msgstr "Värilanttilompakko"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
@@ -176,7 +176,7 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Peruuta"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
