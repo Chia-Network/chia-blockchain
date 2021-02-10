@@ -45,10 +45,11 @@ testnet_kwargs = {
     # Max block cost in virtual bytes
     "MAX_BLOCK_COST": 213684,
     # MAX block cost in clvm cost units = MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT
-    # 1 vByte = 108 clvm cost units
-    "CLVM_COST_RATIO_CONSTANT": 108,
+    # 1 vByte = 49 clvm cost units
+    # This constant is calculated using tests/util/benchmark_cost.py
+    "CLVM_COST_RATIO_CONSTANT": 49,
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
-    "MAX_BLOCK_COST_CLVM": 23077872,
+    "MAX_BLOCK_COST_CLVM": 10470516,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "SUB_BLOCKS_CACHE_SIZE": 5000,  # todo almog SUB_BLOCKS_CACHE_SIZE = EPOCH_SUB_BLOCKS + 3*MAX_SUB_SLOT_SUB_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,

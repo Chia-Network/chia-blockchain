@@ -102,7 +102,7 @@ if __name__ == "__main__":
     AggSig has assigned cost of 20vBytes, simple CLVM program is benchmarked against it.
     """
     wallet_tool = WalletTool()
-    benchmark_all_operators()
+    # benchmark_all_operators()
     secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
     puzzles = []
     solutions = []
@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     for i in range(0, 1000):
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
-        public_key = private_key.public_key()
+        public_key = private_key.get_g1()
         solution = wallet_tool.make_solution(
             {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
         )
