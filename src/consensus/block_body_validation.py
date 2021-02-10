@@ -21,9 +21,10 @@ from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
+from src.types.announcement import Announcement
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.full_block import FullBlock, additions_for_npc
+from src.types.full_block import FullBlock, additions_for_npc, announcements_for_npc
 from src.types.name_puzzle_condition import NPC
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
@@ -141,6 +142,7 @@ async def validate_block_body(
     removals: List[bytes32] = []
     coinbase_additions: List[Coin] = list(expected_reward_coins)
     additions: List[Coin] = []
+    announcements: List[Announcement] = []
     npc_list: List[NPC] = []
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
@@ -168,6 +170,7 @@ async def validate_block_body(
             removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
 
         additions = additions_for_npc(npc_list)
+        announcements = announcements_for_npc(npc_list)
 
     # 9. Check that the correct cost is in the transactions info
     if block.transactions_info.cost != cost:
@@ -343,9 +346,11 @@ async def validate_block_body(
     pairs_msgs = []
     for npc in npc_list:
         unspent = removal_coin_records[npc.coin_name]
+        assert height is not None
+        unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
             unspent,
-            removal_coin_records,
+            announcements,
             npc.condition_dict,
             prev_transaction_block_height,
             block.foliage_block.timestamp,

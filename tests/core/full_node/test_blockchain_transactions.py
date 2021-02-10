@@ -14,6 +14,7 @@ from src.util.ints import uint64
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
+from src.types.announcement import Announcement
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -530,7 +531,7 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_coin_consumed(self, two_nodes):
+    async def test_assert_announcement_consumed(self, two_nodes):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -561,14 +562,20 @@ class TestBlockchainTransactions:
                 spend_coin_block_2 = coin
 
         # This condition requires block2 coinbase to be spent
-        block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_CONSUMED, [spend_coin_block_2.name()])
+        block1_cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_ANNOUNCEMENT,
+            [Announcement(spend_coin_block_2.name(), bytes("test", "utf-8")).name()],
+        )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
         )
 
         # This condition requires block1 coinbase to be spent
-        block2_cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_CONSUMED, [spend_coin_block_1.name()])
+        block2_cvp = ConditionVarPair(
+            ConditionOpcode.CREATE_ANNOUNCEMENT,
+            [bytes("test", "utf-8")],
+        )
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_2, block2_dic
@@ -588,7 +595,7 @@ class TestBlockchainTransactions:
         # Try to validate that block
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_COIN_CONSUMED_FAILED
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
         # bundle_together contains both transactions
         bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])

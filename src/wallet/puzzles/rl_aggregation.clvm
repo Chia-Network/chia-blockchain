@@ -3,7 +3,7 @@
       wallet-coin-primary-input
       wallet-coin-amount)
 
-    (defconstant ASSERT_COIN_CONSUMED 52)
+    (defconstant ASSERT_ANNOUNCEMENT 52)
     (defconstant ASSERT_MY_COIN_ID 53)
 
     (defun sha256tree (tree)
@@ -20,7 +20,7 @@
         (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
 
     (defun-inline input-of-lock ()
-        (list ASSERT_COIN_CONSUMED (sha256 (parent-coin-id) (create-lock-puzzlehash my-id) 0)))
+        (list ASSERT_ANNOUNCEMENT (sha256 (parent-coin-id) my-id)))
 
     (list (create-my-id-condition)
           (input-of-lock))

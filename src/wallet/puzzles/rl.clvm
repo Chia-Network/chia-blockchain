@@ -11,6 +11,7 @@
     (defconstant CLAWBACK_MODE 3)
     (defconstant AGGSIG 50)
     (defconstant CREATE_COIN 51)
+    (defconstant CREATE_ANNOUNCEMENT 60)
     (defconstant ASSERT_MY_COIN_ID 53)
     (defconstant ASSERT_BLOCK_AGE_EXCEEDS 56)
 
@@ -37,14 +38,12 @@
                     (unquote (c or (r args)))))
             0))
 
-    (include create-lock-puzzlehash.clvm)
-
     (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
-        (list CREATE_COIN
-              (create-lock-puzzlehash (sha256 consolidating_primary_input
-                                              consolidating_coin_puzzle_hash
-                                              outgoing_amount))
-              0))
+        (list CREATE_ANNOUNCEMENT
+              (sha256 consolidating_primary_input
+                      consolidating_coin_puzzle_hash
+                      outgoing_amount))
+              )
 
     (defun aggregation (origin_id
                         (my_puzzle_hash

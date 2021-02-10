@@ -162,15 +162,6 @@ def spend_bundle_for_spendable_ccs(
         coin_solution = CoinSolution(input_coins[index], full_solution)
         coin_solutions.append(coin_solution)
 
-    # now add solutions to consume the lock coins
-
-    for _ in range(N):
-        prev_index = (_ - 1) % N
-        prev_coin = spendable_cc_list[prev_index].coin
-        this_coin = spendable_cc_list[_].coin
-        subtotal = subtotals[_]
-        coin_solution = coin_solution_for_lock_coin(prev_coin, subtotal, this_coin)
-        coin_solutions.append(coin_solution)
     if sigs is None or sigs == []:
         return SpendBundle(coin_solutions, NULL_SIGNATURE)
     else:

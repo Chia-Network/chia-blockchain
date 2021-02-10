@@ -1,23 +1,12 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Set
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.coin_record import CoinRecord
-from src.types.sized_bytes import bytes32
+from src.types.announcement import Announcement
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode
 from src.util.errors import Err
 from src.util.ints import uint64, uint32
-
-
-def blockchain_assert_coin_consumed(condition: ConditionVarPair, removed: Dict[bytes32, CoinRecord]) -> Optional[Err]:
-    """
-    Checks coin consumed conditions
-    Returns None if conditions are met, if not returns the reason why it failed
-    """
-    coin_name = condition.vars[0]
-    if coin_name not in removed:
-        return Err.ASSERT_COIN_CONSUMED_FAILED
-    return None
 
 
 def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
@@ -91,9 +80,20 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent
     return None
 
 
+def blockchain_assert_announcement(condition: ConditionVarPair, announcements: Set[bytes]) -> Optional[Err]:
+    """
+    Check if an announcement is included in the list of announcements
+    """
+    announcement_hash = condition.vars[0]
+    if announcement_hash not in announcements:
+        return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+
+    return None
+
+
 def blockchain_check_conditions_dict(
     unspent: CoinRecord,
-    removed: Dict[bytes32, CoinRecord],
+    announcements: List[Announcement],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     prev_transaction_block_height: uint32,
     timestamp: uint64,
@@ -101,14 +101,15 @@ def blockchain_check_conditions_dict(
     """
     Check all conditions against current state.
     """
+    announcement_names = set([a.name() for a in announcements])
     for con_list in conditions_dict.values():
         cvp: ConditionVarPair
         for cvp in con_list:
             error = None
-            if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = blockchain_assert_coin_consumed(cvp, removed)
-            elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
+            if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = blockchain_assert_my_coin_id(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                error = blockchain_assert_announcement(cvp, announcement_names)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
                 error = blockchain_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:

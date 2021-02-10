@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 from .coin import Coin
 from .program import Program
-from src.util.chain_utils import additions_for_solution
+from .announcement import Announcement
+from src.util.chain_utils import additions_for_solution, announcements_for_solution
 from src.util.streamable import Streamable, streamable
 
 
@@ -22,3 +23,6 @@ class CoinSolution(Streamable):
 
     def additions(self) -> List[Coin]:
         return additions_for_solution(self.coin.name(), self.solution)
+
+    def announcements(self) -> List[Announcement]:
+        return announcements_for_solution(self.coin.name(), self.solution)
