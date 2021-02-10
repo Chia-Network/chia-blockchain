@@ -830,7 +830,7 @@ class Timelord:
 
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
-                    output = ClassgroupElement(y_bytes[:form_size])
+                    output = ClassgroupElement.from_bytes(y_bytes[:form_size])
                     time_taken = time.time() - self.chain_start_time[chain]
                     ips = int(iterations_needed / time_taken * 10) / 10
                     log.info(
