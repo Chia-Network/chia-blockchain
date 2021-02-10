@@ -164,53 +164,38 @@ class FullNodeStore:
         """
         assert len(self.finished_sub_slots) >= 1
 
-        if len(self.finished_sub_slots) == 0:
-            log.warning("no finished sub slots")
-            return None
-
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
-        last_slot_ch = (
+
+        cc_challenge: bytes32 = (
             last_slot.challenge_chain.get_hash() if last_slot is not None else self.constants.GENESIS_CHALLENGE
         )
-        last_slot_rc_hash = (
+        rc_challenge: bytes32 = (
             last_slot.reward_chain.get_hash() if last_slot is not None else self.constants.GENESIS_CHALLENGE
         )
+        icc_challenge: Optional[bytes32] = None
+
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
             if slot == eos:
                 return []
 
-        if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != last_slot_ch:
+        if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != cc_challenge:
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
             return None
 
-        # TODO: Fix
-        # if not eos.proofs.challenge_chain_slot_proof.is_valid(
-        #     self.constants, ClassgroupElement.get_default_element(),
-        #     replace(eos.challenge_chain.challenge_chain_end_of_slot_vdf,
-        # ):
-        #     return False
-        # if not eos.proofs.reward_chain_slot_proof.is_valid(
-        #     self.constants, ClassgroupElement.get_default_element(), eos.reward_chain.end_of_slot_vdf
-        # ):
-        #     return False
-        # if eos.infused_challenge_chain is not None:
-        #     # TODO: Fix
-        #     if not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-        #         self.constants,
-        #         ClassgroupElement.get_default_element(),
-        #         eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-        #     ):
-        #         return False
+        if peak is None:
+            sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
+        else:
+            sub_slot_iters = peak.sub_slot_iters
 
-        total_iters = uint128(
-            last_slot_iters + eos.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
-        )
+        total_iters = uint128(last_slot_iters + sub_slot_iters)
 
         if peak is not None and peak.total_iters > last_slot_iters:
             # Peak is in this slot
             rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
+            cc_start_element = peak.challenge_vdf_output
+            iters = uint64(total_iters - peak.total_iters)
             if peak.reward_infusion_new_challenge != rc_challenge:
                 # We don't have this challenge hash yet
                 if rc_challenge not in self.future_eos_cache:
@@ -218,46 +203,65 @@ class FullNodeStore:
                 self.future_eos_cache[rc_challenge].append(eos)
                 log.warning(f"Don't have challenge hash {rc_challenge}")
                 return None
-            if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
-                log.error(
-                    f"Invalid iterations {peak.total_iters} {eos.reward_chain.end_of_slot_vdf.number_of_iterations} "
-                    f"{total_iters}"
-                )
-                return None
 
             if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
                     curr = sub_blocks.sub_block_record(curr.prev_hash)
                 if curr.is_challenge_sub_block(self.constants):
-                    icc_start_challenge_hash = curr.challenge_block_info_hash
+                    icc_challenge = curr.challenge_block_info_hash
                 else:
                     assert curr.finished_infused_challenge_slot_hashes is not None
-                    icc_start_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
-                if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                    assert eos.infused_challenge_chain is not None
-                    if (
-                        eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
-                        != icc_start_challenge_hash
-                    ):
-                        return None
+                    icc_challenge = curr.finished_infused_challenge_slot_hashes[-1]
+                assert icc_challenge is not None
         else:
-            # Empty slot after the peak
-            if eos.reward_chain.end_of_slot_vdf.challenge != last_slot_rc_hash:
-                return None
+            # This is on an empty slot
+            cc_start_element = ClassgroupElement.get_default_element()
+            iters = sub_slot_iters
 
-            if (
-                last_slot is not None
-                and last_slot.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+            # The icc should only be present if the previous slot had an icc too
+            icc_challenge = (
+                last_slot.infused_challenge_chain.get_hash()
+                if last_slot is not None and last_slot.infused_challenge_chain is not None
+                else None
+            )
+
+        # Validate cc VDF
+        if not eos.proofs.challenge_chain_slot_proof.is_valid(
+            self.constants,
+            cc_start_element,
+            eos.challenge_chain.challenge_chain_end_of_slot_vdf,
+            VDFInfo(cc_challenge, iters, eos.challenge_chain.challenge_chain_end_of_slot_vdf.output),
+        ):
+            return None
+        # Validate reward chain VDF
+        if not eos.proofs.reward_chain_slot_proof.is_valid(
+            self.constants,
+            ClassgroupElement.get_default_element(),
+            eos.reward_chain.end_of_slot_vdf,
+            VDFInfo(rc_challenge, iters, eos.reward_chain.end_of_slot_vdf.output),
+        ):
+            return None
+
+        if icc_challenge is not None:
+            assert eos.infused_challenge_chain is not None
+            assert eos.proofs.infused_challenge_chain_slot_proof is not None
+
+            if not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
+                self.constants,
+                ClassgroupElement.get_default_element(),
+                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                VDFInfo(
+                    icc_challenge,
+                    iters,
+                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
+                ),
             ):
-                assert eos.infused_challenge_chain is not None
-                assert last_slot.infused_challenge_chain is not None
-                # Have infused challenge chain that must be verified
-                if (
-                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
-                    != last_slot.infused_challenge_chain.get_hash()
-                ):
-                    return None
+                return None
+        else:
+            # This is the first sub slot and it's empty, therefore there is no ICC
+            if eos.infused_challenge_chain is not None or eos.proofs.infused_challenge_chain_slot_proof is not None:
+                return None
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
