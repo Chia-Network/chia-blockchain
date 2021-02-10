@@ -378,11 +378,11 @@ def chia_init(root_path: Path):
     # These are the files that will be migrated
     MANIFEST: List[str] = [
         "config",
-        "db/blockchain_v23.db",
-        "wallet",
+        # "db/blockchain_v23.db",
+        # "wallet",
     ]
 
-    for version_number in range(chia_minor_release_number() - 1, 8, -1):
+    for version_number in range(chia_minor_release_number() - 1, 18, -1):
         old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % version_number))
         manifest = MANIFEST
         print(f"Checking {old_path}")
