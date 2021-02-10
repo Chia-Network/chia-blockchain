@@ -795,7 +795,7 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle):
 
 def handle_sub_epoch_segment_start(curr_header: HeaderBlock, header_blocks: Dict[bytes32, HeaderBlock]):
     sub_slots: List[SubSlotData] = []
-    while curr_header.sub_block_height > 0:
+    while curr_header.height > 0:
         for sub_slot in reversed(curr_header.finished_sub_slots):
             sub_slots.insert(0, handle_finished_slots(sub_slot))
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
