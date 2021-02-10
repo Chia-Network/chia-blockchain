@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-10 11:02\n"
+"PO-Revision-Date: 2021-02-10 15:50\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -437,7 +437,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:251
 msgid "Estimated network space"
-msgstr ""
+msgstr "Estimoitu verkkoavaruus"
 
 #: src/components/fullNode/FullNode.jsx:257
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -499,15 +499,15 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:781
 #: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Fee"
-msgstr ""
+msgstr "Palkkio"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:421
 msgid "Fee (TXCH)"
-msgstr ""
+msgstr "Palkkio (XCH)"
 
 #: src/components/block/Block.jsx:313
 msgid "Fees Amount"
-msgstr ""
+msgstr "Palkkiosumma"
 
 #: src/components/block/Block.jsx:322
 msgid "Fees Puzzle Hash"
@@ -517,16 +517,16 @@ msgstr ""
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Filename"
-msgstr ""
+msgstr "Tiedoston nimi"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "Lopullinen hakemisto"
 
 #: src/components/fullNode/FullNode.jsx:40
 #: src/components/fullNode/FullNode.jsx:113
 msgid "Finished"
-msgstr ""
+msgstr "Valmis"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:418
@@ -560,7 +560,7 @@ msgstr ""
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "Help translate"
-msgstr ""
+msgstr "Auta kääntämisessä"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
@@ -634,11 +634,11 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "K-Size"
-msgstr ""
+msgstr "K-Arvo"
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
-msgstr ""
+msgstr "Avaimet"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "Last Attempted Proof"
@@ -658,7 +658,7 @@ msgstr ""
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
-msgstr ""
+msgstr "Kirjaudutaan"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
@@ -668,7 +668,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
-msgstr ""
+msgstr "Minuuttia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
@@ -691,19 +691,19 @@ msgstr ""
 #: src/components/wallet/WalletAdd.tsx:49
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr ""
+msgstr "Seuraava"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
-msgstr ""
+msgstr "Alias"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "No"
-msgstr ""
+msgstr "Ei"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "Ei vielä farmilohkoja"
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "No previous transactions"
@@ -713,7 +713,7 @@ msgstr ""
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Node ID"
-msgstr ""
+msgstr "Noodin tunnus"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 msgid "None of your plots have passed the plot filter yet."
@@ -728,21 +728,21 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:149
 msgid "Not Synced"
-msgstr ""
+msgstr "Ei synkronoitu"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "Hyväksymättä vielä"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "Vahvistamatta vielä"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:181
 #: src/components/fullNode/FullNode.jsx:190
 msgid "Not connected"
-msgstr ""
+msgstr "Ei yhteyttä"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
