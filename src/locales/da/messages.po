@@ -8,7 +8,7 @@ msgstr ""
 "Language: da\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-08 21:40\n"
+"PO-Revision-Date: 2021-02-10 13:22\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,64 +20,64 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:43
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "*Vil du udforske Chia's blokke yderligerer? Se <0>Chia Explorer</0> bygget af en open source udvikler."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "0 automatically chooses bucket count"
-msgstr ""
+msgstr "0 vælger automatisk antallet af bucket"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "En harvester er en service der kører på en maskine hvor plot filen(filerne) er opbevaret. En farmer og harvester snakker med en fuld node for at følge kædens nuværende form. Se dit netværk af tilsluttede harvesters her under Lær mere"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Accepter"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Accepteret tidspunkt:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Action"
-msgstr ""
+msgstr "Aktion"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "Actions"
-msgstr ""
+msgstr "Aktioner"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Tilføj"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Tilføj plot folder"
 
 #: src/components/wallet/Wallets.tsx:70
 msgid "Add Wallet"
-msgstr ""
+msgstr "Tilføj pung"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Tilføj et plot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:404
 #: src/components/wallet/coloured/WalletColoured.tsx:456
 #: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "Address"
-msgstr ""
+msgstr "Addresse"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:746
 #: src/components/wallet/standard/WalletStandard.tsx:334
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Addresse / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -86,73 +86,73 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:768
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Amount"
-msgstr ""
+msgstr "Beløb"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:414
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Beløb ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "Beløb for Start Coin"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Er du sikker du vil slette plotfilen? Plotfilen kan ikke gendannes."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Tilbage"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Balance"
-msgstr ""
+msgstr "Saldo"
 
 #: src/components/block/Block.jsx:309
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Grund belønningsbeløb"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:29
 #: src/components/farm/FarmLatestBlockChallenges.tsx:35
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "Herunder er den nuværende blok udfordring. Du har muligvis en løsning til disse udfordringer. Disse blokke afventer løsninger."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "Bedste skøn over de sidste 5 timer"
 
 #: src/components/block/Block.jsx:126
 #: src/components/block/Block.jsx:138
 #: src/components/block/Block.jsx:150
 #: src/components/block/Block.jsx:329
 msgid "Block"
-msgstr ""
+msgstr "Blok"
 
 #: src/components/block/Block.jsx:241
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "Blok VDF iterationer"
 
 #: src/components/fullNode/FullNode.jsx:383
 msgid "Block hash"
-msgstr ""
+msgstr "Blok hash"
 
 #: src/components/block/Block.jsx:153
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "Blok med hash {headerHash} eksisterer ikke."
 
 #: src/components/fullNode/FullNode.jsx:345
 msgid "Blocks"
-msgstr ""
+msgstr "Blokke"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Gennemse"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:51
 msgid "But you are currently farming <0/>"
@@ -162,57 +162,57 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:32
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Køb"
 
 #: src/components/wallet/Wallets.tsx:33
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC Pung"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "Kan sikkerhedskopieres af et mnemonisk seed"
 
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Annuller"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Annuller og Brug"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "Advarsel, sletning af disse plot filer vil slette dem for evigt. Check om dit drev er ordenligt forbundet."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Udfordring"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Udfordringshash"
 
 #: src/components/wallet/Wallets.tsx:29
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia Pung"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Vælg et antal af plotfiler"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Vælg plotfil størrelse"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Nedluking af node og server"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Mønter:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
@@ -221,23 +221,23 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "Farve Info"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Farve Bånd"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Farve:"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Farvet Mønt"
 
 #: src/components/wallet/create/WalletCreate.jsx:163
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Farvet Mønt Indstillinger"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -245,7 +245,7 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:36
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Bekræftet ved højde {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
@@ -470,11 +470,11 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "Farmer kører ikke"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "Farmer tjener blok belønning og transaktionsgebyrer ved at bruge diskplads til at hjælpe netværket med at sikre transaktioner. Her vil dine plotfiler blive listet når de er tilføjet. <0>Lær mere</0>"
 
 #: src/components/farm/Farm.tsx:13
 #: src/components/farm/FarmerStatus.tsx:27
@@ -499,51 +499,51 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:781
 #: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Fee"
-msgstr ""
+msgstr "Gebyr"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:421
 msgid "Fee (TXCH)"
-msgstr ""
+msgstr "Gebyr (TXCH)"
 
 #: src/components/block/Block.jsx:313
 msgid "Fees Amount"
-msgstr ""
+msgstr "Gebyr Beløb"
 
 #: src/components/block/Block.jsx:322
 msgid "Fees Puzzle Hash"
-msgstr ""
+msgstr "Gebyr Puzzle Hash"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Filename"
-msgstr ""
+msgstr "Filnavn"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "Endelig folder placering"
 
 #: src/components/fullNode/FullNode.jsx:40
 #: src/components/fullNode/FullNode.jsx:113
 msgid "Finished"
-msgstr ""
+msgstr "Færdig"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:418
 msgid "Full Node"
-msgstr ""
+msgstr "Fuld Node"
 
 #: src/components/fullNode/FullNode.jsx:304
 msgid "Full Node Status"
-msgstr ""
+msgstr "Fuld Node Status"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "Generer Ny Farve"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "Harvester ID"
-msgstr ""
+msgstr "Harvester ID"
 
 #: src/components/fullNode/FullNode.jsx:54
 msgid "Header Hash"
@@ -556,32 +556,32 @@ msgstr ""
 #: src/components/block/Block.jsx:203
 #: src/components/fullNode/FullNode.jsx:84
 msgid "Height"
-msgstr ""
+msgstr "Højde"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "Help translate"
-msgstr ""
+msgstr "Hjælp med oversættelse"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr ""
+msgstr "Gem Avanceret Indstillinger"
 
 #: src/components/wallet/WalletHistory.tsx:58
 msgid "History"
-msgstr ""
+msgstr "Historie"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "Host Navn"
 
 #: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "IP address"
-msgstr ""
+msgstr "IP addresse"
 
 #: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "IP address / host"
-msgstr ""
+msgstr "IP addresse / host"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
