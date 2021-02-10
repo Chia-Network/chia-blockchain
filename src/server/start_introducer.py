@@ -5,6 +5,7 @@ from typing import Dict
 from src.introducer.introducer import Introducer
 from src.introducer.introducer_api import IntroducerAPI
 from src.server.outbound_message import NodeType
+from src.types.sized_bytes import bytes32
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 
@@ -20,6 +21,7 @@ def service_kwargs_for_introducer(
     root_path: pathlib.Path,
     config: Dict,
 ) -> Dict:
+    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
     introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)
 
@@ -31,6 +33,7 @@ def service_kwargs_for_introducer(
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
         server_listen_ports=[config["port"]],
+        network_id=genesis_challenge,
     )
     return kwargs
 

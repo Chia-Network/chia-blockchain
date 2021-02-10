@@ -5,6 +5,7 @@ from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.types.sized_bytes import bytes32
 from src.util.block_tools import test_constants
 from src.wallet.wallet_node import WalletNode
 from src.rpc.wallet_rpc_api import WalletRpcApi
@@ -29,7 +30,13 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Keychain,
 ) -> Dict:
-    node = WalletNode(config, keychain, root_path, consensus_constants=consensus_constants)
+    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
+    node = WalletNode(
+        config,
+        keychain,
+        root_path,
+        consensus_constants=consensus_constants.replace(GENESIS_CHALLENGE=genesis_challenge),
+    )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
 
@@ -49,6 +56,7 @@ def service_kwargs_for_wallet(
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
         auth_connect_peers=False,
+        network_id=genesis_challenge,
     )
     port = config.get("port")
     if port is not None:

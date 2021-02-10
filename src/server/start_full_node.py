@@ -10,6 +10,7 @@ from src.full_node.full_node_api import FullNodeAPI
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
+from src.types.sized_bytes import bytes32
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 
@@ -23,7 +24,12 @@ SERVICE_NAME = "full_node"
 def service_kwargs_for_full_node(
     root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-    full_node = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
+    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
+    full_node = FullNode(
+        config,
+        root_path=root_path,
+        consensus_constants=consensus_constants.replace(GENESIS_CHALLENGE=genesis_challenge),
+    )
     api = FullNodeAPI(full_node)
 
     upnp_list = []
@@ -40,6 +46,7 @@ def service_kwargs_for_full_node(
         upnp_ports=upnp_list,
         server_listen_ports=[config["port"]],
         on_connect_callback=full_node.on_connect,
+        network_id=genesis_challenge,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])

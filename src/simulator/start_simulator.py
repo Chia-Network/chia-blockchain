@@ -28,6 +28,7 @@ def service_kwargs_for_full_node_simulator(
     bt: BlockTools,
 ) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
+    genesis_challenge = config["network_genesis_challenges"][config["selected_network"]]
 
     node = FullNode(
         config,
@@ -48,6 +49,7 @@ def service_kwargs_for_full_node_simulator(
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
+        network_id=genesis_challenge,
     )
     return kwargs
 

@@ -112,7 +112,6 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        self.constants = constants
         create_default_chia_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)
         self.keychain.delete_all_keys()
@@ -143,7 +142,14 @@ class BlockTools:
         self.plots: Dict[Path, PlotInfo] = loaded_plots
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
+        self._config["selected_network"] = "testnet0"
+        for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
+            self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
+        self.genesis_challenge = bytes32(
+            bytes.fromhex(self._config["network_genesis_challenges"][self._config["selected_network"]])
+        )
+        self.constants = constants.replace(GENESIS_CHALLENGE=self.genesis_challenge)
 
     def init_plots(self, root_path):
         plot_dir = get_plot_dir()
