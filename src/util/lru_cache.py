@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 class LRUCache:
     def __init__(self, capacity: int):
-        self.cache: OrderedDict[Any, Any] = OrderedDict()
+        self.cache: OrderedDict = OrderedDict()
         self.capacity = capacity
 
     def get(self, key: Any) -> Optional[Any]:
