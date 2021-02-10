@@ -225,17 +225,20 @@ class TestCCWallet:
         assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
         spend_bundle = await cc_wallet_2.generate_zero_val_coin()
-        await time_out_assert(
-            15, self.tx_in_pool, True, full_node_api.full_node.mempool_manager, spend_bundle.name()
-        )
+        await time_out_assert(15, self.tx_in_pool, True, full_node_api.full_node.mempool_manager, spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
+        async def unspent_count():
+            unspent: List[WalletCoinRecord] = list(
+                await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(cc_wallet_2.id())
+            )
+            return len(unspent)
+
+        await time_out_assert(15, unspent_count, 1)
         unspent: List[WalletCoinRecord] = list(
             await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(cc_wallet_2.id())
         )
-
-        assert len(unspent) == 1
         assert unspent.pop().coin.amount == 0
 
     @pytest.mark.asyncio
