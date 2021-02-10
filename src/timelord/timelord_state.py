@@ -59,7 +59,7 @@ class LastState:
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
             self.last_weight = state.reward_chain_sub_block.weight
-            self.last_height = state.reward_chain_sub_block.sub_block_height
+            self.last_height = state.reward_chain_sub_block.height
             self.total_iters = state.reward_chain_sub_block.total_iters
             self.last_peak_challenge = state.reward_chain_sub_block.get_hash()
             self.difficulty = state.difficulty
@@ -138,7 +138,7 @@ class LastState:
             return None
         assert self.peak is not None
         if (
-            self.peak.reward_chain_sub_block.sub_block_height + 1
+            self.peak.reward_chain_sub_block.height + 1
         ) % self.constants.SUB_EPOCH_SUB_BLOCKS <= self.constants.MAX_SUB_SLOT_SUB_BLOCKS and (self.get_deficit() == 0):
             return self.sub_epoch_summary
         return None

@@ -8,7 +8,7 @@ dependencies = [
     "chiabip158==0.19",  # bip158-style wallet filters
     "chiapos==0.12.43",  # proof of space
     "clvm==0.8.0",
-    "clvm_rs==0.1.1",
+    "clvm_rs==0.1.2",
     "clvm_tools==0.3.0",
     "aiohttp==3.7.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
@@ -20,7 +20,7 @@ dependencies = [
     "cryptography==3.3.2",  # Python cryptography library for TLS
     "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
-    "PyYAML==5.3.1",  # Used for config file format
+    "PyYAML==5.4.1",  # Used for config file format
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI

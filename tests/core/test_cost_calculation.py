@@ -106,6 +106,19 @@ class TestCostCalculation:
 
         coin_name = npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        assert error is None
+
+    async def test_clvm_strict_mode(self):
+        program = SerializedProgram.from_bytes(
+            binutils.assemble(
+                "(i (a (q 0xfe) (q ())) (q ()) (q ((51 "
+                "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 200))))"
+            ).as_bin()
+        )
+        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+        assert error is not None
+        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        assert error is None
 
     @pytest.mark.asyncio
     async def test_tx_generator_speed(self):
@@ -121,7 +134,6 @@ class TestCostCalculation:
         assert len(npc) == 687
         log.info(f"Time spent: {duration}")
 
-        # TODO: lower the threshold after this is optimized
         assert duration < 3
 
     @pytest.mark.asyncio

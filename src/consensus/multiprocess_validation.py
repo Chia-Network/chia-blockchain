@@ -103,7 +103,7 @@ async def pre_validate_blocks_multiprocessing(
     recent_sub_blocks_compressed: Dict[bytes32, SubBlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
-    if blocks[0].sub_block_height > 0:
+    if blocks[0].height > 0:
         if not sub_blocks.contains_sub_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
         curr = sub_blocks.sub_block_record(blocks[0].prev_header_hash)
@@ -112,7 +112,7 @@ async def pre_validate_blocks_multiprocessing(
             curr.sub_epoch_summary_included is None
             or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
             or num_sub_slots_found < num_sub_slots_to_look_for
-        ) and curr.sub_block_height > 0:
+        ) and curr.height > 0:
             if num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS or num_sub_slots_found < num_sub_slots_to_look_for:
                 recent_sub_blocks_compressed[curr.header_hash] = curr
 
@@ -131,7 +131,7 @@ async def pre_validate_blocks_multiprocessing(
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for sub_block in blocks:
-        if sub_block.sub_block_height != 0 and prev_sb is None:
+        if sub_block.height != 0 and prev_sb is None:
             prev_sb = sub_blocks.sub_block_record(sub_block.prev_header_hash)
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, sub_block, prev_sb, sub_blocks)
 

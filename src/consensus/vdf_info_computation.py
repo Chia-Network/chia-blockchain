@@ -90,7 +90,7 @@ def get_signage_point_vdf_info(
         else:
             found_sub_slots = []
         sp_pre_sb: Optional[SubBlockRecord] = None
-        while len(found_sub_slots) < 2 and curr.sub_block_height > 0:
+        while len(found_sub_slots) < 2 and curr.height > 0:
             if sp_pre_sb is None and curr.total_iters < sp_total_iters:
                 sp_pre_sb = curr
             curr = sub_blocks.sub_block_record(curr.prev_hash)

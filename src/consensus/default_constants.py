@@ -37,17 +37,18 @@ testnet_kwargs = {
     "MEMPOOL_BLOCK_BUFFER": 10,
     # Max coin amount uint(1 << 64)
     "MAX_COIN_AMOUNT": 0xFFFFFFFFFFFFFFFF,
-    # Raw size per block target = 1,000,000 bytes
+    # Targeting twice bitcoin's block size of 1.3MB per block
+    # Raw size per block target = 1,300,000 * 600 / 47 = approx 100 KB
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes
-    # floor(1,000,000 / 219) * 457 = 2086662 (size in vBytes)
+    # floor(100 * 1024 / 219) * 457 = 213684 (size in vBytes)
     # Max block cost in virtual bytes
-    "MAX_BLOCK_COST": 2086662,
+    "MAX_BLOCK_COST": 213684,
     # MAX block cost in clvm cost units = MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT
     # 1 vByte = 108 clvm cost units
     "CLVM_COST_RATIO_CONSTANT": 108,
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
-    "MAX_BLOCK_COST_CLVM": 225359496,
+    "MAX_BLOCK_COST_CLVM": 23077872,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "SUB_BLOCKS_CACHE_SIZE": 5000,  # todo almog SUB_BLOCKS_CACHE_SIZE = EPOCH_SUB_BLOCKS + 3*MAX_SUB_SLOT_SUB_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,

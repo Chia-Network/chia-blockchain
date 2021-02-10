@@ -19,37 +19,37 @@ from src.util.significant_bits import (
 def _get_blocks_at_height(
     sub_blocks: BlockchainInterface,
     prev_sb: SubBlockRecord,
-    target_sub_block_height: uint32,
+    target_height: uint32,
     max_num_sub_blocks: uint32 = uint32(1),
 ) -> List[SubBlockRecord]:
     """
-    Return a consecutive list of SubBlockRecords starting at target_sub_block_height, returning a maximum of
+    Return a consecutive list of SubBlockRecords starting at target_height, returning a maximum of
     max_num_sub_blocks. Assumes all sub-block records are present. Does a slot linear search, if the sub-blocks are not
     in the path of the peak.
 
     Args:
         sub_blocks: dict from header hash to SubBlockRecord.
         prev_sb: prev_sb (to start backwards search).
-        target_sub_block_height: target sub-block to start
+        target_height: target sub-block to start
         max_num_sub_blocks: max number of sub-blocks to fetch (although less might be fetched)
 
     """
-    if sub_blocks.contains_sub_height(prev_sb.sub_block_height):
-        header_hash = sub_blocks.sub_height_to_hash(prev_sb.sub_block_height)
+    if sub_blocks.contains_height(prev_sb.height):
+        header_hash = sub_blocks.height_to_hash(prev_sb.height)
         if header_hash == prev_sb.header_hash:
             # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
             block_list: List[SubBlockRecord] = []
-            for h in range(target_sub_block_height, target_sub_block_height + max_num_sub_blocks):
-                assert sub_blocks.contains_sub_height(uint32(h))
+            for h in range(target_height, target_height + max_num_sub_blocks):
+                assert sub_blocks.contains_height(uint32(h))
                 block_list.append(sub_blocks.height_to_sub_block_record(uint32(h)))
             return block_list
         # slow fetching, goes back one by one
     curr_b: SubBlockRecord = prev_sb
     target_blocks = []
-    while curr_b.sub_block_height >= target_sub_block_height:
-        if curr_b.sub_block_height < target_sub_block_height + max_num_sub_blocks:
+    while curr_b.height >= target_height:
+        if curr_b.height < target_height + max_num_sub_blocks:
             target_blocks.append(curr_b)
-        if curr_b.sub_block_height == 0:
+        if curr_b.height == 0:
             break
         curr_b = sub_blocks.sub_block_record(curr_b.prev_hash)
     return list(reversed(target_blocks))
@@ -78,12 +78,12 @@ def _get_last_block_in_previous_epoch(
      before the final sub-block in the epoch. Block at height 0 is an exception.
     # TODO: check edge cases here
     """
-    height_in_next_epoch = prev_sb.sub_block_height + constants.MAX_SUB_SLOT_SUB_BLOCKS + 3
+    height_in_next_epoch = prev_sb.height + constants.MAX_SUB_SLOT_SUB_BLOCKS + 3
     height_epoch_surpass: uint32 = uint32(height_in_next_epoch - (height_in_next_epoch % constants.EPOCH_SUB_BLOCKS))
     height_prev_epoch_surpass: uint32 = uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS)
     if (height_in_next_epoch - height_epoch_surpass) > (3 * constants.MAX_SUB_SLOT_SUB_BLOCKS):
         raise ValueError(
-            f"Height at {prev_sb.sub_block_height + 1} should not create a new epoch, it is far past the epoch barrier"
+            f"Height at {prev_sb.height + 1} should not create a new epoch, it is far past the epoch barrier"
         )
 
     if height_prev_epoch_surpass == 0:
@@ -108,9 +108,9 @@ def _get_last_block_in_previous_epoch(
     fetched_index: int = constants.MAX_SUB_SLOT_SUB_BLOCKS
     last_sb_in_slot: SubBlockRecord = fetched_blocks[fetched_index]
     fetched_index += 1
-    assert last_sb_in_slot.sub_block_height == height_prev_epoch_surpass - 1
+    assert last_sb_in_slot.height == height_prev_epoch_surpass - 1
     curr_b: SubBlockRecord = fetched_blocks[fetched_index]
-    assert curr_b.sub_block_height == height_prev_epoch_surpass
+    assert curr_b.height == height_prev_epoch_surpass
 
     # Wait until the slot finishes with a challenge chain infusion at start of slot
     # Note that there are no overflow blocks at the start of new epochs
@@ -129,7 +129,7 @@ def _get_last_block_in_previous_epoch(
 
 def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
-    sub_block_height: uint32,
+    height: uint32,
     deficit: uint8,
     sub_blocks: BlockchainInterface,
     prev_header_hash: Optional[bytes32],
@@ -137,28 +137,28 @@ def can_finish_sub_and_full_epoch(
 ) -> Tuple[bool, bool]:
     """
     Returns a bool tuple
-    first bool is true if the next sub-slot after sub_block_height will form part of a new sub-epoch. Therefore
-    sub_block height is the last sub-block, and sub_block_height + 1 is in a new sub-epoch.
-    second bool is true if the next sub-slot after sub_block_height will form part of a new sub-epoch and epoch.
-    Therefore, sub_block height is the last sub-block, and sub_block_height + 1 is in a new epoch.
+    first bool is true if the next sub-slot after height will form part of a new sub-epoch. Therefore
+    sub_block height is the last sub-block, and height + 1 is in a new sub-epoch.
+    second bool is true if the next sub-slot after height will form part of a new sub-epoch and epoch.
+    Therefore, sub_block height is the last sub-block, and height + 1 is in a new epoch.
     Warning: This assumes the previous sub-block is not the last sub-block in the sub-epoch (which means this
     current block does not include a sub epoch summary). TODO: check, simplify, and test code
 
     Args:
         constants: consensus constants being used for this chain
-        sub_block_height: sub-block height of the (potentially) last sub-block in the sub-epoch
-        deficit: deficit of the sub-block at sub_block_height
+        height: sub-block height of the (potentially) last sub-block in the sub-epoch
+        deficit: deficit of the sub-block at height
         sub_blocks: dictionary from header hash to SBR of all included SBR
-        prev_header_hash: prev_header hash of the sub-block at sub_block_height, assuming not genesis
+        prev_header_hash: prev_header hash of the sub-block at height, assuming not genesis
         can_finish_soon: this is useful when sending SES to timelords. We might not be able to finish it, but we will
             soon (within MAX_SUB_SLOT_SUB_BLOCKS)
     """
 
-    if sub_block_height < constants.SUB_EPOCH_SUB_BLOCKS - constants.MAX_SUB_SLOT_SUB_BLOCKS - 1:
+    if height < constants.SUB_EPOCH_SUB_BLOCKS - constants.MAX_SUB_SLOT_SUB_BLOCKS - 1:
         return False, False
 
     # Used along with "can_finish_soon"
-    future_sb_height = sub_block_height + constants.MAX_SUB_SLOT_SUB_BLOCKS + 1
+    future_sb_height = height + constants.MAX_SUB_SLOT_SUB_BLOCKS + 1
 
     assert prev_header_hash is not None
 
@@ -169,27 +169,25 @@ def can_finish_sub_and_full_epoch(
 
         # Disqualify blocks which are too far past in height
         # The maximum possible height which includes sub epoch summary
-        if (sub_block_height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
             return False, False
-        check_already_included = (sub_block_height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1
+        check_already_included = (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1
     else:
         # If can_finish_soon=True, we still want to make sure that we will be finishing a sub-epoch soon.
         # Here we check if a theoretical future block can finish the sub-epoch
         if (
-            (sub_block_height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS
+            (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS
             and future_sb_height % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS
         ):
             return False, False
         # Don't check already included if we are not at the sub-epoch barrier yet.
-        check_already_included = (
-            1 < (sub_block_height + 1) % constants.SUB_EPOCH_SUB_BLOCKS <= constants.MAX_SUB_SLOT_SUB_BLOCKS
-        )
+        check_already_included = 1 < (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS <= constants.MAX_SUB_SLOT_SUB_BLOCKS
 
     # For sub-blocks which equal 0 or 1, we assume that the sub-epoch has not been finished yet
     if check_already_included:
         already_included_ses = False
         curr: SubBlockRecord = sub_blocks.sub_block_record(prev_header_hash)
-        while curr.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
+        while curr.height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
             if curr.sub_epoch_summary_included is not None:
                 already_included_ses = True
                 break
@@ -200,11 +198,11 @@ def can_finish_sub_and_full_epoch(
 
     # For checking new epoch, make sure the epoch sub blocks are aligned
     if not can_finish_soon:
-        if (sub_block_height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        if (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
             return True, False
     else:
         if (
-            (sub_block_height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS
+            (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS
             and future_sb_height % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS
         ):
             return True, False
@@ -216,7 +214,7 @@ def get_next_sub_slot_iters(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
     prev_header_hash: bytes32,
-    sub_block_height: uint32,
+    height: uint32,
     curr_sub_slot_iters: uint64,
     deficit: uint8,
     new_slot: bool,
@@ -224,23 +222,23 @@ def get_next_sub_slot_iters(
     skip_epoch_check=False,
 ) -> uint64:
     """
-    Returns the slot iterations required for the next block after the one at sub_block_height, where new_slot is true
+    Returns the slot iterations required for the next block after the one at height, where new_slot is true
     iff the next block will be in the next slot.
 
     Args:
         constants: consensus constants being used for this chain
         sub_blocks: dictionary from header hash to SBR of all included SBR
         prev_header_hash: header hash of the previous sub-block
-        sub_block_height: the sub-block height of the sub-block to look at
-        curr_sub_slot_iters: sub-slot iters at the infusion point of the sub_block at sub_block_height
-        deficit: deficit of the sub_block at sub_block_height
-        new_slot: whether or not there is a new slot after sub_block_height
-        signage_point_total_iters: signage point iters of the sub_block at sub_block_height
+        height: the sub-block height of the sub-block to look at
+        curr_sub_slot_iters: sub-slot iters at the infusion point of the sub_block at height
+        deficit: deficit of the sub_block at height
+        new_slot: whether or not there is a new slot after height
+        signage_point_total_iters: signage point iters of the sub_block at height
         skip_epoch_check: don't check correct epoch
     """
-    next_sub_block_height: uint32 = uint32(sub_block_height + 1)
+    next_height: uint32 = uint32(height + 1)
 
-    if next_sub_block_height < (constants.EPOCH_SUB_BLOCKS - constants.MAX_SUB_SLOT_SUB_BLOCKS):
+    if next_height < (constants.EPOCH_SUB_BLOCKS - constants.MAX_SUB_SLOT_SUB_BLOCKS):
         return uint64(constants.SUB_SLOT_ITERS_STARTING)
 
     if not sub_blocks.contains_sub_block(prev_header_hash):
@@ -251,7 +249,7 @@ def get_next_sub_slot_iters(
     # If we are in the same epoch, return same ssi
     if not skip_epoch_check:
         _, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, sub_block_height, deficit, sub_blocks, prev_header_hash, False
+            constants, height, deficit, sub_blocks, prev_header_hash, False
         )
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
@@ -299,7 +297,7 @@ def get_next_difficulty(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
     prev_header_hash: bytes32,
-    sub_block_height: uint32,
+    height: uint32,
     current_difficulty: uint64,
     deficit: uint8,
     new_slot: bool,
@@ -315,16 +313,16 @@ def get_next_difficulty(
         constants: consensus constants being used for this chain
         sub_blocks: dictionary from header hash to SBR of all included SBR
         prev_header_hash: header hash of the previous sub-block
-        sub_block_height: the sub-block height of the sub-block to look at
-        current_difficulty: difficulty at the infusion point of the sub_block at sub_block_height
-        deficit: deficit of the sub_block at sub_block_height
-        new_slot: whether or not there is a new slot after sub_block_height
-        signage_point_total_iters: signage point iters of the sub_block at sub_block_height
+        height: the sub-block height of the sub-block to look at
+        current_difficulty: difficulty at the infusion point of the sub_block at height
+        deficit: deficit of the sub_block at height
+        new_slot: whether or not there is a new slot after height
+        signage_point_total_iters: signage point iters of the sub_block at height
         skip_epoch_check: don't check correct epoch
     """
-    next_sub_block_height: uint32 = uint32(sub_block_height + 1)
+    next_height: uint32 = uint32(height + 1)
 
-    if next_sub_block_height < (constants.EPOCH_SUB_BLOCKS - constants.MAX_SUB_SLOT_SUB_BLOCKS):
+    if next_height < (constants.EPOCH_SUB_BLOCKS - constants.MAX_SUB_SLOT_SUB_BLOCKS):
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
@@ -336,7 +334,7 @@ def get_next_difficulty(
     # If we are in the same slot as previous sub-block, return same difficulty
     if not skip_epoch_check:
         _, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, sub_block_height, deficit, sub_blocks, prev_header_hash, False
+            constants, height, deficit, sub_blocks, prev_header_hash, False
         )
         if not new_slot or not can_finish_epoch:
             return current_difficulty
@@ -405,7 +403,7 @@ def get_sub_slot_iters_and_difficulty(
     if prev_sb is None:
         return constants.SUB_SLOT_ITERS_STARTING, constants.DIFFICULTY_STARTING
 
-    if prev_sb.sub_block_height != 0:
+    if prev_sb.height != 0:
         prev_difficulty: uint64 = uint64(prev_sb.weight - sub_blocks.sub_block_record(prev_sb.prev_hash).weight)
     else:
         # prev block is genesis
@@ -416,7 +414,7 @@ def get_sub_slot_iters_and_difficulty(
         constants,
         sub_blocks,
         prev_sb.prev_hash,
-        prev_sb.sub_block_height,
+        prev_sb.height,
         prev_difficulty,
         prev_sb.deficit,
         len(header_block.finished_sub_slots) > 0,
@@ -427,7 +425,7 @@ def get_sub_slot_iters_and_difficulty(
         constants,
         sub_blocks,
         prev_sb.prev_hash,
-        prev_sb.sub_block_height,
+        prev_sb.height,
         prev_sb.sub_slot_iters,
         prev_sb.deficit,
         len(header_block.finished_sub_slots) > 0,

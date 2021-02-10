@@ -16,7 +16,6 @@ class TransactionRecord(Streamable):
     Used for storing transaction data and status in wallets.
     """
 
-    confirmed_at_sub_height: uint32
     confirmed_at_height: uint32
     created_at_time: uint64
     to_puzzle_hash: bytes32

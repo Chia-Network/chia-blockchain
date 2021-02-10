@@ -38,7 +38,9 @@ class uint64(StructStream):
 class uint128(int):
     @classmethod
     def parse(cls, f: BinaryIO) -> Any:
-        n = int.from_bytes(f.read(16), "big", signed=False)
+        read_bytes = f.read(16)
+        assert len(read_bytes) == 16
+        n = int.from_bytes(read_bytes, "big", signed=False)
         assert n <= (2 ** 128) - 1 and n >= 0
         return cls(n)
 
@@ -51,7 +53,9 @@ class int512(int):
     # Uses 65 bytes to fit in the sign bit
     @classmethod
     def parse(cls, f: BinaryIO) -> Any:
-        n = int.from_bytes(f.read(65), "big", signed=True)
+        read_bytes = f.read(65)
+        assert len(read_bytes) == 65
+        n = int.from_bytes(read_bytes, "big", signed=True)
         assert n <= (2 ** 512) - 1 and n >= -(2 ** 512)
         return cls(n)
 

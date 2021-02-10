@@ -86,11 +86,11 @@ class TestRpc:
             assert block == blocks[-1]
             assert (await client.get_sub_block(bytes([1] * 32))) is None
 
-            assert (await client.get_sub_block_record_by_sub_height(2)).header_hash == blocks[2].header_hash
+            assert (await client.get_sub_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
             assert len((await client.get_sub_block_records(0, 100))) == num_blocks + 1
 
-            assert (await client.get_sub_block_record_by_sub_height(100)) is None
+            assert (await client.get_sub_block_record_by_height(100)) is None
 
             ph = list(blocks[-1].get_included_reward_coins())[0].puzzle_hash
             coins = await client.get_unspent_coins(ph)
