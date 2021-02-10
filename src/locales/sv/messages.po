@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-10 17:03\n"
+"PO-Revision-Date: 2021-02-10 17:59\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -66,7 +66,7 @@ msgstr "Lägg till plånbok"
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Lägg till en plott"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:404
 #: src/components/wallet/coloured/WalletColoured.tsx:456
@@ -456,7 +456,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:429
 #: src/components/wallet/standard/WalletStandard.tsx:357
 msgid "Farm"
-msgstr ""
+msgstr "Odling"
 
 #: src/components/block/Block.jsx:263
 msgid "Farmer Puzzle Hash"
@@ -474,7 +474,7 @@ msgstr "Odlaren körs inte"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "Odlare tjänar blockbelöningar och transaktionsavgifter genom att dedikera ledigt utrymme till nätverket för att hjälpa till att säkra transaktioner. Detta är vad din odling gör när du väl har lagt till en plott. <0>Läs mer</0>"
 
 #: src/components/farm/Farm.tsx:13
 #: src/components/farm/FarmerStatus.tsx:27
@@ -489,7 +489,7 @@ msgstr "Odlar"
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr ""
+msgstr "Odlingsstatus"
 
 #: src/components/wallet/WalletHistory.tsx:50
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -907,7 +907,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "Plottar allokeras utrymme på din hårddisk som används för att odla och tjäna Chia.<0>Läs mer</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
@@ -1182,7 +1182,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 msgid "TXCH Farming Rewards"
-msgstr ""
+msgstr "TXCH-odlingsbelöningar"
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
 msgid "TXCH Fees Collected"
