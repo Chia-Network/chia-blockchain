@@ -150,7 +150,7 @@ async def show_async(args, parser):
 
             if peak is not None:
                 if peak.is_block:
-                    peak_time = peak.foliage_block.timestamp
+                    peak_time = peak.timestamp
                 else:
                     peak_hash = peak.header_hash
                     curr = await client.get_sub_block_record(peak_hash)
@@ -176,7 +176,7 @@ async def show_async(args, parser):
                 print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
                 print("Total iterations since the start of the blockchain:", total_iters)
                 print("")
-                print("SB Height |   Height  | Hash:")
+                print("SB Height |   Hash:")
 
                 added_blocks: List[SubBlockRecord] = []
                 curr = await client.get_sub_block_record(peak.header_hash)

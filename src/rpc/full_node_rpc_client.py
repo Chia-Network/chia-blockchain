@@ -44,9 +44,7 @@ class FullNodeRpcClient(RpcClient):
                 return None
         except Exception:
             return None
-        json_res = response["sub_block_record"]
-        del json_res["reward_claims_incorporated"]
-        return SubBlockRecord.from_json_dict(json_res)
+        return SubBlockRecord.from_json_dict(response["sub_block_record"])
 
     async def get_unfinished_sub_block_headers(self) -> List[UnfinishedHeaderBlock]:
         response = await self.fetch("get_unfinished_sub_block_headers", {})
