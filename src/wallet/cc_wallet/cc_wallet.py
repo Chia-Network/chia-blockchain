@@ -270,7 +270,7 @@ class CCWallet:
             await self.wallet_state_manager.create_action(
                 name="request_puzzle_solution",
                 wallet_id=self.id(),
-                type=self.type(),
+                wallet_type=self.type(),
                 callback="puzzle_solution_received",
                 done=False,
                 data=data_str,
@@ -281,7 +281,7 @@ class CCWallet:
         height = response.height
         puzzle: Program = response.puzzle
         r = uncurry_cc(puzzle)
-        header_hash = self.wallet_state_manager.blockchain.sub_height_to_hash(height)
+        header_hash = self.wallet_state_manager.blockchain.height_to_hash(height)
         block: Optional[
             HeaderBlockRecord
         ] = await self.wallet_state_manager.blockchain.block_store.get_header_block_record(header_hash)
