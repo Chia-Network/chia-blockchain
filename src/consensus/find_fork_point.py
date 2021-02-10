@@ -15,14 +15,14 @@ def find_fork_point_in_chain(
     Returns -1 if chains have no common ancestor
     * assumes forkpoint is loaded in sub_blocks
     """
-    while sub_block_2.sub_block_height > 0 or sub_block_1.sub_block_height > 0:
-        if sub_block_2.sub_block_height > sub_block_1.sub_block_height:
+    while sub_block_2.height > 0 or sub_block_1.height > 0:
+        if sub_block_2.height > sub_block_1.height:
             sub_block_2 = sub_blocks.sub_block_record(sub_block_2.prev_hash)
-        elif sub_block_1.sub_block_height > sub_block_2.sub_block_height:
+        elif sub_block_1.height > sub_block_2.height:
             sub_block_1 = sub_blocks.sub_block_record(sub_block_1.prev_hash)
         else:
             if sub_block_2.header_hash == sub_block_1.header_hash:
-                return sub_block_2.sub_block_height
+                return sub_block_2.height
             sub_block_2 = sub_blocks.sub_block_record(sub_block_2.prev_hash)
             sub_block_1 = sub_blocks.sub_block_record(sub_block_1.prev_hash)
     if sub_block_2 != sub_block_1:

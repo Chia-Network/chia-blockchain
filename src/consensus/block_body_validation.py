@@ -44,8 +44,7 @@ async def validate_block_body(
     coin_store: CoinStore,
     peak: Optional[SubBlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
-    sub_height: uint32,
-    height: Optional[uint32],
+    height: uint32,
     cached_cost_result: Optional[CostResult] = None,
     fork_point_with_peak: Optional[uint32] = None,
 ) -> Optional[Err]:
@@ -55,12 +54,8 @@ async def validate_block_body(
     validates correctly, or an Err if something does not validate.
     """
     if isinstance(block, FullBlock):
-        assert sub_height == block.sub_block_height
-        if height is not None:
-            assert height == block.height
-            assert block.is_block()
-        else:
-            assert not block.is_block()
+        assert height == block.height
+    prev_transaction_block_height: uint32 = uint32(0)
 
     # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
     # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
@@ -100,18 +95,19 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
-    if sub_height > 0:
+    if height > 0:
         # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
         prev_block = sub_blocks.sub_block_record(block.foliage_block.prev_block_hash)
+        prev_transaction_block_height = prev_block.height
 
         assert prev_block.fees is not None
         pool_coin = create_pool_coin(
-            prev_block.sub_block_height,
+            prev_block.height,
             prev_block.pool_puzzle_hash,
             calculate_pool_reward(prev_block.height),
         )
         farmer_coin = create_farmer_coin(
-            prev_block.sub_block_height,
+            prev_block.height,
             prev_block.farmer_puzzle_hash,
             uint64(calculate_base_farmer_reward(prev_block.height) + prev_block.fees),
         )
@@ -120,22 +116,21 @@ async def validate_block_body(
         expected_reward_coins.add(farmer_coin)
 
         # For the second block in the chain, don't go back further
-        if prev_block.sub_block_height > 0:
+        if prev_block.height > 0:
             curr_sb = sub_blocks.sub_block_record(prev_block.prev_hash)
-            curr_height = curr_sb.height
             while not curr_sb.is_block:
                 expected_reward_coins.add(
                     create_pool_coin(
-                        curr_sb.sub_block_height,
+                        curr_sb.height,
                         curr_sb.pool_puzzle_hash,
-                        calculate_pool_reward(curr_height),
+                        calculate_pool_reward(curr_sb.height),
                     )
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
-                        curr_sb.sub_block_height,
+                        curr_sb.height,
                         curr_sb.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr_height),
+                        calculate_base_farmer_reward(curr_sb.height),
                     )
                 )
                 curr_sb = sub_blocks.sub_block_record(curr_sb.prev_hash)
@@ -150,7 +145,7 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    if sub_height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
+    if height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
         return Err.INITIAL_TRANSACTION_FREEZE
 
     if block.transactions_generator is not None:
@@ -223,7 +218,7 @@ async def validate_block_body(
             return Err.DOUBLE_SPEND
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-    if peak is None or sub_height == 0:
+    if peak is None or height == 0:
         fork_sub_h: int = -1
     elif fork_point_with_peak is not None:
         fork_sub_h = fork_point_with_peak
@@ -233,33 +228,30 @@ async def validate_block_body(
     if fork_sub_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.sub_height_to_hash(uint32(fork_sub_h)))
+        last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.height_to_hash(uint32(fork_sub_h)))
         assert last_sb_in_common is not None
-        if last_sb_in_common.is_block:
-            coin_store_reorg_height = last_sb_in_common.height
-        else:
-            coin_store_reorg_height = last_sb_in_common.height - 1
+        coin_store_reorg_height = last_sb_in_common.height
 
     # Get additions and removals since (after) fork_h but not including this block
     additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
     removals_since_fork: Set[bytes32] = set()
     coinbases_since_fork: Dict[bytes32, uint32] = {}
 
-    if sub_height > 0:
+    if height > 0:
         curr: Optional[FullBlock] = await block_store.get_full_block(block.prev_header_hash)
         assert curr is not None
 
-        while curr.sub_block_height > fork_sub_h:
+        while curr.height > fork_sub_h:
             removals_in_curr, additions_in_curr = curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
                 removals_since_fork.add(c_name)
             for c in additions_in_curr:
-                additions_since_fork[c.name()] = (c, curr.sub_block_height)
+                additions_since_fork[c.name()] = (c, curr.height)
 
             for coinbase_coin in curr.get_included_reward_coins():
-                additions_since_fork[coinbase_coin.name()] = (coinbase_coin, curr.sub_block_height)
-                coinbases_since_fork[coinbase_coin.name()] = curr.sub_block_height
-            if curr.sub_block_height == 0:
+                additions_since_fork[coinbase_coin.name()] = (coinbase_coin, curr.height)
+                coinbases_since_fork[coinbase_coin.name()] = curr.height
+            if curr.height == 0:
                 break
             curr = await block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
@@ -271,7 +263,7 @@ async def validate_block_body(
             rem_coin: Coin = additions_dic[rem]
             new_unspent: CoinRecord = CoinRecord(
                 rem_coin,
-                sub_height,
+                height,
                 uint32(0),
                 False,
                 False,
@@ -350,13 +342,12 @@ async def validate_block_body(
     pairs_pks = []
     pairs_msgs = []
     for npc in npc_list:
-        assert height is not None
         unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
             unspent,
             removal_coin_records,
             npc.condition_dict,
-            height,
+            prev_transaction_block_height,
             block.foliage_block.timestamp,
         )
         if error:

@@ -19,14 +19,14 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 @streamable
 class RequestPuzzleSolution(Streamable):
     coin_name: bytes32
-    sub_height: uint32
+    height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
 class PuzzleSolutionResponse(Streamable):
     coin_name: bytes32
-    sub_height: uint32
+    height: uint32
     puzzle: Program
     solution: Program
 
@@ -41,7 +41,7 @@ class RespondPuzzleSolution(Streamable):
 @streamable
 class RejectPuzzleSolution(Streamable):
     coin_name: bytes32
-    sub_height: uint32
+    height: uint32
 
 
 @dataclass(frozen=True)
@@ -62,7 +62,7 @@ class TransactionAck(Streamable):
 @streamable
 class NewPeakWallet(Streamable):
     header_hash: bytes32
-    sub_block_height: uint32
+    height: uint32
     weight: uint128
     fork_point_with_previous_peak: uint32
 
@@ -70,7 +70,7 @@ class NewPeakWallet(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RequestSubBlockHeader(Streamable):
-    sub_height: uint32
+    height: uint32
 
 
 @dataclass(frozen=True)
@@ -88,7 +88,7 @@ class RejectHeaderRequest(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RequestRemovals(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
     coin_names: Optional[List[bytes32]]
 
@@ -96,7 +96,7 @@ class RequestRemovals(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RespondRemovals(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, Optional[Coin]]]
     proofs: Optional[List[Tuple[bytes32, bytes]]]
@@ -105,14 +105,14 @@ class RespondRemovals(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RejectRemovalsRequest(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
 class RequestAdditions(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
     puzzle_hashes: Optional[List[bytes32]]
 
@@ -120,7 +120,7 @@ class RequestAdditions(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RespondAdditions(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, List[Coin]]]
     proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]]
@@ -129,27 +129,27 @@ class RespondAdditions(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RejectAdditionsRequest(Streamable):
-    sub_height: uint32
+    height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
 class RequestHeaderBlocks(Streamable):
-    start_sub_height: uint32
-    end_sub_height: uint32
+    start_height: uint32
+    end_height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
 class RejectHeaderBlocks(Streamable):
-    start_sub_height: uint32
-    end_sub_height: uint32
+    start_height: uint32
+    end_height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
 class RespondHeaderBlocks(Streamable):
-    start_sub_height: uint32
-    end_sub_height: uint32
+    start_height: uint32
+    end_height: uint32
     header_blocks: List[HeaderBlock]

@@ -15,12 +15,12 @@ class BlockCache(BlockchainInterface):
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
         headers: Dict[bytes32, HeaderBlock] = {},
-        sub_height_to_hash: Dict[uint32, bytes32] = {},
+        height_to_hash: Dict[uint32, bytes32] = {},
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
     ):
         self._sub_blocks = sub_blocks
         self._headers = headers
-        self._sub_height_to_hash = sub_height_to_hash
+        self._height_to_hash = height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
         self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class BlockCache(BlockchainInterface):
         return self._sub_blocks[header_hash]
 
     def height_to_sub_block_record(self, height: uint32, check_db=False) -> SubBlockRecord:
-        header_hash = self.sub_height_to_hash(height)
+        header_hash = self.height_to_hash(height)
         return self.sub_block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
@@ -38,17 +38,17 @@ class BlockCache(BlockchainInterface):
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self._sub_epoch_summaries[height]
 
-    def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        if height not in self._sub_height_to_hash:
+    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        if height not in self._height_to_hash:
             self.log.warning(f"could not find height in cache {height}")
             return None
-        return self._sub_height_to_hash[height]
+        return self._height_to_hash[height]
 
     def contains_sub_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._sub_blocks
 
-    def contains_sub_height(self, sub_height: uint32) -> bool:
-        return sub_height in self._sub_height_to_hash
+    def contains_height(self, height: uint32) -> bool:
+        return height in self._height_to_hash
 
     async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
         return self._sub_blocks
@@ -66,15 +66,15 @@ class BlockCache(BlockchainInterface):
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
-        self._sub_epoch_segments[sub_epoch_summary_sub_height] = SubEpochSegments(segments)
+        self._sub_epoch_segments[sub_epoch_summary_height] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_sub_height: uint32,
+        sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        segments = self._sub_epoch_segments.get(sub_epoch_summary_sub_height)
+        segments = self._sub_epoch_segments.get(sub_epoch_summary_height)
         if segments is None:
             return None
         return segments.challenge_segments

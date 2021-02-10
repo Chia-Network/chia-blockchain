@@ -107,7 +107,6 @@ class CCWallet:
             raise ValueError("Internal Error, unable to generate new coloured coin")
 
         regular_record = TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
@@ -125,7 +124,6 @@ class CCWallet:
             name=token_bytes(),
         )
         cc_record = TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=cc_coin.puzzle_hash,
@@ -241,7 +239,7 @@ class CCWallet:
         assert self.cc_info.my_genesis_checker is not None
         return bytes(self.cc_info.my_genesis_checker).hex()
 
-    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin], sub_height: uint32):
+    async def coin_added(self, coin: Coin, header_hash: bytes32, removals: List[Coin], height: uint32):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that {coin} was added")
 
@@ -261,7 +259,7 @@ class CCWallet:
                 "data": {
                     "action_data": {
                         "api_name": "request_puzzle_solution",
-                        "sub_height": sub_height,
+                        "height": height,
                         "coin_name": coin.parent_coin_info,
                         "received_coin": coin.name(),
                     }
@@ -272,7 +270,7 @@ class CCWallet:
             await self.wallet_state_manager.create_action(
                 name="request_puzzle_solution",
                 wallet_id=self.id(),
-                type=self.type(),
+                wallet_type=self.type(),
                 callback="puzzle_solution_received",
                 done=False,
                 data=data_str,
@@ -280,10 +278,10 @@ class CCWallet:
 
     async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
         coin_name = response.coin_name
-        sub_height = response.sub_height
+        height = response.height
         puzzle: Program = response.puzzle
         r = uncurry_cc(puzzle)
-        header_hash = self.wallet_state_manager.blockchain.sub_height_to_hash(sub_height)
+        header_hash = self.wallet_state_manager.blockchain.height_to_hash(height)
         block: Optional[
             HeaderBlockRecord
         ] = await self.wallet_state_manager.blockchain.block_store.get_header_block_record(header_hash)
@@ -365,7 +363,6 @@ class CCWallet:
 
         if send:
             regular_record = TransactionRecord(
-                confirmed_at_sub_height=uint32(0),
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
@@ -383,7 +380,6 @@ class CCWallet:
                 name=token_bytes(),
             )
             cc_record = TransactionRecord(
-                confirmed_at_sub_height=uint32(0),
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=cc_puzzle_hash,
@@ -465,7 +461,7 @@ class CCWallet:
             used_coins: Set = set()
 
             # Use older coins first
-            spendable.sort(key=lambda r: r.confirmed_block_sub_height)
+            spendable.sort(key=lambda r: r.confirmed_block_height)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -580,7 +576,6 @@ class CCWallet:
         )
         # TODO add support for array in stored records
         return TransactionRecord(
-            confirmed_at_sub_height=uint32(0),
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=puzzle_hashes[0],

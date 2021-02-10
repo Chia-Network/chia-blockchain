@@ -485,19 +485,19 @@ class Timelord:
                     )
                     if self.last_state.state_type == StateType.FIRST_SUB_SLOT:
                         is_block = True
-                        sub_block_height: uint32 = uint32(0)
+                        height: uint32 = uint32(0)
                     else:
                         is_block = self.last_state.get_last_block_total_iters() < sp_total_iters
-                        sub_block_height: uint32 = self.last_state.get_height() + 1
+                        height: uint32 = self.last_state.get_height() + 1
 
-                    if sub_block_height < 5:
+                    if height < 5:
                         # Don't directly update our state for the first few sub-blocks, because we cannot validate
                         # whether the pre-farm is correct
                         return
 
                     new_reward_chain_sub_block = RewardChainSubBlock(
                         self.last_state.get_weight() + block.difficulty,
-                        sub_block_height,
+                        height,
                         ip_total_iters,
                         block.reward_chain_sub_block.signage_point_index,
                         block.reward_chain_sub_block.pos_ss_cc_challenge_hash,

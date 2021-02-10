@@ -158,17 +158,22 @@ class Streamable:
             inner_type = get_args(f_type)[0]
             full_list: List[inner_type] = []  # type: ignore
             # wjb assert inner_type != get_args(List)[0]  # type: ignore
-            list_size: uint32 = uint32(int.from_bytes(f.read(4), "big"))
+            list_size_bytes = f.read(4)
+            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+            list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
             for list_index in range(list_size):
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
             return full_list
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
-            is_present: bool = f.read(1) == bytes([1])
-            if is_present:
+            is_present_bytes = f.read(1)
+            assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
+            if is_present_bytes == bytes([0]):
+                return None
+            elif is_present_bytes == bytes([1]):
                 return cls.parse_one_item(inner_type, f)  # type: ignore
             else:
-                return None
+                raise ValueError("Optional must be 0 or 1")
         if is_type_Tuple(f_type):
             inner_types = get_args(f_type)
             full_list = []
@@ -176,17 +181,35 @@ class Streamable:
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
             return tuple(full_list)
         if f_type is bool:
-            return bool.from_bytes(f.read(4), "big")
+            bool_byte = f.read(1)
+            assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
+            if bool_byte == bytes([0]):
+                return False
+            elif bool_byte == bytes([1]):
+                return True
+            else:
+                raise ValueError("Bool byte must be 0 or 1")
         if f_type == bytes:
-            list_size = uint32(int.from_bytes(f.read(4), "big"))
-            return f.read(list_size)
+            list_size_bytes = f.read(4)
+            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+            list_size = uint32(int.from_bytes(list_size_bytes, "big"))
+            bytes_read = f.read(list_size)
+            assert bytes_read is not None and len(bytes_read) == list_size
+            return bytes_read
         if hasattr(f_type, "parse"):
             return f_type.parse(f)
         if hasattr(f_type, "from_bytes") and size_hints[f_type.__name__]:
-            return f_type.from_bytes(f.read(size_hints[f_type.__name__]))
+            bytes_to_read = size_hints[f_type.__name__]
+            bytes_read = f.read(bytes_to_read)
+            assert bytes_read is not None and len(bytes_read) == bytes_to_read
+            return f_type.from_bytes(bytes_read)
         if f_type is str:
-            str_size: uint32 = uint32(int.from_bytes(f.read(4), "big"))
-            return bytes.decode(f.read(str_size), "utf-8")
+            str_size_bytes = f.read(4)
+            assert str_size_bytes is not None and len(str_size_bytes) == 4  # Checks for EOF
+            str_size: uint32 = uint32(int.from_bytes(str_size_bytes, "big"))
+            str_read_bytes = f.read(str_size)
+            assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
+            return bytes.decode(str_read_bytes, "utf-8")
         else:
             raise RuntimeError(f"Type {f_type} does not have parse")
 
@@ -226,10 +249,11 @@ class Streamable:
         elif hasattr(f_type, "__bytes__"):
             f.write(bytes(item))
         elif f_type is str:
-            f.write(uint32(len(item)).to_bytes(4, "big"))
-            f.write(item.encode("utf-8"))
+            str_bytes = item.encode("utf-8")
+            f.write(uint32(len(str_bytes)).to_bytes(4, "big"))
+            f.write(str_bytes)
         elif f_type is bool:
-            f.write(int(item).to_bytes(4, "big"))
+            f.write(int(item).to_bytes(1, "big"))
         else:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 

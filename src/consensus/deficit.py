@@ -7,22 +7,22 @@ from src.util.ints import uint32, uint8
 
 def calculate_deficit(
     constants: ConsensusConstants,
-    sub_block_height: uint32,
+    height: uint32,
     prev_sb: Optional[SubBlockRecord],
     overflow: bool,
     num_finished_sub_slots: int,
 ) -> uint8:
     """
-    Returns the deficit of the sub-block to be created at sub_block_height.
+    Returns the deficit of the sub-block to be created at height.
 
     Args:
         constants: consensus constants being used for this chain
-        sub_block_height: sub-block height of the block that we care about
+        height: sub-block height of the block that we care about
         prev_sb: previous sub-block
         overflow: whether or not this is an overflow sub-block
         num_finished_sub_slots: the number of finished slots between infusion points of prev and current
     """
-    if sub_block_height == 0:
+    if height == 0:
         return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
     else:
         assert prev_sb is not None

@@ -12,7 +12,7 @@ from clvm.EvalError import EvalError
 
 from clvm_tools.curry import curry, uncurry
 
-from clvm_rs import serialize_and_run_program
+from clvm_rs import serialize_and_run_program, STRICT_MODE
 
 
 def run_program(
@@ -170,7 +170,13 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
+    def run_safe_with_cost(self, *args) -> Tuple[int, SExp]:
+        return self._run(STRICT_MODE, *args)
+
     def run_with_cost(self, *args) -> Tuple[int, SExp]:
+        return self._run(0, *args)
+
+    def _run(self, flags, *args) -> Tuple[int, SExp]:
         # when multiple arguments are passed, concatenate them into a serialized
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
@@ -186,6 +192,6 @@ class SerializedProgram:
             serialized_args += _serialize(args[0])
 
         max_cost = 0
-        cost, ret = serialize_and_run_program(self._buf, serialized_args, 1, 3, max_cost)
+        cost, ret = serialize_and_run_program(self._buf, serialized_args, 1, 3, max_cost, flags)
         # TODO this could be parsed lazily
         return cost, sexp_from_stream(io.BytesIO(ret), SExp.to)

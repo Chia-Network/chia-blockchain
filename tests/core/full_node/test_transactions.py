@@ -96,7 +96,7 @@ class TestTransactions:
             peak: Optional[SubBlockRecord] = fna.full_node.blockchain.get_peak()
             if peak is None:
                 return -1
-            peak_height = peak.sub_block_height
+            peak_height = peak.height
             return peak_height
 
         await time_out_assert(10, peak_height, num_blocks, full_node_api_1)

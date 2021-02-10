@@ -21,7 +21,10 @@ class StructStream(int):
 
     @classmethod
     def parse(cls: Any, f: BinaryIO) -> Any:
-        return cls(*struct.unpack(cls.PACK, f.read(struct.calcsize(cls.PACK))))
+        bytes_to_read = struct.calcsize(cls.PACK)
+        read_bytes = f.read(bytes_to_read)
+        assert read_bytes is not None and len(read_bytes) == bytes_to_read
+        return cls(*struct.unpack(cls.PACK, read_bytes))
 
     def stream(self, f):
         f.write(struct.pack(self.PACK, self))

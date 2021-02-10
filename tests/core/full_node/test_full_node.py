@@ -33,6 +33,7 @@ from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.wallet_tools import WalletTool
+from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
 from src.util.clvm import int_to_bytes
 from tests.core.full_node.test_full_sync import node_height_at_least
@@ -49,7 +50,7 @@ log = logging.getLogger(__name__)
 async def get_block_path(full_node: FullNodeAPI):
     blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
     assert blocks_list[0] is not None
-    while blocks_list[0].sub_block_height != 0:
+    while blocks_list[0].height != 0:
         b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
         assert b is not None
         blocks_list.insert(0, b)
@@ -187,12 +188,12 @@ class TestFullNodeProtocol:
 
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 1))
 
-        assert full_node_1.full_node.blockchain.get_peak().sub_block_height == 0
+        assert full_node_1.full_node.blockchain.get_peak().height == 0
 
         for block in bt.get_consecutive_blocks(30):
             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
-        assert full_node_1.full_node.blockchain.get_peak().sub_block_height == 29
+        assert full_node_1.full_node.blockchain.get_peak().height == 29
 
     @pytest.mark.asyncio
     async def test_respond_end_of_sub_slot(self, wallet_nodes):
@@ -364,7 +365,7 @@ class TestFullNodeProtocol:
         for block in blocks[-3:]:
             new_peak = fnp.NewPeak(
                 block.header_hash,
-                block.sub_block_height,
+                block.height,
                 block.weight,
                 uint32(0),
                 block.reward_chain_sub_block.get_unfinished().get_hash(),
@@ -380,7 +381,7 @@ class TestFullNodeProtocol:
         # Ignores low weight
         new_peak = fnp.NewPeak(
             blocks_reorg[-2].header_hash,
-            blocks_reorg[-2].sub_block_height,
+            blocks_reorg[-2].height,
             blocks_reorg[-2].weight,
             uint32(0),
             blocks_reorg[-2].reward_chain_sub_block.get_unfinished().get_hash(),
@@ -391,7 +392,7 @@ class TestFullNodeProtocol:
         # Does not ignore equal weight
         new_peak = fnp.NewPeak(
             blocks_reorg[-1].header_hash,
-            blocks_reorg[-1].sub_block_height,
+            blocks_reorg[-1].height,
             blocks_reorg[-1].weight,
             uint32(0),
             blocks_reorg[-1].reward_chain_sub_block.get_unfinished().get_hash(),
@@ -415,8 +416,8 @@ class TestFullNodeProtocol:
         for block in blocks[-3:]:
             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 
-        start_sub_height = (
-            full_node_1.full_node.blockchain.get_peak().sub_block_height
+        start_height = (
+            full_node_1.full_node.blockchain.get_peak().height
             if full_node_1.full_node.blockchain.get_peak() is not None
             else -1
         )
@@ -440,7 +441,7 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             100,
             puzzle_hashes[0],
-            blocks[1].get_future_reward_coins(1)[0],
+            get_future_reward_coins(blocks[1])[0],
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
@@ -467,7 +468,7 @@ class TestFullNodeProtocol:
         for block in blocks_new[-2:]:
             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
-        await time_out_assert(10, node_height_at_least, True, full_node_1, start_sub_height + 2)
+        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 2)
 
         spend_bundles = []
         # Fill mempool
@@ -626,17 +627,17 @@ class TestFullNodeProtocol:
         assert res.type == ProtocolMessageTypes.reject_sub_block.value
 
         # Ask without transactions
-        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, False))
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].height, False))
         assert res.type != ProtocolMessageTypes.reject_sub_block.value
         assert fnp.RespondSubBlock.from_bytes(res.data).sub_block.transactions_generator is None
 
         # Ask with transactions
-        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, True))
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].height, True))
         assert res.type != ProtocolMessageTypes.reject_sub_block.value
         assert fnp.RespondSubBlock.from_bytes(res.data).sub_block.transactions_generator is not None
 
         # Ask for another one
-        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height - 1, True))
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].height - 1, True))
         assert res.type != ProtocolMessageTypes.reject_sub_block.value
 
     @pytest.mark.asyncio
@@ -665,7 +666,7 @@ class TestFullNodeProtocol:
         for block in blocks_t:
             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 
-        peak_height = blocks_t[-1].sub_block_height
+        peak_height = blocks_t[-1].height
 
         # Start >= End
         res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(4), uint32(4), False))
@@ -1197,7 +1198,7 @@ class TestFullNodeProtocol:
 #         # Don't have
 #         res = await full_node_1.request_header(wallet_protocol.RequestHeader(uint32(2), blocks[2].header_hash))
 #         assert isinstance(res.data, wallet_protocol.RejectHeaderRequest)
-#         assert res.data.sub_block_height == 2
+#         assert res.data.height == 2
 #         assert res.data.header_hash == blocks[2].header_hash
 #
 #     @pytest.mark.asyncio
@@ -1211,7 +1212,7 @@ class TestFullNodeProtocol:
 #
 #         # Request removals for nonexisting block fails
 #         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(blocks_new[-1].sub_block_height, blocks_new[-1].header_hash, None)
+#             wallet_protocol.RequestRemovals(blocks_new[-1].height, blocks_new[-1].header_hash, None)
 #         )
 #         assert isinstance(res.data, wallet_protocol.RejectRemovalsRequest)
 #
@@ -1220,7 +1221,7 @@ class TestFullNodeProtocol:
 #             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(blocks_new[-1].sub_block_height, blocks_new[-1].header_hash, None)
+#             wallet_protocol.RequestRemovals(blocks_new[-1].height, blocks_new[-1].header_hash, None)
 #         )
 #         assert isinstance(res.data, wallet_protocol.RejectRemovalsRequest)
 #
@@ -1234,7 +1235,7 @@ class TestFullNodeProtocol:
 #             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(blocks_new[-4].sub_block_height, blocks_new[-4].header_hash, None)
+#             wallet_protocol.RequestRemovals(blocks_new[-4].height, blocks_new[-4].header_hash, None)
 #         )
 #
 #         assert isinstance(res.data, wallet_protocol.RespondRemovals)
@@ -1268,7 +1269,7 @@ class TestFullNodeProtocol:
 #         # If no coins requested, respond all coins and NO proof
 #         res = await full_node_1.request_removals(
 #             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 None,
 #             )
@@ -1287,7 +1288,7 @@ class TestFullNodeProtocol:
 #         coin_list = [spend_bundles[0].removals()[0].name()]
 #         res = await full_node_1.request_removals(
 #             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 coin_list,
 #             )
@@ -1308,7 +1309,7 @@ class TestFullNodeProtocol:
 #
 #         res = await full_node_1.request_removals(
 #             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 coin_list,
 #             )
@@ -1329,7 +1330,7 @@ class TestFullNodeProtocol:
 #
 #         res = await full_node_1.request_removals(
 #             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 coin_list,
 #             )
@@ -1363,7 +1364,7 @@ class TestFullNodeProtocol:
 #
 #         # Request additinos for nonexisting block fails
 #         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(blocks_new[-1].sub_block_height, blocks_new[-1].header_hash, None)
+#             wallet_protocol.RequestAdditions(blocks_new[-1].height, blocks_new[-1].header_hash, None)
 #         )
 #         assert isinstance(res.data, wallet_protocol.RejectAdditionsRequest)
 #
@@ -1372,7 +1373,7 @@ class TestFullNodeProtocol:
 #             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(blocks_new[-1].sub_block_height, blocks_new[-1].header_hash, None)
+#             wallet_protocol.RequestAdditions(blocks_new[-1].height, blocks_new[-1].header_hash, None)
 #         )
 #         assert isinstance(res.data, wallet_protocol.RejectAdditionsRequest)
 #
@@ -1386,7 +1387,7 @@ class TestFullNodeProtocol:
 #             await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 #
 #         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(blocks_new[-4].sub_block_height, blocks_new[-4].header_hash, None)
+#             wallet_protocol.RequestAdditions(blocks_new[-4].height, blocks_new[-4].header_hash, None)
 #         )
 #         assert isinstance(res.data, wallet_protocol.RespondAdditions)
 #         assert len(res.data.coins) == 2
@@ -1420,7 +1421,7 @@ class TestFullNodeProtocol:
 #         # If no puzzle hashes requested, respond all coins and NO proof
 #         res = await full_node_1.request_additions(
 #             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 None,
 #             )
@@ -1440,7 +1441,7 @@ class TestFullNodeProtocol:
 #         ph_list = [puzzle_hashes[0]]
 #         res = await full_node_1.request_additions(
 #             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 ph_list,
 #             )
@@ -1468,7 +1469,7 @@ class TestFullNodeProtocol:
 #         ph_list = [token_bytes(32)]
 #         res = await full_node_1.request_additions(
 #             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 ph_list,
 #             )
@@ -1489,7 +1490,7 @@ class TestFullNodeProtocol:
 #         ph_list = [puzzle_hashes[0], token_bytes(32)]
 #         res = await full_node_1.request_additions(
 #             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].sub_block_height,
+#                 blocks_new[height_with_transactions].height,
 #                 blocks_new[height_with_transactions].header_hash,
 #                 ph_list,
 #             )

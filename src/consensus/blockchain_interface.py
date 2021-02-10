@@ -24,7 +24,7 @@ class BlockchainInterface:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         pass
 
-    def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         pass
 
     def contains_sub_block(self, header_hash: bytes32) -> bool:
@@ -36,7 +36,7 @@ class BlockchainInterface:
     def add_sub_block(self, sub_block: SubBlockRecord):
         pass
 
-    def contains_sub_height(self, height: uint32) -> bool:
+    def contains_height(self, height: uint32) -> bool:
         pass
 
     async def warmup(self, fork_point: uint32):
@@ -57,12 +57,12 @@ class BlockchainInterface:
         return None
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_sub_height: uint32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
         pass
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_sub_height: uint32,
+        sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         pass
