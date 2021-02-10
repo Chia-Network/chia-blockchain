@@ -13,7 +13,6 @@ from src.util.condition_tools import (
     created_outputs_for_conditions_dict,
     created_announcements_for_conditions_dict,
 )
-from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlock
