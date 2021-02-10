@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-10 10:00\n"
+"PO-Revision-Date: 2021-02-10 11:02\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -176,11 +176,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr "Peruuta"
+msgstr "Peru"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Peru ja Käytä"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -188,98 +188,98 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Haaste"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Haastetiiviste"
 
 #: src/components/wallet/Wallets.tsx:29
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia Lompakko"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Anna Plot-tiedostojen Määrä"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Anna Tiedoston Koko"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Suljetaan noodi ja palvelut"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Kolikot:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Väri"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "Värin Tiedot"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Värin Teksti"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Väri:"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Värikolikko"
 
 #: src/components/wallet/create/WalletCreate.jsx:163
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Värikolikon Valinnat"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Vahvistettu lohkossa:"
 
 #: src/components/wallet/WalletHistory.tsx:36
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Vahvistettu lohkokorkeudessa {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Yhdistä"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Yhdistä muihin"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:179
 msgid "Connected"
-msgstr ""
+msgstr "Yhdistetty"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Yhdistetään lompakkoon"
 
 #: src/components/fullNode/FullNode.jsx:177
 msgid "Connection Status"
-msgstr ""
+msgstr "Yhteyden Tila"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Yhteyden Tila:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Yhteystyyppi"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
-msgstr ""
+msgstr "Yhteydet"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:460
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -287,18 +287,18 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
 #: src/components/wallet/standard/WalletStandard.tsx:388
 msgid "Copy"
-msgstr ""
+msgstr "Kopioi"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Luo"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
-msgstr ""
+msgstr "Luo Plot-tiedosto"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -310,25 +310,25 @@ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
-msgstr ""
+msgstr "Kauppaa"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Tarjoa"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:395
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:727
 #: src/components/wallet/standard/WalletStandard.tsx:325
 msgid "Create Transaction"
-msgstr ""
+msgstr "Tee Rahansiirto"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Luo yksityinen avain"
 
 #: src/components/wallet/create/WalletCreate.jsx:239
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Luo admin-lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:175
 msgid "Create new coloured coin"
@@ -362,11 +362,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:137
 #: src/components/wallet/WalletHistory.tsx:31
 msgid "Date"
-msgstr ""
+msgstr "Päiväys"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "Delay"
-msgstr ""
+msgstr "Viive"
 
 #: src/components/fullNode/FullNodeConnections.jsx:110
 #: src/components/plot/PlotAction.tsx:24
@@ -375,21 +375,21 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
-msgstr ""
+msgstr "Poista"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "Delete Plot"
-msgstr ""
+msgstr "Poista Plot-tiedosto"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Poista kaikki avaimet"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Poista avain"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -402,7 +402,7 @@ msgstr ""
 #: src/components/block/Block.jsx:227
 #: src/components/fullNode/FullNode.jsx:223
 msgid "Difficulty"
-msgstr ""
+msgstr "Vaikeusaste"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -415,7 +415,7 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:41
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "Raahaa ja pudota tarjoustiedosto"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -429,7 +429,7 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "Virhe"
 
 #: src/components/wallet/standard/WalletStandard.tsx:305
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -456,21 +456,21 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:429
 #: src/components/wallet/standard/WalletStandard.tsx:357
 msgid "Farm"
-msgstr ""
+msgstr "Farmi"
 
 #: src/components/block/Block.jsx:263
 msgid "Farmer Puzzle Hash"
-msgstr ""
+msgstr "Farmarin Haastetiiviste"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "Farmeri ei ole päällä"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "Farmeri ei ole käynnissä"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
