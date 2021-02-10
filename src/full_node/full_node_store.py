@@ -1,5 +1,4 @@
 import logging
-from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.blockchain_interface import BlockchainInterface
@@ -363,7 +362,7 @@ class FullNodeStore:
                         uint64(sp_total_iters - curr.total_iters),
                         signage_point.rc_vdf.output,
                     )
-                if not signage_point.cc_vdf == replace(cc_vdf_info_expected, number_of_iterations=delta_iters):
+                if not signage_point.cc_vdf == dataclasses.replace(cc_vdf_info_expected, number_of_iterations=delta_iters):
                     return False
                 if check_from_start_of_ss:
                     start_ele = ClassgroupElement.get_default_element()
