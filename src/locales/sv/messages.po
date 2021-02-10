@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-10 19:04\n"
+"PO-Revision-Date: 2021-02-10 20:33\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -253,7 +253,7 @@ msgstr "Anslut"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Anslut till andra peer-datorer"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:179
@@ -287,14 +287,14 @@ msgstr "Anslutningar"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
 #: src/components/wallet/standard/WalletStandard.tsx:388
 msgid "Copy"
-msgstr ""
+msgstr "Kopiera"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Skapa"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -320,11 +320,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:727
 #: src/components/wallet/standard/WalletStandard.tsx:325
 msgid "Create Transaction"
-msgstr ""
+msgstr "Skapa transaktion"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Skapa ny privat nyckel"
 
 #: src/components/wallet/create/WalletCreate.jsx:239
 msgid "Create admin wallet"
@@ -348,11 +348,11 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr ""
+msgstr "Skapad:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "Skapad av oss:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -362,7 +362,7 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:137
 #: src/components/wallet/WalletHistory.tsx:31
 msgid "Date"
-msgstr ""
+msgstr "Datum"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "Delay"
@@ -385,24 +385,24 @@ msgstr "Ta bort plott"
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Ta bort alla nycklar"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Ta bort nyckel"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Om du tar bort alla nycklar kommer de att permanent tas bort från datorn. Se till att du har säkerhetskopierat dem. Är det säkert att du vill fortsätta?"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Om du tar bort nyckeln kommer den att permanent tas bort från datorn. Se till att du har säkerhetskopierat den. Är det säkert att du vill fortsätta?"
 
 #: src/components/block/Block.jsx:227
 #: src/components/fullNode/FullNode.jsx:223
 msgid "Difficulty"
-msgstr ""
+msgstr "Svårighetsgrad"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -499,11 +499,11 @@ msgstr "Odlingsstatus"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:781
 #: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Fee"
-msgstr ""
+msgstr "Avgift"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:421
 msgid "Fee (TXCH)"
-msgstr ""
+msgstr "Avgift (TXCH)"
 
 #: src/components/block/Block.jsx:313
 msgid "Fees Amount"
@@ -531,11 +531,11 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:418
 msgid "Full Node"
-msgstr ""
+msgstr "Fullständig nod"
 
 #: src/components/fullNode/FullNode.jsx:304
 msgid "Full Node Status"
-msgstr ""
+msgstr "Status för full nod"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -560,15 +560,15 @@ msgstr "Höjd"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
 msgid "Help translate"
-msgstr ""
+msgstr "Hjälp till med översättning"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr ""
+msgstr "Dölj avancerade alternativ"
 
 #: src/components/wallet/WalletHistory.tsx:58
 msgid "History"
-msgstr ""
+msgstr "Historik"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
@@ -597,15 +597,15 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:41
 msgid "In Progress"
-msgstr ""
+msgstr "Pågår"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Incoming"
-msgstr ""
+msgstr "Inkommande"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:19
 msgid "Index"
-msgstr ""
+msgstr "Index"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
@@ -658,7 +658,7 @@ msgstr ""
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
-msgstr ""
+msgstr "Loggar in"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
@@ -681,7 +681,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:470
 #: src/components/wallet/standard/WalletStandard.tsx:398
 msgid "New Address"
-msgstr ""
+msgstr "Ny adress"
 
 #: src/components/wallet/WalletAdd.tsx:34
 msgid "New Wallet"
@@ -691,15 +691,15 @@ msgstr "Ny plånbok"
 #: src/components/wallet/WalletAdd.tsx:49
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr ""
+msgstr "Nästa"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
-msgstr ""
+msgstr "Smeknamn"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "No"
-msgstr ""
+msgstr "Nej"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
@@ -707,7 +707,7 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "No previous transactions"
-msgstr ""
+msgstr "Inga tidigare transaktioner"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -766,7 +766,7 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr ""
+msgstr "Utgående"
 
 #: src/components/fullNode/FullNode.jsx:198
 msgid "Peak Height"
@@ -782,22 +782,22 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:38
 msgid "Pending"
-msgstr ""
+msgstr "Väntande"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:602
 #: src/components/wallet/standard/WalletStandard.tsx:226
 msgid "Pending Balance"
-msgstr ""
+msgstr "Väntande saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:611
 #: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "Pending Change"
-msgstr ""
+msgstr "Väntande växel"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:593
 #: src/components/wallet/standard/WalletStandard.tsx:219
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Väntande totalt saldo"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -942,7 +942,7 @@ msgstr "Port"
 
 #: src/components/block/Block.jsx:348
 msgid "Previous"
-msgstr ""
+msgstr "Föregående"
 
 #: src/components/block/Block.jsx:222
 msgid "Previous Block Hash"
@@ -970,11 +970,11 @@ msgstr ""
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
-msgstr ""
+msgstr "I kö"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "Max RAM-användning"
 
 #: src/components/wallet/Wallets.tsx:40
 msgid "RL Wallet"
@@ -1000,7 +1000,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:452
 #: src/components/wallet/standard/WalletStandard.tsx:380
 msgid "Receive Address"
-msgstr ""
+msgstr "Mottagaradress"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1008,7 +1008,7 @@ msgstr "Uppdatera plottar"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr ""
+msgstr "Byt namn"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1017,11 +1017,11 @@ msgstr "SB-höjd"
 
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "Spara"
 
 #: src/components/fullNode/FullNode.jsx:394
 msgid "Search"
-msgstr ""
+msgstr "Sök"
 
 #: src/components/fullNode/FullNode.jsx:377
 msgid "Search block by header hash"
@@ -1067,19 +1067,19 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "Vald"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr ""
+msgstr "Sälj"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:434
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:796
 #: src/components/wallet/standard/WalletStandard.tsx:362
 msgid "Send"
-msgstr ""
+msgstr "Skicka"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
@@ -1091,16 +1091,16 @@ msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Visa avancerade alternativ"
 
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Sida"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "Logga in"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1119,7 +1119,7 @@ msgstr "Spenderbart belopp"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Spenderingsintervall (antal block): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
@@ -1132,7 +1132,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:117
 msgid "State"
-msgstr ""
+msgstr "Tillstånd"
 
 #: src/components/fullNode/FullNode.jsx:130
 #: src/components/fullNode/FullNode.jsx:147
@@ -1168,7 +1168,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:164
 msgid "Synced"
-msgstr ""
+msgstr "Synkad"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
@@ -1202,11 +1202,11 @@ msgstr "Den fullständiga nod din odlare är ansluten till är nedan.<0>Läs mer
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "Den minsta storlek som krävs för mainnet är k=32"
 
 #: src/components/fullNode/FullNode.jsx:155
 msgid "The node is not synced"
-msgstr ""
+msgstr "Noden är inte synkad"
 
 #: src/components/fullNode/FullNode.jsx:138
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -1236,7 +1236,7 @@ msgstr "Dessa plottar är ogiltiga. Det kan vara lämpligt att ta bort dem."
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Denna funktion kan bara användas från GUI."
 
 #: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
@@ -1288,17 +1288,17 @@ msgstr ""
 
 #: src/components/block/Block.jsx:189
 msgid "Timestamp"
-msgstr ""
+msgstr "Tidsstämpel"
 
 #: src/components/wallet/WalletHistory.tsx:27
 msgid "To"
-msgstr ""
+msgstr "Till"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:563
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Total Balance"
-msgstr ""
+msgstr "Totalt saldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
@@ -1306,7 +1306,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:239
 msgid "Total Iterations"
-msgstr ""
+msgstr "Totalt antal iterationer"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
@@ -1322,11 +1322,11 @@ msgstr "Sammanlagd storlek hos alla plottar"
 
 #: src/components/block/Block.jsx:231
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Totalt antal VDF-iterationer"
 
 #: src/components/fullNode/FullNode.jsx:243
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Totalt antal iterationer sedan blockkedjan startade"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
@@ -1396,11 +1396,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:584
 #: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "View pending balances"
-msgstr ""
+msgstr "Visa väntande saldon"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "Visa väntande saldon..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1427,7 +1427,7 @@ msgstr "Vikt"
 
 #: src/components/block/Block.jsx:210
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Vikt är den sammanlagda svårighetsgraden för alla underblock upp till och inklusive detta"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
