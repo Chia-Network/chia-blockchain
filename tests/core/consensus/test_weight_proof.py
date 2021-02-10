@@ -78,7 +78,7 @@ async def load_blocks_dont_validate(
     difficulty = test_constants.DIFFICULTY_STARTING
     block: FullBlock
     for block in blocks:
-        if block.sub_block_height > 0:
+        if block.height > 0:
             assert prev_block is not None
             difficulty = block.reward_chain_sub_block.weight - prev_block.weight
 
@@ -106,10 +106,10 @@ async def load_blocks_dont_validate(
             test_constants, BlockCache(sub_blocks, height_to_hash), required_iters, block, None
         )
         sub_blocks[block.header_hash] = sub_block
-        height_to_hash[block.sub_block_height] = block.header_hash
+        height_to_hash[block.height] = block.header_hash
         header_cache[block.header_hash] = block.get_block_header()
         if sub_block.sub_epoch_summary_included is not None:
-            sub_epoch_summaries[block.sub_block_height] = sub_block.sub_epoch_summary_included
+            sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
         prev_block = block
     return header_cache, height_to_hash, sub_blocks, sub_epoch_summaries
 
