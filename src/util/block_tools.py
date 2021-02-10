@@ -256,7 +256,6 @@ class BlockTools:
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
                 timestamp=uint64(int(time.time())),
-                farmer_reward_puzzle_hash=farmer_reward_puzzle_hash,
             )
             log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -637,15 +636,12 @@ class BlockTools:
         constants: ConsensusConstants,
         seed: bytes32 = b"",
         timestamp: Optional[uint64] = None,
-        farmer_reward_puzzle_hash: Optional[bytes32] = None,
         force_overflow: bool = False,
         skip_slots: int = 0,
     ) -> FullBlock:
         if timestamp is None:
             timestamp = uint64(int(time.time()))
 
-        if farmer_reward_puzzle_hash is None:
-            farmer_reward_puzzle_hash = self.farmer_ph
         finished_sub_slots: List[EndOfSubSlotBundle] = []
         unfinished_block: Optional[UnfinishedBlock] = None
         ip_iters: uint64 = uint64(0)
