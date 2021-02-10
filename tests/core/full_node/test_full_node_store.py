@@ -118,7 +118,10 @@ class TestFullNodeStore:
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[2].challenge_chain.get_hash()) is None
-        assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash())[0] == sub_slots[3]
+        if peak.overflow:
+            assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash())[0] == sub_slots[3]
+        else:
+            assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[4].challenge_chain.get_hash())[0] == sub_slots[4]
 
         assert (
