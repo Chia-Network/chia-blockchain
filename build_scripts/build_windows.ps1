@@ -46,7 +46,7 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Build chia-blockchain wheels"
 Write-Output "   ---"
-pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
+pip wheel --use-pep517 --extra-index-url https://download.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
 
 Write-Output "   ---"
 Write-Output "Install chia-blockchain wheels into venv with pip"
