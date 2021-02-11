@@ -929,7 +929,7 @@ class FullNode:
         block = respond_unfinished_sub_block.unfinished_sub_block
 
         if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
-                block.prev_header_hash
+            block.prev_header_hash
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")
