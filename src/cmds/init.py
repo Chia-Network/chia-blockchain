@@ -377,8 +377,8 @@ def chia_init(root_path: Path):
     # These are the files that will be migrated
     MANIFEST: List[str] = [
         "config",
-        "db/blockchain_v27.db",
-        "wallet",
+        "db/blockchain_v27_2.db",
+        # "wallet",
     ]
 
     # Version 19 is the first version that used the bech32m addresses

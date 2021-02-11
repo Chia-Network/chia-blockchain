@@ -40,10 +40,10 @@ class LastState:
         self.total_iters: uint128 = uint128(0)
         self.last_challenge_sb_or_eos_total_iters = uint128(0)
         self.last_block_total_iters: Optional[uint128] = None
-        self.last_peak_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
+        self.last_peak_challenge: bytes32 = constants.GENESIS_CHALLENGE
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
-        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.FIRST_RC_CHALLENGE, uint128(0))]
+        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
 
     def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
         if isinstance(state, timelord_protocol.NewPeakTimelord):
@@ -150,9 +150,9 @@ class LastState:
         if self.state_type == StateType.FIRST_SUB_SLOT:
             assert self.peak is None and self.subslot_end is None
             if chain == Chain.CHALLENGE_CHAIN:
-                return self.constants.FIRST_CC_CHALLENGE
+                return self.constants.GENESIS_CHALLENGE
             elif chain == Chain.REWARD_CHAIN:
-                return self.constants.FIRST_RC_CHALLENGE
+                return self.constants.GENESIS_CHALLENGE
             elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 return None
         elif self.state_type == StateType.PEAK:

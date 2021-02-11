@@ -53,7 +53,7 @@ class TestBlockchainTransactions:
         for block in blocks:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block), None)
 
-        spend_block = blocks[1]
+        spend_block = blocks[2]
         spend_coin = None
         for coin in list(spend_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
@@ -111,7 +111,7 @@ class TestBlockchainTransactions:
         for block in blocks:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        spend_block = blocks[1]
+        spend_block = blocks[2]
         spend_coin = None
         for coin in list(spend_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
@@ -151,7 +151,7 @@ class TestBlockchainTransactions:
         for block in blocks:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        spend_block = blocks[1]
+        spend_block = blocks[2]
 
         spend_coin = None
         for coin in list(spend_block.get_included_reward_coins()):
@@ -191,7 +191,7 @@ class TestBlockchainTransactions:
         for block in blocks:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        spend_block = blocks[1]
+        spend_block = blocks[2]
 
         spend_coin = None
         for coin in list(spend_block.get_included_reward_coins()):
@@ -299,7 +299,7 @@ class TestBlockchainTransactions:
         for block in blocks:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        spend_block = blocks[1]
+        spend_block = blocks[2]
 
         spend_coin = None
         for coin in list(spend_block.get_included_reward_coins()):
@@ -480,8 +480,8 @@ class TestBlockchainTransactions:
 
         # Coinbase that gets spent
 
-        spend_block = blocks[1]
-        bad_block = blocks[2]
+        spend_block = blocks[2]
+        bad_block = blocks[3]
         spend_coin = None
         bad_spend_coin = None
         for coin in list(spend_block.get_included_reward_coins()):
@@ -549,8 +549,8 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Coinbase that gets spent
-        block1 = blocks[1]
-        block2 = blocks[2]
+        block1 = blocks[2]
+        block2 = blocks[3]
 
         spend_coin_block_1 = None
         spend_coin_block_2 = None
@@ -632,7 +632,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Coinbase that gets spent
-        block1 = blocks[1]
+        block1 = blocks[2]
         spend_coin_block_1 = None
         for coin in list(block1.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
@@ -683,7 +683,7 @@ class TestBlockchainTransactions:
 
     @pytest.mark.asyncio
     async def test_assert_block_age_exceeds(self, two_nodes):
-        num_blocks = 10
+        num_blocks = 11
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
@@ -699,15 +699,15 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Coinbase that gets spent
-        block1 = blocks[1]
+        block1 = blocks[2]
         spend_coin_block_1 = None
         for coin in list(block1.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
 
-        # This condition requires block1 coinbase to be spent after index 10
+        # This condition requires block1 coinbase to be spent after index 11
         # This condition requires block1 coinbase to be spent more than 10 block after it was farmed
-        # block index has to be greater than (1 + 9 = 10)
+        # block index has to be greater than (2 + 9 = 11)
         block1_cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, [int_to_bytes(9)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
@@ -724,7 +724,7 @@ class TestBlockchainTransactions:
             guarantee_block=True,
         )
 
-        # Try to validate that block at index 10
+        # Try to validate that block at index 11
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
@@ -738,7 +738,7 @@ class TestBlockchainTransactions:
         res, _, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert res == ReceiveBlockResult.NEW_PEAK
 
-        # At index 11, it can be spent
+        # At index 12, it can be spent
         new_blocks = bt.get_consecutive_blocks(
             1,
             new_blocks,
@@ -769,7 +769,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Coinbase that gets spent
-        block1 = blocks[1]
+        block1 = blocks[2]
         spend_coin_block_1 = None
         for coin in list(block1.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
@@ -830,7 +830,7 @@ class TestBlockchainTransactions:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Coinbase that gets spent
-        block1 = blocks[1]
+        block1 = blocks[2]
         spend_coin_block_1 = None
         for coin in list(block1.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:

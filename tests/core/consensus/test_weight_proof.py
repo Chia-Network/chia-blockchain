@@ -131,7 +131,7 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
     # sub epoch summaries validate hashes
     summaries, sub_epoch_data_weight = _map_summaries(
         test_constants.SUB_EPOCH_SUB_BLOCKS,
-        test_constants.GENESIS_SES_HASH,
+        test_constants.GENESIS_CHALLENGE,
         wp.sub_epochs,
         test_constants.DIFFICULTY_STARTING,
     )
@@ -157,7 +157,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         summaries, sub_epoch_data_weight = _map_summaries(
             wpf.constants.SUB_EPOCH_SUB_BLOCKS,
-            wpf.constants.GENESIS_SES_HASH,
+            wpf.constants.GENESIS_CHALLENGE,
             wp.sub_epochs,
             wpf.constants.DIFFICULTY_STARTING,
         )

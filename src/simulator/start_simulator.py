@@ -7,6 +7,7 @@ from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
+from src.types.sized_bytes import bytes32
 from src.util.block_tools import BlockTools, test_constants
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -28,6 +29,7 @@ def service_kwargs_for_full_node_simulator(
     bt: BlockTools,
 ) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
+    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
 
     node = FullNode(
         config,
@@ -48,6 +50,7 @@ def service_kwargs_for_full_node_simulator(
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
+        network_id=genesis_challenge,
     )
     return kwargs
 

@@ -178,6 +178,7 @@ async def validate_block_body(
 
     additions_dic: Dict[bytes32, Coin] = {}
     # 10. Check additions for max coin amount
+    # Be careful to check for 64 bit overflows in other languages. This is the max 64 bit unsigned integer
     for coin in additions + coinbase_additions:
         additions_dic[coin.name()] = coin
         if coin.amount >= constants.MAX_COIN_AMOUNT:

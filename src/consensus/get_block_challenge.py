@@ -37,7 +37,7 @@ def get_block_challenge(
             challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
     else:
         if genesis_block:
-            challenge = constants.FIRST_CC_CHALLENGE
+            challenge = constants.GENESIS_CHALLENGE
         else:
             if overflow:
                 if skip_overflow_last_ss_validation:

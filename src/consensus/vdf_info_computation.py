@@ -44,8 +44,8 @@ def get_signage_point_vdf_info(
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif genesis_block:
         # Case 3: Genesis block case, first challenge
-        rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
-        cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
+        rc_vdf_challenge = constants.GENESIS_CHALLENGE
+        cc_vdf_challenge = constants.GENESIS_CHALLENGE
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif new_sub_slot and overflow and len(finished_sub_slots) == 1:
