@@ -53,6 +53,7 @@ import {
   STANDARD_WALLET,
   RATE_LIMITED,
 } from '../util/wallet_types';
+
 const config = require('../config/config');
 
 function sleep(ms) {
@@ -99,13 +100,13 @@ async function ping_harvester(store) {
   }
 }
 
-var can_call = true;
-var can_call_get_wallet_transactions = true;
-var can_call_get_wallet_balance = true;
+let can_call = true;
+let can_call_get_wallet_transactions = true;
+let can_call_get_wallet_balance = true;
 
-var timeout_tx = null;
-var timeout_balance = null;
-var timeout_height = null;
+let timeout_tx = null;
+let timeout_balance = null;
+let timeout_height = null;
 
 async function get_height(store) {
   if (can_call === true) {
@@ -174,10 +175,8 @@ export const handle_message = async (store, payload) => {
     const state = store.getState();
 
     if (
-      stateBefore.full_node_state?.blockchain_state?.peak
-        ?.reward_chain_sub_block?.sub_block_height !==
-      state.full_node_state?.blockchain_state?.peak?.reward_chain_sub_block
-        ?.sub_block_height
+      stateBefore.full_node_state?.blockchain_state?.peak?.height !==
+      state.full_node_state?.blockchain_state?.peak?.height
     ) {
       dispatch(updateLatestBlocks());
       dispatch(updateLatestSubBlocks());
@@ -281,23 +280,21 @@ export const handle_message = async (store, payload) => {
       if (state === 'state') {
         store.dispatch(refreshPlots());
       }
-    } else {
-      if (state === 'coin_added' || state === 'coin_removed') {
-        var { wallet_id } = payload.data;
-        get_wallet_balance(store, wallet_id);
-        get_wallet_transactions(store, wallet_id);
-      } else if (state === 'sync_changed') {
-        store.dispatch(get_sync_status());
-      } else if (state === 'new_block') {
-        await get_height(store);
-      } else if (state === 'new_peak') {
-        await get_height(store);
-        store.dispatch(getBlockChainState());
-      } else if (state === 'pending_transaction') {
-        wallet_id = payload.data.wallet_id;
-        get_wallet_balance(store, wallet_id);
-        get_wallet_transactions(store, wallet_id);
-      }
+    } else if (state === 'coin_added' || state === 'coin_removed') {
+      var { wallet_id } = payload.data;
+      get_wallet_balance(store, wallet_id);
+      get_wallet_transactions(store, wallet_id);
+    } else if (state === 'sync_changed') {
+      store.dispatch(get_sync_status());
+    } else if (state === 'new_block') {
+      await get_height(store);
+    } else if (state === 'new_peak') {
+      await get_height(store);
+      store.dispatch(getBlockChainState());
+    } else if (state === 'pending_transaction') {
+      wallet_id = payload.data.wallet_id;
+      get_wallet_balance(store, wallet_id);
+      get_wallet_transactions(store, wallet_id);
     }
   } else if (payload.command === 'cc_set_name') {
     if (payload.data.success) {

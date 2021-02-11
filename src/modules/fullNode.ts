@@ -79,7 +79,7 @@ export default function fullnodeReducer(
         if (data.success) {
           return { ...state, block: data.block };
         }
-      } else if (command === 'get_sub_block_record') {
+      } else if (command === 'get_block_record') {
         if (data.success) {
           return { ...state, header: data.header };
         }

@@ -12,9 +12,7 @@ export const fullNodeMessage = (message) => ({
 export function updateLatestSubBlocks() {
   return async (dispatch, getState) => {
     const state = getState();
-    const height =
-      state.full_node_state.blockchain_state?.peak?.reward_chain_sub_block
-        ?.sub_block_height;
+    const height = state.full_node_state.blockchain_state?.peak?.height;
     if (height) {
       const subBlocks = await dispatch(getSubBlockRecords(height));
 
@@ -31,11 +29,11 @@ export function getSubBlockRecords(end, count = 10) {
     const start = end - count;
 
     const {
-      data: { sub_block_records },
+      data: { block_records },
     } = await async_api(
       dispatch,
       fullNodeMessage({
-        command: 'get_sub_block_records',
+        command: 'get_block_records',
         data: {
           start,
           end,
@@ -44,15 +42,14 @@ export function getSubBlockRecords(end, count = 10) {
       false,
     );
 
-    return sub_block_records.reverse();
+    return block_records.reverse();
   };
 }
 
 export function updateLatestBlocks() {
   return async (dispatch, getState) => {
     const state = getState();
-    const height =
-      state.full_node_state.blockchain_state?.peak?.foliage_block?.height;
+    const height = state.full_node_state.blockchain_state?.peak?.height;
     if (height) {
       const blocks = await dispatch(getBlocksRecords(height));
 
@@ -104,7 +101,7 @@ export function getUnfinishedSubBlockHeaders() {
     } = await async_api(
       dispatch,
       fullNodeMessage({
-        command: 'get_unfinished_sub_block_headers',
+        command: 'get_unfinished_block_headers',
       }),
       false,
     );
@@ -178,14 +175,14 @@ export const closeConnection = (node_id) => {
 
 export const getSubBlockAction = (header_hash) => {
   const action = fullNodeMessage();
-  action.message.command = 'get_sub_block';
+  action.message.command = 'get_block';
   action.message.data = { header_hash };
   return action;
 };
 
 export const getSubBlockRecordAction = (headerHash) => {
   const action = fullNodeMessage();
-  action.message.command = 'get_sub_block_record';
+  action.message.command = 'get_block_record';
   action.message.data = { header_hash: headerHash };
   return action;
 };
@@ -203,7 +200,7 @@ export function getSubBlock(headerHash) {
     const response = await async_api(
       dispatch,
       fullNodeMessage({
-        command: 'get_sub_block',
+        command: 'get_block',
         data: {
           header_hash: headerHash,
         },
@@ -220,7 +217,7 @@ export function getSubBlockRecord(headerHash) {
     const response = await async_api(
       dispatch,
       fullNodeMessage({
-        command: 'get_sub_block_record',
+        command: 'get_block_record',
         data: {
           header_hash: headerHash,
         },

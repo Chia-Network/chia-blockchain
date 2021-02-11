@@ -18,9 +18,7 @@ export default function useSelectFile(): () => Promise<string | undefined> {
 
     openDialog(
       <AlertDialog>
-        <Trans>
-          This feature is available only from the GUI.
-        </Trans>
+        <Trans>This feature is available only from the GUI.</Trans>
       </AlertDialog>,
     );
   }

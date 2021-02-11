@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { FormatBytes, Flex, Card, Loading, StateColor, Table } from '@chia/core';
+import {
+  FormatBytes,
+  Flex,
+  Card,
+  Loading,
+  StateColor,
+  Table,
+} from '@chia/core';
 import { Status } from '@chia/icons';
 import { useRouteMatch, useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Button, Grid, TextField, Tooltip, Typography } from '@material-ui/core';
+import {
+  Box,
+  Button,
+  Grid,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
@@ -23,22 +37,22 @@ const cols = [
       const {
         isFinished = false,
         header_hash,
-        foliage_sub_block: {
-          foliage_block_hash,
-        } = {},
+        foliage_sub_block: { foliage_block_hash } = {},
       } = row;
 
-      const value = isFinished
-        ? header_hash
-        : <span>{foliage_block_hash}</span>;
+      const value = isFinished ? (
+        header_hash
+      ) : (
+        <span>{foliage_block_hash}</span>
+      );
 
-      const color = isFinished
-        ? StateColor.SUCCESS
-        : StateColor.WARNING;
+      const color = isFinished ? StateColor.SUCCESS : StateColor.WARNING;
 
-      const tooltip = isFinished
-        ? <Trans>Finished</Trans>
-        : <Trans>In Progress</Trans>;
+      const tooltip = isFinished ? (
+        <Trans>Finished</Trans>
+      ) : (
+        <Trans>In Progress</Trans>
+      );
 
       return (
         <Flex gap={1} alignItems="center">
@@ -46,37 +60,35 @@ const cols = [
             <Status color={color} />
           </Tooltip>
           <Tooltip title={<span>{value}</span>}>
-            <Box textOverflow="ellipsis" overflow="hidden">{value}</Box>
+            <Box textOverflow="ellipsis" overflow="hidden">
+              {value}
+            </Box>
           </Tooltip>
         </Flex>
       );
     },
     title: <Trans>Header Hash</Trans>,
-  }, {
-    field: 'sub_block_height',
+  },
+  {
+    field: 'height',
     title: <Trans>SB Height</Trans>,
-  }, {
+  },
+  {
     field(row) {
-      const { 
-        height, 
+      const {
+        height,
         timestamp,
         isFinished,
-        foliage_block: {
-          height: foliageHeight,
-        } = {},
+        foliage_block: { height: foliageHeight } = {},
       } = row;
       const isSubBlock = !timestamp;
 
       if (!isFinished) {
-        return (
-          <i>{foliageHeight}</i>
-        );
+        return <i>{foliageHeight}</i>;
       }
 
       if (isSubBlock) {
-        return (
-          <i>{height}</i>
-        );
+        return <i>{height}</i>;
       }
 
       return height;
@@ -88,36 +100,22 @@ const cols = [
       const {
         isFinished,
         timestamp,
-        foliage_block: {
-          timestamp: foliageBlockTimestamp,
-        } = {},
+        foliage_block: { timestamp: foliageBlockTimestamp } = {},
       } = row;
 
-      const value = isFinished
-        ? timestamp
-        : foliageBlockTimestamp;
+      const value = isFinished ? timestamp : foliageBlockTimestamp;
 
-      return value 
-        ? unix_to_short_date(Number.parseInt(value))
-        : '';
+      return value ? unix_to_short_date(Number.parseInt(value)) : '';
     },
     title: <Trans>Time Created</Trans>,
   },
   {
     field(row) {
-      const {
-        isFinished = false,
-      } = row;
+      const { isFinished = false } = row;
 
-      return isFinished
-        ? <Trans>Finished</Trans>
-        : <Trans>Unfinished</Trans>;
+      return isFinished ? <Trans>Finished</Trans> : <Trans>Unfinished</Trans>;
     },
-    title: (
-      <Trans>
-        State
-      </Trans>
-    ),
+    title: <Trans>State</Trans>,
   },
 ];
 
@@ -142,20 +140,12 @@ const getStatusItems = (state, connected) => {
       ),
     };
     status_items.push(item);
-  } else if (!state.sync.synced){
+  } else if (!state.sync.synced) {
     const item = {
       label: <Trans>Status</Trans>,
-      value: (
-        <Trans>
-          Not Synced
-        </Trans>
-      ),
+      value: <Trans>Not Synced</Trans>,
       colour: 'red',
-      tooltip: (
-        <Trans>
-          The node is not synced
-        </Trans>
-      ),
+      tooltip: <Trans>The node is not synced</Trans>,
     };
     status_items.push(item);
   } else {
@@ -164,9 +154,7 @@ const getStatusItems = (state, connected) => {
       value: <Trans>Synced</Trans>,
       colour: '#3AAC59',
       tooltip: (
-        <Trans>
-          This node is fully caught up and validating the network
-        </Trans>
+        <Trans>This node is fully caught up and validating the network</Trans>
       ),
     };
     status_items.push(item);
@@ -178,9 +166,7 @@ const getStatusItems = (state, connected) => {
       value: connected ? (
         <Trans>Connected</Trans>
       ) : (
-        <Trans>
-          Not connected
-        </Trans>
+        <Trans>Not connected</Trans>
       ),
       colour: connected ? '#3AAC59' : 'red',
     });
@@ -193,16 +179,10 @@ const getStatusItems = (state, connected) => {
     status_items.push(item);
   }
 
-  const peakHeight = state.peak?.foliage_block?.height ?? 0;
+  const peakHeight = state.peak?.height ?? 0;
   status_items.push({
     label: <Trans>Peak Height</Trans>,
     value: peakHeight,
-  });
-
-  const peakSubBlockHeight = state.peak?.reward_chain_sub_block?.sub_block_height ?? 0;
-  status_items.push({
-    label: <Trans>Peak Sub-block Height</Trans>,
-    value: peakSubBlockHeight,
   });
 
   const peakTimestamp = state.peak?.foliage_block?.timestamp;
@@ -211,11 +191,7 @@ const getStatusItems = (state, connected) => {
     value: peakTimestamp
       ? unix_to_short_date(Number.parseInt(peakTimestamp))
       : '',
-    tooltip: (
-      <Trans>
-        This is the time of the latest peak sub block.
-      </Trans>
-    ),
+    tooltip: <Trans>This is the time of the latest peak sub block.</Trans>,
   });
 
   const { difficulty } = state;
@@ -227,31 +203,19 @@ const getStatusItems = (state, connected) => {
 
   const { sub_slot_iters } = state;
   status_items.push({
-    label: (
-      <Trans>VDF Sub Slot Iterations</Trans>
-    ),
+    label: <Trans>VDF Sub Slot Iterations</Trans>,
     value: sub_slot_iters,
   });
 
-  const totalIters = state.peak?.reward_chain_sub_block?.total_iters ?? 0;
+  const totalIters = state.peak?.total_iters ?? 0;
   status_items.push({
-    label: (
-      <Trans>Total Iterations</Trans>
-    ),
+    label: <Trans>Total Iterations</Trans>,
     value: totalIters,
-    tooltip: (
-      <Trans>
-        Total iterations since the start of the blockchain
-      </Trans>
-    ),
+    tooltip: <Trans>Total iterations since the start of the blockchain</Trans>,
   });
 
   const space_item = {
-    label: (
-      <Trans>
-        Estimated network space
-      </Trans>
-    ),
+    label: <Trans>Estimated network space</Trans>,
     value: <FormatBytes value={state.space} precision={3} />,
     tooltip: (
       <Trans>
@@ -297,12 +261,11 @@ const FullNodeStatus = (props) => {
   const connected = useSelector(
     (state) => state.daemon_state.full_node_connected,
   );
-  const statusItems = blockchain_state && getStatusItems(blockchain_state, connected);
+  const statusItems =
+    blockchain_state && getStatusItems(blockchain_state, connected);
 
   return (
-    <Card
-      title={<Trans>Full Node Status</Trans>}
-    >
+    <Card title={<Trans>Full Node Status</Trans>}>
       {statusItems ? (
         <Grid spacing={4} container>
           {statusItems.map((item) => (
@@ -321,12 +284,16 @@ const FullNodeStatus = (props) => {
 const BlocksCard = () => {
   const { url } = useRouteMatch();
   const history = useHistory();
-  const latestSubBlocks = useSelector((state) => state.full_node_state.latest_sub_blocks ?? []);
-  const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers ?? []);
+  const latestSubBlocks = useSelector(
+    (state) => state.full_node_state.latest_sub_blocks ?? [],
+  );
+  const unfinishedSubBlockHeaders = useSelector(
+    (state) => state.full_node_state.unfinished_sub_block_headers ?? [],
+  );
 
   const rows = [
     ...unfinishedSubBlockHeaders,
-    ...latestSubBlocks.map(row => ({
+    ...latestSubBlocks.map((row) => ({
       ...row,
       isFinished: true,
     })),
@@ -341,15 +308,9 @@ const BlocksCard = () => {
   }
 
   return (
-    <Card
-      title={<Trans>Blocks</Trans>}
-    >
-      {!!rows.length ? (
-        <Table
-          cols={cols}
-          rows={rows}
-          onRowClick={handleRowClick}
-        />
+    <Card title={<Trans>Blocks</Trans>}>
+      {rows.length ? (
+        <Table cols={cols} rows={rows} onRowClick={handleRowClick} />
       ) : (
         <Flex justifyContent="center">
           <Loading />
@@ -373,9 +334,7 @@ function SearchBlock() {
   }
 
   return (
-    <Card
-      title={<Trans>Search block by header hash</Trans>}
-    >
+    <Card title={<Trans>Search block by header hash</Trans>}>
       <Flex alignItems="stretch">
         <Box flexGrow={1}>
           <TextField
@@ -386,11 +345,7 @@ function SearchBlock() {
             variant="outlined"
           />
         </Box>
-        <Button
-          onClick={handleSearch}
-          variant="contained"
-          disableElevation
-        >
+        <Button onClick={handleSearch} variant="contained" disableElevation>
           <Trans>Search</Trans>
         </Button>
       </Flex>
@@ -414,9 +369,7 @@ export default function FullNode() {
   };
 
   return (
-    <LayoutMain
-      title={<Trans>Full Node</Trans>}
-    >
+    <LayoutMain title={<Trans>Full Node</Trans>}>
       <Flex flexDirection="column" gap={3}>
         <FullNodeStatus />
         <BlocksCard />
