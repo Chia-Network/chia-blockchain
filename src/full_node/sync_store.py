@@ -17,6 +17,7 @@ class SyncStore:
     sync_target_height: Optional[uint32]  # Peak height we are syncing towards
     peers_changed: asyncio.Event
     batch_syncing: Set[bytes32]  # Set of nodes which we are batch syncing from
+    backtrack_syncing: Dict[bytes32, int]  # Set of nodes which we are backtrack syncing from, and how many threads
 
     @classmethod
     async def create(cls):
@@ -31,6 +32,7 @@ class SyncStore:
         self.peers_changed = asyncio.Event()
 
         self.batch_syncing = set()
+        self.backtrack_syncing = {}
         return self
 
     def set_peak_target(self, peak_hash: bytes32, target_height: uint32):
