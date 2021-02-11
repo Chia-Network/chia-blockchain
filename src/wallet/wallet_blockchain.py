@@ -228,9 +228,9 @@ class WalletBlockchain(BlockchainInterface):
                 ValidationError(Err(pre_validation_result.error)) if pre_validation_result.error is not None else None
             )
 
-        assert required_iters is not None
         if error is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
+        assert required_iters is not None
 
         sub_block = block_to_sub_block_record(
             self.constants,
