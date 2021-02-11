@@ -231,31 +231,42 @@ class FullNode:
         Returns:
             True iff we found the fork point, and we do not need to long sync.
         """
+        # Don't trigger multiple short syncs to the same peer
+        if peer.peer_node_id in self.sync_store.batch_syncing:
+            return True  # Don't trigger a long sync
 
-        unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
-        curr_height: int = target_height
-        found_fork_point = False
-        responses = []
-        while curr_height > peak_height - 5:
-            # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
-            # already have the unfinished block, from when it was broadcast, so we just need to download the header,
-            # but not the transactions
-            fetch_tx: bool = unfinished_block is None and curr_height == target_height
-            curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_height), fetch_tx))
-            if curr is None:
-                raise ValueError(f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, timed out")
-            if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
-                raise ValueError(
-                    f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
-                )
-            responses.append(curr)
-            if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_height == 0:
-                found_fork_point = True
-                break
-            curr_height -= 1
-        if found_fork_point:
-            for response in reversed(responses):
-                await self.respond_sub_block(response)
+        try:
+            self.sync_store.batch_syncing.add(peer.peer_node_id)
+
+            unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
+            curr_height: int = target_height
+            found_fork_point = False
+            responses = []
+            while curr_height > peak_height - 5:
+                # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
+                # already have the unfinished block, from when it was broadcast, so we just need to download the header,
+                # but not the transactions
+                fetch_tx: bool = unfinished_block is None and curr_height == target_height
+                curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_height), fetch_tx))
+                if curr is None:
+                    raise ValueError(f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, timed out")
+                if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
+                    raise ValueError(
+                        f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
+                    )
+                responses.append(curr)
+                if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_height == 0:
+                    found_fork_point = True
+                    break
+                curr_height -= 1
+            if found_fork_point:
+                for response in reversed(responses):
+                    await self.respond_sub_block(response)
+        except Exception as e:
+            self.sync_store.batch_syncing.remove(peer.peer_node_id)
+            raise e
+
+        self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return found_fork_point
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
