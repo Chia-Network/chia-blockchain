@@ -47,7 +47,7 @@ class WalletNodeAPI:
         pass
 
     @api_request
-    async def respond_sub_block_header(self, response: wallet_protocol.RespondSubBlockHeader):
+    async def respond_block_header(self, response: wallet_protocol.RespondBlockHeader):
         pass
 
     @peer_required

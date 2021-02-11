@@ -22,7 +22,7 @@ class ProtocolMessageTypes(Enum):
 
     # Timelord protocol (timelord <-> full_node)
     new_peak_timelord = 13
-    new_unfinished_sub_block_timelord = 14
+    new_unfinished_block_timelord = 14
     new_infusion_point_vdf = 15
     new_signage_point_vdf = 16
     new_end_of_sub_slot_vdf = 17
@@ -34,15 +34,15 @@ class ProtocolMessageTypes(Enum):
     respond_transaction = 21
     request_proof_of_weight = 22
     respond_proof_of_weight = 23
-    request_sub_block = 24
-    respond_sub_block = 25
-    reject_sub_block = 26
-    request_sub_blocks = 27
-    respond_sub_blocks = 28
-    reject_sub_blocks = 29
-    new_unfinished_sub_block = 30
-    request_unfinished_sub_block = 31
-    respond_unfinished_sub_block = 32
+    request_block = 24
+    respond_block = 25
+    reject_block = 26
+    request_blocks = 27
+    respond_blocks = 28
+    reject_blocks = 29
+    new_unfinished_block = 30
+    request_unfinished_block = 31
+    respond_unfinished_block = 32
     new_signage_point_or_end_of_sub_slot = 33
     request_signage_point_or_end_of_sub_slot = 34
     respond_signage_point = 35
@@ -60,8 +60,8 @@ class ProtocolMessageTypes(Enum):
     send_transaction = 45
     transaction_ack = 46
     new_peak_wallet = 47
-    request_sub_block_header = 48
-    respond_sub_block_header = 49
+    request_block_header = 48
+    respond_block_header = 49
     reject_header_request = 50
     request_removals = 51
     respond_removals = 52

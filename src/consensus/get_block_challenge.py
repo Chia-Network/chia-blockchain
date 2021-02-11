@@ -2,7 +2,7 @@ from typing import List, Union
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -49,7 +49,7 @@ def get_block_challenge(
             else:
                 challenges_to_look_for = 1
             reversed_challenge_hashes: List[bytes32] = []
-            curr: SubBlockRecord = sub_blocks.sub_block_record(header_block.prev_header_hash)
+            curr: BlockRecord = sub_blocks.sub_block_record(header_block.prev_header_hash)
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
                     assert curr.finished_challenge_slot_hashes is not None

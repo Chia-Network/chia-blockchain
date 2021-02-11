@@ -13,7 +13,7 @@ from src.types.classgroup import ClassgroupElement
 
 @dataclass(frozen=True)
 @streamable
-class SubBlockRecord(Streamable):
+class BlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more
     efficient way to maintain data about the blockchain. This allows us to validate future blocks,
@@ -40,9 +40,9 @@ class SubBlockRecord(Streamable):
     overflow: bool
     prev_transaction_block_height: uint32
 
-    # Block (present iff is_block)
+    # Transaction block (present iff is_transaction_block)
     timestamp: Optional[uint64]
-    prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
+    prev_transaction_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
     fees: Optional[uint64]
     reward_claims_incorporated: Optional[List[Coin]]
 
@@ -55,15 +55,15 @@ class SubBlockRecord(Streamable):
     sub_epoch_summary_included: Optional[SubEpochSummary]
 
     @property
-    def is_block(self) -> bool:
+    def is_transaction_block(self) -> bool:
         return self.timestamp is not None
 
     @property
     def first_in_sub_slot(self) -> bool:
         return self.finished_challenge_slot_hashes is not None
 
-    def is_challenge_sub_block(self, constants: ConsensusConstants) -> bool:
-        return self.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
+    def is_challenge_block(self, constants: ConsensusConstants) -> bool:
+        return self.deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1
 
     def sp_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
         if self.overflow:

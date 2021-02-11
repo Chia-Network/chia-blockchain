@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List, Tuple
 from src.types.full_block import FullBlock
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.ints import uint32, uint64
@@ -20,7 +20,7 @@ class FullNodeRpcClient(RpcClient):
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
         if response["blockchain_state"]["peak"] is not None:
-            response["blockchain_state"]["peak"] = SubBlockRecord.from_json_dict(response["blockchain_state"]["peak"])
+            response["blockchain_state"]["peak"] = BlockRecord.from_json_dict(response["blockchain_state"]["peak"])
         return response["blockchain_state"]
 
     async def get_sub_block(self, header_hash) -> Optional[FullBlock]:
@@ -30,21 +30,21 @@ class FullNodeRpcClient(RpcClient):
             return None
         return FullBlock.from_json_dict(response["block"])
 
-    async def get_sub_block_record_by_height(self, height) -> Optional[SubBlockRecord]:
+    async def get_block_record_by_height(self, height) -> Optional[BlockRecord]:
         try:
             response = await self.fetch("get_block_record_by_height", {"height": height})
         except Exception:
             return None
-        return SubBlockRecord.from_json_dict(response["block_record"])
+        return BlockRecord.from_json_dict(response["block_record"])
 
-    async def get_sub_block_record(self, header_hash) -> Optional[SubBlockRecord]:
+    async def get_block_record(self, header_hash) -> Optional[BlockRecord]:
         try:
             response = await self.fetch("get_block_record", {"header_hash": header_hash.hex()})
             if response["block_record"] is None:
                 return None
         except Exception:
             return None
-        return SubBlockRecord.from_json_dict(response["block_record"])
+        return BlockRecord.from_json_dict(response["block_record"])
 
     async def get_unfinished_sub_block_headers(self) -> List[UnfinishedHeaderBlock]:
         response = await self.fetch("get_unfinished_block_headers", {})
@@ -88,7 +88,7 @@ class FullNodeRpcClient(RpcClient):
             additions.append(CoinRecord.from_json_dict(coin_record))
         return additions, removals
 
-    async def get_sub_block_records(self, start: int, end: int) -> List:
+    async def get_block_records(self, start: int, end: int) -> List:
         try:
             response = await self.fetch("get_block_records", {"start": start, "end": end})
             if response["block_records"] is None:

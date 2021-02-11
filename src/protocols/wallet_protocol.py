@@ -69,13 +69,13 @@ class NewPeakWallet(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RequestSubBlockHeader(Streamable):
+class RequestBlockHeader(Streamable):
     height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
-class RespondSubBlockHeader(Streamable):
+class RespondBlockHeader(Streamable):
     header_block: HeaderBlock
 
 

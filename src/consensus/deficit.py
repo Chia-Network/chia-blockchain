@@ -1,14 +1,14 @@
 from typing import Optional
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.util.ints import uint32, uint8
 
 
 def calculate_deficit(
     constants: ConsensusConstants,
     height: uint32,
-    prev_sb: Optional[SubBlockRecord],
+    prev_sb: Optional[BlockRecord],
     overflow: bool,
     num_finished_sub_slots: int,
 ) -> uint8:
@@ -23,11 +23,11 @@ def calculate_deficit(
         num_finished_sub_slots: the number of finished slots between infusion points of prev and current
     """
     if height == 0:
-        return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
+        return uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1)
     else:
         assert prev_sb is not None
         prev_deficit: uint8 = prev_sb.deficit
-        if prev_deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+        if prev_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
             # Prev sb must be an overflow sb. However maybe it's in a different sub-slot
             if overflow:
                 if num_finished_sub_slots > 0:
@@ -43,11 +43,11 @@ def calculate_deficit(
                 return uint8(0)
             elif num_finished_sub_slots == 1:
                 if overflow:
-                    return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
+                    return uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
                 else:
-                    return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
+                    return uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1)
             else:
                 # More than one finished sub slot, we can decrease deficit
-                return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
+                return uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1)
         else:
             return uint8(prev_deficit - 1)

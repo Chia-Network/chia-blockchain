@@ -51,7 +51,7 @@ class TestBlockStore:
                 await store.add_full_block(block, sub_block)
                 assert block == await store.get_full_block(block.header_hash)
                 assert block == await store.get_full_block(block.header_hash)
-                assert sub_block == (await store.get_sub_block_record(sub_block_hh))
+                assert sub_block == (await store.get_block_record(sub_block_hh))
                 await store.set_peak(sub_block.header_hash)
                 await store.set_peak(sub_block.header_hash)
 
@@ -60,7 +60,7 @@ class TestBlockStore:
             assert len(await store.get_full_blocks_at([100])) == 0
 
             # Get sub blocks
-            sub_block_records = await store.get_sub_block_records()
+            sub_block_records = await store.get_block_records()
             assert len(sub_block_records[0]) == len(blocks)
 
             # Peak is correct

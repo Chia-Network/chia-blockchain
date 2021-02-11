@@ -15,9 +15,9 @@ try:
 except ImportError:
     pass
 
-from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
+from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.pot_iterations import calculate_iterations_quality
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_summaries,
@@ -53,7 +53,7 @@ def count_sub_epochs(blockchain, last_hash) -> int:
     return count
 
 
-def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
+def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
     curr = sub_blocks[last_hash]
     blocks = 1
     while curr.height != 0:
@@ -69,11 +69,11 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
 async def load_blocks_dont_validate(
     blocks,
 ) -> Tuple[
-    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, SubBlockRecord], Dict[bytes32, SubEpochSummary]
+    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[bytes32, SubEpochSummary]
 ]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
-    sub_blocks: Dict[bytes32, SubBlockRecord] = {}
+    sub_blocks: Dict[bytes32, BlockRecord] = {}
     sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = {}
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
@@ -81,29 +81,29 @@ async def load_blocks_dont_validate(
     for block in blocks:
         if block.height > 0:
             assert prev_block is not None
-            difficulty = block.reward_chain_sub_block.weight - prev_block.weight
+            difficulty = block.reward_chain_block.weight - prev_block.weight
 
-        if block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-            assert block.reward_chain_sub_block.signage_point_index == 0
-            cc_sp: bytes32 = block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+        if block.reward_chain_block.challenge_chain_sp_vdf is None:
+            assert block.reward_chain_block.signage_point_index == 0
+            cc_sp: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
         else:
-            cc_sp = block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+            cc_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
-        quality_string: Optional[bytes32] = block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+        quality_string: Optional[bytes32] = block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
             test_constants,
-            block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
+            block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,
         )
         assert quality_string is not None
 
         required_iters: uint64 = calculate_iterations_quality(
             quality_string,
-            block.reward_chain_sub_block.proof_of_space.size,
+            block.reward_chain_block.proof_of_space.size,
             difficulty,
             cc_sp,
         )
 
-        sub_block = block_to_sub_block_record(
+        sub_block = block_to_block_record(
             test_constants, BlockCache(sub_blocks, height_to_hash), required_iters, block, None
         )
         sub_blocks[block.header_hash] = sub_block
@@ -130,7 +130,7 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
     assert wp is not None
     # sub epoch summaries validate hashes
     summaries, sub_epoch_data_weight = _map_summaries(
-        test_constants.SUB_EPOCH_SUB_BLOCKS,
+        test_constants.SUB_EPOCH_BLOCKS,
         test_constants.GENESIS_CHALLENGE,
         wp.sub_epochs,
         test_constants.DIFFICULTY_STARTING,
@@ -156,7 +156,7 @@ class TestWeightProof:
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         summaries, sub_epoch_data_weight = _map_summaries(
-            wpf.constants.SUB_EPOCH_SUB_BLOCKS,
+            wpf.constants.SUB_EPOCH_BLOCKS,
             wpf.constants.GENESIS_CHALLENGE,
             wp.sub_epochs,
             wpf.constants.DIFFICULTY_STARTING,
@@ -304,7 +304,7 @@ class TestWeightProof:
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
         peak = 30000
-        sub_blocks = await block_store.get_sub_block_records_in_range(0, peak)
+        sub_blocks = await block_store.get_block_records_in_range(0, peak)
         headers = await block_store.get_header_blocks_in_range(0, peak)
 
         height_to_hash = {}
@@ -317,7 +317,7 @@ class TestWeightProof:
         peak_height = sub_blocks[peak[0].header_hash].height
 
         # Sets the other state variables (peak_height and height_to_hash)
-        curr: SubBlockRecord = sub_blocks[peak[0].header_hash]
+        curr: BlockRecord = sub_blocks[peak[0].header_hash]
         while True:
             height_to_hash[curr.height] = curr.header_hash
             if curr.sub_epoch_summary_included is not None:

@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.sized_bytes import bytes32
@@ -13,7 +13,7 @@ def get_signage_point_vdf_info(
     constants: ConsensusConstants,
     finished_sub_slots: List[EndOfSubSlotBundle],
     overflow: bool,
-    prev_sb: Optional[SubBlockRecord],
+    prev_sb: Optional[BlockRecord],
     sub_blocks: BlockchainInterface,
     sp_total_iters: uint128,
     sp_iters: uint64,
@@ -51,7 +51,7 @@ def get_signage_point_vdf_info(
     elif new_sub_slot and overflow and len(finished_sub_slots) == 1:
         # Case 4: Starting at prev will put us in the previous, sub-slot, since case 2 handled more empty slots
         assert prev_sb is not None
-        curr: SubBlockRecord = prev_sb
+        curr: BlockRecord = prev_sb
         while not curr.first_in_sub_slot and curr.total_iters > sp_total_iters:
             curr = sub_blocks.sub_block_record(curr.prev_hash)
         if curr.total_iters < sp_total_iters:
@@ -89,7 +89,7 @@ def get_signage_point_vdf_info(
             )
         else:
             found_sub_slots = []
-        sp_pre_sb: Optional[SubBlockRecord] = None
+        sp_pre_sb: Optional[BlockRecord] = None
         while len(found_sub_slots) < 2 and curr.height > 0:
             if sp_pre_sb is None and curr.total_iters < sp_total_iters:
                 sp_pre_sb = curr

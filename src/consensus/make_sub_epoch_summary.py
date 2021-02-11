@@ -5,7 +5,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
-    is_overflow_sub_block,
+    is_overflow_block,
 )
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import (
@@ -13,7 +13,7 @@ from src.consensus.difficulty_adjustment import (
     get_next_difficulty,
     get_next_sub_slot_iters,
 )
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
@@ -28,7 +28,7 @@ def make_sub_epoch_summary(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
     blocks_included_height: uint32,
-    prev_prev_sub_block: SubBlockRecord,
+    prev_prev_sub_block: BlockRecord,
     new_difficulty: Optional[uint64],
     new_sub_slot_iters: Optional[uint64],
 ) -> SubEpochSummary:
@@ -46,8 +46,8 @@ def make_sub_epoch_summary(
         new_sub_slot_iters: sub slot iters in new epoch
     """
     assert prev_prev_sub_block.height == blocks_included_height - 2
-    # If first sub_epoch. Adds MAX_SUB_SLOT_SUB_BLOCKS because blocks_included_height might be behind
-    if (blocks_included_height + constants.MAX_SUB_SLOT_SUB_BLOCKS) // constants.SUB_EPOCH_SUB_BLOCKS == 1:
+    # If first sub_epoch. Adds MAX_SUB_SLOT_BLOCKS because blocks_included_height might be behind
+    if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS == 1:
         return SubEpochSummary(
             constants.GENESIS_CHALLENGE,
             constants.GENESIS_CHALLENGE,
@@ -55,7 +55,7 @@ def make_sub_epoch_summary(
             None,
             None,
         )
-    curr: SubBlockRecord = prev_prev_sub_block
+    curr: BlockRecord = prev_prev_sub_block
     while curr.sub_epoch_summary_included is None:
         curr = sub_blocks.sub_block_record(curr.prev_hash)
     assert curr is not None
@@ -64,7 +64,7 @@ def make_sub_epoch_summary(
     return SubEpochSummary(
         prev_ses,
         curr.finished_reward_slot_hashes[-1],
-        uint8(curr.height % constants.SUB_EPOCH_SUB_BLOCKS),
+        uint8(curr.height % constants.SUB_EPOCH_BLOCKS),
         new_difficulty,
         new_sub_slot_iters,
     )
@@ -88,13 +88,13 @@ def next_sub_epoch_summary(
         required_iters: required iters of the proof of space in block
         block: the (potentially) last sub-block in the new epoch
         can_finish_soon: this is useful when sending SES to timelords. We might not be able to finish it, but we will
-            soon (within MAX_SUB_SLOT_SUB_BLOCKS)
+            soon (within MAX_SUB_SLOT_BLOCKS)
 
     Returns:
         object: the new sub-epoch summary
     """
-    signage_point_index = block.reward_chain_sub_block.signage_point_index
-    prev_sb: Optional[SubBlockRecord] = sub_blocks.try_sub_block(block.prev_header_hash)
+    signage_point_index = block.reward_chain_block.signage_point_index
+    prev_sb: Optional[BlockRecord] = sub_blocks.try_sub_block(block.prev_header_hash)
     if prev_sb is None or prev_sb.height == 0:
         return None
 
@@ -114,7 +114,7 @@ def next_sub_epoch_summary(
         len(block.finished_sub_slots) > 0,
         prev_sb.sp_total_iters(constants),
     )
-    overflow = is_overflow_sub_block(constants, signage_point_index)
+    overflow = is_overflow_block(constants, signage_point_index)
     deficit = calculate_deficit(
         constants,
         uint32(prev_sb.height + 1),

@@ -4,7 +4,7 @@ import pytest
 
 
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from src.protocols.full_node_protocol import RespondSubBlock
+from src.protocols.full_node_protocol import RespondBlock
 from src.server.server import ChiaServer
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
@@ -55,7 +55,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_sub_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
@@ -196,8 +196,8 @@ class TestWalletSimulator:
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
         for block in all_blocks:
-            await full_node_1.respond_sub_block(RespondSubBlock(block))
-            await full_node_2.respond_sub_block(RespondSubBlock(block))
+            await full_node_1.respond_block(RespondBlock(block))
+            await full_node_2.respond_block(RespondBlock(block))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]

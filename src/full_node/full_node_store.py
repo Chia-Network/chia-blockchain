@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple, Set
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.protocols import timelord_protocol
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -159,7 +159,7 @@ class FullNodeStore:
         self,
         eos: EndOfSubSlotBundle,
         sub_blocks: BlockchainInterface,
-        peak: Optional[SubBlockRecord],
+        peak: Optional[BlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
@@ -208,18 +208,18 @@ class FullNodeStore:
                 log.warning(f"Don't have challenge hash {rc_challenge}")
                 return None
 
-            if peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            if peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 icc_start_element = None
-            elif peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+            elif peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                 icc_start_element = ClassgroupElement.get_default_element()
             else:
                 icc_start_element = peak.infused_challenge_vdf_output
 
-            if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            if peak.deficit < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
-                while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
+                while not curr.first_in_sub_slot and not curr.is_challenge_block(self.constants):
                     curr = sub_blocks.sub_block_record(curr.prev_hash)
-                if curr.is_challenge_sub_block(self.constants):
+                if curr.is_challenge_block(self.constants):
                     icc_challenge = curr.challenge_block_info_hash
                     icc_iters = uint64(total_iters - curr.total_iters)
                 else:
@@ -239,7 +239,7 @@ class FullNodeStore:
                 last_slot.infused_challenge_chain.get_hash()
                 if last_slot is not None
                 and last_slot.infused_challenge_chain is not None
-                and last_slot.reward_chain.deficit != self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+                and last_slot.reward_chain.deficit != self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
                 else None
             )
 
@@ -312,7 +312,7 @@ class FullNodeStore:
         self,
         index: uint8,
         sub_blocks: BlockchainInterface,
-        peak: Optional[SubBlockRecord],
+        peak: Optional[BlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
         skip_vdf_validation=False,
@@ -499,7 +499,7 @@ class FullNodeStore:
 
     def new_peak(
         self,
-        peak: SubBlockRecord,
+        peak: BlockRecord,
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
@@ -568,7 +568,7 @@ class FullNodeStore:
 
     def get_finished_sub_slots(
         self,
-        prev_sb: Optional[SubBlockRecord],
+        prev_sb: Optional[BlockRecord],
         sub_block_records: BlockchainInterface,
         pos_ss_challenge_hash: bytes32,
         extra_sub_slot: bool = False,
@@ -585,7 +585,7 @@ class FullNodeStore:
         final_index: int = -1
 
         if prev_sb is not None:
-            curr: SubBlockRecord = prev_sb
+            curr: BlockRecord = prev_sb
             assert curr is not None
             while not curr.first_in_sub_slot:
                 curr = sub_block_records.sub_block_record(curr.prev_hash)

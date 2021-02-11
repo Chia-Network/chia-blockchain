@@ -17,22 +17,22 @@ from src.full_node.bundle_tools import best_solution_program
 from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.signage_point import SignagePoint
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.coin import Coin, hash_coin_list
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import (
-    FoliageSubBlock,
-    FoliageBlock,
+    Foliage,
+    FoliageTransactionBlock,
     TransactionsInfo,
-    FoliageSubBlockData,
+    FoliageBlockData,
 )
 from src.types.full_block import additions_for_npc, FullBlock
 from src.types.pool_target import PoolTarget
 from src.types.program import SerializedProgram
 from src.types.proof_of_space import ProofOfSpace
-from src.types.reward_chain_sub_block import (
-    RewardChainSubBlockUnfinished,
-    RewardChainSubBlock,
+from src.types.reward_chain_block import (
+    RewardChainBlockUnfinished,
+    RewardChainBlock,
 )
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
@@ -41,15 +41,15 @@ from src.types.vdf import VDFInfo, VDFProof
 from src.util.hash import std_hash
 from src.util.ints import uint128, uint64, uint32, uint8
 from src.util.merkle_set import MerkleSet
-from src.util.prev_block import get_prev_block
+from src.util.prev_transaction_block import get_prev_transaction_block
 from tests.recursive_replace import recursive_replace
 
 
 def create_foliage(
     constants: ConsensusConstants,
-    reward_sub_block: RewardChainSubBlockUnfinished,
+    reward_sub_block: RewardChainBlockUnfinished,
     spend_bundle: Optional[SpendBundle],
-    prev_sub_block: Optional[SubBlockRecord],
+    prev_sub_block: Optional[BlockRecord],
     sub_blocks: BlockchainInterface,
     total_iters_sp: uint128,
     timestamp: uint64,
@@ -58,7 +58,7 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     seed: bytes32 = b"",
-) -> Tuple[FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
+) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
     """
     Creates a foliage for a given reward chain sub block. This may or may not be a block. In the case of a block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -81,13 +81,13 @@ def create_foliage(
     """
 
     if prev_sub_block is not None:
-        res = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
-        is_block: bool = res[0]
-        prev_block: Optional[SubBlockRecord] = res[1]
+        res = get_prev_transaction_block(prev_sub_block, sub_blocks, total_iters_sp)
+        is_transaction_block: bool = res[0]
+        prev_block: Optional[BlockRecord] = res[1]
     else:
-        # Genesis is a block
+        # Genesis is a transaction block
         prev_block = None
-        is_block = True
+        is_transaction_block = True
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
@@ -107,7 +107,7 @@ def create_foliage(
     )
     assert pool_target_signature is not None
 
-    foliage_sub_block_data = FoliageSubBlockData(
+    foliage_sub_block_data = FoliageBlockData(
         reward_sub_block.get_hash(),
         pool_target,
         pool_target_signature,
@@ -115,7 +115,7 @@ def create_foliage(
         extension_data,
     )
 
-    foliage_sub_block_signature: G2Element = get_plot_signature(
+    foliage_block_data_signature: G2Element = get_plot_signature(
         foliage_sub_block_data.get_hash(),
         reward_sub_block.proof_of_space.plot_public_key,
     )
@@ -126,7 +126,7 @@ def create_foliage(
         prev_sub_block_hash = prev_sub_block.header_hash
 
     solution_program: Optional[SerializedProgram] = None
-    if is_block:
+    if is_transaction_block:
         spend_bundle_fees: int = 0
         aggregate_sig: G2Element = G2Element.infinity()
         cost = uint64(0)
@@ -145,8 +145,8 @@ def create_foliage(
         if height > 0:
             assert prev_block is not None
             assert prev_sub_block is not None
-            curr: SubBlockRecord = prev_sub_block
-            while not curr.is_block:
+            curr: BlockRecord = prev_sub_block
+            while not curr.is_transaction_block:
                 curr = sub_blocks.sub_block_record(curr.prev_hash)
 
             assert curr.fees is not None
@@ -167,7 +167,7 @@ def create_foliage(
             if curr.height > 0:
                 curr = sub_blocks.sub_block_record(curr.prev_hash)
                 # Prev block is not genesis
-                while not curr.is_block:
+                while not curr.is_transaction_block:
                     pool_coin = create_pool_coin(
                         curr.height,
                         curr.pool_puzzle_hash,
@@ -236,7 +236,7 @@ def create_foliage(
             prev_block_hash = prev_block.header_hash
 
         assert transactions_info is not None
-        foliage_block: Optional[FoliageBlock] = FoliageBlock(
+        foliage_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
             prev_block_hash,
             timestamp,
             filter_hash,
@@ -245,25 +245,25 @@ def create_foliage(
             transactions_info.get_hash(),
         )
         assert foliage_block is not None
-        foliage_block_hash: Optional[bytes32] = foliage_block.get_hash()
-        foliage_block_signature: Optional[G2Element] = get_plot_signature(
-            foliage_block_hash, reward_sub_block.proof_of_space.plot_public_key
+        foliage_transaction_block_hash: Optional[bytes32] = foliage_block.get_hash()
+        foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
+            foliage_transaction_block_hash, reward_sub_block.proof_of_space.plot_public_key
         )
-        assert foliage_block_signature is not None
+        assert foliage_transaction_block_signature is not None
     else:
-        foliage_block_hash = None
-        foliage_block_signature = None
+        foliage_transaction_block_hash = None
+        foliage_transaction_block_signature = None
         foliage_block = None
         transactions_info = None
-    assert (foliage_block_hash is None) == (foliage_block_signature is None)
+    assert (foliage_transaction_block_hash is None) == (foliage_transaction_block_signature is None)
 
-    foliage_sub_block = FoliageSubBlock(
+    foliage_sub_block = Foliage(
         prev_sub_block_hash,
         reward_sub_block.get_hash(),
         foliage_sub_block_data,
-        foliage_sub_block_signature,
-        foliage_block_hash,
-        foliage_block_signature,
+        foliage_block_data_signature,
+        foliage_transaction_block_hash,
+        foliage_transaction_block_signature,
     )
 
     return foliage_sub_block, foliage_block, transactions_info, solution_program
@@ -287,7 +287,7 @@ def create_unfinished_block(
     sub_blocks: BlockchainInterface,
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
-    prev_sub_block: Optional[SubBlockRecord] = None,
+    prev_sub_block: Optional[BlockRecord] = None,
     finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
 ) -> UnfinishedBlock:
     """
@@ -359,7 +359,7 @@ def create_unfinished_block(
 
     total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
 
-    rc_sub_block = RewardChainSubBlockUnfinished(
+    rc_sub_block = RewardChainBlockUnfinished(
         total_iters,
         signage_point_index,
         slot_cc_challenge,
@@ -406,7 +406,7 @@ def unfinished_block_to_full_block(
     icc_ip_vdf: Optional[VDFInfo],
     icc_ip_proof: Optional[VDFProof],
     finished_sub_slots: List[EndOfSubSlotBundle],
-    prev_sub_block: Optional[SubBlockRecord],
+    prev_sub_block: Optional[BlockRecord],
     sub_blocks: BlockchainInterface,
     total_iters_sp: uint128,
     difficulty: uint64,
@@ -432,21 +432,21 @@ def unfinished_block_to_full_block(
     """
     # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
     if prev_sub_block is None:
-        is_block = True
+        is_transaction_block = True
         new_weight = uint128(difficulty)
         new_height = uint32(0)
-        new_foliage_sub_block = unfinished_block.foliage_sub_block
-        new_foliage_block = unfinished_block.foliage_block
+        new_foliage_sub_block = unfinished_block.foliage
+        new_foliage_block = unfinished_block.foliage_transaction_block
         new_tx_info = unfinished_block.transactions_info
         new_generator = unfinished_block.transactions_generator
     else:
-        is_block, _ = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
+        is_transaction_block, _ = get_prev_transaction_block(prev_sub_block, sub_blocks, total_iters_sp)
         new_weight = uint128(prev_sub_block.weight + difficulty)
         new_height = uint32(prev_sub_block.height + 1)
-        if is_block:
-            new_fbh = unfinished_block.foliage_sub_block.foliage_block_hash
-            new_fbs = unfinished_block.foliage_sub_block.foliage_block_signature
-            new_foliage_block = unfinished_block.foliage_block
+        if is_transaction_block:
+            new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
+            new_fbs = unfinished_block.foliage.foliage_transaction_block_signature
+            new_foliage_block = unfinished_block.foliage_transaction_block
             new_tx_info = unfinished_block.transactions_info
             new_generator = unfinished_block.transactions_generator
         else:
@@ -457,28 +457,28 @@ def unfinished_block_to_full_block(
             new_generator = None
         assert (new_fbh is None) == (new_fbs is None)
         new_foliage_sub_block = replace(
-            unfinished_block.foliage_sub_block,
+            unfinished_block.foliage,
             prev_sub_block_hash=prev_sub_block.header_hash,
-            foliage_block_hash=new_fbh,
-            foliage_block_signature=new_fbs,
+            foliage_transaction_block_hash=new_fbh,
+            foliage_transaction_block_signature=new_fbs,
         )
     ret = FullBlock(
         finished_sub_slots,
-        RewardChainSubBlock(
+        RewardChainBlock(
             new_weight,
             new_height,
-            unfinished_block.reward_chain_sub_block.total_iters,
-            unfinished_block.reward_chain_sub_block.signage_point_index,
-            unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
-            unfinished_block.reward_chain_sub_block.proof_of_space,
-            unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf,
-            unfinished_block.reward_chain_sub_block.challenge_chain_sp_signature,
+            unfinished_block.reward_chain_block.total_iters,
+            unfinished_block.reward_chain_block.signage_point_index,
+            unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
+            unfinished_block.reward_chain_block.proof_of_space,
+            unfinished_block.reward_chain_block.challenge_chain_sp_vdf,
+            unfinished_block.reward_chain_block.challenge_chain_sp_signature,
             cc_ip_vdf,
-            unfinished_block.reward_chain_sub_block.reward_chain_sp_vdf,
-            unfinished_block.reward_chain_sub_block.reward_chain_sp_signature,
+            unfinished_block.reward_chain_block.reward_chain_sp_vdf,
+            unfinished_block.reward_chain_block.reward_chain_sp_signature,
             rc_ip_vdf,
             icc_ip_vdf,
-            is_block,
+            is_transaction_block,
         ),
         unfinished_block.challenge_chain_sp_proof,
         cc_ip_proof,
@@ -492,6 +492,6 @@ def unfinished_block_to_full_block(
     )
     return recursive_replace(
         ret,
-        "foliage_sub_block.reward_block_hash",
-        ret.reward_chain_sub_block.get_hash(),
+        "foliage.reward_block_hash",
+        ret.reward_chain_block.get_hash(),
     )

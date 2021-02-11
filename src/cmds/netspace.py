@@ -67,7 +67,7 @@ async def netstorge_async(args, parser):
 
                 newer_block_height = blockchain_state["peak"].height
             else:
-                newer_sub_block = await client.get_sub_block_record(hexstr_to_bytes(args.start))
+                newer_sub_block = await client.get_block_record(hexstr_to_bytes(args.start))
                 if newer_sub_block is None:
                     print("Sub block header hash", args.start, "not found.")
                     client.close()
@@ -77,9 +77,9 @@ async def netstorge_async(args, parser):
                     print("newer_height", newer_sub_block.height)
                     newer_block_height = newer_sub_block.height
 
-            newer_block_header = await client.get_sub_block_record_by_height(newer_block_height)
+            newer_block_header = await client.get_block_record_by_height(newer_block_height)
             older_block_height = max(0, newer_block_height - int(args.delta_block_height))
-            older_block_header = await client.get_sub_block_record_by_height(older_block_height)
+            older_block_header = await client.get_block_record_by_height(older_block_height)
             network_space_bytes_estimate = await client.get_network_space(
                 newer_block_header.header_hash, older_block_header.header_hash
             )

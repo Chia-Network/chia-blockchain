@@ -57,7 +57,7 @@ class XTestMempoolPerformance:
         ph = await wallet.get_new_puzzlehash()
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
@@ -73,10 +73,10 @@ class XTestMempoolPerformance:
             await con.close()
 
         # blocks = bt.get_consecutive_blocks(3, blocks)
-        # await full_node_api_1.full_node.respond_sub_block(full_node_protocol.respondsubblock(blocks[-3]))
+        # await full_node_api_1.full_node.respond_block(full_node_protocol.respondsubblock(blocks[-3]))
         #
         # for block in blocks[-2:]:
         #     start_t_2 = time.time()
-        #     await full_node_api_1.full_node.respond_sub_block(full_node_protocol.respondsubblock(block))
+        #     await full_node_api_1.full_node.respond_block(full_node_protocol.respondsubblock(block))
         #     assert time.time() - start_t_2 < 1
 """

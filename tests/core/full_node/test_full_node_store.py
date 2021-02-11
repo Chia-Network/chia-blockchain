@@ -5,7 +5,7 @@ import pytest
 from pytest import raises
 
 from src.consensus.blockchain import ReceiveBlockResult
-from src.consensus.pot_iterations import is_overflow_sub_block
+from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.signage_point import SignagePoint
 from src.protocols.timelord_protocol import NewInfusionPointVDF
@@ -37,11 +37,11 @@ class TestFullNodeStore:
             unfinished_blocks.append(
                 UnfinishedBlock(
                     block.finished_sub_slots,
-                    block.reward_chain_sub_block.get_unfinished(),
+                    block.reward_chain_block.get_unfinished(),
                     block.challenge_chain_sp_proof,
                     block.reward_chain_sp_proof,
-                    block.foliage_sub_block,
-                    block.foliage_block,
+                    block.foliage,
+                    block.foliage_transaction_block,
                     block.transactions_info,
                     block.transactions_generator,
                 )
@@ -269,13 +269,13 @@ class TestFullNodeStore:
 
         # Test adding past signage point
         sp = SignagePoint(
-            blocks[1].reward_chain_sub_block.challenge_chain_sp_vdf,
+            blocks[1].reward_chain_block.challenge_chain_sp_vdf,
             blocks[1].challenge_chain_sp_proof,
-            blocks[1].reward_chain_sub_block.reward_chain_sp_vdf,
+            blocks[1].reward_chain_block.reward_chain_sp_vdf,
             blocks[1].reward_chain_sp_proof,
         )
         assert not store.new_signage_point(
-            blocks[1].reward_chain_sub_block.signage_point_index,
+            blocks[1].reward_chain_block.signage_point_index,
             {},
             peak,
             blockchain.sub_block_record(blocks[1].header_hash).sp_sub_slot_total_iters(test_constants),
@@ -344,7 +344,7 @@ class TestFullNodeStore:
 
         # If this is not the case, fix test to find a block that is
         assert (
-            blocks_4[-1].reward_chain_sub_block.signage_point_index
+            blocks_4[-1].reward_chain_block.signage_point_index
             < test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA
         )
         await blockchain.receive_block(blocks_4[-1])
@@ -354,7 +354,7 @@ class TestFullNodeStore:
             sb.signage_point_index + test_constants.NUM_SP_INTERVALS_EXTRA,
             test_constants.NUM_SPS_SUB_SLOT,
         ):
-            if is_overflow_sub_block(test_constants, i):
+            if is_overflow_block(test_constants, i):
                 finished_sub_slots = blocks_5[-1].finished_sub_slots
             else:
                 finished_sub_slots = []
@@ -414,12 +414,12 @@ class TestFullNodeStore:
             prev_block = blocks[i]
             block = blocks[i + 1]
             new_ip = NewInfusionPointVDF(
-                block.reward_chain_sub_block.get_unfinished().get_hash(),
-                block.reward_chain_sub_block.challenge_chain_ip_vdf,
+                block.reward_chain_block.get_unfinished().get_hash(),
+                block.reward_chain_block.challenge_chain_ip_vdf,
                 block.challenge_chain_ip_proof,
-                block.reward_chain_sub_block.reward_chain_ip_vdf,
+                block.reward_chain_block.reward_chain_ip_vdf,
                 block.reward_chain_ip_proof,
-                block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
+                block.reward_chain_block.infused_challenge_chain_ip_vdf,
                 block.infused_challenge_chain_ip_proof,
             )
             store.add_to_future_ip(new_ip)

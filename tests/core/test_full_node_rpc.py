@@ -1,6 +1,6 @@
 import pytest
 
-from src.consensus.pot_iterations import is_overflow_sub_block
+from src.consensus.pot_iterations import is_overflow_block
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
@@ -56,27 +56,27 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_block=True)
 
             assert len(await client.get_unfinished_sub_block_headers()) == 0
-            assert len((await client.get_sub_block_records(0, 100))) == 0
+            assert len((await client.get_block_records(0, 100))) == 0
             for block in blocks:
-                if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
+                if is_overflow_block(test_constants, block.reward_chain_block.signage_point_index):
                     finished_ss = block.finished_sub_slots[:-1]
                 else:
                     finished_ss = block.finished_sub_slots
 
                 unf = UnfinishedBlock(
                     finished_ss,
-                    block.reward_chain_sub_block.get_unfinished(),
+                    block.reward_chain_block.get_unfinished(),
                     block.challenge_chain_sp_proof,
                     block.reward_chain_sp_proof,
-                    block.foliage_sub_block,
-                    block.foliage_block,
+                    block.foliage,
+                    block.foliage_transaction_block,
                     block.transactions_info,
                     block.transactions_generator,
                 )
                 await full_node_api_1.full_node.respond_unfinished_sub_block(
-                    full_node_protocol.RespondUnfinishedSubBlock(unf), None
+                    full_node_protocol.RespondUnfinishedBlock(unf), None
                 )
-                await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block), None)
+                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block), None)
 
             assert len(await client.get_unfinished_sub_block_headers()) > 0
             assert len(await client.get_all_block(0, 2)) == 2
@@ -86,11 +86,11 @@ class TestRpc:
             assert block == blocks[-1]
             assert (await client.get_sub_block(bytes([1] * 32))) is None
 
-            assert (await client.get_sub_block_record_by_height(2)).header_hash == blocks[2].header_hash
+            assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
-            assert len((await client.get_sub_block_records(0, 100))) == num_blocks + 1
+            assert len((await client.get_block_records(0, 100))) == num_blocks + 1
 
-            assert (await client.get_sub_block_record_by_height(100)) is None
+            assert (await client.get_block_record_by_height(100)) is None
 
             ph = list(blocks[-1].get_included_reward_coins())[0].puzzle_hash
             coins = await client.get_unspent_coins(ph)

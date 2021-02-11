@@ -1,14 +1,14 @@
 from typing import Union
 
 from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
 
 
 def find_fork_point_in_chain(
     sub_blocks: BlockchainInterface,
-    sub_block_1: Union[SubBlockRecord, HeaderBlock],
-    sub_block_2: Union[SubBlockRecord, HeaderBlock],
+    sub_block_1: Union[BlockRecord, HeaderBlock],
+    sub_block_2: Union[BlockRecord, HeaderBlock],
 ) -> int:
     """Tries to find height where new chain (sub_block_2) diverged from sub_block_1 (assuming prev blocks
     are all included in chain)

@@ -14,7 +14,7 @@ from blspy import PrivateKey, G1Element, AugSchemeMPL
 from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.full_node.weight_proof import WeightProofHandler
 from src.protocols.wallet_protocol import RespondPuzzleSolution, PuzzleSolutionResponse
 from src.types.coin import Coin
@@ -173,7 +173,7 @@ class WalletStateManager:
         return self
 
     @property
-    def peak(self) -> Optional[SubBlockRecord]:
+    def peak(self) -> Optional[BlockRecord]:
         peak = self.blockchain.get_peak()
         return peak
 
@@ -368,7 +368,7 @@ class WalletStateManager:
         if self.sync_mode is True:
             return False
         full_peak = await self.blockchain.get_full_peak()
-        if full_peak is not None and full_peak.foliage_block.timestamp > int(time.time()) - 10 * 60:
+        if full_peak is not None and full_peak.foliage_transaction_block.timestamp > int(time.time()) - 10 * 60:
             return True
         return False
 
@@ -478,7 +478,7 @@ class WalletStateManager:
             trade_additions,
         ) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
-        sub_block: Optional[SubBlockRecord] = await self.blockchain.get_sub_block_from_db(
+        sub_block: Optional[BlockRecord] = await self.blockchain.get_sub_block_from_db(
             self.blockchain.height_to_hash(height)
         )
         assert sub_block is not None
@@ -491,7 +491,7 @@ class WalletStateManager:
         # [block 6] will contain rewards for [sub 1] [sub 2] [block 3]
         while prev is not None:
             # step 1 find previous block
-            if prev.is_block:
+            if prev.is_transaction_block:
                 break
             prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
 
@@ -505,7 +505,7 @@ class WalletStateManager:
             # step 2 traverse from previous block to the block before it
             pool_rewards.add(bytes32(prev.height.to_bytes(32, "big")))
             farmer_rewards.add(std_hash(std_hash(prev.height)))
-            if prev.is_block:
+            if prev.is_transaction_block:
                 break
             prev = await self.blockchain.get_sub_block_from_db(prev.prev_hash)
 
@@ -730,7 +730,7 @@ class WalletStateManager:
                 unspent_coin_names.add(coin.name())
 
         # # Get all blocks after fork point up to but not including this block
-        # curr: SubBlockRecord = self.lockchain.sub_blocks[new_block.prev_header_hash]
+        # curr: BlockRecord = self.lockchain.sub_blocks[new_block.prev_header_hash]
         # reorg_blocks: List[HeaderBlockRecord] = []
         # while curr.height > fork_h:
         #     header_block_record = await self.block_store.get_header_block_record(

@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -93,7 +93,7 @@ class TestTransactions:
         await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         async def peak_height(fna: FullNodeAPI):
-            peak: Optional[SubBlockRecord] = fna.full_node.blockchain.get_peak()
+            peak: Optional[BlockRecord] = fna.full_node.blockchain.get_peak()
             if peak is None:
                 return -1
             peak_height = peak.height
@@ -167,7 +167,7 @@ class TestTransactions:
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
         for block in all_blocks:
-            await full_node_api_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]

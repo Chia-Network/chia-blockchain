@@ -5,7 +5,7 @@ from src.consensus.pos_quality import quality_str_to_quality
 from src.consensus.constants import ConsensusConstants
 
 
-def is_overflow_sub_block(constants: ConsensusConstants, signage_point_index: uint8) -> bool:
+def is_overflow_block(constants: ConsensusConstants, signage_point_index: uint8) -> bool:
     if signage_point_index >= constants.NUM_SPS_SUB_SLOT:
         raise ValueError("SP index too high")
     return signage_point_index >= constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA

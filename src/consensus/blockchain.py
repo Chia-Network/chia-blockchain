@@ -21,11 +21,11 @@ from src.consensus.difficulty_adjustment import (
     get_next_sub_slot_iters,
     get_sub_slot_iters_and_difficulty,
 )
-from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
+from src.consensus.full_block_to_block_record import block_to_block_record
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
@@ -61,7 +61,7 @@ class Blockchain(BlockchainInterface):
     # peak of the blockchain
     peak_height: Optional[uint32]
     # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
-    __sub_blocks: Dict[bytes32, SubBlockRecord]
+    __sub_blocks: Dict[bytes32, BlockRecord]
     # all hashes of sub blocks in sub_block_record by height, used for garbage collection
     __heights_in_cache: Dict[uint32, Set[bytes32]]
     # Defines the path from genesis to the peak, no orphan sub-blocks
@@ -89,7 +89,7 @@ class Blockchain(BlockchainInterface):
         consensus_constants: ConsensusConstants,
     ):
         """
-        Initializes a blockchain with the SubBlockRecords from disk, assuming they have all been
+        Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
         in the consensus constants config.
         """
@@ -123,9 +123,7 @@ class Blockchain(BlockchainInterface):
         self.__sub_epoch_summaries = sub_epoch_summaries
         self.__sub_blocks = {}
         self.__heights_in_cache = {}
-        sub_blocks, peak = await self.block_store.get_sub_block_records_close_to_peak(
-            self.constants.SUB_BLOCKS_CACHE_SIZE
-        )
+        sub_blocks, peak = await self.block_store.get_block_records_close_to_peak(self.constants.BLOCKS_CACHE_SIZE)
         for sub_block in sub_blocks.values():
             self.add_sub_block(sub_block)
 
@@ -138,7 +136,7 @@ class Blockchain(BlockchainInterface):
         self.peak_height = self.sub_block_record(peak).height
         assert len(self.__height_to_hash) == self.peak_height + 1
 
-    def get_peak(self) -> Optional[SubBlockRecord]:
+    def get_peak(self) -> Optional[BlockRecord]:
         """
         Return the peak of the blockchain
         """
@@ -162,7 +160,7 @@ class Blockchain(BlockchainInterface):
         peak = None
         while start >= 0:
             block = await self.block_store.get_full_block(self.height_to_hash(uint32(start)))
-            if block is not None and block.is_block():
+            if block is not None and block.is_transaction_block():
                 peak = block
                 break
             start -= 1
@@ -209,7 +207,7 @@ class Blockchain(BlockchainInterface):
 
         if pre_validation_result is None:
             if block.height == 0:
-                prev_sb: Optional[SubBlockRecord] = None
+                prev_sb: Optional[BlockRecord] = None
             else:
                 prev_sb = self.sub_block_record(block.prev_header_hash)
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(self.constants, block, prev_sb, self)
@@ -242,7 +240,7 @@ class Blockchain(BlockchainInterface):
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
-        sub_block = block_to_sub_block_record(
+        sub_block = block_to_block_record(
             self.constants,
             self,
             required_iters,
@@ -262,7 +260,7 @@ class Blockchain(BlockchainInterface):
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
     async def _reconsider_peak(
-        self, sub_block: SubBlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
+        self, sub_block: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
     ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -308,12 +306,12 @@ class Blockchain(BlockchainInterface):
                 await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_height))
 
             # Collect all blocks from fork point to new peak
-            blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
+            blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
             curr = sub_block.header_hash
 
             while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
                 fetched_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
-                fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block_record(curr)
+                fetched_sub_block: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
                 blocks_to_add.append((fetched_block, fetched_sub_block))
@@ -324,7 +322,7 @@ class Blockchain(BlockchainInterface):
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
                 self.__height_to_hash[fetched_sub_block.height] = fetched_sub_block.header_hash
-                if fetched_sub_block.is_block:
+                if fetched_sub_block.is_transaction_block:
                     await self.coin_store.new_block(fetched_block)
                 if fetched_sub_block.sub_epoch_summary_included is not None:
                     self.__sub_epoch_summaries[fetched_sub_block.height] = fetched_sub_block.sub_epoch_summary_included
@@ -375,7 +373,7 @@ class Blockchain(BlockchainInterface):
         block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
         if block is None:
             return None
-        curr_sbr: SubBlockRecord = self.sub_block_record(block.header_hash)
+        curr_sbr: BlockRecord = self.sub_block_record(block.header_hash)
         is_overflow = curr_sbr.overflow
 
         curr: Optional[FullBlock] = block
@@ -428,7 +426,7 @@ class Blockchain(BlockchainInterface):
             return []
         recent_rc: List[Tuple[bytes32, uint128]] = []
         curr = self.try_sub_block(peak.prev_hash)
-        while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
             if curr.first_in_sub_slot:
                 assert curr.finished_reward_slot_hashes is not None
@@ -451,11 +449,11 @@ class Blockchain(BlockchainInterface):
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
-            block.reward_chain_sub_block,
+            block.reward_chain_block,
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
-            block.foliage_sub_block,
-            block.foliage_block,
+            block.foliage,
+            block.foliage_transaction_block,
             b"",
         )
         prev_sb = self.try_sub_block(unfinished_header_block.prev_header_hash)
@@ -510,10 +508,10 @@ class Blockchain(BlockchainInterface):
         """
         return header_hash in self.__sub_blocks
 
-    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
+    def sub_block_record(self, header_hash: bytes32) -> BlockRecord:
         return self.__sub_blocks[header_hash]
 
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
+    def height_to_sub_block_record(self, height: uint32) -> BlockRecord:
         header_hash = self.height_to_hash(height)
         return self.sub_block_record(header_hash)
 
@@ -535,7 +533,7 @@ class Blockchain(BlockchainInterface):
     async def warmup(self, fork_point: uint32):
         """
         Loads sub blocks into the cache. The sub-blocks loaded include all blocks from
-        fork point - SUB_BLOCKS_CACHE_SIZE up to and including the fork_point.
+        fork point - BLOCKS_CACHE_SIZE up to and including the fork_point.
 
         Args:
             fork_point: the last sub-block height to load in the cache
@@ -543,8 +541,8 @@ class Blockchain(BlockchainInterface):
         """
         if self.peak_height is None:
             return
-        sub_blocks = await self.block_store.get_sub_block_records_in_range(
-            max(fork_point - self.constants.SUB_BLOCKS_CACHE_SIZE, uint32(0)), fork_point
+        sub_blocks = await self.block_store.get_block_records_in_range(
+            max(fork_point - self.constants.BLOCKS_CACHE_SIZE, uint32(0)), fork_point
         )
         for sub_block in sub_blocks.values():
             self.add_sub_block(sub_block)
@@ -569,35 +567,35 @@ class Blockchain(BlockchainInterface):
     def clean_sub_block_records(self):
         """
         Cleans the cache so that we only maintain relevant sub-blocks. This removes sub-block records that have sub
-        height < peak - SUB_BLOCKS_CACHE_SIZE. These blocks are necessary for calculating future difficulty adjustments.
+        height < peak - BLOCKS_CACHE_SIZE. These blocks are necessary for calculating future difficulty adjustments.
         """
 
-        if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
+        if len(self.__sub_blocks) < self.constants.BLOCKS_CACHE_SIZE:
             return
 
         peak = self.get_peak()
         assert peak is not None
-        if peak.height - self.constants.SUB_BLOCKS_CACHE_SIZE < 0:
+        if peak.height - self.constants.BLOCKS_CACHE_SIZE < 0:
             return
-        self.clean_sub_block_record(peak.height - self.constants.SUB_BLOCKS_CACHE_SIZE)
+        self.clean_sub_block_record(peak.height - self.constants.BLOCKS_CACHE_SIZE)
 
-    async def get_sub_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, SubBlockRecord]:
-        return await self.block_store.get_sub_block_records_in_range(start, stop)
+    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
+        return await self.block_store.get_block_records_in_range(start, stop)
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         return await self.block_store.get_header_blocks_in_range(start, stop)
 
-    async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
+    async def get_sub_block_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__sub_blocks:
             return self.__sub_blocks[header_hash]
-        return await self.block_store.get_sub_block_record(header_hash)
+        return await self.block_store.get_block_record(header_hash)
 
     def remove_sub_block(self, header_hash: bytes32):
         sbr = self.sub_block_record(header_hash)
         del self.__sub_blocks[header_hash]
         self.__heights_in_cache[sbr.height].remove(header_hash)
 
-    def add_sub_block(self, sub_block: SubBlockRecord):
+    def add_sub_block(self, sub_block: BlockRecord):
         """
         Adds a sub block record to the cache.
         """
