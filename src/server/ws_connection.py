@@ -108,7 +108,8 @@ class WSChiaConnection:
             assert payload is not None
             await self._send_message(payload)
             payload = await self._read_one_message()
-            assert payload is not None
+            if payload is None:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(payload.msg.data)
             if ProtocolMessageTypes(payload.msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
@@ -118,8 +119,13 @@ class WSChiaConnection:
             self.connection_type = NodeType(inbound_handshake.node_type)
 
         else:
-            payload = await self._read_one_message()
-            assert payload is not None
+            try:
+                payload = await self._read_one_message()
+            except Exception:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
+
+            if payload is None:
+                raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(payload.msg.data)
             if ProtocolMessageTypes(payload.msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
