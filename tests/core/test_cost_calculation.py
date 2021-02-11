@@ -31,12 +31,12 @@ class TestCostCalculation:
     async def test_basics(self):
         wallet_tool = bt.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
-        num_blocks = 2
+        num_blocks = 3
         blocks = bt.get_consecutive_blocks(
             num_blocks, [], guarantee_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
         )
         coinbase = None
-        for coin in blocks[1].get_included_reward_coins():
+        for coin in blocks[2].get_included_reward_coins():
             if coin.puzzle_hash == ph:
                 coinbase = coin
                 break
@@ -74,7 +74,7 @@ class TestCostCalculation:
         )
 
         coinbase = None
-        for coin in blocks[1].get_included_reward_coins():
+        for coin in blocks[2].get_included_reward_coins():
             if coin.puzzle_hash == ph:
                 coinbase = coin
                 break

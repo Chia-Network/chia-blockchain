@@ -74,7 +74,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_SUB_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 300,
+        "WEIGHT_PROOF_RECENT_BLOCKS": 350,
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "EPOCH_SUB_BLOCKS": 280,
@@ -112,7 +112,6 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        self.constants = constants
         create_default_chia_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)
         self.keychain.delete_all_keys()
@@ -143,7 +142,14 @@ class BlockTools:
         self.plots: Dict[Path, PlotInfo] = loaded_plots
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
+        self._config["selected_network"] = "testnet0"
+        for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
+            self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
+        self.genesis_challenge = bytes32(
+            bytes.fromhex(self._config["network_genesis_challenges"][self._config["selected_network"]])
+        )
+        self.constants = constants.replace(GENESIS_CHALLENGE=self.genesis_challenge)
 
     def init_plots(self, root_path):
         plot_dir = get_plot_dir()
@@ -250,7 +256,6 @@ class BlockTools:
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
                 timestamp=uint64(int(time.time())),
-                farmer_reward_puzzle_hash=farmer_reward_puzzle_hash,
             )
             log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -631,15 +636,12 @@ class BlockTools:
         constants: ConsensusConstants,
         seed: bytes32 = b"",
         timestamp: Optional[uint64] = None,
-        farmer_reward_puzzle_hash: Optional[bytes32] = None,
         force_overflow: bool = False,
         skip_slots: int = 0,
     ) -> FullBlock:
         if timestamp is None:
             timestamp = uint64(int(time.time()))
 
-        if farmer_reward_puzzle_hash is None:
-            farmer_reward_puzzle_hash = self.farmer_ph
         finished_sub_slots: List[EndOfSubSlotBundle] = []
         unfinished_block: Optional[UnfinishedBlock] = None
         ip_iters: uint64 = uint64(0)
@@ -702,7 +704,7 @@ class BlockTools:
                         ip_iters,
                         proof_of_space,
                         cc_challenge,
-                        farmer_reward_puzzle_hash,
+                        constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH,
                         PoolTarget(constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0)),
                         self.get_plot_signature,
                         self.get_pool_key_signature,
@@ -998,7 +1000,7 @@ def get_challenges(
 ):
     if len(finished_sub_slots) == 0:
         if prev_header_hash is None:
-            return constants.FIRST_CC_CHALLENGE, constants.FIRST_RC_CHALLENGE
+            return constants.GENESIS_CHALLENGE, constants.GENESIS_CHALLENGE
         curr = sub_blocks[prev_header_hash]
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]

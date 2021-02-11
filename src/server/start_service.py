@@ -7,6 +7,7 @@ from sys import platform
 from typing import Any, List, Optional, Tuple, Callable
 
 from src.server.ssl_context import private_ssl_ca_paths, chia_ssl_ca_paths
+from ..types.sized_bytes import bytes32
 
 try:
     import uvloop
@@ -34,6 +35,7 @@ class Service:
         node_type: NodeType,
         advertised_port: int,
         service_name: str,
+        network_id=bytes32,
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
@@ -46,19 +48,19 @@ class Service:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
         ping_interval = self.config.get("ping_interval")
-        network_id = self.config.get("network_id")
         self.self_hostname = self.config.get("self_hostname")
         self.daemon_port = self.config.get("daemon_port")
         assert ping_interval is not None
-        assert network_id is not None
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
         self._rpc_task = None
+        self._network_id = network_id
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
+
         if parse_cli_args:
             service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
@@ -123,6 +125,7 @@ class Service:
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
         ]
+        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
 
         self._rpc_close_task = None
         if self._rpc_info:

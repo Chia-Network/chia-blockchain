@@ -395,7 +395,7 @@ class FullNodeAPI:
                 return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
         if new_sp.index_from_challenge > 0:
             if (
-                new_sp.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE
+                new_sp.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE
                 and self.full_node.full_node_store.get_sub_slot(new_sp.challenge_hash) is None
             ):
                 # If this is a normal signage point,, and we don't have the end of sub slot, request the end of sub slot
@@ -427,7 +427,7 @@ class FullNodeAPI:
                 )
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
-                if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
+                if request.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE:
                     self.log.info(f"Don't have challenge hash {request.challenge_hash}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
@@ -608,7 +608,7 @@ class FullNodeAPI:
                 cc_challenge_hash = sp_vdfs.cc_vdf.challenge
 
             pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int, uint128]] = None
-            if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
+            if request.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE:
                 # Checks that the proof of space is a response to a recent challenge and valid SP
                 pos_sub_slot = self.full_node.full_node_store.get_sub_slot(cc_challenge_hash)
                 if pos_sub_slot is None:
@@ -704,8 +704,10 @@ class FullNodeAPI:
                     self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
                     uint32(0),
                 )
+                farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
             else:
                 pool_target = request.pool_target
+                farmer_ph = request.farmer_puzzle_hash
 
             if peak is None or peak.height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
                 difficulty = self.full_node.constants.DIFFICULTY_STARTING
@@ -743,7 +745,7 @@ class FullNodeAPI:
                 ip_iters,
                 request.proof_of_space,
                 cc_challenge_hash,
-                request.farmer_puzzle_hash,
+                farmer_ph,
                 pool_target,
                 get_plot_sig,
                 get_pool_sig,

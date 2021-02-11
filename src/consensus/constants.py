@@ -28,17 +28,17 @@ class ConsensusConstants:
     NUM_SP_INTERVALS_EXTRA: int  # The difference between signage point and infusion point (plus required_iters)
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
-    FIRST_CC_CHALLENGE: bytes32  # The "hash" of the "challenge chain end of slot" for the sub-slot before the 1st one
-    FIRST_RC_CHALLENGE: bytes32  # The "hash" of the "reward chain end of slot" for the sub-slot before the 1st one
+    # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
+    # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
+    GENESIS_CHALLENGE: bytes32
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
-    GENESIS_PREV_HASH: bytes32  # The prev sub-block and prev block of the genesis block
-    GENESIS_SES_HASH: bytes32  # The sub epoch summary "hash" of the sub-epoch that end at height -
+    GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash
     MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
     # Target tx count per sec
     TX_PER_SEC: int
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
-    # Max coin amount uint(1 << 64)
+    # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
     MAX_COIN_AMOUNT: int
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)

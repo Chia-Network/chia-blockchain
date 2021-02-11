@@ -72,6 +72,7 @@ class WalletNode:
     state_changed_callback: Optional[Callable]
     syncing: bool
     full_node_peer: Optional[PeerInfo]
+    peer_task: Optional[asyncio.Task]
 
     def __init__(
         self,
@@ -109,6 +110,7 @@ class WalletNode:
         self.sync_task: Optional[Task] = None
         self.new_peak_lock: Optional[asyncio.Lock] = None
         self.logged_in_fingerprint: Optional[int] = None
+        self.peer_task = None
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()

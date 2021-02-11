@@ -33,8 +33,8 @@ class WalletTransactionStore:
                 " confirmed_at_height bigint,"
                 " created_at_time bigint,"
                 " to_puzzle_hash text,"
-                " amount bigint,"
-                " fee_amount bigint,"
+                " amount blob,"
+                " fee_amount blob,"
                 " confirmed int,"
                 " sent int,"
                 " wallet_id bigint,"
@@ -95,8 +95,8 @@ class WalletTransactionStore:
                 record.confirmed_at_height,
                 record.created_at_time,
                 record.to_puzzle_hash.hex(),
-                record.amount,
-                record.fee_amount,
+                bytes(record.amount),
+                bytes(record.fee_amount),
                 int(record.confirmed),
                 record.sent,
                 record.wallet_id,

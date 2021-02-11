@@ -86,7 +86,7 @@ class TestFullNodeStore:
             == []
         )
         # Test adding non-connecting sub-slots genesis
-        assert store.get_sub_slot(test_constants.FIRST_CC_CHALLENGE) is None
+        assert store.get_sub_slot(test_constants.GENESIS_CHALLENGE) is None
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
         assert store.new_finished_sub_slot(sub_slots[1], {}, None) is None

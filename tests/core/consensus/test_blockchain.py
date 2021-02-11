@@ -39,7 +39,7 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs_400(self, default_400_blocks):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
+            test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
@@ -47,7 +47,7 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs_1000(self, default_1000_blocks):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
+            test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
@@ -55,7 +55,7 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs(self):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
+            test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
