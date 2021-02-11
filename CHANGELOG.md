@@ -38,7 +38,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
-- The function that estimated total farming space was counting space at twice the actual rate it. Netspace will display half of the previous space estimate which is now a correct estimate of the actual space currently being farmed.
+- The function that estimated total farming space was counting space at twice the actual rate. Netspace will display half of the previous space estimate which is now a correct estimate of the actual space currently being farmed.
 - We fixed many sync and stay in sync issue for both node and wallet including that both would send peaks to other peers multiple times and would validate the same transaction multiple times.
 - The GUI was incorrectly reporting the time frame that the netspace estimate it displays utilizes. It is technically 312.5 minutes, on average, over the trailing 1000 sub blocks.
 - Coloured coins were not working in the new consensus.
