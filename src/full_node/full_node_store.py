@@ -195,7 +195,6 @@ class FullNodeStore:
             # Peak is in this slot
             rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
             cc_start_element = peak.challenge_vdf_output
-            icc_start_element = peak.infused_challenge_vdf_output
             iters = uint64(total_iters - peak.total_iters)
             if peak.reward_infusion_new_challenge != rc_challenge:
                 # We don't have this challenge hash yet
@@ -204,6 +203,13 @@ class FullNodeStore:
                 self.future_eos_cache[rc_challenge].append(eos)
                 log.warning(f"Don't have challenge hash {rc_challenge}")
                 return None
+
+            if peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                icc_start_element = None
+            elif peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                icc_start_element = ClassgroupElement.get_default_element()
+            else:
+                icc_start_element = peak.infused_challenge_vdf_output
 
             if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
@@ -262,6 +268,8 @@ class FullNodeStore:
             return None
 
         if icc_challenge is not None:
+            if icc_start_element is None:
+                print("Bad")
             assert icc_start_element is not None
             assert icc_iters is not None
             assert eos.infused_challenge_chain is not None
