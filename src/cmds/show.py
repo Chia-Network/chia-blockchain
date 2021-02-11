@@ -146,7 +146,6 @@ async def show_async(args, parser):
             else:
                 print("\nSearching for an initial chain.")
                 print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
-                print("Errors that follow can be safely ignored\n")
 
             if peak is not None:
                 if peak.is_block:
@@ -162,7 +161,7 @@ async def show_async(args, parser):
                 print(
                     "      Time:",
                     f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
-                    f"SB height: {peak.height:>8}\n",
+                    f"                 Height: {peak.height:>10}\n",
                 )
 
                 print("Estimated network space: ", end="")
@@ -176,7 +175,7 @@ async def show_async(args, parser):
                 print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
                 print("Total iterations since the start of the blockchain:", total_iters)
                 print("")
-                print("SB Height |   Hash:")
+                print("  Height: |   Hash:")
 
                 added_blocks: List[SubBlockRecord] = []
                 curr = await client.get_sub_block_record(peak.header_hash)
@@ -185,7 +184,7 @@ async def show_async(args, parser):
                     curr = await client.get_sub_block_record(curr.prev_hash)
 
                 for b in added_blocks:
-                    print(f"{b.height:>8}  | {b.header_hash}")
+                    print(f"{b.height:>9} | {b.header_hash}")
             else:
                 print("Blockchain has no blocks yet")
 
