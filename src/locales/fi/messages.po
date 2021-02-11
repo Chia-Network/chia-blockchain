@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 06:55\n"
+"PO-Revision-Date: 2021-02-11 16:07\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -446,11 +446,11 @@ msgstr ""
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Expected Time to Win"
-msgstr ""
+msgstr "Laskennallinen Aika Palkkioon"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr ""
+msgstr "Ei voi avata (epäkelpo plotti)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:429
@@ -568,12 +568,12 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:58
 msgid "History"
-msgstr ""
+msgstr "Historia"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "Palvelimen nimi"
 
 #: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "IP address"
@@ -597,7 +597,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:54
 msgid "In Progress"
-msgstr ""
+msgstr "Käynnissä"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Incoming"
