@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 17:49\n"
+"PO-Revision-Date: 2021-02-11 19:45\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -445,7 +445,7 @@ msgstr "Uppskattat nätverksutrymme"
 
 #: src/components/fullNode/FullNode.jsx:221
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr ""
+msgstr "Uppskattad summa av allt plottat diskutrymme hos alla odlare i nätverket"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -651,7 +651,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "Last Height Farmed"
-msgstr ""
+msgstr "Senaste höjd som odlats på"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
@@ -708,7 +708,7 @@ msgstr "Nej"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "Inga block har odlats ännu"
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "No previous transactions"
@@ -1277,7 +1277,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
-msgstr ""
+msgstr "Denna tabell visar den sista tidpunkt då din odling försökte vinna en blockverifiering."
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
@@ -1307,7 +1307,7 @@ msgstr "Totalt saldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Totalt antal Chia som odlats"
 
 #: src/components/fullNode/FullNode.jsx:212
 msgid "Total Iterations"
@@ -1456,7 +1456,7 @@ msgstr "Du har {0}% av utrymmet på nätverket, så det tar i genomsnitt {expect
 
 #: src/components/farm/overview/FarmOverview.tsx:13
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Översikt över din odling"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
