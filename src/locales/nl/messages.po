@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 06:55\n"
+"PO-Revision-Date: 2021-02-11 10:37\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -130,7 +130,7 @@ msgstr ""
 #: src/components/block/Block.jsx:150
 #: src/components/block/Block.jsx:329
 msgid "Block"
-msgstr ""
+msgstr "Blok"
 
 #: src/components/block/Block.jsx:241
 msgid "Block VDF Iterations"
@@ -162,7 +162,7 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:32
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Koop"
 
 #: src/components/wallet/Wallets.tsx:33
 msgid "CC Wallet"
@@ -212,7 +212,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Munten:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
