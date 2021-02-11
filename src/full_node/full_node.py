@@ -319,7 +319,7 @@ class FullNode:
             if request.height < curr_peak_height + self.config["sync_sub_blocks_behind_threshold"]:
                 # This case of being behind but not by so much
                 self.log.debug("Doing batch sync")
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 20, 0)), request.height):
+                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
