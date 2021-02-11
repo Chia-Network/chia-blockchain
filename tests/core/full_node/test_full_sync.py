@@ -164,13 +164,13 @@ class TestFullSync:
         for block in blocks_950:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        # # Node 2 syncs from halfway
-        # for i in range(int(len(default_1000_blocks) / 2)):
-        #     await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(default_1000_blocks[i]))
+        # Node 2 syncs from halfway
+        for i in range(int(len(default_1000_blocks) / 2)):
+            await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(default_1000_blocks[i]))
 
-        # # Node 3 syncs from a different blockchain
-        # for block in blocks_400:
-        #     await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+        # Node 3 syncs from a different blockchain
+        for block in blocks_400:
+            await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
