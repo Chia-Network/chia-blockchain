@@ -170,6 +170,12 @@ class FullNode:
 
         """
         # Don't trigger multiple batch syncs to the same peer
+
+        if (
+            peer.peer_node_id in self.sync_store.backtrack_syncing
+            and self.sync_store.backtrack_syncing[peer.peer_node_id] > 0
+        ):
+            return True  # Don't batch sync, we are already in progress of a backtrack sync
         if peer.peer_node_id in self.sync_store.batch_syncing:
             return True  # Don't trigger a long sync
         self.sync_store.batch_syncing.add(peer.peer_node_id)
@@ -231,12 +237,10 @@ class FullNode:
         Returns:
             True iff we found the fork point, and we do not need to long sync.
         """
-        # Don't trigger multiple short syncs to the same peer
-        if peer.peer_node_id in self.sync_store.batch_syncing:
-            return True  # Don't trigger a long sync
-
         try:
-            self.sync_store.batch_syncing.add(peer.peer_node_id)
+            if peer.peer_node_id not in self.sync_store.backtrack_syncing:
+                self.sync_store.backtrack_syncing[peer.peer_node_id] = 0
+            self.sync_store.backtrack_syncing[peer.peer_node_id] += 1
 
             unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
             curr_height: int = target_height
@@ -263,10 +267,10 @@ class FullNode:
                 for response in reversed(responses):
                     await self.respond_sub_block(response)
         except Exception as e:
-            self.sync_store.batch_syncing.remove(peer.peer_node_id)
+            self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
             raise e
 
-        self.sync_store.batch_syncing.remove(peer.peer_node_id)
+        self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
