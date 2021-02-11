@@ -317,7 +317,6 @@ class FullNode:
                         )
         else:
             if request.height <= curr_peak_height + self.config["short_sync_sub_blocks_behind_threshold"]:
-                self.log.debug("Doing backtrack sync")
                 # This is the normal case of receiving the next sub-block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -333,7 +332,6 @@ class FullNode:
 
             if request.height < curr_peak_height + self.config["sync_sub_blocks_behind_threshold"]:
                 # This case of being behind but not by so much
-                self.log.debug("Doing batch sync")
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return
 
