@@ -380,9 +380,11 @@ class WalletNode:
                         self.wallet_state_manager.blockchain.clean_sub_block_records()
                     self.wallet_state_manager.state_changed("new_block")
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
-                    self.log.info(f"Invalid block from peer: {peer.get_peer_info()}")
+                    self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
                     await peer.close()
                     return
+                else:
+                    self.log.debug(f"Result: {result}")
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
@@ -444,7 +446,7 @@ class WalletNode:
                         f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                         f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                     )
-                    self.log.error(f"{weight_proof}")
+                    self.log.debug(f"{weight_proof}")
                     return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(

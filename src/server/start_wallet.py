@@ -81,7 +81,7 @@ def main():
     else:
         constants = DEFAULT_CONSTANTS
         genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
-        constants.replace(GENESIS_CHALLENGE=genesis_challenge)
+        constants = constants.replace(GENESIS_CHALLENGE=genesis_challenge)
     keychain = Keychain(testing=False)
     kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
     return run_service(**kwargs)

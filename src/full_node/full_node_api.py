@@ -326,16 +326,29 @@ class FullNodeAPI:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
-        if (
-            self.full_node.full_node_store.get_unfinished_block(new_unfinished_sub_block.unfinished_reward_hash)
-            is not None
-        ):
+        block_hash = new_unfinished_sub_block.unfinished_reward_hash
+        if self.full_node.full_node_store.get_unfinished_block(block_hash) is not None:
+            return None
+
+        # This prevents us from downloading the same block from many peers
+        if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
             return None
 
         msg = make_msg(
             ProtocolMessageTypes.request_unfinished_sub_block,
-            full_node_protocol.RequestUnfinishedSubBlock(new_unfinished_sub_block.unfinished_reward_hash),
+            full_node_protocol.RequestUnfinishedSubBlock(block_hash),
         )
+        self.full_node.full_node_store.requesting_unfinished_blocks.add(block_hash)
+
+        # However, we want to eventually download from other peers, if this peer does not respond
+        # Todo: keep track of who it was
+        async def eventually_clear():
+            await asyncio.sleep(5)
+            if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
+                self.full_node.full_node_store.requesting_unfinished_blocks.remove(block_hash)
+
+        asyncio.create_task(eventually_clear())
+
         return msg
 
     @api_request

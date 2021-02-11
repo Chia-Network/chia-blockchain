@@ -169,22 +169,31 @@ class FullNode:
             False if the fork point was not found, and we need to do a long sync. True otherwise.
 
         """
+        # Don't trigger multiple batch syncs to the same peer
+
+        if (
+            peer.peer_node_id in self.sync_store.backtrack_syncing
+            and self.sync_store.backtrack_syncing[peer.peer_node_id] > 0
+        ):
+            return True  # Don't batch sync, we are already in progress of a backtrack sync
+        if peer.peer_node_id in self.sync_store.batch_syncing:
+            return True  # Don't trigger a long sync
+        self.sync_store.batch_syncing.add(peer.peer_node_id)
+
+        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
         if start_height > 0:
             first = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(start_height), False))
             if first is None or not isinstance(first, full_node_protocol.RespondSubBlock):
+                self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 raise ValueError(f"Error short batch syncing, could not fetch sub-block at height {start_height}")
             if not self.blockchain.contains_sub_block(first.sub_block.prev_header_hash):
                 self.log.info("Batch syncing stopped, this is a deep chain")
+                self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 # First sb not connected to our blockchain, do a long sync instead
                 return False
 
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
-        # Don't trigger multiple batch syncs to the same peer
-        if peer.peer_node_id in self.sync_store.batch_syncing:
-            return True  # Don't trigger a long sync
-        self.sync_store.batch_syncing.add(peer.peer_node_id)
-        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
         try:
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
@@ -228,31 +237,40 @@ class FullNode:
         Returns:
             True iff we found the fork point, and we do not need to long sync.
         """
+        try:
+            if peer.peer_node_id not in self.sync_store.backtrack_syncing:
+                self.sync_store.backtrack_syncing[peer.peer_node_id] = 0
+            self.sync_store.backtrack_syncing[peer.peer_node_id] += 1
 
-        unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
-        curr_height: int = target_height
-        found_fork_point = False
-        responses = []
-        while curr_height > peak_height - 5:
-            # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
-            # already have the unfinished block, from when it was broadcast, so we just need to download the header,
-            # but not the transactions
-            fetch_tx: bool = unfinished_block is None and curr_height == target_height
-            curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_height), fetch_tx))
-            if curr is None:
-                raise ValueError(f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, timed out")
-            if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
-                raise ValueError(
-                    f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
-                )
-            responses.append(curr)
-            if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_height == 0:
-                found_fork_point = True
-                break
-            curr_height -= 1
-        if found_fork_point:
-            for response in reversed(responses):
-                await self.respond_sub_block(response)
+            unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
+            curr_height: int = target_height
+            found_fork_point = False
+            responses = []
+            while curr_height > peak_height - 5:
+                # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
+                # already have the unfinished block, from when it was broadcast, so we just need to download the header,
+                # but not the transactions
+                fetch_tx: bool = unfinished_block is None and curr_height == target_height
+                curr = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(curr_height), fetch_tx))
+                if curr is None:
+                    raise ValueError(f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, timed out")
+                if curr is None or not isinstance(curr, full_node_protocol.RespondSubBlock):
+                    raise ValueError(
+                        f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
+                    )
+                responses.append(curr)
+                if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_height == 0:
+                    found_fork_point = True
+                    break
+                curr_height -= 1
+            if found_fork_point:
+                for response in reversed(responses):
+                    await self.respond_sub_block(response)
+        except Exception as e:
+            self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
+            raise e
+
+        self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
@@ -299,7 +317,6 @@ class FullNode:
                         )
         else:
             if request.height <= curr_peak_height + self.config["short_sync_sub_blocks_behind_threshold"]:
-                self.log.debug("Doing backtrack sync")
                 # This is the normal case of receiving the next sub-block
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
@@ -315,8 +332,7 @@ class FullNode:
 
             if request.height < curr_peak_height + self.config["sync_sub_blocks_behind_threshold"]:
                 # This case of being behind but not by so much
-                self.log.debug("Doing batch sync")
-                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 20, 0)), request.height):
+                if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
@@ -738,7 +754,7 @@ class FullNode:
             f"sub slot iters: {sub_slot_iters}"
         )
 
-        sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
+        sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
 
         if not self.sync_store.get_sync_mode():
@@ -793,9 +809,9 @@ class FullNode:
             msg = make_msg(
                 ProtocolMessageTypes.new_peak,
                 full_node_protocol.NewPeak(
-                    sub_block.header_hash,
-                    sub_block.height,
-                    sub_block.weight,
+                    record.header_hash,
+                    record.height,
+                    record.weight,
                     fork_height,
                     sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
                 ),
@@ -809,9 +825,9 @@ class FullNode:
         msg = make_msg(
             ProtocolMessageTypes.new_peak_wallet,
             wallet_protocol.NewPeakWallet(
-                sub_block.header_hash,
-                sub_block.height,
-                sub_block.weight,
+                record.header_hash,
+                record.height,
+                record.weight,
                 fork_height,
             ),
         )
@@ -832,7 +848,7 @@ class FullNode:
             return None
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
-        header_hash = sub_block.foliage_sub_block.get_hash()
+        header_hash = sub_block.header_hash
         if self.blockchain.contains_sub_block(header_hash):
             return None
 
@@ -854,7 +870,7 @@ class FullNode:
                 List[PreValidationResult]
             ] = await self.blockchain.pre_validate_blocks_multiprocessing([sub_block])
             if pre_validation_results is None:
-                raise ValueError(f"Failed to validate sub_block {sub_block.header_hash} height {sub_block.height}")
+                raise ValueError(f"Failed to validate sub_block {header_hash} height {sub_block.height}")
             if pre_validation_results[0].error is not None:
                 if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                     added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
@@ -862,7 +878,7 @@ class FullNode:
                     fork_height: Optional[uint32] = None
                 else:
                     raise ValueError(
-                        f"Failed to validate sub_block {sub_block.header_hash} height "
+                        f"Failed to validate sub_block {header_hash} height "
                         f"{sub_block.height}: {pre_validation_results[0].error}"
                     )
             else:
@@ -925,6 +941,13 @@ class FullNode:
         """
         block = respond_unfinished_sub_block.unfinished_sub_block
 
+        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
+            block.prev_header_hash
+        ):
+            # No need to request the parent, since the peer will send it to us anyway, via NewPeak
+            self.log.debug("Received a disconnected unfinished block")
+            return
+
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
         # foliages for the same trunk). This is intentional, to prevent DOS attacks.
@@ -932,16 +955,11 @@ class FullNode:
         if self.full_node_store.seen_unfinished_block(block.get_hash()):
             return
 
+        block_hash = block.reward_chain_sub_block.get_hash()
+
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
         # hash, return
-        if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
-            return
-
-        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
-            block.prev_header_hash
-        ):
-            # No need to request the parent, since the peer will send it to us anyway, via NewPeak
-            self.log.debug("Received a disconnected unfinished block")
+        if self.full_node_store.get_unfinished_block(block_hash) is not None:
             return
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
@@ -1010,7 +1028,7 @@ class FullNode:
         assert required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
-        if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
+        if self.full_node_store.get_unfinished_block(block_hash) is not None:
             return
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
@@ -1028,9 +1046,9 @@ class FullNode:
 
         self.full_node_store.add_unfinished_block(height, block)
         if farmed_block is True:
-            self.log.info(f"🍀 ️Farmed unfinished_block {block.partial_hash}")
+            self.log.info(f"🍀 ️Farmed unfinished_block {block_hash}")
         else:
-            self.log.info(f"Added unfinished_block {block.partial_hash}, not farmed")
+            self.log.info(f"Added unfinished_block {block_hash}, not farmed")
 
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
