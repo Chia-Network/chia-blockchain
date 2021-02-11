@@ -68,15 +68,14 @@ class VDFProof(Streamable):
             return False
         try:
             disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
+            # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
+            return verify_n_wesolowski(
+                str(disc),
+                input_el.data,
+                info.output.data + bytes(self.witness),
+                info.number_of_iterations,
+                constants.DISCRIMINANT_SIZE_BITS,
+                self.witness_type,
+            )
         except Exception:
             return False
-        # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
-        # TODO: check for maximum witness type
-        return verify_n_wesolowski(
-            str(disc),
-            input_el.data,
-            info.output.data + bytes(self.witness),
-            info.number_of_iterations,
-            constants.DISCRIMINANT_SIZE_BITS,
-            self.witness_type,
-        )

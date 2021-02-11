@@ -23,11 +23,5 @@ class ClassgroupElement(Streamable):
         return ClassgroupElement.from_bytes(b"\x08")
 
     @staticmethod
-    def get_bad_element(constants: ConsensusConstants):
-        # Used by test_blockchain to check that bad VDF outputs and proofs are
-        # rejected. Use the default element for simplicity.
-        return ClassgroupElement.get_default_element()
-
-    @staticmethod
     def get_size(constants: ConsensusConstants):
         return 100
