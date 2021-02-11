@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 17:49\n"
+"PO-Revision-Date: 2021-02-11 20:47\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -140,7 +140,7 @@ msgstr ""
 msgid "Block at height {0} in the Chia blockchain"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:338
+#: src/components/fullNode/FullNode.jsx:340
 msgid "Block hash"
 msgstr ""
 
@@ -148,7 +148,7 @@ msgstr ""
 msgid "Block with hash {headerHash} does not exists."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:307
+#: src/components/fullNode/FullNode.jsx:309
 msgid "Blocks"
 msgstr ""
 
@@ -404,7 +404,7 @@ msgid "Deleting the key will permanently remove the key from your computer, make
 msgstr ""
 
 #: src/components/block/Block.jsx:218
-#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Difficulty"
 msgstr ""
 
@@ -439,11 +439,11 @@ msgstr ""
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:218
+#: src/components/fullNode/FullNode.jsx:217
 msgid "Estimated network space"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:221
+#: src/components/fullNode/FullNode.jsx:220
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr ""
 
@@ -533,11 +533,11 @@ msgid "Finished"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:368
+#: src/components/fullNode/FullNode.jsx:370
 msgid "Full Node"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:270
 msgid "Full Node Status"
 msgstr ""
 
@@ -781,7 +781,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:190
+#: src/components/fullNode/FullNode.jsx:189
 msgid "Peak Time"
 msgstr ""
 
@@ -1024,11 +1024,11 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:345
+#: src/components/fullNode/FullNode.jsx:347
 msgid "Search"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:333
+#: src/components/fullNode/FullNode.jsx:335
 msgid "Search block by header hash"
 msgstr ""
 
@@ -1255,7 +1255,7 @@ msgstr ""
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1309,7 +1309,7 @@ msgstr ""
 msgid "Total Chia Farmed"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:212
+#: src/components/fullNode/FullNode.jsx:211
 msgid "Total Iterations"
 msgstr ""
 
@@ -1329,7 +1329,7 @@ msgstr ""
 msgid "Total VDF Iterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:214
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
@@ -1386,7 +1386,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:205
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
