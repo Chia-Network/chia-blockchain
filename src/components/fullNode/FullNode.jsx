@@ -185,7 +185,7 @@ const getStatusItems = (state, connected) => {
     value: peakHeight,
   });
 
-  const peakTimestamp = state.peak?.foliage_block?.timestamp;
+  const peakTimestamp = state.peak?.timestamp;
   status_items.push({
     label: <Trans>Peak Time</Trans>,
     value: peakTimestamp
@@ -263,6 +263,8 @@ const FullNodeStatus = (props) => {
   );
   const statusItems =
     blockchain_state && getStatusItems(blockchain_state, connected);
+
+  console.log('blockchain_state', blockchain_state);
 
   return (
     <Card title={<Trans>Full Node Status</Trans>}>
