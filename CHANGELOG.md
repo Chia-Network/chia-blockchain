@@ -10,21 +10,42 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- We now use the rust version of clvm, clvm_rs, to validate transactions. We have additionally published binary wheels for all four platforms and all three supported python versions.
-- Last Attempted Proof on the Farm tab of the GUI now shows hours:minutes:seconds instead of just hours:minutes. It makes it much easier to see that your farmer is responding to challenges recently at a glance.
+- The Beta 27 chain is a hard fork. All TXCH from previous releases has been reset on this chain. Your keys and plots of k=32 or larger continue to work just fine on this new chain.
+- We now use the rust version of clvm, clvm_rs, in preference to validate transactions. We have additionally published binary wheels or clvm_rs for all four platforms and all three supported python versions. The rust version is approximately 50 times faster than the python version used to validate on chain transactions in previous versions.
+- Now that we have two clvm implementations - one in Rust, and one in Python, we default to using the Rust implementation. Please note while this speeds up the `brun` tool and blockchain code, this temporarily breaks the ChiaLisp compiler (the `run` binary). We will address this in the next release.
+- We have moved to compressed quadratic forms for VDFs. Using compressed representation of quadratic forms reduces their serialized size from 130 to 100 bytes (for forms with 1024-bit discriminant). This shrinks the size of VDF outputs and VDF proofs, and it's a breaking change as the compressed representation is not compatible with the older uncompressed (a, b) representation. Compressed forms are also used in calls to chiavdf and in timelord's communication with VDF clients. The form compression algorithm is based on ["Trustless Groups of Unknown Order with Hyperelliptic Curves"](https://eprint.iacr.org/2020/196) by Samuel Dobson, Steven D. Galbraith and Benjamin Smith.
+- Last Attempted Proof on the Farm tab of the GUI now shows hours:minutes:seconds instead of just hours:minutes. This makes it much easier to see that your farmer is responding to recent challenges at a glance.
+- You can now send and receive transactions with the command line. Try `chia wallet -h` to learn more. Also, `chia wallet` now requires a third argument of `show`, therefor you will use `chia wallet show` to see your wallet balance.
+- We have added the [Crowdin](https://crowdin.com/) translation platform to [chia blockchain gui](https://crowdin.com/project/chia-blockchain). We are still getting it fully set up, but helping to translate the GUI is going to be much easier.
 - Full Node > Connections in the GUI now shows the peak sub block height your connected peers believe they are at. A node syncing from you will not be at the true peak sub block height until it gets into sync.
 - `chia init -c [directory]` will create new TLS certificates signed by your CA located in `[directory]`. Use this feature to configure a new remote harvester. Type `chia init -h` to get instructions. Huge thanks to a very efficient @eFishCent for this quick and thorough pull request.
-- We now build both MacOS x86_64 and MacOS universal wheels for chiapos, chiavdf, blpsy, and chiabip158 in Python 3.9. The universal build allows M1 Macs to run these dependencies in ARM64 native mode.
+- We build both MacOS x86_64 and MacOS universal wheels for chiapos, chiavdf, blpsy, and chiabip158 in Python 3.9. The universal build allows M1 Macs to run these dependencies in ARM64 native mode.
 - On first run in the GUI (or when there are no plot directories) there is now an "Add Plot Directories" on the Farm tab also.
 
 ### Changed
 
-- The GUI is now in a seperate repository from chia-blockchain, [chia-blockchain-gui](https://github.com/Chia-Network/chia-blockchain-gui). The installers and install scripts have been updated and it continues to follow basically the same install steps. Note that the GUI directory will now be `chia-blockchain-gui`.
+- We are moving away from the terms sub blocks and blocks in our new consensus. What used to be called sub blocks will now just be blocks. Some blocks are now also transaction blocks. This is simpler both in the code and to reason about. Not all the code or UI may have caught up yet.
+- This release has the final mainnet rewards schedule. During the first three years, each block winner will win 2 TXCH/XCH per block for a total of 9216 TXCH per day from 4608 challenges per day.
+- Smart transactions now use an announcement instead of 'coin consumed' or lock methods.
+- The GUI is now in a separate submodule repository from chia-blockchain, [chia-blockchain-gui](https://github.com/Chia-Network/chia-blockchain-gui). The installers and install scripts have been updated and it continues to follow the same install steps. Note that the GUI directory will now be `chia-blockchain-gui`. The workflow for this may be "touch and go" for people who use the git install methods over the short term.
+- Very large coin counts are now supported.
+- Various RPC endpoints have been renamed to follow our switch to "just blocks" from sub blocks.
+- We've made changes to the protocol handshake and the blockchain genesis process to support mainnet launch and running/farming more than one chain at a time. That also means we can't as easily determine when an old version of the peer tries to connect so we will put warnings in the logs for now.
+- We no longer replace addresses in the config. **IMPORTANT** - This means if you change the target address in config.yml, you have to make sure you control the correct keys.
+- We now only migrate Beta 19 and newer installations.
+- We have removed cbor2 as a dependency.
+- We updated various dependencies including cryptography, packaging, portalocker, and pyyaml - most of which are only development dependencies.
 
 ### Fixed
+
+- The function that estimated total farming space was counting space at twice the actual rate. Netspace will display half of the previous space estimate which is now a correct estimate of the actual space currently being farmed.
+- We fixed many sync and stay in sync issue for both node and wallet including that both would send peaks to other peers multiple times and would validate the same transaction multiple times.
 - The GUI was incorrectly reporting the time frame that the netspace estimate it displays utilizes. It is technically 312.5 minutes, on average, over the trailing 1000 sub blocks.
+- Coloured coins were not working in the new consensus.
+- Some Haswell processors do not have certain AVX extensions and therefor would not run.
 - The cli wallet, `chia wallet`, was incorrectly displaying TXCH balances as if they were Coloured Coins.
-- We made changes to CI to hopefully not repeat our skipped releases.
+- We addressed [CVE-2020-28477](https://nvd.nist.gov/vuln/detail/CVE-2020-28477) in the GUI.
+- We made changes to CI to hopefully not repeat our skipped releases from the previous release cycle.
 
 ## [1.0beta26] aka Beta 1.26 - 2021-02-05
 
