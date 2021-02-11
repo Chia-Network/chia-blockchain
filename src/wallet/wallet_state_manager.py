@@ -22,7 +22,7 @@ from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.util.hash import std_hash
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -379,16 +379,16 @@ class WalletStateManager:
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint64:
+    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint128:
         """
         Returns the balance amount of all coins that are spendable.
         """
 
         spendable: Set[WalletCoinRecord] = await self.get_spendable_coins_for_wallet(wallet_id, unspent_records)
 
-        spendable_amount: uint64 = uint64(0)
+        spendable_amount: uint128 = uint128(0)
         for record in spendable:
-            spendable_amount = uint64(spendable_amount + record.coin.amount)
+            spendable_amount = uint128(spendable_amount + record.coin.amount)
 
         return spendable_amount
 
@@ -409,21 +409,21 @@ class WalletStateManager:
 
     async def get_confirmed_balance_for_wallet(
         self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
-    ) -> uint64:
+    ) -> uint128:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
         """
         if unspent_coin_records is None:
             unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        amount: uint64 = uint64(0)
+        amount: uint128 = uint128(0)
         for record in unspent_coin_records:
-            amount = uint64(amount + record.coin.amount)
+            amount = uint128(amount + record.coin.amount)
         self.log.info(f"Confirmed balance amount is {amount}")
-        return uint64(amount)
+        return uint128(amount)
 
     async def get_unconfirmed_balance(
         self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
-    ) -> uint64:
+    ) -> uint128:
         """
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
         transactions.
@@ -438,7 +438,7 @@ class WalletStateManager:
             removal_amount += record.fee_amount
 
         result = confirmed - removal_amount
-        return uint64(result)
+        return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
         """

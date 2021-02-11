@@ -19,7 +19,7 @@ from src.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
 )
 from src.util.json_util import dict_to_json_str
-from src.util.ints import uint8, uint64, uint32
+from src.util.ints import uint8, uint64, uint32, uint128
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -208,7 +208,7 @@ class CCWallet:
         self.log.info(f"Confirmed balance for cc wallet {self.id()} is {amount}")
         return uint64(amount)
 
-    async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
+    async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
         confirmed = await self.get_confirmed_balance(unspent_records)
         unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             self.id()
@@ -225,7 +225,7 @@ class CCWallet:
         result = confirmed - removal_amount + addition_amount
 
         self.log.info(f"Unconfirmed balance for cc wallet {self.id()} is {result}")
-        return uint64(result)
+        return uint128(result)
 
     async def get_name(self):
         return self.wallet_info.name

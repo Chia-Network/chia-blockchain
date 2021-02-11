@@ -12,7 +12,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint8, uint64, uint32
+from src.util.ints import uint8, uint64, uint32, uint128
 from src.util.streamable import streamable, Streamable
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
@@ -336,13 +336,13 @@ class RLWallet:
         available_amount = min(unlocked, total_amount)
         return uint64(available_amount)
 
-    async def get_confirmed_balance(self, unspent_records=None) -> uint64:
+    async def get_confirmed_balance(self, unspent_records=None) -> uint128:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), unspent_records)
 
-    async def get_unconfirmed_balance(self, unspent_records=None) -> uint64:
+    async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint64:
+    async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id())
         return spendable_am
 
