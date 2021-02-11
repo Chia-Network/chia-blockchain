@@ -231,15 +231,14 @@ class ChiaServer:
                 if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
+            if connection is not None:
+                await connection.close()
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
+                close_event.set()
             elif e.code == Err.SELF_CONNECTION:
-                if connection is not None:
-                    await connection.close()
                 close_event.set()
             else:
-                if connection is not None:
-                    await connection.close()
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
@@ -361,14 +360,13 @@ class ChiaServer:
         except client_exceptions.ClientConnectorError as e:
             self.log.info(f"{e}")
         except ProtocolError as e:
+            if connection is not None:
+                await connection.close()
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
             elif e.code == Err.SELF_CONNECTION:
-                if connection is not None:
-                    await connection.close()
+                pass
             else:
-                if connection is not None:
-                    await connection.close()
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
         except Exception as e:
