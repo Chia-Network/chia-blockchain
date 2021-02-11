@@ -64,25 +64,21 @@ class WeightProofHandler:
             log.debug("chain to short for weight proof")
             return None
 
-        await self.lock.acquire()
-        if self.proof is not None:
-            if tip == self.tip:
-                self.lock.release()
-                return self.proof
-            new_wp = await self._create_proof_of_weight(tip, self.proof)
-            self.proof = new_wp
-            self.tip = tip
-            self.lock.release()
-            return new_wp
+        async with self.lock:
+            if self.proof is not None:
+                if tip == self.tip:
+                    return self.proof
+                new_wp = await self._create_proof_of_weight(tip, self.proof)
+                self.proof = new_wp
+                self.tip = tip
+                return new_wp
 
-        wp = await self._create_proof_of_weight(tip)
-        if wp is None:
-            self.lock.release()
-            return None
-        self.proof = wp
-        self.tip = tip
-        self.lock.release()
-        return wp
+            wp = await self._create_proof_of_weight(tip)
+            if wp is None:
+                return None
+            self.proof = wp
+            self.tip = tip
+            return wp
 
     async def _create_proof_of_weight(self, tip: bytes32, wp: Optional[WeightProof] = None) -> Optional[WeightProof]:
         """
