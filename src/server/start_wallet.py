@@ -30,12 +30,11 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Keychain,
 ) -> Dict:
-    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
     node = WalletNode(
         config,
         keychain,
         root_path,
-        consensus_constants=consensus_constants.replace(GENESIS_CHALLENGE=genesis_challenge),
+        consensus_constants=consensus_constants,
     )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
@@ -46,7 +45,7 @@ def service_kwargs_for_wallet(
     else:
         connect_peers = []
         node.full_node_peer = None
-
+    genesis_challenge = consensus_constants.GENESIS_CHALLENGE
     kwargs = dict(
         root_path=root_path,
         node=node,
@@ -81,6 +80,8 @@ def main():
         config["database_path"] = f"{current}_simulation"
     else:
         constants = DEFAULT_CONSTANTS
+        genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
+        constants.replace(GENESIS_CHALLENGE=genesis_challenge)
     keychain = Keychain(testing=False)
     kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
     return run_service(**kwargs)
