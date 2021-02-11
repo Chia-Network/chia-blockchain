@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 17:49\n"
+"PO-Revision-Date: 2021-02-11 18:48\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -979,7 +979,7 @@ msgstr "Jonossa"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "RAM enimmäismäärä"
 
 #: src/components/wallet/Wallets.tsx:40
 msgid "RL Wallet"
@@ -987,20 +987,20 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:125
 msgid "Rate Limited"
-msgstr ""
+msgstr "Siirtorajoitettu"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Siirtorajoitettu Tiedot"
 
 #: src/components/wallet/create/WalletCreate.jsx:227
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Siirtorajoitettu Valinnat"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Siirtorajoitetun Lompakon Asennus"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:452
 #: src/components/wallet/standard/WalletStandard.tsx:380
@@ -1050,7 +1050,7 @@ msgstr "Valitse Avain"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Valitse Tarjous"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
@@ -1058,7 +1058,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:103
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Valitse Lompakon Tyypoi"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1119,12 +1119,12 @@ msgstr "Käytettävissä ajanjaksolla"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:569
 #: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Käytettävissä Oleva Saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Käyttöajanjakso (lohkojen lukum.): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
@@ -1133,7 +1133,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Käyttöraja (Chiaa/ajanjakso):{0}"
 
 #: src/components/fullNode/FullNode.jsx:118
 msgid "State"
