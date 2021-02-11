@@ -198,7 +198,7 @@ class ChiaServer:
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
             return ws
-
+        connection: Optional[WSChiaConnection] = None
         try:
             connection = WSChiaConnection(
                 self._local_type,
@@ -231,10 +231,15 @@ class ChiaServer:
                 if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                     self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
-            await connection.close()
-            if e.code == Err.SELF_CONNECTION:
+            if e.code == Err.INVALID_HANDSHAKE:
+                self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
+            elif e.code == Err.SELF_CONNECTION:
+                if connection is not None:
+                    await connection.close()
                 close_event.set()
             else:
+                if connection is not None:
+                    await connection.close()
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
@@ -292,6 +297,7 @@ class ChiaServer:
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
             )
         session = None
+        connection: Optional[WSChiaConnection] = None
         try:
             timeout = ClientTimeout(total=10)
             session = ClientSession(timeout=timeout)
@@ -355,10 +361,14 @@ class ChiaServer:
         except client_exceptions.ClientConnectorError as e:
             self.log.info(f"{e}")
         except ProtocolError as e:
-            await connection.close()
-            if e.code == Err.SELF_CONNECTION:
-                pass
+            if e.code == Err.INVALID_HANDSHAKE:
+                self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
+            elif e.code == Err.SELF_CONNECTION:
+                if connection is not None:
+                    await connection.close()
             else:
+                if connection is not None:
+                    await connection.close()
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
         except Exception as e:
@@ -378,7 +388,11 @@ class ChiaServer:
             if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
                 self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
         else:
-            self.log.error(f"Invalid connection type for connection {connection}, while closing")
+            # This means the handshake was enver finished with this peer
+            self.log.debug(
+                f"Invalid connection type for connection {connection.peer_host},"
+                f" while closing. Handshake never finished."
+            )
         on_disconnect = getattr(self.node, "on_disconnect", None)
         if on_disconnect is not None:
             on_disconnect(connection)
