@@ -169,22 +169,25 @@ class FullNode:
             False if the fork point was not found, and we need to do a long sync. True otherwise.
 
         """
+        # Don't trigger multiple batch syncs to the same peer
+        if peer.peer_node_id in self.sync_store.batch_syncing:
+            return True  # Don't trigger a long sync
+        self.sync_store.batch_syncing.add(peer.peer_node_id)
+
+        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
         if start_height > 0:
             first = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(start_height), False))
             if first is None or not isinstance(first, full_node_protocol.RespondSubBlock):
+                self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 raise ValueError(f"Error short batch syncing, could not fetch sub-block at height {start_height}")
             if not self.blockchain.contains_sub_block(first.sub_block.prev_header_hash):
                 self.log.info("Batch syncing stopped, this is a deep chain")
+                self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 # First sb not connected to our blockchain, do a long sync instead
                 return False
 
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
 
-        # Don't trigger multiple batch syncs to the same peer
-        if peer.peer_node_id in self.sync_store.batch_syncing:
-            return True  # Don't trigger a long sync
-        self.sync_store.batch_syncing.add(peer.peer_node_id)
-        self.log.info(f"Starting batch short sync from {start_height} to height {target_height}")
         try:
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
@@ -925,6 +928,13 @@ class FullNode:
         """
         block = respond_unfinished_sub_block.unfinished_sub_block
 
+        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
+                block.prev_header_hash
+        ):
+            # No need to request the parent, since the peer will send it to us anyway, via NewPeak
+            self.log.debug("Received a disconnected unfinished block")
+            return
+
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
         # foliages for the same trunk). This is intentional, to prevent DOS attacks.
@@ -935,13 +945,6 @@ class FullNode:
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
         # hash, return
         if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
-            return
-
-        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
-            block.prev_header_hash
-        ):
-            # No need to request the parent, since the peer will send it to us anyway, via NewPeak
-            self.log.debug("Received a disconnected unfinished block")
             return
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
