@@ -164,24 +164,27 @@ class TestFullSync:
         for block in blocks_950:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        # Node 2 syncs from halfway
-        for i in range(int(len(default_1000_blocks) / 2)):
-            await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(default_1000_blocks[i]))
+        # # Node 2 syncs from halfway
+        # for i in range(int(len(default_1000_blocks) / 2)):
+        #     await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(default_1000_blocks[i]))
 
-        # Node 3 syncs from a different blockchain
-        for block in blocks_400:
-            await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+        # # Node 3 syncs from a different blockchain
+        # for block in blocks_400:
+        #     await full_node_3.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
 
         # Also test request proof of weight
         # Have the request header hash
-        res = await full_node_1.request_proof_of_weight(
+
+        response = await full_node_1.request_proof_of_weight(
             full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
         )
-        assert res is not None
-        validated, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(res.data.wp)
+
+        assert response is not None
+        wp = full_node_protocol.RespondProofOfWeight.from_bytes(response.data).wp
+        validated, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(wp)
         assert validated
 
         # Don't have the request header hash
