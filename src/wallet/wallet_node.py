@@ -415,7 +415,6 @@ class WalletNode:
                 while (
                     not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash) and top.height > 0
                 ):
-                    self.log.info(f"FETCHING {top.height - 1}")
                     request_prev = wallet_protocol.RequestSubBlockHeader(top.height - 1)
                     response_prev: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request_prev)
                     if response_prev is None:
@@ -445,7 +444,7 @@ class WalletNode:
                         f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                         f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                     )
-                    # self.log.error(f"{weight_proof}")
+                    self.log.debug(f"{weight_proof}")
                     return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
