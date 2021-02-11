@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
@@ -47,6 +47,9 @@ class FullNodeStore:
     # Infusion point VDFs which depend on infusions that we don't have
     future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]]
 
+    # Partial hashes of unfinished blocks we are requesting
+    requesting_unfinished_blocks: Set[bytes32] = set()
+
     def __init__(self):
         self.candidate_blocks = {}
         self.seen_unfinished_blocks = set()
@@ -55,6 +58,7 @@ class FullNodeStore:
         self.future_eos_cache = {}
         self.future_sp_cache = {}
         self.future_ip_cache = {}
+        self.requesting_unfinished_blocks = set()
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
