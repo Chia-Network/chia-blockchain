@@ -104,7 +104,7 @@ export default function Connections(props) {
                   </Trans>
                 </TableCell>
                 <TableCell align="right">
-                  <Trans>SB Height</Trans>
+                  <Trans>Height</Trans>
                 </TableCell>
                 <TableCell align="right">
                   <Trans>Delete</Trans>
@@ -131,7 +131,7 @@ export default function Connections(props) {
                     {service_connection_types[item.type]}
                   </TableCell>
                   <TableCell align="right">
-                    {item.peak_sub_height}
+                    {item.peak_height}
                   </TableCell>
                   <TableCell
                     className={classes.clickable}

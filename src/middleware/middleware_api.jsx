@@ -29,7 +29,7 @@ import {
   getBlockChainState,
   getFullNodeConnections,
   updateLatestBlocks,
-  updateLatestSubBlocks,
+  // updateLatestSubBlocks,
   updateUnfinishedSubBlockHeaders,
 } from '../modules/fullnodeMessages';
 import {
@@ -179,7 +179,7 @@ export const handle_message = async (store, payload) => {
       state.full_node_state?.blockchain_state?.peak?.height
     ) {
       dispatch(updateLatestBlocks());
-      dispatch(updateLatestSubBlocks());
+      // dispatch(updateLatestSubBlocks());
       dispatch(updateUnfinishedSubBlockHeaders());
     }
   } else if (payload.command === 'ping') {

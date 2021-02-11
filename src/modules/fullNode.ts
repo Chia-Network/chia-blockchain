@@ -1,7 +1,7 @@
 import { service_full_node } from '../util/service_names';
 import type Connection from '../types/Connection';
 import type Header from '../types/Header';
-import type Block from '../types/Block';
+// import type Block from '../types/Block';
 import type SubBlock from '../types/SubBlock';
 import type FoliageBlock from '../types/FoliageBlock';
 import type FoliageSubBlock from '../types/FoliageSubBlock';
@@ -27,9 +27,9 @@ type FullNodeState = {
   headers: Header[];
   block?: string | null; // If not null, page is changed to block page
   header?: string | null;
-  unfinished_sub_block_headers?: any[];
-  latest_blocks?: Block[];
-  latest_sub_blocks?: SubBlock[];
+  unfinished_block_headers?: any[];
+  // latest_blocks?: Block[];
+  latest_blocks?: SubBlock[];
 };
 
 const initialState: FullNodeState = {
@@ -49,15 +49,10 @@ export default function fullnodeReducer(
         ...state,
         latest_blocks: action.blocks,
       };
-    case 'FULL_NODE_SET_LATEST_SUB_BLOCKS':
+    case 'FULL_NODE_SET_UNFINISHED_BLOCK_HEADERS':
       return {
         ...state,
-        latest_sub_blocks: action.subBlocks,
-      };
-    case 'FULL_NODE_SET_UNFINISHED_SUB_BLOCK_HEADERS':
-      return {
-        ...state,
-        unfinished_sub_block_headers: action.headers,
+        unfinished_block_headers: action.headers,
       };
     case 'LOG_OUT':
       return { ...initialState };

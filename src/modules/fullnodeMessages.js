@@ -14,17 +14,17 @@ export function updateLatestSubBlocks() {
     const state = getState();
     const height = state.full_node_state.blockchain_state?.peak?.height;
     if (height) {
-      const subBlocks = await dispatch(getSubBlockRecords(height));
+      const blocks = await dispatch(getBlockRecords(height));
 
       dispatch({
-        type: 'FULL_NODE_SET_LATEST_SUB_BLOCKS',
-        subBlocks,
+        type: 'FULL_NODE_SET_LATEST_BLOCKS',
+        blocks,
       });
     }
   };
 }
 
-export function getSubBlockRecords(end, count = 10) {
+export function getBlockRecords(end, count = 10) {
   return async (dispatch) => {
     const start = end - count;
 
@@ -85,16 +85,16 @@ export function getBlocksRecords(end, count = 10) {
 
 export function updateUnfinishedSubBlockHeaders() {
   return async (dispatch, getState) => {
-    const headers = await dispatch(getUnfinishedSubBlockHeaders());
+    const headers = await dispatch(getUnfinishedBlockHeaders());
 
     dispatch({
-      type: 'FULL_NODE_SET_UNFINISHED_SUB_BLOCK_HEADERS',
+      type: 'FULL_NODE_SET_UNFINISHED_BLOCK_HEADERS',
       headers,
     });
   };
 }
 
-export function getUnfinishedSubBlockHeaders() {
+export function getUnfinishedBlockHeaders() {
   return async (dispatch) => {
     const {
       data: { headers },
@@ -110,26 +110,6 @@ export function getUnfinishedSubBlockHeaders() {
   };
 }
 
-/*
-export function getSubBlockRecords(headerHash, count = 1) {
-  return async (dispatch) => {
-    const records = [];
-    let currentHash = headerHash;
-
-    for (let i = 0; i < count; i++) {
-      const subBlockRecord = await getSubBlockRecord(currentHash);
-
-      currentHash = subBlockRecord?.prev_hash;
-      if (!currentHash) {
-        break;
-      }
-    }
-
-    return records;
-  };
-}
-*/
-
 export const pingFullNode = () => {
   const action = fullNodeMessage();
   action.message.command = 'ping';
@@ -144,6 +124,7 @@ export const getBlockChainState = () => {
   return action;
 };
 
+/*
 // @deprecated
 export const getLatestBlocks = () => {
   const action = fullNodeMessage();
@@ -151,6 +132,7 @@ export const getLatestBlocks = () => {
   action.message.data = {};
   return action;
 };
+*/
 
 export const getFullNodeConnections = () => {
   const action = fullNodeMessage();
@@ -173,14 +155,14 @@ export const closeConnection = (node_id) => {
   return action;
 };
 
-export const getSubBlockAction = (header_hash) => {
+export const getBlockAction = (header_hash) => {
   const action = fullNodeMessage();
   action.message.command = 'get_block';
   action.message.data = { header_hash };
   return action;
 };
 
-export const getSubBlockRecordAction = (headerHash) => {
+export const getBlockRecordAction = (headerHash) => {
   const action = fullNodeMessage();
   action.message.command = 'get_block_record';
   action.message.data = { header_hash: headerHash };
@@ -195,7 +177,7 @@ export const clearBlock = (header_hash) => {
   return action;
 };
 
-export function getSubBlock(headerHash) {
+export function getBlock(headerHash) {
   return async (dispatch) => {
     const response = await async_api(
       dispatch,
@@ -208,11 +190,11 @@ export function getSubBlock(headerHash) {
       false,
     );
 
-    return response?.data?.sub_block;
+    return response?.data?.block;
   };
 }
 
-export function getSubBlockRecord(headerHash) {
+export function getBlockRecord(headerHash) {
   return async (dispatch) => {
     const response = await async_api(
       dispatch,
@@ -225,6 +207,6 @@ export function getSubBlockRecord(headerHash) {
       false,
     );
 
-    return response?.data?.sub_block_record;
+    return response?.data?.block_record;
   };
 }

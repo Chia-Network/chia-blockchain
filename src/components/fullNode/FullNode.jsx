@@ -122,8 +122,8 @@ const cols = [
 const getStatusItems = (state, connected) => {
   const status_items = [];
   if (state.sync && state.sync.sync_mode) {
-    const progress = state.sync.sync_progress_sub_height;
-    const tip = state.sync.sync_tip_sub_height;
+    const progress = state.sync.sync_progress_height;
+    const tip = state.sync.sync_tip_height;
     const item = {
       label: <Trans>Status</Trans>,
       value: (
@@ -284,16 +284,12 @@ const FullNodeStatus = (props) => {
 const BlocksCard = () => {
   const { url } = useRouteMatch();
   const history = useHistory();
-  const latestSubBlocks = useSelector(
-    (state) => state.full_node_state.latest_sub_blocks ?? [],
-  );
-  const unfinishedSubBlockHeaders = useSelector(
-    (state) => state.full_node_state.unfinished_sub_block_headers ?? [],
-  );
+  const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks ?? []);
+  const unfinishedBlockHeaders = useSelector((state) => state.full_node_state.unfinished_block_headers ?? []);
 
   const rows = [
-    ...unfinishedSubBlockHeaders,
-    ...latestSubBlocks.map((row) => ({
+    ...unfinishedBlockHeaders,
+    ...latestBlocks.map(row => ({
       ...row,
       isFinished: true,
     })),

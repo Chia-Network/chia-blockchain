@@ -29,7 +29,7 @@ const cols = [
   },
   {
     field(row: Row) {
-      return moment(row.timestamp * 1000).format('MMM D, H:mm:ss A');
+      return moment(row.timestamp * 1000).format('MMM D, h:mm:ss A');
     },
     title: <Trans>Date</Trans>,
   },

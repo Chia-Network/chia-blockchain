@@ -31,7 +31,7 @@ if (!setupEvents.handleSquirrelEvent()) {
   const PY_MAC_DIST_FOLDER = "../../app.asar.unpacked/daemon";
   const PY_WIN_DIST_FOLDER = "../../app.asar.unpacked/daemon";
   const PY_DIST_FILE = "daemon";
-  const PY_FOLDER = "../src/daemon";
+  const PY_FOLDER = "../chia-blockchain/src/daemon";
   const PY_MODULE = "server"; // without .py suffix
 
   let pyProc = null;

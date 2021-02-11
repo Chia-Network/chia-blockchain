@@ -14,8 +14,8 @@ import {
   sha256,
 } from '../../util/utils';
 import {
-  getSubBlockRecord,
-  getSubBlock,
+  getBlockRecord,
+  getBlock,
 } from '../../modules/fullnodeMessages';
 import { chia_formatter } from '../../util/chia';
 import { calculatePoolReward, calculateBaseFarmerReward } from '../../util/blockRewards';
@@ -62,18 +62,18 @@ export default function Block() {
       setPrevBlockRecord();
       setNewPlotId();
 
-      const block = await dispatch(getSubBlock(headerHash));
+      const block = await dispatch(getBlock(headerHash));
       setBlock(block);
 
       if (block) {
         setNewPlotId(await computeNewPlotId(block));
       }
 
-      const blockRecord = await dispatch(getSubBlockRecord(headerHash));
+      const blockRecord = await dispatch(getBlockRecord(headerHash));
       setBlockRecord(blockRecord);
 
       if (blockRecord?.prev_block_hash) {
-        const prevBlockRecord = await dispatch(getSubBlockRecord(blockRecord?.prev_block_hash));
+        const prevBlockRecord = await dispatch(getBlockRecord(blockRecord?.prev_block_hash));
         setPrevBlockRecord(prevBlockRecord);
       }
     } catch (e) {
