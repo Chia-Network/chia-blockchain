@@ -28,6 +28,9 @@ type SubBlock = {
   timestamp: number | null;
   total_iters: string;
   weight: string;
+  foliage_block?: {
+    timestamp: string;
+  };
 };
 
 export default SubBlock;

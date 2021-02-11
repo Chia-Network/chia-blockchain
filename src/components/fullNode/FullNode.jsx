@@ -119,7 +119,7 @@ const cols = [
   },
 ];
 
-const getStatusItems = (state, connected) => {
+const getStatusItems = (state, connected, latestPeakTimestamp) => {
   const status_items = [];
   if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
@@ -185,11 +185,10 @@ const getStatusItems = (state, connected) => {
     value: peakHeight,
   });
 
-  const peakTimestamp = state.peak?.timestamp;
   status_items.push({
     label: <Trans>Peak Time</Trans>,
-    value: peakTimestamp
-      ? unix_to_short_date(Number.parseInt(peakTimestamp))
+    value: latestPeakTimestamp
+      ? unix_to_short_date(latestPeakTimestamp)
       : '',
     tooltip: <Trans>This is the time of the latest peak sub block.</Trans>,
   });
@@ -255,16 +254,17 @@ const StatusCell = (props) => {
 };
 
 const FullNodeStatus = (props) => {
-  const blockchain_state = useSelector(
+  const blockchainState = useSelector(
     (state) => state.full_node_state.blockchain_state,
   );
   const connected = useSelector(
     (state) => state.daemon_state.full_node_connected,
   );
-  const statusItems =
-    blockchain_state && getStatusItems(blockchain_state, connected);
 
-  console.log('blockchain_state', blockchain_state);
+  const latestPeakTimestamp = useSelector(
+    (state) => state.full_node_state.latest_peak_timestamp,
+  );
+  const statusItems = blockchainState && getStatusItems(blockchainState, connected, latestPeakTimestamp);
 
   return (
     <Card title={<Trans>Full Node Status</Trans>}>
