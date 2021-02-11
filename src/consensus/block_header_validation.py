@@ -738,7 +738,7 @@ def validate_unfinished_header_block(
 
         if genesis_block:
             # 24a. Check prev block hash for genesis
-            if header_block.foliage_block.prev_block_hash != bytes([0] * 32):
+            if header_block.foliage_block.prev_block_hash != constants.GENESIS_CHALLENGE:
                 return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
         else:
             assert prev_sb is not None
