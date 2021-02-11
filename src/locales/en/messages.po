@@ -135,7 +135,7 @@ msgstr "Block VDF Iterations"
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Block at height {0} in the Chia blockchain"
 
-#: src/components/fullNode/FullNode.jsx:338
+#: src/components/fullNode/FullNode.jsx:340
 msgid "Block hash"
 msgstr "Block hash"
 
@@ -143,7 +143,7 @@ msgstr "Block hash"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Block with hash {headerHash} does not exists."
 
-#: src/components/fullNode/FullNode.jsx:307
+#: src/components/fullNode/FullNode.jsx:309
 msgid "Blocks"
 msgstr "Blocks"
 
@@ -399,7 +399,7 @@ msgid "Deleting the key will permanently remove the key from your computer, make
 msgstr "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 
 #: src/components/block/Block.jsx:218
-#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Difficulty"
 msgstr "Difficulty"
 
@@ -434,11 +434,11 @@ msgstr "Error"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Error: Cannot send chia to coloured address. Please enter a chia address."
 
-#: src/components/fullNode/FullNode.jsx:218
+#: src/components/fullNode/FullNode.jsx:217
 msgid "Estimated network space"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:221
+#: src/components/fullNode/FullNode.jsx:220
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
@@ -528,11 +528,11 @@ msgid "Finished"
 msgstr "Finished"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:368
+#: src/components/fullNode/FullNode.jsx:370
 msgid "Full Node"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:270
 msgid "Full Node Status"
 msgstr "Full Node Status"
 
@@ -776,7 +776,7 @@ msgstr "Peak Height"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:190
+#: src/components/fullNode/FullNode.jsx:189
 msgid "Peak Time"
 msgstr "Peak Time"
 
@@ -1019,11 +1019,11 @@ msgstr "Rename"
 msgid "Save"
 msgstr "Save"
 
-#: src/components/fullNode/FullNode.jsx:345
+#: src/components/fullNode/FullNode.jsx:347
 msgid "Search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:333
+#: src/components/fullNode/FullNode.jsx:335
 msgid "Search block by header hash"
 msgstr "Search block by header hash"
 
@@ -1250,7 +1250,7 @@ msgstr "This is the pending change, which are change coins which you have sent t
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
-#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
 msgstr "This is the time of the latest peak sub block."
 
@@ -1304,7 +1304,7 @@ msgstr "Total Balance"
 msgid "Total Chia Farmed"
 msgstr "Total Chia Farmed"
 
-#: src/components/fullNode/FullNode.jsx:212
+#: src/components/fullNode/FullNode.jsx:211
 msgid "Total Iterations"
 msgstr "Total Iterations"
 
@@ -1324,7 +1324,7 @@ msgstr "Total Size of Plots"
 msgid "Total VDF Iterations"
 msgstr "Total VDF Iterations"
 
-#: src/components/fullNode/FullNode.jsx:214
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Total iterations since the start of the blockchain"
 msgstr "Total iterations since the start of the blockchain"
 
@@ -1381,7 +1381,7 @@ msgstr "Unique identifier"
 msgid "User Pubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:205
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterations"
 
