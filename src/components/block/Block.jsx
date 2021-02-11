@@ -196,10 +196,6 @@ export default function Block() {
       ),
     },
     {
-      name: <Trans>Sub Block Height</Trans>,
-      value: blockRecord.sub_block_height,
-    },
-    {
       name: <Trans>Height</Trans>,
       value: blockRecord.height,
     },
@@ -214,14 +210,9 @@ export default function Block() {
       ),
     },
     {
-      name: <Trans>Previous Sub Block Hash</Trans>,
+      name: <Trans>Previous Block Hash</Trans>,
       value: blockRecord.prev_hash,
       onClick: handleShowPreviousSubBlock,
-    },
-    {
-      name: <Trans>Previous Block Hash</Trans>,
-      value: blockRecord.prev_block_hash,
-      onClick: handleShowPreviousBlock,
     },
     {
       name: <Trans>Difficulty</Trans>,
@@ -336,7 +327,7 @@ export default function Block() {
             </BackIcon>
             <span>
               <Trans>
-                Sub Block at height {blockRecord.sub_block_height} in the Chia
+                Block at height {blockRecord.height} in the Chia
                 blockchain
               </Trans>
             </span>

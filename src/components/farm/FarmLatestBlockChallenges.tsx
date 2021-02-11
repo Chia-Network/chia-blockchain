@@ -1,10 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-// import moment from 'moment';
 import {
   Typography,
-  Tooltip,
 } from '@material-ui/core';
 import { Link, Table, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
@@ -13,13 +11,8 @@ import type { Row } from '../core/components/Table/Table';
 const cols = [
   {
     minWidth: '200px',
-    field(row: Row) {
-      return (
-        <Tooltip title={row.challenge}>
-          <span>{row.signage_point.challenge_hash}</span>
-        </Tooltip>
-      );
-    },
+    tooltip: true,
+    field: 'signage_point.challenge_hash',
     title: (
       <Trans>Challenge Hash</Trans>
     ),
@@ -27,33 +20,7 @@ const cols = [
   {
     field: (row: Row) => row.signage_point.signage_point_index,
     title: <Trans>Index</Trans>,
-  }, /*
-  {
-    width: '200px',
-    field(row: Row) {
-      if (row?.estimates?.length > 0) {
-        const seconds = Math.min(...row.estimates);
-        return moment.duration({ seconds }).humanize();
-      }
-
-      return null;
-    },
-    title: (
-      <Flex alignItems="center" gap={1}>
-        <span>
-          <Trans>
-            Best Estimate
-          </Trans>
-        </span>
-        <TooltipIcon>
-          <Trans>
-            Best Estimate is how many seconds of time must be proved for your
-            proofs.
-          </Trans>
-        </TooltipIcon>
-      </Flex>
-    ),
-  }, */
+  },
 ];
 
 export default function FarmLatestBlockChallenges() {

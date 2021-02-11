@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
+import { get } from 'lodash';
 import {
   FormatBytes,
   Flex,
@@ -37,8 +38,10 @@ const cols = [
       const {
         isFinished = false,
         header_hash,
-        foliage_sub_block: { foliage_block_hash } = {},
+        foliage_sub_block,
       } = row;
+
+      const { foliage_block_hash } = foliage_sub_block || {};
 
       const value = isFinished ? (
         header_hash
@@ -70,28 +73,26 @@ const cols = [
     title: <Trans>Header Hash</Trans>,
   },
   {
-    field: 'height',
-    title: <Trans>SB Height</Trans>,
-  },
-  {
     field(row) {
       const {
-        height,
         timestamp,
         isFinished,
-        foliage_block: { height: foliageHeight } = {},
+        foliage_block,
+        foliage_sub_block,
       } = row;
-      const isSubBlock = !timestamp;
+
+      const { height: foliageHeight } = foliage_sub_block || {};
+
+      const height = get(row, 'reward_chain_sub_block.height');
+      const isSubBlock = !foliage_block;
 
       if (!isFinished) {
         return <i>{foliageHeight}</i>;
       }
 
-      if (isSubBlock) {
-        return <i>{height}</i>;
-      }
-
-      return height;
+      return isSubBlock 
+        ? <i>{height}</i>
+        : height;
     },
     title: <Trans>Height</Trans>,
   },
@@ -99,11 +100,10 @@ const cols = [
     field(row) {
       const {
         isFinished,
-        timestamp,
-        foliage_block: { timestamp: foliageBlockTimestamp } = {},
       } = row;
 
-      const value = isFinished ? timestamp : foliageBlockTimestamp;
+      const timestamp = get(row, 'foliage_block.timestamp');
+      const value = timestamp;
 
       return value ? unix_to_short_date(Number.parseInt(value)) : '';
     },

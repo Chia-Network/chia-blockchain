@@ -179,9 +179,11 @@ export default function Table(props: Props) {
                   >
                     {tooltipValue ? (
                       <Tooltip title={tooltipValue}>
-                        <StyledTableCellContent>
-                          {value}
-                        </StyledTableCellContent>
+    
+                          <StyledTableCellContent>
+                            {value}
+                          </StyledTableCellContent>
+    
                       </Tooltip>
                     ) : (
                     <StyledTableCellContent>

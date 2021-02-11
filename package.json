@@ -16,7 +16,7 @@
     "dev:testnet": "cross-env TESTNET=true NODE_ENV=development BROWSER=none nf start -p 3000",
     "styleguide": "styleguidist server",
     "styleguide:build": "styleguidist build",
-    "locale:extract": "lingui extract --overwrite",
+    "locale:extract": "lingui extract",
     "locale:compile": "lingui compile",
     "eslint": "eslint src/**/*.[t]s{,x}",
     "format": "prettier --write src/**/*.[jt]s{,x} && eslint --fix src/**/*.[jt]s{,x}",

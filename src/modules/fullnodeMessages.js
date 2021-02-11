@@ -9,21 +9,6 @@ export const fullNodeMessage = (message) => ({
   },
 });
 
-export function updateLatestSubBlocks() {
-  return async (dispatch, getState) => {
-    const state = getState();
-    const height = state.full_node_state.blockchain_state?.peak?.height;
-    if (height) {
-      const blocks = await dispatch(getBlockRecords(height));
-
-      dispatch({
-        type: 'FULL_NODE_SET_LATEST_BLOCKS',
-        blocks,
-      });
-    }
-  };
-}
-
 export function getBlockRecords(end, count = 10) {
   return async (dispatch) => {
     const start = end - count;

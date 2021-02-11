@@ -10,9 +10,9 @@ import { RootState } from '../../modules/rootReducer';
 
 const cols = [
   {
-    field(row: Row) {
-      return row.challenge_hash;
-    },
+    minWidth: '200px',
+    field: 'challenge_hash',
+    tooltip: true,
     title: <Trans>Challenge</Trans>,
   },
   {
@@ -22,9 +22,7 @@ const cols = [
     title: <Trans>Plots Passed Filter</Trans>,
   },
   {
-    field(row: Row) {
-      return row.proofs;
-    },
+    field: 'proofs',
     title: <Trans>Proofs Found</Trans>,
   },
   {

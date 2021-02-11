@@ -197,7 +197,7 @@ export default function CreateOffer() {
                 }}
               >
                 {wallets.map((wallet) => (
-                  <MenuItem value={wallet.id}>{wallet.name}</MenuItem>
+                  <MenuItem value={wallet.id} key={wallet.id}>{wallet.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>

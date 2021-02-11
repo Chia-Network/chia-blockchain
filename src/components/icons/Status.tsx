@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import styled from 'styled-components';
 import { StateColor } from '@chia/core';
 import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
@@ -12,10 +12,15 @@ type Props = {
   color: StateColor;
 };
 
-export default function Status(props: Props) {
+// @ts-ignore
+function Status(props: Props, ref) {
   const { color } = props;
 
   return (
-    <StyledFiberManualRecordIcon color={color} />
+    <div ref={ref}>
+      <StyledFiberManualRecordIcon color={color}  />
+    </div>
   );
 }
+
+export default forwardRef(Status);
