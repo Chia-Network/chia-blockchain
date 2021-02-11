@@ -4,7 +4,7 @@ import { I18nProvider } from '@lingui/react';
 import { i18n } from "@lingui/core"
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
-import { en, sk, zh } from 'make-plural/plurals';
+import { en, ru, sk, zh } from 'make-plural/plurals';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
@@ -15,6 +15,7 @@ import { daemon_rpc_ws } from '../../util/config';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
 import catalogEn from '../../locales/en/messages';
+import catalogRu from '../../locales/ru/messages';
 import catalogSk from '../../locales/sk/messages';
 import catalogZhCN from '../../locales/zh-CN/messages';
 import useLocale from '../../hooks/useLocale';
@@ -23,11 +24,14 @@ import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
 
 i18n.loadLocaleData('en', { plurals: en });
+i18n.loadLocaleData('ru', { plurals: ru });
 i18n.loadLocaleData('sk', { plurals: sk });
 i18n.loadLocaleData('zh-CN', { plurals: zh });
 
 // @ts-ignore
 i18n.load('en', catalogEn.messages);
+// @ts-ignore
+i18n.load('ru', catalogRu.messages);
 // @ts-ignore
 i18n.load('sk', catalogSk.messages);
 // @ts-ignore

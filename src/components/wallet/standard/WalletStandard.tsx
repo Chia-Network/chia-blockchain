@@ -147,7 +147,6 @@ const useStyles = makeStyles((theme) => ({
   copyButton: {
     marginTop: theme.spacing(0),
     marginBottom: theme.spacing(0),
-    width: 50,
     height: 56,
   },
   cardTitle: {
