@@ -55,7 +55,7 @@ def count_sub_epochs(blockchain, last_hash) -> int:
 def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
     curr = sub_blocks[last_hash]
     blocks = 1
-    while curr.sub_block_height != 0:
+    while curr.height != 0:
         # next sub block
         curr = sub_blocks[curr.prev_hash]
         # if end of sub-epoch
@@ -117,9 +117,9 @@ async def load_blocks_dont_validate(
 async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, summaries):
     curr = sub_blocks[blocks[-1].header_hash]
     orig_summaries: Dict[int, SubEpochSummary] = {}
-    while curr.sub_block_height > 0:
+    while curr.height > 0:
         if curr.sub_epoch_summary_included is not None:
-            orig_summaries[curr.sub_block_height] = curr.sub_epoch_summary_included
+            orig_summaries[curr.height] = curr.sub_epoch_summary_included
         # next sub block
         curr = sub_blocks[curr.prev_hash]
 
@@ -311,15 +311,15 @@ class TestWeightProof:
             return None, None
 
         assert peak is not None
-        peak_height = sub_blocks[peak[0].header_hash].sub_block_height
+        peak_height = sub_blocks[peak[0].header_hash].height
 
         # Sets the other state variables (peak_height and height_to_hash)
         curr: SubBlockRecord = sub_blocks[peak[0].header_hash]
         while True:
-            sub_height_to_hash[curr.sub_block_height] = curr.header_hash
+            sub_height_to_hash[curr.height] = curr.header_hash
             if curr.sub_epoch_summary_included is not None:
-                sub_epoch_summaries[curr.sub_block_height] = curr.sub_epoch_summary_included
-            if curr.sub_block_height == 0:
+                sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
+            if curr.height == 0:
                 break
             curr = sub_blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
