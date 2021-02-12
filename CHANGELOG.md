@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased
+
+### Added
+- 'chia wallet get_transactions' in the command line to see your transactions
+- 'chia wallet show' also shows your wallet's height
+
+### Changed
+- Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This affectes the RPC, now
+all fields that referred to sub blocks are changed to blocks
+- 'chia wallet send' now takes in TXCH or XCH as units instead of mojos
+
+
 ## [1.0beta27] aka Beta 1.27 - 2021-02-11
 
 ### Added
