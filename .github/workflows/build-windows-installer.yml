@@ -62,11 +62,11 @@ jobs:
         python-version: "3.7"
 
     - name: Checkout GUI
-      uses: actions/checkout@v2
-      with:
-        repository: 'Chia-Network/chia-blockchain-gui'
-        ref: 'main'
-        path: 'chia-blockchain-gui'
+      run: |
+        git submodule update --init --recursive
+        cd chia-blockchain-gui
+        git checkout main
+        git pull
 
     - name: Test for secrets access
       id: check_secrets
