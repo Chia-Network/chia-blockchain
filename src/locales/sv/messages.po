@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 20:47\n"
+"PO-Revision-Date: 2021-02-12 06:12\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -142,11 +142,11 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:340
 msgid "Block hash"
-msgstr ""
+msgstr "Blockhash"
 
 #: src/components/block/Block.jsx:153
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "Block med hash {headerHash} existerar inte."
 
 #: src/components/fullNode/FullNode.jsx:309
 msgid "Blocks"
@@ -196,7 +196,7 @@ msgstr "Verifiering"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Verifieringshash"
 
 #: src/components/wallet/Wallets.tsx:29
 msgid "Chia Wallet"
@@ -1253,7 +1253,7 @@ msgstr ""
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Detta är summan av inkommande och utgående väntande transaktioner (som ännu inte inkluderats i blockkedjan). Den innefattar inte odlingsbelöningar."
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
