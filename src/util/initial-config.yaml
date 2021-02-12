@@ -168,6 +168,7 @@ full_node:
   database_path: db/blockchain_v27_2.db
   peer_db_path: db/peer_table_node.db
   simulator_database_path: sim_db/simulator_blockchain_v27_2.db
+  simulator_peer_db_path: sim_db/peer_table_node.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True

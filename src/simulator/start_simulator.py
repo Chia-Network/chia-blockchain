@@ -58,6 +58,10 @@ def service_kwargs_for_full_node_simulator(
 def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config["database_path"] = config["simulator_database_path"]
+    config["peer_db_path"] = config["simulator_peer_db_path"]
+    config["introducer_peer"]["host"] = "127.0.0.1"
+    config["introducer_peer"]["port"] = 58555
+
     kwargs = service_kwargs_for_full_node_simulator(
         DEFAULT_ROOT_PATH,
         config,
