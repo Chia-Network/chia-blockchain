@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 
 async def validate_block_body(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     block_store: BlockStore,
     coin_store: CoinStore,
     peak: Optional[BlockRecord],
@@ -102,43 +102,43 @@ async def validate_block_body(
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
     if height > 0:
         # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
-        prev_block = sub_blocks.sub_block_record(block.foliage_transaction_block.prev_transaction_block_hash)
-        prev_transaction_block_height = prev_block.height
+        prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
+        prev_transaction_block_height = prev_transaction_block.height
 
-        assert prev_block.fees is not None
+        assert prev_transaction_block.fees is not None
         pool_coin = create_pool_coin(
-            prev_block.height,
-            prev_block.pool_puzzle_hash,
-            calculate_pool_reward(prev_block.height),
+            prev_transaction_block.height,
+            prev_transaction_block.pool_puzzle_hash,
+            calculate_pool_reward(prev_transaction_block.height),
         )
         farmer_coin = create_farmer_coin(
-            prev_block.height,
-            prev_block.farmer_puzzle_hash,
-            uint64(calculate_base_farmer_reward(prev_block.height) + prev_block.fees),
+            prev_transaction_block.height,
+            prev_transaction_block.farmer_puzzle_hash,
+            uint64(calculate_base_farmer_reward(prev_transaction_block.height) + prev_transaction_block.fees),
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
         expected_reward_coins.add(farmer_coin)
 
         # For the second block in the chain, don't go back further
-        if prev_block.height > 0:
-            curr_sb = sub_blocks.sub_block_record(prev_block.prev_hash)
-            while not curr_sb.is_transaction_block:
+        if prev_transaction_block.height > 0:
+            curr_b = blocks.block_record(prev_transaction_block.prev_hash)
+            while not curr_b.is_transaction_block:
                 expected_reward_coins.add(
                     create_pool_coin(
-                        curr_sb.height,
-                        curr_sb.pool_puzzle_hash,
-                        calculate_pool_reward(curr_sb.height),
+                        curr_b.height,
+                        curr_b.pool_puzzle_hash,
+                        calculate_pool_reward(curr_b.height),
                     )
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
-                        curr_sb.height,
-                        curr_sb.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr_sb.height),
+                        curr_b.height,
+                        curr_b.farmer_puzzle_hash,
+                        calculate_base_farmer_reward(curr_b.height),
                     )
                 )
-                curr_sb = sub_blocks.sub_block_record(curr_sb.prev_hash)
+                curr_b = blocks.block_record(curr_b.prev_hash)
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS
@@ -231,12 +231,12 @@ async def validate_block_body(
     elif fork_point_with_peak is not None:
         fork_sub_h = fork_point_with_peak
     else:
-        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks.sub_block_record(block.prev_header_hash))
+        fork_sub_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
     if fork_sub_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.height_to_hash(uint32(fork_sub_h)))
+        last_sb_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_sub_h)))
         assert last_sb_in_common is not None
         coin_store_reorg_height = last_sb_in_common.height
 

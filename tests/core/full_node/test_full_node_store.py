@@ -139,7 +139,7 @@ class TestFullNodeStore:
         blocks = bt.get_consecutive_blocks(3, block_list_input=blocks)
         for block in blocks:
             await blockchain.receive_block(block)
-            sb = blockchain.sub_block_record(block.header_hash)
+            sb = blockchain.block_record(block.header_hash)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain)
             assert res[0] is None
@@ -149,7 +149,7 @@ class TestFullNodeStore:
         for block in blocks_reorg:
             res, _, _ = await blockchain.receive_block(block)
             if res == ReceiveBlockResult.NEW_PEAK:
-                sb = blockchain.sub_block_record(block.header_hash)
+                sb = blockchain.block_record(block.header_hash)
                 sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
                 res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, True, blockchain)
                 assert res[0] is None
@@ -182,7 +182,7 @@ class TestFullNodeStore:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             res, _, _ = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
-                sb = blockchain.sub_block_record(blocks[-1].header_hash)
+                sb = blockchain.block_record(blocks[-1].header_hash)
                 sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(blocks[-1].header_hash)
 
                 res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, True, blockchain)
@@ -210,17 +210,17 @@ class TestFullNodeStore:
         #         continue
         #     latest = peak
         #     while latest.total_iters > peak.sp_total_iters(test_constants):
-        #         latest = blockchain.sub_blocks[latest.prev_hash]
+        #         latest = blockchain.blocks[latest.prev_hash]
         #     sp = get_signage_point(
         #         test_constants,
-        #         blockchain.sub_blocks,
+        #         blockchain.blocks,
         #         latest,
         #         ss_start_iters,
         #         uint8(i),
         #         [],
         #         peak.sub_slot_iters,
         #     )
-        #     assert store.new_signage_point(i, blockchain.sub_blocks, peak, peak.sub_slot_iters, sp)
+        #     assert store.new_signage_point(i, blockchain.blocks, peak, peak.sub_slot_iters, sp)
 
         # Test adding signage points for overflow blocks (ip_sub_slot)
         for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
@@ -278,7 +278,7 @@ class TestFullNodeStore:
             blocks[1].reward_chain_block.signage_point_index,
             {},
             peak,
-            blockchain.sub_block_record(blocks[1].header_hash).sp_sub_slot_total_iters(test_constants),
+            blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(test_constants),
             sp,
         )
 
@@ -348,7 +348,7 @@ class TestFullNodeStore:
             < test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA
         )
         await blockchain.receive_block(blocks_4[-1])
-        sb = blockchain.sub_block_record(blocks_4[-1].header_hash)
+        sb = blockchain.block_record(blocks_4[-1].header_hash)
         store.new_peak(sb, None, None, False, blockchain)
         for i in range(
             sb.signage_point_index + test_constants.NUM_SP_INTERVALS_EXTRA,
@@ -377,13 +377,13 @@ class TestFullNodeStore:
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             await blockchain.receive_block(blocks[-1])
-            sb = blockchain.sub_block_record(blocks[-1].header_hash)
+            sb = blockchain.block_record(blocks[-1].header_hash)
             if sb.first_in_sub_slot:
                 break
         assert len(blocks) >= 3
         dependant_sub_slots = blocks[-1].finished_sub_slots
         for block in blocks[:-2]:
-            sb = blockchain.sub_block_record(block.header_hash)
+            sb = blockchain.block_record(block.header_hash)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             peak = sb
             res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain)
@@ -391,7 +391,7 @@ class TestFullNodeStore:
 
         assert store.new_finished_sub_slot(dependant_sub_slots[0], blockchain, peak) is None
         block = blocks[-2]
-        sb = blockchain.sub_block_record(block.header_hash)
+        sb = blockchain.block_record(block.header_hash)
         sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
         res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain)
         assert res[0] == dependant_sub_slots[0]
@@ -403,7 +403,7 @@ class TestFullNodeStore:
 
         for block in blocks[:5]:
             await blockchain.receive_block(block)
-            sb = blockchain.sub_block_record(block.header_hash)
+            sb = blockchain.block_record(block.header_hash)
 
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain)
@@ -426,7 +426,7 @@ class TestFullNodeStore:
 
             await blockchain.receive_block(prev_block)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
-            sb = blockchain.sub_block_record(prev_block.header_hash)
+            sb = blockchain.block_record(prev_block.header_hash)
             res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain)
             if len(block.finished_sub_slots) == 0:
                 case_0 = True

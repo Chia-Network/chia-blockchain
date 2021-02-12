@@ -8,7 +8,7 @@ from src.util.ints import uint32, uint8
 def calculate_deficit(
     constants: ConsensusConstants,
     height: uint32,
-    prev_sb: Optional[BlockRecord],
+    prev_b: Optional[BlockRecord],
     overflow: bool,
     num_finished_sub_slots: int,
 ) -> uint8:
@@ -18,15 +18,15 @@ def calculate_deficit(
     Args:
         constants: consensus constants being used for this chain
         height: sub-block height of the block that we care about
-        prev_sb: previous sub-block
+        prev_b: previous sub-block
         overflow: whether or not this is an overflow sub-block
         num_finished_sub_slots: the number of finished slots between infusion points of prev and current
     """
     if height == 0:
         return uint8(constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1)
     else:
-        assert prev_sb is not None
-        prev_deficit: uint8 = prev_sb.deficit
+        assert prev_b is not None
+        prev_deficit: uint8 = prev_b.deficit
         if prev_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
             # Prev sb must be an overflow sb. However maybe it's in a different sub-slot
             if overflow:

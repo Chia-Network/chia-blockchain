@@ -273,26 +273,25 @@ async def show_async(args, parser):
                     elif result_txt == "":
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
-        if args.sub_block_header_hash_by_height != "":
-            block_header = await client.get_block_record_by_height(args.sub_block_header_hash_by_height)
+        if args.block_header_hash_by_height != "":
+            block_header = await client.get_block_record_by_height(args.block_header_hash_by_height)
             if block_header is not None:
                 print(
-                    f"Header hash of sub-block {args.sub_block_header_hash_by_height}: "
-                    f"{block_header.header_hash.hex()}"
+                    f"Header hash of sub-block {args.block_header_hash_by_height}: " f"{block_header.header_hash.hex()}"
                 )
             else:
-                print("Sub block height", args.sub_block_header_hash_by_height, "not found.")
+                print("Sub block height", args.block_header_hash_by_height, "not found.")
         if args.sub_block_by_header_hash != "":
             sub_block: Optional[BlockRecord] = await client.get_block_record(
                 hexstr_to_bytes(args.sub_block_by_header_hash)
             )
-            full_block: Optional[FullBlock] = await client.get_sub_block(hexstr_to_bytes(args.sub_block_by_header_hash))
+            full_block: Optional[FullBlock] = await client.get_block(hexstr_to_bytes(args.sub_block_by_header_hash))
             # Would like to have a verbose flag for this
             if sub_block is not None:
                 assert full_block is not None
-                prev_sb = await client.get_block_record(sub_block.prev_hash)
-                if prev_sb is not None:
-                    difficulty = sub_block.weight - prev_sb.weight
+                prev_b = await client.get_block_record(sub_block.prev_hash)
+                if prev_b is not None:
+                    difficulty = sub_block.weight - prev_b.weight
                 else:
                     difficulty = sub_block.weight
                 if sub_block.is_transaction_block:
@@ -329,7 +328,7 @@ async def show_async(args, parser):
                     f"Fees Amount            {sub_block.fees}\n"
                 )
             else:
-                print("Sub-block with header hash", args.sub_block_header_hash_by_height, "not found.")
+                print("Sub-block with header hash", args.block_header_hash_by_height, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

@@ -126,7 +126,7 @@ class TestTransactions:
         for block in after_freeze_blocks:
             await full_node_api.full_node.blockchain.receive_block(block, None)
 
-        assert full_node_api.full_node.blockchain.peak_height == 30
+        assert full_node_api.full_node.blockchain.get_peak_height() == 30
 
         new_blocks = bt.get_consecutive_blocks(
             1, block_list_input=after_freeze_blocks, transaction_data=tx.spend_bundle, guarantee_block=True

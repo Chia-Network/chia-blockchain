@@ -14,7 +14,7 @@ test_constants = DEFAULT_CONSTANTS.replace(**{"NUM_SPS_SUB_SLOT": 32, "SUB_SLOT_
 
 
 class TestPotIterations:
-    def test_is_overflow_sub_block(self):
+    def test_is_overflow_block(self):
         assert not is_overflow_block(test_constants, uint8(27))
         assert not is_overflow_block(test_constants, uint8(28))
         assert is_overflow_block(test_constants, uint8(29))

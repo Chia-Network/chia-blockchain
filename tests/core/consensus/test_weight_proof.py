@@ -39,20 +39,6 @@ def event_loop():
     yield loop
 
 
-def count_sub_epochs(blockchain, last_hash) -> int:
-    curr = blockchain._sub_blocks[last_hash]
-    count = 0
-    while True:
-        if curr.height == 0:
-            break
-        # next sub block
-        curr = blockchain._sub_blocks[curr.prev_hash]
-        # if end of sub-epoch
-        if curr.sub_epoch_summary_included is not None:
-            count += 1
-    return count
-
-
 def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
     curr = sub_blocks[last_hash]
     blocks = 1
@@ -316,7 +302,7 @@ class TestWeightProof:
         assert peak is not None
         peak_height = sub_blocks[peak[0].header_hash].height
 
-        # Sets the other state variables (peak_height and height_to_hash)
+        # Sets the other state variables (_peak_height and height_to_hash)
         curr: BlockRecord = sub_blocks[peak[0].header_hash]
         while True:
             height_to_hash[curr.height] = curr.header_hash

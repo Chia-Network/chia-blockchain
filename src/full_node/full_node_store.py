@@ -218,7 +218,7 @@ class FullNodeStore:
             if peak.deficit < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_block(self.constants):
-                    curr = sub_blocks.sub_block_record(curr.prev_hash)
+                    curr = sub_blocks.block_record(curr.prev_hash)
                 if curr.is_challenge_block(self.constants):
                     icc_challenge = curr.challenge_block_info_hash
                     icc_iters = uint64(total_iters - curr.total_iters)
@@ -372,7 +372,7 @@ class FullNodeStore:
                             # Did not find a sub-block where it's iters are before our sp_total_iters, in this ss
                             check_from_start_of_ss = True
                             break
-                        curr = sub_blocks.sub_block_record(curr.prev_hash)
+                        curr = sub_blocks.block_record(curr.prev_hash)
 
                 if check_from_start_of_ss:
                     # Check VDFs from start of sub slot
@@ -568,7 +568,7 @@ class FullNodeStore:
 
     def get_finished_sub_slots(
         self,
-        prev_sb: Optional[BlockRecord],
+        prev_b: Optional[BlockRecord],
         sub_block_records: BlockchainInterface,
         pos_ss_challenge_hash: bytes32,
         extra_sub_slot: bool = False,
@@ -584,11 +584,11 @@ class FullNodeStore:
         pos_index: Optional[int] = None
         final_index: int = -1
 
-        if prev_sb is not None:
-            curr: BlockRecord = prev_sb
+        if prev_b is not None:
+            curr: BlockRecord = prev_b
             assert curr is not None
             while not curr.first_in_sub_slot:
-                curr = sub_block_records.sub_block_record(curr.prev_hash)
+                curr = sub_block_records.block_record(curr.prev_hash)
             assert curr is not None
             assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
@@ -598,7 +598,7 @@ class FullNodeStore:
 
         if pos_ss_challenge_hash == self.constants.GENESIS_CHALLENGE:
             pos_index = 0
-        if prev_sb is None:
+        if prev_b is None:
             final_index = 0
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:

@@ -34,7 +34,7 @@ class PreValidationResult(Streamable):
     cost_result: Optional[CostResult]  # Iff error is None and sub-block is a block
 
 
-def batch_pre_validate_sub_blocks(
+def batch_pre_validate_blocks(
     constants_dict: Dict,
     blocks_pickled: Dict[bytes, bytes],
     header_blocks_pickled: List[bytes],
@@ -97,16 +97,16 @@ async def pre_validate_blocks_multiprocessing(
         blocks: list of full blocks to validate (must be connected to current chain)
     """
     batch_size = 4
-    prev_sb: Optional[BlockRecord] = None
+    prev_b: Optional[BlockRecord] = None
     # Collects all the recent sub-blocks (up to the previous sub-epoch)
-    recent_sub_blocks: Dict[bytes32, BlockRecord] = {}
+    recent_blocks: Dict[bytes32, BlockRecord] = {}
     recent_blocks_compressed: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
     if blocks[0].height > 0:
-        if not sub_blocks.contains_sub_block(blocks[0].prev_header_hash):
+        if not sub_blocks.contains_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
-        curr = sub_blocks.sub_block_record(blocks[0].prev_header_hash)
+        curr = sub_blocks.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
             curr.sub_epoch_summary_included is None
@@ -119,21 +119,21 @@ async def pre_validate_blocks_multiprocessing(
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
-            recent_sub_blocks[curr.header_hash] = curr
+            recent_blocks[curr.header_hash] = curr
             if curr.is_transaction_block:
                 num_blocks_seen += 1
-            curr = sub_blocks.sub_block_record(curr.prev_hash)
-        recent_sub_blocks[curr.header_hash] = curr
+            curr = sub_blocks.block_record(curr.prev_hash)
+        recent_blocks[curr.header_hash] = curr
         recent_blocks_compressed[curr.header_hash] = curr
     sub_block_was_present = []
     for block in blocks:
-        sub_block_was_present.append(sub_blocks.contains_sub_block(block.header_hash))
+        sub_block_was_present.append(sub_blocks.contains_block(block.header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for sub_block in blocks:
-        if sub_block.height != 0 and prev_sb is None:
-            prev_sb = sub_blocks.sub_block_record(sub_block.prev_header_hash)
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, sub_block, prev_sb, sub_blocks)
+        if sub_block.height != 0 and prev_b is None:
+            prev_b = sub_blocks.block_record(sub_block.prev_header_hash)
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, sub_block, prev_b, sub_blocks)
 
         if sub_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
             log.warning(f"Sub block: {sub_block.reward_chain_block}")
@@ -141,8 +141,8 @@ async def pre_validate_blocks_multiprocessing(
         challenge = get_block_challenge(
             constants,
             sub_block,
-            BlockCache(recent_sub_blocks),
-            prev_sb is None,
+            BlockCache(recent_blocks),
+            prev_b is None,
             overflow,
             False,
         )
@@ -155,8 +155,8 @@ async def pre_validate_blocks_multiprocessing(
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):
-                if not sub_block_was_present[i] and sub_blocks.contains_sub_block(block_i.header_hash):
-                    sub_blocks.remove_sub_block(block_i.header_hash)
+                if not sub_block_was_present[i] and sub_blocks.contains_block(block_i.header_hash):
+                    sub_blocks.remove_block_record(block_i.header_hash)
             return None
 
         required_iters: uint64 = calculate_iterations_quality(
@@ -173,15 +173,15 @@ async def pre_validate_blocks_multiprocessing(
             sub_block,
             None,
         )
-        recent_sub_blocks[sub_block_rec.header_hash] = sub_block_rec
+        recent_blocks[sub_block_rec.header_hash] = sub_block_rec
         recent_blocks_compressed[sub_block_rec.header_hash] = sub_block_rec
-        sub_blocks.add_sub_block(sub_block_rec)  # Temporarily add sub block to dict
-        prev_sb = sub_block_rec
+        sub_blocks.add_block_record(sub_block_rec)  # Temporarily add sub block to dict
+        prev_b = sub_block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
     for i, block in enumerate(blocks):
         if not sub_block_was_present[i]:
-            sub_blocks.remove_sub_block(block.header_hash)
+            sub_blocks.remove_block_record(block.header_hash)
 
     recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
 
@@ -191,7 +191,7 @@ async def pre_validate_blocks_multiprocessing(
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
         if any([len(block.finished_sub_slots) > 0 for block in blocks_to_validate]):
-            final_pickled = {bytes(k): bytes(v) for k, v in recent_sub_blocks.items()}
+            final_pickled = {bytes(k): bytes(v) for k, v in recent_blocks.items()}
         else:
             final_pickled = recent_sb_compressed_pickled
         hb_pickled: List[bytes] = []
@@ -209,7 +209,7 @@ async def pre_validate_blocks_multiprocessing(
         futures.append(
             asyncio.get_running_loop().run_in_executor(
                 pool,
-                batch_pre_validate_sub_blocks,
+                batch_pre_validate_blocks,
                 constants_json,
                 final_pickled,
                 hb_pickled,

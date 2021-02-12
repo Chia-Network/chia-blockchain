@@ -186,7 +186,7 @@ class FullNode:
             if first is None or not isinstance(first, full_node_protocol.RespondBlock):
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 raise ValueError(f"Error short batch syncing, could not fetch sub-block at height {start_height}")
-            if not self.blockchain.contains_sub_block(first.sub_block.prev_header_hash):
+            if not self.blockchain.contains_block(first.sub_block.prev_header_hash):
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
                 # First sb not connected to our blockchain, do a long sync instead
@@ -202,9 +202,7 @@ class FullNode:
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.lock:
-                    success, advanced_peak, fork_height = await self.receive_sub_block_batch(
-                        response.sub_blocks, peer, None
-                    )
+                    success, advanced_peak, fork_height = await self.receive_block_batch(response.blocks, peer, None)
                     if not success:
                         raise ValueError(
                             f"Error short batch syncing, failed to validate sub-blocks {height}-{end_height}"
@@ -251,7 +249,7 @@ class FullNode:
                 # already have the unfinished block, from when it was broadcast, so we just need to download the header,
                 # but not the transactions
                 fetch_tx: bool = unfinished_block is None and curr_height == target_height
-                curr = await peer.request_sub_block(full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx))
+                curr = await peer.request_block(full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx))
                 if curr is None:
                     raise ValueError(f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, timed out")
                 if curr is None or not isinstance(curr, full_node_protocol.RespondBlock):
@@ -259,7 +257,7 @@ class FullNode:
                         f"Failed to fetch sub block {curr_height} from {peer.get_peer_info()}, wrong type {type(curr)}"
                     )
                 responses.append(curr)
-                if self.blockchain.contains_sub_block(curr.sub_block.prev_header_hash) or curr_height == 0:
+                if self.blockchain.contains_block(curr.sub_block.prev_header_hash) or curr_height == 0:
                     found_fork_point = True
                     break
                 curr_height -= 1
@@ -285,9 +283,9 @@ class FullNode:
         """
 
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
-        self.sync_store.peer_has_sub_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
+        self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
-        if self.blockchain.contains_sub_block(request.header_hash):
+        if self.blockchain.contains_block(request.header_hash):
             return None
 
         # Not interested in less heavy peaks
@@ -308,7 +306,7 @@ class FullNode:
                         full_node_protocol.RequestBlock(uint32(peak_sync_height), False), timeout=10
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
-                        self.sync_store.peer_has_sub_block(
+                        self.sync_store.peer_has_block(
                             peak_sync_hash,
                             peer.peer_node_id,
                             target_peak_response.sub_block.weight,
@@ -346,7 +344,7 @@ class FullNode:
         if peak_block is None:
             peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
-            peak = self.blockchain.sub_block_record(peak_block.header_hash)
+            peak = self.blockchain.block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
@@ -359,7 +357,7 @@ class FullNode:
 
             curr = peak
             while not curr.is_challenge_block(self.constants) and not curr.first_in_sub_slot:
-                curr = self.blockchain.sub_block_record(curr.prev_hash)
+                curr = self.blockchain.block_record(curr.prev_hash)
 
             if curr.is_challenge_block(self.constants):
                 last_csb_or_eos = curr.total_iters
@@ -384,7 +382,7 @@ class FullNode:
             return False
 
         while curr is not None and not curr.is_transaction_block:
-            curr = self.blockchain.try_sub_block(curr.prev_hash)
+            curr = self.blockchain.try_block_record(curr.prev_hash)
 
         now = time.time()
         if (
@@ -410,11 +408,8 @@ class FullNode:
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
             synced = await self.synced()
-            if (
-                synced
-                and self.blockchain.peak_height is not None
-                and self.blockchain.peak_height > self.constants.INITIAL_FREEZE_PERIOD
-            ):
+            peak_height = self.blockchain.get_peak_height()
+            if synced and peak_height is not None and peak_height > self.constants.INITIAL_FREEZE_PERIOD:
                 my_filter = self.mempool_manager.get_filter()
                 mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
 
@@ -424,7 +419,7 @@ class FullNode:
         peak_full: Optional[FullBlock] = await self.blockchain.get_full_peak()
 
         if peak_full is not None:
-            peak: BlockRecord = self.blockchain.sub_block_record(peak_full.header_hash)
+            peak: BlockRecord = self.blockchain.block_record(peak_full.header_hash)
             if connection.connection_type is NodeType.FULL_NODE:
                 request_node = full_node_protocol.NewPeak(
                     peak.header_hash,
@@ -531,7 +526,7 @@ class FullNode:
                     )
             for i, target_peak_response in enumerate(await asyncio.gather(*coroutines)):
                 if target_peak_response is not None and isinstance(target_peak_response, RespondBlock):
-                    self.sync_store.peer_has_sub_block(
+                    self.sync_store.peer_has_block(
                         heaviest_peak_hash, peers[i], heaviest_peak_weight, heaviest_peak_height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
@@ -613,8 +608,8 @@ class FullNode:
                     to_remove.append(peer)
                     continue
                 elif isinstance(response, RespondBlocks):
-                    success, advanced_peak, _ = await self.receive_sub_block_batch(
-                        response.sub_blocks, peer, None if advanced_peak else uint32(fork_point_height)
+                    success, advanced_peak, _ = await self.receive_block_batch(
+                        response.blocks, peer, None if advanced_peak else uint32(fork_point_height)
                     )
                     if success is False:
                         await peer.close()
@@ -652,14 +647,14 @@ class FullNode:
                 break
             else:
                 self.log.info(f"Added sub-blocks {start_height} to {end_height}")
-                self.blockchain.clean_sub_block_record(
+                self.blockchain.clean_block_record(
                     min(
                         end_height - self.constants.BLOCKS_CACHE_SIZE,
                         peak.height - self.constants.BLOCKS_CACHE_SIZE,
                     )
                 )
 
-    async def receive_sub_block_batch(
+    async def receive_block_batch(
         self, blocks: List[FullBlock], peer: ws.WSChiaConnection, fork_point: Optional[uint32]
     ) -> Tuple[bool, bool, Optional[uint32]]:
         advanced_peak = False
@@ -688,7 +683,7 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                 return False, advanced_peak, fork_height
-            sub_block = self.blockchain.sub_block_record(block.header_hash)
+            sub_block = self.blockchain.block_record(block.header_hash)
             if sub_block.sub_epoch_summary_included is not None:
                 await self.weight_proof_handler.create_prev_sub_epoch_segments()
         self._state_changed("new_peak")
@@ -758,7 +753,7 @@ class FullNode:
         assert sub_slots is not None
 
         if not self.sync_store.get_sync_mode():
-            self.blockchain.clean_sub_block_records()
+            self.blockchain.clean_block_records()
 
         added_eos, _, _ = self.full_node_store.new_peak(
             record,
@@ -849,7 +844,7 @@ class FullNode:
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = sub_block.header_hash
-        if self.blockchain.contains_sub_block(header_hash):
+        if self.blockchain.contains_block(header_hash):
             return None
 
         if sub_block.is_transaction_block() and sub_block.transactions_generator is None:
@@ -862,7 +857,7 @@ class FullNode:
 
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
-            if self.blockchain.contains_sub_block(header_hash):
+            if self.blockchain.contains_block(header_hash):
                 return None
             validation_start = time.time()
             # Tries to add the block to the blockchain
@@ -928,9 +923,9 @@ class FullNode:
         self._state_changed("sub_block")
         return None
 
-    async def respond_unfinished_sub_block(
+    async def respond_unfinished_block(
         self,
-        respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedBlock,
+        respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
         peer: Optional[ws.WSChiaConnection],
         farmed_block: bool = False,
     ):
@@ -939,9 +934,9 @@ class FullNode:
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
-        block = respond_unfinished_sub_block.unfinished_sub_block
+        block = respond_unfinished_block.unfinished_block
 
-        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_sub_block(
+        if block.prev_header_hash != self.constants.GENESIS_CHALLENGE and not self.blockchain.contains_block(
             block.prev_header_hash
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
@@ -969,9 +964,9 @@ class FullNode:
                 return
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
-            prev_sb = None
+            prev_b = None
         else:
-            prev_sb = self.blockchain.sub_block_record(block.prev_header_hash)
+            prev_b = self.blockchain.block_record(block.prev_header_hash)
 
         is_overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
 
@@ -982,10 +977,10 @@ class FullNode:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 first_ss_new_epoch = True
         else:
-            curr = self.blockchain.try_sub_block(block.prev_header_hash)
+            curr = self.blockchain.try_block_record(block.prev_header_hash)
             num_blocks_in_ss = 2  # Curr and prev
             while (curr is not None) and not curr.first_in_sub_slot:
-                curr = self.blockchain.try_sub_block(curr.prev_hash)
+                curr = self.blockchain.try_block_record(curr.prev_hash)
                 num_blocks_in_ss += 1
             if (
                 curr is not None
@@ -994,15 +989,15 @@ class FullNode:
                 and curr.sub_epoch_summary_included.new_difficulty is not None
             ):
                 first_ss_new_epoch = True
-            elif prev_sb is not None:
+            elif prev_b is not None:
                 # If the prev can finish an epoch, then we are in a new epoch
-                prev_prev = self.blockchain.try_sub_block(prev_sb.prev_hash)
+                prev_prev = self.blockchain.try_block_record(prev_b.prev_hash)
                 _, can_finish_epoch = can_finish_sub_and_full_epoch(
                     self.constants,
-                    prev_sb.height,
-                    prev_sb.deficit,
+                    prev_b.height,
+                    prev_b.deficit,
                     self.blockchain,
-                    prev_sb.header_hash if prev_prev is not None else None,
+                    prev_b.header_hash if prev_prev is not None else None,
                     False,
                 )
                 if can_finish_epoch:
@@ -1034,7 +1029,7 @@ class FullNode:
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
             height = uint32(0)
         else:
-            height = uint32(self.blockchain.sub_block_record(block.prev_header_hash).height + 1)
+            height = uint32(self.blockchain.block_record(block.prev_header_hash).height + 1)
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants,
@@ -1053,7 +1048,7 @@ class FullNode:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
             block,
-            prev_sb,
+            prev_b,
             self.blockchain,
         )
 
@@ -1089,7 +1084,7 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
-        self._state_changed("unfinished_sub_block")
+        self._state_changed("unfinished_block")
 
     async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> Optional[Message]:
         # Lookup unfinished blocks
@@ -1103,7 +1098,7 @@ class FullNode:
             )
             return None
 
-        prev_sb: Optional[BlockRecord] = None
+        prev_b: Optional[BlockRecord] = None
 
         target_rc_hash = request.reward_chain_ip_vdf.challenge
 
@@ -1112,7 +1107,7 @@ class FullNode:
             if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
                 target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
         if target_rc_hash == self.constants.GENESIS_CHALLENGE:
-            prev_sb = None
+            prev_b = None
         else:
             # Find the prev block, starts looking backwards from the peak
             # TODO: should we look at end of slots too?
@@ -1123,12 +1118,12 @@ class FullNode:
                     break
                 if curr.reward_infusion_new_challenge == target_rc_hash:
                     # Found our prev block
-                    prev_sb = curr
+                    prev_b = curr
                     break
-                curr = self.blockchain.try_sub_block(curr.prev_hash)
+                curr = self.blockchain.try_block_record(curr.prev_hash)
 
             # If not found, cache keyed on prev block
-            if prev_sb is None:
+            if prev_b is None:
                 self.full_node_store.add_to_future_ip(request)
                 self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                 return None
@@ -1139,7 +1134,7 @@ class FullNode:
             unfinished_block.reward_chain_block.signage_point_index,
         )
         finished_sub_slots = self.full_node_store.get_finished_sub_slots(
-            prev_sb,
+            prev_b,
             self.blockchain,
             unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
             overflow,
@@ -1147,7 +1142,7 @@ class FullNode:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
             dataclasses.replace(unfinished_block, finished_sub_slots=finished_sub_slots),
-            prev_sb,
+            prev_b,
             self.blockchain,
         )
 
@@ -1177,7 +1172,7 @@ class FullNode:
             request.infused_challenge_chain_ip_vdf,
             request.infused_challenge_chain_ip_proof,
             finished_sub_slots,
-            prev_sb,
+            prev_b,
             self.blockchain,
             sp_total_iters,
             difficulty,
@@ -1190,9 +1185,9 @@ class FullNode:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 first_ss_new_epoch = True
         else:
-            curr = prev_sb
+            curr = prev_b
             while (curr is not None) and not curr.first_in_sub_slot:
-                curr = self.blockchain.sub_block_record(curr.prev_hash)
+                curr = self.blockchain.block_record(curr.prev_hash)
             if (
                 curr is not None
                 and curr.first_in_sub_slot

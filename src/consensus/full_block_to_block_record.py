@@ -30,30 +30,30 @@ def block_to_block_record(
     else:
         block = full_block
     if block.height == 0:
-        prev_sb: Optional[BlockRecord] = None
+        prev_b: Optional[BlockRecord] = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
     else:
-        prev_sb = sub_blocks.sub_block_record(block.prev_header_hash)
-        assert prev_sb is not None
+        prev_b = sub_blocks.block_record(block.prev_header_hash)
+        assert prev_b is not None
         sub_slot_iters = get_next_sub_slot_iters(
             constants,
             sub_blocks,
-            prev_sb.prev_hash,
-            prev_sb.height,
-            prev_sb.sub_slot_iters,
-            prev_sb.deficit,
+            prev_b.prev_hash,
+            prev_b.height,
+            prev_b.sub_slot_iters,
+            prev_b.deficit,
             len(block.finished_sub_slots) > 0,
-            prev_sb.sp_total_iters(constants),
+            prev_b.sp_total_iters(constants),
         )
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     deficit = calculate_deficit(
         constants,
         block.height,
-        prev_sb,
+        prev_b,
         overflow,
         len(block.finished_sub_slots),
     )
-    prev_block_hash = (
+    prev_transaction_block_hash = (
         block.foliage_transaction_block.prev_transaction_block_hash
         if block.foliage_transaction_block is not None
         else None
@@ -92,13 +92,13 @@ def block_to_block_record(
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 found_ses_hash = sub_slot.challenge_chain.subepoch_summary_hash
     if found_ses_hash:
-        assert prev_sb is not None
+        assert prev_b is not None
         assert len(block.finished_sub_slots) > 0
         ses = make_sub_epoch_summary(
             constants,
             sub_blocks,
             block.height,
-            sub_blocks.sub_block_record(prev_sb.prev_hash),
+            sub_blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
@@ -117,9 +117,9 @@ def block_to_block_record(
         icc_output = None
 
     prev_transaction_block_height = uint32(0)
-    curr: Optional[BlockRecord] = sub_blocks.try_sub_block(block.prev_header_hash)
+    curr: Optional[BlockRecord] = sub_blocks.try_block_record(block.prev_header_hash)
     while curr is not None and not curr.is_transaction_block:
-        curr = sub_blocks.try_sub_block(curr.prev_hash)
+        curr = sub_blocks.try_block_record(curr.prev_hash)
 
     if curr is not None and curr.is_transaction_block:
         prev_transaction_block_height = curr.height
@@ -143,7 +143,7 @@ def block_to_block_record(
         overflow,
         prev_transaction_block_height,
         timestamp,
-        prev_block_hash,
+        prev_transaction_block_hash,
         fees,
         reward_claims_incorporated,
         finished_challenge_slot_hashes,

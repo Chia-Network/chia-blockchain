@@ -801,7 +801,7 @@ class TestBlockHeaderValidation:
                         uint8(0),
                     ),
                 )
-                if blockchain.sub_block_record(blocks[-2].header_hash).deficit == 0:
+                if blockchain.block_record(blocks[-2].header_hash).deficit == 0:
                     case_1 = True
                 else:
                     case_2 = True
@@ -876,7 +876,7 @@ class TestBlockHeaderValidation:
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_too_many_sub_blocks(self, empty_blockchain):
+    async def test_too_many_blocks(self, empty_blockchain):
         # 4: TODO
         pass
 
@@ -1069,7 +1069,7 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PLOT_SIGNATURE
 
     @pytest.mark.asyncio
-    async def test_bad_foliage_block_sig(self, empty_blockchain):
+    async def test_bad_foliage_transaction_block_sig(self, empty_blockchain):
         # 17
         blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1470,7 +1470,7 @@ class TestReorgs:
             num_blocks_chain_2 - num_blocks_chain_2_start,
             blocks[:num_blocks_chain_2_start],
             seed=b"2",
-            time_per_sub_block=8,
+            time_per_block=8,
         )
         found_orphan = False
         for reorg_block in blocks_reorg_chain:

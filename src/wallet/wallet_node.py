@@ -377,7 +377,7 @@ class WalletNode:
                 ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
                 if result == ReceiveBlockResult.NEW_PEAK:
                     if not self.wallet_state_manager.sync_mode:
-                        self.wallet_state_manager.blockchain.clean_sub_block_records()
+                        self.wallet_state_manager.blockchain.clean_block_records()
                     self.wallet_state_manager.state_changed("new_block")
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
                     self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
@@ -412,9 +412,7 @@ class WalletNode:
                 blocks = [top]
                 # Fetch blocks backwards until we hit the one that we have,
                 # then complete them with additions / removals going forward
-                while (
-                    not self.wallet_state_manager.blockchain.contains_sub_block(top.prev_header_hash) and top.height > 0
-                ):
+                while not self.wallet_state_manager.blockchain.contains_block(top.prev_header_hash) and top.height > 0:
                     request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
                     response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
                     if response_prev is None:
@@ -555,7 +553,7 @@ class WalletNode:
 
                 peak = self.wallet_state_manager.blockchain.get_peak()
                 assert peak is not None
-                self.wallet_state_manager.blockchain.clean_sub_block_record(
+                self.wallet_state_manager.blockchain.clean_block_record(
                     min(
                         end_height - self.constants.BLOCKS_CACHE_SIZE,
                         peak.height - self.constants.BLOCKS_CACHE_SIZE,

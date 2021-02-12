@@ -39,7 +39,7 @@ class NewUnfinishedBlock(Streamable):
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
     difficulty: uint64
     sub_slot_iters: uint64  # SSi in the slot where block is infused
-    foliage_sub_block: Foliage  # Reward chain foliage data
+    foliage: Foliage  # Reward chain foliage data
     sub_epoch_summary: Optional[SubEpochSummary]  # If this is the last slot in epoch, the next slot should include this
     # This is the last thing infused in the reward chain before this signage point.
     # The challenge that the SP reward chain VDF is based off of, or in the case of sp index 0, the previous infusion

@@ -61,7 +61,7 @@ class FullNodeRpcApi:
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
 
         if peak is not None and peak.height > 0:
-            difficulty = uint64(peak.weight - self.service.blockchain.sub_block_record(peak.prev_hash).weight)
+            difficulty = uint64(peak.weight - self.service.blockchain.block_record(peak.prev_hash).weight)
             sub_slot_iters = peak.sub_slot_iters
         else:
             difficulty = self.service.constants.DIFFICULTY_STARTING
@@ -160,7 +160,7 @@ class FullNodeRpcApi:
         start = int(request["start"])
         end = int(request["end"])
         records = []
-        peak_height = self.full_node.blockchain.peak_height
+        peak_height = self.full_node.blockchain.get_peak_height()
         if peak_height is None:
             raise ValueError("Peak is None")
 
@@ -169,7 +169,7 @@ class FullNodeRpcApi:
                 self.full_node.log.warning("requested block is higher than known peak ")
                 break
             header_hash: bytes32 = self.service.blockchain.height_to_hash(uint32(a))
-            record: Optional[BlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+            record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB
                 record = await self.service.blockchain.block_store.get_block_record(header_hash)
@@ -190,7 +190,7 @@ class FullNodeRpcApi:
         header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash(header_height)
         if header_hash is None:
             raise ValueError(f"Sub block hash {height} not found in chain")
-        record: Optional[BlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
@@ -203,7 +203,7 @@ class FullNodeRpcApi:
             raise ValueError("header_hash not in request")
         header_hash_str = request["header_hash"]
         header_hash = hexstr_to_bytes(header_hash_str)
-        record: Optional[BlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_block_record(header_hash)

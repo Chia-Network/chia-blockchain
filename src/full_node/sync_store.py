@@ -51,7 +51,7 @@ class SyncStore:
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    def peer_has_sub_block(
+    def peer_has_block(
         self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool
     ):
         """

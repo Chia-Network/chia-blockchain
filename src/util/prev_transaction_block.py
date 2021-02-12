@@ -10,12 +10,12 @@ def get_prev_transaction_block(
     sub_blocks: BlockchainInterface,
     total_iters_sp: uint128,
 ) -> Tuple[bool, BlockRecord]:
-    prev_block = curr
+    prev_transaction_block = curr
     while not curr.is_transaction_block:
-        curr = sub_blocks.sub_block_record(curr.prev_hash)
+        curr = sub_blocks.block_record(curr.prev_hash)
     if total_iters_sp > curr.total_iters:
-        prev_block = curr
+        prev_transaction_block = curr
         is_transaction_block = True
     else:
         is_transaction_block = False
-    return is_transaction_block, prev_block
+    return is_transaction_block, prev_transaction_block

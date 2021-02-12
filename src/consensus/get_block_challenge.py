@@ -49,7 +49,7 @@ def get_block_challenge(
             else:
                 challenges_to_look_for = 1
             reversed_challenge_hashes: List[bytes32] = []
-            curr: BlockRecord = sub_blocks.sub_block_record(header_block.prev_header_hash)
+            curr: BlockRecord = sub_blocks.block_record(header_block.prev_header_hash)
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
                     assert curr.finished_challenge_slot_hashes is not None
@@ -58,6 +58,6 @@ def get_block_challenge(
                     assert curr.finished_challenge_slot_hashes is not None
                     assert len(curr.finished_challenge_slot_hashes) > 0
                     break
-                curr = sub_blocks.sub_block_record(curr.prev_hash)
+                curr = sub_blocks.block_record(curr.prev_hash)
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     return challenge

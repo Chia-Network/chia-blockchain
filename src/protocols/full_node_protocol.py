@@ -88,7 +88,7 @@ class RequestBlocks(Streamable):
 class RespondBlocks(Streamable):
     start_height: uint32
     end_height: uint32
-    sub_blocks: List[FullBlock]
+    blocks: List[FullBlock]
 
 
 @dataclass(frozen=True)
@@ -119,7 +119,7 @@ class RequestUnfinishedBlock(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RespondUnfinishedBlock(Streamable):
-    unfinished_sub_block: UnfinishedBlock
+    unfinished_block: UnfinishedBlock
 
 
 @dataclass(frozen=True)

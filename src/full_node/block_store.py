@@ -234,7 +234,7 @@ class BlockStore:
         self, blocks_n: int
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
-        Returns a dictionary with all sub_blocks that have height >= peak height - blocks_n, as well as the
+        Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
         peak header hash.
         """
 

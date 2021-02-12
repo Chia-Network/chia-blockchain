@@ -790,7 +790,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            time_per_sub_block=20,
+            time_per_block=20,
             guarantee_block=True,
         )
 
@@ -805,7 +805,7 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
             guarantee_block=True,
-            time_per_sub_block=31,
+            time_per_block=31,
         )
         res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
         assert err is None

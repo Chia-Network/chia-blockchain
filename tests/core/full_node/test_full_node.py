@@ -291,7 +291,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # Do the same thing but with non-genesis
@@ -319,7 +319,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
         # Do the same thing one more time, with overflow
@@ -343,7 +343,7 @@ class TestFullNodeProtocol:
         for slot in blocks[-1].finished_sub_slots:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
-        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedBlock(unf), None)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
     @pytest.mark.asyncio
@@ -624,21 +624,21 @@ class TestFullNodeProtocol:
 
         # Don't have height
         res = await full_node_1.request_block(fnp.RequestBlock(uint32(1248921), False))
-        assert res.type == ProtocolMessageTypes.reject_sub_block.value
+        assert res.type == ProtocolMessageTypes.reject_block.value
 
         # Ask without transactions
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, False))
-        assert res.type != ProtocolMessageTypes.reject_sub_block.value
+        assert res.type != ProtocolMessageTypes.reject_block.value
         assert fnp.RespondBlock.from_bytes(res.data).sub_block.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, True))
-        assert res.type != ProtocolMessageTypes.reject_sub_block.value
+        assert res.type != ProtocolMessageTypes.reject_block.value
         assert fnp.RespondBlock.from_bytes(res.data).sub_block.transactions_generator is not None
 
         # Ask for another one
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height - 1, True))
-        assert res.type != ProtocolMessageTypes.reject_sub_block.value
+        assert res.type != ProtocolMessageTypes.reject_block.value
 
     @pytest.mark.asyncio
     async def test_request_blocks(self, wallet_nodes):
@@ -671,32 +671,32 @@ class TestFullNodeProtocol:
         # Start >= End
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(4), uint32(4), False))
         assert res is not None
-        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).sub_blocks
+        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
         assert len(sub_blocks) == 1
         assert sub_blocks[0].header_hash == blocks[4].header_hash
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(5), uint32(4), False))
-        assert res.type == ProtocolMessageTypes.reject_sub_blocks.value
+        assert res.type == ProtocolMessageTypes.reject_blocks.value
         # Invalid range
         res = await full_node_1.request_blocks(
             fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height + 5), False)
         )
-        assert res.type == ProtocolMessageTypes.reject_sub_blocks.value
+        assert res.type == ProtocolMessageTypes.reject_blocks.value
 
         # Try fetching more blocks than constants.MAX_BLOCK_COUNT_PER_REQUESTS
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(0), uint32(33), False))
-        assert res.type == ProtocolMessageTypes.reject_sub_blocks.value
+        assert res.type == ProtocolMessageTypes.reject_blocks.value
 
         # Ask without transactions
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), False))
 
-        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).sub_blocks
+        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
         assert len(sub_blocks) == 6
         for b in sub_blocks:
             assert b.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), True))
-        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).sub_blocks
+        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
         assert len(sub_blocks) == 6
         assert sub_blocks[-1].transactions_generator is not None
         assert std_hash(sub_blocks[-1]) == std_hash(blocks_t[-1])
@@ -725,14 +725,14 @@ class TestFullNodeProtocol:
         # Don't have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is not None
-        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedBlock(unf), peer)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
 
         # Have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is None
 
     @pytest.mark.asyncio
-    async def test_request_unfinished_sub_block(self, wallet_nodes):
+    async def test_request_unfinished_block(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         peer = await connect_and_get_peer(server_1, server_2)
@@ -753,11 +753,11 @@ class TestFullNodeProtocol:
         )
 
         # Don't have
-        res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is None
-        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedBlock(unf), peer)
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
         # Have
-        res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
+        res = await full_node_1.request_unfinished_block(fnp.RequestUnfinishedBlock(unf.partial_hash))
         assert res is not None
 
     @pytest.mark.asyncio

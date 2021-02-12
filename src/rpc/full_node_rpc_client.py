@@ -23,7 +23,7 @@ class FullNodeRpcClient(RpcClient):
             response["blockchain_state"]["peak"] = BlockRecord.from_json_dict(response["blockchain_state"]["peak"])
         return response["blockchain_state"]
 
-    async def get_sub_block(self, header_hash) -> Optional[FullBlock]:
+    async def get_block(self, header_hash) -> Optional[FullBlock]:
         try:
             response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
         except Exception:
@@ -46,7 +46,7 @@ class FullNodeRpcClient(RpcClient):
             return None
         return BlockRecord.from_json_dict(response["block_record"])
 
-    async def get_unfinished_sub_block_headers(self) -> List[UnfinishedHeaderBlock]:
+    async def get_unfinished_block_headers(self) -> List[UnfinishedHeaderBlock]:
         response = await self.fetch("get_unfinished_block_headers", {})
         return [UnfinishedHeaderBlock.from_json_dict(r) for r in response["headers"]]
 

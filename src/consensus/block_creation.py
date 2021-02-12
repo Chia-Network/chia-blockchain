@@ -47,10 +47,10 @@ from tests.recursive_replace import recursive_replace
 
 def create_foliage(
     constants: ConsensusConstants,
-    reward_sub_block: RewardChainBlockUnfinished,
+    reward_block_unfinished: RewardChainBlockUnfinished,
     spend_bundle: Optional[SpendBundle],
-    prev_sub_block: Optional[BlockRecord],
-    sub_blocks: BlockchainInterface,
+    prev_block: Optional[BlockRecord],
+    blocks: BlockchainInterface,
     total_iters_sp: uint128,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
@@ -66,10 +66,10 @@ def create_foliage(
 
     Args:
         constants: consensus constants being used for this chain
-        reward_sub_block: the reward sub block to look at, potentially at the signage point
+        reward_block_unfinished: the reward sub block to look at, potentially at the signage point
         spend_bundle: the spend bundle including all transactions
-        prev_sub_block: the previous sub-block at the signage point
-        sub_blocks: dict from header hash to sub-blocks, of all ancestor sub-blocks
+        prev_block: the previous sub-block at the signage point
+        blocks: dict from header hash to sub-blocks, of all ancestor sub-blocks
         total_iters_sp: total iters at the signage point
         timestamp: timestamp to put into the foliage block
         farmer_reward_puzzlehash: where to pay out farming reward
@@ -80,22 +80,22 @@ def create_foliage(
 
     """
 
-    if prev_sub_block is not None:
-        res = get_prev_transaction_block(prev_sub_block, sub_blocks, total_iters_sp)
+    if prev_block is not None:
+        res = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
         is_transaction_block: bool = res[0]
-        prev_block: Optional[BlockRecord] = res[1]
+        prev_transaction_block: Optional[BlockRecord] = res[1]
     else:
         # Genesis is a transaction block
-        prev_block = None
+        prev_transaction_block = None
         is_transaction_block = True
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
     extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
-    if prev_sub_block is None:
+    if prev_block is None:
         height: uint32 = uint32(0)
     else:
-        height = uint32(prev_sub_block.height + 1)
+        height = uint32(prev_block.height + 1)
 
     # Create filter
     byte_array_tx: List[bytes32] = []
@@ -103,12 +103,12 @@ def create_foliage(
     tx_removals: List[bytes32] = []
 
     pool_target_signature: Optional[G2Element] = get_pool_signature(
-        pool_target, reward_sub_block.proof_of_space.pool_public_key
+        pool_target, reward_block_unfinished.proof_of_space.pool_public_key
     )
     assert pool_target_signature is not None
 
-    foliage_sub_block_data = FoliageBlockData(
-        reward_sub_block.get_hash(),
+    foliage_data = FoliageBlockData(
+        reward_block_unfinished.get_hash(),
         pool_target,
         pool_target_signature,
         farmer_reward_puzzlehash,
@@ -116,14 +116,14 @@ def create_foliage(
     )
 
     foliage_block_data_signature: G2Element = get_plot_signature(
-        foliage_sub_block_data.get_hash(),
-        reward_sub_block.proof_of_space.plot_public_key,
+        foliage_data.get_hash(),
+        reward_block_unfinished.proof_of_space.plot_public_key,
     )
 
-    prev_sub_block_hash: bytes32 = constants.GENESIS_CHALLENGE
+    prev_block_hash: bytes32 = constants.GENESIS_CHALLENGE
     if height != 0:
-        assert prev_sub_block is not None
-        prev_sub_block_hash = prev_sub_block.header_hash
+        assert prev_block is not None
+        prev_block_hash = prev_block.header_hash
 
     solution_program: Optional[SerializedProgram] = None
     if is_transaction_block:
@@ -143,11 +143,11 @@ def create_foliage(
         # TODO: prev generators root
         reward_claims_incorporated = []
         if height > 0:
+            assert prev_transaction_block is not None
             assert prev_block is not None
-            assert prev_sub_block is not None
-            curr: BlockRecord = prev_sub_block
+            curr: BlockRecord = prev_block
             while not curr.is_transaction_block:
-                curr = sub_blocks.sub_block_record(curr.prev_hash)
+                curr = blocks.block_record(curr.prev_hash)
 
             assert curr.fees is not None
             pool_coin = create_pool_coin(
@@ -161,11 +161,11 @@ def create_foliage(
                 curr.farmer_puzzle_hash,
                 uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
             )
-            assert curr.header_hash == prev_block.header_hash
+            assert curr.header_hash == prev_transaction_block.header_hash
             reward_claims_incorporated += [pool_coin, farmer_coin]
 
             if curr.height > 0:
-                curr = sub_blocks.sub_block_record(curr.prev_hash)
+                curr = blocks.block_record(curr.prev_hash)
                 # Prev block is not genesis
                 while not curr.is_transaction_block:
                     pool_coin = create_pool_coin(
@@ -179,7 +179,7 @@ def create_foliage(
                         calculate_base_farmer_reward(curr.height),
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
-                    curr = sub_blocks.sub_block_record(curr.prev_hash)
+                    curr = blocks.block_record(curr.prev_hash)
         additions: List[Coin] = reward_claims_incorporated.copy()
         npc_list = []
         if solution_program is not None:
@@ -230,43 +230,44 @@ def create_foliage(
             cost,
             reward_claims_incorporated,
         )
-        if prev_block is None:
-            prev_block_hash: bytes32 = constants.GENESIS_CHALLENGE
+        if prev_transaction_block is None:
+            prev_transaction_block_hash: bytes32 = constants.GENESIS_CHALLENGE
         else:
-            prev_block_hash = prev_block.header_hash
+            prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
-        foliage_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
-            prev_block_hash,
+        foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
+            prev_transaction_block_hash,
             timestamp,
             filter_hash,
             additions_root,
             removals_root,
             transactions_info.get_hash(),
         )
-        assert foliage_block is not None
-        foliage_transaction_block_hash: Optional[bytes32] = foliage_block.get_hash()
+        assert foliage_transaction_block is not None
+
+        foliage_transaction_block_hash: Optional[bytes32] = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
-            foliage_transaction_block_hash, reward_sub_block.proof_of_space.plot_public_key
+            foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
         assert foliage_transaction_block_signature is not None
     else:
         foliage_transaction_block_hash = None
         foliage_transaction_block_signature = None
-        foliage_block = None
+        foliage_transaction_block = None
         transactions_info = None
     assert (foliage_transaction_block_hash is None) == (foliage_transaction_block_signature is None)
 
-    foliage_sub_block = Foliage(
-        prev_sub_block_hash,
-        reward_sub_block.get_hash(),
-        foliage_sub_block_data,
+    foliage = Foliage(
+        prev_block_hash,
+        reward_block_unfinished.get_hash(),
+        foliage_data,
         foliage_block_data_signature,
         foliage_transaction_block_hash,
         foliage_transaction_block_signature,
     )
 
-    return foliage_sub_block, foliage_block, transactions_info, solution_program
+    return foliage, foliage_transaction_block, transactions_info, solution_program
 
 
 def create_unfinished_block(
@@ -284,10 +285,10 @@ def create_unfinished_block(
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     signage_point: SignagePoint,
     timestamp: uint64,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
-    prev_sub_block: Optional[BlockRecord] = None,
+    prev_block: Optional[BlockRecord] = None,
     finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
 ) -> UnfinishedBlock:
     """
@@ -311,8 +312,8 @@ def create_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         spend_bundle: transactions to add to the foliage block, if created
-        prev_sub_block: previous sub-block (already in chain) from the signage point
-        sub_blocks: dictionary from header hash to SBR of all included SBR
+        prev_block: previous sub-block (already in chain) from the signage point
+        blocks: dictionary from header hash to SBR of all included SBR
         finished_sub_slots_input: finished_sub_slots at the signage point
 
     Returns:
@@ -324,7 +325,7 @@ def create_unfinished_block(
         finished_sub_slots = finished_sub_slots_input.copy()
     overflow: bool = sp_iters > ip_iters
     total_iters_sp: uint128 = uint128(sub_slot_start_total_iters + sp_iters)
-    is_genesis: bool = prev_sub_block is None
+    is_genesis: bool = prev_block is None
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
@@ -342,11 +343,11 @@ def create_unfinished_block(
             if is_genesis:
                 rc_sp_hash = constants.GENESIS_CHALLENGE
             else:
-                assert prev_sub_block is not None
-                assert sub_blocks is not None
-                curr = prev_sub_block
+                assert prev_block is not None
+                assert blocks is not None
+                curr = prev_block
                 while not curr.first_in_sub_slot:
-                    curr = sub_blocks.sub_block_record(curr.prev_hash)
+                    curr = blocks.block_record(curr.prev_hash)
                 assert curr.finished_reward_slot_hashes is not None
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
         signage_point = SignagePoint(None, None, None, None)
@@ -359,7 +360,7 @@ def create_unfinished_block(
 
     total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
 
-    rc_sub_block = RewardChainBlockUnfinished(
+    rc_block = RewardChainBlockUnfinished(
         total_iters,
         signage_point_index,
         slot_cc_challenge,
@@ -370,12 +371,12 @@ def create_unfinished_block(
         rc_sp_signature,
     )
 
-    (foliage_sub_block, foliage_block, transactions_info, solution_program,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info, solution_program,) = create_foliage(
         constants,
-        rc_sub_block,
+        rc_block,
         spend_bundle,
-        prev_sub_block,
-        sub_blocks,
+        prev_block,
+        blocks,
         total_iters_sp,
         timestamp,
         farmer_reward_puzzle_hash,
@@ -387,11 +388,11 @@ def create_unfinished_block(
 
     return UnfinishedBlock(
         finished_sub_slots,
-        rc_sub_block,
+        rc_block,
         signage_point.cc_proof,
         signage_point.rc_proof,
-        foliage_sub_block,
-        foliage_block,
+        foliage,
+        foliage_transaction_block,
         transactions_info,
         solution_program,
     )
@@ -406,8 +407,8 @@ def unfinished_block_to_full_block(
     icc_ip_vdf: Optional[VDFInfo],
     icc_ip_proof: Optional[VDFProof],
     finished_sub_slots: List[EndOfSubSlotBundle],
-    prev_sub_block: Optional[BlockRecord],
-    sub_blocks: BlockchainInterface,
+    prev_block: Optional[BlockRecord],
+    blocks: BlockchainInterface,
     total_iters_sp: uint128,
     difficulty: uint64,
 ) -> FullBlock:
@@ -424,41 +425,41 @@ def unfinished_block_to_full_block(
         icc_ip_vdf: the infused challenge chain vdf info at the infusion point
         icc_ip_proof: the infused challenge chain proof
         finished_sub_slots: finished sub slots from the prev sub block to the infusion point
-        prev_sub_block: prev sub block from the infusion point
-        sub_blocks: dictionary from header hash to SBR of all included SBR
+        prev_block: prev sub block from the infusion point
+        blocks: dictionary from header hash to SBR of all included SBR
         total_iters_sp: total iters at the signage point
         difficulty: difficulty at the infusion point
 
     """
     # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
-    if prev_sub_block is None:
+    if prev_block is None:
         is_transaction_block = True
         new_weight = uint128(difficulty)
         new_height = uint32(0)
-        new_foliage_sub_block = unfinished_block.foliage
-        new_foliage_block = unfinished_block.foliage_transaction_block
+        new_foliage = unfinished_block.foliage
+        new_foliage_transaction_block = unfinished_block.foliage_transaction_block
         new_tx_info = unfinished_block.transactions_info
         new_generator = unfinished_block.transactions_generator
     else:
-        is_transaction_block, _ = get_prev_transaction_block(prev_sub_block, sub_blocks, total_iters_sp)
-        new_weight = uint128(prev_sub_block.weight + difficulty)
-        new_height = uint32(prev_sub_block.height + 1)
+        is_transaction_block, _ = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
+        new_weight = uint128(prev_block.weight + difficulty)
+        new_height = uint32(prev_block.height + 1)
         if is_transaction_block:
             new_fbh = unfinished_block.foliage.foliage_transaction_block_hash
             new_fbs = unfinished_block.foliage.foliage_transaction_block_signature
-            new_foliage_block = unfinished_block.foliage_transaction_block
+            new_foliage_transaction_block = unfinished_block.foliage_transaction_block
             new_tx_info = unfinished_block.transactions_info
             new_generator = unfinished_block.transactions_generator
         else:
             new_fbh = None
             new_fbs = None
-            new_foliage_block = None
+            new_foliage_transaction_block = None
             new_tx_info = None
             new_generator = None
         assert (new_fbh is None) == (new_fbs is None)
-        new_foliage_sub_block = replace(
+        new_foliage = replace(
             unfinished_block.foliage,
-            prev_sub_block_hash=prev_sub_block.header_hash,
+            prev_block_hash=prev_block.header_hash,
             foliage_transaction_block_hash=new_fbh,
             foliage_transaction_block_signature=new_fbs,
         )
@@ -485,8 +486,8 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_sp_proof,
         rc_ip_proof,
         icc_ip_proof,
-        new_foliage_sub_block,
-        new_foliage_block,
+        new_foliage,
+        new_foliage_transaction_block,
         new_tx_info,
         new_generator,
     )
