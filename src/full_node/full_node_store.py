@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple, Set
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.protocols import timelord_protocol
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -35,8 +35,8 @@ class FullNodeStore:
     # For the first sub-slot, EndOfSlotBundle is None
     finished_sub_slots: List[Tuple[Optional[EndOfSubSlotBundle], List[Optional[SignagePoint]], uint128]]
 
-    # These caches maintain objects which depend on infused sub-blocks in the reward chain, that we
-    # might receive before the sub-blocks themselves. The dict keys are the reward chain challenge hashes.
+    # These caches maintain objects which depend on infused blocks in the reward chain, that we
+    # might receive before the blocks themselves. The dict keys are the reward chain challenge hashes.
 
     # End of slots which depend on infusions that we don't have
     future_eos_cache: Dict[bytes32, List[EndOfSubSlotBundle]]
@@ -158,8 +158,8 @@ class FullNodeStore:
     def new_finished_sub_slot(
         self,
         eos: EndOfSubSlotBundle,
-        sub_blocks: BlockchainInterface,
-        peak: Optional[SubBlockRecord],
+        blocks: BlockchainInterface,
+        peak: Optional[BlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
@@ -208,18 +208,18 @@ class FullNodeStore:
                 log.warning(f"Don't have challenge hash {rc_challenge}")
                 return None
 
-            if peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            if peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 icc_start_element = None
-            elif peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+            elif peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                 icc_start_element = ClassgroupElement.get_default_element()
             else:
                 icc_start_element = peak.infused_challenge_vdf_output
 
-            if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            if peak.deficit < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
-                while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
-                    curr = sub_blocks.sub_block_record(curr.prev_hash)
-                if curr.is_challenge_sub_block(self.constants):
+                while not curr.first_in_sub_slot and not curr.is_challenge_block(self.constants):
+                    curr = blocks.block_record(curr.prev_hash)
+                if curr.is_challenge_block(self.constants):
                     icc_challenge = curr.challenge_block_info_hash
                     icc_iters = uint64(total_iters - curr.total_iters)
                 else:
@@ -239,7 +239,7 @@ class FullNodeStore:
                 last_slot.infused_challenge_chain.get_hash()
                 if last_slot is not None
                 and last_slot.infused_challenge_chain is not None
-                and last_slot.reward_chain.deficit != self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+                and last_slot.reward_chain.deficit != self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
                 else None
             )
 
@@ -311,8 +311,8 @@ class FullNodeStore:
     def new_signage_point(
         self,
         index: uint8,
-        sub_blocks: BlockchainInterface,
-        peak: Optional[SubBlockRecord],
+        blocks: BlockchainInterface,
+        peak: Optional[BlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
         skip_vdf_validation=False,
@@ -345,7 +345,7 @@ class FullNodeStore:
                 ss_challenge_hash = sub_slot.challenge_chain.get_hash()
                 ss_reward_hash = sub_slot.reward_chain.get_hash()
             if ss_challenge_hash == signage_point.cc_vdf.challenge:
-                # If we do have this slot, find the Prev sub-block from SP and validate SP
+                # If we do have this slot, find the Prev block from SP and validate SP
                 if peak is not None and start_ss_total_iters > peak.total_iters:
                     # We are in a future sub slot from the peak, so maybe there is a new SSI
                     checkpoint_size: uint64 = uint64(next_sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
@@ -369,10 +369,10 @@ class FullNodeStore:
                         and curr.total_iters > sp_total_iters
                     ):
                         if curr.first_in_sub_slot:
-                            # Did not find a sub-block where it's iters are before our sp_total_iters, in this ss
+                            # Did not find a block where it's iters are before our sp_total_iters, in this ss
                             check_from_start_of_ss = True
                             break
-                        curr = sub_blocks.sub_block_record(curr.prev_hash)
+                        curr = blocks.block_record(curr.prev_hash)
 
                 if check_from_start_of_ss:
                     # Check VDFs from start of sub slot
@@ -499,15 +499,15 @@ class FullNodeStore:
 
     def new_peak(
         self,
-        peak: SubBlockRecord,
+        peak: BlockRecord,
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
-        sub_blocks: BlockchainInterface,
+        blocks: BlockchainInterface,
     ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
-        the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
+        the prev sub-slot (since we still might get more blocks with an sp in the previous sub-slot)
 
         Results in either one or two sub-slots in finished_sub_slots.
         """
@@ -546,7 +546,7 @@ class FullNodeStore:
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
 
         for eos in self.future_eos_cache.get(peak.reward_infusion_new_challenge, []):
-            if self.new_finished_sub_slot(eos, sub_blocks, peak) is not None:
+            if self.new_finished_sub_slot(eos, blocks, peak) is not None:
                 new_eos = eos
                 break
 
@@ -554,7 +554,7 @@ class FullNodeStore:
         for sp in self.future_sp_cache.get(peak.reward_infusion_new_challenge, []):
             assert sp.cc_vdf is not None
             index = uint8(sp.cc_vdf.number_of_iterations // peak.sub_slot_iters)
-            if self.new_signage_point(index, sub_blocks, peak, peak.sub_slot_iters, sp):
+            if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
                 new_sps.append(sp)
 
         for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):
@@ -568,8 +568,8 @@ class FullNodeStore:
 
     def get_finished_sub_slots(
         self,
-        prev_sb: Optional[SubBlockRecord],
-        sub_block_records: BlockchainInterface,
+        prev_b: Optional[BlockRecord],
+        block_records: BlockchainInterface,
         pos_ss_challenge_hash: bytes32,
         extra_sub_slot: bool = False,
     ) -> List[EndOfSubSlotBundle]:
@@ -584,11 +584,11 @@ class FullNodeStore:
         pos_index: Optional[int] = None
         final_index: int = -1
 
-        if prev_sb is not None:
-            curr: SubBlockRecord = prev_sb
+        if prev_b is not None:
+            curr: BlockRecord = prev_b
             assert curr is not None
             while not curr.first_in_sub_slot:
-                curr = sub_block_records.sub_block_record(curr.prev_hash)
+                curr = block_records.block_record(curr.prev_hash)
             assert curr is not None
             assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
@@ -598,7 +598,7 @@ class FullNodeStore:
 
         if pos_ss_challenge_hash == self.constants.GENESIS_CHALLENGE:
             pos_index = 0
-        if prev_sb is None:
+        if prev_b is None:
             final_index = 0
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:

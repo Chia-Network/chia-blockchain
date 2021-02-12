@@ -1,27 +1,37 @@
+import sys
 import time
-from typing import Tuple, Optional, Callable
+from datetime import datetime
+from typing import Tuple, Optional, Callable, List
 
 import aiohttp
 import asyncio
 
 from src.rpc.wallet_rpc_client import WalletRpcClient
+from src.util.bech32m import encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.ints import uint64
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
 from src.cmds.units import units
+from decimal import Decimal
 
 
-command_list = ["send", "show", "get_transaction"]
+command_list = ["send", "show", "get_transaction", "get_transactions"]
 
 
 def help_message():
     print("usage: chia wallet command")
     print(f"command can be any of {command_list}")
     print("")
-    print("chia wallet send -f [optional fingerprint] -i [optional wallet_id] -a [amount] -m [fee] -t [target address]")
+    print(
+        "chia wallet send -f [optional fingerprint] -i [optional wallet_id] -a [(T)XCH amount] -m [(T)XCH fee] "
+        "-t [target address]"
+    )
     print("chia wallet show -f [optional fingerprint] -i [optional wallet_id]")
     print("chia wallet get_transaction -f [optional fingerprint] -i [optional wallet_id] -tx [transaction id]")
+    print("chia wallet get_transactions -f [optional fingerprint] -i [optional wallet_id]")
 
 
 def make_parser(parser):
@@ -45,9 +55,9 @@ def make_parser(parser):
         "-a",
         "--amount",
         help="How much chia to send, in TXCH/XCH",
-        type=int,
+        type=str,
     )
-    parser.add_argument("-m", "--fee", help="Set the fees for the transaction.", type=int, default=0)
+    parser.add_argument("-m", "--fee", help="Set the fees for the transaction.", type=str, default="0")
     parser.add_argument(
         "-t",
         "--address",
@@ -60,6 +70,7 @@ def make_parser(parser):
         help="transaction id to search for",
         type=str,
     )
+    parser.add_argument("--verbose", "-v", action="count", default=0)
     parser.add_argument(
         "command",
         help=f"Command can be any one of {command_list}",
@@ -68,6 +79,20 @@ def make_parser(parser):
     )
     parser.set_defaults(function=handler)
     parser.print_help = lambda self=parser: help_message()
+
+
+def print_transaction(tx: TransactionRecord, verbose: bool):
+    if verbose:
+        print(tx)
+    else:
+        chia_amount = Decimal(int(tx.amount)) / units["chia"]
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash)
+        print(f"Transaction {tx.name}")
+        print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
+        print(f"Amount: {chia_amount} TXCH")
+        print(f"To address: {to_address}")
+        print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        print("")
 
 
 async def get_transaction(args, wallet_client, fingerprint: int):
@@ -81,8 +106,29 @@ async def get_transaction(args, wallet_client, fingerprint: int):
         return
     else:
         transaction_id = hexstr_to_bytes(args.tx_id)
-    tx = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
-    print(tx)
+    tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
+    print_transaction(tx, verbose=(args.verbose > 0))
+
+
+async def get_transactions(args, wallet_client, fingerprint: int):
+    if args.id is None:
+        print("Please specify a wallet id with -i")
+        return
+    else:
+        wallet_id = args.id
+    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
+    if len(txs) == 0:
+        print("There are no transactions to this address")
+    for i in range(0, len(txs), 5):
+        for j in range(0, 5):
+            print_transaction(txs[i + j], verbose=(args.verbose > 0))
+        print("Press q to quit, or c to continue")
+        while True:
+            entered_key = sys.stdin.read(1)
+            if entered_key == "q":
+                return
+            elif entered_key == "c":
+                break
 
 
 async def send(args, wallet_client, fingerprint: int):
@@ -95,12 +141,12 @@ async def send(args, wallet_client, fingerprint: int):
         print("Please specify an amount with -a")
         return
     else:
-        amount = args.amount
+        amount = Decimal(args.amount)
     if args.amount is None:
         print("Please specify the transaction fees with -m")
         return
     else:
-        fee = args.fee
+        fee = Decimal(args.fee)
     if args.address is None:
         print("Please specify a target address with -t")
         return
@@ -108,7 +154,9 @@ async def send(args, wallet_client, fingerprint: int):
         address = args.address
 
     print("Submitting transaction...")
-    res = await wallet_client.send_transaction(wallet_id, amount, address, fee)
+    final_amount = uint64(int(amount * units["chia"]))
+    final_fee = uint64(int(fee * units["chia"]))
+    res = await wallet_client.send_transaction(wallet_id, final_amount * units["chia"], address, final_fee)
     tx_id = res.name
     start = time.time()
     while time.time() - start < 10:
@@ -120,11 +168,13 @@ async def send(args, wallet_client, fingerprint: int):
             return
 
     print("Transaction not yet submitted to nodes.")
-    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
+    print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
 
 
 async def print_balances(args, wallet_client, fingerprint: int):
     summaries_response = await wallet_client.get_wallets()
+
+    print(f"Wallet height: {await wallet_client.get_height_info()}")
     print(f"Balances, fingerprint: {fingerprint}")
     for summary in summaries_response:
         wallet_id = summary["id"]
@@ -273,6 +323,8 @@ def handler(args, parser):
 
     if command == "get_transaction":
         return asyncio.run(execute_with_wallet(args, parser, get_transaction))
+    if command == "get_transactions":
+        return asyncio.run(execute_with_wallet(args, parser, get_transactions))
     if command == "send":
         return asyncio.run(execute_with_wallet(args, parser, send))
     elif command == "show":

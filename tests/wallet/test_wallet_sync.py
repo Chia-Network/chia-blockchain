@@ -15,7 +15,7 @@ from tests.time_out_assert import time_out_assert
 
 
 def wallet_height_at_least(wallet_node, h):
-    height = wallet_node.wallet_state_manager.blockchain.peak_height
+    height = wallet_node.wallet_state_manager.blockchain._peak_height
     if height == h:
         return True
     return False
@@ -49,7 +49,7 @@ class TestWalletSync:
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -61,7 +61,7 @@ class TestWalletSync:
         num_blocks = 30
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
         for i in range(1, len(blocks_reorg)):
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
         await time_out_assert(
             100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
@@ -73,7 +73,7 @@ class TestWalletSync:
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -83,7 +83,7 @@ class TestWalletSync:
 
         # Tests a long reorg
         for block in default_1000_blocks:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
@@ -92,7 +92,7 @@ class TestWalletSync:
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
 
         for i in range(1, len(blocks_reorg)):
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
         await time_out_assert(
             600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
@@ -113,11 +113,11 @@ class TestWalletSync:
 
         # Insert 400 blocks
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Farm few more with reward
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         # Confirm we have the funds
         funds = sum(
@@ -137,7 +137,7 @@ class TestWalletSync:
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
         for block in blocks_reorg[-30:]:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(5, get_tx_count, 0, 1)
         await time_out_assert(5, wallet.get_confirmed_balance, 0)
@@ -156,14 +156,14 @@ class TestWalletSync:
 
         # Insert 400 blocks
         for block in default_400_blocks:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Reorg blocks that carry reward
         num_blocks_reorg = 30
         blocks_reorg = bt.get_consecutive_blocks(num_blocks_reorg, block_list_input=default_400_blocks[:-5])
 
         for block in blocks_reorg[:-5]:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         async def get_tx_count(wallet_id):
             txs = await wsm.get_all_transactions(wallet_id)
@@ -178,7 +178,7 @@ class TestWalletSync:
         blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=blocks_reorg_1)
 
         for block in blocks_reorg_2[-41:]:
-            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         # Confirm we have the funds
         funds = calculate_pool_reward(uint32(len(blocks_reorg_1))) + calculate_base_farmer_reward(

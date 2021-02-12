@@ -10,7 +10,7 @@ from chiabip158 import PyBIP158
 from blspy import G1Element, AugSchemeMPL, G2Element
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.full_node.bundle_tools import best_solution_program
@@ -62,7 +62,7 @@ class MempoolManager:
         self.coin_store = coin_store
 
         tx_per_sec = self.constants.TX_PER_SEC
-        sec_per_block = self.constants.SUB_SLOT_TIME_TARGET // self.constants.SLOT_SUB_BLOCKS_TARGET
+        sec_per_block = self.constants.SUB_SLOT_TIME_TARGET // self.constants.SLOT_BLOCKS_TARGET
         block_buffer_count = self.constants.MEMPOOL_BLOCK_BUFFER
 
         # MEMPOOL_SIZE = 60000
@@ -72,7 +72,7 @@ class MempoolManager:
         self.pool = ProcessPoolExecutor(max_workers=1)
 
         # The mempool will correspond to a certain peak
-        self.peak: Optional[SubBlockRecord] = None
+        self.peak: Optional[BlockRecord] = None
         self.mempool: Mempool = Mempool.create(self.mempool_size)
 
     def shut_down(self):
@@ -304,7 +304,9 @@ class MempoolManager:
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            chialisp_height = self.peak.prev_transaction_block_height if not self.peak.is_block else self.peak.height
+            chialisp_height = (
+                self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
+            )
             error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, uint32(chialisp_height))
 
             if error:
@@ -381,7 +383,7 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash].spend_bundle
         return None
 
-    async def new_peak(self, new_peak: Optional[SubBlockRecord]):
+    async def new_peak(self, new_peak: Optional[BlockRecord]):
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """

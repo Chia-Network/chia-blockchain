@@ -29,7 +29,7 @@ class TestNodeLoad:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks)
         peer = await connect_and_get_peer(server_1, server_2)
-        await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[0]), peer)
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[0]), peer)
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
@@ -40,7 +40,7 @@ class TestNodeLoad:
 
         start_unf = time.time()
         for i in range(1, num_blocks):
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
-            await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
+            await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
         print(f"Time taken to process {num_blocks} is {time.time() - start_unf}")
         assert time.time() - start_unf < 100

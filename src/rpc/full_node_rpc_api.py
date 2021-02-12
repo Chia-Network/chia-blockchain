@@ -1,4 +1,4 @@
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
 
@@ -58,10 +58,10 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
-        peak: Optional[SubBlockRecord] = self.service.blockchain.get_peak()
+        peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
 
         if peak is not None and peak.height > 0:
-            difficulty = uint64(peak.weight - self.service.blockchain.sub_block_record(peak.prev_hash).weight)
+            difficulty = uint64(peak.weight - self.service.blockchain.block_record(peak.prev_hash).weight)
             sub_slot_iters = peak.sub_slot_iters
         else:
             difficulty = self.service.constants.DIFFICULTY_STARTING
@@ -160,7 +160,7 @@ class FullNodeRpcApi:
         start = int(request["start"])
         end = int(request["end"])
         records = []
-        peak_height = self.full_node.blockchain.peak_height
+        peak_height = self.full_node.blockchain.get_peak_height()
         if peak_height is None:
             raise ValueError("Peak is None")
 
@@ -169,12 +169,12 @@ class FullNodeRpcApi:
                 self.full_node.log.warning("requested block is higher than known peak ")
                 break
             header_hash: bytes32 = self.service.blockchain.height_to_hash(uint32(a))
-            record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+            record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB
-                record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
+                record = await self.service.blockchain.block_store.get_block_record(header_hash)
             if record is None:
-                raise ValueError(f"Sub block {header_hash.hex()} does not exist")
+                raise ValueError(f"Block {header_hash.hex()} does not exist")
 
             records.append(record)
         return {"block_records": records}
@@ -186,16 +186,16 @@ class FullNodeRpcApi:
         header_height = uint32(int(height))
         peak_height = self.service.blockchain.get_peak_height()
         if peak_height is None or header_height > peak_height:
-            raise ValueError(f"Sub block height {height} not found in chain")
+            raise ValueError(f"Block height {height} not found in chain")
         header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash(header_height)
         if header_hash is None:
-            raise ValueError(f"Sub block hash {height} not found in chain")
-        record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+            raise ValueError(f"Block hash {height} not found in chain")
+        record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
-            record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
+            record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
-            raise ValueError(f"Sub block {header_hash} does not exist")
+            raise ValueError(f"Block {header_hash} does not exist")
         return {"block_record": record}
 
     async def get_block_record(self, request: Dict):
@@ -203,18 +203,18 @@ class FullNodeRpcApi:
             raise ValueError("header_hash not in request")
         header_hash_str = request["header_hash"]
         header_hash = hexstr_to_bytes(header_hash_str)
-        record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
-            record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
+            record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
-            raise ValueError(f"Sub block {header_hash.hex()} does not exist")
+            raise ValueError(f"Block {header_hash.hex()} does not exist")
 
         return {"block_record": record}
 
     async def get_unfinished_block_headers(self, request: Dict) -> Optional[Dict]:
 
-        peak: Optional[SubBlockRecord] = self.service.blockchain.get_peak()
+        peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
         if peak is None:
             return {"headers": []}
 
@@ -223,11 +223,11 @@ class FullNodeRpcApi:
             if ub_height == peak.height:
                 unfinished_header_block = UnfinishedHeaderBlock(
                     block.finished_sub_slots,
-                    block.reward_chain_sub_block,
+                    block.reward_chain_block,
                     block.challenge_chain_sp_proof,
                     block.reward_chain_sp_proof,
-                    block.foliage_sub_block,
-                    block.foliage_block,
+                    block.foliage,
+                    block.foliage_transaction_block,
                     b"",
                 )
                 response_headers.append(unfinished_header_block)
@@ -249,10 +249,10 @@ class FullNodeRpcApi:
         newer_block_bytes = hexstr_to_bytes(newer_block_hex)
         older_block_bytes = hexstr_to_bytes(older_block_hex)
 
-        newer_block = await self.service.block_store.get_sub_block_record(newer_block_bytes)
+        newer_block = await self.service.block_store.get_block_record(newer_block_bytes)
         if newer_block is None:
             raise ValueError("Newer block not found")
-        older_block = await self.service.block_store.get_sub_block_record(older_block_bytes)
+        older_block = await self.service.block_store.get_block_record(older_block_bytes)
         if older_block is None:
             raise ValueError("Newer block not found")
         delta_weight = newer_block.weight - older_block.weight

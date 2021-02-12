@@ -1,6 +1,6 @@
 from src.consensus.pos_quality import _expected_plot_size
 from src.consensus.pot_iterations import (
-    is_overflow_sub_block,
+    is_overflow_block,
     calculate_sp_iters,
     calculate_ip_iters,
     calculate_iterations_quality,
@@ -14,14 +14,14 @@ test_constants = DEFAULT_CONSTANTS.replace(**{"NUM_SPS_SUB_SLOT": 32, "SUB_SLOT_
 
 
 class TestPotIterations:
-    def test_is_overflow_sub_block(self):
-        assert not is_overflow_sub_block(test_constants, uint8(27))
-        assert not is_overflow_sub_block(test_constants, uint8(28))
-        assert is_overflow_sub_block(test_constants, uint8(29))
-        assert is_overflow_sub_block(test_constants, uint8(30))
-        assert is_overflow_sub_block(test_constants, uint8(31))
+    def test_is_overflow_block(self):
+        assert not is_overflow_block(test_constants, uint8(27))
+        assert not is_overflow_block(test_constants, uint8(28))
+        assert is_overflow_block(test_constants, uint8(29))
+        assert is_overflow_block(test_constants, uint8(30))
+        assert is_overflow_block(test_constants, uint8(31))
         with raises(ValueError):
-            assert is_overflow_sub_block(test_constants, uint8(32))
+            assert is_overflow_block(test_constants, uint8(32))
 
     def test_calculate_sp_iters(self):
         ssi: uint64 = uint64(100001 * 64 * 4)

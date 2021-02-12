@@ -1,7 +1,7 @@
 from typing import Dict, Optional, Tuple, List
 import aiosqlite
 
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32, uint64
@@ -11,7 +11,7 @@ from src.types.sized_bytes import bytes32
 
 class WalletBlockStore:
     """
-    This object handles HeaderBlocks and SubBlocks stored in DB used by wallet.
+    This object handles HeaderBlocks and Blocks stored in DB used by wallet.
     """
 
     db: aiosqlite.Connection
@@ -33,7 +33,7 @@ class WalletBlockStore:
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on header_blocks(height)")
 
-        # Sub block records
+        # Block records
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS block_records(header_hash "
             "text PRIMARY KEY, prev_hash text, height bigint, weight bigint, total_iters text,"
@@ -55,22 +55,22 @@ class WalletBlockStore:
         await cursor_2.close()
         await self.db.commit()
 
-    async def add_block_record(self, block_record: HeaderBlockRecord, sub_block: SubBlockRecord):
+    async def add_block_record(self, header_block_record: HeaderBlockRecord, block_record: BlockRecord):
         """
         Adds a block record to the database. This block record is assumed to be connected
         to the chain, but it may or may not be in the LCA path.
         """
-        if block_record.header.foliage_block is not None:
-            timestamp = block_record.header.foliage_block.timestamp
+        if header_block_record.header.foliage_transaction_block is not None:
+            timestamp = header_block_record.header.foliage_transaction_block.timestamp
         else:
             timestamp = uint64(0)
         cursor = await self.db.execute(
             "INSERT OR REPLACE INTO header_blocks VALUES(?, ?, ?, ?)",
             (
-                block_record.header_hash.hex(),
-                block_record.height,
+                header_block_record.header_hash.hex(),
+                header_block_record.height,
                 timestamp,
-                bytes(block_record),
+                bytes(header_block_record),
             ),
         )
 
@@ -78,13 +78,15 @@ class WalletBlockStore:
         cursor_2 = await self.db.execute(
             "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?, ?, ?, ?,?)",
             (
-                block_record.header.header_hash.hex(),
-                block_record.header.prev_header_hash.hex(),
-                block_record.header.height,
-                block_record.header.weight.to_bytes(128 // 8, "big", signed=False).hex(),
-                block_record.header.total_iters.to_bytes(128 // 8, "big", signed=False).hex(),
-                bytes(sub_block),
-                None if sub_block.sub_epoch_summary_included is None else bytes(sub_block.sub_epoch_summary_included),
+                header_block_record.header.header_hash.hex(),
+                header_block_record.header.prev_header_hash.hex(),
+                header_block_record.header.height,
+                header_block_record.header.weight.to_bytes(128 // 8, "big", signed=False).hex(),
+                header_block_record.header.total_iters.to_bytes(128 // 8, "big", signed=False).hex(),
+                bytes(block_record),
+                None
+                if block_record.sub_epoch_summary_included is None
+                else bytes(block_record.sub_epoch_summary_included),
                 False,
             ),
         )
@@ -125,7 +127,7 @@ class WalletBlockStore:
         else:
             return None
 
-    async def get_sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
+    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         cursor = await self.db.execute(
             "SELECT block from block_records WHERE header_hash=?",
             (header_hash.hex(),),
@@ -133,25 +135,25 @@ class WalletBlockStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return SubBlockRecord.from_bytes(row[0])
+            return BlockRecord.from_bytes(row[0])
         return None
 
-    async def get_sub_block_records(
+    async def get_block_records(
         self,
-    ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+    ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all blocks, as well as the header hash of the peak,
         if present.
         """
         cursor = await self.db.execute("SELECT header_hash, block, is_peak from block_records")
         rows = await cursor.fetchall()
         await cursor.close()
-        ret: Dict[bytes32, SubBlockRecord] = {}
+        ret: Dict[bytes32, BlockRecord] = {}
         peak: Optional[bytes32] = None
         for row in rows:
-            header_hash_bytes, sub_block_bytes, is_peak = row
+            header_hash_bytes, block_record_bytes, is_peak = row
             header_hash = bytes.fromhex(header_hash_bytes)
-            ret[header_hash] = SubBlockRecord.from_bytes(sub_block_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
             if is_peak:
                 assert peak is None  # Sanity check, only one peak
                 peak = header_hash
@@ -167,11 +169,11 @@ class WalletBlockStore:
         await cursor_2.close()
         await self.db.commit()
 
-    async def get_sub_block_records_close_to_peak(
+    async def get_block_records_close_to_peak(
         self, blocks_n: int
-    ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+    ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all blocks, as well as the header hash of the peak,
         if present.
         """
 
@@ -187,11 +189,11 @@ class WalletBlockStore:
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
-        ret: Dict[bytes32, SubBlockRecord] = {}
+        ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash_bytes, sub_block_bytes = row
+            header_hash_bytes, block_record_bytes = row
             header_hash = bytes.fromhex(header_hash_bytes)
-            ret[header_hash] = SubBlockRecord.from_bytes(sub_block_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
         return ret, peak
 
     async def get_header_blocks_in_range(
@@ -207,19 +209,19 @@ class WalletBlockStore:
         await cursor.close()
         ret: Dict[bytes32, HeaderBlock] = {}
         for row in rows:
-            header_hash_bytes, sub_block_bytes = row
+            header_hash_bytes, block_record_bytes = row
             header_hash = bytes.fromhex(header_hash_bytes)
-            ret[header_hash] = HeaderBlock.from_bytes(sub_block_bytes)
+            ret[header_hash] = HeaderBlock.from_bytes(block_record_bytes)
 
         return ret
 
-    async def get_sub_block_records_in_range(
+    async def get_block_records_in_range(
         self,
         start: int,
         stop: int,
-    ) -> Dict[bytes32, SubBlockRecord]:
+    ) -> Dict[bytes32, BlockRecord]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all blocks, as well as the header hash of the peak,
         if present.
         """
 
@@ -228,17 +230,17 @@ class WalletBlockStore:
         cursor = await self.db.execute(formatted_str)
         rows = await cursor.fetchall()
         await cursor.close()
-        ret: Dict[bytes32, SubBlockRecord] = {}
+        ret: Dict[bytes32, BlockRecord] = {}
         for row in rows:
-            header_hash_bytes, sub_block_bytes = row
+            header_hash_bytes, block_record_bytes = row
             header_hash = bytes.fromhex(header_hash_bytes)
-            ret[header_hash] = SubBlockRecord.from_bytes(sub_block_bytes)
+            ret[header_hash] = BlockRecord.from_bytes(block_record_bytes)
 
         return ret
 
     async def get_peak_heights_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all blocks, as well as the header hash of the peak,
         if present.
         """
 

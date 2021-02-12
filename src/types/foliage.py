@@ -23,9 +23,9 @@ class TransactionsInfo(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class FoliageBlock(Streamable):
+class FoliageTransactionBlock(Streamable):
     # Information that goes along with each transaction block that is relevant for light clients
-    prev_block_hash: bytes32
+    prev_transaction_block_hash: bytes32
     timestamp: uint64
     filter_hash: bytes32
     additions_root: bytes32
@@ -35,8 +35,8 @@ class FoliageBlock(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class FoliageSubBlockData(Streamable):
-    # Part of the sub-block that is signed by the plot key
+class FoliageBlockData(Streamable):
+    # Part of the block that is signed by the plot key
     unfinished_reward_block_hash: bytes32
     pool_target: PoolTarget
     pool_signature: Optional[G2Element]  # Iff ProofOfSpace has a pool pk
@@ -46,12 +46,12 @@ class FoliageSubBlockData(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class FoliageSubBlock(Streamable):
-    # The entire sub-block, containing signature and the unsigned back pointer
+class Foliage(Streamable):
+    # The entire foliage block, containing signature and the unsigned back pointer
     # The hash of this is the "block hash"
-    prev_sub_block_hash: bytes32
+    prev_block_hash: bytes32
     reward_block_hash: bytes32
-    foliage_sub_block_data: FoliageSubBlockData
-    foliage_sub_block_signature: G2Element
-    foliage_block_hash: Optional[bytes32]
-    foliage_block_signature: Optional[G2Element]
+    foliage_block_data: FoliageBlockData
+    foliage_block_data_signature: G2Element
+    foliage_transaction_block_hash: Optional[bytes32]
+    foliage_transaction_block_signature: Optional[G2Element]

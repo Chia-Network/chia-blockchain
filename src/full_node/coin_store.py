@@ -55,11 +55,11 @@ class CoinStore:
 
     async def new_block(self, block: FullBlock):
         """
-        Only called for sub-blocks which are blocks (and thus have rewards and transactions)
+        Only called for blocks which are blocks (and thus have rewards and transactions)
         """
-        if block.is_block() is False:
+        if block.is_transaction_block() is False:
             return
-        assert block.foliage_block is not None
+        assert block.foliage_transaction_block is not None
         removals, additions = block.tx_removals_and_additions()
 
         for coin in additions:
@@ -69,7 +69,7 @@ class CoinStore:
                 uint32(0),
                 False,
                 False,
-                block.foliage_block.timestamp,
+                block.foliage_transaction_block.timestamp,
             )
             await self._add_coin_record(record)
 
@@ -89,7 +89,7 @@ class CoinStore:
                 uint32(0),
                 False,
                 True,
-                block.foliage_block.timestamp,
+                block.foliage_transaction_block.timestamp,
             )
             await self._add_coin_record(reward_coin_r)
 

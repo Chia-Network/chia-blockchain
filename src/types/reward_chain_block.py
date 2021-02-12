@@ -11,7 +11,7 @@ from src.types.vdf import VDFInfo
 
 @dataclass(frozen=True)
 @streamable
-class RewardChainSubBlockUnfinished(Streamable):
+class RewardChainBlockUnfinished(Streamable):
     total_iters: uint128
     signage_point_index: uint8
     pos_ss_cc_challenge_hash: bytes32
@@ -24,7 +24,7 @@ class RewardChainSubBlockUnfinished(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RewardChainSubBlock(Streamable):
+class RewardChainBlock(Streamable):
     weight: uint128
     height: uint32
     total_iters: uint128
@@ -38,10 +38,10 @@ class RewardChainSubBlock(Streamable):
     reward_chain_sp_signature: G2Element
     reward_chain_ip_vdf: VDFInfo
     infused_challenge_chain_ip_vdf: Optional[VDFInfo]  # Iff deficit < 16
-    is_block: bool
+    is_transaction_block: bool
 
-    def get_unfinished(self) -> RewardChainSubBlockUnfinished:
-        return RewardChainSubBlockUnfinished(
+    def get_unfinished(self) -> RewardChainBlockUnfinished:
+        return RewardChainBlockUnfinished(
             self.total_iters,
             self.signage_point_index,
             self.pos_ss_cc_challenge_hash,

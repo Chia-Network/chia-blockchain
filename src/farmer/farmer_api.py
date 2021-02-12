@@ -194,31 +194,29 @@ class FarmerAPI:
             # This is a response with block signatures
             for sk in self.farmer.get_private_keys():
                 (
-                    foliage_sub_block_hash,
-                    foliage_sub_block_sig_harvester,
+                    foliage_block_data_hash,
+                    foliage_sig_harvester,
                 ) = response.message_signatures[0]
                 (
-                    foliage_block_hash,
-                    foliage_block_sig_harvester,
+                    foliage_transaction_block_hash,
+                    foliage_transaction_block_sig_harvester,
                 ) = response.message_signatures[1]
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
                     agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
                     assert agg_pk == pospace.plot_public_key
-                    foliage_sub_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_sub_block_hash, agg_pk)
-                    foliage_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_hash, agg_pk)
-                    foliage_sub_block_agg_sig = AugSchemeMPL.aggregate(
-                        [foliage_sub_block_sig_harvester, foliage_sub_block_sig_farmer]
-                    )
+                    foliage_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_data_hash, agg_pk)
+                    foliage_transaction_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_transaction_block_hash, agg_pk)
+                    foliage_agg_sig = AugSchemeMPL.aggregate([foliage_sig_harvester, foliage_sig_farmer])
                     foliage_block_agg_sig = AugSchemeMPL.aggregate(
-                        [foliage_block_sig_harvester, foliage_block_sig_farmer]
+                        [foliage_transaction_block_sig_harvester, foliage_transaction_block_sig_farmer]
                     )
-                    assert AugSchemeMPL.verify(agg_pk, foliage_sub_block_hash, foliage_sub_block_agg_sig)
-                    assert AugSchemeMPL.verify(agg_pk, foliage_block_hash, foliage_block_agg_sig)
+                    assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
+                    assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)
 
                     request_to_nodes = farmer_protocol.SignedValues(
                         computed_quality_string,
-                        foliage_sub_block_agg_sig,
+                        foliage_agg_sig,
                         foliage_block_agg_sig,
                     )
 
@@ -260,7 +258,7 @@ class FarmerAPI:
             plot_identifier,
             challenge_hash,
             sp_hash,
-            [full_node_request.foliage_sub_block_hash, full_node_request.foliage_block_hash],
+            [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
         )
 
         msg = make_msg(ProtocolMessageTypes.request_signatures, request)

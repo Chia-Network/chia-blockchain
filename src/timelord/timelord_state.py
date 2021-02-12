@@ -3,7 +3,7 @@ from typing import Optional, List, Tuple, Union
 
 from src.consensus.constants import ConsensusConstants
 from src.protocols import timelord_protocol
-from src.timelord.iters_from_sub_block import iters_from_sub_block
+from src.timelord.iters_from_block import iters_from_block
 from src.timelord.types import StateType, Chain
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -19,12 +19,12 @@ log = logging.getLogger(__name__)
 class LastState:
     """
     Represents the state that the timelord is in, and should execute VDFs on top of. A state can be one of three types:
-    1. A "peak" or a sub-block
+    1. A "peak" or a block
     2. An end of sub-slot
-    3. None, if it's the first sub-slot and there are no sub-blocks yet
-    Timelords execute VDFs until they reach the next sub-block or sub-slot, at which point the state is changed again.
+    3. None, if it's the first sub-slot and there are no blocks yet
+    Timelords execute VDFs until they reach the next block or sub-slot, at which point the state is changed again.
     The state can also be changed arbitrarily to a sub-slot or peak, for example in the case the timelord receives
-    a new sub-block in the future.
+    a new block in the future.
     """
 
     def __init__(self, constants: ConsensusConstants):
@@ -32,7 +32,7 @@ class LastState:
         self.peak: Optional[timelord_protocol.NewPeakTimelord] = None
         self.subslot_end: Optional[EndOfSubSlotBundle] = None
         self.last_ip: uint64 = uint64(0)
-        self.deficit: uint8 = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+        self.deficit: uint8 = constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
         self.sub_epoch_summary: Optional[SubEpochSummary] = None
         self.constants: ConsensusConstants = constants
         self.last_weight: uint128 = uint128(0)
@@ -50,21 +50,21 @@ class LastState:
             self.state_type = StateType.PEAK
             self.peak = state
             self.subslot_end = None
-            _, self.last_ip = iters_from_sub_block(
+            _, self.last_ip = iters_from_block(
                 self.constants,
-                state.reward_chain_sub_block,
+                state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
-            self.last_weight = state.reward_chain_sub_block.weight
-            self.last_height = state.reward_chain_sub_block.height
-            self.total_iters = state.reward_chain_sub_block.total_iters
-            self.last_peak_challenge = state.reward_chain_sub_block.get_hash()
+            self.last_weight = state.reward_chain_block.weight
+            self.last_height = state.reward_chain_block.height
+            self.total_iters = state.reward_chain_block.total_iters
+            self.last_peak_challenge = state.reward_chain_block.get_hash()
             self.difficulty = state.difficulty
             self.sub_slot_iters = state.sub_slot_iters
-            if state.reward_chain_sub_block.is_block:
+            if state.reward_chain_block.is_transaction_block:
                 self.last_block_total_iters = self.total_iters
             self.reward_challenge_cache = state.previous_reward_challenges
             self.last_challenge_sb_or_eos_total_iters = self.peak.last_challenge_sb_or_eos_total_iters
@@ -87,13 +87,13 @@ class LastState:
 
         self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
         log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
-        while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 
     def get_sub_slot_iters(self) -> uint64:
         return self.sub_slot_iters
 
-    def can_infuse_sub_block(self) -> bool:
+    def can_infuse_block(self) -> bool:
         if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:
             return True
         ss_start_iters = self.get_total_iters() - self.get_last_ip()
@@ -101,7 +101,7 @@ class LastState:
         for _, total_iters in self.reward_challenge_cache:
             if total_iters > ss_start_iters:
                 already_infused_count += 1
-        if already_infused_count >= self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        if already_infused_count >= self.constants.MAX_SUB_SLOT_BLOCKS:
             return False
         return True
 
@@ -138,8 +138,8 @@ class LastState:
             return None
         assert self.peak is not None
         if (
-            self.peak.reward_chain_sub_block.height + 1
-        ) % self.constants.SUB_EPOCH_SUB_BLOCKS <= self.constants.MAX_SUB_SLOT_SUB_BLOCKS and (self.get_deficit() == 0):
+            self.peak.reward_chain_block.height + 1
+        ) % self.constants.SUB_EPOCH_BLOCKS <= self.constants.MAX_SUB_SLOT_BLOCKS and (self.get_deficit() == 0):
             return self.sub_epoch_summary
         return None
 
@@ -157,20 +157,20 @@ class LastState:
                 return None
         elif self.state_type == StateType.PEAK:
             assert self.peak is not None
-            sub_block = self.peak.reward_chain_sub_block
+            reward_chain_block = self.peak.reward_chain_block
             if chain == Chain.CHALLENGE_CHAIN:
-                return sub_block.challenge_chain_ip_vdf.challenge
+                return reward_chain_block.challenge_chain_ip_vdf.challenge
             elif chain == Chain.REWARD_CHAIN:
-                return sub_block.get_hash()
+                return reward_chain_block.get_hash()
             elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if sub_block.infused_challenge_chain_ip_vdf is not None:
-                    return sub_block.infused_challenge_chain_ip_vdf.challenge
-                elif self.peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                if reward_chain_block.infused_challenge_chain_ip_vdf is not None:
+                    return reward_chain_block.infused_challenge_chain_ip_vdf.challenge
+                elif self.peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     return ChallengeBlockInfo(
-                        sub_block.proof_of_space,
-                        sub_block.challenge_chain_sp_vdf,
-                        sub_block.challenge_chain_sp_signature,
-                        sub_block.challenge_chain_ip_vdf,
+                        reward_chain_block.proof_of_space,
+                        reward_chain_block.challenge_chain_sp_vdf,
+                        reward_chain_block.challenge_chain_sp_signature,
+                        reward_chain_block.challenge_chain_ip_vdf,
                     ).get_hash()
                 return None
         elif self.state_type == StateType.END_OF_SUB_SLOT:
@@ -180,7 +180,7 @@ class LastState:
             elif chain == Chain.REWARD_CHAIN:
                 return self.subslot_end.reward_chain.get_hash()
             elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if self.subslot_end.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                if self.subslot_end.reward_chain.deficit < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                     assert self.subslot_end.infused_challenge_chain is not None
                     return self.subslot_end.infused_challenge_chain.get_hash()
                 return None
@@ -191,15 +191,15 @@ class LastState:
             return ClassgroupElement.get_default_element()
         elif self.state_type == StateType.PEAK:
             assert self.peak is not None
-            sub_block = self.peak.reward_chain_sub_block
+            reward_chain_block = self.peak.reward_chain_block
             if chain == Chain.CHALLENGE_CHAIN:
-                return sub_block.challenge_chain_ip_vdf.output
+                return reward_chain_block.challenge_chain_ip_vdf.output
             if chain == Chain.REWARD_CHAIN:
                 return ClassgroupElement.get_default_element()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if sub_block.infused_challenge_chain_ip_vdf is not None:
-                    return sub_block.infused_challenge_chain_ip_vdf.output
-                elif self.peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                if reward_chain_block.infused_challenge_chain_ip_vdf is not None:
+                    return reward_chain_block.infused_challenge_chain_ip_vdf.output
+                elif self.peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     return ClassgroupElement.get_default_element()
                 else:
                     return None
@@ -208,7 +208,7 @@ class LastState:
                 return ClassgroupElement.get_default_element()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 assert self.subslot_end is not None
-                if self.subslot_end.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                if self.subslot_end.reward_chain.deficit < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                     return ClassgroupElement.get_default_element()
                 else:
                     return None

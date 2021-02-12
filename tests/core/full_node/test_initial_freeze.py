@@ -42,7 +42,7 @@ class TestTransactions:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         for i in range(num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
@@ -67,7 +67,7 @@ class TestTransactions:
         assert response is None
 
         for i in range(26):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         new_spend = full_node_protocol.NewTransaction(tx.spend_bundle.name(), 1, 0)
         response = await full_node_api.new_transaction(new_spend)
@@ -92,7 +92,7 @@ class TestTransactions:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         for i in range(num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
@@ -106,11 +106,13 @@ class TestTransactions:
 
         current_blocks = await full_node_api.get_all_full_blocks()
         new_blocks = bt.get_consecutive_blocks(
-            1, block_list_input=current_blocks, transaction_data=tx.spend_bundle, guarantee_block=True
+            1, block_list_input=current_blocks, transaction_data=tx.spend_bundle, guarantee_transaction_block=True
         )
         last_block = new_blocks[-1:][0]
 
-        new_blocks_no_tx = bt.get_consecutive_blocks(1, block_list_input=current_blocks, guarantee_block=True)
+        new_blocks_no_tx = bt.get_consecutive_blocks(
+            1, block_list_input=current_blocks, guarantee_transaction_block=True
+        )
         last_block_no_tx = new_blocks_no_tx[-1:][0]
 
         result, error, fork = await full_node_api.full_node.blockchain.receive_block(last_block, None)
@@ -126,10 +128,10 @@ class TestTransactions:
         for block in after_freeze_blocks:
             await full_node_api.full_node.blockchain.receive_block(block, None)
 
-        assert full_node_api.full_node.blockchain.peak_height == 30
+        assert full_node_api.full_node.blockchain.get_peak_height() == 30
 
         new_blocks = bt.get_consecutive_blocks(
-            1, block_list_input=after_freeze_blocks, transaction_data=tx.spend_bundle, guarantee_block=True
+            1, block_list_input=after_freeze_blocks, transaction_data=tx.spend_bundle, guarantee_transaction_block=True
         )
         last_block = new_blocks[-1:][0]
         result, error, fork = await full_node_api.full_node.blockchain.receive_block(last_block, None)

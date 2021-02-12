@@ -32,17 +32,17 @@ constants = test_constants
 def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
     pool_amount = calculate_pool_reward(block.height)
     farmer_amount = calculate_base_farmer_reward(block.height)
-    if block.is_block():
+    if block.is_transaction_block():
         assert block.transactions_info is not None
         farmer_amount = uint64(farmer_amount + block.transactions_info.fees)
     pool_coin: Coin = create_pool_coin(
         block.height,
-        block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
+        block.foliage.foliage_block_data.pool_target.puzzle_hash,
         pool_amount,
     )
     farmer_coin: Coin = create_farmer_coin(
         block.height,
-        block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
+        block.foliage.foliage_block_data.farmer_reward_puzzle_hash,
         farmer_amount,
     )
     return pool_coin, farmer_coin
@@ -64,7 +64,7 @@ class TestCoinStore:
 
         coins_to_spend: List[Coin] = []
         for block in blocks:
-            if block.is_block():
+            if block.is_transaction_block():
                 for coin in block.get_included_reward_coins():
                     if coin.puzzle_hash == reward_ph:
                         coins_to_spend.append(coin)
@@ -92,7 +92,7 @@ class TestCoinStore:
             farmer_coin, pool_coin = get_future_reward_coins(block)
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
-            if block.is_block():
+            if block.is_transaction_block():
                 removals, additions = block.tx_removals_and_additions()
 
                 assert block.get_included_reward_coins() == should_be_included_prev
@@ -133,7 +133,7 @@ class TestCoinStore:
 
         # Save/get block
         for block in blocks:
-            if block.is_block():
+            if block.is_transaction_block():
                 await coin_store.new_block(block)
                 coins = block.get_included_reward_coins()
                 records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -160,7 +160,7 @@ class TestCoinStore:
         coin_store = await CoinStore.create(connection)
 
         for block in blocks:
-            if block.is_block():
+            if block.is_transaction_block():
                 await coin_store.new_block(block)
                 coins = block.get_included_reward_coins()
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -177,7 +177,7 @@ class TestCoinStore:
         await coin_store.rollback_to_block(reorg_index)
 
         for block in blocks:
-            if block.is_block():
+            if block.is_transaction_block():
                 coins = block.get_included_reward_coins()
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
@@ -211,7 +211,7 @@ class TestCoinStore:
             assert b.get_peak().height == initial_block_count - 1
 
             for c, block in enumerate(blocks):
-                if block.is_block():
+                if block.is_transaction_block():
                     coins = block.get_included_reward_coins()
                     records: List[Optional[CoinRecord]] = [
                         await coin_store.get_coin_record(coin.name()) for coin in coins
@@ -232,7 +232,7 @@ class TestCoinStore:
                     assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
                 elif reorg_block.height >= initial_block_count:
                     assert result == ReceiveBlockResult.NEW_PEAK
-                    if reorg_block.is_block():
+                    if reorg_block.is_transaction_block():
                         coins = reorg_block.get_included_reward_coins()
                         records: List[Optional[CoinRecord]] = [
                             await coin_store.get_coin_record(coin.name()) for coin in coins
@@ -256,7 +256,7 @@ class TestCoinStore:
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
         num_blocks = 10
-        blocks = bt.get_consecutive_blocks(num_blocks, guarantee_block=True)
+        blocks = bt.get_consecutive_blocks(num_blocks, guarantee_transaction_block=True)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()

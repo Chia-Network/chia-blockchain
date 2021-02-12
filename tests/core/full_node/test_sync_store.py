@@ -36,18 +36,18 @@ class TestStore:
 
         assert store.get_heaviest_peak() is None
         assert len(store.get_peak_of_each_peer()) == 0
-        store.peer_has_sub_block(std_hash(b"block10"), peer_ids[0], 500, 10, True)
-        store.peer_has_sub_block(std_hash(b"block1"), peer_ids[0], 300, 1, False)
-        store.peer_has_sub_block(std_hash(b"block1"), peer_ids[1], 300, 1, True)
-        store.peer_has_sub_block(std_hash(b"block10"), peer_ids[2], 500, 10, False)
-        store.peer_has_sub_block(std_hash(b"block1"), peer_ids[2], 300, 1, False)
+        store.peer_has_block(std_hash(b"block10"), peer_ids[0], 500, 10, True)
+        store.peer_has_block(std_hash(b"block1"), peer_ids[0], 300, 1, False)
+        store.peer_has_block(std_hash(b"block1"), peer_ids[1], 300, 1, True)
+        store.peer_has_block(std_hash(b"block10"), peer_ids[2], 500, 10, False)
+        store.peer_has_block(std_hash(b"block1"), peer_ids[2], 300, 1, False)
 
         assert store.get_heaviest_peak()[0] == std_hash(b"block10")
         assert store.get_heaviest_peak()[1] == 10
         assert store.get_heaviest_peak()[2] == 500
 
         assert len(store.get_peak_of_each_peer()) == 2
-        store.peer_has_sub_block(std_hash(b"block1"), peer_ids[2], 500, 1, True)
+        store.peer_has_block(std_hash(b"block1"), peer_ids[2], 500, 1, True)
         assert len(store.get_peak_of_each_peer()) == 3
         assert store.get_peak_of_each_peer()[peer_ids[0]][2] == 500
         assert store.get_peak_of_each_peer()[peer_ids[1]][2] == 300
@@ -62,6 +62,6 @@ class TestStore:
         assert store.get_peers_that_have_peak([std_hash(b"block10")]) == {peer_ids[2]}
         store.peer_disconnected(peer_ids[2])
         assert store.get_heaviest_peak()[2] == 300
-        store.peer_has_sub_block(std_hash(b"block30"), peer_ids[0], 700, 30, True)
+        store.peer_has_block(std_hash(b"block30"), peer_ids[0], 700, 30, True)
         assert store.get_peak_of_each_peer()[peer_ids[0]][2] == 700
         assert store.get_heaviest_peak()[2] == 700

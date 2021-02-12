@@ -22,7 +22,7 @@ class WalletSyncStore:
     potential_blocks_received: Dict[uint32, asyncio.Event]
     # Blocks that we have finalized during sync, queue them up for adding after sync is done
     potential_future_blocks: List[HeaderBlock]
-    # A map from height to header hash of sub-blocks added to the chain
+    # A map from height to header hash of blocks added to the chain
     header_hashes_added: Dict[uint32, bytes32]
     # map from potential peak to fork point
     peak_fork_point: Dict[bytes32, uint32]

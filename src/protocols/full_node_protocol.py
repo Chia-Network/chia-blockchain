@@ -65,19 +65,19 @@ class RespondProofOfWeight(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RequestSubBlock(Streamable):
+class RequestBlock(Streamable):
     height: uint32
     include_transaction_block: bool
 
 
 @dataclass(frozen=True)
 @streamable
-class RejectSubBlock(Streamable):
+class RejectBlock(Streamable):
     height: uint32
 
 
 @dataclass(frozen=True)
-class RequestSubBlocks(Streamable):
+class RequestBlocks(Streamable):
     start_height: uint32
     end_height: uint32
     include_transaction_block: bool
@@ -85,41 +85,41 @@ class RequestSubBlocks(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RespondSubBlocks(Streamable):
+class RespondBlocks(Streamable):
     start_height: uint32
     end_height: uint32
-    sub_blocks: List[FullBlock]
+    blocks: List[FullBlock]
 
 
 @dataclass(frozen=True)
 @streamable
-class RejectSubBlocks(Streamable):
+class RejectBlocks(Streamable):
     start_height: uint32
     end_height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
-class RespondSubBlock(Streamable):
-    sub_block: FullBlock
+class RespondBlock(Streamable):
+    block: FullBlock
 
 
 @dataclass(frozen=True)
 @streamable
-class NewUnfinishedSubBlock(Streamable):
+class NewUnfinishedBlock(Streamable):
     unfinished_reward_hash: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
-class RequestUnfinishedSubBlock(Streamable):
+class RequestUnfinishedBlock(Streamable):
     unfinished_reward_hash: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
-class RespondUnfinishedSubBlock(Streamable):
-    unfinished_sub_block: UnfinishedBlock
+class RespondUnfinishedBlock(Streamable):
+    unfinished_block: UnfinishedBlock
 
 
 @dataclass(frozen=True)

@@ -51,11 +51,9 @@ class SyncStore:
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    def peer_has_sub_block(
-        self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool
-    ):
+    def peer_has_block(self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool):
         """
-        Adds a record that a certain peer has a sub_block.
+        Adds a record that a certain peer has a block.
         """
 
         if header_hash == self.sync_target_header_hash:
@@ -94,7 +92,7 @@ class SyncStore:
 
     def get_heaviest_peak(self) -> Optional[Tuple[bytes32, uint32, uint128]]:
         """
-        Returns: the header_hash, height, and weight of the heaviest sub_block that one of our peers has notified
+        Returns: the header_hash, height, and weight of the heaviest block that one of our peers has notified
         us of.
         """
 

@@ -18,7 +18,7 @@ from src.full_node.block_store import BlockStore
 from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.coin_store import CoinStore
 from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
-from src.consensus.sub_block_record import SubBlockRecord
+from src.consensus.block_record import BlockRecord
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.announcement import Announcement
@@ -40,10 +40,10 @@ log = logging.getLogger(__name__)
 
 async def validate_block_body(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     block_store: BlockStore,
     coin_store: CoinStore,
-    peak: Optional[SubBlockRecord],
+    peak: Optional[BlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     cached_cost_result: Optional[CostResult] = None,
@@ -58,30 +58,34 @@ async def validate_block_body(
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
 
-    # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
-    # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
-    if block.foliage_sub_block.foliage_block_hash is None:
+    # 1. For non block blocks, foliage block, transaction filter, transactions info, and generator must be empty
+    # If it is a block but not a transaction block, there is no body to validate. Check that all fields are None
+    if block.foliage.foliage_transaction_block_hash is None:
         if (
-            block.foliage_block is not None
+            block.foliage_transaction_block is not None
             or block.transactions_info is not None
             or block.transactions_generator is not None
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA
-        return None  # This means the sub-block is valid
+        return None  # This means the block is valid
 
     # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
-    if block.foliage_block is None or block.foliage_block.filter_hash is None or block.transactions_info is None:
-        return Err.IS_BLOCK_BUT_NO_DATA
+    if (
+        block.foliage_transaction_block is None
+        or block.foliage_transaction_block.filter_hash is None
+        or block.transactions_info is None
+    ):
+        return Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA
 
     # keeps track of the reward coins that need to be incorporated
     expected_reward_coins: Set[Coin] = set()
 
     # 3. The transaction info hash in the Foliage block must match the transaction info
-    if block.foliage_block.transactions_info_hash != std_hash(block.transactions_info):
+    if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
         return Err.INVALID_TRANSACTIONS_INFO_HASH
 
-    # 4. The foliage block hash in the foliage sub block must match the foliage block
-    if block.foliage_sub_block.foliage_block_hash != std_hash(block.foliage_block):
+    # 4. The foliage block hash in the foliage block must match the foliage block
+    if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
         return Err.INVALID_FOLIAGE_BLOCK_HASH
 
     # 5. The prev generators root must be valid
@@ -95,46 +99,46 @@ async def validate_block_body(
         if block.transactions_info.generator_root != bytes([0] * 32):
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
-    # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
+    # 7. The reward claims must be valid for the previous blocks, and current block fees
     if height > 0:
-        # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
-        prev_block = sub_blocks.sub_block_record(block.foliage_block.prev_block_hash)
-        prev_transaction_block_height = prev_block.height
+        # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
+        prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
+        prev_transaction_block_height = prev_transaction_block.height
 
-        assert prev_block.fees is not None
+        assert prev_transaction_block.fees is not None
         pool_coin = create_pool_coin(
-            prev_block.height,
-            prev_block.pool_puzzle_hash,
-            calculate_pool_reward(prev_block.height),
+            prev_transaction_block.height,
+            prev_transaction_block.pool_puzzle_hash,
+            calculate_pool_reward(prev_transaction_block.height),
         )
         farmer_coin = create_farmer_coin(
-            prev_block.height,
-            prev_block.farmer_puzzle_hash,
-            uint64(calculate_base_farmer_reward(prev_block.height) + prev_block.fees),
+            prev_transaction_block.height,
+            prev_transaction_block.farmer_puzzle_hash,
+            uint64(calculate_base_farmer_reward(prev_transaction_block.height) + prev_transaction_block.fees),
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
         expected_reward_coins.add(farmer_coin)
 
         # For the second block in the chain, don't go back further
-        if prev_block.height > 0:
-            curr_sb = sub_blocks.sub_block_record(prev_block.prev_hash)
-            while not curr_sb.is_block:
+        if prev_transaction_block.height > 0:
+            curr_b = blocks.block_record(prev_transaction_block.prev_hash)
+            while not curr_b.is_transaction_block:
                 expected_reward_coins.add(
                     create_pool_coin(
-                        curr_sb.height,
-                        curr_sb.pool_puzzle_hash,
-                        calculate_pool_reward(curr_sb.height),
+                        curr_b.height,
+                        curr_b.pool_puzzle_hash,
+                        calculate_pool_reward(curr_b.height),
                     )
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
-                        curr_sb.height,
-                        curr_sb.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr_sb.height),
+                        curr_b.height,
+                        curr_b.farmer_puzzle_hash,
+                        calculate_base_farmer_reward(curr_b.height),
                     )
                 )
-                curr_sb = sub_blocks.sub_block_record(curr_sb.prev_hash)
+                curr_b = blocks.block_record(curr_b.prev_hash)
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS
@@ -186,8 +190,8 @@ async def validate_block_body(
 
     # 11. Validate addition and removal roots
     root_error = validate_block_merkle_roots(
-        block.foliage_block.additions_root,
-        block.foliage_block.removals_root,
+        block.foliage_transaction_block.additions_root,
+        block.foliage_transaction_block.removals_root,
         additions + coinbase_additions,
         removals,
     )
@@ -206,7 +210,7 @@ async def validate_block_body(
     encoded_filter = bytes(bip158.GetEncoded())
     filter_hash = std_hash(encoded_filter)
 
-    if filter_hash != block.foliage_block.filter_hash:
+    if filter_hash != block.foliage_transaction_block.filter_hash:
         return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
     # 13. Check for duplicate outputs in additions
@@ -227,12 +231,12 @@ async def validate_block_body(
     elif fork_point_with_peak is not None:
         fork_sub_h = fork_point_with_peak
     else:
-        fork_sub_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks.sub_block_record(block.prev_header_hash))
+        fork_sub_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
     if fork_sub_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = await sub_blocks.get_sub_block_from_db(sub_blocks.height_to_hash(uint32(fork_sub_h)))
+        last_sb_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_sub_h)))
         assert last_sb_in_common is not None
         coin_store_reorg_height = last_sb_in_common.height
 
@@ -271,7 +275,7 @@ async def validate_block_body(
                 uint32(0),
                 False,
                 False,
-                block.foliage_block.timestamp,
+                block.foliage_transaction_block.timestamp,
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
@@ -296,7 +300,7 @@ async def validate_block_body(
                     uint32(0),
                     False,
                     (rem in coinbases_since_fork),
-                    block.foliage_block.timestamp,
+                    block.foliage_transaction_block.timestamp,
                 )
                 removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -354,7 +358,7 @@ async def validate_block_body(
             announcements,
             npc.condition_dict,
             prev_transaction_block_height,
-            block.foliage_block.timestamp,
+            block.foliage_transaction_block.timestamp,
         )
         if error:
             return error

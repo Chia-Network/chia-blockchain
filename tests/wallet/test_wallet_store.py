@@ -1,3 +1,4 @@
+# TODO: write tests for other stores
 # import asyncio
 # from pathlib import Path
 # from secrets import token_bytes
@@ -179,7 +180,7 @@
 #             )
 #             await store.add_block_record(br_3, True)
 #             assert len(await store.get_lca_path()) == 3
-#             await store.remove_blocks_from_path(1)
+#             await store.remove_block_records_from_path(1)
 #             assert len(await store.get_lca_path()) == 2
 #
 #             await store.rollback_lca_to_block(0)
