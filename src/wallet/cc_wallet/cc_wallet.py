@@ -401,8 +401,8 @@ class CCWallet:
 
         return full_spend
 
-    async def get_spendable_balance(self) -> uint64:
-        coins = await self.get_cc_spendable_coins()
+    async def get_spendable_balance(self, records=None) -> uint64:
+        coins = await self.get_cc_spendable_coins(records)
         amount = 0
         for record in coins:
             amount += record.coin.amount
@@ -432,10 +432,12 @@ class CCWallet:
 
         return uint64(addition_amount)
 
-    async def get_cc_spendable_coins(self) -> List[WalletCoinRecord]:
+    async def get_cc_spendable_coins(self, records=None) -> List[WalletCoinRecord]:
         result: List[WalletCoinRecord] = []
 
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
+        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+            self.id(), records
+        )
 
         for record in record_list:
             lineage = await self.get_lineage_proof_for_coin(record.coin)
