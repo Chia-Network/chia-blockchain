@@ -76,7 +76,7 @@ class WalletBlockStore:
 
         await cursor.close()
         cursor_2 = await self.db.execute(
-            "INSERT OR REPLACE INTO header_block_records VALUES(?, ?, ?, ?, ?, ?, ?,?)",
+            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?, ?, ?, ?,?)",
             (
                 header_block_record.header.header_hash.hex(),
                 header_block_record.header.prev_header_hash.hex(),
