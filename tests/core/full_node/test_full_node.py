@@ -671,9 +671,9 @@ class TestFullNodeProtocol:
         # Start >= End
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(4), uint32(4), False))
         assert res is not None
-        blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
-        assert len(blocks) == 1
-        assert blocks[0].header_hash == blocks[4].header_hash
+        fetched_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
+        assert len(fetched_blocks) == 1
+        assert fetched_blocks[0].header_hash == blocks[4].header_hash
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(5), uint32(4), False))
         assert res.type == ProtocolMessageTypes.reject_blocks.value
         # Invalid range
@@ -689,17 +689,17 @@ class TestFullNodeProtocol:
         # Ask without transactions
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), False))
 
-        blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
-        assert len(blocks) == 6
-        for b in blocks:
+        fetched_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
+        assert len(fetched_blocks) == 6
+        for b in fetched_blocks:
             assert b.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), True))
-        blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
-        assert len(blocks) == 6
-        assert blocks[-1].transactions_generator is not None
-        assert std_hash(blocks[-1]) == std_hash(blocks_t[-1])
+        fetched_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
+        assert len(fetched_blocks) == 6
+        assert fetched_blocks[-1].transactions_generator is not None
+        assert std_hash(fetched_blocks[-1]) == std_hash(blocks_t[-1])
 
     @pytest.mark.asyncio
     async def test_new_unfinished_block(self, wallet_nodes):

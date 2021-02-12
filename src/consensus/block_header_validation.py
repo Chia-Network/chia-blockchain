@@ -338,7 +338,7 @@ def validate_unfinished_header_block(
             else:
                 assert prev_b is not None
                 if prev_b.deficit == 0:
-                    # 2s. If prev sb had deficit 0, resets deficit to MIN_SUB_BLOCK_PER_CHALLENGE_BLOCK
+                    # 2s. If prev sb had deficit 0, resets deficit to MIN_BLOCK_PER_CHALLENGE_BLOCK
                     if sub_slot.reward_chain.deficit != constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                         log.error(
                             constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK,
@@ -420,7 +420,7 @@ def validate_unfinished_header_block(
             num_blocks += 1
             curr = blocks.block_record(curr.prev_hash)
         if num_blocks > constants.MAX_SUB_SLOT_BLOCKS:
-            return None, ValidationError(Err.TOO_MANY_SUB_BLOCKS)
+            return None, ValidationError(Err.TOO_MANY_BLOCKS)
 
     # If block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this block
