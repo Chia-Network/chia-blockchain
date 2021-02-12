@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 20:47\n"
+"PO-Revision-Date: 2021-02-12 12:21\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -138,7 +138,7 @@ msgstr "Lohkon VDF-iteraatiot"
 
 #: src/components/block/Block.jsx:329
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Lohko korkeudessa {0} Chian lohkoketjussa"
 
 #: src/components/fullNode/FullNode.jsx:340
 msgid "Block hash"
@@ -336,19 +336,19 @@ msgstr "Luo admin-lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:175
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Luo uusi värillinen kolikko"
 
 #: src/components/wallet/create/WalletCreate.jsx:251
 msgid "Create user wallet"
-msgstr ""
+msgstr "Luo käyttäjälle uusi lompakko"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr ""
+msgstr "Luo lompakko värillist varten"
 
 #: src/components/wallet/create/WalletCreate.jsx:187
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Luo lompakko olemassa olevaa värillistä varten"
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
@@ -478,7 +478,7 @@ msgstr "Farmari ei ole käynnissä"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "Farmarit ansaitsevat lohkopalkkioita ja transaktiopalkkioita varaamalla tyhjää levytilaa vertaisverkolle transaktioiden vahvistamiseksi. Farmisi näkyy täällä luotuasi plot-tiedostoja. <0>Katso lisää</0>"
 
 #: src/components/farm/Farm.tsx:13
 #: src/components/farm/FarmerStatus.tsx:27
@@ -924,15 +924,15 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "Pool Key"
-msgstr ""
+msgstr "Kimppapoolin avain"
 
 #: src/components/block/Block.jsx:250
 msgid "Pool Public Key"
-msgstr ""
+msgstr "Poolin julkinen avain"
 
 #: src/components/block/Block.jsx:258
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "Poolin Osoitetiiviste"
 
 #: src/components/block/Block.jsx:296
 msgid "Pool Reward Amount"
@@ -983,7 +983,7 @@ msgstr "RAM enimmäismäärä"
 
 #: src/components/wallet/Wallets.tsx:40
 msgid "RL Wallet"
-msgstr ""
+msgstr "Siirtorajoitettu Lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:125
 msgid "Rate Limited"
@@ -992,11 +992,11 @@ msgstr "Siirtorajoitettu"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr "Siirtorajoitettu Tiedot"
+msgstr "Siirtorajoitetetun Tiedot"
 
 #: src/components/wallet/create/WalletCreate.jsx:227
 msgid "Rate Limited Options"
-msgstr "Siirtorajoitettu Valinnat"
+msgstr "Siirtorajoitetun Valinnat"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
@@ -1054,7 +1054,7 @@ msgstr "Valitse Tarjous"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Valitse Väliaikaistyöhakemisto"
 
 #: src/components/wallet/create/WalletCreate.jsx:103
 msgid "Select Wallet Type"
@@ -1169,7 +1169,7 @@ msgstr "Prosessorisiivun Koko"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
-msgstr ""
+msgstr "Lähetä"
 
 #: src/components/fullNode/FullNode.jsx:154
 msgid "Synced"
@@ -1293,7 +1293,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:189
 msgid "Timestamp"
-msgstr ""
+msgstr "Aikaleima"
 
 #: src/components/wallet/WalletHistory.tsx:27
 msgid "To"
@@ -1315,23 +1315,23 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "Verkkoavaruuden Koko"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Plottitiedoston Koko:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:14
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Plottien Yhteiskoko"
 
 #: src/components/block/Block.jsx:222
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "VDF-iteraatioiden Määrä"
 
 #: src/components/fullNode/FullNode.jsx:213
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Iteraatioiden määrä lohkoketjun alusta asti"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
@@ -1371,11 +1371,11 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
-msgstr ""
+msgstr "Tyyppi"
 
 #: src/components/fullNode/FullNode.jsx:116
 msgid "Unfinished"
-msgstr ""
+msgstr "Kesken"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
@@ -1416,7 +1416,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:120
 msgid "Wallets"
-msgstr ""
+msgstr "Lompakot"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "Want to earn more Chia? Add more plots to your farm."
@@ -1428,7 +1428,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:203
 msgid "Weight"
-msgstr ""
+msgstr "Paino"
 
 #: src/components/block/Block.jsx:206
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
@@ -1448,7 +1448,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
-msgstr ""
+msgstr "Kyllä"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1469,29 +1469,29 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:108
 msgid "connections:"
-msgstr ""
+msgstr "yhteydet:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:102
 msgid "height:"
-msgstr ""
+msgstr "korkeus:"
 
 #: src/components/wallet/Wallets.tsx:96
 msgid "not synced"
-msgstr ""
+msgstr "ei synkronoitu"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:87
 msgid "status:"
-msgstr ""
+msgstr "tila:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:94
 msgid "synced"
-msgstr ""
+msgstr "synkronoitu"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:92
 msgid "syncing"
-msgstr ""
+msgstr "synkronoi"
 
