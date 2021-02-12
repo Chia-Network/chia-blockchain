@@ -37,7 +37,7 @@ class TestWalletRpc:
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         initial_funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]

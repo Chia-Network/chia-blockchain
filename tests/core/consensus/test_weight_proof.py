@@ -57,7 +57,7 @@ async def load_blocks_dont_validate(
 ]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
-    blocks: Dict[bytes32, BlockRecord] = {}
+    block_records: Dict[bytes32, BlockRecord] = {}
     sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = {}
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
@@ -88,15 +88,15 @@ async def load_blocks_dont_validate(
         )
 
         block_record = block_to_block_record(
-            test_constants, BlockCache(blocks, height_to_hash), required_iters, block, None
+            test_constants, BlockCache(block_records, height_to_hash), required_iters, block, None
         )
-        blocks[block.header_hash] = block_record
+        block_records[block.header_hash] = block_record
         height_to_hash[block.height] = block.header_hash
         header_cache[block.header_hash] = block.get_block_header()
         if block_record.sub_epoch_summary_included is not None:
             sub_epoch_summaries[block.height] = block_record.sub_epoch_summary_included
         prev_block = block
-    return header_cache, height_to_hash, blocks, sub_epoch_summaries
+    return header_cache, height_to_hash, block_records, sub_epoch_summaries
 
 
 async def _test_map_summaries(blocks, header_cache, height_to_hash, block_records, summaries):

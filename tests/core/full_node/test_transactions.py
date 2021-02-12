@@ -49,7 +49,7 @@ class TestTransactions:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         for i in range(num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
@@ -85,7 +85,7 @@ class TestTransactions:
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
 
         for i in range(num_blocks):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
@@ -126,7 +126,7 @@ class TestTransactions:
 
         # Farm another block
         for i in range(1, 8):
-            await full_node_api_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
@@ -162,7 +162,7 @@ class TestTransactions:
         await server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         for i in range(num_blocks):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         all_blocks = await full_node_api_0.get_all_full_blocks()
 

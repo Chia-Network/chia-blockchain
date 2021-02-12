@@ -45,7 +45,7 @@ class TestBlockStore:
             # Save/get block
             for block in blocks:
                 await bc.receive_block(block)
-                block = bc.block_record(block.header_hash)
+                block_record = bc.block_record(block.header_hash)
                 block_record_hh = block_record.header_hash
                 await store.add_full_block(block, block_record)
                 await store.add_full_block(block, block_record)
