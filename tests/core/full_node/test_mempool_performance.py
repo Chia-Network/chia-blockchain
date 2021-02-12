@@ -73,10 +73,10 @@ class XTestMempoolPerformance:
             await con.close()
 
         # blocks = bt.get_consecutive_blocks(3, blocks)
-        # await full_node_api_1.full_node.respond_block(full_node_protocol.respondsubblock(blocks[-3]))
+        # await full_node_api_1.full_node.respond_block(full_node_protocol.respondblock(blocks[-3]))
         #
         # for block in blocks[-2:]:
         #     start_t_2 = time.time()
-        #     await full_node_api_1.full_node.respond_block(full_node_protocol.respondsubblock(block))
+        #     await full_node_api_1.full_node.respond_block(full_node_protocol.respondblock(block))
         #     assert time.time() - start_t_2 < 1
 """

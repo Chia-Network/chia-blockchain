@@ -177,10 +177,10 @@ full_node:
   enable_upnp: True
 
   # If node is more than these blocks behind, will do a sync (long sync)
-  sync_sub_blocks_behind_threshold: 300
+  sync_blocks_behind_threshold: 300
 
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
-  short_sync_sub_blocks_behind_threshold: 20
+  short_sync_blocks_behind_threshold: 20
 
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30

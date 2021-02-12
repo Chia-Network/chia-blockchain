@@ -445,8 +445,8 @@ class Timelord:
                     self.total_infused += 1
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
                     if not self.last_state.can_infuse_block():
-                        log.warning("Too many sub-blocks, cannot infuse, discarding")
-                        # Too many sub blocks
+                        log.warning("Too many blocks, cannot infuse, discarding")
+                        # Too many blocks
                         return
                     overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
 
@@ -491,7 +491,7 @@ class Timelord:
                         height: uint32 = self.last_state.get_height() + 1
 
                     if height < 5:
-                        # Don't directly update our state for the first few sub-blocks, because we cannot validate
+                        # Don't directly update our state for the first few blocks, because we cannot validate
                         # whether the pre-farm is correct
                         return
 
@@ -517,7 +517,7 @@ class Timelord:
                     elif overflow and self.last_state.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                         if self.last_state.peak is not None:
                             assert self.last_state.subslot_end is None
-                            # This means the previous sub-block is also an overflow sub-block, and did not manage
+                            # This means the previous block is also an overflow block, and did not manage
                             # to lower the deficit, therefore we cannot lower it either. (new slot)
                             new_deficit = self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
                         else:

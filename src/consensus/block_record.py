@@ -21,10 +21,10 @@ class BlockRecord(Streamable):
     """
 
     header_hash: bytes32
-    prev_hash: bytes32  # Header hash of the previous sub-block
+    prev_hash: bytes32  # Header hash of the previous block
     height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
-    total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
+    total_iters: uint128  # Total number of VDF iterations since genesis, including this block
     signage_point_index: uint8
     challenge_vdf_output: ClassgroupElement  # This is the intermediary VDF output at ip_iters in challenge chain
     infused_challenge_vdf_output: Optional[

@@ -142,7 +142,7 @@ class WeightProofHandler:
         for idx, ses_height in enumerate(summary_heights):
             if ses_height > tip_rec.height:
                 break
-            # next sub block
+            # next block
             ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(ses_height))
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
                 self.log.error("error while building proof")
@@ -692,7 +692,7 @@ def _make_sub_epoch_data(
     sub_epoch_summary: SubEpochSummary,
 ) -> SubEpochData:
     reward_chain_hash: bytes32 = sub_epoch_summary.reward_chain_hash
-    #  Number of subblocks overflow in previous slot
+    #  Number of blocks overflow in previous slot
     previous_sub_epoch_overflows: uint8 = sub_epoch_summary.num_blocks_overflow  # total in sub epoch - expected
     #  New work difficulty and iterations per sub-slot
     sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters

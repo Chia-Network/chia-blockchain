@@ -106,11 +106,13 @@ class TestTransactions:
 
         current_blocks = await full_node_api.get_all_full_blocks()
         new_blocks = bt.get_consecutive_blocks(
-            1, block_list_input=current_blocks, transaction_data=tx.spend_bundle, guarantee_block=True
+            1, block_list_input=current_blocks, transaction_data=tx.spend_bundle, guarantee_transaction_block=True
         )
         last_block = new_blocks[-1:][0]
 
-        new_blocks_no_tx = bt.get_consecutive_blocks(1, block_list_input=current_blocks, guarantee_block=True)
+        new_blocks_no_tx = bt.get_consecutive_blocks(
+            1, block_list_input=current_blocks, guarantee_transaction_block=True
+        )
         last_block_no_tx = new_blocks_no_tx[-1:][0]
 
         result, error, fork = await full_node_api.full_node.blockchain.receive_block(last_block, None)
@@ -129,7 +131,7 @@ class TestTransactions:
         assert full_node_api.full_node.blockchain.get_peak_height() == 30
 
         new_blocks = bt.get_consecutive_blocks(
-            1, block_list_input=after_freeze_blocks, transaction_data=tx.spend_bundle, guarantee_block=True
+            1, block_list_input=after_freeze_blocks, transaction_data=tx.spend_bundle, guarantee_transaction_block=True
         )
         last_block = new_blocks[-1:][0]
         result, error, fork = await full_node_api.full_node.blockchain.receive_block(last_block, None)

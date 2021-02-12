@@ -29,7 +29,7 @@ class BlockStore:
             "  is_block tinyint, block blob)"
         )
 
-        # Sub block records
+        # Block records
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS block_records(header_hash "
             "text PRIMARY KEY, prev_hash text, height bigint,"
@@ -55,7 +55,7 @@ class BlockStore:
         self.block_cache = LRUCache(1000)
         return self
 
-    async def add_full_block(self, block: FullBlock, sub_block: BlockRecord) -> None:
+    async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(block.header_hash, block)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
@@ -75,8 +75,10 @@ class BlockStore:
                 block.header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.height,
-                bytes(sub_block),
-                None if sub_block.sub_epoch_summary_included is None else bytes(sub_block.sub_epoch_summary_included),
+                bytes(block_record),
+                None
+                if block_record.sub_epoch_summary_included is None
+                else bytes(block_record.sub_epoch_summary_included),
                 False,
                 block.is_transaction_block(),
             ),
@@ -192,7 +194,7 @@ class BlockStore:
         self,
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all blocks, as well as the header hash of the peak,
         if present.
         """
         cursor = await self.db.execute("SELECT * from block_records")
@@ -214,7 +216,7 @@ class BlockStore:
         stop: int,
     ) -> Dict[bytes32, BlockRecord]:
         """
-        Returns a dictionary with all sub blocks in range between start and stop
+        Returns a dictionary with all blocks in range between start and stop
         if present.
         """
 
@@ -256,7 +258,7 @@ class BlockStore:
 
     async def get_peak_height_dicts(self) -> Tuple[Dict[uint32, bytes32], Dict[uint32, SubEpochSummary]]:
         """
-        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        Returns a dictionary with all blocks, as well as the header hash of the peak,
         if present.
         """
 

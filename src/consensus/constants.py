@@ -7,8 +7,8 @@ from src.util.ints import uint64, uint32, uint8
 @dataclasses.dataclass(frozen=True)
 class ConsensusConstants:
     SLOT_BLOCKS_TARGET: uint32  # How many blocks to target per sub-slot
-    MIN_BLOCKS_PER_CHALLENGE_BLOCK: uint8  # How many sub-blocks must be created per slot (to make challenge sb)
-    # Max number of sub-blocks that can be infused into a sub-slot.
+    MIN_BLOCKS_PER_CHALLENGE_BLOCK: uint8  # How many blocks must be created per slot (to make challenge sb)
+    # Max number of blocks that can be infused into a sub-slot.
     # Note: this must be less than SUB_EPOCH_BLOCKS/2, and > SLOT_BLOCKS_TARGET
     MAX_SUB_SLOT_BLOCKS: uint32
     NUM_SPS_SUB_SLOT: uint32  # The number of signage points per sub-slot (including the 0th sp at the sub-slot start)
@@ -16,8 +16,8 @@ class ConsensusConstants:
     SUB_SLOT_ITERS_STARTING: uint64  # The sub_slot_iters for the first epoch
     DIFFICULTY_STARTING: uint64  # The difficulty for the first epoch
     DIFFICULTY_FACTOR: uint32  # The maximum factor by which difficulty and sub_slot_iters can change per epoch
-    SUB_EPOCH_BLOCKS: uint32  # The number of sub-blocks per sub-epoch
-    EPOCH_BLOCKS: uint32  # The number of sub-blocks per sub-epoch, must be a multiple of SUB_EPOCH_BLOCKS
+    SUB_EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch
+    EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch, must be a multiple of SUB_EPOCH_BLOCKS
 
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)

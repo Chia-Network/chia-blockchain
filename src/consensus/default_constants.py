@@ -12,8 +12,8 @@ testnet_kwargs = {
     "DIFFICULTY_STARTING": 2 ** 24,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    "SUB_EPOCH_BLOCKS": 384,  # The number of sub-blocks per sub-epoch, mainnet 284
-    "EPOCH_BLOCKS": 384 * 2,  # The number of sub-blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
+    "SUB_EPOCH_BLOCKS": 384,  # The number of blocks per sub-epoch, mainnet 284
+    "EPOCH_BLOCKS": 384 * 2,  # The number of blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
@@ -55,7 +55,7 @@ testnet_kwargs = {
     "BLOCKS_CACHE_SIZE": 5000,  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 3*MAX_SUB_SLOT_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
-    "INITIAL_FREEZE_PERIOD": 10000,  # Transaction are disabled first 10000 sub blocks
+    "INITIAL_FREEZE_PERIOD": 10000,  # Transaction are disabled first 10000 blocks
 }
 
 

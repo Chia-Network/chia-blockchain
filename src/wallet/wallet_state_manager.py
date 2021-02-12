@@ -478,15 +478,15 @@ class WalletStateManager:
             trade_additions,
         ) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
-        sub_block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(
+        block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(
             self.blockchain.height_to_hash(height)
         )
-        assert sub_block is not None
+        assert block is not None
 
         pool_rewards = set()
         farmer_rewards = set()
 
-        prev = await self.blockchain.get_block_record_from_db(sub_block.prev_hash)
+        prev = await self.blockchain.get_block_record_from_db(block.prev_hash)
         # [sub 1] [sub 2] [block 3] [sub 4] [sub 5] [block6]
         # [block 6] will contain rewards for [sub 1] [sub 2] [block 3]
         while prev is not None:

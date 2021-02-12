@@ -55,7 +55,7 @@ class CoinStore:
 
     async def new_block(self, block: FullBlock):
         """
-        Only called for sub-blocks which are blocks (and thus have rewards and transactions)
+        Only called for blocks which are blocks (and thus have rewards and transactions)
         """
         if block.is_transaction_block() is False:
             return

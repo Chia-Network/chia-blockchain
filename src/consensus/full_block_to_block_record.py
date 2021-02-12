@@ -18,7 +18,7 @@ from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 
 def block_to_block_record(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     required_iters: uint64,
     full_block: Optional[Union[FullBlock, HeaderBlock]],
     header_block: Optional[HeaderBlock],
@@ -33,11 +33,11 @@ def block_to_block_record(
         prev_b: Optional[BlockRecord] = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
     else:
-        prev_b = sub_blocks.block_record(block.prev_header_hash)
+        prev_b = blocks.block_record(block.prev_header_hash)
         assert prev_b is not None
         sub_slot_iters = get_next_sub_slot_iters(
             constants,
-            sub_blocks,
+            blocks,
             prev_b.prev_hash,
             prev_b.height,
             prev_b.sub_slot_iters,
@@ -96,9 +96,9 @@ def block_to_block_record(
         assert len(block.finished_sub_slots) > 0
         ses = make_sub_epoch_summary(
             constants,
-            sub_blocks,
+            blocks,
             block.height,
-            sub_blocks.block_record(prev_b.prev_hash),
+            blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
@@ -117,9 +117,9 @@ def block_to_block_record(
         icc_output = None
 
     prev_transaction_block_height = uint32(0)
-    curr: Optional[BlockRecord] = sub_blocks.try_block_record(block.prev_header_hash)
+    curr: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)
     while curr is not None and not curr.is_transaction_block:
-        curr = sub_blocks.try_block_record(curr.prev_hash)
+        curr = blocks.try_block_record(curr.prev_hash)
 
     if curr is not None and curr.is_transaction_block:
         prev_transaction_block_height = curr.height

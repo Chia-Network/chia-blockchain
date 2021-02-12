@@ -101,7 +101,7 @@ class RejectBlocks(Streamable):
 @dataclass(frozen=True)
 @streamable
 class RespondBlock(Streamable):
-    sub_block: FullBlock
+    block: FullBlock
 
 
 @dataclass(frozen=True)

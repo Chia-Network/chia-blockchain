@@ -13,13 +13,13 @@ def calculate_deficit(
     num_finished_sub_slots: int,
 ) -> uint8:
     """
-    Returns the deficit of the sub-block to be created at height.
+    Returns the deficit of the block to be created at height.
 
     Args:
         constants: consensus constants being used for this chain
-        height: sub-block height of the block that we care about
-        prev_b: previous sub-block
-        overflow: whether or not this is an overflow sub-block
+        height: block height of the block that we care about
+        prev_b: previous block
+        overflow: whether or not this is an overflow block
         num_finished_sub_slots: the number of finished slots between infusion points of prev and current
     """
     if height == 0:
@@ -31,7 +31,7 @@ def calculate_deficit(
             # Prev sb must be an overflow sb. However maybe it's in a different sub-slot
             if overflow:
                 if num_finished_sub_slots > 0:
-                    # We are an overflow sub-block, but in a new sub-slot, so we can decrease the deficit
+                    # We are an overflow block, but in a new sub-slot, so we can decrease the deficit
                     return uint8(prev_deficit - 1)
                 # Still overflowed, so we cannot decrease the deficit
                 return uint8(prev_deficit)

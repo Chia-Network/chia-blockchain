@@ -41,7 +41,7 @@ class FullNodeSimulator(FullNodeAPI):
         return blocks
 
     @api_request
-    async def farm_new_block(self, request: FarmNewBlockProtocol):
+    async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):
         await self.lock.acquire()
         try:
             self.log.info("Farming new block!")
@@ -63,7 +63,7 @@ class FullNodeSimulator(FullNodeAPI):
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
-                guarantee_block=True,
+                guarantee_transaction_block=True,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
@@ -113,7 +113,7 @@ class FullNodeSimulator(FullNodeAPI):
             pool_reward_puzzle_hash=coinbase_ph,
             block_list_input=current_blocks[:old_index],
             force_overflow=True,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             seed=32 * b"1",
         )
 

@@ -15,7 +15,7 @@ def make_parser(parser):
         "-d",
         "--delta-block-height",
         help="Compare a block X blocks older."
-        + "Defaults to 192 sub-blocks (~1 hour) and Peak sub-block as the starting block."
+        + "Defaults to 192 blocks (~1 hour) and Peak block as the starting block."
         + "Use --start BLOCK_HEIGHT to specify starting block",
         type=str,
         default="192",
@@ -23,7 +23,7 @@ def make_parser(parser):
     parser.add_argument(
         "-s",
         "--start",
-        help="Newest block used to calculate estimated total network space. Defaults to Peak sub-block.",
+        help="Newest block used to calculate estimated total network space. Defaults to Peak block.",
         type=str,
         default="",
     )
@@ -60,7 +60,7 @@ async def netstorge_async(args, parser):
             if args.start == "":
                 blockchain_state = await client.get_blockchain_state()
                 if blockchain_state["peak"] is None:
-                    print("No sub-blocks in blockchain")
+                    print("No blocks in blockchain")
                     client.close()
                     await client.await_closed()
                     return None
@@ -69,7 +69,7 @@ async def netstorge_async(args, parser):
             else:
                 newer_block = await client.get_block_record(hexstr_to_bytes(args.start))
                 if newer_block is None:
-                    print("Sub block header hash", args.start, "not found.")
+                    print("Block header hash", args.start, "not found.")
                     client.close()
                     await client.await_closed()
                     return None
@@ -84,15 +84,15 @@ async def netstorge_async(args, parser):
                 newer_block_header.header_hash, older_block_header.header_hash
             )
             print(
-                "Older Sub Block\n"
-                f"Sub Block Height: {older_block_header.height}\n"
+                "Older Block\n"
+                f"Block Height: {older_block_header.height}\n"
                 f"Weight:           {older_block_header.weight}\n"
                 f"VDF Iterations:   {older_block_header.total_iters}\n"
                 f"Header Hash:      0x{older_block_header.header_hash}\n"
             )
             print(
-                "Newer Sub Block\n"
-                f"Sub Block Height: {newer_block_header.height}\n"
+                "Newer Block\n"
+                f"Block Height: {newer_block_header.height}\n"
                 f"Weight:           {newer_block_header.weight}\n"
                 f"VDF Iterations:   {newer_block_header.total_iters}\n"
                 f"Header Hash:      0x{newer_block_header.header_hash}\n"

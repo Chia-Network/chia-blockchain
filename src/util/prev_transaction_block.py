@@ -7,12 +7,12 @@ from src.util.ints import uint128
 
 def get_prev_transaction_block(
     curr: BlockRecord,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     total_iters_sp: uint128,
 ) -> Tuple[bool, BlockRecord]:
     prev_transaction_block = curr
     while not curr.is_transaction_block:
-        curr = sub_blocks.block_record(curr.prev_hash)
+        curr = blocks.block_record(curr.prev_hash)
     if total_iters_sp > curr.total_iters:
         prev_transaction_block = curr
         is_transaction_block = True

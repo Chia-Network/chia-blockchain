@@ -298,7 +298,7 @@ class FullNodeAPI:
 
     @api_request
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
-        self.log.warning("Received unsolicited/late sub-blocks")
+        self.log.warning("Received unsolicited/late blocks")
         return None
 
     @api_request
@@ -312,7 +312,7 @@ class FullNodeAPI:
         Receive a full block from a peer full node (or ourselves).
         """
 
-        self.log.warning(f"Received unsolicited/late sub-block from peer {peer.get_peer_info()}")
+        self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_info()}")
         return None
 
     @api_request
@@ -659,7 +659,7 @@ class FullNodeAPI:
 
             prev_b: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
 
-            # Finds the previous sub block from the signage point, ensuring that the reward chain VDF is correct
+            # Finds the previous block from the signage point, ensuring that the reward chain VDF is correct
             if prev_b is not None:
                 if request.signage_point_index == 0:
                     if pos_sub_slot is None:
@@ -683,8 +683,8 @@ class FullNodeAPI:
                         break
                     if prev_b.finished_reward_slot_hashes is not None and len(prev_b.finished_reward_slot_hashes) > 0:
                         if prev_b.finished_reward_slot_hashes[-1] == rc_challenge:
-                            # This sub-block includes a sub-slot which is where our SP vdf starts. Go back one more
-                            # to find the prev sub block
+                            # This block includes a sub-slot which is where our SP vdf starts. Go back one more
+                            # to find the prev block
                             prev_b = self.full_node.blockchain.try_block_record(prev_b.prev_hash)
                             found = True
                             break
@@ -703,7 +703,7 @@ class FullNodeAPI:
                     and pos_sub_slot is not None
                     and finished_sub_slots[-1] != pos_sub_slot[0]
                 ):
-                    self.log.error("Have different sub-slots than is required to farm this sub-block")
+                    self.log.error("Have different sub-slots than is required to farm this block")
                     return None
             except ValueError as e:
                 self.log.warning(f"Value Error: {e}")
@@ -744,7 +744,7 @@ class FullNodeAPI:
                 required_iters,
             )
 
-            self.log.info("Starting to make the unfinished sub-block")
+            self.log.info("Starting to make the unfinished block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
@@ -766,7 +766,7 @@ class FullNodeAPI:
                 prev_b,
                 finished_sub_slots,
             )
-            self.log.info("Made the unfinished sub-block")
+            self.log.info("Made the unfinished block")
             if prev_b is not None:
                 height: uint32 = uint32(prev_b.height + 1)
             else:

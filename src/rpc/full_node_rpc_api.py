@@ -174,7 +174,7 @@ class FullNodeRpcApi:
                 # Fetch from DB
                 record = await self.service.blockchain.block_store.get_block_record(header_hash)
             if record is None:
-                raise ValueError(f"Sub block {header_hash.hex()} does not exist")
+                raise ValueError(f"Block {header_hash.hex()} does not exist")
 
             records.append(record)
         return {"block_records": records}
@@ -186,16 +186,16 @@ class FullNodeRpcApi:
         header_height = uint32(int(height))
         peak_height = self.service.blockchain.get_peak_height()
         if peak_height is None or header_height > peak_height:
-            raise ValueError(f"Sub block height {height} not found in chain")
+            raise ValueError(f"Block height {height} not found in chain")
         header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash(header_height)
         if header_hash is None:
-            raise ValueError(f"Sub block hash {height} not found in chain")
+            raise ValueError(f"Block hash {height} not found in chain")
         record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
-            raise ValueError(f"Sub block {header_hash} does not exist")
+            raise ValueError(f"Block {header_hash} does not exist")
         return {"block_record": record}
 
     async def get_block_record(self, request: Dict):
@@ -208,7 +208,7 @@ class FullNodeRpcApi:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
-            raise ValueError(f"Sub block {header_hash.hex()} does not exist")
+            raise ValueError(f"Block {header_hash.hex()} does not exist")
 
         return {"block_record": record}
 

@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 # noinspection PyCallByClass
 def validate_unfinished_header_block(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
     expected_difficulty: uint64,
@@ -48,16 +48,16 @@ def validate_unfinished_header_block(
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
 
-    This method is meant to validate only the unfinished part of the sub-block. However, the finished_sub_slots
-    refers to all sub-slots that were finishes from the previous sub-block's infusion point, up to this sub-blocks
-    infusion point. Therefore, in the case where this is an overflow sub-block, and the last sub-slot is not yet
+    This method is meant to validate only the unfinished part of the block. However, the finished_sub_slots
+    refers to all sub-slots that were finishes from the previous block's infusion point, up to this blocks
+    infusion point. Therefore, in the case where this is an overflow block, and the last sub-slot is not yet
     released, header_block.finished_sub_slots will be missing one sub-slot. In this case,
     skip_overflow_last_ss_validation must be set to True. This will skip validation of end of slots, sub-epochs,
     and lead to other small tweaks in validation.
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
 
-    prev_b = sub_blocks.try_block_record(header_block.prev_header_hash)
+    prev_b = blocks.try_block_record(header_block.prev_header_hash)
     genesis_block = prev_b is None
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
@@ -87,7 +87,7 @@ def validate_unfinished_header_block(
                     constants,
                     prev_b.height,
                     prev_b.deficit,
-                    sub_blocks,
+                    blocks,
                     prev_b.prev_hash,
                     False,
                 )
@@ -98,7 +98,7 @@ def validate_unfinished_header_block(
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: Optional[bytes32] = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
-        # Finished a slot(s) since previous block. The first sub-slot must have at least one sub-block, and all
+        # Finished a slot(s) since previous block. The first sub-slot must have at least one block, and all
         # subsequent sub-slots must be empty
         for finished_sub_slot_n, sub_slot in enumerate(header_block.finished_sub_slots):
             # Start of slot challenge is fetched from SP
@@ -113,7 +113,7 @@ def validate_unfinished_header_block(
                     assert prev_b is not None
                     curr: BlockRecord = prev_b
                     while not curr.first_in_sub_slot:
-                        curr = sub_blocks.block_record(curr.prev_hash)
+                        curr = blocks.block_record(curr.prev_hash)
                     assert curr.finished_challenge_slot_hashes is not None
 
                     # 2b. check sub-slot challenge hash for non-genesis block
@@ -139,13 +139,13 @@ def validate_unfinished_header_block(
                 icc_challenge_hash: Optional[bytes32] = None
                 icc_vdf_input = None
                 if prev_b.deficit < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
-                    # There should be no ICC chain if the last sub block's deficit is 16
+                    # There should be no ICC chain if the last block's deficit is 16
                     # Prev sb's deficit is 0, 1, 2, 3, or 4
                     if finished_sub_slot_n == 0:
                         # This is the first sub slot after the last sb, which must have deficit 1-4, and thus an ICC
                         curr = prev_b
                         while not curr.is_challenge_block(constants) and not curr.first_in_sub_slot:
-                            curr = sub_blocks.block_record(curr.prev_hash)
+                            curr = blocks.block_record(curr.prev_hash)
                         if curr.is_challenge_block(constants):
                             icc_challenge_hash = curr.challenge_block_info_hash
                             icc_iters_committed = uint64(prev_b.sub_slot_iters - curr.ip_iters(constants))
@@ -159,7 +159,7 @@ def validate_unfinished_header_block(
                         else:
                             icc_vdf_input = prev_b.infused_challenge_vdf_output
                     else:
-                        # This is not the first sub slot after the last sub block, so we might not have an ICC
+                        # This is not the first sub slot after the last block, so we might not have an ICC
                         if (
                             header_block.finished_sub_slots[finished_sub_slot_n - 1].reward_chain.deficit
                             < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
@@ -384,9 +384,9 @@ def validate_unfinished_header_block(
                 # 3c. Check the actual sub-epoch is correct
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     constants,
-                    sub_blocks,
+                    blocks,
                     height,
-                    sub_blocks.block_record(prev_b.prev_hash),
+                    blocks.block_record(prev_b.prev_hash),
                     expected_difficulty if can_finish_epoch else None,
                     expected_sub_slot_iters if can_finish_epoch else None,
                 )
@@ -411,24 +411,24 @@ def validate_unfinished_header_block(
                         ),
                     )
 
-    # 4. Check if the number of sub-blocks is less than the max
+    # 4. Check if the number of blocks is less than the max
     if not new_sub_slot and not genesis_block:
         assert prev_b is not None
-        num_blocks = 2  # This includes the current sub-block and the prev sub-block
+        num_blocks = 2  # This includes the current block and the prev block
         curr = prev_b
         while not curr.first_in_sub_slot:
             num_blocks += 1
-            curr = sub_blocks.block_record(curr.prev_hash)
+            curr = blocks.block_record(curr.prev_hash)
         if num_blocks > constants.MAX_SUB_SLOT_BLOCKS:
             return None, ValidationError(Err.TOO_MANY_SUB_BLOCKS)
 
-    # If sub_block state is correct, we should always find a challenge here
-    # This computes what the challenge should be for this sub-block
+    # If block state is correct, we should always find a challenge here
+    # This computes what the challenge should be for this block
 
     challenge = get_block_challenge(
         constants,
         header_block,
-        sub_blocks,
+        blocks,
         genesis_block,
         overflow,
         skip_overflow_last_ss_validation,
@@ -463,7 +463,7 @@ def validate_unfinished_header_block(
     if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
         return None, ValidationError(Err.INVALID_SP_INDEX)
 
-    # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
+    # Note that required iters might be from the previous slot (if we are in an overflow block)
     required_iters: uint64 = calculate_iterations_quality(
         q_str,
         header_block.reward_chain_block.proof_of_space.size,
@@ -563,7 +563,7 @@ def validate_unfinished_header_block(
         sub_slots_to_pass_in,
         overflow,
         prev_b,
-        sub_blocks,
+        blocks,
         sp_total_iters,
         sp_iters,
     )
@@ -601,7 +601,7 @@ def validate_unfinished_header_block(
                 assert prev_b is not None
                 curr = prev_b
                 while not curr.first_in_sub_slot:
-                    curr = sub_blocks.block_record(curr.prev_hash)
+                    curr = blocks.block_record(curr.prev_hash)
                 assert curr.finished_reward_slot_hashes is not None
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
@@ -654,9 +654,9 @@ def validate_unfinished_header_block(
         # Finds the previous block
         curr = prev_b
         while not curr.is_transaction_block:
-            curr = sub_blocks.block_record(curr.prev_hash)
+            curr = blocks.block_record(curr.prev_hash)
 
-        # The first sub-block to have an sp > the last block's infusion iters, is a block
+        # The first block to have an sp > the last tx block's infusion iters, is a tx block
         if overflow:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - expected_sub_slot_iters)
         else:
@@ -668,7 +668,7 @@ def validate_unfinished_header_block(
         ):
             return None, ValidationError(Err.INVALID_IS_TRANSACTION_BLOCK)
 
-    # 16. Check foliage sub block signature by plot key
+    # 16. Check foliage block signature by plot key
     if not AugSchemeMPL.verify(
         header_block.reward_chain_block.proof_of_space.plot_public_key,
         header_block.foliage.foliage_block_data.get_hash(),
@@ -685,7 +685,7 @@ def validate_unfinished_header_block(
         ):
             return None, ValidationError(Err.INVALID_PLOT_SIGNATURE)
 
-    # 18. Check unfinished reward chain sub block hash
+    # 18. Check unfinished reward chain block hash
     if (
         header_block.reward_chain_block.get_hash()
         != header_block.foliage.foliage_block_data.unfinished_reward_block_hash
@@ -699,7 +699,7 @@ def validate_unfinished_header_block(
     ):
         return None, ValidationError(Err.OLD_POOL_TARGET)
 
-    # 20a. Check pre-farm puzzle hashes for genesis sub-block.
+    # 20a. Check pre-farm puzzle hashes for genesis block.
     if genesis_block:
         if (
             header_block.foliage.foliage_block_data.pool_target.puzzle_hash
@@ -713,7 +713,7 @@ def validate_unfinished_header_block(
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
     else:
-        # 20b. Check pool target signature. Should not check this for genesis sub-block.
+        # 20b. Check pool target signature. Should not check this for genesis block.
         if not AugSchemeMPL.verify(
             header_block.reward_chain_block.proof_of_space.pool_public_key,
             bytes(header_block.foliage.foliage_block_data.pool_target),
@@ -747,7 +747,7 @@ def validate_unfinished_header_block(
             # 24b. Check prev block hash for non-genesis
             curr_b: BlockRecord = prev_b
             while not curr_b.is_transaction_block:
-                curr_b = sub_blocks.block_record(curr_b.prev_hash)
+                curr_b = blocks.block_record(curr_b.prev_hash)
             if not header_block.foliage_transaction_block.prev_transaction_block_hash == curr_b.header_hash:
                 log.error(
                     f"Prev BH: {header_block.foliage_transaction_block.prev_transaction_block_hash} "
@@ -763,11 +763,11 @@ def validate_unfinished_header_block(
         # 26. The timestamp in Foliage Block must comply with the timestamp rules
         if prev_b is not None:
             last_timestamps: List[uint64] = []
-            curr_b = sub_blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
+            curr_b = blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
             assert curr_b.timestamp is not None
             while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
                 last_timestamps.append(curr_b.timestamp)
-                fetched: Optional[BlockRecord] = sub_blocks.try_block_record(curr_b.prev_transaction_block_hash)
+                fetched: Optional[BlockRecord] = blocks.try_block_record(curr_b.prev_transaction_block_hash)
                 if not fetched:
                     break
                 curr_b = fetched
@@ -785,14 +785,14 @@ def validate_unfinished_header_block(
 
 def validate_finished_header_block(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     header_block: HeaderBlock,
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
-    Fully validates the header of a sub-block. A header block is the same  as a full block, but
+    Fully validates the header of a block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
     """
     unfinished_header_block = UnfinishedHeaderBlock(
@@ -807,7 +807,7 @@ def validate_finished_header_block(
 
     required_iters, validate_unfinished_err = validate_unfinished_header_block(
         constants,
-        sub_blocks,
+        blocks,
         unfinished_header_block,
         check_filter,
         expected_difficulty,
@@ -825,7 +825,7 @@ def validate_finished_header_block(
         prev_b: Optional[BlockRecord] = None
         genesis_block = True
     else:
-        prev_b = sub_blocks.block_record(header_block.prev_header_hash)
+        prev_b = blocks.block_record(header_block.prev_header_hash)
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
 
     ip_iters: uint64 = calculate_ip_iters(
@@ -836,7 +836,7 @@ def validate_finished_header_block(
     )
     if not genesis_block:
         assert prev_b is not None
-        # 27. Check sub-block height
+        # 27. Check block height
         if header_block.height != prev_b.height + 1:
             return None, ValidationError(Err.INVALID_HEIGHT)
 
@@ -876,16 +876,16 @@ def validate_finished_header_block(
     if new_sub_slot:
         cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
     else:
-        # Not first sub-block in slot
+        # Not first block in slot
         if genesis_block:
             # genesis block
             cc_vdf_challenge = constants.GENESIS_CHALLENGE
         else:
             assert prev_b is not None
-            # Not genesis block, go back to first sub-block in slot
+            # Not genesis block, go back to first block in slot
             curr = prev_b
             while curr.finished_challenge_slot_hashes is None:
-                curr = sub_blocks.block_record(curr.prev_hash)
+                curr = blocks.block_record(curr.prev_hash)
             cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
     cc_target_vdf_info = VDFInfo(
@@ -967,7 +967,7 @@ def validate_finished_header_block(
                     icc_vdf_input = prev_b.infused_challenge_vdf_output
                 curr = prev_b
                 while curr.finished_infused_challenge_slot_hashes is None and not curr.is_challenge_block(constants):
-                    curr = sub_blocks.block_record(curr.prev_hash)
+                    curr = blocks.block_record(curr.prev_hash)
 
                 if curr.is_challenge_block(constants):
                     icc_vdf_challenge = curr.challenge_block_info_hash

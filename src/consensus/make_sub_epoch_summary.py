@@ -26,22 +26,22 @@ log = logging.getLogger(__name__)
 
 def make_sub_epoch_summary(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     blocks_included_height: uint32,
     prev_prev_block: BlockRecord,
     new_difficulty: Optional[uint64],
     new_sub_slot_iters: Optional[uint64],
 ) -> SubEpochSummary:
     """
-    Creates a sub-epoch-summary object, assuming that the first sub-block in the new sub-epoch is at height
-    "blocks_included_height". Prev_prev_b is the second to last sub block in the previous sub-epoch. On a new epoch,
+    Creates a sub-epoch-summary object, assuming that the first block in the new sub-epoch is at height
+    "blocks_included_height". Prev_prev_b is the second to last block in the previous sub-epoch. On a new epoch,
     new_difficulty and new_sub_slot_iters are also added.
 
     Args:
         constants: consensus constants being used for this chain
-        sub_blocks: dictionary from header hash to SBR of all included SBR
-        blocks_included_height: sub_block height in which the SES will be included
-        prev_prev_block: second to last sub-block in epoch
+        blocks: dictionary from header hash to SBR of all included SBR
+        blocks_included_height: block height in which the SES will be included
+        prev_prev_block: second to last block in epoch
         new_difficulty: difficulty in new epoch
         new_sub_slot_iters: sub slot iters in new epoch
     """
@@ -57,7 +57,7 @@ def make_sub_epoch_summary(
         )
     curr: BlockRecord = prev_prev_block
     while curr.sub_epoch_summary_included is None:
-        curr = sub_blocks.block_record(curr.prev_hash)
+        curr = blocks.block_record(curr.prev_hash)
     assert curr is not None
     assert curr.finished_reward_slot_hashes is not None
     prev_ses = curr.sub_epoch_summary_included.get_hash()
@@ -72,21 +72,21 @@ def make_sub_epoch_summary(
 
 def next_sub_epoch_summary(
     constants: ConsensusConstants,
-    sub_blocks: BlockchainInterface,
+    blocks: BlockchainInterface,
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
     can_finish_soon: bool = False,
 ) -> Optional[SubEpochSummary]:
     """
-    Returns the sub-epoch summary that can be included in the sub-block after block. If it should include one. Block
-    must be eligible to be the last sub-block in the epoch. If not, returns None. Assumes that there is a new slot
+    Returns the sub-epoch summary that can be included in the block after block. If it should include one. Block
+    must be eligible to be the last block in the epoch. If not, returns None. Assumes that there is a new slot
     ending after block.
 
     Args:
         constants: consensus constants being used for this chain
-        sub_blocks: interface to cached SBR
+        blocks: interface to cached SBR
         required_iters: required iters of the proof of space in block
-        block: the (potentially) last sub-block in the new epoch
+        block: the (potentially) last block in the new epoch
         can_finish_soon: this is useful when sending SES to timelords. We might not be able to finish it, but we will
             soon (within MAX_SUB_SLOT_BLOCKS)
 
@@ -94,7 +94,7 @@ def next_sub_epoch_summary(
         object: the new sub-epoch summary
     """
     signage_point_index = block.reward_chain_block.signage_point_index
-    prev_b: Optional[BlockRecord] = sub_blocks.try_block_record(block.prev_header_hash)
+    prev_b: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)
     if prev_b is None or prev_b.height == 0:
         return None
 
@@ -106,7 +106,7 @@ def next_sub_epoch_summary(
     # This is the ssi of the current block
     sub_slot_iters = get_next_sub_slot_iters(
         constants,
-        sub_blocks,
+        blocks,
         prev_b.prev_hash,
         prev_b.height,
         prev_b.sub_slot_iters,
@@ -126,7 +126,7 @@ def next_sub_epoch_summary(
         constants,
         uint32(prev_b.height + 1),
         deficit,
-        sub_blocks,
+        blocks,
         prev_b.header_hash if prev_b is not None else None,
         can_finish_soon,
     )
@@ -144,10 +144,10 @@ def next_sub_epoch_summary(
         ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
         next_difficulty = get_next_difficulty(
             constants,
-            sub_blocks,
+            blocks,
             block.prev_header_hash,
             uint32(prev_b.height + 1),
-            uint64(prev_b.weight - sub_blocks.block_record(prev_b.prev_hash).weight),
+            uint64(prev_b.weight - blocks.block_record(prev_b.prev_hash).weight),
             deficit,
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
@@ -155,7 +155,7 @@ def next_sub_epoch_summary(
         )
         next_sub_slot_iters = get_next_sub_slot_iters(
             constants,
-            sub_blocks,
+            blocks,
             block.prev_header_hash,
             uint32(prev_b.height + 1),
             sub_slot_iters,
@@ -167,7 +167,7 @@ def next_sub_epoch_summary(
 
     return make_sub_epoch_summary(
         constants,
-        sub_blocks,
+        blocks,
         uint32(prev_b.height + 2),
         prev_b,
         next_difficulty,

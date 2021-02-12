@@ -230,7 +230,7 @@ class BlockTools:
         time_per_block: Optional[float] = None,
         force_overflow: bool = False,
         skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
-        guarantee_block: bool = False,  # Force that this sub-block must be a block
+        guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -284,8 +284,8 @@ class BlockTools:
             curr = blocks[curr.prev_hash]
             blocks_added_this_sub_slot += 1
 
-        finished_sub_slots_at_sp: List[EndOfSubSlotBundle] = []  # Sub-slots since last sub block, up to signage point
-        finished_sub_slots_at_ip: List[EndOfSubSlotBundle] = []  # Sub-slots since last sub block, up to infusion point
+        finished_sub_slots_at_sp: List[EndOfSubSlotBundle] = []  # Sub-slots since last block, up to signage point
+        finished_sub_slots_at_ip: List[EndOfSubSlotBundle] = []  # Sub-slots since last block, up to infusion point
         sub_slot_iters: uint64 = latest_block.sub_slot_iters  # The number of iterations in one sub-slot
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(constants)
@@ -352,14 +352,14 @@ class BlockTools:
                             break
                         if same_slot_as_last:
                             if signage_point_index == latest_block.signage_point_index:
-                                # Ignore this sub-block because it's in the past
+                                # Ignore this block because it's in the past
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
                         if transaction_data_included:
                             transaction_data = None
                         assert start_timestamp is not None
-                        full_block, sub_block_record = get_full_block_and_sub_record(
+                        full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -384,21 +384,18 @@ class BlockTools:
                             latest_block,
                             seed,
                         )
-                        if sub_block_record.is_transaction_block:
+                        if block_record.is_transaction_block:
                             transaction_data_included = True
                         else:
-                            if guarantee_block:
+                            if guarantee_transaction_block:
                                 continue
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
                         blocks_added_this_sub_slot += 1
 
-                        blocks[full_block.header_hash] = sub_block_record
-                        log.info(
-                            f"Created block {sub_block_record.height} ove=False, iters "
-                            f"{sub_block_record.total_iters}"
-                        )
+                        blocks[full_block.header_hash] = block_record
+                        log.info(f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -409,12 +406,12 @@ class BlockTools:
             # Finish the end of sub-slot and try again next sub-slot
             # End of sub-slot logic
             if len(finished_sub_slots_at_ip) == 0:
-                # Sub block has been created within this sub-slot
+                # Block has been created within this sub-slot
                 eos_iters: uint64 = uint64(sub_slot_iters - (latest_block.total_iters - sub_slot_start_total_iters))
                 cc_input: ClassgroupElement = latest_block.challenge_vdf_output
                 rc_challenge: bytes32 = latest_block.reward_infusion_new_challenge
             else:
-                # No sub-blocks were successfully created within this sub-slot
+                # No blocks were successfully created within this sub-slot
                 eos_iters = sub_slot_iters
                 cc_input = ClassgroupElement.get_default_element()
                 rc_challenge = slot_rc_challenge
@@ -471,9 +468,9 @@ class BlockTools:
                 new_difficulty = None
 
             if icc_ip_vdf is not None:
-                # Icc vdf (Deficit of latest sub-block is <= 4)
+                # Icc vdf (Deficit of latest block is <= 4)
                 if len(finished_sub_slots_at_ip) == 0:
-                    # This means there are sub-blocks in this sub-slot
+                    # This means there are blocks in this sub-slot
                     curr = latest_block
                     while not curr.is_challenge_block(constants) and not curr.first_in_sub_slot:
                         curr = blocks[curr.prev_hash]
@@ -482,7 +479,7 @@ class BlockTools:
                     else:
                         icc_eos_iters = sub_slot_iters
                 else:
-                    # This means there are no sub-blocks in this sub-slot
+                    # This means there are no blocks in this sub-slot
                     icc_eos_iters = sub_slot_iters
                 icc_ip_vdf = VDFInfo(
                     icc_ip_vdf.challenge,
@@ -527,7 +524,7 @@ class BlockTools:
                 transaction_data = None
             sub_slots_finished += 1
             log.info(
-                f"Sub slot finished. Sub-blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
+                f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
@@ -568,7 +565,7 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert start_timestamp is not None
-                        full_block, sub_block_record = get_full_block_and_sub_record(
+                        full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -596,24 +593,21 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
 
-                        if sub_block_record.is_transaction_block:
+                        if block_record.is_transaction_block:
                             transaction_data_included = True
-                        elif guarantee_block:
+                        elif guarantee_transaction_block:
                             continue
                         if pending_ses:
                             pending_ses = False
 
                         block_list.append(full_block)
                         blocks_added_this_sub_slot += 1
-                        log.info(
-                            f"Created block {sub_block_record.height } ov=True, iters "
-                            f"{sub_block_record.total_iters}"
-                        )
+                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
 
-                        blocks[full_block.header_hash] = sub_block_record
+                        blocks[full_block.header_hash] = block_record
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -687,8 +681,8 @@ class BlockTools:
                         uint8(signage_point_index),
                         required_iters,
                     )
-                    is_overflow_block = is_overflow_block(constants, uint8(signage_point_index))
-                    if force_overflow and not is_overflow_block:
+                    is_overflow = is_overflow_block(constants, uint8(signage_point_index))
+                    if force_overflow and not is_overflow:
                         continue
                     if len(finished_sub_slots) < skip_slots:
                         continue
@@ -708,11 +702,12 @@ class BlockTools:
                         self.get_pool_key_signature,
                         signage_point,
                         timestamp,
-                        seed,
+                        BlockCache({}),
+                        seed=seed,
                         finished_sub_slots_input=finished_sub_slots,
                     )
                     assert unfinished_block is not None
-                    if not is_overflow_block:
+                    if not is_overflow:
                         cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
                             constants,
                             ClassgroupElement.get_default_element(),
@@ -986,8 +981,8 @@ def finish_block(
         difficulty,
     )
 
-    sub_block_record = block_to_block_record(constants, BlockCache(blocks), required_iters, full_block, None)
-    return full_block, sub_block_record
+    block_record = block_to_block_record(constants, BlockCache(blocks), required_iters, full_block, None)
+    return full_block, block_record
 
 
 def get_challenges(
@@ -1102,7 +1097,7 @@ def get_icc(
         icc_challenge_hash = curr.challenge_block_info_hash
     else:
         assert curr.finished_infused_challenge_slot_hashes is not None
-        # First sub block in sub slot has deficit 0,1,2 or 3
+        # First block in sub slot has deficit 0,1,2 or 3
         icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
     return get_vdf_info_and_proof(
         constants,
@@ -1167,7 +1162,7 @@ def get_full_block_and_sub_record(
         slot_cc_challenge = overflow_cc_challenge
         slot_rc_challenge = overflow_rc_challenge
 
-    full_block, sub_block_record = finish_block(
+    full_block, block_record = finish_block(
         constants,
         blocks,
         height_to_hash,
@@ -1184,4 +1179,4 @@ def get_full_block_and_sub_record(
         difficulty,
     )
 
-    return full_block, sub_block_record
+    return full_block, block_record

@@ -58,8 +58,8 @@ async def validate_block_body(
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
 
-    # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
-    # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
+    # 1. For non block blocks, foliage block, transaction filter, transactions info, and generator must be empty
+    # If it is a block but not a transaction block, there is no body to validate. Check that all fields are None
     if block.foliage.foliage_transaction_block_hash is None:
         if (
             block.foliage_transaction_block is not None
@@ -67,7 +67,7 @@ async def validate_block_body(
             or block.transactions_generator is not None
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA
-        return None  # This means the sub-block is valid
+        return None  # This means the block is valid
 
     # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
     if (
@@ -84,7 +84,7 @@ async def validate_block_body(
     if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
         return Err.INVALID_TRANSACTIONS_INFO_HASH
 
-    # 4. The foliage block hash in the foliage sub block must match the foliage block
+    # 4. The foliage block hash in the foliage block must match the foliage block
     if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
         return Err.INVALID_FOLIAGE_BLOCK_HASH
 
@@ -99,9 +99,9 @@ async def validate_block_body(
         if block.transactions_info.generator_root != bytes([0] * 32):
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
-    # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
+    # 7. The reward claims must be valid for the previous blocks, and current block fees
     if height > 0:
-        # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
+        # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
         prev_transaction_block_height = prev_transaction_block.height
 

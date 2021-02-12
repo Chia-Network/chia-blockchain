@@ -95,5 +95,5 @@ class FullNodeRpcClient(RpcClient):
                 return []
         except Exception:
             return []
-        # TODO: return sub block records
+        # TODO: return block records
         return response["block_records"]

@@ -44,7 +44,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -77,7 +77,7 @@ class TestBlockchainTransactions:
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=next_spendbundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         next_block = new_blocks[-1]
@@ -103,7 +103,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_3, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -127,7 +127,7 @@ class TestBlockchainTransactions:
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block_spendbundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         next_block = new_blocks[-1]
@@ -143,7 +143,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -168,7 +168,7 @@ class TestBlockchainTransactions:
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block_spendbundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         next_block = new_blocks[-1]
@@ -184,7 +184,7 @@ class TestBlockchainTransactions:
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
@@ -201,7 +201,10 @@ class TestBlockchainTransactions:
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
 
         blocks_spend = bt.get_consecutive_blocks(
-            1, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True, transaction_data=spend_bundle
+            1,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
         )
         # Move chain to height 10, with a spend at height 10
         for block in blocks_spend:
@@ -212,7 +215,7 @@ class TestBlockchainTransactions:
             7,
             blocks[:6],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             seed=b"another seed",
         )
 
@@ -224,7 +227,7 @@ class TestBlockchainTransactions:
             1,
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             transaction_data=spend_bundle,
         )
 
@@ -237,7 +240,7 @@ class TestBlockchainTransactions:
             1,
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             transaction_data=spend_bundle,
         )
 
@@ -250,7 +253,7 @@ class TestBlockchainTransactions:
             1,
             new_blocks[:12],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             transaction_data=spend_bundle,
             seed=b"spend at 12 is ok",
         )
@@ -262,7 +265,7 @@ class TestBlockchainTransactions:
             1,
             new_blocks[:13],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             transaction_data=spend_bundle,
             seed=b"spend at 13 is ok",
         )
@@ -274,7 +277,7 @@ class TestBlockchainTransactions:
             1,
             new_blocks[:14],
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             transaction_data=spend_bundle,
             seed=b"spend at 14 is double spend",
         )
@@ -292,7 +295,7 @@ class TestBlockchainTransactions:
         receiver_3_puzzlehash = WALLET_A_PUZZLE_HASHES[3]
 
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
@@ -314,7 +317,7 @@ class TestBlockchainTransactions:
             seed=b"spend_reorg_coin",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
@@ -334,7 +337,7 @@ class TestBlockchainTransactions:
             seed=b"spend_reorg_coin",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
@@ -353,7 +356,7 @@ class TestBlockchainTransactions:
             seed=b"spend_reorg_coin",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
@@ -384,7 +387,7 @@ class TestBlockchainTransactions:
             blocks[:6],
             seed=b"reorg cb coin",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         for block in new_blocks:
@@ -403,7 +406,7 @@ class TestBlockchainTransactions:
             seed=b"reorg cb coin",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
@@ -422,7 +425,7 @@ class TestBlockchainTransactions:
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
@@ -470,7 +473,7 @@ class TestBlockchainTransactions:
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -509,7 +512,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=bad_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         # Try to validate that block
@@ -524,7 +527,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=valid_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert res == ReceiveBlockResult.NEW_PEAK
@@ -540,7 +543,7 @@ class TestBlockchainTransactions:
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -589,7 +592,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         # Try to validate that block
@@ -606,7 +609,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=bundle_together,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         # Try to validate newly created block
@@ -623,7 +626,7 @@ class TestBlockchainTransactions:
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -652,7 +655,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         # Try to validate that block at index 10
@@ -664,7 +667,7 @@ class TestBlockchainTransactions:
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         res, _, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert res == ReceiveBlockResult.NEW_PEAK
@@ -675,7 +678,7 @@ class TestBlockchainTransactions:
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert err is None
@@ -690,7 +693,7 @@ class TestBlockchainTransactions:
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -721,7 +724,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         # Try to validate that block at index 11
@@ -733,7 +736,7 @@ class TestBlockchainTransactions:
             1,
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         res, _, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert res == ReceiveBlockResult.NEW_PEAK
@@ -744,7 +747,7 @@ class TestBlockchainTransactions:
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
         assert err is None
@@ -760,7 +763,7 @@ class TestBlockchainTransactions:
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -791,7 +794,7 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
             time_per_block=20,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         # Try to validate that block before 3 sec
@@ -804,7 +807,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             time_per_block=31,
         )
         res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
@@ -821,7 +824,7 @@ class TestBlockchainTransactions:
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
-            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
@@ -854,7 +857,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle_bad,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
@@ -866,7 +869,7 @@ class TestBlockchainTransactions:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=block1_spend_bundle_good,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
         assert err is None

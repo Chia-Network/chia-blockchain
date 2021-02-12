@@ -63,7 +63,7 @@ class TestMempool:
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             3,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -96,7 +96,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -136,7 +136,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -174,7 +174,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -209,7 +209,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -237,7 +237,7 @@ class TestMempool:
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             3,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -270,7 +270,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             4,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -303,7 +303,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -338,7 +338,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -373,7 +373,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -408,7 +408,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -450,7 +450,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -494,7 +494,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -541,7 +541,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -588,7 +588,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -623,7 +623,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -658,7 +658,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             5,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -713,7 +713,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
@@ -753,7 +753,7 @@ class TestMempool:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )

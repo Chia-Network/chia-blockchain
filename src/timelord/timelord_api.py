@@ -35,17 +35,17 @@ class TimelordAPI:
                 log.info("Skipping peak, already have.")
                 return
             else:
-                log.warning("Sub-block that we don't have, changing to it.")
+                log.warning("block that we don't have, changing to it.")
                 self.timelord.new_peak = new_peak
                 self.timelord.new_subslot_end = None
 
     @api_request
-    async def new_unfinished_block(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedBlock):
+    async def new_unfinished_block(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlock):
         async with self.timelord.lock:
             try:
                 sp_iters, ip_iters = iters_from_block(
                     self.timelord.constants,
-                    new_unfinished_subblock.reward_chain_block,
+                    new_unfinished_block.reward_chain_block,
                     self.timelord.last_state.get_sub_slot_iters(),
                     self.timelord.last_state.get_difficulty(),
                 )
@@ -53,11 +53,11 @@ class TimelordAPI:
                 return
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
-                self.timelord.overflow_blocks.append(new_unfinished_subblock)
+                self.timelord.overflow_blocks.append(new_unfinished_block)
             elif ip_iters > last_ip_iters:
-                new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_subblock)
+                new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
                 if new_block_iters:
-                    self.timelord.unfinished_blocks.append(new_unfinished_subblock)
+                    self.timelord.unfinished_blocks.append(new_unfinished_block)
                     for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
                         self.timelord.iters_to_submit[chain].append(new_block_iters)
                     if self.timelord.last_state.get_deficit() < self.timelord.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:

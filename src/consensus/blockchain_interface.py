@@ -33,7 +33,7 @@ class BlockchainInterface:
     def remove_block_record(self, header_hash: bytes32):
         pass
 
-    def add_block_record(self, sub_block: BlockRecord):
+    def add_block_record(self, block_record: BlockRecord):
         pass
 
     def contains_height(self, height: uint32) -> bool:

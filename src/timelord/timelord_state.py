@@ -19,12 +19,12 @@ log = logging.getLogger(__name__)
 class LastState:
     """
     Represents the state that the timelord is in, and should execute VDFs on top of. A state can be one of three types:
-    1. A "peak" or a sub-block
+    1. A "peak" or a block
     2. An end of sub-slot
-    3. None, if it's the first sub-slot and there are no sub-blocks yet
-    Timelords execute VDFs until they reach the next sub-block or sub-slot, at which point the state is changed again.
+    3. None, if it's the first sub-slot and there are no blocks yet
+    Timelords execute VDFs until they reach the next block or sub-slot, at which point the state is changed again.
     The state can also be changed arbitrarily to a sub-slot or peak, for example in the case the timelord receives
-    a new sub-block in the future.
+    a new block in the future.
     """
 
     def __init__(self, constants: ConsensusConstants):
@@ -157,20 +157,20 @@ class LastState:
                 return None
         elif self.state_type == StateType.PEAK:
             assert self.peak is not None
-            sub_block = self.peak.reward_chain_block
+            reward_chain_block = self.peak.reward_chain_block
             if chain == Chain.CHALLENGE_CHAIN:
-                return sub_block.challenge_chain_ip_vdf.challenge
+                return reward_chain_block.challenge_chain_ip_vdf.challenge
             elif chain == Chain.REWARD_CHAIN:
-                return sub_block.get_hash()
+                return reward_chain_block.get_hash()
             elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if sub_block.infused_challenge_chain_ip_vdf is not None:
-                    return sub_block.infused_challenge_chain_ip_vdf.challenge
+                if reward_chain_block.infused_challenge_chain_ip_vdf is not None:
+                    return reward_chain_block.infused_challenge_chain_ip_vdf.challenge
                 elif self.peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     return ChallengeBlockInfo(
-                        sub_block.proof_of_space,
-                        sub_block.challenge_chain_sp_vdf,
-                        sub_block.challenge_chain_sp_signature,
-                        sub_block.challenge_chain_ip_vdf,
+                        reward_chain_block.proof_of_space,
+                        reward_chain_block.challenge_chain_sp_vdf,
+                        reward_chain_block.challenge_chain_sp_signature,
+                        reward_chain_block.challenge_chain_ip_vdf,
                     ).get_hash()
                 return None
         elif self.state_type == StateType.END_OF_SUB_SLOT:
@@ -191,14 +191,14 @@ class LastState:
             return ClassgroupElement.get_default_element()
         elif self.state_type == StateType.PEAK:
             assert self.peak is not None
-            sub_block = self.peak.reward_chain_block
+            reward_chain_block = self.peak.reward_chain_block
             if chain == Chain.CHALLENGE_CHAIN:
-                return sub_block.challenge_chain_ip_vdf.output
+                return reward_chain_block.challenge_chain_ip_vdf.output
             if chain == Chain.REWARD_CHAIN:
                 return ClassgroupElement.get_default_element()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if sub_block.infused_challenge_chain_ip_vdf is not None:
-                    return sub_block.infused_challenge_chain_ip_vdf.output
+                if reward_chain_block.infused_challenge_chain_ip_vdf is not None:
+                    return reward_chain_block.infused_challenge_chain_ip_vdf.output
                 elif self.peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     return ClassgroupElement.get_default_element()
                 else:

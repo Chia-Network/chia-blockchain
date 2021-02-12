@@ -60,16 +60,16 @@ def create_foliage(
     seed: bytes32 = b"",
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
     """
-    Creates a foliage for a given reward chain sub block. This may or may not be a block. In the case of a block,
+    Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
     the return values are not None. This is called at the signage point, so some of this information may be
     tweaked at the infusion point.
 
     Args:
         constants: consensus constants being used for this chain
-        reward_block_unfinished: the reward sub block to look at, potentially at the signage point
+        reward_block_unfinished: the reward block to look at, potentially at the signage point
         spend_bundle: the spend bundle including all transactions
-        prev_block: the previous sub-block at the signage point
-        blocks: dict from header hash to sub-blocks, of all ancestor sub-blocks
+        prev_block: the previous block at the signage point
+        blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
         timestamp: timestamp to put into the foliage block
         farmer_reward_puzzlehash: where to pay out farming reward
@@ -299,10 +299,10 @@ def create_unfinished_block(
         constants: consensus constants being used for this chain
         sub_slot_start_total_iters: the starting sub-slot iters at the signage point sub-slot
         sub_slot_iters: sub-slot-iters at the infusion point epoch
-        signage_point_index: signage point index of the sub-block to create
-        sp_iters: sp_iters of the sub-block to create
-        ip_iters: ip_iters of the sub-block to create
-        proof_of_space: proof of space of the sub-block to create
+        signage_point_index: signage point index of the block to create
+        sp_iters: sp_iters of the block to create
+        ip_iters: ip_iters of the block to create
+        proof_of_space: proof of space of the block to create
         slot_cc_challenge: challenge hash at the sp sub-slot
         farmer_reward_puzzle_hash: where to pay out farmer rewards
         pool_target: where to pay out pool rewards
@@ -312,7 +312,7 @@ def create_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         spend_bundle: transactions to add to the foliage block, if created
-        prev_block: previous sub-block (already in chain) from the signage point
+        prev_block: previous block (already in chain) from the signage point
         blocks: dictionary from header hash to SBR of all included SBR
         finished_sub_slots_input: finished_sub_slots at the signage point
 
@@ -413,19 +413,19 @@ def unfinished_block_to_full_block(
     difficulty: uint64,
 ) -> FullBlock:
     """
-    Converts an unfinished sub block to a finished sub block. Includes all the infusion point VDFs as well as tweaking
+    Converts an unfinished block to a finished block. Includes all the infusion point VDFs as well as tweaking
     other properties (height, weight, sub-slots, etc)
 
     Args:
-        unfinished_block: the unfinished sub-block to finish
+        unfinished_block: the unfinished block to finish
         cc_ip_vdf: the challenge chain vdf info at the infusion point
         cc_ip_proof: the challenge chain proof
         rc_ip_vdf: the reward chain vdf info at the infusion point
         rc_ip_proof: the reward chain proof
         icc_ip_vdf: the infused challenge chain vdf info at the infusion point
         icc_ip_proof: the infused challenge chain proof
-        finished_sub_slots: finished sub slots from the prev sub block to the infusion point
-        prev_block: prev sub block from the infusion point
+        finished_sub_slots: finished sub slots from the prev block to the infusion point
+        prev_block: prev block from the infusion point
         blocks: dictionary from header hash to SBR of all included SBR
         total_iters_sp: total iters at the signage point
         difficulty: difficulty at the infusion point

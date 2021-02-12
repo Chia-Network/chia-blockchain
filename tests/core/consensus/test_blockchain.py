@@ -248,7 +248,7 @@ class TestBlockHeaderValidation:
         blockchain = empty_blockchain
         num_blocks = 20
         blocks = []
-        for i in range(num_blocks):  # Same thing, but 2 sub-slots per sub-block
+        for i in range(num_blocks):  # Same thing, but 2 sub-slots per block
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -259,7 +259,7 @@ class TestBlockHeaderValidation:
         blockchain = empty_blockchain
         num_blocks = 10
         blocks = []
-        for i in range(num_blocks):  # Same thing, but 5 sub-slots per sub-block
+        for i in range(num_blocks):  # Same thing, but 5 sub-slots per block
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=5)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -1404,7 +1404,7 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
-        # Test one which should not be a block
+        # Test one which should not be a tx block
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
             if not blocks[-1].is_transaction_block():
@@ -1540,7 +1540,7 @@ class TestReorgs:
 
         blocks = bt.get_consecutive_blocks(10, farmer_reward_puzzle_hash=coinbase_puzzlehash)
         blocks = bt.get_consecutive_blocks(
-            2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+            2, blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
 
         spend_block = blocks[10]
@@ -1555,18 +1555,18 @@ class TestReorgs:
             blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
 
         blocks_fork = bt.get_consecutive_blocks(
-            1, blocks[:12], farmer_reward_puzzle_hash=coinbase_puzzlehash, seed=b"123", guarantee_block=True
+            1, blocks[:12], farmer_reward_puzzle_hash=coinbase_puzzlehash, seed=b"123", guarantee_transaction_block=True
         )
         blocks_fork = bt.get_consecutive_blocks(
             2,
             blocks_fork,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             transaction_data=spend_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             seed=b"1245",
         )
         for block in blocks:

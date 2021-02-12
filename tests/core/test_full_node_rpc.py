@@ -53,7 +53,7 @@ class TestRpc:
             assert state["sub_slot_iters"] > 0
 
             blocks = bt.get_consecutive_blocks(num_blocks)
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_block=True)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
 
             assert len(await client.get_unfinished_block_headers()) == 0
             assert len((await client.get_block_records(0, 100))) == 0

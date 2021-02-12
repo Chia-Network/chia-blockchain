@@ -409,7 +409,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_ph,
             pool_reward_puzzle_hash=wallet_ph,
         )
@@ -457,7 +457,7 @@ class TestFullNodeProtocol:
         blocks_new = bt.get_consecutive_blocks(
             2,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             transaction_data=spend_bundle,
         )
 
@@ -497,7 +497,7 @@ class TestFullNodeProtocol:
             1,
             block_list_input=blocks_new,
             transaction_data=agg_bundle,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
         )
         # Farm one block to clear mempool
         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-1]), peer)
@@ -516,7 +516,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_ph,
             pool_reward_puzzle_hash=wallet_ph,
         )
@@ -571,7 +571,7 @@ class TestFullNodeProtocol:
         blocks_new = bt.get_consecutive_blocks(
             2,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=cb_ph,
             pool_reward_puzzle_hash=cb_ph,
         )
@@ -606,7 +606,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(
             2,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
             pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
         )
@@ -616,7 +616,7 @@ class TestFullNodeProtocol:
             list(blocks[-1].get_included_reward_coins())[0],
         )
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
         )
 
         for block in blocks:
@@ -629,12 +629,12 @@ class TestFullNodeProtocol:
         # Ask without transactions
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, False))
         assert res.type != ProtocolMessageTypes.reject_block.value
-        assert fnp.RespondBlock.from_bytes(res.data).sub_block.transactions_generator is None
+        assert fnp.RespondBlock.from_bytes(res.data).block.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, True))
         assert res.type != ProtocolMessageTypes.reject_block.value
-        assert fnp.RespondBlock.from_bytes(res.data).sub_block.transactions_generator is not None
+        assert fnp.RespondBlock.from_bytes(res.data).block.transactions_generator is not None
 
         # Ask for another one
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height - 1, True))
@@ -649,7 +649,7 @@ class TestFullNodeProtocol:
         blocks = bt.get_consecutive_blocks(
             33,
             block_list_input=blocks,
-            guarantee_block=True,
+            guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
             pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
         )
@@ -660,7 +660,7 @@ class TestFullNodeProtocol:
             list(blocks[-1].get_included_reward_coins())[0],
         )
         blocks_t = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle
         )
 
         for block in blocks_t:
@@ -671,9 +671,9 @@ class TestFullNodeProtocol:
         # Start >= End
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(4), uint32(4), False))
         assert res is not None
-        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
-        assert len(sub_blocks) == 1
-        assert sub_blocks[0].header_hash == blocks[4].header_hash
+        blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
+        assert len(blocks) == 1
+        assert blocks[0].header_hash == blocks[4].header_hash
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(5), uint32(4), False))
         assert res.type == ProtocolMessageTypes.reject_blocks.value
         # Invalid range
@@ -689,17 +689,17 @@ class TestFullNodeProtocol:
         # Ask without transactions
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), False))
 
-        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
-        assert len(sub_blocks) == 6
-        for b in sub_blocks:
+        blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
+        assert len(blocks) == 6
+        for b in blocks:
             assert b.transactions_generator is None
 
         # Ask with transactions
         res = await full_node_1.request_blocks(fnp.RequestBlocks(uint32(peak_height - 5), uint32(peak_height), True))
-        sub_blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
-        assert len(sub_blocks) == 6
-        assert sub_blocks[-1].transactions_generator is not None
-        assert std_hash(sub_blocks[-1]) == std_hash(blocks_t[-1])
+        blocks = fnp.RespondBlocks.from_bytes(res.data).blocks
+        assert len(blocks) == 6
+        assert blocks[-1].transactions_generator is not None
+        assert std_hash(blocks[-1]) == std_hash(blocks_t[-1])
 
     @pytest.mark.asyncio
     async def test_new_unfinished_block(self, wallet_nodes):

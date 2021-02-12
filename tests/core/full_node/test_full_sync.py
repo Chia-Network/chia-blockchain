@@ -61,7 +61,7 @@ class TestFullSync:
 
     @pytest.mark.asyncio
     async def test_long_sync_from_zero(self, five_nodes, default_400_blocks):
-        # Must be larger than "sync_sub_block_behind_threshold" in the config
+        # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
         blocks: List[FullBlock] = default_400_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
