@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-12 06:12\n"
+"PO-Revision-Date: 2021-02-12 07:19\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -221,19 +221,19 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Färg"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "Färginfo"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Färgsträng"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Färg:"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
 msgid "Coloured Coin"
@@ -344,11 +344,11 @@ msgstr "Skapa användarplånbok"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr ""
+msgstr "Skapa plånbok för färg"
 
 #: src/components/wallet/create/WalletCreate.jsx:187
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Skapa plånbok för existerande färg"
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
@@ -437,7 +437,7 @@ msgstr "Fel"
 
 #: src/components/wallet/standard/WalletStandard.tsx:305
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "Fel: det går inte att skicka chia till färgad adress. Ange en chia-adress."
 
 #: src/components/fullNode/FullNode.jsx:217
 msgid "Estimated network space"
@@ -543,7 +543,7 @@ msgstr "Status för full nod"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "Skapa ny färg"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "Harvester ID"
@@ -551,11 +551,11 @@ msgstr "Skördar-ID"
 
 #: src/components/fullNode/FullNode.jsx:73
 msgid "Header Hash"
-msgstr ""
+msgstr "Huvudhash"
 
 #: src/components/block/Block.jsx:185
 msgid "Header hash"
-msgstr ""
+msgstr "Huvudhash"
 
 #: src/components/block/Block.jsx:199
 #: src/components/fullNode/FullNode.jsx:97
@@ -623,7 +623,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr ""
+msgstr "Infopaket"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
@@ -951,7 +951,7 @@ msgstr "Föregående"
 
 #: src/components/block/Block.jsx:213
 msgid "Previous Block Hash"
-msgstr ""
+msgstr "Föregående blockhash"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1030,7 +1030,7 @@ msgstr "Sök"
 
 #: src/components/fullNode/FullNode.jsx:335
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Sök block med huvudhash"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1367,7 +1367,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:273
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Transaktionsfilterhash"
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
