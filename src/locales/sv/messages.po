@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 22:15\n"
+"PO-Revision-Date: 2021-02-13 23:32\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1223,11 +1223,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:225
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "Sammanlagt antal VDF- (verifiable delay function) eller bevis-på-tid-iterationer på hela kedjan upp till detta underblock."
 
 #: src/components/block/Block.jsx:235
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "Sammanlagt antal VDF- (verifiable delay function) eller bevis-på-tid-iterationer på detta block."
 
 #: src/components/block/Block.jsx:307
 msgid "The total transactions fees in this block. Rewarded to the farmer."
