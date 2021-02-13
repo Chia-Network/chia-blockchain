@@ -1,6 +1,7 @@
 from src.consensus.block_record import BlockRecord
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
@@ -31,6 +32,7 @@ class FullNodeRpcApi:
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_blocks": self.get_blocks,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
+            "/verify": self.verify
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:
@@ -300,3 +302,17 @@ class FullNodeRpcApi:
         for tx_addition in tx_additions + list(reward_additions):
             addition_records.append(await self.service.coin_store.get_coin_record(tx_addition.name()))
         return {"additions": addition_records, "removals": removal_records}
+
+    async def verify(self, request: Dict) -> Optional[Dict]:
+        if "message" not in request:
+            raise ValueError("No message in request")
+        if "public_key" not in request:
+            raise ValueError("No public_key in request")
+        if "signature" not in request:
+            raise ValueError("No signature in request")
+
+        message = bytes(request["message"], "utf-8")
+        public_key = G1Element.from_bytes(bytes.fromhex(request["public_key"]))
+        signature = G2Element.from_bytes(bytes.fromhex(request["signature"]))
+        valid = AugSchemeMPL.verify(public_key, message, signature)
+        return {"valid": valid}
