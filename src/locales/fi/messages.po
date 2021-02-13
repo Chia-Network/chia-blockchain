@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 18:17\n"
+"PO-Revision-Date: 2021-02-13 19:14\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1092,11 +1092,11 @@ msgstr "Lähetä tämä infopaketti Siirtorajoitetun Lompakon käyttäjälle, jo
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Lähetä julkinen avaimesi Siirtorajoitetun Lompakon pääkäyttäjälle:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Näytä Lisäoptiot"
 
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
@@ -1128,7 +1128,7 @@ msgstr "Käyttöajanjakso (lohkojen lukum.): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Käyttöajanjakson pituus (lohkojen määrä)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
@@ -1179,7 +1179,7 @@ msgstr "Synkrononissa"
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr "Synkronoi"
+msgstr "Synkronoi...."
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Syncing {progress}/{tip}"
@@ -1195,15 +1195,15 @@ msgstr "XCH Transaktioveloitukset"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Väliaikaistiestot luodaan plottauprosessin aikana. Ne ylittävät lopullisen plot-tiedoston koon. Varmista että levyllä on tarpeeksi tilaa. <0>Katso lisää</0>"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr ""
+msgstr "Väliaikaishakemiston sijainti"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Alla verkkosolmu, johon farmarisi on kytketty. <0>Katso lisää</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
@@ -1211,11 +1211,11 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:148
 msgid "The node is not synced"
-msgstr ""
+msgstr "Solmu ei ole synkronoitu"
 
 #: src/components/fullNode/FullNode.jsx:136
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "Solmu synkronoi, mikä tarkoittaa että se lataa lohkoketjua muilta solmuilta"
 
 #: src/components/block/Block.jsx:265
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1257,7 +1257,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Viimeisimmän lohkon aikaleima."
 
 #: src/components/block/Block.jsx:192
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
@@ -1273,7 +1273,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:157
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Solmu on ajan tasalla ja todentaa lohkoketjuverkkoa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1285,7 +1285,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:110
 msgid "Time Created"
-msgstr ""
+msgstr "Luontiaikaleima"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "Time this trade was created at this time"
@@ -1311,7 +1311,7 @@ msgstr "Tuotettuja Chioja"
 
 #: src/components/fullNode/FullNode.jsx:211
 msgid "Total Iterations"
-msgstr ""
+msgstr "Iteraatioita"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
@@ -1388,7 +1388,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:205
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF-iteraatioita"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 msgid "View Log"
@@ -1460,7 +1460,7 @@ msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr ""
+msgstr "Solmupalvelun Yhteys"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
