@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-12 07:19\n"
+"PO-Revision-Date: 2021-02-13 11:56\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -138,7 +138,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:329
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Block vid höjd {0} i Chia-blockkedjan"
 
 #: src/components/fullNode/FullNode.jsx:340
 msgid "Block hash"
@@ -370,7 +370,7 @@ msgstr "Datum"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "Delay"
-msgstr ""
+msgstr "Fördröjning"
 
 #: src/components/fullNode/FullNodeConnections.jsx:110
 #: src/components/plot/PlotAction.tsx:24
@@ -450,7 +450,7 @@ msgstr "Uppskattad summa av allt plottat diskutrymme hos alla odlare i nätverke
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Expected Time to Win"
-msgstr ""
+msgstr "Förväntad tid för att vinna"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
