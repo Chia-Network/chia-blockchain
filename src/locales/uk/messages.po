@@ -8,7 +8,7 @@ msgstr ""
 "Language: uk\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 05:55\n"
+"PO-Revision-Date: 2021-02-13 06:56\n"
 "Last-Translator: \n"
 "Language-Team: Ukrainian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -24,11 +24,11 @@ msgstr "Бажаєте подивитися більше інформації п
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "0 automatically chooses bucket count"
-msgstr ""
+msgstr "0 автоматично вибирає кількість сегментів"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "Комбайн - це служба, що працює на машині, де фактично зберігаються ділянка(и). Фермер та комбайн розмовляють із повним вузлом, щоб побачити стан ланцюга. Перегляньте свою мережу підключених комбайнів нижче. Докладніше"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -99,133 +99,133 @@ msgstr "Початкова кількість монет"
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Ви впевнені, що хочете видалити ділянку? Ділянка не підлягає відновленню."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Назад"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Balance"
-msgstr ""
+msgstr "Баланс"
 
 #: src/components/block/Block.jsx:300
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Базова сума винагороди фермера"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "Нижче наведені значення випробувань для блоків. У вас може бути чи не бути доказів наявності місця для цих випробувань. Ці блоки ще не містять підтверджень часу."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "Найкраща оцінка за останні 5 годин"
 
 #: src/components/block/Block.jsx:126
 #: src/components/block/Block.jsx:138
 #: src/components/block/Block.jsx:150
 #: src/components/block/Block.jsx:320
 msgid "Block"
-msgstr ""
+msgstr "Блок"
 
 #: src/components/block/Block.jsx:232
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "VDF ітерацій блоку"
 
 #: src/components/block/Block.jsx:329
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Блок на висоті {0} в блокчейне Chia"
 
 #: src/components/fullNode/FullNode.jsx:340
 msgid "Block hash"
-msgstr ""
+msgstr "Хеш блока"
 
 #: src/components/block/Block.jsx:153
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "Блок з хешем {headerHash} не існує."
 
 #: src/components/fullNode/FullNode.jsx:309
 msgid "Blocks"
-msgstr ""
+msgstr "Блоки"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Огляд"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:49
 msgid "But you are currently farming <0/>"
-msgstr ""
+msgstr "Але ви зараз займаєтеся фермерством <0 />"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:32
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Покупка"
 
 #: src/components/wallet/Wallets.tsx:33
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC гаманець"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "Може бути збережений в якості резервної копії за допомогою мнемонічного зерна"
 
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Відміна"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Відмінити і відправити"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "Увага! Видалення цих ділянок призведе до безповоротного видалення файлів назавжди. Переконайтеся, що пристрої зберігання правильно підключені."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Випробування"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Хеш випробування"
 
 #: src/components/wallet/Wallets.tsx:29
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia гаманець"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Виберіть кількість ділянок"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Виберіть розмір ділянки"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Закриття вузла і сервера"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Монет:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Колір"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "Інформація про колір"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
@@ -237,19 +237,19 @@ msgstr "Колір:"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Кольорові монети"
 
 #: src/components/wallet/create/WalletCreate.jsx:163
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Варіанти кольорових монет"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Підтверджено в блоці:"
 
 #: src/components/wallet/WalletHistory.tsx:36
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Підтверджено на висоті {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
