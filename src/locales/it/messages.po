@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 18:17\n"
+"PO-Revision-Date: 2021-02-13 19:14\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -94,47 +94,47 @@ msgstr "Totale ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "Importo per moneta iniziale"
+msgstr "Importo Per Moneta Iniziale"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Sei sicuro di voler eliminare il plot? Il plot non può essere recuperato."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Indietro"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Balance"
-msgstr ""
+msgstr "Bilancio"
 
 #: src/components/block/Block.jsx:300
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Importo Base Ricompensa Farmer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "Di seguito sono riportate le attuali sfide del blocco. Puoi avere o non avere una prova di spazio per queste sfide. Questi blocchi non contengono attualmente una prova di tempo."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "Migliore stima sulle ultime 5 ore"
 
 #: src/components/block/Block.jsx:126
 #: src/components/block/Block.jsx:138
 #: src/components/block/Block.jsx:150
 #: src/components/block/Block.jsx:320
 msgid "Block"
-msgstr ""
+msgstr "Blocco"
 
 #: src/components/block/Block.jsx:232
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "Blocco Iterazioni VDF"
 
 #: src/components/block/Block.jsx:329
 msgid "Block at height {0} in the Chia blockchain"
