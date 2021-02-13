@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 16:36\n"
+"PO-Revision-Date: 2021-02-13 18:17\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -840,7 +840,7 @@ msgstr "Anna käypä käytettävä määrä"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Anna käypä julkinen avain"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:659
 #: src/components/wallet/standard/WalletStandard.tsx:275
@@ -853,7 +853,7 @@ msgstr "Valitse määrä"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Valitse osta tai myy"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin type"
@@ -920,7 +920,7 @@ msgstr "Plotataan"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr ""
+msgstr "Rinnakkaisplottaus voi säästää aikaa. Muutoin lisää plottaus jonoon."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "Pool Key"
@@ -951,7 +951,7 @@ msgstr "Edellinen"
 
 #: src/components/block/Block.jsx:213
 msgid "Previous Block Hash"
-msgstr ""
+msgstr "Edellinen lohkotiiviste"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -959,7 +959,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Yksityinen avain julkisella sormenjäljellä {fingerprint}"
 
 #: src/components/block/Block.jsx:242
 msgid "Proof of Space Size"
@@ -1034,15 +1034,15 @@ msgstr "Hae lohkotunnisteen tiivisteellä"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Toinen väliaikaishakemistosijainti"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Valitse Toinen Väliaikaishakemisto"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Valitse Kohdehakemisto"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
@@ -1062,11 +1062,11 @@ msgstr "Valitse Lompakon Tyypoi"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Valitse lopullinen kohdehakemisto plot-tiedostolle. Suosittelemme isoa massamuistia (esim. ulkoinen kovalevy)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Valitse väliaikainen työhakemisto plot-tiedostolle. Suosittelemme nopeaa SSD-levyä."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1088,7 +1088,7 @@ msgstr "Lähetä"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Lähetä tämä infopaketti Siirtorajoitetun Lompakon käyttäjälle, joka voi käyttää sitä oman lompakkonsa perustamiseen:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
