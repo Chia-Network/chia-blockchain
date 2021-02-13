@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 20:11\n"
+"PO-Revision-Date: 2021-02-13 21:10\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1241,19 +1241,19 @@ msgstr "Questi plot non sono validi, dovresti eliminarli."
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Questa funzione è disponibile solo sulla GUI."
 
 #: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Questo è l'ammontare di Chia che puoi utilizzare attualmente per fare transazioni. Non include le ricompense coltivate in sospeso, transazioni in entrata in sospeso, e Chia che tua hai appena speso ma non sono ancora nella blockchain."
 
 #: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Questa è la modifica in sospeso, ovvero le monete di cambio che hai inviato a te stesso, ma non sono state ancora confermate."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (non ancora incluse nella blockchain). Questo non include le ricompense coltivate."
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
@@ -1293,57 +1293,57 @@ msgstr ""
 
 #: src/components/block/Block.jsx:189
 msgid "Timestamp"
-msgstr ""
+msgstr "Marca temporale"
 
 #: src/components/wallet/WalletHistory.tsx:27
 msgid "To"
-msgstr ""
+msgstr "A"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:563
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Total Balance"
-msgstr ""
+msgstr "Bilancio Totale"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Totale Chia Coltivati"
 
 #: src/components/fullNode/FullNode.jsx:211
 msgid "Total Iterations"
-msgstr ""
+msgstr "Iterazioni in Totale"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "Spazio Totale della Rete"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Dimensione Totale del Plot:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:14
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Dimensione Totale dei Plot"
 
 #: src/components/block/Block.jsx:222
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Totale Iterazioni VDF"
 
 #: src/components/fullNode/FullNode.jsx:213
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Totale iterazioni dall'inizio della blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Commercia"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Dettagli Commercio"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "ID Scambio"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
