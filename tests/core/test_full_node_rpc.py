@@ -111,6 +111,15 @@ class TestRpc:
 
             await client.close_connection(connections[0]["node_id"])
             await time_out_assert(10, num_connections, 0)
+
+            pk = "820e3f84e1368deab22350e6f500bc50726cb9b7c1c3be215996c77be029843b790381f9b0925a68cd23dbaebd8eadb3"
+            signature = (
+                "ab91e486c838186cc0f096239a04efdb8cbbf9853920fb4f3254591c7c957598e58aab5e0ac04a76f63d0007ebcbcc730"
+                "c6bb0251d972423f532e4cacca79f19081fd818d28dcf6d1ef122cfa4c8644e35e3ebf94aae89d73eafe5ecc350cc73"
+            )
+
+            assert (await client.verify("hello", pk, signature)) is True
+            assert (await client.verify("goodbye", pk, signature)) is False
         finally:
             # Checks that the RPC manages to stop the node
             client.close()

@@ -97,3 +97,12 @@ class FullNodeRpcClient(RpcClient):
             return []
         # TODO: return block records
         return response["block_records"]
+
+    async def verify(self, message: str, public_key: bytes32, signature: bytes32) -> Optional[bool]:
+        try:
+            response = await self.fetch(
+                "verify", {"message": message, "public_key": public_key, "signature": signature}
+            )
+        except Exception:
+            return False
+        return response["valid"]

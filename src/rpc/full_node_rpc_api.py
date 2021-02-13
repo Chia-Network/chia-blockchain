@@ -32,7 +32,7 @@ class FullNodeRpcApi:
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_blocks": self.get_blocks,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
-            "/verify": self.verify
+            "/verify": self.verify,
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:
