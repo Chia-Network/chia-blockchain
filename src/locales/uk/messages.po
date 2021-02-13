@@ -8,7 +8,7 @@ msgstr ""
 "Language: uk\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-12 18:30\n"
+"PO-Revision-Date: 2021-02-13 05:55\n"
 "Last-Translator: \n"
 "Language-Team: Ukrainian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -32,52 +32,52 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Прийняти"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Прийняти в:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Action"
-msgstr ""
+msgstr "Дія"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "Actions"
-msgstr ""
+msgstr "Дії"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Додати"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Додати директорію з ділянками"
 
 #: src/components/wallet/Wallets.tsx:70
 msgid "Add Wallet"
-msgstr ""
+msgstr "Додати гаманець"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Додати ділянку"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:404
 #: src/components/wallet/coloured/WalletColoured.tsx:456
 #: src/components/wallet/standard/WalletStandard.tsx:384
 msgid "Address"
-msgstr ""
+msgstr "Адреса"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:746
 #: src/components/wallet/standard/WalletStandard.tsx:334
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Адреса / Хеш-головоломка"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -86,15 +86,15 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:768
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Amount"
-msgstr ""
+msgstr "Кількість"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:414
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Кількість ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "Початкова кількість монет"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
@@ -233,7 +233,7 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Колір:"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
 msgid "Coloured Coin"
