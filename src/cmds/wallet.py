@@ -156,7 +156,7 @@ async def send(args, wallet_client, fingerprint: int):
     print("Submitting transaction...")
     final_amount = uint64(int(amount * units["chia"]))
     final_fee = uint64(int(fee * units["chia"]))
-    res = await wallet_client.send_transaction(wallet_id, final_amount * units["chia"], address, final_fee)
+    res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee)
     tx_id = res.name
     start = time.time()
     while time.time() - start < 10:
