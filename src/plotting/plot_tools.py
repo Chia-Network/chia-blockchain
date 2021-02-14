@@ -202,11 +202,10 @@ def load_plots(
                 continue
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
-# Uncomment next three lines if memo is needed for dev debug
-#            plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, local_master_sk)
-#            plot_memo_str: str = plot_memo.hex()
-#            log.info(f"Memo: {plot_memo_str}")
-
+    # Uncomment next three lines if memo is needed for dev debug
+    #            plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, local_master_sk)
+    #            plot_memo_str: str = plot_memo.hex()
+    #            log.info(f"Memo: {plot_memo_str}")
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"

@@ -116,9 +116,9 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             log.info(f"Debug memo: {args.memo}")
             plot_memo = bytes.fromhex(args.memo)
 
-# Uncomment next two lines if memo is needed for dev debug
-#        plot_memo_str: str = plot_memo.hex()
-#        log.info(f"Memo: {plot_memo_str}")
+        # Uncomment next two lines if memo is needed for dev debug
+        #        plot_memo_str: str = plot_memo.hex()
+        #        log.info(f"Memo: {plot_memo_str}")
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
