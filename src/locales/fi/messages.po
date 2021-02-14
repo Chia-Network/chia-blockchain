@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 19:14\n"
+"PO-Revision-Date: 2021-02-14 07:08\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1119,7 +1119,7 @@ msgstr "Käytettävissä ajanjaksolla"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:569
 #: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "Spendable Balance"
-msgstr "Käytettävissä Oleva Saldo"
+msgstr "Saldo Käytettävissä"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
@@ -1207,27 +1207,27 @@ msgstr "Alla verkkosolmu, johon farmarisi on kytketty. <0>Katso lisää</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "Lohkoketjun hyväksymä minimiarvo on k=32"
 
 #: src/components/fullNode/FullNode.jsx:148
 msgid "The node is not synced"
-msgstr "Solmu ei ole synkronoitu"
+msgstr "Solmu ei ole synkronissa"
 
 #: src/components/fullNode/FullNode.jsx:136
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "Solmu synkronoi, mikä tarkoittaa että se lataa lohkoketjua muilta solmuilta"
+msgstr "Solmu synkronoi. Se lataa lohkoketjua muilta solmuilta"
 
 #: src/components/block/Block.jsx:265
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr "Siemenarvo plot-tiedostojen luontia varten. Riippuu kimppapoolin ja plotin julkisesta avaimesta."
+msgstr "Siemenarvo plot-tiedostojen luontia varten. Riippuu kimppapoolin ja plotin julkisista avaimista."
 
 #: src/components/block/Block.jsx:225
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "Tähän lohkoon asti iteroitujen VDF-aikatodisteiden lukumäärä."
 
 #: src/components/block/Block.jsx:235
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "Tähän lohkoon asti iteroitujen VDF-aikatodisteiden lukumäärä."
 
 #: src/components/block/Block.jsx:307
 msgid "The total transactions fees in this block. Rewarded to the farmer."
@@ -1235,17 +1235,17 @@ msgstr "Kokonaistransaktioveloitukset tässä lohkossa. Suoritetaan farmarille."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr ""
+msgstr "Näitä plot-tiedostoja ei löydy tai ne ovat viallisia."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Tämä ominaisuus käytettävissä ainoastaan graafisessa käyttöliittymässä."
 
 #: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Transaktioihin käytettävissä oleva Chiojen määrä. Ei sisällä odottavia farmarin palkkioita, saapumassa olevia transaktioita eikä lähetettyjä, mutta vahvistamattomia transaktioita."
 
 #: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
@@ -1253,7 +1253,7 @@ msgstr ""
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Lähtevien ja saapuvien keskeneräisten transaktioiden summa (ei vielä lohkoketjussa). Ei sisällä farmarin palkkioita."
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
@@ -1269,7 +1269,7 @@ msgstr "Yksityisten avaimiesi hallinoimien Chiojen kokonaissumma lohkoketjussa. 
 
 #: src/components/wallet/standard/WalletStandard.tsx:221
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Nykyinen saldo + keskeneräinen saldo, eli tuleva saldo keskeneräisten transaktioiden jälkeen."
 
 #: src/components/fullNode/FullNode.jsx:157
 msgid "This node is fully caught up and validating the network"
@@ -1303,7 +1303,7 @@ msgstr "Osoitteeseen"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:563
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Total Balance"
-msgstr "Kokonaissumma"
+msgstr "Kokonaissaldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
@@ -1401,11 +1401,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:584
 #: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "View pending balances"
-msgstr ""
+msgstr "Katso avoimet saldot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "Katso avoimet saldot..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
