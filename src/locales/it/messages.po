@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-14 11:23\n"
+"PO-Revision-Date: 2021-02-14 21:49\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1257,11 +1257,11 @@ msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Questo è il tempo dell'ultimo sottoblocco di picco."
 
 #: src/components/block/Block.jsx:192
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Questo è il tempo in cui il blocco è stato creato dal coltivatore, che è precedente a quando è stato finalizzato con una prova di tempo"
 
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
