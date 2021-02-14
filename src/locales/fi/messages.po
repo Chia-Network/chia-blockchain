@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-14 07:08\n"
+"PO-Revision-Date: 2021-02-14 16:15\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -623,7 +623,7 @@ msgstr "Tarjouisen hyväksyntäaika"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr "Informaatiopaketti"
+msgstr "Infopaketti"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
@@ -797,7 +797,7 @@ msgstr "Avoin Saldo"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:611
 #: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "Pending Change"
-msgstr "Avoin Vaihto"
+msgstr "Avoimet Siirrot"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:593
 #: src/components/wallet/standard/WalletStandard.tsx:219
@@ -1245,15 +1245,15 @@ msgstr "Tämä ominaisuus käytettävissä ainoastaan graafisessa käyttöliitty
 
 #: src/components/wallet/standard/WalletStandard.tsx:200
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr "Transaktioihin käytettävissä oleva Chiojen määrä. Ei sisällä odottavia farmarin palkkioita, saapumassa olevia transaktioita eikä lähetettyjä, mutta vahvistamattomia transaktioita."
+msgstr "Transaktioihin käytettävissä oleva Chiojen määrä. Ei sisällä avoimia farmarin palkkioita, avoimia saapuvia transaktioita eikä lähetettyjä, mutta vahvistamattomia transaktioita."
 
 #: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Avoimet siirrot ovat kolikoita, jotka olet siirtänyt, mutta joiden siirtoa ei ole vielä vahvistettu loppuun."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "Lähtevien ja saapuvien keskeneräisten transaktioiden summa (ei vielä lohkoketjussa). Ei sisällä farmarin palkkioita."
+msgstr "Lähtevien ja saapuvien avointen transaktioiden summa (ei vielä lohkoketjussa). Ei sisällä farmarin palkkioita."
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "This is the time of the latest peak sub block."
@@ -1261,7 +1261,7 @@ msgstr "Viimeisimmän lohkon aikaleima."
 
 #: src/components/block/Block.jsx:192
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Ajankohta jolloin farmari on luonut lohkon. Aikatodiste viimeistelee lohkon tämän ajankohdan jälkeen"
 
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -1269,7 +1269,7 @@ msgstr "Yksityisten avaimiesi hallinoimien Chiojen kokonaissumma lohkoketjussa. 
 
 #: src/components/wallet/standard/WalletStandard.tsx:221
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "Nykyinen saldo + keskeneräinen saldo, eli tuleva saldo keskeneräisten transaktioiden jälkeen."
+msgstr "Nykyinen saldo + avoin saldo, eli tuleva saldo avointen transaktioiden jälkeen."
 
 #: src/components/fullNode/FullNode.jsx:157
 msgid "This node is fully caught up and validating the network"
@@ -1277,19 +1277,19 @@ msgstr "Solmu on ajan tasalla ja todentaa lohkoketjuverkkoa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
-msgstr ""
+msgstr "Taulukko näyttää viimeisimmän ajankohdan, jolloin farmisi on yrittänyt voittaa lohkohaasteen."
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Kauppa on sisällytetty lohkoketjuun tässä lohkokorkeudessa"
 
 #: src/components/fullNode/FullNode.jsx:110
 msgid "Time Created"
-msgstr "Luontiaikaleima"
+msgstr "Luontiaika"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "Time this trade was created at this time"
-msgstr ""
+msgstr "Kauppa on luotu tänä ajankohtana"
 
 #: src/components/block/Block.jsx:189
 msgid "Timestamp"
@@ -1335,35 +1335,35 @@ msgstr "Iteraatioiden määrä lohkoketjun alusta asti"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Kaupankäynti"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Kaupankäynnin Yksityskohdat"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "Kauppa"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "Kauppa:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Kaupankäynnin Yleiskuva"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Kaupat näkyvät täällä"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "Kaupankäynti"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "Kaupankäyntihistoria"
 
 #: src/components/block/Block.jsx:273
 msgid "Transactions Filter Hash"
@@ -1379,12 +1379,12 @@ msgstr "Kesken"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Yksilöllinen tunniste"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr ""
+msgstr "Käyttäjän julkinen avain"
 
 #: src/components/fullNode/FullNode.jsx:205
 msgid "VDF Sub Slot Iterations"
@@ -1392,26 +1392,26 @@ msgstr "VDF-iteraatioita"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 msgid "View Log"
-msgstr ""
+msgstr "Katso Loki"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "Näytä Tarjous"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:584
 #: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "View pending balances"
-msgstr "Katso avoimet saldot"
+msgstr "Næytä avoimet saldot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr "Katso avoimet saldot..."
+msgstr "Näytä avoimet saldot..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:25
 msgid "Wait for synchronization"
-msgstr ""
+msgstr "Odota synkroinointia"
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:120
@@ -1420,11 +1420,11 @@ msgstr "Lompakot"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Haluatko ansaita Chioja? Lisää plot-tiedostoja farmiisi."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Haluatko asettaa tauon ennen seuraavaa plottausta?"
 
 #: src/components/block/Block.jsx:203
 msgid "Weight"
@@ -1432,19 +1432,19 @@ msgstr "Paino"
 
 #: src/components/block/Block.jsx:206
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Paino on kaikkien tähänastisten lohkojen vaikeuskerroin"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Tervetuloa Chiaan. Kirjaudu sisään avaimella tai luo uusi avain."
 
 #: src/components/wallet/WalletAdd.tsx:37
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopiointiin. Ilman niitä sinulla ei ole pääsyä lompakkoosi. Pidä ne tallessa! Kirjoita ylös sanat ja niiden järjestysnumerot. (Oikea järjestys on tärkeää)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
@@ -1456,7 +1456,7 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:13
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Farmin Yleiskuva"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
