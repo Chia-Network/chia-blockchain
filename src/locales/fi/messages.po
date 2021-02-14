@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-14 16:15\n"
+"PO-Revision-Date: 2021-02-14 17:22\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -94,7 +94,7 @@ msgstr "Määrä ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "Määrä Ensimmäiselle Kolikolle"
+msgstr "Alkumäärä"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
@@ -188,7 +188,7 @@ msgstr "Peru ja Käytä"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "Huomioi, plot-tiedostojen poistoa ei voi perua. Tarkista että tallennusmediat ovat oikein kytketty."
+msgstr "Huomio, plot-tiedostojen poistoa ei voi perua. Tarkista että tallennusmediat ovat oikein kytketty."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
@@ -200,7 +200,7 @@ msgstr "Haastetiiviste"
 
 #: src/components/wallet/Wallets.tsx:29
 msgid "Chia Wallet"
-msgstr "Chia Lompakko"
+msgstr "Chia-lompakko"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -257,7 +257,7 @@ msgstr "Yhdistä"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr "Yhdistä muihin"
+msgstr "Yhdistä muihin verkkosolmuihin"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:167
@@ -314,7 +314,7 @@ msgstr "Luo Siirtorajoitettu Käyttäjälompakko"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
-msgstr "Kauppaa"
+msgstr "Käy Kauppaa"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -344,11 +344,11 @@ msgstr "Luo käyttäjälle uusi lompakko"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr "Luo lompakko värillist varten"
+msgstr "Luo lompakko väriä varten"
 
 #: src/components/wallet/create/WalletCreate.jsx:187
 msgid "Create wallet for existing colour"
-msgstr "Luo lompakko olemassa olevaa värillistä varten"
+msgstr "Luo lompakko olemassa olevaa väriä varten"
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
@@ -478,7 +478,7 @@ msgstr "Farmari ei ole käynnissä"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr "Farmarit ansaitsevat lohkopalkkioita ja transaktiopalkkioita varaamalla tyhjää levytilaa vertaisverkolle transaktioiden vahvistamiseksi. Farmisi näkyy täällä luotuasi plot-tiedostoja. <0>Katso lisää</0>"
+msgstr "Farmarit ansaitsevat lohkopalkkioita ja transaktioveloituksia varaamalla levytilaa vertaisverkolle ja vahvistamalla transaktioita. Farmisi näkyy täällä luotuasi plot-tiedoston. <0>Katso lisää</0>"
 
 #: src/components/farm/Farm.tsx:13
 #: src/components/farm/FarmerStatus.tsx:27
@@ -618,7 +618,7 @@ msgstr "Näyttää, jos tarjous oli itse luomamme"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr "Tarjouisen hyväksyntäaika"
+msgstr "Tarjouksen hyväksyntäaika"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
@@ -718,7 +718,7 @@ msgstr "Ei aiempia transaktioita"
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Node ID"
-msgstr "Noodin tunnus"
+msgstr "Solmun tunnus"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:43
 msgid "None of your plots have passed the plot filter yet."
@@ -733,7 +733,7 @@ msgstr "Ei Saatavilla"
 
 #: src/components/fullNode/FullNode.jsx:146
 msgid "Not Synced"
-msgstr "Ei synkronoitu"
+msgstr "Ei Synkronoitu"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
@@ -767,7 +767,7 @@ msgstr "Tarjous"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr "Tarjous Luotu"
+msgstr "Tarjouksia Tehty"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
@@ -810,7 +810,7 @@ msgstr "Anna kaupankäyntipari"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:710
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr "Anna nollaveloitus. Positiivisiaveloituksia ei vielä tueta."
+msgstr "Anna nollaveloitus. Positiivisia veloituksia ei vielä tueta."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
@@ -928,7 +928,7 @@ msgstr "Kimppapoolin avain"
 
 #: src/components/block/Block.jsx:250
 msgid "Pool Public Key"
-msgstr "Poolin julkinen avain"
+msgstr "Kimppapoolin Julkinen Avain"
 
 #: src/components/block/Block.jsx:258
 msgid "Pool Puzzle Hash"
@@ -951,7 +951,7 @@ msgstr "Edellinen"
 
 #: src/components/block/Block.jsx:213
 msgid "Previous Block Hash"
-msgstr "Edellinen lohkotiiviste"
+msgstr "Edellinen Lohkotiiviste"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -963,7 +963,7 @@ msgstr "Yksityinen avain julkisella sormenjäljellä {fingerprint}"
 
 #: src/components/block/Block.jsx:242
 msgid "Proof of Space Size"
-msgstr "Tilatodisteen Koko"
+msgstr "Tilatodisteavaruuden Koko"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
@@ -983,7 +983,7 @@ msgstr "RAM enimmäismäärä"
 
 #: src/components/wallet/Wallets.tsx:40
 msgid "RL Wallet"
-msgstr "Siirtorajoitettu Lompakko"
+msgstr "Rajoitettu Lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:125
 msgid "Rate Limited"
@@ -1005,7 +1005,7 @@ msgstr "Siirtorajoitetun Lompakon Asennus"
 #: src/components/wallet/coloured/WalletColoured.tsx:452
 #: src/components/wallet/standard/WalletStandard.tsx:380
 msgid "Receive Address"
-msgstr "Kohdeosoite"
+msgstr "Vastaanottajan Osoite"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1013,7 +1013,7 @@ msgstr "Päivitä Plot-tiedostot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr "Nimeä uudelleen"
+msgstr "Nimeä Uudelleen"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1113,7 +1113,7 @@ msgstr "Käytettävissä"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr "Käytettävissä ajanjaksolla"
+msgstr "Käytettävissä Ajanjaksoa Kohti"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:569
@@ -1191,7 +1191,7 @@ msgstr "XCH Tuotantopalkkiot"
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
 msgid "TXCH Fees Collected"
-msgstr "XCH Transaktioveloitukset"
+msgstr "Perityt TXCH veloitukset"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1339,15 +1339,15 @@ msgstr "Kaupankäynti"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr "Kaupankäynnin Yksityskohdat"
+msgstr "Kaupan Yksityskohdat"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr "Kauppa"
+msgstr "Kaupan tunnus"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr "Kauppa:"
+msgstr "Kauppan tunnus:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
@@ -1388,7 +1388,7 @@ msgstr "Käyttäjän julkinen avain"
 
 #: src/components/fullNode/FullNode.jsx:205
 msgid "VDF Sub Slot Iterations"
-msgstr "VDF-iteraatioita"
+msgstr "VDF -väli-iteraatoita"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 msgid "View Log"
@@ -1452,7 +1452,7 @@ msgstr "Kyllä"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-msgstr ""
+msgstr "Sinulla on {0}% verkon tila-avaruudesta, joten yhden lohkon farmaroinnin odotusarvo on {expectedTimeToWin}."
 
 #: src/components/farm/overview/FarmOverview.tsx:13
 msgid "Your Farm Overview"
@@ -1464,7 +1464,7 @@ msgstr "Solmupalvelun Yhteys"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr ""
+msgstr "Harvesteriverkkosi"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:108
