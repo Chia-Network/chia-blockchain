@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-14 21:49\n"
+"PO-Revision-Date: 2021-02-14 22:06\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1265,31 +1265,31 @@ msgstr "Questo è il tempo in cui il blocco è stato creato dal coltivatore, che
 
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Questo è l'ammontare totale di chia nella blockchain nell'attuale sottoblocco di picco che è controllato dalle tue chiavi private. Questo include le ricompense da farming congelate, ma non le transazioni in entrata e uscita che sono in attesa."
 
 #: src/components/wallet/standard/WalletStandard.tsx:221
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Questo è il bilancio totale + il bilancio in attesa: questo è il bilancio che apparirà dopo che tutte le transazioni in attesa saranno confermate."
 
 #: src/components/fullNode/FullNode.jsx:157
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Questo nodo è pronto e sta validando la rete"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
-msgstr ""
+msgstr "Questa tabella ti mostra le ultime volte che la tua coltivazione ha tentato di vincere la sfida del blocco."
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Questo commercio è stato incluso sulla blockchain a questa altezza di blocco"
 
 #: src/components/fullNode/FullNode.jsx:110
 msgid "Time Created"
-msgstr ""
+msgstr "Creato al Tempo"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "Time this trade was created at this time"
-msgstr ""
+msgstr "Tempo questo commercio è stato creato a questo tempo"
 
 #: src/components/block/Block.jsx:189
 msgid "Timestamp"
@@ -1367,7 +1367,7 @@ msgstr "Storia commerci"
 
 #: src/components/block/Block.jsx:273
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Filtro Hash Transazioni"
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
@@ -1384,28 +1384,28 @@ msgstr "Identificatore unico"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr ""
+msgstr "Pubkey utente"
 
 #: src/components/fullNode/FullNode.jsx:205
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "Iterazioni Sotto Slot VDF"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 msgid "View Log"
-msgstr ""
+msgstr "Vedi Log"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "Vedi Offerta"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:584
 #: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "View pending balances"
-msgstr ""
+msgstr "Vedi bilanci in attesa"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "Vedi bilanci in attesa..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1420,11 +1420,11 @@ msgstr "I wallet"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Vuoi guadagnare più Chia? Aggingi più plot alla tua coltivazione."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Vuoi un ritardo prima che parta il prossimo plot?"
 
 #: src/components/block/Block.jsx:203
 msgid "Weight"
@@ -1432,19 +1432,19 @@ msgstr "Peso"
 
 #: src/components/block/Block.jsx:206
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Il peso è la difficoltà aggiunta in totale a tutti i sottoblocchi fino a e incluso questo"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Benvenuto da Chia. Per favore accedi con una chiave esistente, o crea una nuova chiave."
 
 #: src/components/wallet/WalletAdd.tsx:37
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Benvenuto! Le parole seguenti sono utilizzate per il backup del tuo wallet. Senza di queste, perderai l'accesso al tuo wallet, tienile al sicuro! Scrivi ogni parola insieme al suo vicino numero d'ordine. (L'ordine è importate)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amministratore, inseriscile sotto per completare il setup del tuo Wallet a Velocità Limitata (RL):"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
@@ -1452,19 +1452,19 @@ msgstr "Sì"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-msgstr ""
+msgstr "Tu hai lo {0}% dello spazio della rete, quindi coltivare un blocco richiederà in media {expectedTimeToWin}."
 
 #: src/components/farm/overview/FarmOverview.tsx:13
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Panoramica della Tua Fattoria"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr ""
+msgstr "La tua Connessione del Full Node"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr ""
+msgstr "La rete del tuo Harvester"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:108
