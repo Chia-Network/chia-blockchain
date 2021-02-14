@@ -11,6 +11,7 @@ from src.consensus.pos_quality import _expected_plot_size, UI_ACTUAL_SPACE_CONST
 from src.types.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
+from src.types.sized_bytes import bytes32
 
 
 log = logging.getLogger(__name__)
@@ -202,10 +203,10 @@ def load_plots(
                 continue
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
-    # Uncomment next three lines if memo is needed for dev debug
-    #            plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, local_master_sk)
-    #            plot_memo_str: str = plot_memo.hex()
-    #            log.info(f"Memo: {plot_memo_str}")
+            # Uncomment next three lines if memo is needed for dev debug
+            plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, local_master_sk)
+            plot_memo_str: str = plot_memo.hex()
+            log.info(f"Memo: {plot_memo_str}")
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
