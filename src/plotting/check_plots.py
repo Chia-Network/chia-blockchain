@@ -73,9 +73,6 @@ def check_plots(args, root_path):
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
         log.info(f"\tLocal sk: {plot_info.local_sk}")
-# Uncomment next two lines if memo is needed for dev debug
-#        plot_memo: bytes32 = stream_plot_info(plot_info.pool_public_key, plot_info.farmer_public_key, plot_info.local_sk)
-#        log.info(f"\tMemo: {plot_memo}")
         total_proofs = 0
         try:
             for i in range(num):
