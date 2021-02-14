@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-13 21:10\n"
+"PO-Revision-Date: 2021-02-14 10:24\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -249,7 +249,7 @@ msgstr "Confermato al blocco:"
 
 #: src/components/wallet/WalletHistory.tsx:36
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Confermato all'altezza {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
