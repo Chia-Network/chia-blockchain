@@ -11,7 +11,10 @@ export const fullNodeMessage = (message) => ({
 
 export function getBlockRecords(end, count = 10) {
   return async (dispatch) => {
-    const start = end - count;
+    let start = end - count;
+    if (start < 0) {
+      start = 0;
+    }
 
     const {
       data: { block_records },
@@ -27,7 +30,7 @@ export function getBlockRecords(end, count = 10) {
       false,
     );
 
-    return block_records.reverse();
+    return block_records ? block_records.reverse() : [];
   };
 }
 
@@ -48,7 +51,10 @@ export function updateLatestBlocks() {
 
 export function getBlocksRecords(end, count = 10) {
   return async (dispatch) => {
-    const start = end - count;
+    let start = end - count;
+    if (start < 0) {
+      start = 0;
+    }
 
     const {
       data: { blocks },
@@ -64,7 +70,7 @@ export function getBlocksRecords(end, count = 10) {
       false,
     );
 
-    return blocks.reverse();
+    return blocks ? blocks.reverse() : [];
   };
 }
 

@@ -19,10 +19,12 @@ import {
   standardWallet,
   CCWallet,
   RLWallet,
+  DIDWallet
 } from '../../modules/walletMenu';
 import { CreateWalletView } from './create/WalletCreate';
 import ColouredWallet from './coloured/WalletColoured';
 import RateLimitedWallet from './rateLimited/WalletRateLimited';
+import DistributedWallet from './did/DIDWallet';
 import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
 import LayoutSidebar from '../layout/LayoutSidebar';
@@ -48,16 +50,22 @@ const WalletItem = (props: any) => {
 
   let mainLabel = <></>;
   if (wallet.type === WalletType.STANDARD_WALLET) {
-    mainLabel = <Trans>Chia Wallet</Trans>;
+    mainLabel = <Trans id="WalletItem.chiaWallet">Chia Wallet</Trans>;
     name = 'Chia';
   } else if (wallet.type === WalletType.COLOURED_COIN) {
-    mainLabel = <Trans>CC Wallet</Trans>;
+    mainLabel = <Trans id="WalletItem.ccWallet">CC Wallet</Trans>;
     if (name.length > 18) {
       name = name.slice(0, 18);
       name = name.concat('...');
     }
   } else if (wallet.type === WalletType.RATE_LIMITED) {
-    mainLabel = <Trans>RL Wallet</Trans>;
+    mainLabel = <Trans id="WalletItem.rlWallet">RL Wallet</Trans>;
+    if (name.length > 18) {
+      name = name.slice(0, 18);
+      name = name.concat('...');
+    }
+  } else if (wallet.type === WalletType.DISTRIBUTED_ID) {
+    mainLabel = <Trans id="WalletItem.didWallet">DID Wallet</Trans>;
     if (name.length > 18) {
       name = name.slice(0, 18);
       name = name.concat('...');
@@ -71,6 +79,8 @@ const WalletItem = (props: any) => {
       dispatch(changeWalletMenu(CCWallet, wallet.id));
     } else if (wallet.type === WalletType.RATE_LIMITED) {
       dispatch(changeWalletMenu(RLWallet, wallet.id));
+    } else if (wallet.type === WalletType.DISTRIBUTED_ID) {
+      dispatch(changeWalletMenu(DIDWallet, wallet.id));
     }
 
     history.push('/dashboard/wallets');
@@ -95,7 +105,7 @@ const CreateWallet = () => {
       <Divider />
       <ListItem button onClick={presentCreateWallet}>
         <ListItemText
-          primary={<Trans>Add Wallet</Trans>}
+          primary={<Trans id="CreateWallet.addWallet">Add Wallet</Trans>}
         />
       </ListItem>
       <Divider />
@@ -121,35 +131,35 @@ export function StatusCard() {
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">
-        <Trans>Status</Trans>
+        <Trans id="StatusCard.title">Status</Trans>
       </Typography>
       <div style={{ marginLeft: 8 }}>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans>status:</Trans>
+            <Trans id="StatusCard.status">status:</Trans>
           </Box>
           <Box>
           {
             (() => {
               if (syncing)
-                 return <Trans>syncing</Trans>
+                 return <Trans id="WalletStatusCard.syncing">syncing</Trans>
               if (synced)
-                 return <Trans>synced</Trans>
+                 return <Trans id="WalletStatusCard.synced">synced</Trans>
               if (!synced)
-                return <Trans>not synced</Trans>
+                return <Trans id="WalletStatusCard.not_synced">not synced</Trans>
           })()
             }
           </Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans>height:</Trans>
+            <Trans id="StatusCard.height">height:</Trans>
           </Box>
           <Box>{height}</Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>
-            <Trans>connections:</Trans>
+            <Trans id="StatusCard.connections">connections:</Trans>
           </Box>
           <Box>{connectionCount}</Box>
         </Box>
@@ -166,7 +176,7 @@ export default function Wallets() {
 
   return (
     <LayoutSidebar
-      title={<Trans>Wallets</Trans>}
+      title={<Trans id="Wallets.title">Wallets</Trans>}
       sidebar={(
         <Flex flexDirection="column" height="100%" overflow="hidden">
           <Divider />
@@ -198,6 +208,10 @@ export default function Wallets() {
                 )}
                 {!!wallet && wallet.type === WalletType.RATE_LIMITED && (
                   <RateLimitedWallet wallet_id={id} />
+                )}
+                {!!wallet && wallet.type === WalletType.DISTRIBUTED_ID && (
+                  // @ts-ignore
+                  <DistributedWallet wallet_id={id} />
                 )}
               </Route>
               <Route path={`${path}/create`} exact>

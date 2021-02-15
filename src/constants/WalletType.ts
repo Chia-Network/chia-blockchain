@@ -8,6 +8,7 @@ enum WalletType {
   CUSTODY = 5,
   COLOURED_COIN = 6,
   RECOVERABLE = 7,
+  DISTRIBUTED_ID = 8,
 }
 
 export default WalletType;

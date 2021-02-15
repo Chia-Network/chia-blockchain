@@ -4,6 +4,9 @@ export const CREATE_EXISTING_CC = 'CREATE_EXISTING_CC';
 export const CREATE_RL_WALLET_OPTIONS = 'CREATE_RL_WALLET_OPTIONS';
 export const CREATE_RL_ADMIN = 'CREATE_RL_ADMIN';
 export const CREATE_RL_USER = 'CREATE_RL_USER';
+export const CREATE_DID_WALLET_OPTIONS = 'CREATE_DID_WALLET_OPTIONS';
+export const CREATE_DID_WALLET = 'CREATE_DID_WALLET';
+export const RECOVER_DID_WALLET = 'RECOVER_DID_WALLET';
 export const ALL_OPTIONS = 'ALL_OPTIONS';
 
 export const changeCreateWallet = (item: string) => ({

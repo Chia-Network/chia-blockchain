@@ -51,7 +51,9 @@ function getLatestTimestamp(
   }
 
   if (blocks) {
-    const firstBlock = blocks.find((block) => !!block.foliage_transaction_block?.timestamp);
+    const firstBlock = blocks.find(
+      (block) => !!block.foliage_transaction_block?.timestamp,
+    );
     if (
       firstBlock &&
       firstBlock.foliage_transaction_block &&

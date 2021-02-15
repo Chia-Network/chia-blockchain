@@ -27,11 +27,16 @@ import {
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
   CREATE_RL_USER,
+  CREATE_DID_WALLET_OPTIONS,
+  CREATE_DID_WALLET,
+  RECOVER_DID_WALLET
 } from '../../../modules/createWallet';
 import { CreateNewCCWallet } from './createNewColouredCoin';
 import { CreateExistingCCWallet } from './createExistingColouredCoin';
 import { CreateRLAdminWallet } from './createRLAdmin';
 import { CreateRLUserWallet } from './createRLUser';
+import { CreateDIDWallet } from './createDIDWallet';
+import { RecoverDIDWallet } from './recoverDIDWallet';
 
 export const useStyles = makeStyles((theme) => ({
   walletContainer: {
@@ -93,6 +98,10 @@ export const MainWalletList = () => {
     dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
+  function select_option_did() {
+    dispatch(changeCreateWallet(CREATE_DID_WALLET_OPTIONS));
+  }
+
   return (
     <Grid container spacing={0}>
       <Grid item xs={12}>
@@ -100,7 +109,7 @@ export const MainWalletList = () => {
           <Box display="flex">
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans>Select Wallet Type</Trans>
+                <Trans id="MainWalletList.title">Select Wallet Type</Trans>
               </Typography>
             </Box>
           </Box>
@@ -112,7 +121,7 @@ export const MainWalletList = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans>Coloured Coin</Trans>
+                <Trans id="MainWalletList.colouredCoin">Coloured Coin</Trans>
               }
             />
           </ListItem>
@@ -122,7 +131,17 @@ export const MainWalletList = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans>Rate Limited</Trans>
+                <Trans id="MainWalletList.rateLimited">Rate Limited</Trans>
+              }
+            />
+          </ListItem>
+          <ListItem button onClick={select_option_did}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.distributedIdentity">Distributed Identity</Trans>
               }
             />
           </ListItem>
@@ -160,7 +179,7 @@ export const CCListItems = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans>Coloured Coin Options</Trans>
+                <Trans id="CCListItems.title">Coloured Coin Options</Trans>
               </Typography>
             </Box>
           </Box>
@@ -172,7 +191,7 @@ export const CCListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans>
+                <Trans id="MainWalletList.createNewColouredCoin">
                   Create new coloured coin
                 </Trans>
               }
@@ -184,7 +203,7 @@ export const CCListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans>
+                <Trans id="MainWalletList.createWalletForExistingColour">
                   Create wallet for existing colour
                 </Trans>
               }
@@ -224,7 +243,7 @@ export const RLListItems = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans>Rate Limited Options</Trans>
+                <Trans id="RLListItems.title">Rate Limited Options</Trans>
               </Typography>
             </Box>
           </Box>
@@ -236,7 +255,7 @@ export const RLListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans>
+                <Trans id="MainWalletList.createAdminWallet">
                   Create admin wallet
                 </Trans>
               }
@@ -248,8 +267,72 @@ export const RLListItems = () => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Trans>
+                <Trans id="MainWalletList.createUserWallet">
                   Create user wallet
+                </Trans>
+              }
+            />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
+  );
+};
+
+export const DIDListItems = () => {
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function goBack() {
+    dispatch(changeCreateWallet(ALL_OPTIONS));
+  }
+
+  function select_option_create() {
+    dispatch(changeCreateWallet(CREATE_DID_WALLET));
+  }
+
+  function select_option_recover() {
+    dispatch(changeCreateWallet(RECOVER_DID_WALLET));
+  }
+
+  return (
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box>
+              <Button onClick={goBack}>
+                <ArrowBackIosIcon />
+              </Button>
+            </Box>
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                <Trans id="DIDListItems.title">Distributed Identity Options</Trans>
+              </Typography>
+            </Box>
+          </Box>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_create}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.createDIDWallet">
+                  Create DID wallet
+                </Trans>
+              }
+            />
+          </ListItem>
+          <ListItem button onClick={select_option_recover}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.recoverDIDWallet">
+                  Recover DID wallet
                 </Trans>
               }
             />
@@ -273,6 +356,9 @@ export function CreateWalletView() {
         {view === CREATE_RL_WALLET_OPTIONS && <RLListItems />}
         {view === CREATE_RL_ADMIN && <CreateRLAdminWallet />}
         {view === CREATE_RL_USER && <CreateRLUserWallet />}
+        {view === CREATE_DID_WALLET_OPTIONS && <DIDListItems />}
+        {view === CREATE_DID_WALLET && <CreateDIDWallet />}
+        {view === RECOVER_DID_WALLET && <RecoverDIDWallet />}
       </CardContent>
     </Card>
   );

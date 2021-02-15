@@ -14,6 +14,11 @@ interface Wallet {
   transactions: Transaction[];
   address: string;
   colour: string;
+  mydid: string;
+  didcoin: string;
+  backup_dids: string[];
+  dids_num_req: number;
+  did_attest: string;
   sending_transaction: boolean;
   send_transaction_result?: string | null;
 }

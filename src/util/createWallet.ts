@@ -22,6 +22,11 @@ export default function createWallet(
     transactions: [],
     address: '',
     colour: '',
+    mydid: '',
+    didcoin: '',
+    backup_dids: [],
+    dids_num_req: 0,
+    did_attest: '',
     sending_transaction: false,
     send_transaction_result: '',
   };

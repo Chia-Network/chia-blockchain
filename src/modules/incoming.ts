@@ -246,6 +246,42 @@ export default function incomingReducer(
         }
         wallet.name = name;
         return { ...state };
+      } else if (command === 'did_get_did') {
+        const id = data.wallet_id;
+        const mydid = data.my_did;
+        const { coin_id } = data;
+        wallets = state.wallets;
+        const wallet = wallets[Number.parseInt(id, 10)];
+        if (!wallet) {
+          return state;
+        }
+        wallet.mydid = mydid;
+        wallet.didcoin = coin_id;
+        return { ...state };
+      } else if (command === 'did_get_recovery_list') {
+        const id = data.wallet_id;
+        const dids = data.recover_list;
+        const dids_num_req = data.num_required;
+        wallets = state.wallets;
+        const wallet = wallets[Number.parseInt(id, 10)];
+        if (!wallet) {
+          return state;
+        }
+        wallet.backup_dids = dids;
+        wallet.dids_num_req = dids_num_req;
+        return { ...state };
+      } else if (command === 'did_create_attest') {
+        const id = data.wallet_id;
+        const attest = data.message_spend_bundle;
+        wallets = state.wallets;
+        const wallet = wallets[Number.parseInt(id, 10)];
+        if (!wallet) {
+          return state;
+        }
+        wallet.did_attest = attest;
+        return { ...state };
+      } else if (command === 'did_create_backup_file') {
+        success = data.success;
       }
       if (command === 'state_changed' && data.state === 'tx_update') {
         const id = data.wallet_id;
