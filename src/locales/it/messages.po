@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-15 05:17\n"
+"PO-Revision-Date: 2021-02-15 23:36\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -58,8 +58,8 @@ msgid "Add Plot Directory"
 msgstr "Aggiungi Cartella Plot"
 
 #: src/components/wallet/Wallets.tsx:70
-msgid "Add Wallet"
-msgstr "Aggiungi Wallet"
+#~ msgid "Add Wallet"
+#~ msgstr "Add Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -68,14 +68,14 @@ msgstr "Aggiungi Wallet"
 msgid "Add a Plot"
 msgstr "Aggiungi un Plot"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:404
-#: src/components/wallet/coloured/WalletColoured.tsx:456
-#: src/components/wallet/standard/WalletStandard.tsx:384
+#: src/components/wallet/coloured/WalletColoured.tsx:403
+#: src/components/wallet/coloured/WalletColoured.tsx:455
+#: src/components/wallet/standard/WalletStandard.tsx:383
 msgid "Address"
 msgstr "Indirizzo"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:746
-#: src/components/wallet/standard/WalletStandard.tsx:334
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
+#: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Address / Puzzle hash"
 msgstr "Indirizzo / Puzzle hash"
 
@@ -83,12 +83,12 @@ msgstr "Indirizzo / Puzzle hash"
 #: src/components/trading/TradesTable.tsx:16
 #: src/components/wallet/WalletHistory.tsx:46
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:768
-#: src/components/wallet/standard/WalletStandard.tsx:344
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
+#: src/components/wallet/standard/WalletStandard.tsx:343
 msgid "Amount"
 msgstr "Totale"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:414
+#: src/components/wallet/coloured/WalletColoured.tsx:413
 msgid "Amount ({cc_unit})"
 msgstr "Totale ({cc_unit})"
 
@@ -106,9 +106,9 @@ msgstr "Sei sicuro di voler eliminare il plot? Il plot non può essere recuperat
 msgid "Back"
 msgstr "Indietro"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:286
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:560
-#: src/components/wallet/standard/WalletStandard.tsx:193
+#: src/components/wallet/coloured/WalletColoured.tsx:285
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
+#: src/components/wallet/standard/WalletStandard.tsx:192
 msgid "Balance"
 msgstr "Bilancio"
 
@@ -169,8 +169,12 @@ msgid "Buy"
 msgstr "Compra"
 
 #: src/components/wallet/Wallets.tsx:33
-msgid "CC Wallet"
-msgstr "CC Wallet"
+#~ msgid "CC Wallet"
+#~ msgstr "CC Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:182
+msgid "CCListItems.title"
+msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
@@ -199,8 +203,8 @@ msgid "Challenge Hash"
 msgstr "Hash Sfida"
 
 #: src/components/wallet/Wallets.tsx:29
-msgid "Chia Wallet"
-msgstr "Wallet Chia"
+#~ msgid "Chia Wallet"
+#~ msgstr "Chia Wallet"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -223,7 +227,7 @@ msgstr "Monete:"
 msgid "Colour"
 msgstr "Colore"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:181
+#: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
 msgstr "Informazioni Colore"
 
@@ -231,17 +235,17 @@ msgstr "Informazioni Colore"
 msgid "Colour String"
 msgstr "Stringa Colore"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:186
+#: src/components/wallet/coloured/WalletColoured.tsx:185
 msgid "Colour:"
 msgstr "Colore:"
 
 #: src/components/wallet/create/WalletCreate.jsx:115
-msgid "Coloured Coin"
-msgstr "Moneta Colorata"
+#~ msgid "Coloured Coin"
+#~ msgstr "Coloured Coin"
 
 #: src/components/wallet/create/WalletCreate.jsx:163
-msgid "Coloured Coin Options"
-msgstr "Opzioni Moneta Colorata"
+#~ msgid "Coloured Coin Options"
+#~ msgstr "Coloured Coin Options"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -285,11 +289,11 @@ msgstr "Tipo di connessione"
 msgid "Connections"
 msgstr "Connessioni"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:460
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:388
+#: src/components/wallet/coloured/WalletColoured.tsx:459
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:441
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
+#: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "Copy"
 msgstr "Copia"
 
@@ -320,9 +324,9 @@ msgstr "Crea Scambio"
 msgid "Create Trade Offer"
 msgstr "Crea Offerta Commerciale"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:395
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:727
-#: src/components/wallet/standard/WalletStandard.tsx:325
+#: src/components/wallet/coloured/WalletColoured.tsx:394
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
+#: src/components/wallet/standard/WalletStandard.tsx:324
 msgid "Create Transaction"
 msgstr "Crea Transazione"
 
@@ -331,24 +335,28 @@ msgid "Create a new private key"
 msgstr "Crea una nuova chiave privata"
 
 #: src/components/wallet/create/WalletCreate.jsx:239
-msgid "Create admin wallet"
-msgstr "Crea un wallet amministratore"
+#~ msgid "Create admin wallet"
+#~ msgstr "Create admin wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:175
-msgid "Create new coloured coin"
-msgstr "Crea una nuova moneta colorata"
+#~ msgid "Create new coloured coin"
+#~ msgstr "Create new coloured coin"
 
 #: src/components/wallet/create/WalletCreate.jsx:251
-msgid "Create user wallet"
-msgstr "Crea un wallet utente"
+#~ msgid "Create user wallet"
+#~ msgstr "Create user wallet"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
 msgstr "Crea un wallet per colore"
 
 #: src/components/wallet/create/WalletCreate.jsx:187
-msgid "Create wallet for existing colour"
-msgstr "Crea un wallet per un colore esistente"
+#~ msgid "Create wallet for existing colour"
+#~ msgstr "Create wallet for existing colour"
+
+#: src/components/wallet/Wallets.tsx:81
+msgid "CreateWallet.addWallet"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
@@ -361,6 +369,10 @@ msgstr "Creato da noi:"
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
 msgstr "Stato attuale dello scambio"
+
+#: src/components/wallet/create/WalletCreate.jsx:310
+msgid "DIDListItems.title"
+msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:29
 #: src/components/trading/TradingOverview.jsx:137
@@ -418,6 +430,7 @@ msgid "Does your machine support parallel plotting?"
 msgstr "Questa macchina supporta il plotting parallelo?"
 
 #: src/components/trading/ViewOffer.jsx:41
+#: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
 msgstr "Trascina e rilascia il file dell'offerta"
 
@@ -435,7 +448,7 @@ msgstr "Inserisci le 24 parole mnemoniche che hai salvato per poter ripristinare
 msgid "Error"
 msgstr "Errore"
 
-#: src/components/wallet/standard/WalletStandard.tsx:305
+#: src/components/wallet/standard/WalletStandard.tsx:304
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Errore: impossibile inviare chia ad un indirizzo colorato. Perfavore inserisci un indirizzo chia."
 
@@ -457,8 +470,8 @@ msgid "Failed to open (invalid plots)"
 msgstr "Impossibile aprire (plot non validi)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
-#: src/components/wallet/coloured/WalletColoured.tsx:429
-#: src/components/wallet/standard/WalletStandard.tsx:357
+#: src/components/wallet/coloured/WalletColoured.tsx:428
+#: src/components/wallet/standard/WalletStandard.tsx:356
 msgid "Farm"
 msgstr "Coltiva"
 
@@ -500,12 +513,12 @@ msgstr "Stato della Coltivazione"
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:781
-#: src/components/wallet/standard/WalletStandard.tsx:349
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:780
+#: src/components/wallet/standard/WalletStandard.tsx:348
 msgid "Fee"
 msgstr "Fee"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:421
+#: src/components/wallet/coloured/WalletColoured.tsx:420
 msgid "Fee (TXCH)"
 msgstr "Fee (TXCH)"
 
@@ -563,7 +576,7 @@ msgstr "Hash Header"
 msgid "Height"
 msgstr "Altezza"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:44
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:45
 msgid "Help translate"
 msgstr "Aiuta a tradurre"
 
@@ -620,8 +633,8 @@ msgstr "Indicato se questa offerta è stata creata da noi"
 msgid "Indicated what time this offer was accepted"
 msgstr "Indicato quando è stata accettata questa offerta"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:341
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:490
 msgid "Info Packet"
 msgstr "Informazioni sul Pacchetto"
 
@@ -665,6 +678,46 @@ msgstr "Plot Harvester Locale"
 msgid "Logging in"
 msgstr "Accedendo"
 
+#: src/components/wallet/create/WalletCreate.jsx:124
+msgid "MainWalletList.colouredCoin"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:258
+msgid "MainWalletList.createAdminWallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:322
+msgid "MainWalletList.createDIDWallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:194
+msgid "MainWalletList.createNewColouredCoin"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:270
+msgid "MainWalletList.createUserWallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:206
+msgid "MainWalletList.createWalletForExistingColour"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:144
+msgid "MainWalletList.distributedIdentity"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:134
+msgid "MainWalletList.rateLimited"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:334
+msgid "MainWalletList.recoverDIDWallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:112
+msgid "MainWalletList.title"
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.jsx:99
@@ -679,12 +732,12 @@ msgstr "Minuti"
 msgid "More memory slightly increases speed"
 msgstr "Più memoria aumenta leggermente la velocità"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 msgid "My Pubkey"
 msgstr "La mia Pubkey"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:470
-#: src/components/wallet/standard/WalletStandard.tsx:398
+#: src/components/wallet/coloured/WalletColoured.tsx:469
+#: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
 msgstr "Nuovo Indirizzo"
 
@@ -698,7 +751,7 @@ msgstr "Nuovo Wallet"
 msgid "Next"
 msgstr "Prossimo"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:200
+#: src/components/wallet/coloured/WalletColoured.tsx:199
 msgid "Nickname"
 msgstr "Nickname"
 
@@ -789,18 +842,18 @@ msgstr "Tempo Picco"
 msgid "Pending"
 msgstr "In attesa"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:602
-#: src/components/wallet/standard/WalletStandard.tsx:226
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:601
+#: src/components/wallet/standard/WalletStandard.tsx:225
 msgid "Pending Balance"
 msgstr "Bilancio in attesa"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:611
-#: src/components/wallet/standard/WalletStandard.tsx:233
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
+#: src/components/wallet/standard/WalletStandard.tsx:232
 msgid "Pending Change"
 msgstr "Cambiamento in attesa"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:593
-#: src/components/wallet/standard/WalletStandard.tsx:219
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:592
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
 msgstr "Bilancio Totale in attesa"
 
@@ -808,7 +861,7 @@ msgstr "Bilancio Totale in attesa"
 msgid "Please add a trade pair"
 msgstr "Per favore aggiungi una coppia di scambio"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:710
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
 msgstr "Per favore inserisci tasse 0. Le tasse positive non sono ancora supportate per RL."
 
@@ -817,16 +870,16 @@ msgid "Please enter a valid initial coin amount"
 msgstr "Per favore inserisci un ammontare di moneta iniziale valido"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:677
-#: src/components/wallet/standard/WalletStandard.tsx:287
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
+#: src/components/wallet/standard/WalletStandard.tsx:286
 msgid "Please enter a valid numeric amount"
 msgstr "Per favore inserisci una ammontare numerico valido"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:689
-#: src/components/wallet/standard/WalletStandard.tsx:295
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:688
+#: src/components/wallet/standard/WalletStandard.tsx:294
 msgid "Please enter a valid numeric fee"
 msgstr "Per favore inserisci un valore numerico valido per la tassa"
 
@@ -842,8 +895,8 @@ msgstr "Per favore inserisci un ammontare numerico spendibili valido"
 msgid "Please enter a valid pubkey"
 msgstr "Per favore inserisci una pubkey valida"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:659
-#: src/components/wallet/standard/WalletStandard.tsx:275
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
+#: src/components/wallet/standard/WalletStandard.tsx:274
 msgid "Please finish syncing before making a transaction"
 msgstr "Per favore completa la sincronizzazione prima di fare una transazione"
 
@@ -982,28 +1035,32 @@ msgid "RAM max usage"
 msgstr "Utilizzo massimo RAM"
 
 #: src/components/wallet/Wallets.tsx:40
-msgid "RL Wallet"
-msgstr "Wallet RL"
+#~ msgid "RL Wallet"
+#~ msgstr "RL Wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:246
+msgid "RLListItems.title"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:125
-msgid "Rate Limited"
-msgstr "Velocità Limitata"
+#~ msgid "Rate Limited"
+#~ msgstr "Rate Limited"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
 msgid "Rate Limited Info"
 msgstr "Informazioni Velocità Limitata"
 
 #: src/components/wallet/create/WalletCreate.jsx:227
-msgid "Rate Limited Options"
-msgstr "Opzioni Velocità Limitata"
+#~ msgid "Rate Limited Options"
+#~ msgstr "Rate Limited Options"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
 msgstr "Setup Utente Wallet a Velocità Limitata"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:452
-#: src/components/wallet/standard/WalletStandard.tsx:380
+#: src/components/wallet/coloured/WalletColoured.tsx:451
+#: src/components/wallet/standard/WalletStandard.tsx:379
 msgid "Receive Address"
 msgstr "Indirizzo per Ricevere"
 
@@ -1011,7 +1068,7 @@ msgstr "Indirizzo per Ricevere"
 msgid "Refresh Plots"
 msgstr "Aggiorna Plot"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:206
+#: src/components/wallet/coloured/WalletColoured.tsx:205
 msgid "Rename"
 msgstr "Rinomina"
 
@@ -1057,8 +1114,8 @@ msgid "Select Temporary Directory"
 msgstr "Seleziona Cartella Temporanea"
 
 #: src/components/wallet/create/WalletCreate.jsx:103
-msgid "Select Wallet Type"
-msgstr "Seleziona Tipo di Wallet"
+#~ msgid "Select Wallet Type"
+#~ msgstr "Select Wallet Type"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1080,17 +1137,17 @@ msgstr "Selezionato"
 msgid "Sell"
 msgstr "Vendi"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:434
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:796
-#: src/components/wallet/standard/WalletStandard.tsx:362
+#: src/components/wallet/coloured/WalletColoured.tsx:433
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:795
+#: src/components/wallet/standard/WalletStandard.tsx:361
 msgid "Send"
 msgstr "Invia"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:477
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 msgstr "Invia questo pacchetto di informazioni al tuo utente Wallet a Velocità Limitata che deve usarlo per completare il setup del suo wallet:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:284
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
 msgstr "Invia la tua pubkey all'amministratore del tuo Wallet a Velocità Limitata:"
 
@@ -1115,14 +1172,14 @@ msgstr "Ammontare Spendibile"
 msgid "Spendable Amount Per Interval"
 msgstr "Ammontare Spendibile Per Intervallo"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:288
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:569
-#: src/components/wallet/standard/WalletStandard.tsx:200
+#: src/components/wallet/coloured/WalletColoured.tsx:287
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
+#: src/components/wallet/standard/WalletStandard.tsx:199
 msgid "Spendable Balance"
 msgstr "Bilancio Spendibile"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:407
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:458
 msgid "Spending Interval (number of blocks): {interval}"
 msgstr "Intervallo di Spesa (numero di blocchi): {interval}"
 
@@ -1130,8 +1187,8 @@ msgstr "Intervallo di Spesa (numero di blocchi): {interval}"
 msgid "Spending Interval Length (number of blocks)"
 msgstr "Lunghezza Intervallo di Spesa (numero di blocchi)"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:414
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:465
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite di Spesa (chia per intervallo): {0}"
 
@@ -1147,13 +1204,28 @@ msgstr "Condizione"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:40
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:82
 msgid "Status"
 msgstr "Stato"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
 msgstr "Stato:"
+
+#: src/components/wallet/Wallets.tsx:119
+msgid "StatusCard.connections"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:113
+msgid "StatusCard.height"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+msgid "StatusCard.status"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:93
+msgid "StatusCard.title"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Stripe Size"
@@ -1167,7 +1239,7 @@ msgstr "Dimensione Striscia"
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
 msgid "Submit"
 msgstr "Invia"
 
@@ -1243,15 +1315,15 @@ msgstr "Questi plot non sono validi, dovresti eliminarli."
 msgid "This feature is available only from the GUI."
 msgstr "Questa funzione è disponibile solo sulla GUI."
 
-#: src/components/wallet/standard/WalletStandard.tsx:200
+#: src/components/wallet/standard/WalletStandard.tsx:199
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "Questo è l'ammontare di Chia che puoi utilizzare attualmente per fare transazioni. Non include le ricompense coltivate in sospeso, transazioni in entrata in sospeso, e Chia che tua hai appena speso ma non sono ancora nella blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:235
+#: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "Questa è la modifica in sospeso, ovvero le monete di cambio che hai inviato a te stesso, ma non sono state ancora confermate."
 
-#: src/components/wallet/standard/WalletStandard.tsx:228
+#: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (non ancora incluse nella blockchain). Questo non include le ricompense coltivate."
 
@@ -1263,11 +1335,11 @@ msgstr "Questo è il tempo dell'ultimo sottoblocco di picco."
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Questo è il tempo in cui il blocco è stato creato dal coltivatore, che è precedente a quando è stato finalizzato con una prova di tempo"
 
-#: src/components/wallet/standard/WalletStandard.tsx:194
+#: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "Questo è l'ammontare totale di chia nella blockchain nell'attuale sottoblocco di picco che è controllato dalle tue chiavi private. Questo include le ricompense da farming congelate, ma non le transazioni in entrata e uscita che sono in attesa."
 
-#: src/components/wallet/standard/WalletStandard.tsx:221
+#: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Questo è il bilancio totale + il bilancio in attesa: questo è il bilancio che apparirà dopo che tutte le transazioni in attesa saranno confermate."
 
@@ -1299,9 +1371,9 @@ msgstr "Marca temporale"
 msgid "To"
 msgstr "A"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:287
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:563
-#: src/components/wallet/standard/WalletStandard.tsx:194
+#: src/components/wallet/coloured/WalletColoured.tsx:286
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+#: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Total Balance"
 msgstr "Bilancio Totale"
 
@@ -1382,7 +1454,7 @@ msgid "Unique identifier"
 msgstr "Identificatore unico"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:299
 msgid "User Pubkey"
 msgstr "Pubkey utente"
 
@@ -1398,12 +1470,12 @@ msgstr "Vedi Log"
 msgid "View Offer"
 msgstr "Vedi Offerta"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:584
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
+#: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "View pending balances"
 msgstr "Vedi bilanci in attesa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:296
+#: src/components/wallet/coloured/WalletColoured.tsx:295
 msgid "View pending balances..."
 msgstr "Vedi bilanci in attesa..."
 
@@ -1413,10 +1485,41 @@ msgstr "Vedi bilanci in attesa..."
 msgid "Wait for synchronization"
 msgstr "Aspetta per la sincronizzazione"
 
+#: src/components/wallet/Wallets.tsx:34
+msgid "WalletItem.ccWallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:30
+msgid "WalletItem.chiaWallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:48
+msgid "WalletItem.didWallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:41
+msgid "WalletItem.rlWallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:107
+msgid "WalletStatusCard.not_synced"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:105
+msgid "WalletStatusCard.synced"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:103
+msgid "WalletStatusCard.syncing"
+msgstr ""
+
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:120
 msgid "Wallets"
 msgstr "I wallet"
+
+#: src/components/wallet/Wallets.tsx:131
+msgid "Wallets.title"
+msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:77
 msgid "Want to earn more Chia? Add more plots to your farm."
@@ -1442,7 +1545,7 @@ msgstr "Benvenuto da Chia. Per favore accedi con una chiave esistente, o crea un
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "Benvenuto! Le parole seguenti sono utilizzate per il backup del tuo wallet. Senza di queste, perderai l'accesso al tuo wallet, tienile al sicuro! Scrivi ogni parola insieme al suo vicino numero d'ordine. (L'ordine è importate)"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amministratore, inseriscile sotto per completare il setup del tuo Wallet a Velocità Limitata (RL):"
 
@@ -1467,31 +1570,26 @@ msgid "Your Harvester Network"
 msgstr "La rete del tuo Harvester"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:108
 msgid "connections:"
 msgstr "connessioni:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:102
 msgid "height:"
 msgstr "altezza:"
 
 #: src/components/wallet/Wallets.tsx:96
-msgid "not synced"
-msgstr "non sincronizzato"
+#~ msgid "not synced"
+#~ msgstr "not synced"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:87
 msgid "status:"
 msgstr "stato:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:94
 msgid "synced"
 msgstr "sincronizzato"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:92
 msgid "syncing"
 msgstr "sincronizzando"
 
