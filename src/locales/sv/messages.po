@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-15 05:17\n"
+"PO-Revision-Date: 2021-02-15 07:25\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -55,7 +55,7 @@ msgstr "Lägg till"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Lägg till plottkatalog"
+msgstr "Lägg till mapp med plottar"
 
 #: src/components/wallet/Wallets.tsx:70
 msgid "Add Wallet"
@@ -411,7 +411,7 @@ msgstr "Svårighetsgrad"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "Har du redan några plottar på denna maskin?<0>Lägg till plottkatalog</0>"
+msgstr "Har du redan några plottar på denna maskin?<0>Lägg till plottmapp</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -590,7 +590,7 @@ msgstr "IP-adress/värd"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr ""
+msgstr "Om ingen anges kommer den tillfälliga mappen att användas."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
@@ -867,7 +867,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "Ange tillfällig mapp"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1034,11 +1034,11 @@ msgstr "Sök block med huvudhash"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Andra tillfällig mapp"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Välj en andra tillfällig mapp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
@@ -1054,7 +1054,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Välj tillfällig mapp"
 
 #: src/components/wallet/create/WalletCreate.jsx:103
 msgid "Select Wallet Type"
@@ -1195,11 +1195,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr ""
+msgstr "Tillfällig mapp"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
