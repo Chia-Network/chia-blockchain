@@ -641,8 +641,18 @@ class FullNodeAPI:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is None:
                     spend_bundle: Optional[SpendBundle] = None
+                    additions = None
+                    removals = None
                 else:
-                    spend_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                    mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                    if mempool_bundle is None:
+                        spend_bundle = None
+                        additions = None
+                        removals = None
+                    else:
+                        spend_bundle = mempool_bundle[0]
+                        additions = mempool_bundle[1]
+                        removals = mempool_bundle[2]
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -764,6 +774,8 @@ class FullNodeAPI:
                 self.full_node.blockchain,
                 b"",
                 spend_bundle,
+                additions,
+                removals,
                 prev_b,
                 finished_sub_slots,
             )
@@ -1030,6 +1042,7 @@ class FullNodeAPI:
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
             cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(request.transaction)
+
             async with self.full_node.blockchain.lock:
                 cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
                     request.transaction, cost_result, spend_name
@@ -1038,13 +1051,15 @@ class FullNodeAPI:
                     self.log.debug(f"Added transaction to mempool: {spend_name}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
-                    fees = request.transaction.fees()
+                    mempool_item = self.full_node.mempool_manager.get_mempool_item(spend_name)
+                    assert mempool_item is not None
+                    fees = mempool_item.fee
                     assert fees >= 0
                     assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(
                         spend_name,
                         cost,
-                        uint64(request.transaction.fees()),
+                        uint64(fees),
                     )
                     msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
                     await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)

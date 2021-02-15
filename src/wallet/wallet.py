@@ -1,10 +1,12 @@
 import logging
 import time
-from typing import Dict, List, Set, Any
+from typing import Dict, List, Set, Any, Optional
 
 from blspy import G1Element
 
 from src.types.blockchain_format.coin import Coin
+from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
+from src.full_node.bundle_tools import best_solution_program
 from src.types.coin_solution import CoinSolution
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -38,6 +40,7 @@ class Wallet:
     log: logging.Logger
     wallet_id: uint32
     secret_key_store: SecretKeyStore
+    cost_of_single_tx: Optional[int]
 
     @staticmethod
     async def create(
@@ -53,8 +56,41 @@ class Wallet:
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
         self.secret_key_store = SecretKeyStore()
-
+        self.cost_of_single_tx = None
         return self
+
+    async def get_max_send_amount(self, records=None):
+        spendable: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+        )
+        if len(spendable) == 0:
+            return 0
+        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
+        if self.cost_of_single_tx is None:
+            coin = spendable[0].coin
+            tx = await self.generate_signed_transaction(
+                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send=True
+            )
+            program = best_solution_program(tx.spend_bundle)
+            # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            cost_result: CostResult = calculate_cost_of_program(
+                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+            )
+            self.cost_of_single_tx = cost_result.cost
+            self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
+
+        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
+        current_cost = 0
+        total_amount = 0
+        total_coin_count = 0
+        for record in spendable:
+            current_cost += self.cost_of_single_tx
+            total_amount += record.coin.amount
+            total_coin_count += 1
+            if current_cost + self.cost_of_single_tx > max_cost:
+                break
+
+        return total_amount
 
     @classmethod
     def type(cls) -> uint8:
@@ -135,7 +171,7 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries=None,
+        primaries: Optional[List[Dict[str, bytes32]]] = None,
         min_time=0,
         me=None,
         announcements=None,
@@ -185,7 +221,7 @@ class Wallet:
             used_coins: Set = set()
 
             # Use older coins first
-            unspent.sort(key=lambda r: r.confirmed_block_height)
+            unspent.sort(reverse=True, key=lambda r: r.coin.amount)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -220,17 +256,32 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
+        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        ignore_max_send: bool = False,
     ) -> List[CoinSolution]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         """
+        if primaries is None:
+            total_amount = amount + fee
+        else:
+            primaries_amount = 0
+            for prim in primaries:
+                primaries_amount += prim["amount"]
+            total_amount = amount + fee + primaries_amount
+
+        if not ignore_max_send:
+            max_send = await self.get_max_send_amount()
+            if total_amount > max_send:
+                raise ValueError(f"Can't send more than {max_send} in a single transaction")
+
         if coins is None:
-            coins = await self.select_coins(amount + fee)
+            coins = await self.select_coins(total_amount)
         assert len(coins) > 0
 
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
-        change = spend_value - amount - fee
+        change = spend_value - total_amount
 
         spends: List[CoinSolution] = []
         output_created = False
@@ -241,11 +292,13 @@ class Wallet:
 
             # Only one coin creates outputs
             if not output_created and origin_id in (None, coin.name()):
-                primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
+                if primaries is None:
+                    primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
+                else:
+                    primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
                 if change > 0:
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-
                 solution = self.make_solution(primaries=primaries, fee=fee)
                 output_created = True
             else:
@@ -267,10 +320,14 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
+        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        ignore_max_send: bool = False,
     ) -> TransactionRecord:
         """ Use this to generate transaction. """
 
-        transaction = await self.generate_unsigned_transaction(amount, puzzle_hash, fee, origin_id, coins)
+        transaction = await self.generate_unsigned_transaction(
+            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send
+        )
         assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")

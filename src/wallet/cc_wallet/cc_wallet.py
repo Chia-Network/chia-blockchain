@@ -7,6 +7,8 @@ from secrets import token_bytes
 from typing import Dict, Optional, List, Any, Set
 from blspy import G2Element, AugSchemeMPL
 
+from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
+from src.full_node.bundle_tools import best_solution_program
 from src.protocols.wallet_protocol import PuzzleSolutionResponse
 from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -59,6 +61,7 @@ class CCWallet:
     standard_wallet: Wallet
     base_puzzle_program: Optional[bytes]
     base_inner_puzzle_hash: Optional[bytes32]
+    cost_of_single_tx: Optional[int]
 
     @staticmethod
     async def create_new_cc(
@@ -67,6 +70,7 @@ class CCWallet:
         amount: uint64,
     ):
         self = CCWallet()
+        self.cost_of_single_tx = None
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
@@ -150,8 +154,8 @@ class CCWallet:
         wallet: Wallet,
         genesis_checker_hex: str,
     ) -> CCWallet:
-
         self = CCWallet()
+        self.cost_of_single_tx = None
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
@@ -226,6 +230,39 @@ class CCWallet:
 
         self.log.info(f"Unconfirmed balance for cc wallet {self.id()} is {result}")
         return uint128(result)
+
+    async def get_max_send_amount(self, records=None):
+        spendable: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+        )
+        if len(spendable) == 0:
+            return 0
+        spendable.sort(reverse=True, key=lambda record: record.coin.amount)
+        if self.cost_of_single_tx is None:
+            coin = spendable[0].coin
+            tx = await self.generate_signed_transaction(
+                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send=True
+            )
+            program = best_solution_program(tx.spend_bundle)
+            # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            cost_result: CostResult = calculate_cost_of_program(
+                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+            )
+            self.cost_of_single_tx = cost_result.cost
+            self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
+
+        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
+        current_cost = 0
+        total_amount = 0
+        total_coin_count = 0
+        for record in spendable:
+            current_cost += self.cost_of_single_tx
+            total_amount += record.coin.amount
+            total_coin_count += 1
+            if current_cost + self.cost_of_single_tx > max_cost:
+                break
+
+        return total_amount
 
     async def get_name(self):
         return self.wallet_info.name
@@ -523,19 +560,26 @@ class CCWallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
+        ignore_max_sent_amount: bool = False
     ) -> TransactionRecord:
         sigs: List[G2Element] = []
 
         # Get coins and calculate amount of change required
         outgoing_amount = uint64(sum(amounts))
+        total_outgoing = outgoing_amount + fee
+
+        if not ignore_max_sent_amount:
+            max_send = await self.get_max_send_amount()
+            if total_outgoing > max_send:
+                raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
         if coins is None:
-            selected_coins: Set[Coin] = await self.select_coins(uint64(outgoing_amount + fee))
+            selected_coins: Set[Coin] = await self.select_coins(uint64(total_outgoing))
         else:
             selected_coins = coins
 
         total_amount = sum([x.amount for x in selected_coins])
-        change = total_amount - outgoing_amount - fee
+        change = total_amount - total_outgoing
         primaries = []
         for amount, puzzle_hash in zip(amounts, puzzle_hashes):
             primaries.append({"puzzlehash": puzzle_hash, "amount": amount})

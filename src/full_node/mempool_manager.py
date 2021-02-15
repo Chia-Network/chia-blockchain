@@ -78,7 +78,9 @@ class MempoolManager:
     def shut_down(self):
         self.pool.shutdown(wait=True)
 
-    async def create_bundle_from_mempool(self, peak_header_hash: bytes32) -> Optional[SpendBundle]:
+    async def create_bundle_from_mempool(
+        self, peak_header_hash: bytes32
+    ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
@@ -92,6 +94,8 @@ class MempoolManager:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_bundles: List[SpendBundle] = []
+        removals = []
+        additions = []
         for dic in self.mempool.sorted_spends.values():
             for item in dic.values():
                 if (
@@ -101,10 +105,12 @@ class MempoolManager:
                     spend_bundles.append(item.spend_bundle)
                     cost_sum += item.cost_result.cost
                     fee_sum += item.fee
+                    removals.extend(item.removals)
+                    additions.extend(item.additions)
                 else:
                     break
         if len(spend_bundles) > 0:
-            return SpendBundle.aggregate(spend_bundles)
+            return SpendBundle.aggregate(spend_bundles), additions, removals
         else:
             return None
 
@@ -150,10 +156,12 @@ class MempoolManager:
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
-
+        start_time = time.time()
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
             self.pool, validate_transaction_multiprocess, self.constants_json, bytes(new_spend)
         )
+        end_time = time.time()
+        log.info(f"It took {end_time - start_time} to pre validate transaction")
         return CostResult.from_bytes(cached_result_bytes)
 
     async def add_spendbundle(
@@ -342,7 +350,8 @@ class MempoolManager:
             for mempool_item in conflicting_pool_items.values():
                 self.mempool.remove_spend(mempool_item)
 
-        new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost_result, spend_name)
+        removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
+        new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost_result, spend_name, additions, removals)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
         log.info(f"add_spendbundle took {time.time() - start_time} seconds")
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
@@ -386,6 +395,12 @@ class MempoolManager:
         """ Returns a full SpendBundle if it's inside one the mempools"""
         if bundle_hash in self.mempool.spends:
             return self.mempool.spends[bundle_hash].spend_bundle
+        return None
+
+    def get_mempool_item(self, bundle_hash: bytes32) -> Optional[MempoolItem]:
+        """ Returns a MempoolItem if it's inside one the mempools"""
+        if bundle_hash in self.mempool.spends:
+            return self.mempool.spends[bundle_hash]
         return None
 
     async def new_peak(self, new_peak: Optional[BlockRecord]):

@@ -6,7 +6,6 @@ from src.full_node.full_node_api import FullNodeAPI
 from src.protocols.full_node_protocol import RespondBlock
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.full_block import FullBlock
-from src.types.spend_bundle import SpendBundle
 
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
@@ -52,14 +51,22 @@ class FullNodeSimulator(FullNodeAPI):
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
-            bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                peak.header_hash
-            )
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+            if mempool_bundle is None:
+                spend_bundle = None
+                additions = None
+                removals = None
+            else:
+                spend_bundle = mempool_bundle[0]
+                additions = mempool_bundle[1]
+                removals = mempool_bundle[2]
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash
             more = self.bt.get_consecutive_blocks(
                 1,
-                transaction_data=bundle,
+                transaction_data=spend_bundle,
+                additions=additions,
+                removals=removals,
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
@@ -83,14 +90,22 @@ class FullNodeSimulator(FullNodeAPI):
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
-            bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                peak.header_hash
-            )
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+            if mempool_bundle is None:
+                spend_bundle = None
+                additions = None
+                removals = None
+            else:
+                spend_bundle = mempool_bundle[0]
+                additions = mempool_bundle[1]
+                removals = mempool_bundle[2]
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash
             more = self.bt.get_consecutive_blocks(
                 1,
-                transaction_data=bundle,
+                transaction_data=spend_bundle,
+                additions=additions,
+                removals=removals,
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
