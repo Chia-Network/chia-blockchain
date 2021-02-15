@@ -4,8 +4,8 @@ from blspy import PrivateKey, AugSchemeMPL, G2Element
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
-from src.types.coin import Coin
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_to_bytes, int_from_bytes
@@ -33,7 +33,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_fee_condition,
 )
 from src.wallet.derive_keys import master_sk_to_wallet_sk
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 
 
 DEFAULT_SEED = b"seed" * 8

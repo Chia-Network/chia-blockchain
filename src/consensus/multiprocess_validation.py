@@ -16,8 +16,8 @@ from src.consensus.pot_iterations import is_overflow_block, calculate_iterations
 from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.program import SerializedProgram
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.block_cache import BlockCache
 from src.util.errors import Err
 from src.util.ints import uint64, uint16

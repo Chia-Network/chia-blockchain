@@ -8,16 +8,16 @@ import pytest
 from blspy import AugSchemeMPL, G2Element
 
 from src.consensus.blockchain import ReceiveBlockResult
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.slots import InfusedChallengeChainSubSlot
+from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint64, uint8, int512
+from src.util.ints import uint64, uint8
 from src.util.wallet_tools import WalletTool
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt

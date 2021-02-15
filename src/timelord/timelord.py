@@ -20,19 +20,19 @@ from src.server.server import ChiaServer
 from src.timelord.iters_from_block import iters_from_block
 from src.timelord.timelord_state import LastState
 from src.timelord.types import Chain, IterationType, StateType
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.reward_chain_block import RewardChainBlock
-from src.types.sized_bytes import bytes32
-from src.types.slots import (
+from src.types.blockchain_format.reward_chain_block import RewardChainBlock
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.ints import uint64, uint8, uint32
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 
 log = logging.getLogger(__name__)
 

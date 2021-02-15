@@ -8,7 +8,7 @@ import logging
 import traceback
 
 from src.consensus.pos_quality import _expected_plot_size, UI_ACTUAL_SPACE_CONSTANT_FACTOR
-from src.types.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
 

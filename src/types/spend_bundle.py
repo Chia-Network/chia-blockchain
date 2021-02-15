@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import List
 
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.announcement import Announcement
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 from .coin_solution import CoinSolution
 from blspy import G2Element, AugSchemeMPL

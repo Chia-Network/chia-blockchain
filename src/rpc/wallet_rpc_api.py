@@ -21,7 +21,7 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.backup_utils import get_backup_info, download_backup, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict

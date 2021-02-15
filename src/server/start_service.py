@@ -7,7 +7,7 @@ from sys import platform
 from typing import Any, List, Optional, Tuple, Callable
 
 from src.server.ssl_context import private_ssl_ca_paths, chia_ssl_ca_paths
-from ..types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 
 try:
     import uvloop

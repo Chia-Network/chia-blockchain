@@ -6,7 +6,7 @@ import pytest
 from src.full_node.mempool_manager import MempoolManager
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint16, uint32, uint64
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_coin_record import WalletCoinRecord

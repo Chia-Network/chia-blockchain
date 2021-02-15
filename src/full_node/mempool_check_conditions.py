@@ -5,8 +5,8 @@ from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
-from src.types.program import SerializedProgram
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err

@@ -1,7 +1,7 @@
 import io
 from typing import List, Optional, Set, Tuple
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
 
 from clvm import run_program as default_run_program, SExp

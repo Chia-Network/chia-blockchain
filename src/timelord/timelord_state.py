@@ -5,11 +5,11 @@ from src.consensus.constants import ConsensusConstants
 from src.protocols import timelord_protocol
 from src.timelord.iters_from_block import iters_from_block
 from src.timelord.types import StateType, Chain
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.sized_bytes import bytes32
-from src.types.slots import ChallengeBlockInfo
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import ChallengeBlockInfo
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint64, uint8, uint128, uint32
 
 

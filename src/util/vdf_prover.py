@@ -3,9 +3,9 @@ from typing import Tuple
 from chiavdf import prove
 
 from src.consensus.constants import ConsensusConstants
-from src.types.classgroup import ClassgroupElement
-from src.types.sized_bytes import bytes32
-from src.types.vdf import VDFProof, VDFInfo
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.vdf import VDFProof, VDFInfo
 from src.util.ints import uint64, uint8
 
 

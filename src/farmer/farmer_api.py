@@ -12,8 +12,8 @@ from src.farmer.farmer import Farmer
 from src.protocols import harvester_protocol, farmer_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
-from src.types.pool_target import PoolTarget
-from src.types.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint32, uint64
 

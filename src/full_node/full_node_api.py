@@ -30,7 +30,7 @@ from src.protocols.full_node_protocol import RejectBlocks, RejectBlock
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse, RejectHeaderBlocks
 from src.server.outbound_message import Message, NodeType, make_msg
-from src.types.coin import Coin, hash_coin_list
+from src.types.blockchain_format.coin import Coin, hash_coin_list
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -38,9 +38,9 @@ from src.types.header_block import HeaderBlock
 
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
-from src.types.pool_target import PoolTarget
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required

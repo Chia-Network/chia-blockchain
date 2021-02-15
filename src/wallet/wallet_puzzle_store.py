@@ -3,7 +3,7 @@ from blspy import G1Element
 from typing import Set, Tuple, Optional, List
 import aiosqlite
 import logging
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.derivation_record import DerivationRecord

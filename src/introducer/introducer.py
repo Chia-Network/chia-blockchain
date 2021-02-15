@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from typing import Dict, Optional, Callable
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.server.server import ChiaServer
 
 

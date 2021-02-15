@@ -4,10 +4,10 @@ from typing import Dict, List, Set, Any
 
 from blspy import G1Element
 
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint8, uint64, uint32, uint128
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (

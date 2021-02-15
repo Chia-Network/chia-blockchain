@@ -33,22 +33,22 @@ from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.plotting.plot_tools import load_plots, PlotInfo
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.pool_target import PoolTarget
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
-from src.types.slots import (
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import (
     InfusedChallengeChainSubSlot,
     ChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
 from src.types.spend_bundle import SpendBundle
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block,

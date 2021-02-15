@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from src.util.streamable import Streamable, streamable
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32
 
 

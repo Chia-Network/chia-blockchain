@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.types.program import SerializedProgram, Program
+from src.types.blockchain_format.program import SerializedProgram, Program
 from src.wallet.puzzles.load_clvm import load_clvm
 
 

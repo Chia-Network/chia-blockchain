@@ -14,8 +14,8 @@ from src.consensus.constants import ConsensusConstants
 
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.outbound_message import NodeType, make_msg
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from src.util.bech32m import decode_puzzle_hash

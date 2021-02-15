@@ -8,11 +8,11 @@ from typing import Dict, Optional, List, Any, Set
 from blspy import G2Element, AugSchemeMPL
 
 from src.protocols.wallet_protocol import PuzzleSolutionResponse
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.types.program import Program
+from src.types.blockchain_format.program import Program
 from src.types.spend_bundle import SpendBundle
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.condition_tools import (
     conditions_dict_for_solution,

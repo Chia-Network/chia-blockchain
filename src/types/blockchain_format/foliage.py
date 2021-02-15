@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import List, Optional
 from blspy import G2Element
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
 from src.util.streamable import Streamable, streamable
-from src.types.pool_target import PoolTarget
-from src.types.coin import Coin
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.coin import Coin
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class TransactionsInfo(Streamable):
     aggregated_signature: G2Element
     fees: uint64  # This only includes user fees, not block rewards
     cost: uint64
-    reward_claims_incorporated: List[Coin]
+    reward_claims_incorporated: List[Coin]  # These can be in any order
 
 
 @dataclass(frozen=True)
@@ -41,14 +41,14 @@ class FoliageBlockData(Streamable):
     pool_target: PoolTarget
     pool_signature: Optional[G2Element]  # Iff ProofOfSpace has a pool pk
     farmer_reward_puzzle_hash: bytes32
-    extension_data: bytes32
+    extension_data: bytes32  # Used for future updates. Can be any 32 byte value initially
 
 
 @dataclass(frozen=True)
 @streamable
 class Foliage(Streamable):
     # The entire foliage block, containing signature and the unsigned back pointer
-    # The hash of this is the "block hash"
+    # The hash of this is the "header hash"
     prev_block_hash: bytes32
     reward_block_hash: bytes32
     foliage_block_data: FoliageBlockData

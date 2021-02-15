@@ -1,6 +1,6 @@
 import time
 import random
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from typing import List, Dict, Optional
 from src.util.ints import uint64
 from src.types.peer_info import PeerInfo

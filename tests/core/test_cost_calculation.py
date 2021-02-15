@@ -10,7 +10,7 @@ from src.full_node.mempool_check_conditions import (
     get_name_puzzle_conditions,
     get_puzzle_and_solution_for_coin,
 )
-from src.types.program import SerializedProgram
+from src.types.blockchain_format.program import SerializedProgram
 from src.util.byte_types import hexstr_to_bytes
 from tests.setup_nodes import test_constants, bt
 from clvm_tools import binutils

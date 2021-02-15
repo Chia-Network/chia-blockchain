@@ -5,7 +5,7 @@ from typing import Dict, List
 import pytest
 
 from src.protocols import full_node_protocol
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode

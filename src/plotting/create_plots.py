@@ -5,8 +5,8 @@ import logging
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 from datetime import datetime
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.keychain import Keychain
 from src.util.config import config_path_for_filename, load_config
 from src.util.path import mkdir

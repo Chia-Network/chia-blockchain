@@ -18,8 +18,8 @@ from src.protocols.farmer_protocol import FarmingInfo
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import make_msg
 from src.server.ws_connection import WSChiaConnection
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint8, uint64, uint32
 

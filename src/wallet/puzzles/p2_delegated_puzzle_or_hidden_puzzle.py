@@ -21,8 +21,8 @@ from blspy import G1Element, PrivateKey
 
 from clvm.casts import int_from_bytes
 
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 
 from .load_clvm import load_clvm
 from .p2_conditions import puzzle_for_conditions

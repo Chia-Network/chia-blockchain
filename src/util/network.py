@@ -1,7 +1,7 @@
 import secrets
 
 from src.server.outbound_message import NodeType
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 
 
 def create_node_id() -> bytes32:

@@ -1,4 +1,4 @@
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
 from src.util.ints import uint64, uint128, uint8
 from src.consensus.pos_quality import quality_str_to_quality

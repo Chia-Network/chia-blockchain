@@ -1,5 +1,6 @@
 from .constants import ConsensusConstants
-from ..types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
+from ..util.ints import uint64
 
 testnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
@@ -37,8 +38,8 @@ testnet_kwargs = {
     "TX_PER_SEC": 20,
     # Size of mempool = 10x the size of block
     "MEMPOOL_BLOCK_BUFFER": 10,
-    # Max coin amount uint(1 << 64)
-    "MAX_COIN_AMOUNT": 0xFFFFFFFFFFFFFFFF,
+    # Max coin amount, fits into 64 bits
+    "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Targeting twice bitcoin's block size of 1.3MB per block
     # Raw size per block target = 1,300,000 * 600 / 47 = approx 100 KB
     # Rax TX (single in, single out) = 219 bytes (not compressed)

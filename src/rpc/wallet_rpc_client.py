@@ -3,7 +3,7 @@ from pathlib import Path
 from src.rpc.rpc_client import RpcClient
 from src.wallet.transaction_record import TransactionRecord
 from src.util.ints import uint64, uint32
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash
 
 

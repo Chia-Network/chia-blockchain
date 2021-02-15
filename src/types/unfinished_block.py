@@ -3,10 +3,10 @@ from typing import List, Optional
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.util.streamable import Streamable, streamable
-from src.types.vdf import VDFProof
-from src.types.reward_chain_block import RewardChainBlockUnfinished
-from src.types.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
-from src.types.program import SerializedProgram
+from src.types.blockchain_format.vdf import VDFProof
+from src.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from src.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
+from src.types.blockchain_format.program import SerializedProgram
 
 
 @dataclass(frozen=True)

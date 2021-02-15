@@ -8,12 +8,12 @@ import pprint
 from enum import Enum
 from typing import Any, BinaryIO, List, Type, get_type_hints, Dict, Tuple
 from src.util.byte_types import hexstr_to_bytes
-from src.types.program import Program, SerializedProgram
+from src.types.blockchain_format.program import Program, SerializedProgram
 from src.util.hash import std_hash
 
 from blspy import PrivateKey, G1Element, G2Element
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint64, int64, uint128, int512
 from src.util.type_checking import (
     is_type_List,

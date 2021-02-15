@@ -4,10 +4,10 @@ from typing import List, Optional, Tuple
 
 from blspy import G2Element, AugSchemeMPL
 
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import CoinSolution, SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
 from src.util.ints import uint64

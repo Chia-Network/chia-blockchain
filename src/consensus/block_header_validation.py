@@ -19,13 +19,13 @@ from src.consensus.pot_iterations import (
 )
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.consensus.block_record import BlockRecord
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8

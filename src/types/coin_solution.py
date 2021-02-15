@@ -2,8 +2,8 @@ from typing import List
 
 from dataclasses import dataclass
 
-from .coin import Coin
-from .program import Program
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.program import Program
 from .announcement import Announcement
 from src.util.chain_utils import additions_for_solution, announcements_for_solution
 from src.util.streamable import Streamable, streamable

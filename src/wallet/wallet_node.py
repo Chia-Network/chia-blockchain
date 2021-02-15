@@ -24,7 +24,7 @@ from src.protocols.wallet_protocol import (
     RespondHeaderBlocks,
 )
 from src.server.ws_connection import WSChiaConnection
-from src.types.coin import hash_coin_list, Coin
+from src.types.blockchain_format.coin import hash_coin_list, Coin
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.protocols import wallet_protocol
@@ -34,7 +34,7 @@ from src.server.outbound_message import make_msg, NodeType, Message
 from src.server.node_discovery import WalletPeers
 from src.util.errors import ValidationError, Err
 from src.util.ints import uint32, uint128
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.merkle_set import (
     confirm_included_already_hashed,
     confirm_not_included_already_hashed,

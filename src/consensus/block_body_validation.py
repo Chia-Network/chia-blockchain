@@ -19,14 +19,14 @@ from src.consensus.blockchain_check_conditions import blockchain_check_condition
 from src.full_node.coin_store import CoinStore
 from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.consensus.block_record import BlockRecord
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.announcement import Announcement
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc, announcements_for_npc
 from src.types.name_puzzle_condition import NPC
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.errors import Err
@@ -185,7 +185,7 @@ async def validate_block_body(
     # Be careful to check for 64 bit overflows in other languages. This is the max 64 bit unsigned integer
     for coin in additions + coinbase_additions:
         additions_dic[coin.name()] = coin
-        if coin.amount >= constants.MAX_COIN_AMOUNT:
+        if coin.amount > constants.MAX_COIN_AMOUNT:
             return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
     # 11. Validate addition and removal roots
@@ -336,16 +336,20 @@ async def validate_block_body(
     if fees < assert_fee_sum:
         return Err.ASSERT_FEE_CONDITION_FAILED
 
-    # 18. Check that the computed fees are equal to the fees in the block header
+    # 18. Check that the assert fee amount < maximum coin amount
+    if fees > constants.MAX_COIN_AMOUNT:
+        return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
+
+    # 19. Check that the computed fees are equal to the fees in the block header
     if block.transactions_info.fees != fees:
         return Err.INVALID_BLOCK_FEE_AMOUNT
 
-    # 19. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
+    # 20. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
     for unspent in removal_coin_records.values():
         if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
             return Err.WRONG_PUZZLE_HASH
 
-    # 20. Verify conditions
+    # 21. Verify conditions
     # create hash_key list for aggsig check
     pairs_pks = []
     pairs_msgs = []
@@ -366,7 +370,7 @@ async def validate_block_body(
             pairs_pks.append(pk)
             pairs_msgs.append(m)
 
-    # 21. Verify aggregated signature
+    # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
     if not block.transactions_info.aggregated_signature:
         return Err.BAD_AGGREGATE_SIGNATURE

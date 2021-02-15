@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from src.consensus.condition_costs import ConditionCost
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import SerializedProgram
+from src.types.blockchain_format.program import SerializedProgram
 from src.types.name_puzzle_condition import NPC
 from src.util.ints import uint64, uint16
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions

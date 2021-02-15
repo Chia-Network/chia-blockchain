@@ -4,10 +4,10 @@ from clvm import KEYWORD_FROM_ATOM
 
 from clvm_tools.binutils import disassemble as bu_disassemble
 from blspy import AugSchemeMPL
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
 from src.util.condition_tools import pkm_pairs_for_conditions_dict

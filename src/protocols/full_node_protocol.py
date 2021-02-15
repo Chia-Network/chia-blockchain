@@ -3,11 +3,11 @@ from typing import List, Optional
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.slots import SubSlotProofs
+from src.types.blockchain_format.slots import SubSlotProofs
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.sized_bytes import bytes32
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.weight_proof import WeightProof
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.peer_info import TimestampedPeerInfo

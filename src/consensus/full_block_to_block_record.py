@@ -5,13 +5,13 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_block
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import get_next_sub_slot_iters
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.types.slots import ChallengeBlockInfo
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
 from src.consensus.block_record import BlockRecord
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint64, uint32
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 

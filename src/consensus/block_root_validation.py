@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
-from src.types.coin import Coin, hash_coin_list
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.coin import Coin, hash_coin_list
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.errors import Err
 from src.util.merkle_set import MerkleSet
 

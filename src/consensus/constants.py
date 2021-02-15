@@ -1,6 +1,6 @@
 import dataclasses
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint8
 
 

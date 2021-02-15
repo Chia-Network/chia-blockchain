@@ -42,9 +42,9 @@ from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
-from src.types.pool_target import PoolTarget
-from src.types.sized_bytes import bytes32
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 
 from src.util.errors import ConsensusError, Err

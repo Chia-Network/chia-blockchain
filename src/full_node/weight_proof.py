@@ -9,13 +9,13 @@ from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_ip_iters
 from src.consensus.block_record import BlockRecord
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, InfusedChallengeChainSubSlot
-from src.types.sub_epoch_summary import SubEpochSummary
-from src.types.vdf import VDFProof, VDFInfo
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, InfusedChallengeChainSubSlot
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.vdf import VDFProof, VDFInfo
 from src.types.weight_proof import (
     WeightProof,
     SubEpochData,

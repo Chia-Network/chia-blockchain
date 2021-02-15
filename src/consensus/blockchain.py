@@ -24,9 +24,9 @@ from src.consensus.difficulty_adjustment import (
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.consensus.block_record import BlockRecord
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
 from src.util.ints import uint32, uint64, uint128
