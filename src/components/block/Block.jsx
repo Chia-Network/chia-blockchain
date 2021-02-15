@@ -29,7 +29,7 @@ const BackIcon = styled(ArrowBackIosIcon)`
 `;
 
 async function computeNewPlotId(block) {
-  const { pool_public_key, plot_public_key } = block.reward_chain_sub_block.proof_of_space;
+  const { pool_public_key, plot_public_key } = block.reward_chain_block.proof_of_space;
 
   let buf = hex_to_array(pool_public_key);
   buf = buf.concat(hex_to_array(plot_public_key));
@@ -154,7 +154,7 @@ export default function Block() {
             Block with hash {headerHash} does not exists.
           </Trans>
         </Alert>
-        
+
       </LayoutMain>
     );
   }
@@ -173,7 +173,7 @@ export default function Block() {
     'mojo',
   ).to('chia').toString();
 
-  const chia_fees = blockRecord.fees 
+  const chia_fees = blockRecord.fees
     ? chia_formatter(
       Number.parseFloat(BigInt(blockRecord.fees)),
       'mojo',
@@ -230,7 +230,7 @@ export default function Block() {
     },
     {
       name: <Trans>Block VDF Iterations</Trans>,
-      value: BigInt(block.reward_chain_sub_block.challenge_chain_ip_vdf.number_of_iterations).toLocaleString(),
+      value: BigInt(block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations).toLocaleString(),
       tooltip: (
         <Trans>
           The total number of VDF (verifiable delay function) or proof of time
@@ -240,15 +240,15 @@ export default function Block() {
     },
     {
       name: <Trans>Proof of Space Size</Trans>,
-      value: block.reward_chain_sub_block.proof_of_space.size,
+      value: block.reward_chain_block.proof_of_space.size,
     },
     {
       name: <Trans>Plot Public Key</Trans>,
-      value: block.reward_chain_sub_block.proof_of_space.plot_public_key,
+      value: block.reward_chain_block.proof_of_space.plot_public_key,
     },
     {
       name: <Trans>Pool Public Key</Trans>,
-      value: block.reward_chain_sub_block.proof_of_space.pool_public_key,
+      value: block.reward_chain_block.proof_of_space.pool_public_key,
     },
     {
       name: <Trans>Farmer Puzzle Hash</Trans>,
@@ -274,7 +274,7 @@ export default function Block() {
           Transactions Filter Hash
         </Trans>
       ),
-      value: block.foliage_block?.filter_hash,
+      value: block.foliage_transaction_block?.filter_hash,
     },
     /*
     {
@@ -291,7 +291,7 @@ export default function Block() {
       value: blockRecord.pool_puzzle_hash,
     },
     */
-   
+
     {
       name: <Trans>Pool Reward Amount</Trans>,
       value: `${poolReward} TXCH`,

@@ -1,7 +1,7 @@
-type FoliageSubBlock = {
-  foliage_block_hash: string;
-  foliage_block_signature: string;
-  foliage_sub_block_data: {
+type Foliage = {
+  foliage_transaction_block_hash: string;
+  foliage_block_data_signature: string;
+  foliage_block_data: {
     extension_data: string;
     farmer_reward_puzzle_hash: string;
     pool_signature: string;
@@ -11,9 +11,8 @@ type FoliageSubBlock = {
     };
     unfinished_reward_block_hash: string;
   };
-  foliage_sub_block_signature: string;
-  prev_sub_block_hash: string;
+  prev_block_hash: string;
   reward_block_hash: string;
 };
 
-export default FoliageSubBlock;
+export default Foliage;

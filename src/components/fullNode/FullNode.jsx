@@ -38,15 +38,15 @@ const cols = [
       const {
         isFinished = false,
         header_hash,
-        foliage_sub_block,
+        foliage,
       } = row;
 
-      const { foliage_block_hash } = foliage_sub_block || {};
+      const { foliage_transaction_block_hash } = foliage || {};
 
       const value = isFinished ? (
         header_hash
       ) : (
-        <span>{foliage_block_hash}</span>
+        <span>{foliage_transaction_block_hash}</span>
       );
 
       const color = isFinished ? StateColor.SUCCESS : StateColor.WARNING;
@@ -75,24 +75,19 @@ const cols = [
   {
     field(row) {
       const {
-        timestamp,
         isFinished,
-        foliage_block,
-        foliage_sub_block,
+        foliage,
       } = row;
 
-      const { height: foliageHeight } = foliage_sub_block || {};
+      const { height: foliageHeight } = foliage || {};
 
-      const height = get(row, 'reward_chain_sub_block.height');
-      const isSubBlock = !foliage_block;
+      const height = get(row, 'reward_chain_block.height');
 
       if (!isFinished) {
         return <i>{foliageHeight}</i>;
       }
 
-      return isSubBlock 
-        ? <i>{height}</i>
-        : height;
+      return height;
     },
     title: <Trans>Height</Trans>,
   },
@@ -102,7 +97,7 @@ const cols = [
         isFinished,
       } = row;
 
-      const timestamp = get(row, 'foliage_block.timestamp');
+      const timestamp = get(row, 'foliage_transaction_block.timestamp');
       const value = timestamp;
 
       return value ? unix_to_short_date(Number.parseInt(value)) : '';

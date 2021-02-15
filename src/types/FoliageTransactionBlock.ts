@@ -1,4 +1,4 @@
-type FoliageBlock = {
+type FoliageTransactionBlock = {
   additions_root: string;
   filter_hash: string;
   height: number;
@@ -8,4 +8,4 @@ type FoliageBlock = {
   transactions_info_hash: string;
 };
 
-export default FoliageBlock;
+export default FoliageTransactionBlock;

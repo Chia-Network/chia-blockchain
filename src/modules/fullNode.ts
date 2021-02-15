@@ -4,8 +4,8 @@ import type Connection from '../types/Connection';
 import type Header from '../types/Header';
 // import type Block from '../types/Block';
 import type SubBlock from '../types/SubBlock';
-import type FoliageBlock from '../types/FoliageBlock';
-import type FoliageSubBlock from '../types/FoliageSubBlock';
+import type FoliageTransactionBlock from '../types/FoliageTransactionBlock';
+import type Foliage from '../types/Foliage';
 
 type FullNodeState = {
   blockchain_state?: {
@@ -19,8 +19,8 @@ type FullNodeState = {
       sync_tip_height: number;
     };
     peak?: {
-      foliage_block: FoliageBlock;
-      foliage_sub_block: FoliageSubBlock;
+      foliage_transaction_block: FoliageTransactionBlock;
+      foliage: Foliage;
     };
   };
   connections?: Connection[];
@@ -51,13 +51,13 @@ function getLatestTimestamp(
   }
 
   if (blocks) {
-    const firstBlock = blocks.find((block) => !!block.foliage_block?.timestamp);
+    const firstBlock = blocks.find((block) => !!block.foliage_transaction_block?.timestamp);
     if (
       firstBlock &&
-      firstBlock.foliage_block &&
-      firstBlock.foliage_block.timestamp
+      firstBlock.foliage_transaction_block &&
+      firstBlock.foliage_transaction_block.timestamp
     ) {
-      timestamps.push(firstBlock.foliage_block?.timestamp);
+      timestamps.push(firstBlock.foliage_transaction_block?.timestamp);
     }
   }
 

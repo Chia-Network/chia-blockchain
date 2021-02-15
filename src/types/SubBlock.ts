@@ -22,13 +22,12 @@ type SubBlock = {
   reward_claims_incorporated: unknown;
   reward_infusion_new_challenge: string;
   signage_point_index: number;
-  sub_block_height: number;
   sub_epoch_summary_included: unknown;
   sub_slot_iters: string;
   timestamp: number | null;
   total_iters: string;
   weight: string;
-  foliage_block?: {
+  foliage_transaction_block?: {
     timestamp: string;
   };
 };
