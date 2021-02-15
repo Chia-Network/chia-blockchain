@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-11 20:47\n"
+"PO-Revision-Date: 2021-02-15 05:17\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -140,7 +140,7 @@ msgstr "Blok VDF iterácii"
 msgid "Block at height {0} in the Chia blockchain"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:340
+#: src/components/fullNode/FullNode.jsx:335
 msgid "Block hash"
 msgstr ""
 
@@ -148,7 +148,7 @@ msgstr ""
 msgid "Block with hash {headerHash} does not exists."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:309
+#: src/components/fullNode/FullNode.jsx:304
 msgid "Blocks"
 msgstr "Bloky"
 
@@ -260,7 +260,7 @@ msgid "Connect to other peers"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:162
 msgid "Connected"
 msgstr ""
 
@@ -268,7 +268,7 @@ msgstr ""
 msgid "Connecting to wallet"
 msgstr "Pripájanie k peňaženke"
 
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:160
 msgid "Connection Status"
 msgstr ""
 
@@ -404,7 +404,7 @@ msgid "Deleting the key will permanently remove the key from your computer, make
 msgstr ""
 
 #: src/components/block/Block.jsx:218
-#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:193
 msgid "Difficulty"
 msgstr "Zložitosť"
 
@@ -439,11 +439,11 @@ msgstr ""
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:217
+#: src/components/fullNode/FullNode.jsx:212
 msgid "Estimated network space"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:220
+#: src/components/fullNode/FullNode.jsx:215
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr ""
 
@@ -528,16 +528,16 @@ msgid "Final folder location"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:55
-#: src/components/fullNode/FullNode.jsx:116
+#: src/components/fullNode/FullNode.jsx:111
 msgid "Finished"
 msgstr "Dokončené"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:370
+#: src/components/fullNode/FullNode.jsx:365
 msgid "Full Node"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:270
+#: src/components/fullNode/FullNode.jsx:265
 msgid "Full Node Status"
 msgstr ""
 
@@ -558,7 +558,7 @@ msgid "Header hash"
 msgstr "Poradie hlavičky"
 
 #: src/components/block/Block.jsx:199
-#: src/components/fullNode/FullNode.jsx:97
+#: src/components/fullNode/FullNode.jsx:92
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Height"
 msgstr "Poradie"
@@ -731,7 +731,7 @@ msgstr ""
 msgid "Not Available"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:141
 msgid "Not Synced"
 msgstr ""
 
@@ -744,8 +744,8 @@ msgid "Not confirmed yet"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:169
-#: src/components/fullNode/FullNode.jsx:176
+#: src/components/fullNode/FullNode.jsx:164
+#: src/components/fullNode/FullNode.jsx:171
 msgid "Not connected"
 msgstr ""
 
@@ -773,7 +773,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
 msgstr ""
 
@@ -781,7 +781,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
 msgstr ""
 
@@ -1024,11 +1024,11 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:347
+#: src/components/fullNode/FullNode.jsx:342
 msgid "Search"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:335
+#: src/components/fullNode/FullNode.jsx:330
 msgid "Search block by header hash"
 msgstr ""
 
@@ -1135,14 +1135,14 @@ msgstr ""
 msgid "Spending Limit (chia per interval): {0}"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:118
+#: src/components/fullNode/FullNode.jsx:113
 msgid "State"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:128
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:153
-#: src/components/fullNode/FullNode.jsx:175
+#: src/components/fullNode/FullNode.jsx:123
+#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:148
+#: src/components/fullNode/FullNode.jsx:170
 #: src/components/plot/overview/PlotOverviewPlots.tsx:58
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:40
@@ -1171,7 +1171,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/FullNode.jsx:149
 msgid "Synced"
 msgstr ""
 
@@ -1181,7 +1181,7 @@ msgstr ""
 msgid "Syncing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:125
 msgid "Syncing {progress}/{tip}"
 msgstr ""
 
@@ -1209,11 +1209,11 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:148
+#: src/components/fullNode/FullNode.jsx:143
 msgid "The node is not synced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:131
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr ""
 
@@ -1255,7 +1255,7 @@ msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale za
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nie sú zahrnuté do blockchainu). To nezahŕňa odmeny za ťažbu."
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:188
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1271,7 +1271,7 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
-#: src/components/fullNode/FullNode.jsx:157
+#: src/components/fullNode/FullNode.jsx:152
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1283,7 +1283,7 @@ msgstr ""
 msgid "This trade was included on blockchain at this block height"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:110
+#: src/components/fullNode/FullNode.jsx:105
 msgid "Time Created"
 msgstr "Čas vytvorenia"
 
@@ -1309,7 +1309,7 @@ msgstr "Celkový zostatok"
 msgid "Total Chia Farmed"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:211
+#: src/components/fullNode/FullNode.jsx:206
 msgid "Total Iterations"
 msgstr ""
 
@@ -1329,7 +1329,7 @@ msgstr ""
 msgid "Total VDF Iterations"
 msgstr "Celkový počet iterácií VDF"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:208
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
@@ -1373,7 +1373,7 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:116
+#: src/components/fullNode/FullNode.jsx:111
 msgid "Unfinished"
 msgstr "Nedokončené"
 
@@ -1386,7 +1386,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:205
+#: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
