@@ -13,6 +13,7 @@ from src.wallet.util.transaction_type import TransactionType
 from src.wallet.wallet_state_manager import WalletStateManager
 from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.wallet.cc_wallet.test_cc_wallet import tx_in_pool
 
 
 @pytest.fixture(scope="module")
@@ -382,3 +383,74 @@ class TestWalletSimulator:
 
         await time_out_assert(5, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee)
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
+
+    @pytest.mark.asyncio
+    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes):
+        num_blocks = 5
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+
+        primaries = []
+        for i in range(0, 600):
+            primaries.append({"puzzlehash": ph, "amount": 100000000 + i})
+
+        tx_split_coins = await wallet.generate_signed_transaction(1, ph, 0, primaries=primaries)
+
+        await wallet.push_transaction(tx_split_coins)
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_1.full_node.mempool_manager, tx_split_coins.spend_bundle.name()
+        )
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks + 1)
+            ]
+        )
+
+        await time_out_assert(25, wallet.get_confirmed_balance, funds)
+        max_sent_amount = await wallet.get_max_send_amount()
+
+        # 1) Generate transaction that is under the limit
+        under_limit_tx = None
+        try:
+            under_limit_tx = await wallet.generate_signed_transaction(max_sent_amount - 1, ph, 0, )
+        except ValueError:
+            assert ValueError
+
+        assert under_limit_tx is not None
+
+        # 2) Generate transaction that is equal to limit
+        at_limit_tx = None
+        try:
+            at_limit_tx = await wallet.generate_signed_transaction(max_sent_amount, ph, 0, )
+        except ValueError:
+            assert ValueError
+
+        assert at_limit_tx is not None
+
+        # 3) Generate transaction that is greater than limit
+        above_limit_tx = None
+        try:
+            above_limit_tx = await wallet.generate_signed_transaction(max_sent_amount + 1, ph, 0, )
+        except ValueError:
+            pass
+
+        assert above_limit_tx is None

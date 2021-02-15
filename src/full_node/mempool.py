@@ -9,7 +9,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 
 class Mempool:
     spends: Dict[bytes32, MempoolItem]
-    sorted_spends: SortedDict
+    sorted_spends: SortedDict  # Dict[float, Dict[bytes32, MempoolItem]]
     additions: Dict[bytes32, MempoolItem]
     removals: Dict[bytes32, MempoolItem]
     size: int
