@@ -157,11 +157,13 @@ class BlockTools:
         mkdir(plot_dir)
         temp_dir = plot_dir / "tmp"
         mkdir(temp_dir)
+        num_pool_public_key_plots = 15
+        num_pool_address_plots = 5
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = 10  # 10 plots created to a pool public key, and 10 to a pool puzzle hash
+        args.num = num_pool_public_key_plots  # Some plots created to a pool public key, and some to a pool puzzle hash
         args.buffer = 100
         args.farmer_public_key = bytes(self.farmer_pk).hex()
         args.pool_public_key = bytes(self.pool_pk).hex()
@@ -177,23 +179,27 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
-        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big"))) for i in range(args.num)]
+        test_private_keys = [
+            AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big")))
+            for i in range(num_pool_public_key_plots + num_pool_address_plots)
+        ]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
             create_plots(
                 args,
                 root_path,
                 use_datetime=False,
-                test_private_keys=test_private_keys,
+                test_private_keys=test_private_keys[:num_pool_public_key_plots],
             )
             # Create more plots, but to a pool address instead of public key
             args.pool_public_key = None
             args.pool_contract_address = encode_puzzle_hash(self.pool_ph)
+            args.num = num_pool_address_plots
             create_plots(
                 args,
                 root_path,
                 use_datetime=False,
-                test_private_keys=test_private_keys,
+                test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
@@ -259,9 +265,6 @@ class BlockTools:
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
-        if pool_reward_puzzle_hash is None:
-            pool_reward_puzzle_hash = self.pool_ph
-        pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
 
         if len(block_list) == 0:
             initial_block_list_len = 0
@@ -374,6 +377,17 @@ class BlockTools:
                         if transaction_data_included:
                             transaction_data = None
                         assert start_timestamp is not None
+                        if proof_of_space.pool_contract_puzzle_hash is not None:
+                            if pool_reward_puzzle_hash is not None:
+                                # The caller wants to be paid to a specific address, but this PoSpace is tied to an
+                                # address, so continue until a proof of space tied to a pk is found
+                                continue
+                            pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        else:
+                            if pool_reward_puzzle_hash is not None:
+                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
+                            else:
+                                pool_target = PoolTarget(self.pool_ph, uint32(0))
                         full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,
@@ -580,6 +594,18 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert start_timestamp is not None
+
+                        if proof_of_space.pool_contract_puzzle_hash is not None:
+                            if pool_reward_puzzle_hash is not None:
+                                # The caller wants to be paid to a specific address, but this PoSpace is tied to an
+                                # address, so continue until a proof of space tied to a pk is found
+                                continue
+                            pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        else:
+                            if pool_reward_puzzle_hash is not None:
+                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
+                            else:
+                                pool_target = PoolTarget(self.pool_ph, uint32(0))
                         full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,

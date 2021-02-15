@@ -871,7 +871,7 @@ class FullNode:
                 else:
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
-                        f"{block.height}: {pre_validation_results[0].error}"
+                        f"{block.height}: {Err(pre_validation_results[0].error).name}"
                     )
             else:
                 added, error_code, fork_height = await self.blockchain.receive_block(

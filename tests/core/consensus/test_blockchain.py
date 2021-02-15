@@ -897,7 +897,7 @@ class TestBlockHeaderValidation:
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.pool_public_key", None)
+        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
         block_bad = recursive_replace(
