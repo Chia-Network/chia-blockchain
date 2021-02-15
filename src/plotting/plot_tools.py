@@ -207,7 +207,7 @@ def load_plots(
                 else:
                     assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
                     pool_public_key = None
-                    pool_contract_puzzle_hash = [pool_public_key_or_puzzle_hash]
+                    pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
 
                 if (
                     pool_public_keys is not None

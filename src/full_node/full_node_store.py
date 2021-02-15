@@ -272,8 +272,6 @@ class FullNodeStore:
             return None
 
         if icc_challenge is not None:
-            if icc_start_element is None:
-                print("Bad")
             assert icc_start_element is not None
             assert icc_iters is not None
             assert eos.infused_challenge_chain is not None

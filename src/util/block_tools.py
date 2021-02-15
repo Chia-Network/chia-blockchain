@@ -856,7 +856,7 @@ class BlockTools:
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,
                             plot_info.pool_public_key,
-                            None,
+                            plot_info.pool_contract_puzzle_hash,
                             plot_pk,
                             plot_info.prover.get_size(),
                             proof_xs,
