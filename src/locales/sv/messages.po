@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-15 07:25\n"
+"PO-Revision-Date: 2021-02-15 11:29\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -635,7 +635,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "Intervall"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "K-Size"
@@ -643,7 +643,7 @@ msgstr "K-storlek"
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
-msgstr ""
+msgstr "Nycklar"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -655,7 +655,7 @@ msgstr "Senaste höjd som odlats på"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr ""
+msgstr "Senaste blockverifieringar"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:71
 msgid "Local Harvester Plots"
@@ -853,7 +853,7 @@ msgstr "Välj belopp"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Du måste välja köp eller sälj"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin type"
@@ -1062,7 +1062,7 @@ msgstr "Välj plånbokstyp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Välj den mapp där du vill att de färdiga plottarna ska sparas. Vi rekommenderar att du använder en stor, långsam hårddisk (t.ex. en extern HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
