@@ -1,0 +1,67 @@
+(mod (input)
+
+  (defconstant MAX_SINGLE_BYTE 0x7F)
+  (defconstant MAX_TWO_BYTE 0xbf)
+  (defconstant MAX_THREE_BYTE 0xdf)
+  (defconstant MAX_FOUR_BYTE 0xef)
+  (defconstant MAX_FIVE_BYTE 0xf7)
+  (defconstant MAX_SIX_BYTE 0xfb)
+  (defconstant CONS_BOX_MARKER 0xFF)
+
+  (defun sexp_from_stream (input_stream)
+    (if (= (substr input_stream 0 1) CONS_BOX_MARKER)
+      (cons_sexp_from_stream (sexp_from_stream (substr input_stream 1 (strlen input_stream))))
+      (atom_from_stream (substr input_stream 1 (strlen input_stream)) (substr input_stream 0 1))
+    )
+  )
+
+  (defun cons_sexp_from_stream (left_sexp_with_input)
+    (cons_return (f left_sexp_with_input) (sexp_from_stream (f (r left_sexp_with_input))))
+  )
+
+  (defun cons_return (left_sexp right_sexp_with_input)
+    (list (c left_sexp (f right_sexp_with_input)) (f (r right_sexp_with_input)))
+  )
+
+  (defun atom_from_stream (input_file input_bits)
+    (if (= input_bits (q 0x80))
+      (list () input_file)
+      (if (>s input_bits MAX_SINGLE_BYTE)
+        (atom_from_stream_part_two (get_bitcount input_bits input_file))
+        (list input_bits input_file)
+      )
+    )
+  )
+
+  (defun-inline get_bitcount (input_bits input_file)
+    (if (>s input_bits MAX_TWO_BYTE)
+      (if (>s input_bits MAX_THREE_BYTE)
+        (if (>s input_bits MAX_FOUR_BYTE)
+          (if (>s input_bits MAX_FIVE_BYTE)
+            (if (>s input_bits MAX_SIX_BYTE)
+              (x "bad encoding")
+              ; six byte
+              (list (concat (logand (q 0x03) input_bits) (substr input_file 0 4)) (substr input_file 4 (strlen input_file)))
+            )
+            ; five byte
+            (list (concat (logand (q 0x07) input_bits) (substr input_file 0 3)) (substr input_file 3 (strlen input_file)))
+          )
+          ; four byte
+          (list (concat (logand (q 0x0f) input_bits) (substr input_file 0 2)) (substr input_file 2 (strlen input_file)))
+        )
+        ;three byte
+        (list (concat (logand (q 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1 (strlen input_file)))
+      )
+      ;two byte
+      (list (logand (q 0x3f) input_bits) input_file)
+    )
+  )
+
+  (defun atom_from_stream_part_two ((size_to_read input_file))
+    (list (substr input_file 0 size_to_read) (substr input_file size_to_read (strlen input_file)))
+  )
+
+  ; main
+  (f (sexp_from_stream input))
+
+)
