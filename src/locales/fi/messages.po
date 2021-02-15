@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-15 05:17\n"
+"PO-Revision-Date: 2021-02-15 06:20\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -924,11 +924,11 @@ msgstr "Rinnakkaisplottaus voi säästää aikaa. Muutoin lisää plottaus jonoo
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "Pool Key"
-msgstr "Kimppapoolin avain"
+msgstr "Poolin Avain"
 
 #: src/components/block/Block.jsx:250
 msgid "Pool Public Key"
-msgstr "Kimppapoolin Julkinen Avain"
+msgstr "Poolin Julkinen Avain"
 
 #: src/components/block/Block.jsx:258
 msgid "Pool Puzzle Hash"
@@ -936,7 +936,7 @@ msgstr "Poolin Osoitetiiviste"
 
 #: src/components/block/Block.jsx:296
 msgid "Pool Reward Amount"
-msgstr "Kimppapoolin Palkkiosumma"
+msgstr "Poolin Palkkiosumma"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1219,7 +1219,7 @@ msgstr "Solmu synkronoi. Se lataa lohkoketjua muilta solmuilta"
 
 #: src/components/block/Block.jsx:265
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr "Siemenarvo plot-tiedostojen luontia varten. Riippuu kimppapoolin ja plotin julkisista avaimista."
+msgstr "Siemenarvo plot-tiedostojen luontia varten. Riippuu poolin ja plotin julkisista avaimista."
 
 #: src/components/block/Block.jsx:225
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
