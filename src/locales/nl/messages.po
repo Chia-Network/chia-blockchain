@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-15 05:17\n"
+"PO-Revision-Date: 2021-02-15 18:58\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -90,7 +90,7 @@ msgstr "Hoeveelheid"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:414
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Hoeveelheid ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
@@ -99,7 +99,7 @@ msgstr ""
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Bent U zeker dat u het plot-bestand wil verwijderen? Dit is onomkeerbaar."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -156,7 +156,7 @@ msgstr "Blokken"
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Zoek"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:49
 msgid "But you are currently farming <0/>"
@@ -192,7 +192,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Uitdaging"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
@@ -324,11 +324,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:727
 #: src/components/wallet/standard/WalletStandard.tsx:325
 msgid "Create Transaction"
-msgstr ""
+msgstr "Maak een transactie"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Maak een nieuwe privé sleutel"
 
 #: src/components/wallet/create/WalletCreate.jsx:239
 msgid "Create admin wallet"
@@ -352,11 +352,11 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr ""
+msgstr "Gemaakt om:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "Gemaakt door ons:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -415,7 +415,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr ""
+msgstr "Ondersteunt jouw toestel parallel plotten?"
 
 #: src/components/trading/ViewOffer.jsx:41
 msgid "Drag and drop offer file"
