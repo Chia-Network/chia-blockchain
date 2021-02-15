@@ -56,7 +56,7 @@ def create_foliage(
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     seed: bytes32 = b"",
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
     """
@@ -105,7 +105,6 @@ def create_foliage(
     pool_target_signature: Optional[G2Element] = get_pool_signature(
         pool_target, reward_block_unfinished.proof_of_space.pool_public_key
     )
-    assert pool_target_signature is not None
 
     foliage_data = FoliageBlockData(
         reward_block_unfinished.get_hash(),
@@ -282,7 +281,7 @@ def create_unfinished_block(
     farmer_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,

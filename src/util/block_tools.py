@@ -53,6 +53,7 @@ from src.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block,
 )
+from src.util.bech32m import encode_puzzle_hash
 from src.util.block_cache import BlockCache
 from src.util.config import load_config, save_config
 from src.util.hash import std_hash
@@ -121,15 +122,15 @@ class BlockTools:
         self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.init_plots(root_path)
-
-        create_all_ssl(root_path)
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
         )
         self.pool_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
         )
+        self.init_plots(root_path)
+
+        create_all_ssl(root_path)
 
         self.all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
@@ -160,10 +161,11 @@ class BlockTools:
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = 20
+        args.num = 10  # 10 plots created to a pool public key, and 10 to a pool puzzle hash
         args.buffer = 100
         args.farmer_public_key = bytes(self.farmer_pk).hex()
         args.pool_public_key = bytes(self.pool_pk).hex()
+        args.pool_contract_address = None
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -178,6 +180,15 @@ class BlockTools:
         test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big"))) for i in range(args.num)]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
+            create_plots(
+                args,
+                root_path,
+                use_datetime=False,
+                test_private_keys=test_private_keys,
+            )
+            # Create more plots, but to a pool address instead of public key
+            args.pool_public_key = None
+            args.pool_contract_address = encode_puzzle_hash(self.pool_ph)
             create_plots(
                 args,
                 root_path,
@@ -206,7 +217,11 @@ class BlockTools:
 
         raise ValueError(f"Do not have key {plot_pk}")
 
-    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: G1Element) -> G2Element:
+    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: Optional[G1Element]) -> Optional[G2Element]:
+        # Returns the pool signature for the corresponding pk. If no pk is provided, returns None.
+        if pool_pk is None:
+            return None
+
         for sk in self.all_sks:
             sk_child = master_sk_to_pool_sk(sk)
             if sk_child.get_g1() == pool_pk:
@@ -1126,7 +1141,7 @@ def get_full_block_and_sub_record(
     required_iters: uint64,
     sub_slot_iters: uint64,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     finished_sub_slots: List[EndOfSubSlotBundle],
     signage_point: SignagePoint,
     prev_block: BlockRecord,

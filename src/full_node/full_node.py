@@ -715,6 +715,7 @@ class FullNode:
             block.foliage.foliage_block_data.pool_target
             == PoolTarget(self.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
             and block.foliage.prev_block_hash != self.constants.GENESIS_CHALLENGE
+            and block.reward_chain_block.proof_of_space.pool_public_key is not None
         ):
             if not AugSchemeMPL.verify(
                 block.reward_chain_block.proof_of_space.pool_public_key,

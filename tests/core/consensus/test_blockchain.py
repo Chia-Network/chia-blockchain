@@ -1056,7 +1056,7 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SIGNATURE
 
     @pytest.mark.asyncio
-    async def test_is_block(self, empty_blockchain):
+    async def test_is_transaction_block(self, empty_blockchain):
         # 15: TODO
         pass
 
@@ -1134,6 +1134,11 @@ class TestBlockHeaderValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
         block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_SIGNATURE
+
+    @pytest.mark.asyncio
+    async def test_pool_target_contract(self, empty_blockchain):
+        # 20c
+        blocks = bt.get_consecutive_blocks(3)
 
     @pytest.mark.asyncio
     async def test_foliage_data_presence(self, empty_blockchain):

@@ -135,7 +135,7 @@ class HarvesterAPI:
                                     ProofOfSpace(
                                         sp_challenge_hash,
                                         plot_info.pool_public_key,
-                                        None,
+                                        plot_info.pool_contract_puzzle_hash,
                                         plot_public_key,
                                         uint8(plot_info.prover.get_size()),
                                         proof_xs,

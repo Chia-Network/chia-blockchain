@@ -35,6 +35,7 @@ class ProofOfSpace(Streamable):
         original_challenge_hash: bytes32,
         signage_point: bytes32,
     ) -> Optional[bytes32]:
+        # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
         if (self.pool_public_key is None) and (self.pool_contract_puzzle_hash is None):
             return None
         if (self.pool_public_key is not None) and (self.pool_contract_puzzle_hash is not None):
@@ -85,14 +86,14 @@ class ProofOfSpace(Streamable):
         pool_public_key: G1Element,
         plot_public_key: G1Element,
     ) -> bytes32:
-        return bytes32(std_hash(bytes(pool_public_key) + bytes(plot_public_key)))
+        return std_hash(bytes(pool_public_key) + bytes(plot_public_key))
 
     @staticmethod
     def calculate_plot_id_ph(
         pool_contract_puzzle_hash: bytes32,
         plot_public_key: G1Element,
     ) -> bytes32:
-        return bytes32(std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key)))
+        return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
     @staticmethod
     def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:
