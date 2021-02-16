@@ -1363,3 +1363,274 @@ class FullNode:
                         f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
                     )
         return status, error
+
+    async def _needs_compact_proof(self, vdf_info: VDFInfo, header_block: HeaderBlock, field_vdf: FieldVDF) -> bool:
+        if field_vdf == FieldVDF.CC_EOS_VDF:
+            for sub_slot in header_block.finished_sub_slots:
+                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
+                    if (
+                        sub_slot.proofs.challenge_chain_slot_proof.witness_type == 0
+                        and sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                    ):
+                        return False
+                    return True
+        if field_vdf == FieldVDF.ICC_EOS_VDF:
+            for sub_slot in header_block.finished_sub_slots:
+                if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info:
+                    if (
+                        sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type == 0
+                        and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                    ):
+                        return False
+                    return True
+        if field_vdf == FieldVDF.CC_SP_VDF:
+            if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
+                return False
+            if vdf_info == header_block.reward_chain_sub_block.challenge_chain_sp_vdf:
+                if (
+                    header_block.challenge_chain_sp_proof.witness_type == 0
+                    and header_block.challenge_chain_sp_proof.normalized_to_identity
+                ):
+                    return False
+                return True
+        if field_vdf == FieldVDF.CC_IP_VDF:
+            if vdf_info == header_block.reward_chain_sub_block.challenge_chain_ip_vdf:
+                if (
+                    header_block.challenge_chain_ip_proof.witness_type == 0
+                    and header_block.challenge_chain_ip_proof.normalized_to_identity
+                ):
+                    return False
+                return True
+        return False
+
+    async def _can_accept_compact_proof(
+        self,
+        vdf_info: VDFInfo,
+        vdf_proof: VDFProof,
+        height: uint32,
+        field_vdf: FieldVDF,
+    ) -> bool:
+        """
+        - Checks if the provided proof is indeed compact.
+        - Checks if proof verifies given the vdf_info from the start of sub-slot.
+        - Checks if the provided vdf_info is correct, assuming it refers to the start of sub-slot.
+        - Checks if the existing proof was non-compact. Ignore this proof if we already have a compact proof.
+        """
+        # TODO(Florin): Use a cache for recent proofs, and ignore proof if it was already received.
+        if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
+            return False
+        if not vdf_proof.is_valid(self.constants, ClassgroupElement.get_default_element(), vdf_info):
+            return False
+        header_block = await self.blockchain.get_header_block(height)
+        if header_block is None:
+            return False
+        return await self._needs_compact_proof(vdf_info, header_block, field_vdf)
+    
+    async def _replace_proof(
+        self,
+        vdf_info: VDFInfo,
+        vdf_proof: VDFProof,
+        height: uint32,
+        field_vdf: FieldVDF,
+    ):
+        full_blocks = self.block_store.get_full_blocks_at([height])
+        assert len(full_blocks) > 0
+        block = full_blocks[0]
+        new_block = None
+        block_record = self.blockchain.height_to_block_record(height)
+
+        if field_vdf == FieldVDF.CC_EOS_VDF:
+            for index, sub_slot in enumerate(block.finished_sub_slots):
+                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
+                    new_proofs = dataclass.replace(sub_slot.proofs, challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = dataclass.replace(sub_slot, proofs=new_proofs)
+                    new_finished_subslots = block.finished_sub_slots
+                    new_finished_subslots[index] = new_subslot
+                    new_block = dataclass.replace(block, finished_sub_slots=new_finished_subslots)
+                    break
+        if field_vdf == FieldVDF.ICC_EOS_VDF:
+            for index, sub_slot in enumerate(block.finished_sub_slots):
+                if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info:
+                    new_proofs = dataclass.replace(sub_slot.proofs, infused_challenge_chain_slot_proof=vdf_proof)
+                    new_subslot = dataclass.replace(sub_slot, proofs=new_proofs)
+                    new_finished_subslots = block.finished_sub_slots
+                    new_finished_subslots[index] = new_subslot
+                    new_block = dataclass.replace(block, finished_sub_slots=new_finished_subslots)
+                    break
+        if field_vdf == FieldVDF.CC_SP_VDF:
+            assert block.challenge_chain_sp_proof is not None
+            new_block = dataclass.replace(block, challenge_chain_sp_proof=vdf_proof)
+        if field_vdf == FieldVDF.CC_IP_VDF:
+            new_block = dataclass.replace(block, challenge_chain_ip_proof=vdf_proof)
+        assert new_block is not None
+        await self.block_store.add_full_block(new_block, block_record)
+
+    async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
+        if not await self._can_accept_compact_proof(
+            request.vdf_info, request.vdf_proof, request.height, request.field_vdf
+        ):
+            self.log.error(f"Couldn't add compact proof of time from a bluebox: {request}.")
+            return
+        await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, request.field_vdf)
+        msg = Message("new_compact_vdf", full_node_protocol.NewCompactVDF(
+                request.height, request.field_vdf, request.vdf_info
+            )
+        )
+        if self.server is not None:
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+    
+    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+        header_block = await self.blockchain.get_header_block(request.height)
+        if header_block is None:
+            return
+        if await self._needs_compact_proof(request.vdf_info, header_block, request.field_vdf):
+            msg = Message("request_compact_vdf", full_node_protocol.RequestCompactVDF(
+                    request.height, request.field_vdf, request.vdf_info
+                )
+            )
+            await peer.send_message(msg)
+    
+    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
+        header_block = await self.blockchain.get_header_block(request.height)
+        if header_block is None:
+            return
+        vdf_proof: Optional[VDFProof] = None
+        if field_vdf == FieldVDF.CC_EOS_VDF:
+            for sub_slot in header_block.finished_sub_slots:
+                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf == vdf_info:
+                    vdf_proof = sub_slot.proofs.challenge_chain_slot_proof
+                    break
+        if field_vdf == FieldVDF.ICC_EOS_VDF:
+            for sub_slot in header_block.finished_sub_slots:
+                if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf == vdf_info:
+                    vdf_proof = sub_slot.proofs.infused_challenge_chain_slot_proof
+                    break
+        if field_vdf == FieldVDF.CC_SP_VDF:
+            vdf_proof = header_block.challenge_chain_sp_proof
+        if field_vdf == FieldVDF.CC_IP_VDF:
+            vdf_proof = header_block.challenge_chain_ip_proof
+        if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
+            self.log.error(f"{peer} requested compact vdf we don't have.")
+            return
+        compact_vdf = full_node_protocol.RespondCompactVDF(
+            request.height,
+            request.field_vdf,
+            request.vdf_info,
+            vdf_proof,
+        )
+        msg = Message("respond_compact_vdf", compact_vdf)
+        await peer.send_message(msg)
+    
+    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDFs, peer: ws.WSChiaConnection):
+        if not await self._can_accept_compact_proof(
+            request.vdf_info, request.vdf_proof, request.height, request.field_vdf
+        ):
+            self.log.error(f"Couldn't add compact proof of time from a full_node: {request}.")
+            return
+        await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, request.field_vdf)
+        msg = Message("new_compact_vdf", full_node_protocol.NewCompactVDF(
+                request.height, request.field_vdf, request.vdf_info
+            )
+        )
+        if self.server is not None:
+            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+    
+    async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_blocks: int):
+        while not self._shut_down:
+            while self.sync_store.get_sync_mode():
+                if self._shut_down:
+                    return
+                await asyncio.sleep(30)
+
+            broadcast_list: List[timelord_protocol.NewProofOfTime] = []
+            min_height = 1
+            new_min_height = None
+            max_height = self.blockchain.peak_height
+            batches_finished = 0
+            self.log.info("Scanning the blockchain for uncompact blocks.")
+            for h in range(min_height, max_height, 100):
+                # Got 10 times the target header count, sampling the target headers should contain
+                # enough randomness to split the work between blueboxes.
+                if len(broadcast_list) > target_uncompact_blocks * 10:
+                    break
+                stop_height = min(h + 99, max_height)
+                headers = self.blockchain.get_header_blocks_in_range(min_height, stop_height)
+                for header in headers:
+                    prev_broadcast_list_len = len(broadcast_list)
+                    for sub_slot in header.finished_sub_slots:
+                        if (
+                            sub_slot.proofs.challenge_chain_slot_proof.witness_type > 0
+                            or not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                        ):
+                            broadcast_list.append(
+                                timelord_protocol.NewProofOfTime(
+                                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
+                                    header.height,
+                                    FieldVDF.CC_EOS_VDF,
+                                )
+                            )
+                        if (
+                            sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                            and (
+                                sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type > 0
+                                or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                            )
+                        ):
+                            broadcast_list.append(
+                                timelord_protocol.NewProofOfTime(
+                                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                    header.height,
+                                    FieldVDF.ICC_EOS_VDF,
+                                )
+                            )
+                    if (
+                        header.challenge_chain_sp_proof is not None
+                        and (
+                            header.challenge_chain_sp_proof.witness_type > 0
+                            or not header.challenge_chain_sp_proof.normalized_to_identity
+                        )
+                    ):
+                        broadcast_list.append(
+                            timelord_protocol.NewProofOfTime(
+                                header.reward_chain.challenge_chain_sp_vdf,    
+                                header.height,
+                                FieldVDF.CC_SP_VDF,
+                            )
+                        )
+
+                    if (
+                        header.challenge_chain_ip_proof.witness_type > 0
+                        or not header.challenge_chain_ip_proof.normalized_to_identity
+                    ):
+                        broadcast_list.append(
+                            timelord_protocol.NewProofOfTime(
+                                header.reward_chain.challenge_chain_ip_vdf,
+                                header.height,
+                                FieldVDF.CC_IP_VDF,
+                            )
+                        )
+                    # This is the first header with uncompact proofs. Store its height so next time we iterate
+                    # only from here. Fix header block iteration window to at least 1000, so reorgs will be
+                    # handled correctly.
+                    if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(1, max_height - 1000):
+                        new_min_height = header.height
+                
+                # Small sleep between batches.
+                batches_finished += 1
+                if batches_finished % 10 == 0:
+                    await asyncio.sleep(1)
+
+            # We have no uncompact blocks, but mentain the block iteration window to at least 1000 blocks.
+            if new_min_height is None:
+                new_min_height = max(1, max_height - 1000)
+            min_height = new_min_height
+            if len(broadcast_list) > target_uncompact_blocks:
+                random.shuffle(broadcast_list)
+                broadcast_list = broadcast_list[:target_uncompact_blocks]
+            if self.sync_store.get_sync_mode():
+                continue
+            if self.server is not None:
+                for new_pot in broadcast_list:
+                    msg = Message("new_proof_of_time", new_pot)
+                    await self.server.send_to_all([msg], NodeType.TIMELORD)
+            await asyncio.sleep(uncompact_interval)

@@ -72,3 +72,20 @@ class NewSignagePointVDF(Streamable):
 @streamable
 class NewEndOfSubSlotVDF(Streamable):
     end_of_sub_slot_bundle: EndOfSubSlotBundle
+
+
+@dataclass(frozen=True)
+@cbor_message
+class NewProofOfTime:
+    new_proof_of_time: VDFInfo
+    height: uint32
+    field_vdf: FieldVDF
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondCompactProofOfTime:
+    vdf_info: VDFInfo
+    vdf_proof: VDFProof
+    height: uint32
+    field_vdf: FieldVDF

@@ -26,6 +26,8 @@ class ProtocolMessageTypes(Enum):
     new_infusion_point_vdf = 15
     new_signage_point_vdf = 16
     new_end_of_sub_slot_vdf = 17
+    new_proof_of_time = 18
+    respond_compact_proof_of_time = 19
 
     # Full node protocol (full_node <-> full_node)
     new_peak = 18
@@ -48,10 +50,11 @@ class ProtocolMessageTypes(Enum):
     respond_signage_point = 35
     respond_end_of_sub_slot = 36
     request_mempool_transactions = 37
-    request_compact_vdfs = 38
-    respond_compact_vdfs = 39
-    request_peers = 40
-    respond_peers = 41
+    request_compact_vdf = 38
+    respond_compact_vdf = 39
+    new_compact_vdf = 40
+    request_peers = 41
+    respond_peers = 42
 
     # Wallet protocol (wallet <-> full_node)
     request_puzzle_solution = 42

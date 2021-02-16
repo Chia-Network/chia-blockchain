@@ -10,6 +10,7 @@ from chiavdf import verify_n_wesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
+from enum import Enum
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +50,12 @@ class VDFInfo(Streamable):
 class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes
+    normalized_to_identity: bool
+
+    def __init__(self, witness_type: uint8, witness: bytes, normalized_to_identity: bool = False):
+        self.witness_type = witness_type
+        self.witness = witness
+        self.normalized_to_identity = normalized_to_identity
 
     def is_valid(
         self,
@@ -79,3 +86,11 @@ class VDFProof(Streamable):
             )
         except Exception:
             return False
+
+
+# Stores, for a given VDF, the field that uses it. 
+class FieldVDF(Enum):
+    CC_EOS_VDF = 1
+    ICC_EOS_VDF = 2
+    CC_SP_VDF = 3
+    CC_IP_VDF = 4

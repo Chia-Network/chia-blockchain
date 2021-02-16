@@ -592,6 +592,12 @@ class Blockchain(BlockchainInterface):
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         return await self.block_store.get_header_blocks_in_range(start, stop)
 
+    async def get_header_block(self, height: int) -> Optional[HeaderBlock]:
+        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height)
+        if len(header_dict) == 0:
+            return None
+        return list(header_dict.values())[0]
+
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:
             return self.__block_records[header_hash]
