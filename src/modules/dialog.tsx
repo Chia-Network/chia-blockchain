@@ -45,9 +45,7 @@ export function openDialog(
 export function openErrorDialog(
   error: string,
 ): ThunkAction<any, RootState, unknown, Action<Object>> {
-  return (dispatch) => {
-    return dispatch(openDialog(<AlertDialog>{error}</AlertDialog>));
-  };
+  return (dispatch) => dispatch(openDialog(<AlertDialog>{error}</AlertDialog>));
 }
 
 export type Dialog = {

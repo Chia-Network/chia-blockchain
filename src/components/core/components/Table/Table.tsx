@@ -90,19 +90,15 @@ export default function Table(props: Props) {
     setPage(0);
   }
 
-  const currentCols = useMemo<InternalTableCol[]>(() => {
-    return cols.map((col, index) => ({
-      key: index,
-      ...col,
-    }));
-  }, [cols]);
+  const currentCols = useMemo<InternalTableCol[]>(() => cols.map((col, index) => ({
+    key: index,
+    ...col,
+  })), [cols]);
 
-  const preparedRows = useMemo<InternalTableRow[]>(() => {
-    return rows.map((row, rowIndex) => ({
-      id: rowIndex,
-      ...row,
-    }));
-  }, [rows]);
+  const preparedRows = useMemo<InternalTableRow[]>(() => rows.map((row, rowIndex) => ({
+    id: rowIndex,
+    ...row,
+  })), [rows]);
 
   const currentRows = useMemo<InternalTableRow[]>(() => {
     if (!pages) {

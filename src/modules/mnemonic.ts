@@ -15,12 +15,10 @@ const initialState: MnemonicState = {
   incorrect_word: null,
 };
 
-export const mnemonic_word_added = (data: unknown) => {
-  return {
-    ...wordChanged(),
-    data,
-  };
-};
+export const mnemonic_word_added = (data: unknown) => ({
+  ...wordChanged(),
+  data,
+});
 
 export default function mnemonicReducer(
   state = { ...initialState },

@@ -15,27 +15,25 @@ import { genereate_mnemonics, add_new_key_action } from '../../modules/message';
 import LayoutHero from '../layout/LayoutHero';
 import type { RootState } from '../../modules/rootReducer';
 
-const MnemonicField = (props: any) => {
-  return (
-    <Grid item xs={2}>
-      <TextField
-        variant="outlined"
-        margin="normal"
-        color="primary"
-        id={props.id}
-        label={props.index}
-        name="email"
-        autoComplete="email"
-        value={props.word}
-        inputProps={{
-          readOnly: true,
-        }}
-        fullWidth
-        autoFocus
-      />
-    </Grid>
-  );
-};
+const MnemonicField = (props: any) => (
+  <Grid item xs={2}>
+    <TextField
+      variant="outlined"
+      margin="normal"
+      color="primary"
+      id={props.id}
+      label={props.index}
+      name="email"
+      autoComplete="email"
+      value={props.word}
+      inputProps={{
+        readOnly: true,
+      }}
+      fullWidth
+      autoFocus
+    />
+  </Grid>
+);
 
 export default function WalletAdd() {
   const dispatch = useDispatch();

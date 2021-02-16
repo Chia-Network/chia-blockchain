@@ -80,10 +80,12 @@ export function plotQueueDelete(
 
 type PlotQueueState = {
   queue: PlotQueueItem[];
+  deleting: string[];
 };
 
 const initialState: PlotQueueState = {
   queue: [],
+  deleting: [],
 };
 
 export default function plotQueueReducer(
@@ -92,7 +94,9 @@ export default function plotQueueReducer(
 ): PlotQueueState {
   switch (action.type) {
     case 'PLOT_QUEUE_UPDATE':
+     
       const { queue } = action;
+      console.log('PLOT_QUEUE_UPDATE', queue);
 
       return {
         ...state,

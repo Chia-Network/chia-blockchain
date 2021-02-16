@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ReactNode } from 'react';
+import { Trans } from '@lingui/macro';
 import { Button, Dialog, DialogActions, DialogTitle, DialogContent } from '@material-ui/core';
 import { useSelector } from 'react-redux';
 import { Log } from '@chia/core';
@@ -13,7 +14,7 @@ type Props = {
 export default function PlotQueueLogDialog(props: Props) {
   const { id, open, onClose } = props;
   const queueItem = useSelector((state: RootState) => state.plot_queue.queue.find((item) => item.id === id));
-  const [log, setLog] = useState<string>('Loading...');
+  const [log, setLog] = useState<ReactNode>(<Trans>Loading...</Trans>);
 
   useEffect(() => {
     if (queueItem && queueItem.log) {
@@ -35,14 +36,18 @@ export default function PlotQueueLogDialog(props: Props) {
       open={open}
     >
       <DialogTitle id="confirmation-dialog-title">
-        View Log
+        <Trans>
+          View Log
+        </Trans>
       </DialogTitle>
       <DialogContent dividers>
         <Log>{log}</Log>
       </DialogContent>
       <DialogActions>
         <Button autoFocus onClick={handleClose} color="secondary">
-          Close
+          <Trans>
+            Close
+          </Trans>
         </Button>
       </DialogActions>
     </Dialog>

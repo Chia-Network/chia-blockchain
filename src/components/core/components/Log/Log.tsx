@@ -30,13 +30,12 @@ type Props = {
 export default function Log(props: Props) {
   const { children } = props;
 
-  return (
-    
-      <StyledPaper>
-        <StyledScrollToBottom>
+  return ( 
+    <StyledPaper>
+      <StyledScrollToBottom debug={false}>
         <pre>{children}</pre>
-        </StyledScrollToBottom>
-      </StyledPaper>
+      </StyledScrollToBottom>
+    </StyledPaper>
   );
 }
 

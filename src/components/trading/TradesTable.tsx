@@ -33,28 +33,26 @@ type Props = {
 export default function TradesTable(props: Props) {
   const { rows } = props;
 
-  const tableRows = useMemo(() => {
-    return rows.map((row) => {
-      const { amount, name } = row;
-      const humanAmount = amount < 0
-        ? -amount
-        : amount;
+  const tableRows = useMemo(() => rows.map((row) => {
+    const { amount, name } = row;
+    const humanAmount = amount < 0
+      ? -amount
+      : amount;
 
-      return {
-        side: amount < 0
-          ? <Trans>Sell</Trans>
-          : <Trans>Buy</Trans>,
-        name: (
-          <Amount>{name}</Amount>
-        ),
-        amount: (
-          <Amount>
-            {mojo_to_chia_string(humanAmount)}
-          </Amount>
-        ),
-      };
-    });
-  }, [rows]);
+    return {
+      side: amount < 0
+        ? <Trans>Sell</Trans>
+        : <Trans>Buy</Trans>,
+      name: (
+        <Amount>{name}</Amount>
+      ),
+      amount: (
+        <Amount>
+          {mojo_to_chia_string(humanAmount)}
+        </Amount>
+      ),
+    };
+  }), [rows]);
 
   return (
     <Table 

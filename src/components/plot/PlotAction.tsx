@@ -54,7 +54,9 @@ export default function PlotAction(props: Props) {
               <DeleteForeverIcon fontSize="small" />
             </ListItemIcon>
             <Typography variant="inherit" noWrap>
-              Delete
+              <Trans>
+                Delete
+              </Trans>
             </Typography>
           </MenuItem>
         </Box>
