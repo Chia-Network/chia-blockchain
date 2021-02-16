@@ -30,6 +30,7 @@ from tests.core.fixtures import default_400_blocks  # noqa: F401
 from tests.core.fixtures import default_10000_blocks  # noqa: F401
 
 log = logging.getLogger(__name__)
+bad_element = ClassgroupElement.from_bytes(b"\x00")
 
 
 @pytest.fixture(scope="session")
@@ -1003,7 +1004,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1],
                     "reward_chain_block.reward_chain_sp_vdf.output",
-                    ClassgroupElement.get_bad_element(test_constants),
+                    bad_element,
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
                 block_bad = recursive_replace(
@@ -1045,7 +1046,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1],
                     "reward_chain_block.challenge_chain_sp_vdf.output",
-                    ClassgroupElement.get_bad_element(test_constants),
+                    bad_element,
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
                 block_bad = recursive_replace(
@@ -1362,7 +1363,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.challenge_chain_ip_vdf.output",
-            ClassgroupElement.get_bad_element(test_constants),
+            bad_element,
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_IP_VDF
         block_bad = recursive_replace(
@@ -1390,7 +1391,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.reward_chain_ip_vdf.output",
-            ClassgroupElement.get_bad_element(test_constants),
+            bad_element,
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_IP_VDF
         block_bad = recursive_replace(
@@ -1421,7 +1422,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_block.infused_challenge_chain_ip_vdf.output",
-            ClassgroupElement.get_bad_element(test_constants),
+            bad_element,
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
         block_bad = recursive_replace(
