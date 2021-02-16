@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-16 20:57\n"
+"PO-Revision-Date: 2021-02-16 21:53\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -59,7 +59,7 @@ msgstr "Lägg till mapp med plottar"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Lägg till plånbok"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -77,7 +77,7 @@ msgstr "Adress"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
 #: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Adress/pusselhash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -204,7 +204,7 @@ msgstr "Verifieringshash"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia-plånbok"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -216,7 +216,7 @@ msgstr "Välj plottstorlek"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Stäng"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -344,7 +344,7 @@ msgstr "Skapa ny privat nyckel"
 
 #: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Skapa adminplånbok"
 
 #: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
@@ -352,7 +352,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
-msgstr ""
+msgstr "Skapa användarplånbok"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -360,7 +360,7 @@ msgstr "Skapa plånbok för färg"
 
 #: src/components/wallet/create/WalletCreate.jsx:206
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Skapa plånbok för existerande färg"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -435,11 +435,11 @@ msgstr "Svårighetsgrad"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
-msgstr ""
+msgstr "Distribuerad identitet"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Alternativ för distribuerad identitet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -661,7 +661,7 @@ msgstr "Infopaket"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
-msgstr ""
+msgstr "Ursprungligt belopp"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
@@ -759,7 +759,7 @@ msgstr "Mer minne ökar hastigheten något"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 msgid "My Pubkey"
-msgstr ""
+msgstr "Min pubkey"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
@@ -906,7 +906,7 @@ msgstr "Ange ett giltigt numeriskt belopp"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:688
 #: src/components/wallet/standard/WalletStandard.tsx:294
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Ange en giltig numeriskt avgift"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
@@ -918,12 +918,12 @@ msgstr "Ange ett giltigt spenderbart belopp"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Ange en giltig pubkey"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 #: src/components/wallet/standard/WalletStandard.tsx:274
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Vänta på synkronisering innan du gör en transaktion"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1053,7 +1053,7 @@ msgstr "Hittade bevis"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "Pubkey"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1136,7 +1136,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr ""
+msgstr "Välj nyckel"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
@@ -1148,7 +1148,7 @@ msgstr "Välj tillfällig mapp"
 
 #: src/components/wallet/create/WalletCreate.jsx:112
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Välj plånbokstyp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1275,7 +1275,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
 msgid "Submit"
-msgstr ""
+msgstr "Skicka"
 
 #: src/components/fullNode/FullNode.jsx:149
 msgid "Synced"
@@ -1575,11 +1575,11 @@ msgstr "Vikt är den sammanlagda svårighetsgraden för alla underblock upp till
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Välkommen till Chia. Logga in med en existerande nyckel, eller skapa en ny nyckel."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Välkommen! Följande ord används för din plånboks säkerhetskopia. Utan dem förlorar du åtkomst till din plånbok, så spara dom säkert! Skriv ner varje ord tillsammans med ordningsnumret vid sidan om. (Ordningen är viktig)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -1617,7 +1617,7 @@ msgstr "höjd:"
 
 #: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
-msgstr ""
+msgstr "ej synkad"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:98
