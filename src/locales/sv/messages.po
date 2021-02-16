@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-16 21:53\n"
+"PO-Revision-Date: 2021-02-16 22:55\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -564,7 +564,7 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:55
 #: src/components/fullNode/FullNode.jsx:111
 msgid "Finished"
-msgstr ""
+msgstr "Färdig"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
@@ -693,7 +693,7 @@ msgstr "Senaste blockverifieringar"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
-msgstr ""
+msgstr "Läser in …"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
@@ -884,7 +884,7 @@ msgstr "Väntande totalt saldo"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Ange ett handelspar"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
@@ -982,7 +982,7 @@ msgstr "Plottstorlek"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:27
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Plotten är en dubblett av {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
@@ -1006,7 +1006,7 @@ msgstr "Parallell plottning kan spara tid. Lägg annars till plottar i kön."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 msgid "Pool Key"
-msgstr ""
+msgstr "Pool-nyckel"
 
 #: src/components/block/Block.jsx:240
 msgid "Pool Public Key"
@@ -1263,7 +1263,7 @@ msgstr "Status:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Stripe Size"
-msgstr ""
+msgstr "Stripe-storlek"
 
 #: src/components/block/Block.jsx:199
 #~ msgid "Sub Block Height"
@@ -1289,7 +1289,7 @@ msgstr "Synkar"
 
 #: src/components/fullNode/FullNode.jsx:125
 msgid "Syncing {progress}/{tip}"
-msgstr ""
+msgstr "Synkroniserar {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 msgid "TXCH Farming Rewards"
@@ -1297,7 +1297,7 @@ msgstr "TXCH-odlingsbelöningar"
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
 msgid "TXCH Fees Collected"
-msgstr ""
+msgstr "TXCH-avgifter som samlats in"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1321,7 +1321,7 @@ msgstr "Noden är inte synkad"
 
 #: src/components/fullNode/FullNode.jsx:131
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "Noden synkroniserar, vilket betyder att den laddar ner block från andra noder, för att nå det sista blocket i kedjan"
 
 #: src/components/block/Block.jsx:255
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1481,7 +1481,7 @@ msgstr "Typ"
 
 #: src/components/fullNode/FullNode.jsx:111
 msgid "Unfinished"
-msgstr ""
+msgstr "Ej färdig"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
@@ -1563,7 +1563,7 @@ msgstr "Vill du tjäna mer Chia? Lägg till fler plottar till din odling."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Vill du ha en fördröjning innan nästa plott startar?"
 
 #: src/components/block/Block.jsx:193
 msgid "Weight"
@@ -1603,7 +1603,7 @@ msgstr ""
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr ""
+msgstr "Ditt nätverk av skördare"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
