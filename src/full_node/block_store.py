@@ -55,6 +55,19 @@ class BlockStore:
         self.block_cache = LRUCache(1000)
         return self
 
+    async def begin_transaction(self):
+        # Also locks the coin store, since both stores must be updated at once
+        cursor = await self.db.execute("BEGIN TRANSACTION")
+        await cursor.close()
+
+    async def commit_transaction(self):
+        await self.db.commit()
+
+    async def rollback_transaction(self):
+        # Also rolls back the coin store, since both stores must be updated at once
+        cursor = await self.db.execute("ROLLBACK")
+        await cursor.close()
+
     async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(block.header_hash, block)
         cursor_1 = await self.db.execute(
@@ -94,7 +107,6 @@ class BlockStore:
             (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
         )
         await cursor_1.close()
-        await self.db.commit()
 
     async def get_sub_epoch_challenge_segments(
         self,
@@ -298,6 +310,8 @@ class BlockStore:
         return height_to_hash, sub_epoch_summaries
 
     async def set_peak(self, header_hash: bytes32) -> None:
+        # We need to be in a sqlite transaction here.
+        # Note: we do not commit this to the database yet, as we need to also change the coin store
         cursor_1 = await self.db.execute("UPDATE block_records SET is_peak=0 WHERE is_peak=1")
         await cursor_1.close()
         cursor_2 = await self.db.execute(
@@ -305,4 +319,3 @@ class BlockStore:
             (header_hash.hex(),),
         )
         await cursor_2.close()
-        await self.db.commit()

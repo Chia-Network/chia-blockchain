@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.introducer_peers import IntroducerPeers
-from src.server.outbound_message import NodeType, Message, Payload
+from src.server.outbound_message import NodeType, Message
 from src.server.ssl_context import private_ssl_paths, public_ssl_paths
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
@@ -413,12 +413,11 @@ class ChiaServer:
             if payload_inc is None or connection_inc is None:
                 continue
 
-            async def api_call(payload: Payload, connection: WSChiaConnection, task_id):
+            async def api_call(full_message: Message, connection: WSChiaConnection, task_id):
                 start_time = time.time()
                 try:
                     if self.received_message_callback is not None:
                         await self.received_message_callback(connection)
-                    full_message = payload.msg
                     connection.log.info(
                         f"<- {ProtocolMessageTypes(full_message.type).name} from peer "
                         f"{connection.peer_node_id} {connection.peer_host}"
@@ -446,9 +445,8 @@ class ChiaServer:
                     )
 
                     if response is not None:
-                        payload_id = payload.id
-                        response_payload = Payload(response, payload_id)
-                        await connection.reply_to_request(response_payload)
+                        response_message = Message(response.type, response.data, full_message.id)
+                        await connection.reply_to_request(response_message)
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()

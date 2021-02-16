@@ -36,16 +36,9 @@ class Message(Streamable):
     type: uint8  # one of ProtocolMessageTypes
     # Message data for that type
     data: bytes
-
-
-@dataclass(frozen=True)
-@streamable
-class Payload(Streamable):
-    # Message payload
-    msg: Message
-    # payload id
+    # message id
     id: Optional[uint16]
 
 
 def make_msg(msg_type: ProtocolMessageTypes, data: Any) -> Message:
-    return Message(uint8(msg_type.value), bytes(data))
+    return Message(uint8(msg_type.value), bytes(data), None)
