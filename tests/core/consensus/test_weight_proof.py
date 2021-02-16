@@ -243,24 +243,6 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof100002(self, default_10000_blocks):
-        blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-        header = header_cache[height_to_hash[4212]]
-        prev_sb = blockchain.block_record(header.prev_header_hash)
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(test_constants, header, prev_sb, blockchain)
-        validate_finished_header_block(test_constants, blockchain, header, False, difficulty, sub_slot_iters, False)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
-        assert wp is not None
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point = await wpf.validate_weight_proof(wp)
-
-        assert valid
-        assert fork_point == 0
-
-    @pytest.mark.asyncio
     async def test_weight_proof_extend_no_ses(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)

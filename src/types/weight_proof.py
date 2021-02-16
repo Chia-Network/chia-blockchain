@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.reward_chain_block import RewardChainBlock
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.vdf import VDFProof, VDFInfo
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -78,7 +79,7 @@ class SubEpochSegments(Streamable):
 @streamable
 class ProofBlockHeader(Streamable):
     finished_sub_slots: List[EndOfSubSlotBundle]
-    reward_chain_block: RewardChainSubBlock
+    reward_chain_block: RewardChainBlock
 
 
 @dataclass(frozen=True)
