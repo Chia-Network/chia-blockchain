@@ -3,7 +3,7 @@ from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
 
 from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint64, uint32, uint128

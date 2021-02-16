@@ -182,10 +182,7 @@ async def print_balances(args, wallet_client, fingerprint: int):
         typ = WalletType(int(summary["type"])).name
         if typ != "STANDARD_WALLET":
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(
-                f"   -Confirmed: balances['confirmed_wallet_balance']"
-                f"{balances['confirmed_wallet_balance']/units['colouredcoin']}"
-            )
+            print(f"   -Confirmed: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
             print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
             print(f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}")
             print(f"   -Pending change: {balances['pending_change']/units['colouredcoin']}")

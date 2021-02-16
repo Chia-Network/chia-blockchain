@@ -14,13 +14,13 @@ from src.consensus.block_record import BlockRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.full_node.bundle_tools import best_solution_program
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.full_block import additions_for_npc
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.mempool_item import MempoolItem
 from src.full_node.mempool import Mempool
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.errors import Err
 from src.util.clvm import int_from_bytes
@@ -89,13 +89,18 @@ class MempoolManager:
         ):
             return None
 
-        cost_sum = 0
+        cost_sum = 0  # Checks that total cost does not exceed block maximum
+        fee_sum = 0  # Checks that total fees don't exceed 64 bits
         spend_bundles: List[SpendBundle] = []
         for dic in self.mempool.sorted_spends.values():
             for item in dic.values():
-                if item.cost_result.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM:
+                if (
+                    item.cost_result.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM
+                    and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
+                ):
                     spend_bundles.append(item.spend_bundle)
                     cost_sum += item.cost_result.cost
+                    fee_sum += item.fee
                 else:
                     break
         if len(spend_bundles) > 0:
@@ -188,7 +193,7 @@ class MempoolManager:
         addition_amount = uint64(0)
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= self.constants.MAX_COIN_AMOUNT:
+            if coin.amount > self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
                     MempoolInclusionStatus.FAILED,

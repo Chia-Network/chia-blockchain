@@ -7,11 +7,11 @@ from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
 from src.protocols import timelord_protocol
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo
+from src.types.blockchain_format.vdf import VDFInfo
 from src.util.ints import uint32, uint8, uint64, uint128
 
 log = logging.getLogger(__name__)
@@ -272,8 +272,6 @@ class FullNodeStore:
             return None
 
         if icc_challenge is not None:
-            if icc_start_element is None:
-                print("Bad")
             assert icc_start_element is not None
             assert icc_iters is not None
             assert eos.infused_challenge_chain is not None

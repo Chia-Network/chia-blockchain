@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+import logging
 from secrets import token_bytes
 import pytest
 from pytest import raises
@@ -9,13 +10,16 @@ from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.signage_point import SignagePoint
 from src.protocols.timelord_protocol import NewInfusionPointVDF
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint8, uint128
 from tests.setup_nodes import test_constants, bt
-from tests.core.fixtures import empty_blockchain
 from src.util.block_tools import get_signage_point
+from tests.core.fixtures import empty_blockchain  # noqa: F401
+
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -164,7 +168,7 @@ class TestFullNodeStore:
 
         # Test adding signage point
         peak = blockchain.get_peak()
-        ss_start_iters = peak.sp_sub_slot_total_iters(test_constants)
+        ss_start_iters = peak.ip_sub_slot_total_iters(test_constants)
         for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
             sp = get_signage_point(
                 test_constants,

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from src.consensus.cost_calculator import CostResult
 from src.types.spend_bundle import SpendBundle
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
 
 

@@ -16,8 +16,8 @@ from src.consensus.pot_iterations import is_overflow_block, calculate_iterations
 from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.program import SerializedProgram
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.block_cache import BlockCache
 from src.util.errors import Err
 from src.util.ints import uint64, uint16
@@ -138,14 +138,7 @@ async def pre_validate_blocks_multiprocessing(
         if block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
             log.warning(f"Block: {block.reward_chain_block}")
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(
-            constants,
-            block,
-            BlockCache(recent_blocks),
-            prev_b is None,
-            overflow,
-            False,
-        )
+        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:

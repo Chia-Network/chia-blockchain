@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.header_block import HeaderBlock
 from src.util.streamable import Streamable, streamable
 

@@ -5,11 +5,11 @@ from src.consensus.pot_iterations import (
     calculate_sp_iters,
     calculate_ip_iters,
 )
-from src.types.reward_chain_block import (
+from src.types.blockchain_format.reward_chain_block import (
     RewardChainBlock,
     RewardChainBlockUnfinished,
 )
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
 
 

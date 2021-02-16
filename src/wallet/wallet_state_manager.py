@@ -17,9 +17,9 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.block_record import BlockRecord
 from src.full_node.weight_proof import WeightProofHandler
 from src.protocols.wallet_protocol import RespondPuzzleSolution, PuzzleSolutionResponse
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64, uint128
@@ -47,7 +47,7 @@ from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
 from src.wallet.wallet import Wallet
-from src.types.program import Program
+from src.types.blockchain_format.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain

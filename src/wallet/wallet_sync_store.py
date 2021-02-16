@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32
 
 log = logging.getLogger(__name__)

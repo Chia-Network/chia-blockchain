@@ -4,10 +4,10 @@ from blspy import G1Element
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.announcement import Announcement
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.ints import uint64
 from src.util.errors import Err, ConsensusError

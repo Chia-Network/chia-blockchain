@@ -4,20 +4,23 @@ import multiprocessing
 import time
 from dataclasses import replace
 import logging
+from secrets import token_bytes
+
 import pytest
 from blspy import AugSchemeMPL, G2Element
 
 from src.consensus.blockchain import ReceiveBlockResult
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.slots import InfusedChallengeChainSubSlot
+from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint64, uint8, int512
+from src.util.ints import uint64, uint8
 from src.util.wallet_tools import WalletTool
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
@@ -242,6 +245,21 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == num_blocks - 1
+
+    @pytest.mark.asyncio
+    async def test_all_overflow(self, empty_blockchain):
+        blockchain = empty_blockchain
+        num_rounds = 5
+        blocks = []
+        num_blocks = 0
+        for i in range(1, num_rounds):
+            num_blocks += i
+            blocks = bt.get_consecutive_blocks(i, block_list_input=blocks, skip_slots=1, force_overflow=True)
+            for block in blocks[-i:]:
+                result, err, _ = await blockchain.receive_block(block)
+                assert result == ReceiveBlockResult.NEW_PEAK
+                assert err is None
         assert blockchain.get_peak().height == num_blocks - 1
 
     @pytest.mark.asyncio
@@ -895,7 +913,7 @@ class TestBlockHeaderValidation:
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
-        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.pool_public_key", None)
+        block_bad = recursive_replace(blocks[-1], "reward_chain_block.proof_of_space.size", 62)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
 
         block_bad = recursive_replace(
@@ -1057,7 +1075,7 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SIGNATURE
 
     @pytest.mark.asyncio
-    async def test_is_block(self, empty_blockchain):
+    async def test_is_transaction_block(self, empty_blockchain):
         # 15: TODO
         pass
 
@@ -1125,16 +1143,50 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_pool_target_signature(self, empty_blockchain):
         # 20b
-        blocks = bt.get_consecutive_blocks(3)
-        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
-        block_bad: FullBlock = recursive_replace(
-            blocks[-1], "foliage.foliage_block_data.pool_signature", G2Element.generator()
-        )
-        new_m = block_bad.foliage.foliage_block_data.get_hash()
-        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
-        block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
-        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_SIGNATURE
+        blocks_initial = bt.get_consecutive_blocks(2)
+        assert (await empty_blockchain.receive_block(blocks_initial[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await empty_blockchain.receive_block(blocks_initial[1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        attempts = 0
+        while True:
+            # Go until we get a block that has a pool pk, as opposed to a pool contract
+            blocks = bt.get_consecutive_blocks(
+                1, blocks_initial, seed=std_hash(attempts.to_bytes(4, byteorder="big", signed=False))
+            )
+            if blocks[-1].foliage.foliage_block_data.pool_signature is not None:
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1], "foliage.foliage_block_data.pool_signature", G2Element.generator()
+                )
+                new_m = block_bad.foliage.foliage_block_data.get_hash()
+                new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_SIGNATURE
+                return
+            attempts += 1
+
+    @pytest.mark.asyncio
+    async def test_pool_target_contract(self, empty_blockchain):
+        # 20c invalid pool target with contract
+        blocks_initial = bt.get_consecutive_blocks(2)
+        assert (await empty_blockchain.receive_block(blocks_initial[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await empty_blockchain.receive_block(blocks_initial[1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        attempts = 0
+        while True:
+            # Go until we get a block that has a pool contract opposed to a pool pk
+            blocks = bt.get_consecutive_blocks(
+                1, blocks_initial, seed=std_hash(attempts.to_bytes(4, byteorder="big", signed=False))
+            )
+            if blocks[-1].foliage.foliage_block_data.pool_signature is None:
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32(token_bytes(32))
+                )
+                new_m = block_bad.foliage.foliage_block_data.get_hash()
+                new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_block_data_signature", new_fsb_sig)
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POOL_TARGET
+                return
+            attempts += 1
 
     @pytest.mark.asyncio
     async def test_foliage_data_presence(self, empty_blockchain):

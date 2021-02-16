@@ -1,8 +1,7 @@
-import io
 from dataclasses import dataclass
 from typing import Any, List
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.clvm import int_to_bytes, int_from_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint64
@@ -21,7 +20,8 @@ class Coin(Streamable):
     amount: uint64
 
     def name(self) -> bytes32:
-        # TODO(straya): use CLVM coin id calculation
+        # This does not use streamable format for serialization. Look at the __bytes__ method that is being overridden:
+        # The amount is serialized using CLVM serialization.
         return self.get_hash()
 
     def as_list(self) -> List[Any]:
@@ -39,11 +39,7 @@ class Coin(Streamable):
         return Coin(parent_coin_info, puzzle_hash, uint64(amount))
 
     def __bytes__(self):
-        f = io.BytesIO()
-        f.write(self.parent_coin_info)
-        f.write(self.puzzle_hash)
-        f.write(int_to_bytes(self.amount))
-        return f.getvalue()
+        return self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount)
 
 
 def hash_coin_list(coin_list: List[Coin]) -> bytes32:

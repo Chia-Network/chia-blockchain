@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
@@ -6,11 +7,13 @@ from blspy import G1Element
 
 from chiapos import Verifier
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint8
 from src.util.streamable import Streamable, streamable
 from src.util.hash import std_hash
 from src.consensus.constants import ConsensusConstants
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -35,9 +38,12 @@ class ProofOfSpace(Streamable):
         original_challenge_hash: bytes32,
         signage_point: bytes32,
     ) -> Optional[bytes32]:
+        # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
         if (self.pool_public_key is None) and (self.pool_contract_puzzle_hash is None):
+            log.error("Bad 1")
             return None
         if (self.pool_public_key is not None) and (self.pool_contract_puzzle_hash is not None):
+            log.error("Bad 2")
             return None
         if self.size < constants.MIN_PLOT_SIZE:
             return None
@@ -47,9 +53,11 @@ class ProofOfSpace(Streamable):
         new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
         if new_challenge != self.challenge:
+            log.error("Bad 3")
             return None
 
         if not ProofOfSpace.passes_plot_filter(constants, plot_id, original_challenge_hash, signage_point):
+            log.error("Bad 4")
             return None
 
         return self.get_quality_string(plot_id)
@@ -85,14 +93,14 @@ class ProofOfSpace(Streamable):
         pool_public_key: G1Element,
         plot_public_key: G1Element,
     ) -> bytes32:
-        return bytes32(std_hash(bytes(pool_public_key) + bytes(plot_public_key)))
+        return std_hash(bytes(pool_public_key) + bytes(plot_public_key))
 
     @staticmethod
     def calculate_plot_id_ph(
         pool_contract_puzzle_hash: bytes32,
         plot_public_key: G1Element,
     ) -> bytes32:
-        return bytes32(std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key)))
+        return std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key))
 
     @staticmethod
     def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:

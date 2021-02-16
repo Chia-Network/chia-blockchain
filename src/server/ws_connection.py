@@ -12,7 +12,7 @@ from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Handshake
 from src.server.outbound_message import Message, NodeType, make_msg, Payload
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint16, uint8
 from src.util.errors import Err, ProtocolError
 

@@ -2,7 +2,7 @@
 import asyncio
 import logging
 import sys
-from typing import Dict, Optional, List, Tuple, Mapping, Container
+from typing import Dict, Optional, List, Tuple
 
 import aiosqlite
 import pytest
@@ -12,6 +12,10 @@ from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
 from src.util.block_cache import BlockCache
+from tests.core.fixtures import empty_blockchain  # noqa: F401
+from tests.core.fixtures import default_1000_blocks  # noqa: F401
+from tests.core.fixtures import default_400_blocks  # noqa: F401
+from tests.core.fixtures import default_10000_blocks  # noqa: F401
 
 try:
     from reprlib import repr
@@ -25,13 +29,10 @@ from src.full_node.weight_proof import (  # type: ignore
 )
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.types.sub_epoch_summary import SubEpochSummary
-from src.util.default_root import DEFAULT_ROOT_PATH
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32, uint64
-from src.util.logging import initialize_logging
-from tests.setup_nodes import test_constants, bt
-from tests.core.fixtures import empty_blockchain, default_1000_blocks, default_400_blocks, default_10000_blocks
+from tests.setup_nodes import test_constants
 
 
 @pytest.fixture(scope="session")

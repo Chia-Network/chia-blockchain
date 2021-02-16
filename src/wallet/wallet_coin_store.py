@@ -1,8 +1,8 @@
 import asyncio
 from typing import Dict, Optional, List, Set
 import aiosqlite
-from src.types.coin import Coin
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord

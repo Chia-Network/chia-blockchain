@@ -4,7 +4,7 @@ from src.types.spend_bundle import SpendBundle
 from src.wallet.cc_wallet import cc_utils
 from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
-from src.types.program import Program
+from src.types.blockchain_format.program import Program
 from src.util.condition_tools import conditions_dict_for_solution
 from src.types.condition_opcodes import ConditionOpcode
 

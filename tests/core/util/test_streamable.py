@@ -5,8 +5,8 @@ from pytest import raises
 
 from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.ints import uint32, uint8
-from src.types.coin import Coin
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.streamable import Streamable, streamable
 from src.protocols.wallet_protocol import RespondRemovals

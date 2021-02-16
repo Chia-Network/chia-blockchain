@@ -5,13 +5,46 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def final_eos_is_already_included(
+    header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
+    blocks: BlockchainInterface,
+) -> bool:
+    """
+    Args:
+        header_block: An overflow block, with potentially missing information about the new sub slot
+        blocks: all blocks that have been included before header_block
+
+    Returns: True iff the missing sub slot was already included in a previous block. Returns False if the sub
+    slot was not included yet, and therefore it is the responsibility of this block to include it
+
+    """
+    if len(header_block.finished_sub_slots) > 0:
+        # We already have an included empty sub slot, which means the prev block is 2 sub slots behind.
+        return False
+    curr: BlockRecord = blocks.block_record(header_block.prev_header_hash)
+    seen_overflow_block = curr.overflow
+    while not curr.first_in_sub_slot and not curr.height == 0:
+        if curr.overflow:
+            seen_overflow_block = True
+        curr = blocks.block_record(curr.prev_hash)
+
+    if curr.first_in_sub_slot and seen_overflow_block:
+        # We have seen another overflow block in this slot (same as header_block), therefore there are no
+        # missing sub slots
+        return True
+
+    # We have not seen any overflow blocks, therefore header_block will have to include the missing sub slot in
+    # the future
+    return False
 
 
 def get_block_challenge(
@@ -26,7 +59,8 @@ def get_block_challenge(
         if overflow:
             # New sub-slot with overflow block
             if skip_overflow_last_ss_validation:
-                # In this case, we are missing the final sub-slot bundle (it's not finished yet)
+                # In this case, we are missing the final sub-slot bundle (it's not finished yet), however
+                # There is a whole empty slot before this block is infused
                 challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
             else:
                 challenge = header_block.finished_sub_slots[
@@ -44,7 +78,8 @@ def get_block_challenge(
                     # Overflow infusion without the new slot, so get the last challenge
                     challenges_to_look_for = 1
                 else:
-                    # Overflow infusion, so get the second to last challenge
+                    # Overflow infusion, so get the second to last challenge. skip_overflow_last_ss_validation is False,
+                    # Which means no sub slots are omitted
                     challenges_to_look_for = 2
             else:
                 challenges_to_look_for = 1

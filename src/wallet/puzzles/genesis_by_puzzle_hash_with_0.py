@@ -1,8 +1,8 @@
 from typing import Optional
 
-from src.types.coin import Coin
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.wallet.puzzles.load_clvm import load_clvm
 
 

@@ -1,7 +1,7 @@
 from clvm_tools import binutils
 from clvm import SExp
 
-from src.types.program import SerializedProgram
+from src.types.blockchain_format.program import SerializedProgram
 from src.types.spend_bundle import SpendBundle
 
 

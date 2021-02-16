@@ -33,26 +33,27 @@ from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.plotting.plot_tools import load_plots, PlotInfo
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.pool_target import PoolTarget
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
-from src.types.slots import (
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import (
     InfusedChallengeChainSubSlot,
     ChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
 from src.types.spend_bundle import SpendBundle
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.consensus.block_creation import (
     create_unfinished_block,
     unfinished_block_to_full_block,
 )
+from src.util.bech32m import encode_puzzle_hash
 from src.util.block_cache import BlockCache
 from src.util.config import load_config, save_config
 from src.util.hash import std_hash
@@ -121,15 +122,15 @@ class BlockTools:
         self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.init_plots(root_path)
-
-        create_all_ssl(root_path)
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
         )
         self.pool_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
         )
+        self.init_plots(root_path)
+
+        create_all_ssl(root_path)
 
         self.all_sks: List[PrivateKey] = [sk for sk, _ in self.keychain.get_all_private_keys()]
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
@@ -156,14 +157,17 @@ class BlockTools:
         mkdir(plot_dir)
         temp_dir = plot_dir / "tmp"
         mkdir(temp_dir)
+        num_pool_public_key_plots = 15
+        num_pool_address_plots = 5
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
-        args.num = 20
+        args.num = num_pool_public_key_plots  # Some plots created to a pool public key, and some to a pool puzzle hash
         args.buffer = 100
         args.farmer_public_key = bytes(self.farmer_pk).hex()
         args.pool_public_key = bytes(self.pool_pk).hex()
+        args.pool_contract_address = None
         args.tmp_dir = temp_dir
         args.tmp2_dir = plot_dir
         args.final_dir = plot_dir
@@ -175,14 +179,27 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
-        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big"))) for i in range(args.num)]
+        test_private_keys = [
+            AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big")))
+            for i in range(num_pool_public_key_plots + num_pool_address_plots)
+        ]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
             create_plots(
                 args,
                 root_path,
                 use_datetime=False,
-                test_private_keys=test_private_keys,
+                test_private_keys=test_private_keys[:num_pool_public_key_plots],
+            )
+            # Create more plots, but to a pool address instead of public key
+            args.pool_public_key = None
+            args.pool_contract_address = encode_puzzle_hash(self.pool_ph)
+            args.num = num_pool_address_plots
+            create_plots(
+                args,
+                root_path,
+                use_datetime=False,
+                test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
@@ -206,7 +223,11 @@ class BlockTools:
 
         raise ValueError(f"Do not have key {plot_pk}")
 
-    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: G1Element) -> G2Element:
+    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: Optional[G1Element]) -> Optional[G2Element]:
+        # Returns the pool signature for the corresponding pk. If no pk is provided, returns None.
+        if pool_pk is None:
+            return None
+
         for sk in self.all_sks:
             sk_child = master_sk_to_pool_sk(sk)
             if sk_child.get_g1() == pool_pk:
@@ -244,9 +265,6 @@ class BlockTools:
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
-        if pool_reward_puzzle_hash is None:
-            pool_reward_puzzle_hash = self.pool_ph
-        pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
 
         if len(block_list) == 0:
             initial_block_list_len = 0
@@ -359,6 +377,17 @@ class BlockTools:
                         if transaction_data_included:
                             transaction_data = None
                         assert start_timestamp is not None
+                        if proof_of_space.pool_contract_puzzle_hash is not None:
+                            if pool_reward_puzzle_hash is not None:
+                                # The caller wants to be paid to a specific address, but this PoSpace is tied to an
+                                # address, so continue until a proof of space tied to a pk is found
+                                continue
+                            pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        else:
+                            if pool_reward_puzzle_hash is not None:
+                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
+                            else:
+                                pool_target = PoolTarget(self.pool_ph, uint32(0))
                         full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,
@@ -565,6 +594,18 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert start_timestamp is not None
+
+                        if proof_of_space.pool_contract_puzzle_hash is not None:
+                            if pool_reward_puzzle_hash is not None:
+                                # The caller wants to be paid to a specific address, but this PoSpace is tied to an
+                                # address, so continue until a proof of space tied to a pk is found
+                                continue
+                            pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                        else:
+                            if pool_reward_puzzle_hash is not None:
+                                pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
+                            else:
+                                pool_target = PoolTarget(self.pool_ph, uint32(0))
                         full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,
@@ -841,7 +882,7 @@ class BlockTools:
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,
                             plot_info.pool_public_key,
-                            None,
+                            plot_info.pool_contract_puzzle_hash,
                             plot_pk,
                             plot_info.prover.get_size(),
                             proof_xs,
@@ -1126,7 +1167,7 @@ def get_full_block_and_sub_record(
     required_iters: uint64,
     sub_slot_iters: uint64,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     finished_sub_slots: List[EndOfSubSlotBundle],
     signage_point: SignagePoint,
     prev_block: BlockRecord,

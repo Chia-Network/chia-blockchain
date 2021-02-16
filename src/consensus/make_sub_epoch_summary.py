@@ -15,7 +15,7 @@ from src.consensus.difficulty_adjustment import (
 )
 from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint32, uint64, uint8, uint128
 

@@ -3,8 +3,8 @@ from typing import List, Tuple
 
 from blspy import G1Element, G2Element
 
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64, uint8
 from src.util.streamable import Streamable, streamable
 

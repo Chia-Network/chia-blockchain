@@ -10,7 +10,7 @@ from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.full_node.coin_store import CoinStore
 from src.full_node.block_store import BlockStore
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.full_block import FullBlock
 from src.util.ints import uint64

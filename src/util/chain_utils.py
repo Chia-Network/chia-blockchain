@@ -1,6 +1,6 @@
 from typing import List
 
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.announcement import Announcement
 from src.util.condition_tools import (
     created_outputs_for_conditions_dict,

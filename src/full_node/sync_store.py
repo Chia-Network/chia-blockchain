@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple, Set
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint128
 
 log = logging.getLogger(__name__)

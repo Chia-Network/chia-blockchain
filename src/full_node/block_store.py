@@ -4,8 +4,8 @@ from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
 from src.util.ints import uint32
 from src.consensus.block_record import BlockRecord

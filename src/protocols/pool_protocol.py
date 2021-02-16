@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 
-from src.types.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.util.ints import uint32, uint64
 from src.util.streamable import streamable, Streamable
 

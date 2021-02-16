@@ -30,7 +30,7 @@ from src.protocols.full_node_protocol import RejectBlocks, RejectBlock
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse, RejectHeaderBlocks
 from src.server.outbound_message import Message, NodeType, make_msg
-from src.types.coin import Coin, hash_coin_list
+from src.types.blockchain_format.coin import Coin, hash_coin_list
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -38,9 +38,9 @@ from src.types.header_block import HeaderBlock
 
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
-from src.types.pool_target import PoolTarget
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
@@ -591,9 +591,6 @@ class FullNodeAPI:
             return None
 
         async with self.full_node.timelord_lock:
-            if request.pool_target is None or request.pool_signature is None:
-                raise ValueError("Adaptable pool protocol not yet available.")
-
             sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(
                 request.challenge_chain_sp
             )
@@ -654,7 +651,7 @@ class FullNodeAPI:
                     return request.reward_chain_sp_signature
                 return G2Element.infinity()
 
-            def get_pool_sig(_1, _2) -> G2Element:
+            def get_pool_sig(_1, _2) -> Optional[G2Element]:
                 return request.pool_signature
 
             prev_b: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
@@ -715,8 +712,12 @@ class FullNodeAPI:
                 )
                 farmer_ph = self.full_node.constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
             else:
-                pool_target = request.pool_target
                 farmer_ph = request.farmer_puzzle_hash
+                if request.proof_of_space.pool_contract_puzzle_hash is not None:
+                    pool_target = PoolTarget(request.proof_of_space.pool_contract_puzzle_hash, uint32(0))
+                else:
+                    assert request.pool_target is not None
+                    pool_target = request.pool_target
 
             if peak is None or peak.height <= self.full_node.constants.MAX_SUB_SLOT_BLOCKS:
                 difficulty = self.full_node.constants.DIFFICULTY_STARTING

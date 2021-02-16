@@ -9,7 +9,10 @@ from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from src.consensus.get_block_challenge import get_block_challenge
+from src.consensus.get_block_challenge import (
+    get_block_challenge,
+    final_eos_is_already_included,
+)
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
     is_overflow_block,
@@ -19,13 +22,13 @@ from src.consensus.pot_iterations import (
 )
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.consensus.block_record import BlockRecord
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -64,7 +67,11 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
+        if final_eos_is_already_included(header_block, blocks):
+            skip_overflow_last_ss_validation = False
+            finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
+        else:
+            finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
     else:
         finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
 
@@ -713,13 +720,23 @@ def validate_unfinished_header_block(
         ):
             return None, ValidationError(Err.INVALID_PREFARM)
     else:
-        # 20b. Check pool target signature. Should not check this for genesis block.
-        if not AugSchemeMPL.verify(
-            header_block.reward_chain_block.proof_of_space.pool_public_key,
-            bytes(header_block.foliage.foliage_block_data.pool_target),
-            header_block.foliage.foliage_block_data.pool_signature,
-        ):
-            return None, ValidationError(Err.INVALID_POOL_SIGNATURE)
+        # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
+        if header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
+            assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
+            if not AugSchemeMPL.verify(
+                header_block.reward_chain_block.proof_of_space.pool_public_key,
+                bytes(header_block.foliage.foliage_block_data.pool_target),
+                header_block.foliage.foliage_block_data.pool_signature,
+            ):
+                return None, ValidationError(Err.INVALID_POOL_SIGNATURE)
+        else:
+            # 20c. Otherwise, the plot is associated with a contract puzzle hash, not a public key
+            assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is not None
+            if (
+                header_block.foliage.foliage_block_data.pool_target.puzzle_hash
+                != header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash
+            ):
+                return None, ValidationError(Err.INVALID_POOL_TARGET)
 
     # 21. Check extension data if applicable. None for mainnet.
     # 22. Check if foliage block is present

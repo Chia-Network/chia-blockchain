@@ -20,7 +20,7 @@ from src.server.outbound_message import NodeType, Message, Payload
 from src.server.ssl_context import private_ssl_paths, public_ssl_paths
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.errors import ProtocolError, Err
 from src.util.ints import uint16
 from src.protocols.shared_protocol import protocol_version

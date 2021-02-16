@@ -2,11 +2,11 @@ from typing import Optional
 from dataclasses import dataclass
 from blspy import G2Element
 
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
-from src.types.proof_of_space import ProofOfSpace
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 
 
 @dataclass(frozen=True)

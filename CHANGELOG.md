@@ -11,6 +11,8 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 - 'chia wallet get_transactions' in the command line to see your transactions
 - 'chia wallet show' also shows your wallet's height
+- Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
+validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
 
 ### Changed
 - Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This affectes the RPC, now

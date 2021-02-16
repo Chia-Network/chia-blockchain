@@ -54,6 +54,16 @@ def make_parser(parser):
         help="Enter the alternative fingerprint of the key you want to use",
     )
     parser.add_argument(
+        "-c",
+        "--pool_contract_address",
+        type=str,
+        default=None,
+        help=(
+            "Address of where the pool reward will be sent to. Only used "
+            "if alt_fingerprint and pool public key are None"
+        ),
+    )
+    parser.add_argument(
         "-f",
         "--farmer_public_key",
         help="Hex farmer public key",

@@ -5,13 +5,15 @@ import logging
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 from datetime import datetime
-from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.util.bech32m import decode_puzzle_hash
 from src.util.keychain import Keychain
 from src.util.config import config_path_for_filename, load_config
 from src.util.path import mkdir
 from src.plotting.plot_tools import (
-    stream_plot_info,
+    stream_plot_info_pk,
+    stream_plot_info_ph,
     add_plot_directory,
 )
 from src.wallet.derive_keys import (
@@ -61,11 +63,21 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     else:
         farmer_public_key = get_farmer_public_key(args.alt_fingerprint)
 
-    pool_public_key: G1Element
+    pool_public_key: Optional[G1Element] = None
+    pool_contract_puzzle_hash: Optional[bytes32] = None
     if args.pool_public_key is not None:
-        pool_public_key = bytes.fromhex(args.pool_public_key)
+        if args.pool_contract_address is not None:
+            raise RuntimeError("Choose one of pool_contract_address and pool_public_key")
+        pool_public_key = G1Element.from_bytes(bytes.fromhex(args.pool_public_key))
     else:
-        pool_public_key = get_pool_public_key(args.alt_fingerprint)
+        if args.pool_contract_address is None:
+            # If nothing is set, farms to the provided key (or the first key)
+            pool_public_key = get_pool_public_key(args.alt_fingerprint)
+        else:
+            # If the pool contract puzzle hash is set, use that
+            pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
+
+    assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
     if args.num is not None:
         num = args.num
     else:
@@ -76,10 +88,18 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     if args.size < 22:
         log.warning("k under 22 is not supported. Increasing k to 22")
         args.size = 22
-    log.info(
-        f"Creating {num} plots of size {args.size}, pool public key:  "
-        f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
-    )
+
+    if pool_public_key is not None:
+        log.info(
+            f"Creating {num} plots of size {args.size}, pool public key:  "
+            f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
+        )
+    else:
+        assert pool_contract_puzzle_hash is not None
+        log.info(
+            f"Creating {num} plots of size {args.size}, pool contract address:  "
+            f"{args.pool_contract_address} farmer public key: {bytes(farmer_public_key).hex()}"
+        )
 
     tmp_dir_created = False
     if not args.tmp_dir.exists():
@@ -106,12 +126,18 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         plot_public_key = ProofOfSpace.generate_plot_public_key(master_sk_to_local_sk(sk).get_g1(), farmer_public_key)
 
         # The plot id is based on the harvester, farmer, and pool keys
-        plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(pool_public_key, plot_public_key)
+        if pool_public_key is not None:
+            plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(pool_public_key, plot_public_key)
+            plot_memo: bytes32 = stream_plot_info_pk(pool_public_key, farmer_public_key, sk)
+        else:
+            assert pool_contract_puzzle_hash is not None
+            plot_id = ProofOfSpace.calculate_plot_id_ph(pool_contract_puzzle_hash, plot_public_key)
+            plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, sk)
+
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
             plot_id = bytes32(bytes.fromhex(args.plotid))
 
-        plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, sk)
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
             plot_memo = bytes.fromhex(args.memo)

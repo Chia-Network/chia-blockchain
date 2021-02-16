@@ -8,7 +8,7 @@ from src.harvester.harvester import Harvester
 from src.harvester.harvester_api import HarvesterAPI
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.rpc.harvester_rpc_api import HarvesterRpcApi

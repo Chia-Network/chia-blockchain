@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from typing import Callable, Optional
 
 from blspy import AugSchemeMPL, G2Element
 import src.server.ws_connection as ws
@@ -12,8 +12,8 @@ from src.farmer.farmer import Farmer
 from src.protocols import harvester_protocol, farmer_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
-from src.types.pool_target import PoolTarget
-from src.types.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint32, uint64
 
@@ -162,17 +162,25 @@ class FarmerAPI:
                     agg_sig_rc_sp = AugSchemeMPL.aggregate([reward_chain_sp_harv_sig, farmer_share_rc_sp])
                     assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
 
-                    assert pospace.pool_public_key is not None
-                    pool_pk = bytes(pospace.pool_public_key)
-                    if pool_pk not in self.farmer.pool_sks_map:
-                        self.farmer.log.error(
-                            f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
+                    if pospace.pool_public_key is not None:
+                        assert pospace.pool_contract_puzzle_hash is None
+                        pool_pk = bytes(pospace.pool_public_key)
+                        if pool_pk not in self.farmer.pool_sks_map:
+                            self.farmer.log.error(
+                                f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
+                            )
+                            return
+
+                        pool_target: Optional[PoolTarget] = PoolTarget(self.farmer.pool_target, uint32(0))
+                        assert pool_target is not None
+                        pool_target_signature: Optional[G2Element] = AugSchemeMPL.sign(
+                            self.farmer.pool_sks_map[pool_pk], bytes(pool_target)
                         )
-                        return
-                    pool_target: PoolTarget = PoolTarget(self.farmer.pool_target, uint32(0))
-                    pool_target_signature: G2Element = AugSchemeMPL.sign(
-                        self.farmer.pool_sks_map[pool_pk], bytes(pool_target)
-                    )
+                    else:
+                        assert pospace.pool_contract_puzzle_hash is not None
+                        pool_target = None
+                        pool_target_signature = None
+
                     request = farmer_protocol.DeclareProofOfSpace(
                         response.challenge_hash,
                         challenge_chain_sp,

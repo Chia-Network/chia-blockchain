@@ -18,26 +18,26 @@ from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
-from src.types.coin import Coin, hash_coin_list
+from src.types.blockchain_format.coin import Coin, hash_coin_list
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.foliage import (
+from src.types.blockchain_format.foliage import (
     Foliage,
     FoliageTransactionBlock,
     TransactionsInfo,
     FoliageBlockData,
 )
 from src.types.full_block import additions_for_npc, FullBlock
-from src.types.pool_target import PoolTarget
-from src.types.program import SerializedProgram
-from src.types.proof_of_space import ProofOfSpace
-from src.types.reward_chain_block import (
+from src.types.blockchain_format.pool_target import PoolTarget
+from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.proof_of_space import ProofOfSpace
+from src.types.blockchain_format.reward_chain_block import (
     RewardChainBlockUnfinished,
     RewardChainBlock,
 )
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo, VDFProof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.hash import std_hash
 from src.util.ints import uint128, uint64, uint32, uint8
 from src.util.merkle_set import MerkleSet
@@ -56,7 +56,7 @@ def create_foliage(
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     seed: bytes32 = b"",
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
     """
@@ -105,7 +105,6 @@ def create_foliage(
     pool_target_signature: Optional[G2Element] = get_pool_signature(
         pool_target, reward_block_unfinished.proof_of_space.pool_public_key
     )
-    assert pool_target_signature is not None
 
     foliage_data = FoliageBlockData(
         reward_block_unfinished.get_hash(),
@@ -282,7 +281,7 @@ def create_unfinished_block(
     farmer_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,

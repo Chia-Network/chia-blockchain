@@ -3,10 +3,10 @@ import aiosqlite
 
 from src.consensus.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
-from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32, uint64
 from src.wallet.block_record import HeaderBlockRecord
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 
 
 class WalletBlockStore:

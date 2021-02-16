@@ -5,10 +5,10 @@ from typing import Dict, List, Optional, Tuple
 
 from blspy import G2Element
 
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import CoinSolution, SpendBundle
 from src.util.ints import uint64
 from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle

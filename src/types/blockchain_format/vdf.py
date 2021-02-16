@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Dict
 
 from chiavdf import create_discriminant
-from src.types.classgroup import ClassgroupElement
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.sized_bytes import bytes32
 from chiavdf import verify_n_wesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable

@@ -6,11 +6,11 @@ from typing import Optional, List, Tuple, Any
 
 import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.types.program import Program
+from src.types.blockchain_format.program import Program
 from src.types.spend_bundle import SpendBundle
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint8, uint64, uint32, uint128
 from src.util.streamable import streamable, Streamable

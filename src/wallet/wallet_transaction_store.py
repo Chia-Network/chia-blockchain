@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List, Set
 import aiosqlite
-from src.types.sized_bytes import bytes32
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint8
 from src.wallet.transaction_record import TransactionRecord
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
