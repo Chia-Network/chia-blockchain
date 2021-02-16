@@ -75,7 +75,7 @@ class WSChiaConnection:
 
         # Messaging
         self.incoming_queue: asyncio.Queue = incoming_queue
-        self.outgoing_queue: asyncio.Queue[Message] = asyncio.Queue()
+        self.outgoing_queue: asyncio.Queue = asyncio.Queue()
 
         self.inbound_task: Optional[asyncio.Task] = None
         self.outbound_task: Optional[asyncio.Task] = None
