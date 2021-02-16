@@ -3,11 +3,12 @@ import type SpendBundle from './SpendBundle';
 import type TransactionType from '../constants/TransactionType';
 
 type Transaction = {
-  confirmed_at_index: number;
+  confirmed_at_height: number;
   created_at_time: number;
   to_address: string;
-  amount: number;
-  fee_amount: number;
+  to_puzzle_hash?: string;
+  amount: string;
+  fee_amount: string;
   incoming: boolean;
   confirmed: boolean;
   sent: number;
@@ -15,6 +16,9 @@ type Transaction = {
   additions: Coin[];
   removals: Coin[];
   wallet_id: number;
+  trade_id?: number;
+  name?: string;
+  sent_to?: string[];
   type: TransactionType;
 };
 

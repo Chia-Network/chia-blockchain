@@ -34,8 +34,8 @@ export default function computeStatistics(
         feesReward += BigInt(tx.amount);
       }
 
-      if (tx.confirmed_at_index > biggestHeight) {
-        biggestHeight = tx.confirmed_at_index;
+      if (tx.confirmed_at_height > biggestHeight) {
+        biggestHeight = tx.confirmed_at_height;
       }
     });
   });

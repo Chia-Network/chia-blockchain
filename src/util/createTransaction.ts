@@ -4,11 +4,11 @@ import type Transaction from '../types/Transaction';
 import type TransactionType from '../constants/TransactionType';
 
 export default function createTransaction(
-  confirmed_at_index: number,
+  confirmed_at_height: number,
   created_at_time: number,
   to_address: string,
-  amount: number,
-  fee_amount: number,
+  amount: string,
+  fee_amount: string,
   incoming: boolean,
   confirmed: boolean,
   sent: number,
@@ -19,7 +19,7 @@ export default function createTransaction(
   type: TransactionType,
 ): Transaction {
   return {
-    confirmed_at_index,
+    confirmed_at_height,
     created_at_time,
     to_address,
     amount,
