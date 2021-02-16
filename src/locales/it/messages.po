@@ -40,7 +40,7 @@ msgstr "Accettato al tempo:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:76
 msgid "Action"
 msgstr "Azione"
 
@@ -81,7 +81,7 @@ msgstr "Indirizzo / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:46
+#: src/components/wallet/WalletHistory.tsx:44
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
 #: src/components/wallet/standard/WalletStandard.tsx:343
@@ -112,7 +112,7 @@ msgstr "Indietro"
 msgid "Balance"
 msgstr "Bilancio"
 
-#: src/components/block/Block.jsx:300
+#: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
 msgstr "Importo Base Ricompensa Farmer"
 
@@ -125,18 +125,18 @@ msgstr "Di seguito sono riportate le attuali sfide del blocco. Puoi avere o non 
 msgid "Best estimate over last 5 hours"
 msgstr "Migliore stima sulle ultime 5 ore"
 
-#: src/components/block/Block.jsx:126
-#: src/components/block/Block.jsx:138
-#: src/components/block/Block.jsx:150
-#: src/components/block/Block.jsx:320
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:128
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:306
 msgid "Block"
 msgstr "Blocco"
 
-#: src/components/block/Block.jsx:232
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "Blocco Iterazioni VDF"
 
-#: src/components/block/Block.jsx:329
+#: src/components/block/Block.jsx:315
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Blocco all'altezza {0} nella blockchain Chia"
 
@@ -144,7 +144,7 @@ msgstr "Blocco all'altezza {0} nella blockchain Chia"
 msgid "Block hash"
 msgstr "Hash del blocco"
 
-#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:143
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Il blocco con hash {headerHash} non esiste."
 
@@ -163,7 +163,7 @@ msgid "But you are currently farming <0/>"
 msgstr "Ma attualmente stai coltivando <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
-#: src/components/trading/TradesTable.tsx:32
+#: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
 msgstr "Compra"
@@ -214,6 +214,10 @@ msgstr "Scegli il Numero di Plot"
 msgid "Choose Plot Size"
 msgstr "Scegli la Dimensione del Plot"
 
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
+msgid "Close"
+msgstr ""
+
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
 msgstr "Arresto del nodo e del server"
@@ -251,7 +255,7 @@ msgstr ""
 msgid "Confirmed at block:"
 msgstr "Confermato al blocco:"
 
-#: src/components/wallet/WalletHistory.tsx:36
+#: src/components/wallet/WalletHistory.tsx:35
 msgid "Confirmed at height {0}"
 msgstr "Confermato all'altezza {0}"
 
@@ -394,6 +398,7 @@ msgstr "Ritardo"
 
 #: src/components/fullNode/FullNodeConnections.jsx:110
 #: src/components/plot/PlotAction.tsx:24
+#: src/components/plot/PlotAction.tsx:43
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 #: src/components/plot/queue/PlotQueueActions.tsx:57
 #: src/components/selectKey/SelectKey.tsx:39
@@ -423,7 +428,7 @@ msgstr "Eliminando tutte le chiavi queste saranno rimosse definitivamente dal tu
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Eliminando la chiave questa sarà rimossa definitivamente dal tuo computer, assicurati di avere un backup. Sei sicuro di voler continuare?"
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Difficulty"
 msgstr "Difficoltà"
@@ -491,7 +496,7 @@ msgstr "Impossibile aprire (plot non validi)"
 msgid "Farm"
 msgstr "Coltiva"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:244
 msgid "Farmer Puzzle Hash"
 msgstr "Puzzle Hash Farmer"
 
@@ -524,7 +529,7 @@ msgstr "Coltivando"
 msgid "Farming Status"
 msgstr "Stato della Coltivazione"
 
-#: src/components/wallet/WalletHistory.tsx:50
+#: src/components/wallet/WalletHistory.tsx:48
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
@@ -538,17 +543,17 @@ msgstr "Fee"
 msgid "Fee (TXCH)"
 msgstr "Fee (TXCH)"
 
-#: src/components/block/Block.jsx:304
+#: src/components/block/Block.jsx:294
 msgid "Fees Amount"
 msgstr "Ammontare delle Fee"
 
 #: src/components/block/Block.jsx:313
-msgid "Fees Puzzle Hash"
-msgstr "Fee del Puzzle Hash"
+#~ msgid "Fees Puzzle Hash"
+#~ msgstr "Fee del Puzzle Hash"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:70
 msgid "Filename"
 msgstr "Nome file"
 
@@ -574,7 +579,7 @@ msgstr "Stato del Full Node"
 msgid "Generate New Colour"
 msgstr "Genera Nuovo Colore"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:35
+#: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "Harvester ID"
 msgstr "ID Harvester"
 
@@ -582,11 +587,11 @@ msgstr "ID Harvester"
 msgid "Header Hash"
 msgstr "Hash Header"
 
-#: src/components/block/Block.jsx:185
+#: src/components/block/Block.jsx:175
 msgid "Header hash"
 msgstr "Hash Header"
 
-#: src/components/block/Block.jsx:199
+#: src/components/block/Block.jsx:189
 #: src/components/fullNode/FullNode.jsx:92
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Height"
@@ -600,7 +605,7 @@ msgstr "Aiuta a tradurre"
 msgid "Hide Advanced Options"
 msgstr "Nascondi Opzioni Avanzate"
 
-#: src/components/wallet/WalletHistory.tsx:58
+#: src/components/wallet/WalletHistory.tsx:56
 msgid "History"
 msgstr "Storia"
 
@@ -666,7 +671,7 @@ msgstr "Inizializza un Wallet Utente a Velocità Limitata:"
 msgid "Interval"
 msgstr "Intervallo"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:25
+#: src/components/plot/overview/PlotOverviewPlots.tsx:40
 msgid "K-Size"
 msgstr "Taglia-K"
 
@@ -686,7 +691,11 @@ msgstr "Ultima Altezza Coltivata"
 msgid "Latest Block Challenges"
 msgstr "Ultime Sfide Blocchi"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
+msgid "Loading..."
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
 msgstr "Plot Harvester Locale"
 
@@ -757,12 +766,12 @@ msgstr "La mia Pubkey"
 msgid "New Address"
 msgstr "Nuovo Indirizzo"
 
-#: src/components/wallet/WalletAdd.tsx:34
+#: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
 msgstr "Nuovo Wallet"
 
-#: src/components/block/Block.jsx:344
-#: src/components/wallet/WalletAdd.tsx:49
+#: src/components/block/Block.jsx:330
+#: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
 msgstr "Prossimo"
@@ -779,7 +788,7 @@ msgstr "No"
 msgid "No blocks farmed yet"
 msgstr "Ancora nessun blocco coltivato"
 
-#: src/components/wallet/WalletHistory.tsx:60
+#: src/components/wallet/WalletHistory.tsx:58
 msgid "No previous transactions"
 msgstr "Nessuna transazione precedente"
 
@@ -854,7 +863,7 @@ msgstr "Altezza Picco"
 msgid "Peak Time"
 msgstr "Tempo Picco"
 
-#: src/components/wallet/WalletHistory.tsx:38
+#: src/components/wallet/WalletHistory.tsx:37
 msgid "Pending"
 msgstr "In attesa"
 
@@ -947,29 +956,33 @@ msgstr "Plot"
 msgid "Plot Count"
 msgstr "Conteggio Plot"
 
-#: src/components/block/Block.jsx:262
+#: src/components/block/Block.jsx:252
 msgid "Plot Id"
 msgstr "Id Plot"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:45
+#: src/components/plot/overview/PlotOverviewPlots.tsx:60
 msgid "Plot Key"
 msgstr "Chiave Plot"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:30
+#: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "Plot Name"
 msgstr "Nome Plot"
 
-#: src/components/block/Block.jsx:246
+#: src/components/block/Block.jsx:236
 msgid "Plot Public Key"
 msgstr "Chiave Pubblica del Plot"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:40
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Seed"
 msgstr "Seed del Plot"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:28
 msgid "Plot Size"
 msgstr "Dimensione Plot"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:27
+msgid "Plot is duplicate of {0}"
+msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
@@ -991,19 +1004,19 @@ msgstr "Plottando"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Plottare in parallelo può far risparmiare tempo. In alternativa, aggiungi plot alla coda."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:50
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 msgid "Pool Key"
 msgstr "Chiave Pool"
 
-#: src/components/block/Block.jsx:250
+#: src/components/block/Block.jsx:240
 msgid "Pool Public Key"
 msgstr "Chiave Pubblica Pool"
 
-#: src/components/block/Block.jsx:258
+#: src/components/block/Block.jsx:248
 msgid "Pool Puzzle Hash"
 msgstr "Hash Puzzle della Pool"
 
-#: src/components/block/Block.jsx:296
+#: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Ammontare della Ricompensa della Pool"
 
@@ -1014,11 +1027,11 @@ msgstr "Ammontare della Ricompensa della Pool"
 msgid "Port"
 msgstr "Porta"
 
-#: src/components/block/Block.jsx:339
+#: src/components/block/Block.jsx:325
 msgid "Previous"
 msgstr "Precedente"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:203
 msgid "Previous Block Hash"
 msgstr "Hash del Blocco Precedente"
 
@@ -1030,7 +1043,7 @@ msgstr "Hash del Blocco Precedente"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Chiave privata con impronta pubblica {fingerprint}"
 
-#: src/components/block/Block.jsx:242
+#: src/components/block/Block.jsx:232
 msgid "Proof of Space Size"
 msgstr "Dimensione Prova di Spazio"
 
@@ -1152,7 +1165,7 @@ msgid "Selected"
 msgstr "Selezionato"
 
 #: src/components/trading/CreateOffer.jsx:182
-#: src/components/trading/TradesTable.tsx:31
+#: src/components/trading/TradesTable.tsx:30
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
 msgstr "Vendi"
@@ -1220,9 +1233,9 @@ msgstr "Condizione"
 #: src/components/fullNode/FullNode.jsx:140
 #: src/components/fullNode/FullNode.jsx:148
 #: src/components/fullNode/FullNode.jsx:170
-#: src/components/plot/overview/PlotOverviewPlots.tsx:58
+#: src/components/plot/overview/PlotOverviewPlots.tsx:73
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:40
+#: src/components/wallet/WalletHistory.tsx:38
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:93
 msgid "Status"
@@ -1310,19 +1323,19 @@ msgstr "Il nodo non è sincronizzato"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Il nodo si sta sincronizzando, ovvero sta scaricando i blocchi da altri nodi, per raggiungere l'ultimo blocco nella blockchain"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:255
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Il seed usato per creare il plot. Questo dipende dalla pk della pool e dalla pk del plot."
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Il numero totale di VDF (funzione a verifica ritardata) o iterazioni della prova di tempo sull'intera blockchain fino a questo sotto blocco."
 
-#: src/components/block/Block.jsx:235
+#: src/components/block/Block.jsx:225
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Il numero totale di VDF (funzione a verifica ritardata) o iterazioni di prove di tempo su questo blocco."
 
-#: src/components/block/Block.jsx:307
+#: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Il totale delle tasse di transazione in questo blocco. Date come ricompensa al coltivatore."
 
@@ -1352,7 +1365,7 @@ msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (
 msgid "This is the time of the latest peak sub block."
 msgstr "Questo è il tempo dell'ultimo sottoblocco di picco."
 
-#: src/components/block/Block.jsx:192
+#: src/components/block/Block.jsx:182
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Questo è il tempo in cui il blocco è stato creato dal coltivatore, che è precedente a quando è stato finalizzato con una prova di tempo"
 
@@ -1384,7 +1397,7 @@ msgstr "Creato al Tempo"
 msgid "Time this trade was created at this time"
 msgstr "Tempo questo commercio è stato creato a questo tempo"
 
-#: src/components/block/Block.jsx:189
+#: src/components/block/Block.jsx:179
 msgid "Timestamp"
 msgstr "Marca temporale"
 
@@ -1410,15 +1423,15 @@ msgstr "Iterazioni in Totale"
 msgid "Total Network Space"
 msgstr "Spazio Totale della Rete"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/plot/overview/PlotOverviewPlots.tsx:99
 msgid "Total Plot Size:"
 msgstr "Dimensione Totale del Plot:"
 
-#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:14
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
 msgstr "Dimensione Totale dei Plot"
 
-#: src/components/block/Block.jsx:222
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "Totale Iterazioni VDF"
 
@@ -1458,7 +1471,7 @@ msgstr "Commerciando"
 msgid "Trading History"
 msgstr "Storia commerci"
 
-#: src/components/block/Block.jsx:273
+#: src/components/block/Block.jsx:263
 msgid "Transactions Filter Hash"
 msgstr "Filtro Hash Transazioni"
 
@@ -1484,6 +1497,7 @@ msgid "VDF Sub Slot Iterations"
 msgstr "Iterazioni Sotto Slot VDF"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
 msgstr "Vedi Log"
 
@@ -1543,7 +1557,7 @@ msgstr "I wallet"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:77
+#: src/components/plot/overview/PlotOverviewPlots.tsx:92
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Vuoi guadagnare più Chia? Aggingi più plot alla tua coltivazione."
 
@@ -1551,11 +1565,11 @@ msgstr "Vuoi guadagnare più Chia? Aggingi più plot alla tua coltivazione."
 msgid "Want to have a delay before the next plot starts?"
 msgstr "Vuoi un ritardo prima che parta il prossimo plot?"
 
-#: src/components/block/Block.jsx:203
+#: src/components/block/Block.jsx:193
 msgid "Weight"
 msgstr "Peso"
 
-#: src/components/block/Block.jsx:206
+#: src/components/block/Block.jsx:196
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Il peso è la difficoltà aggiunta in totale a tutti i sottoblocchi fino a e incluso questo"
 
@@ -1563,7 +1577,7 @@ msgstr "Il peso è la difficoltà aggiunta in totale a tutti i sottoblocchi fino
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
 msgstr "Benvenuto da Chia. Per favore accedi con una chiave esistente, o crea una nuova chiave."
 
-#: src/components/wallet/WalletAdd.tsx:37
+#: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "Benvenuto! Le parole seguenti sono utilizzate per il backup del tuo wallet. Senza di queste, perderai l'accesso al tuo wallet, tienile al sicuro! Scrivi ogni parola insieme al suo vicino numero d'ordine. (L'ordine è importate)"
 
@@ -1619,4 +1633,3 @@ msgstr "sincronizzato"
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "sincronizzando"
-
