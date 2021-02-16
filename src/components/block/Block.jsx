@@ -299,10 +299,6 @@ export default function Block() {
         </Trans>
       ),
     },
-    {
-      name: <Trans>Fees Puzzle Hash</Trans>,
-      value: blockRecord.farmer_puzzle_hash,
-    },
   ];
 
   return (
