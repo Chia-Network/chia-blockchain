@@ -8,7 +8,7 @@ msgstr ""
 "Language: en\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-15 23:35\n"
+"PO-Revision-Date: 2021-02-16 13:50\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -59,7 +59,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr "Add Wallet"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -170,7 +170,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr "CC Wallet"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -204,7 +204,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr "Chia Wallet"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -241,11 +241,11 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 msgid "Coloured Coin"
-msgstr "Coloured Coin"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 msgid "Coloured Coin Options"
-msgstr "Coloured Coin Options"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -306,7 +306,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
-msgstr "Create DID wallet"
+msgstr ""
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -340,15 +340,15 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
-msgstr "Create admin wallet"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
-msgstr "Create new coloured coin"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
-msgstr "Create user wallet"
+msgstr ""
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -356,7 +356,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:206
 msgid "Create wallet for existing colour"
-msgstr "Create wallet for existing colour"
+msgstr ""
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -376,7 +376,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr "DID Wallet"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -430,11 +430,11 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
-msgstr "Distributed Identity"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr "Distributed Identity Options"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -1052,7 +1052,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr "RL Wallet"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1060,7 +1060,7 @@ msgstr "RL Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:134
 msgid "Rate Limited"
-msgstr "Rate Limited"
+msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
@@ -1069,7 +1069,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 msgid "Rate Limited Options"
-msgstr "Rate Limited Options"
+msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
@@ -1082,7 +1082,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
-msgstr "Recover DID wallet"
+msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1135,7 +1135,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:112
 msgid "Select Wallet Type"
-msgstr "Select Wallet Type"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1603,7 +1603,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
-msgstr "not synced"
+msgstr ""
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:98
@@ -1619,3 +1619,4 @@ msgstr ""
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr ""
+
