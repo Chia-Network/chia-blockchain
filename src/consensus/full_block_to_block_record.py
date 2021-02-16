@@ -12,7 +12,7 @@ from src.types.blockchain_format.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
 from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.util.ints import uint64, uint32
+from src.util.ints import uint64, uint32, uint8
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 
 
@@ -53,16 +53,72 @@ def block_to_block_record(
         overflow,
         len(block.finished_sub_slots),
     )
-    prev_transaction_block_hash = (
-        block.foliage_transaction_block.prev_transaction_block_hash
-        if block.foliage_transaction_block is not None
-        else None
+
+    found_ses_hash: Optional[bytes32] = None
+    ses: Optional[SubEpochSummary] = None
+    if len(block.finished_sub_slots) > 0:
+        for sub_slot in block.finished_sub_slots:
+            if sub_slot.challenge_chain.subepoch_summary_hash is not None:
+                found_ses_hash = sub_slot.challenge_chain.subepoch_summary_hash
+    if found_ses_hash:
+        assert prev_b is not None
+        assert len(block.finished_sub_slots) > 0
+        ses = make_sub_epoch_summary(
+            constants,
+            blocks,
+            block.height,
+            blocks.block_record(prev_b.prev_hash),
+            block.finished_sub_slots[0].challenge_chain.new_difficulty,
+            block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+        )
+        assert ses.get_hash() == found_ses_hash
+
+    prev_transaction_block_height = uint32(0)
+    curr: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)
+    while curr is not None and not curr.is_transaction_block:
+        curr = blocks.try_block_record(curr.prev_hash)
+
+    if curr is not None and curr.is_transaction_block:
+        prev_transaction_block_height = curr.height
+
+    return header_block_to_sub_block_record(
+        constants,
+        required_iters,
+        block,
+        sub_slot_iters,
+        overflow,
+        deficit,
+        prev_transaction_block_height,
+        ses,
     )
-    timestamp = block.foliage_transaction_block.timestamp if block.foliage_transaction_block is not None else None
-    fees = block.transactions_info.fees if block.transactions_info is not None else None
+
+
+def header_block_to_sub_block_record(
+    constants: ConsensusConstants,
+    required_iters: uint64,
+    block: Union[FullBlock, HeaderBlock],
+    sub_slot_iters: uint64,
+    overflow: bool,
+    deficit: uint8,
+    prev_transaction_block_height: uint32,
+    ses: Optional[SubEpochSummary],
+):
+
     reward_claims_incorporated = (
         block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
     )
+
+    cbi = ChallengeBlockInfo(
+        block.reward_chain_block.proof_of_space,
+        block.reward_chain_block.challenge_chain_sp_vdf,
+        block.reward_chain_block.challenge_chain_sp_signature,
+        block.reward_chain_block.challenge_chain_ip_vdf,
+    )
+
+    if block.reward_chain_block.infused_challenge_chain_ip_vdf is not None:
+        icc_output: Optional[ClassgroupElement] = block.reward_chain_block.infused_challenge_chain_ip_vdf.output
+    else:
+        icc_output = None
 
     if len(block.finished_sub_slots) > 0:
         finished_challenge_slot_hashes: Optional[List[bytes32]] = [
@@ -84,45 +140,13 @@ def block_to_block_record(
         finished_challenge_slot_hashes = None
         finished_reward_slot_hashes = None
         finished_infused_challenge_slot_hashes = None
-
-    found_ses_hash: Optional[bytes32] = None
-    ses: Optional[SubEpochSummary] = None
-    if len(block.finished_sub_slots) > 0:
-        for sub_slot in block.finished_sub_slots:
-            if sub_slot.challenge_chain.subepoch_summary_hash is not None:
-                found_ses_hash = sub_slot.challenge_chain.subepoch_summary_hash
-    if found_ses_hash:
-        assert prev_b is not None
-        assert len(block.finished_sub_slots) > 0
-        ses = make_sub_epoch_summary(
-            constants,
-            blocks,
-            block.height,
-            blocks.block_record(prev_b.prev_hash),
-            block.finished_sub_slots[0].challenge_chain.new_difficulty,
-            block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
-        )
-        assert ses.get_hash() == found_ses_hash
-
-    cbi = ChallengeBlockInfo(
-        block.reward_chain_block.proof_of_space,
-        block.reward_chain_block.challenge_chain_sp_vdf,
-        block.reward_chain_block.challenge_chain_sp_signature,
-        block.reward_chain_block.challenge_chain_ip_vdf,
+    prev_transaction_block_hash = (
+        block.foliage_transaction_block.prev_transaction_block_hash
+        if block.foliage_transaction_block is not None
+        else None
     )
-
-    if block.reward_chain_block.infused_challenge_chain_ip_vdf is not None:
-        icc_output: Optional[ClassgroupElement] = block.reward_chain_block.infused_challenge_chain_ip_vdf.output
-    else:
-        icc_output = None
-
-    prev_transaction_block_height = uint32(0)
-    curr: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)
-    while curr is not None and not curr.is_transaction_block:
-        curr = blocks.try_block_record(curr.prev_hash)
-
-    if curr is not None and curr.is_transaction_block:
-        prev_transaction_block_height = curr.height
+    timestamp = block.foliage_transaction_block.timestamp if block.foliage_transaction_block is not None else None
+    fees = block.transactions_info.fees if block.transactions_info is not None else None
 
     return BlockRecord(
         block.header_hash,

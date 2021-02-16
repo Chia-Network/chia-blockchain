@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from blspy import G2Element
-
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.reward_chain_block import RewardChainBlock
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.vdf import VDFProof, VDFInfo
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.header_block import HeaderBlock
 from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import Streamable, streamable
 
@@ -16,7 +14,7 @@ from src.util.streamable import Streamable, streamable
 @streamable
 class SubEpochData(Streamable):
     reward_chain_hash: bytes32
-    num_blocks_overflow: uint8
+    num_sub_blocks_overflow: uint8
     new_sub_slot_iters: Optional[uint64]
     new_difficulty: Optional[uint64]
 
@@ -37,8 +35,7 @@ class SubEpochData(Streamable):
 class SubSlotData(Streamable):
     # if infused
     proof_of_space: Optional[ProofOfSpace]
-    # Signature of signage point
-    cc_sp_sig: Optional[G2Element]
+
     # VDF to signage point
     cc_signage_point: Optional[VDFProof]
     # VDF from signage to infusion point
@@ -48,13 +45,13 @@ class SubSlotData(Streamable):
 
     # VDF from beginning to end of slot if not infused
     #  from ip to end if infused
-    cc_slot_end: Optional[VDFProof]
-    icc_slot_end: Optional[VDFProof]
+    cc_slot_end: Optional[List[VDFProof]]
+    icc_slot_end: Optional[List[VDFProof]]
 
     # info from finished slots
-    cc_slot_end_info: Optional[VDFInfo]
-    icc_slot_end_info: Optional[VDFInfo]
-    rc_slot_end_info: Optional[VDFInfo]
+    cc_slot_end_info: Optional[List[VDFInfo]]
+    icc_slot_end_info: Optional[List[VDFInfo]]
+    cc_ip_vdf_info: Optional[VDFInfo]
 
     def is_challenge(self):
         if self.proof_of_space is not None:
@@ -67,6 +64,7 @@ class SubSlotData(Streamable):
 class SubEpochChallengeSegment(Streamable):
     sub_epoch_n: uint32
     sub_slots: List[SubSlotData]
+    rc_slot_end_info: Optional[VDFInfo]  # in first segment of each sub_epoch
 
 
 @dataclass(frozen=True)
@@ -80,7 +78,7 @@ class SubEpochSegments(Streamable):
 @streamable
 class ProofBlockHeader(Streamable):
     finished_sub_slots: List[EndOfSubSlotBundle]
-    reward_chain_block: RewardChainBlock
+    reward_chain_block: RewardChainSubBlock
 
 
 @dataclass(frozen=True)
@@ -88,4 +86,4 @@ class ProofBlockHeader(Streamable):
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
-    recent_chain_data: List[ProofBlockHeader]  # todo switch HeaderBlock tp class with only needed field
+    recent_chain_data: List[HeaderBlock]
