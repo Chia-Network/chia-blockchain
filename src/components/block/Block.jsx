@@ -89,7 +89,7 @@ export default function Block() {
 
   function handleShowPreviousBlock() {
     const prevHash = blockRecord?.prev_hash;
-    if (prevHash && blockRecord.height) {
+    if (prevHash && blockRecord?.height) {
       // save current hash
       setNextSubBlocks([headerHash, ...nextSubBlocks]);
 
