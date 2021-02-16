@@ -19,7 +19,30 @@ export default function usePlots(): {
   );
 
   const queue = useSelector((state: RootState) => state.plot_queue.queue);
-  const uniquePlots = useMemo(() => uniqBy(plots, (plot) => plot.local_sk), [plots]);
+  const uniquePlots = useMemo(() => {
+    if (!plots) {
+      return plots;
+    }
+
+    return uniqBy(plots, (plot) => plot.local_sk);
+  }, [plots]);
+
+  const updatedPlots = useMemo(() => {
+    if (!plots) {
+      return plots;
+    }
+
+    return plots.map((plot) => {
+      const duplicates = plots.filter(
+        (item) => plot.local_sk === item.local_sk && item !== plot,
+      );
+
+      return {
+        ...plot,
+        duplicates,
+      };
+    });
+  }, [plots]);
 
   const size = useMemo(() => {
     if (uniquePlots && uniquePlots.length) {
@@ -30,7 +53,7 @@ export default function usePlots(): {
   }, [uniquePlots]);
 
   return {
-    plots,
+    plots: updatedPlots,
     uniquePlots,
     size,
     queue,

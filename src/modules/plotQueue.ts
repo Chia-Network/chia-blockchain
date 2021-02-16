@@ -94,9 +94,7 @@ export default function plotQueueReducer(
 ): PlotQueueState {
   switch (action.type) {
     case 'PLOT_QUEUE_UPDATE':
-     
       const { queue } = action;
-      console.log('PLOT_QUEUE_UPDATE', queue);
 
       return {
         ...state,

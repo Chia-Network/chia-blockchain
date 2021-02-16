@@ -1,9 +1,9 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Card, Flex, Table, FormatBytes } from '@chia/core';
-import { TableCell, TableRow } from '@material-ui/core';
-import Typography from '@material-ui/core/Typography';
+import { Warning as WarningIcon } from '@material-ui/icons';
+import { Card, Flex, Table, FormatBytes, StateColor } from '@chia/core';
+import { Box, Typography, TableCell, TableRow, Tooltip} from '@material-ui/core';
 import type Plot from '../../../types/Plot';
 import PlotStatusEnum from '../../../constants/PlotStatus';
 import PlotStatus from '../PlotStatus';
@@ -20,13 +20,35 @@ const StyledTableRowQueue = styled(TableRow)`
     : '#F6EEDF'};
 `;
 
+const StyledWarningIcon = styled(WarningIcon)`
+  color: ${StateColor.WARNING};
+`;
+
 const cols = [{
-  field: ({ file_size, size }: Plot) => (
-    <>
-      {`K-${size}, `}
-      <FormatBytes value={file_size} />
-    </>
-  ),
+  field({ file_size, size, duplicates }: Plot) {
+    const hasDuplicates = duplicates && duplicates.length;
+    const [firstDuplicate] = duplicates || [];
+
+    const duplicateTitle = hasDuplicates ? (
+      <Trans>
+        Plot is duplicate of {firstDuplicate.filename}
+      </Trans>
+    ) : null;
+
+    return (
+      <Flex alignItems="center" gap={1}>
+        <Box>
+          {`K-${size}, `}
+          <FormatBytes value={file_size} />
+        </Box>
+        {hasDuplicates && (
+          <Tooltip title={<Box>{duplicateTitle}</Box>} interactive arrow>
+            <StyledWarningIcon />
+          </Tooltip>
+        )}
+      </Flex>
+    );
+  },
   title: <Trans>K-Size</Trans>,
 }, {
   minWidth: '100px',
