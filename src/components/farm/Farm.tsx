@@ -17,11 +17,10 @@ export default function Farm() {
       <Flex flexDirection="column" gap={3}>
         <FarmOverview />
 
-        <FarmLatestBlockChallenges />
-
-        {hasPlots && (
+        {hasPlots ? (
           <>
             <FarmLastAttemptedProof />
+            <FarmLatestBlockChallenges />
             <AdvancedOptions>
               <Flex flexDirection="column" gap={3}>
                 <FarmFullNodeConnections />
@@ -29,6 +28,8 @@ export default function Farm() {
               </Flex>
             </AdvancedOptions>
           </>
+        ) : (
+          <FarmLatestBlockChallenges />
         )}
       </Flex>
     </LayoutMain>
