@@ -50,8 +50,8 @@ class SubSlotData(Streamable):
     icc_slot_end: Optional[List[VDFProof]]
 
     # info from finished slots
-    cc_slot_end_info: Optional[VDFInfo]
-    icc_slot_end_info: Optional[VDFInfo]
+    cc_slot_end_info: Optional[List[VDFInfo]]
+    icc_slot_end_info: Optional[List[VDFInfo]]
     cc_ip_vdf_info: Optional[VDFInfo]
 
     def is_challenge(self):

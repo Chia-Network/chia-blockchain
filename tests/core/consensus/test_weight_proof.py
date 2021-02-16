@@ -1,13 +1,18 @@
 # flake8: noqa: F811, F401
 import asyncio
+import pickle
 import sys
 from typing import Dict, Optional, List, Tuple
 
 import aiosqlite
 import pytest
+
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
 from src.full_node.block_store import BlockStore
 from src.util.block_cache import BlockCache
+from src.util.block_tools import test_constants
 
 try:
     from reprlib import repr
@@ -28,8 +33,7 @@ from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32, uint64
-from tests.setup_nodes import test_constants, bt
-from tests.core.fixtures import empty_blockchain, default_1000_blocks, default_400_blocks, default_10000_blocks
+from tests.core.fixtures import default_1000_blocks, default_400_blocks, default_10000_blocks
 
 
 @pytest.fixture(scope="session")
@@ -207,11 +211,17 @@ class TestWeightProof:
     async def test_weight_proof1000(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        header = header_cache[height_to_hash[298]]
+        prev_sb = blockchain.sub_block_record(header.prev_header_hash)
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(test_constants, header, prev_sb, blockchain)
+        validate_finished_header_block(test_constants, blockchain, header, False, difficulty, sub_slot_iters, False)
+
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = await wpf.validate_weight_proof(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -223,6 +233,24 @@ class TestWeightProof:
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
 
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
+        valid, fork_point = await wpf.validate_weight_proof(wp)
+
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof100002(self, default_10000_blocks):
+        blocks = default_10000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        header = header_cache[height_to_hash[4212]]
+        prev_sb = blockchain.sub_block_record(header.prev_header_hash)
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(test_constants, header, prev_sb, blockchain)
+        validate_finished_header_block(test_constants, blockchain, header, False, difficulty, sub_slot_iters, False)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
         valid, fork_point = await wpf.validate_weight_proof(wp)
