@@ -38,5 +38,5 @@
   )
 
   ; main
-  (generate_npc_pair_list ((c block_program (q ()))) ())
+  (generate_npc_pair_list ((c block_program (q . ()))) ())
 )
