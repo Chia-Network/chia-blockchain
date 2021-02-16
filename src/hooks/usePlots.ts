@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { sumBy } from 'lodash';
+import { sumBy, uniqBy } from 'lodash';
 import { useSelector } from 'react-redux';
 import Plot from 'types/Plot';
 import PlotQueueItem from 'types/PlotQueueItem';
@@ -20,8 +20,9 @@ export default function usePlots(): {
   const queue = useSelector((state: RootState) => state.plot_queue.queue);
 
   const size = useMemo(() => {
-    if (plots && plots.length) {
-      return sumBy(plots, (plot) => plot.file_size);
+    const uniquePlots = uniqBy(plots, (plot) => plot.local_sk);
+    if (uniquePlots && uniquePlots.length) {
+      return sumBy(uniquePlots, (plot) => plot.file_size);
     }
 
     return 0;
