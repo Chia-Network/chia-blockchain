@@ -8,6 +8,7 @@ import type { RootState } from '../modules/rootReducer';
 export default function usePlots(): {
   loading: boolean;
   plots?: Plot[];
+  uniquePlots?: Plot[];
   hasPlots: boolean;
   queue?: PlotQueueItem[];
   hasQueue: boolean;
@@ -18,18 +19,19 @@ export default function usePlots(): {
   );
 
   const queue = useSelector((state: RootState) => state.plot_queue.queue);
+  const uniquePlots = useMemo(() => uniqBy(plots, (plot) => plot.local_sk), [plots]);
 
   const size = useMemo(() => {
-    const uniquePlots = uniqBy(plots, (plot) => plot.local_sk);
     if (uniquePlots && uniquePlots.length) {
       return sumBy(uniquePlots, (plot) => plot.file_size);
     }
 
     return 0;
-  }, [plots]);
+  }, [uniquePlots]);
 
   return {
     plots,
+    uniquePlots,
     size,
     queue,
     loading: !plots,

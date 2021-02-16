@@ -1,19 +1,16 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
+import usePlots from '../../../hooks/usePlots';
 
 export default function FarmCardPlotCount() {
-  const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots,
-  );
+  const { uniquePlots } = usePlots();
 
   return (
     <FarmCard
       title={<Trans>Plot Count</Trans>}
-      value={plots?.length}
-      loading={!plots}
+      value={uniquePlots?.length}
+      loading={!uniquePlots}
     />
   );
 }
