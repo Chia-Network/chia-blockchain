@@ -247,6 +247,21 @@ class TestBlockHeaderValidation:
         assert blockchain.get_peak().height == num_blocks - 1
 
     @pytest.mark.asyncio
+    async def test_all_overflow(self, empty_blockchain):
+        blockchain = empty_blockchain
+        num_rounds = 5
+        blocks = []
+        num_blocks = 0
+        for i in range(1, num_rounds):
+            num_blocks += i
+            blocks = bt.get_consecutive_blocks(i, block_list_input=blocks, skip_slots=1, force_overflow=True)
+            for block in blocks[-i:]:
+                result, err, _ = await blockchain.receive_block(block)
+                assert result == ReceiveBlockResult.NEW_PEAK
+                assert err is None
+        assert blockchain.get_peak().height == num_blocks - 1
+
+    @pytest.mark.asyncio
     async def test_one_sb_per_two_slots(self, empty_blockchain):
         blockchain = empty_blockchain
         num_blocks = 20

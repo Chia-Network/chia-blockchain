@@ -9,7 +9,10 @@ from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from src.consensus.get_block_challenge import get_block_challenge
+from src.consensus.get_block_challenge import (
+    get_block_challenge,
+    final_eos_is_already_included,
+)
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
     is_overflow_block,
@@ -64,7 +67,11 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
+        if final_eos_is_already_included(header_block, blocks):
+            skip_overflow_last_ss_validation = False
+            finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
+        else:
+            finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
     else:
         finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
 

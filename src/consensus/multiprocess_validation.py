@@ -138,14 +138,7 @@ async def pre_validate_blocks_multiprocessing(
         if block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
             log.warning(f"Block: {block.reward_chain_block}")
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(
-            constants,
-            block,
-            BlockCache(recent_blocks),
-            prev_b is None,
-            overflow,
-            False,
-        )
+        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:
