@@ -117,6 +117,7 @@ export default function PlotOverviewPlots() {
                 <TableCell />
                 <TableCell />
                 <TableCell />
+                <TableCell />
                 <TableCell>
                   <PlotQueueIndicator queueItem={item} />
                 </TableCell>
