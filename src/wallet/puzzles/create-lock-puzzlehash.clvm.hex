@@ -1,0 +1,61 @@
+can't compile ("my-id"), unknown operator
+Traceback (most recent call last):
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/bin/run", line 33, in <module>
+    sys.exit(load_entry_point('clvm-tools', 'console_scripts', 'run')())
+  File "/home/aqk/chia/quote-transform/clvm_tools/clvm_tools/cmds.py", line 99, in run
+    return launch_tool(args, "run", default_stage=2)
+  File "/home/aqk/chia/quote-transform/clvm_tools/clvm_tools/cmds.py", line 231, in launch_tool
+    cost, result = run_program(
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/operators.py", line 52, in run_program
+    return run_program_0(
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_0.py", line 23, in run_program
+    return default_run_program(
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/lib/python3.8/site-packages/clvm/run_program.py", line 182, in run_program
+    cost += f(op_stack, value_stack)
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/lib/python3.8/site-packages/clvm/run_program.py", line 172, in apply_op
+    additional_cost, r = operator_lookup(op, operand_list)
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/lib/python3.8/site-packages/clvm/operators.py", line 175, in __call__
+    return f(arguments)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 247, in do_opt
+    return 1, optimize_sexp(args.first(), run_program)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 233, in optimize_sexp
+    r = opt(r, eval)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 164, in children_optimizer
+    return r.to([optimize_sexp(_, eval) for _ in r.as_iter()])
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 164, in <listcomp>
+    return r.to([optimize_sexp(_, eval) for _ in r.as_iter()])
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 233, in optimize_sexp
+    r = opt(r, eval)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 164, in children_optimizer
+    return r.to([optimize_sexp(_, eval) for _ in r.as_iter()])
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 164, in <listcomp>
+    return r.to([optimize_sexp(_, eval) for _ in r.as_iter()])
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 233, in optimize_sexp
+    r = opt(r, eval)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 164, in children_optimizer
+    return r.to([optimize_sexp(_, eval) for _ in r.as_iter()])
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 164, in <listcomp>
+    return r.to([optimize_sexp(_, eval) for _ in r.as_iter()])
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 233, in optimize_sexp
+    r = opt(r, eval)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/optimize.py", line 42, in constant_optimizer
+    cost, r1 = eval(r, r.null())
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/operators.py", line 52, in run_program
+    return run_program_0(
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_0.py", line 23, in run_program
+    return default_run_program(
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/lib/python3.8/site-packages/clvm/run_program.py", line 182, in run_program
+    cost += f(op_stack, value_stack)
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/lib/python3.8/site-packages/clvm/run_program.py", line 172, in apply_op
+    additional_cost, r = operator_lookup(op, operand_list)
+  File "/home/aqk/chia/quote-transform/chia-blockchain/venv/lib/python3.8/site-packages/clvm/operators.py", line 175, in __call__
+    return f(arguments)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/compile.py", line 177, in do_com
+    return 1, do_com_prog(prog, macro_lookup, symbol_table, run_program)
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/compile.py", line 142, in do_com_prog
+    compiled_args = [do_com_prog(_, macro_lookup, symbol_table, run_program) for _ in prog.rest().as_iter()]
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/compile.py", line 142, in <listcomp>
+    compiled_args = [do_com_prog(_, macro_lookup, symbol_table, run_program) for _ in prog.rest().as_iter()]
+  File "/home/aqk/chia/quote-transform/clvm_tools/stages/stage_2/compile.py", line 161, in do_com_prog
+    raise SyntaxError(
+SyntaxError: can't compile ("my-id"), unknown operator
