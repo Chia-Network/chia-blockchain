@@ -50,8 +50,8 @@ export default function Block() {
   const [error, setError] = useState();
   const [loading, setLoading] = useState(true);
 
-  const hasPreviousSubBlock = !!blockRecord?.prev_hash;
-  const hasNextSubBlock = !!nextSubBlocks.length;
+  const hasPreviousBlock = !!blockRecord?.prev_hash && !!blockRecord?.height;
+  const hasNextBlock = !!nextSubBlocks.length;
 
   async function prepareData(headerHash) {
     setLoading(true);
@@ -72,8 +72,8 @@ export default function Block() {
       const blockRecord = await dispatch(getBlockRecord(headerHash));
       setBlockRecord(blockRecord);
 
-      if (blockRecord?.prev_block_hash) {
-        const prevBlockRecord = await dispatch(getBlockRecord(blockRecord?.prev_block_hash));
+      if (blockRecord?.prev_hash && !!blockRecord?.height) {
+        const prevBlockRecord = await dispatch(getBlockRecord(blockRecord?.prev_hash));
         setPrevBlockRecord(prevBlockRecord);
       }
     } catch (e) {
@@ -87,9 +87,9 @@ export default function Block() {
     prepareData(headerHash);
   }, [headerHash]);
 
-  function handleShowPreviousSubBlock() {
+  function handleShowPreviousBlock() {
     const prevHash = blockRecord?.prev_hash;
-    if (prevHash) {
+    if (prevHash && blockRecord.height) {
       // save current hash
       setNextSubBlocks([headerHash, ...nextSubBlocks]);
 
@@ -97,22 +97,12 @@ export default function Block() {
     }
   }
 
-  function handleShowNextSubBlock() {
+  function handleShowNextBlock() {
     const [nextSubBlock, ...rest] = nextSubBlocks;
     if (nextSubBlock) {
       setNextSubBlocks(rest);
 
       history.push(`/dashboard/block/${nextSubBlock}`);
-    }
-  }
-
-  function handleShowPreviousBlock() {
-    const prevBlockHash = blockRecord?.prev_block_hash;
-    if (prevBlockHash) {
-      // save current hash
-      setNextSubBlocks([headerHash, ...nextSubBlocks]);
-
-      history.push(`/dashboard/block/${prevBlockHash}`);
     }
   }
 
@@ -212,7 +202,7 @@ export default function Block() {
     {
       name: <Trans>Previous Block Hash</Trans>,
       value: blockRecord.prev_hash,
-      onClick: handleShowPreviousSubBlock,
+      onClick: handleShowPreviousBlock,
     },
     {
       name: <Trans>Difficulty</Trans>,
@@ -335,12 +325,12 @@ export default function Block() {
         )}
         action={(
           <Flex gap={1}>
-            <Button onClick={handleShowPreviousSubBlock} disabled={!hasPreviousSubBlock}>
+            <Button onClick={handleShowPreviousBlock} disabled={!hasPreviousBlock}>
               <Trans>
                 Previous
               </Trans>
             </Button>
-            <Button onClick={handleShowNextSubBlock} disabled={!hasNextSubBlock}>
+            <Button onClick={handleShowNextBlock} disabled={!hasNextBlock}>
               <Trans>
                 Next
               </Trans>
