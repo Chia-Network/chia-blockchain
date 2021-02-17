@@ -3,7 +3,7 @@ from typing import Tuple
 from clvm import KEYWORD_FROM_ATOM
 
 from clvm_tools.binutils import disassemble as bu_disassemble
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G2Element
 from src.types.blockchain_format.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.blockchain_format.program import Program
@@ -125,7 +125,11 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print()
     if len(msgs) > 0:
         validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
-        print(f"aggregated signature check pass: {validates}")
+    else:
+        validates = (
+            spend_bundle.aggregated_signature is None or spend_bundle.aggregated_signature == G2Element.infinity()
+        )
+    print(f"aggregated signature check pass: {validates}")
 
 
 def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:

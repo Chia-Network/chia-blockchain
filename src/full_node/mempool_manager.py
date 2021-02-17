@@ -330,9 +330,13 @@ class MempoolManager:
         if validate_signature:
             # Verify aggregated signature
             if len(pks) == 0 and len(msgs) == 0:
-                validates = new_spend.aggregated_signature == G2Element.infinity()
+                validates = (
+                    new_spend.aggregated_signature is None or new_spend.aggregated_signature == G2Element.infinity()
+                )
             else:
-                validates = AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature)
+                validates = new_spend.aggregated_signature is not None and AugSchemeMPL.aggregate_verify(
+                    pks, msgs, new_spend.aggregated_signature
+                )
             if not validates:
                 log.warning(f"Aggsig validation error {pks} {msgs} {new_spend}")
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE

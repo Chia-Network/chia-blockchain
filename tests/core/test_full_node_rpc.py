@@ -53,7 +53,7 @@ class TestRpc:
             assert state["sub_slot_iters"] > 0
 
             blocks = bt.get_consecutive_blocks(num_blocks)
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             assert len(await client.get_unfinished_block_headers()) == 0
             assert len((await client.get_block_records(0, 100))) == 0
@@ -88,12 +88,13 @@ class TestRpc:
 
             assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
-            assert len((await client.get_block_records(0, 100))) == num_blocks + 1
+            assert len((await client.get_block_records(0, 100))) == num_blocks * 2
 
             assert (await client.get_block_record_by_height(100)) is None
 
             ph = list(blocks[-1].get_included_reward_coins())[0].puzzle_hash
             coins = await client.get_unspent_coins(ph)
+            print(coins)
             assert len(coins) >= 1
 
             additions, removals = await client.get_additions_and_removals(blocks[-1].header_hash)

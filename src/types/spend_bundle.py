@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from src.types.blockchain_format.coin import Coin
 from src.types.announcement import Announcement
@@ -20,15 +20,16 @@ class SpendBundle(Streamable):
     """
 
     coin_solutions: List[CoinSolution]
-    aggregated_signature: G2Element
+    aggregated_signature: Optional[G2Element]
 
     @classmethod
     def aggregate(cls, spend_bundles) -> "SpendBundle":
         coin_solutions: List[CoinSolution] = []
-        sigs = []
-        for _ in spend_bundles:
-            coin_solutions += _.coin_solutions
-            sigs.append(_.aggregated_signature)
+        sigs: List[G2Element] = []
+        for bundle in spend_bundles:
+            coin_solutions += bundle.coin_solutions
+            if bundle.aggregated_signature is not None:
+                sigs.append(bundle.aggregated_signature)
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         return cls(coin_solutions, aggregated_signature)
 

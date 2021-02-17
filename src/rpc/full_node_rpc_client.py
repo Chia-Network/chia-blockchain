@@ -2,6 +2,7 @@ from typing import Dict, Optional, List, Tuple
 from src.types.full_block import FullBlock
 from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.ints import uint32, uint64
 from src.types.coin_record import CoinRecord
@@ -97,3 +98,6 @@ class FullNodeRpcClient(RpcClient):
             return []
         # TODO: return block records
         return response["block_records"]
+
+    async def send_transaction(self, spend_bundle: SpendBundle):
+        return await self.fetch("send_transaction", {"spend_bundle": spend_bundle.to_json_dict()})

@@ -106,10 +106,13 @@ class CoinStore:
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
-    async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[CoinRecord]:
+    async def get_coin_records_by_puzzle_hash(
+        self, puzzle_hash: bytes32, start_height: uint32 = uint32(0), end_height: uint32 = uint32((2 ** 32) - 1)
+    ) -> List[CoinRecord]:
         coins = set()
         cursor = await self.coin_record_db.execute(
-            "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            "SELECT * from coin_record WHERE puzzle_hash=? AND confirmed_index>=? AND confirmed_index<?",
+            (puzzle_hash.hex(), start_height, end_height),
         )
         rows = await cursor.fetchall()
 
