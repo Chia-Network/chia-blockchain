@@ -10,18 +10,25 @@ global.daemon_rpc_ws = `wss://${self_hostname}:55400`;
 global.cert_path = 'config/ssl/daemon/private_daemon.crt';
 global.key_path = 'config/ssl/daemon/private_daemon.key';
 
-function loadConfig() {
+function loadConfig(version) {
   try {
-    // get the semver out of package.json and format for chia version approach
-    const sv = semver.parse(require('../../package.json').version);
-    let version = sv.version;
+    // finding the right config file uses this precedence
+    // 1) CHIA_ROOT environment variable
+    // 2) version passed in and determined by the `chia version` call
+    // 3) the version in package.json
 
-    // package major will be 0 until release
-    if (sv.major == 0) {
-      version = `beta-0.1.${sv.patch}`;
+    if (version == null) {
+      // no version was passed in so get the semver out of package.json and format for chia version approach
+      const sv = semver.parse(require('../../package.json').version);
+      version = sv.version;
+
+      // package major will be 0 until release
+      if (sv.major == 0) {
+        version = `beta-0.1.${sv.patch}`;
+      }
     }
 
-    // check if CHIA_ROOT is set. it overrides any default config location
+    // check if CHIA_ROOT is set. it overrides everything else
     const config_root_dir = "CHIA_ROOT" in process.env ? process.env.CHIA_ROOT : path.join(os.homedir(), '.chia', version);
     const config = yaml.load(fs.readFileSync(path.join(config_root_dir, 'config/config.yaml'), 'utf8'));
 
@@ -33,8 +40,7 @@ function loadConfig() {
     global.cert_path = path.join(config_root_dir, config?.ui?.daemon_ssl?.private_crt ?? 'config/ssl/daemon/private_daemon.crt'); // jshint ignore:line
     global.key_path = path.join(config_root_dir, config?.ui?.daemon_ssl?.private_key ?? 'config/ssl/daemon/private_daemon.key'); // jshint ignore:line
   } catch (e) {
-    console.log('Error loading config');
-    console.log(e);    
+    console.log('Error loading config - using defaults');
   }
 }
 

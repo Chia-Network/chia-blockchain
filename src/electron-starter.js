@@ -3,7 +3,6 @@ const setupEvents = require("./setupEvents");
 
 if (!setupEvents.handleSquirrelEvent()) {
   // squirrel event handled and app will exit in 1000ms, so don't do anything else
-  const { promisify } = require("util");
   const {
     app,
     dialog,
@@ -14,180 +13,13 @@ if (!setupEvents.handleSquirrelEvent()) {
   } = require("electron");
   const openAboutWindow = require("about-window").default;
   const path = require("path");
-  const config = require('./config/config');
   const dev_config = require("./dev_config");
-  const WebSocket = require("ws");
+  const chiaEnvironment = require("./util/chiaEnvironment");
   const chiaConfig = require("./util/config");
-  const local_test = config.local_test;
-  var url = require("url");
+  const local_test =  require("./config/config").local_test;
+  const url = require("url");
   const os = require("os");
-  const crypto = require("crypto");
 
-  // this needs to happen early in startup so all processes share the same global config
-  chiaConfig.loadConfig();
-  global.sharedObj = { local_test: local_test };
-
-  /*************************************************************
-   * py process
-   *************************************************************/
-
-  const PY_MAC_DIST_FOLDER = "../../app.asar.unpacked/daemon";
-  const PY_WIN_DIST_FOLDER = "../../app.asar.unpacked/daemon";
-  const PY_DIST_FILE = "daemon";
-  const PY_FOLDER = "../src/daemon";
-  const PY_MODULE = "server"; // without .py suffix
-
-  let pyProc = null;
-  let ws = null;
-  let have_cert = null;
-
-  const guessPackaged = () => {
-    let packed;
-    if (process.platform === "win32") {
-      const fullPath = path.join(__dirname, PY_WIN_DIST_FOLDER);
-      packed = require("fs").existsSync(fullPath);
-      console.log(fullPath);
-      console.log(packed);
-      return packed;
-    }
-    const fullPath = path.join(__dirname, PY_MAC_DIST_FOLDER);
-    packed = require("fs").existsSync(fullPath);
-    console.log(fullPath);
-    console.log(packed);
-    return packed;
-  };
-
-  const getScriptPath = () => {
-    if (!guessPackaged()) {
-      return path.join(PY_FOLDER, PY_MODULE + ".py");
-    }
-    if (process.platform === "win32") {
-      return path.join(__dirname, PY_WIN_DIST_FOLDER, PY_DIST_FILE + ".exe");
-    }
-    return path.join(__dirname, PY_MAC_DIST_FOLDER, PY_DIST_FILE);
-  };
-
-  const createPyProc = () => {
-    // if the daemon isn't local we aren't going to try to start/stop it
-    if (!chiaConfig.manageDaemonLifetime()) {
-      return;
-    }
-
-    let script = getScriptPath();
-    let processOptions = {};
-    //processOptions.detached = true;
-    //processOptions.stdio = "ignore";
-    pyProc = null;
-    if (guessPackaged()) {
-      try {
-        console.log("Running python executable: ");
-        const Process = require("child_process").spawn;
-        pyProc = new Process(script, [], processOptions);
-      } catch {
-        console.log("Running python executable: Error: ");
-        console.log("Script " + script);
-      }
-    } else {
-      console.log("Running python script");
-      console.log("Script " + script);
-
-      const Process = require("child_process").spawn;
-      pyProc = new Process("python", [script], processOptions);
-    }
-    if (pyProc != null) {
-      pyProc.stdout.setEncoding("utf8");
-
-      pyProc.stdout.on("data", function(data) {
-        if (!have_cert) {
-          process.stdout.write("No cert\n");
-          // listen for ssl path message
-          try {
-            let str_arr = data.toString().split("\n")
-            for (var i = 0; i < str_arr.length; i++) {
-              let str = str_arr[i]
-              try {
-                let json = JSON.parse(str);
-                global.cert_path = json["cert"]
-                global.key_path = json["key"]
-                if (cert_path && key_path) {
-                  have_cert = true
-                  process.stdout.write("Have cert\n");
-                  return
-                }
-              } catch (e) {
-              }
-            }
-          } catch (e) {
-          }
-        }
-
-        process.stdout.write(data.toString());
-      });
-
-      pyProc.stderr.setEncoding("utf8");
-      pyProc.stderr.on("data", function(data) {
-        //Here is where the error output goes
-        process.stdout.write("stderr: " + data.toString());
-      });
-
-      pyProc.on("close", function(code) {
-        //Here you can get the exit code of the script
-        console.log("closing code: " + code);
-      });
-
-      console.log("child process success");
-    }
-    //pyProc.unref();
-  };
-
-  const closeDaemon = callback => {
-    const timeout = setTimeout(() => callback(), 20000);
-    const clearTimeoutCallback = err => {
-      clearTimeout(timeout);
-      callback(err);
-    };
-
-    try {
-      const request_id = crypto.randomBytes(32).toString("hex");
-      const key_path = key_path;
-      const cert_path = cert_path;
-      var options = {
-        cert: fs.readFileSync(cert_path),
-        key: fs.readFileSync(key_path),
-        rejectUnauthorized: false
-      };
-      ws = new WebSocket(global.daemon_rpc_ws, {
-        perMessageDeflate: false, options
-      });
-      ws.on("open", function open() {
-        console.log("Opened websocket with", global.daemon_rpc_ws);
-        const msg = {
-          command: "exit",
-          ack: false,
-          origin: "wallet_ui",
-          destination: "daemon",
-          request_id
-        };
-        ws.send(JSON.stringify(msg));
-      });
-      ws.on("message", function incoming(message) {
-        message = JSON.parse(message);
-        if (message["ack"] === true && message["request_id"] === request_id) {
-          clearTimeoutCallback();
-        }
-      });
-      ws.on("error", err => {
-        if (err.errno === "ECONNREFUSED") {
-          clearTimeoutCallback();
-        } else {
-          clearTimeoutCallback(err);
-        }
-      });
-    } catch (e) {
-      clearTimeoutCallback(e);
-    }
-  };
-  
   const ensureSingleInstance = () => {
     const gotTheLock = app.requestSingleInstanceLock();
 
@@ -207,7 +39,11 @@ if (!setupEvents.handleSquirrelEvent()) {
   };
   
   ensureSingleInstance();
-  
+
+  // this needs to happen early in startup so all processes share the same global config
+  chiaConfig.loadConfig(chiaEnvironment.getChiaVersion());
+  global.sharedObj = { local_test: local_test };
+
   const exitPyProc = e => {};
 
   app.on("will-quit", exitPyProc);
@@ -300,7 +136,10 @@ if (!setupEvents.handleSquirrelEvent()) {
 
   const appReady = async () => {
     app.applicationMenu = createMenu();
-    createPyProc();
+    // if the daemon isn't local we aren't going to try to start/stop it
+    if (chiaConfig.manageDaemonLifetime()) {
+      chiaEnvironment.startChiaDaemon();
+    }
     createWindow();
   };
 
@@ -326,7 +165,7 @@ if (!setupEvents.handleSquirrelEvent()) {
     );
   });
 
-  function getMenuTemplate() {
+  const getMenuTemplate = () => {
     const template = [
       {
         label: "File",
@@ -604,13 +443,13 @@ if (!setupEvents.handleSquirrelEvent()) {
     }
 
     return template;
-  }
+  };
 
   /**
    * Open the given external protocol URL in the desktop’s default manner.
    */
-  function openExternal(url) {
+  const openExternal = (url) => {
     // console.log(`openExternal: ${url}`)
     shell.openExternal(url);
-  }
+  };
 }
