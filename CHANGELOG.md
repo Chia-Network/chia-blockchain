@@ -18,7 +18,7 @@ validation was changed to allow blocks like these to be made. This will enable c
 - Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This affectes the RPC, now
 all fields that referred to sub blocks are changed to blocks
 - 'chia wallet send' now takes in TXCH or XCH as units instead of mojos
-
+- Major CLVM semantics change: quoted CLVMObjects will now be represented as a single cons pair, with the quote opcode atom in the left cell, and the quoted value in the right. This breaks all clvm code using quote, and is a hard fork.
 
 ## [1.0beta27] aka Beta 1.27 - 2021-02-11
 
