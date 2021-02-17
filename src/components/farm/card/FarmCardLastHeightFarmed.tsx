@@ -10,16 +10,16 @@ export default function FarmCardLastHeightFarmed() {
   const value = computeStatistics(wallets);
   const loading = !wallets;
 
-  const biggestHeight = value?.biggestHeight;
+  const biggestRewardHeight = value?.biggestRewardHeight;
 
   return (
     <FarmCard
       title={
         <Trans>Last Height Farmed</Trans>
       }
-      value={biggestHeight}
+      value={biggestRewardHeight}
       description={
-        !biggestHeight && (
+        !biggestRewardHeight && (
           <Trans>
             No blocks farmed yet
           </Trans>

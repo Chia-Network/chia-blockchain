@@ -6,11 +6,13 @@ export default function computeStatistics(
 ): {
   totalChia: BigInt;
   biggestHeight: number;
+  biggestRewardHeight: number;
   coinbaseRewards: BigInt;
   feesReward: BigInt;
 } {
   let totalChia = BigInt(0);
   let biggestHeight = 0;
+  let biggestRewardHeight = 0;
   let coinbaseRewards = BigInt(0);
   let feesReward = BigInt(0);
 
@@ -20,22 +22,32 @@ export default function computeStatistics(
     }
 
     wallet.transactions.forEach((tx) => {
-      if (tx.additions.length === 0) {
+      const { additions, type, amount, confirmed_at_height: confirmedAtHeight } = tx;
+      if (additions.length === 0) {
         return;
       }
 
-      totalChia += BigInt(tx.amount);
+      const isFromReward = [
+        TransactionType.COINBASE_REWARD,
+        TransactionType.FEE_REWARD,
+      ].includes(tx.type);
 
-      if (tx.type === TransactionType.OUTGOING) {
-        totalChia -= BigInt(tx.amount);
-      } else if (tx.type === TransactionType.COINBASE_REWARD) {
-        coinbaseRewards += BigInt(tx.amount);
-      } else if (tx.type === TransactionType.FEE_REWARD) {
-        feesReward += BigInt(tx.amount);
+      totalChia += BigInt(amount);
+
+      if (type === TransactionType.OUTGOING) {
+        totalChia -= BigInt(amount);
+      } else if (type === TransactionType.COINBASE_REWARD) {
+        coinbaseRewards += BigInt(amount);
+      } else if (type === TransactionType.FEE_REWARD) {
+        feesReward += BigInt(amount);
       }
 
-      if (tx.confirmed_at_height > biggestHeight) {
-        biggestHeight = tx.confirmed_at_height;
+      if (confirmedAtHeight > biggestHeight) {
+        biggestHeight = confirmedAtHeight;
+      }
+
+      if (isFromReward && confirmedAtHeight > biggestRewardHeight) {
+        biggestRewardHeight = confirmedAtHeight;
       }
     });
   });
@@ -43,6 +55,7 @@ export default function computeStatistics(
   return {
     totalChia,
     biggestHeight,
+    biggestRewardHeight,
     coinbaseRewards,
     feesReward,
   };
