@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-16 22:55\n"
+"PO-Revision-Date: 2021-02-17 05:54\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -453,7 +453,7 @@ msgstr "Stöder din maskin parallell plottning?"
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "Dra och släpp erbjudandefil"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -648,11 +648,11 @@ msgstr "Index"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "Visar om detta erbjudande skapades av oss"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "Visar när detta erbjudande accepterades"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:341
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:490
@@ -841,7 +841,7 @@ msgstr "Antal trådar"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "Erbjudande"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
@@ -1140,7 +1140,7 @@ msgstr "Välj nyckel"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Välj erbjudande"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
