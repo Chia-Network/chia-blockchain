@@ -65,6 +65,8 @@ jobs:
       run: |
         echo "Running git submodule update --init --recursive."
         git submodule update --init --recursive
+        cd chia-blockchain-gui
+        git status
 
     - name: Test for secrets access
       id: check_secrets
