@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-17 08:22\n"
+"PO-Revision-Date: 2021-02-17 09:54\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -99,7 +99,7 @@ msgstr ""
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "Är det säkert att du vill ta bort plotten? Den kan inte återskapas."
+msgstr "Är det säkert att du vill ta bort plotten? Den kan inte återställas."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -170,7 +170,7 @@ msgstr "Köp"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC-plånbok"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -224,7 +224,7 @@ msgstr "Stänger ner nod och server"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Mynt:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
@@ -245,11 +245,11 @@ msgstr "Färg:"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Färgat mynt"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Alternativ för färgade mynt"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -310,7 +310,7 @@ msgstr "Skapa"
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Skapa DID-plånbok"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -348,7 +348,7 @@ msgstr "Skapa adminplånbok"
 
 #: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Skapa nytt färgat mynt"
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
@@ -380,7 +380,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID-plånbok"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -559,7 +559,7 @@ msgstr "Filnamn"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "Sökväg till slutlig mapp"
 
 #: src/components/fullNode/FullNode.jsx:55
 #: src/components/fullNode/FullNode.jsx:111
@@ -935,12 +935,12 @@ msgstr "Du måste välja köp eller sälj"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin type"
-msgstr ""
+msgstr "Välj mynttyp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "Ange slutlig mapp"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
@@ -1065,7 +1065,7 @@ msgstr "Max RAM-användning"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr ""
+msgstr "RL-plånbok"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1095,7 +1095,7 @@ msgstr "Mottagaradress"
 
 #: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Återställ DID-plånbok"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1132,7 +1132,7 @@ msgstr "Välj en andra tillfällig mapp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Välj slutlig mapp"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
@@ -1214,16 +1214,16 @@ msgstr "Spenderbart belopp"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:407
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:458
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr "Spenderingsintervall (antal block): {interval}"
+msgstr "Spenderintervall (antal block): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Längd på spenderintervall (antal block)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:414
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:465
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Spenderbegränsning (chia per intervall): {0}"
 
 #: src/components/fullNode/FullNode.jsx:113
 msgid "State"
@@ -1355,7 +1355,7 @@ msgstr "Detta är den mängd Chia du för tillfället kan använda för transakt
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Detta är väntande växel, det vill säga de växelmynt du har skickat till dig själv men som ännu inte har bekräftats."
 
 #: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
@@ -1371,15 +1371,15 @@ msgstr "Detta är den tidpunkt då blocket skapades av odlaren, vilket är innan
 
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Detta är den sammanlagda mängden chia i blockkedjan vid det aktuella topp-underblocket som kontrolleras av dina privata nycklar. Det innefattar frusna odlingsbelöningar, men inte väntande inkommande och utgående transaktioner."
 
 #: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Detta är totalt saldo + väntande saldo: det är vad ditt saldo kommer att vara när alla väntande transaktioner har bekräftats."
 
 #: src/components/fullNode/FullNode.jsx:152
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Denna nod är helt uppdaterad och validerar nätverket"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
