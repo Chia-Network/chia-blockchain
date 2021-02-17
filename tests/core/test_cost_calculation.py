@@ -108,11 +108,26 @@ class TestCostCalculation:
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
         assert error is None
 
+    @pytest.mark.asyncio
     async def test_clvm_strict_mode(self):
         program = SerializedProgram.from_bytes(
+            # this is a valid generator program except the first clvm
+            # if-condition, that depends on executing an unknown operator
+            # ("0xfe"). In strict mode, this should fail, but in non-strict
+            # mode, the unknown operator should be treated as if it returns ().
             binutils.assemble(
-                "(i (a (q 0xfe) (q ())) (q ()) (q ((51 "
-                "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 200))))"
+                "(i (a (q 0xfe) (q ())) (q ()) "
+                "(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"
+                " (((c (q ((c (q ((c (i 11 (q ((c (i (= 5 (point_add 11"
+                " (pubkey_for_exp (sha256 11 ((c 6 (c 2 (c 23 (q ())))))))))"
+                " (q ((c 23 47))) (q (x))) 1))) (q (c (c 4 (c 5 (c ((c 6 (c 2"
+                " (c 23 (q ()))))) (q ())))) ((c 23 47))))) 1))) (c (q (57 (c"
+                " (i (l 5) (q (sha256 (q 2) ((c 6 (c 2 (c 9 (q ()))))) ((c 6 (c"
+                " 2 (c 13 (q ()))))))) (q (sha256 (q 1) 5))) 1))) 1)))) (c"
+                " (q 0x88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43"
+                "f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280)"
+                ' 1))) (() (q ((51 "00000000000000000000000000000000" 0x0cbba106e000))) ())))))'
+                ")"
             ).as_bin()
         )
         error, npc_list, cost = get_name_puzzle_conditions(program, True)

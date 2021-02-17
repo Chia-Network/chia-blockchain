@@ -544,7 +544,7 @@ class FullNode:
                 raise ValueError("Not performing sync, already caught up.")
 
             request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
-            response = await weight_proof_peer.request_proof_of_weight(request, timeout=60)
+            response = await weight_proof_peer.request_proof_of_weight(request, timeout=90)
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):

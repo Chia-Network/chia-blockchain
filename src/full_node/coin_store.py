@@ -150,7 +150,6 @@ class CoinStore:
             (block_index,),
         )
         await c2.close()
-        await self.coin_record_db.commit()
 
     async def get_unspent_coin_records(self) -> List[CoinRecord]:
         coins = set()
@@ -179,7 +178,6 @@ class CoinStore:
             ),
         )
         await cursor.close()
-        await self.coin_record_db.commit()
         self.coin_record_cache[record.coin.name().hex()] = record
         if len(self.coin_record_cache) > self.cache_size:
             while len(self.coin_record_cache) > self.cache_size:
