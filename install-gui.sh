@@ -63,16 +63,17 @@ if [ ! "$CI" ]; then
 	echo ""
 	cd chia-blockchain-gui
 	git submodule update
+	echo "Running git submodule update."
+	echo ""
 	if [ "$SUBMODULE_BRANCH" ];
 	then
 		git checkout "$SUBMODULE_BRANCH"
+    git pull
 		echo ""
 		echo "Building the GUI with branch $SUBMODULE_BRANCH"
 		echo ""
-	else
-		git checkout main
-  fi
-  git pull
+	fi
+
 	npm install
 	npm audit fix
 	npm run locale:extract
