@@ -10,7 +10,7 @@ from aiohttp import WSMessage, WSMsgType
 from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Handshake
-from src.server.outbound_message import Message, NodeType, make_msg, Payload
+from src.server.outbound_message import Message, NodeType, make_msg
 from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint16, uint8
@@ -85,7 +85,7 @@ class WSChiaConnection:
         self.close_callback = close_callback
 
         self.pending_requests: Dict[bytes32, asyncio.Event] = {}
-        self.request_results: Dict[bytes32, Payload] = {}
+        self.request_results: Dict[bytes32, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         self.request_nonce: uint16 = uint16(0)
@@ -104,14 +104,13 @@ class WSChiaConnection:
                     uint8(local_type.value),
                 ),
             )
-            payload: Optional[Payload] = Payload(outbound_handshake, None)
-            assert payload is not None
-            await self._send_message(payload)
-            payload = await self._read_one_message()
-            if payload is None:
+            assert outbound_handshake is not None
+            await self._send_message(outbound_handshake)
+            inbound_handshake_msg = await self._read_one_message()
+            if inbound_handshake_msg is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(payload.msg.data)
-            if ProtocolMessageTypes(payload.msg.type) != ProtocolMessageTypes.handshake:
+            inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
+            if ProtocolMessageTypes(inbound_handshake_msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             if inbound_handshake.protocol_version != protocol_version:
                 raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
@@ -120,14 +119,14 @@ class WSChiaConnection:
 
         else:
             try:
-                payload = await self._read_one_message()
+                message = await self._read_one_message()
             except Exception:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-            if payload is None:
+            if message is None:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            inbound_handshake = Handshake.from_bytes(payload.msg.data)
-            if ProtocolMessageTypes(payload.msg.type) != ProtocolMessageTypes.handshake:
+            inbound_handshake = Handshake.from_bytes(message.data)
+            if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             if inbound_handshake.protocol_version != protocol_version:
                 raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
@@ -141,8 +140,7 @@ class WSChiaConnection:
                     uint8(local_type.value),
                 ),
             )
-            payload = Payload(outbound_handshake, None)
-            await self._send_message(payload)
+            await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
 
@@ -194,14 +192,14 @@ class WSChiaConnection:
     async def inbound_handler(self):
         try:
             while not self.closed:
-                payload: Payload = await self._read_one_message()
-                if payload is not None:
-                    if payload.id in self.pending_requests:
-                        self.request_results[payload.id] = payload
-                        event = self.pending_requests[payload.id]
+                message: Message = await self._read_one_message()
+                if message is not None:
+                    if message.id in self.pending_requests:
+                        self.request_results[message.id] = message
+                        event = self.pending_requests[message.id]
                         event.set()
                     else:
-                        await self.incoming_queue.put((payload, self))
+                        await self.incoming_queue.put((message, self))
                 else:
                     continue
         except asyncio.CancelledError:
@@ -215,8 +213,7 @@ class WSChiaConnection:
         """ Send message sends a message with no tracking / callback. """
         if self.closed:
             return
-        payload = Payload(message, None)
-        await self.outgoing_queue.put(payload)
+        await self.outgoing_queue.put(message)
 
     def __getattr__(self, attr_name: str):
         # TODO KWARGS
@@ -228,7 +225,7 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), args[0])
+            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), args[0], None)
             request_start_t = time.time()
             result = await self.create_request(msg, timeout)
             self.log.debug(
@@ -251,7 +248,7 @@ class WSChiaConnection:
 
         return invoke
 
-    async def create_request(self, message: Message, timeout: int):
+    async def create_request(self, message_no_id: Message, timeout: int) -> Optional[Message]:
         """ Sends a message and waits for a response. """
         if self.closed:
             return None
@@ -263,10 +260,10 @@ class WSChiaConnection:
         request_id = self.request_nonce
         self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(0)
 
-        payload = Payload(message, request_id)
+        message = Message(message_no_id.type, message_no_id.data, request_id)
 
-        self.pending_requests[payload.id] = event
-        await self.outgoing_queue.put(payload)
+        self.pending_requests[message.id] = event
+        await self.outgoing_queue.put(message)
 
         # If the timeout passes, we set the event
         async def time_out(req_id, req_timeout):
@@ -274,22 +271,20 @@ class WSChiaConnection:
             if req_id in self.pending_requests:
                 self.pending_requests[req_id].set()
 
-        asyncio.create_task(time_out(payload.id, timeout))
+        asyncio.create_task(time_out(message.id, timeout))
         await event.wait()
 
-        self.pending_requests.pop(payload.id)
+        self.pending_requests.pop(message.id)
         result: Optional[Message] = None
-        if payload.id in self.request_results:
-            result_payload: Payload = self.request_results[payload.id]
-            result = result_payload.msg
-            self.log.info(
-                f"<- {ProtocolMessageTypes(result_payload.msg.type).name} from: {self.peer_host}:{self.peer_port}"
-            )
-            self.request_results.pop(payload.id)
+        if message.id in self.request_results:
+            result = self.request_results[message.id]
+            assert result is not None
+            self.log.info(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
+            self.request_results.pop(result.id)
 
         return result
 
-    async def reply_to_request(self, response: Payload):
+    async def reply_to_request(self, response: Message):
         if self.closed:
             return
         await self.outgoing_queue.put(response)
@@ -298,18 +293,17 @@ class WSChiaConnection:
         if self.closed:
             return
         for message in messages:
-            payload = Payload(message, None)
-            await self.outgoing_queue.put(payload)
+            await self.outgoing_queue.put(message)
 
-    async def _send_message(self, payload: Payload):
-        encoded: bytes = bytes(payload)
+    async def _send_message(self, message: Message):
+        encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
-        self.log.info(f"-> {ProtocolMessageTypes(payload.msg.type).name} to peer {self.peer_host} {self.peer_node_id}")
+        self.log.info(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
-    async def _read_one_message(self) -> Optional[Payload]:
+    async def _read_one_message(self) -> Optional[Message]:
         try:
             message: WSMessage = await self.ws.receive(30)
         except asyncio.TimeoutError:
@@ -347,7 +341,7 @@ class WSChiaConnection:
                 return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
-            full_message_loaded: Payload = Payload.from_bytes(data)
+            full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
             return full_message_loaded

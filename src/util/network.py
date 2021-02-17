@@ -1,12 +1,4 @@
-import secrets
-
 from src.server.outbound_message import NodeType
-from src.types.blockchain_format.sized_bytes import bytes32
-
-
-def create_node_id() -> bytes32:
-    """Generates a transient random node_id."""
-    return bytes32(secrets.token_bytes(32))
 
 
 def class_for_type(type: NodeType):
