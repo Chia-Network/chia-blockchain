@@ -868,6 +868,7 @@ class BlockTools:
                 for proof_index, quality_str in enumerate(qualities):
 
                     required_iters = calculate_iterations_quality(
+                        constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
                         plot_info.prover.get_size(),
                         difficulty,
@@ -1076,6 +1077,7 @@ def load_block_list(
             constants, challenge, sp_hash
         )
         required_iters: uint64 = calculate_iterations_quality(
+            constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_str,
             full_block.reward_chain_block.proof_of_space.size,
             difficulty,

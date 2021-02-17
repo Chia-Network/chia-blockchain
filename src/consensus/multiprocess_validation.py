@@ -153,6 +153,7 @@ async def pre_validate_blocks_multiprocessing(
             return None
 
         required_iters: uint64 = calculate_iterations_quality(
+            constants.DIFFICULTY_CONSTANT_FACTOR,
             q_str,
             block.reward_chain_block.proof_of_space.size,
             difficulty,

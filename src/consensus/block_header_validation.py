@@ -472,6 +472,7 @@ def validate_unfinished_header_block(
 
     # Note that required iters might be from the previous slot (if we are in an overflow block)
     required_iters: uint64 = calculate_iterations_quality(
+        constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         header_block.reward_chain_block.proof_of_space.size,
         expected_difficulty,

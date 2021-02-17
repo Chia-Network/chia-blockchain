@@ -372,6 +372,13 @@ def chia_init(root_path: Path):
         "full_node.ssl",
         "introducer.ssl",
         "wallet.ssl",
+        "network_genesis_challenges",
+        "full_node.network_genesis_challenges",
+        "harvester.network_genesis_challenges",
+        "farmer.network_genesis_challenges",
+        "wallet.network_genesis_challenges",
+        "introducer.network_genesis_challenges",
+        "pool.network_genesis_challenges",
     ]
 
     # These are the files that will be migrated

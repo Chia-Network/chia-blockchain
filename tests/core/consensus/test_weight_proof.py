@@ -72,6 +72,7 @@ async def load_blocks_dont_validate(
         assert quality_string is not None
 
         required_iters: uint64 = calculate_iterations_quality(
+            test_constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_string,
             block.reward_chain_block.proof_of_space.size,
             difficulty,

@@ -44,9 +44,10 @@ def calculate_ip_iters(
 
 
 def calculate_iterations_quality(
+    difficulty_constant_factor: uint128,
     quality_string: bytes32,
     size: int,
-    difficulty: int,
+    difficulty: uint64,
     cc_sp_output_hash: bytes32,
 ) -> uint64:
     """
@@ -55,5 +56,7 @@ def calculate_iterations_quality(
     difficulty.
     """
     sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
-    iters = uint64(uint128(int(difficulty) << 25) // quality_str_to_quality(sp_quality_string, size))
+    iters = uint64(
+        uint128(int(difficulty) * int(difficulty_constant_factor)) // quality_str_to_quality(sp_quality_string, size)
+    )
     return max(iters, uint64(1))
