@@ -962,7 +962,7 @@ def validate_finished_header_block(
         log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
     if (
-        not header_block.challenge_chain_ip_proof.normalized_to_identity:
+        not header_block.challenge_chain_ip_proof.normalized_to_identity
         and not header_block.challenge_chain_ip_proof.is_valid(
             constants,
             cc_vdf_output,

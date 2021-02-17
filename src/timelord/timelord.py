@@ -880,9 +880,11 @@ class Timelord:
                     else:
                         writer.write(b"010")
                         await writer.drain()
+                        assert height is not None
+                        assert field_vdf is not None
                         response = timelord_protocol.RespondCompactProofOfTime(vdf_info, vdf_proof, height, field_vdf)
                         if self.server is not None:
-                            message = Message("respond_compact_vdf_timelord", response)
+                            message = make_msg(ProtocolMessageTypes.respond_compact_vdf_timelord, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
         except ConnectionResetError as e:
             log.info(f"Connection reset with VDF client {e}")

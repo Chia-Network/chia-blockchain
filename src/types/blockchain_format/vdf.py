@@ -50,12 +50,7 @@ class VDFInfo(Streamable):
 class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes
-    normalized_to_identity: bool
-
-    def __init__(self, witness_type: uint8, witness: bytes, normalized_to_identity: bool = False):
-        self.witness_type = witness_type
-        self.witness = witness
-        self.normalized_to_identity = normalized_to_identity
+    normalized_to_identity: bool = False
 
     def is_valid(
         self,
@@ -88,7 +83,7 @@ class VDFProof(Streamable):
             return False
 
 
-# Stores, for a given VDF, the field that uses it. 
+# Stores, for a given VDF, the field that uses it.
 class FieldVDF(Enum):
     CC_EOS_VDF = 1
     ICC_EOS_VDF = 2
