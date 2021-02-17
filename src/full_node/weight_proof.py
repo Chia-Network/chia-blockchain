@@ -10,6 +10,7 @@ import math
 from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
+from src.consensus.deficit import calculate_deficit
 from src.consensus.full_block_to_block_record import header_block_to_sub_block_record
 
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_ip_iters, is_overflow_block
@@ -772,10 +773,11 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
         if summary.new_difficulty is not None:
             diff = summary.new_difficulty
 
-    ses_blocks, sub_slots, full_blocks = 0, 0, 0
+    ses_blocks, sub_slots, transaction_blocks = 0, 0, 0
     challenge, prev_challenge, deficit = None, None, None
     height = None
     tip_height = weight_proof.recent_chain_data[-1].height
+    prev_block_record = None
     for idx, block in enumerate(weight_proof.recent_chain_data):
         ses = False
         if block.height is not None:
@@ -798,11 +800,9 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
             continue
 
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        if deficit >= 1 and not (overflow and deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK):
-            deficit -= 1
-
-        log.debug(f"wp, validate block {block.height}  ")
-        if sub_slots > 2 and full_blocks > 11 and tip_height - block.height < 100:
+        deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
+        log.debug(f"wp, validate block {block.height}")
+        if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < 100):
             required_iters, error = validate_finished_header_block(
                 constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
             )
@@ -815,18 +815,19 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
                 return False
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
-        sub_block = header_block_to_sub_block_record(
+        block_record = header_block_to_sub_block_record(
             constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
         )
-        log.debug(f"add block {sub_block.height} to tmp sub blocks")
-        sub_blocks.add_block_record(sub_block)
+        log.debug(f"add block {block_record.height} to tmp sub blocks")
+        sub_blocks.add_block_record(block_record)
 
         if block.first_in_sub_slot:
             sub_slots += 1
         if block.is_transaction_block:
-            full_blocks += 1
+            transaction_blocks += 1
         if ses:
             ses_blocks += 1
+        prev_block_record = block_record
 
     return True
 
@@ -1076,3 +1077,18 @@ def handle_end_of_slots(
         icc_infos,
         None,
     )
+
+
+def get_deficit(
+    constants: ConsensusConstants,
+    curr_deficit: uint8,
+    prev_block: BlockRecord,
+    overflow: bool,
+    num_finished_sub_slots: int,
+) -> uint8:
+    if prev_block is None:
+        if curr_deficit >= 1 and not (overflow and curr_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK):
+            curr_deficit -= 1
+        return curr_deficit
+
+    return calculate_deficit(constants, prev_block.height + 1, prev_block, overflow, num_finished_sub_slots)
