@@ -5,7 +5,7 @@ import { Trans } from '@lingui/macro';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Card, Loading, TooltipIcon, Flex } from '@chia/core';
+import { Card, Link, Loading, TooltipIcon, Flex } from '@chia/core';
 import styled from 'styled-components';
 import {
   unix_to_short_date,
@@ -20,6 +20,7 @@ import {
 import { chia_formatter } from '../../util/chia';
 import { calculatePoolReward, calculateBaseFarmerReward } from '../../util/blockRewards';
 import LayoutMain from '../layout/LayoutMain';
+import toBech32m from '../../util/toBech32m';
 
 /* global BigInt */
 
@@ -201,8 +202,11 @@ export default function Block() {
     },
     {
       name: <Trans>Previous Block Hash</Trans>,
-      value: blockRecord.prev_hash,
-      onClick: handleShowPreviousBlock,
+      value: (
+        <Link onClick={handleShowPreviousBlock}>
+          {blockRecord.prev_hash}
+        </Link>
+      ),
     },
     {
       name: <Trans>Difficulty</Trans>,
@@ -242,11 +246,19 @@ export default function Block() {
     },
     {
       name: <Trans>Farmer Puzzle Hash</Trans>,
-      value: blockRecord.farmer_puzzle_hash,
+      value: (
+        <Link target="_blank" href={`https://www.chiaexplorer.com/blockchain/puzzlehash/${blockRecord.farmer_puzzle_hash}`}>
+          {toBech32m(blockRecord.farmer_puzzle_hash)}
+        </Link>
+      ),
     },
     {
       name: <Trans>Pool Puzzle Hash</Trans>,
-      value: blockRecord.pool_puzzle_hash,
+      value: (
+        <Link target="_blank" href={`https://www.chiaexplorer.com/blockchain/puzzlehash/${blockRecord.pool_puzzle_hash}`}>
+          {toBech32m(blockRecord.pool_puzzle_hash)}
+        </Link>
+      ),
     },
     {
       name: <Trans>Plot Id</Trans>,

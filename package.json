@@ -33,6 +33,7 @@
     "@material-ui/styles": "^4.11.3",
     "@rehooks/local-storage": "^2.4.0",
     "about-window": "^1.13.4",
+    "bech32": "^2.0.0",
     "byte-size": "^7.0.0",
     "bytes-iec": "^3.1.1",
     "connected-react-router": "^6.8.0",
