@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-17 05:54\n"
+"PO-Revision-Date: 2021-02-17 07:01\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -845,7 +845,7 @@ msgstr "Erbjudande"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Skapade erbjudanden"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
@@ -853,7 +853,7 @@ msgstr "Utgående"
 
 #: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
-msgstr ""
+msgstr "Topphöjd"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -861,7 +861,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
-msgstr ""
+msgstr "Topptid"
 
 #: src/components/wallet/WalletHistory.tsx:37
 msgid "Pending"
@@ -1363,7 +1363,7 @@ msgstr "Detta är summan av inkommande och utgående väntande transaktioner (so
 
 #: src/components/fullNode/FullNode.jsx:188
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Detta är tidpunkten för det senaste topp-underblocket."
 
 #: src/components/block/Block.jsx:182
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
@@ -1441,7 +1441,7 @@ msgstr "Totalt antal iterationer sedan blockkedjan startade"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1469,7 +1469,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "Handelshistorik"
 
 #: src/components/block/Block.jsx:263
 msgid "Transactions Filter Hash"
@@ -1503,7 +1503,7 @@ msgstr "Visa logg"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "Visa erbjudande"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
 #: src/components/wallet/standard/WalletStandard.tsx:211
