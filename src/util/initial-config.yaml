@@ -8,8 +8,9 @@ daemon_port: 55400
 network_genesis_challenges: &network_genesis_challenges
   testnet0: "0000000000000000000000000000000000000000000000000000000000000000"
   testnet1: "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"  # std_hash(b"1")
+  testnet2: "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"  # std_hash(b"2")
 
-selected_network: &selected_network "testnet1"
+selected_network: &selected_network "testnet2"
 
 # public ssl ca is included in source code
 # Privet ssl ca is used for trusted connections between machines user owns
