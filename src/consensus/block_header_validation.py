@@ -46,7 +46,7 @@ def validate_unfinished_header_block(
     expected_sub_slot_iters: uint64,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
-    check_sub_epoch_sumary=True,
+    check_sub_epoch_summary=True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -390,7 +390,7 @@ def validate_unfinished_header_block(
                     )
 
                 # 3c. Check the actual sub-epoch is correct
-                if check_sub_epoch_sumary:
+                if check_sub_epoch_summary:
                     expected_sub_epoch_summary = make_sub_epoch_summary(
                         constants,
                         blocks,
@@ -809,7 +809,7 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
-    check_sub_epoch_sumary=True,
+    check_sub_epoch_summary=True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
@@ -833,7 +833,7 @@ def validate_finished_header_block(
         expected_difficulty,
         expected_sub_slot_iters,
         False,
-        check_sub_epoch_sumary,
+        check_sub_epoch_summary=check_sub_epoch_summary,
     )
 
     genesis_block = False
