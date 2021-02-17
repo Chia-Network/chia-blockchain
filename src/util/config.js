@@ -21,7 +21,8 @@ function loadConfig() {
       version = `beta-0.1.${sv.patch}`;
     }
 
-    const config_root_dir = path.join(os.homedir(), '.chia', version);
+    // check if CHIA_ROOT is set. it overrides any default config location
+    const config_root_dir = "CHIA_ROOT" in process.env ? process.env.CHIA_ROOT : path.join(os.homedir(), '.chia', version);
     const config = yaml.load(fs.readFileSync(path.join(config_root_dir, 'config/config.yaml'), 'utf8'));
 
     self_hostname = config?.ui?.daemon_host ?? 'localhost'; // jshint ignore:line
