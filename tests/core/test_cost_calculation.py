@@ -25,13 +25,15 @@ def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
 
+
 @pytest.fixture(scope="module")
 def large_txn_hex():
     import pathlib
     my_dir = pathlib.Path(__file__).absolute().parent
-    with open(my_dir / 'large-block.hex', 'r') as f:
+    with open(my_dir / "large-block.hex", "r") as f:
         hex_str = f.read()
         yield hex_str
+
 
 class TestCostCalculation:
     @pytest.mark.asyncio
