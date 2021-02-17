@@ -7,10 +7,9 @@ dependencies = [
     "chiavdf==0.15.0",  # timelord and vdf verification
     "chiabip158==0.19",  # bip158-style wallet filters
     "chiapos==0.12.44",  # proof of space
-    "clvm==0.8.0",
-    "clvm@git+https://github.com/Chia-Network/clvm.git@f22410fbf5475540051c93c0ad8258edd1359318#egg=clvm",  # noqa
-    "clvm_rs@git+https://github.com/Chia-Network/clvm_rs.git@3a4217b8e9cfc7079e79060370a04ccde86afa7f#egg=clvm-rs",  # noqa
-    "clvm_tools@git+https://github.com/Chia-Network/clvm_tools.git@a43c70cd69154ed6037a12412c744a11234fcc70#egg=clvm-tools",  # noqa
+    "clvm==0.8.9",
+    "clvm_rs==0.1.3",  # noqa
+    "clvm_tools==0.3.5",  # noqa
     "aiohttp==3.7.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
