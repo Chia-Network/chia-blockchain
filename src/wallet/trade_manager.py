@@ -218,9 +218,13 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             if wallet.type() == WalletType.COLOURED_COIN.value:
-                tx = await wallet.generate_signed_transaction([coin.amount], [new_ph], 0, coins={coin})
+                tx = await wallet.generate_signed_transaction(
+                    [coin.amount], [new_ph], 0, coins={coin}, ignore_max_send_amount=True
+                )
             else:
-                tx = await wallet.generate_signed_transaction(coin.amount, new_ph, 0, coins={coin})
+                tx = await wallet.generate_signed_transaction(
+                    coin.amount, new_ph, 0, coins={coin}, ignore_max_send_amount=True
+                )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)

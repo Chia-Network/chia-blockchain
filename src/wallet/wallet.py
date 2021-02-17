@@ -69,7 +69,7 @@ class Wallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             tx = await self.generate_signed_transaction(
-                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send=True
+                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
             program = best_solution_program(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
@@ -237,7 +237,9 @@ class Wallet:
                     continue
                 sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
+                self.log.debug(
+                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!"
+                )
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -246,7 +248,7 @@ class Wallet:
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
 
-        self.log.info(f"Successfully selected coins: {used_coins}")
+        self.log.debug(f"Successfully selected coins: {used_coins}")
         return used_coins
 
     async def generate_unsigned_transaction(
@@ -257,7 +259,7 @@ class Wallet:
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         primaries: Optional[List[Dict[str, bytes32]]] = None,
-        ignore_max_send: bool = False,
+        ignore_max_send_amount: bool = False,
     ) -> List[CoinSolution]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -270,7 +272,7 @@ class Wallet:
                 primaries_amount += prim["amount"]
             total_amount = amount + fee + primaries_amount
 
-        if not ignore_max_send:
+        if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
@@ -321,12 +323,12 @@ class Wallet:
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
         primaries: Optional[List[Dict[str, bytes32]]] = None,
-        ignore_max_send: bool = False,
+        ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
         """ Use this to generate transaction. """
 
         transaction = await self.generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send
+            amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount
         )
         assert len(transaction) > 0
 

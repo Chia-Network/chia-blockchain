@@ -5,9 +5,12 @@ import pytest
 
 from src.full_node.mempool_manager import MempoolManager
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.coin import Coin
 from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint16, uint32, uint64
+from src.wallet.cc_wallet.cc_utils import cc_puzzle_for_inner_puzzle, cc_puzzle_hash_for_inner_puzzle_hash
+from src.wallet.puzzles.cc_loader import CC_MOD
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -429,3 +432,114 @@ class TestCCWallet:
 
         await time_out_assert(30, cc_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(30, cc_wallet_2.get_unconfirmed_balance, 0)
+
+    @pytest.mark.asyncio
+    async def test_cc_max_amount_send(self, two_wallet_nodes):
+        num_blocks = 3
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100000))
+        tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.get_send_queue()
+        tx_record = tx_queue[0]
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100000)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100000)
+
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+
+        cc_2_hash = await cc_wallet.get_new_inner_hash()
+        amounts = []
+        puzzle_hashes = []
+        for i in range(1, 50):
+            amounts.append(uint64(i))
+            puzzle_hashes.append(cc_2_hash)
+        spent_coint = (await cc_wallet.get_cc_spendable_coins())[0].coin
+        tx_record = await cc_wallet.generate_signed_transaction(amounts, puzzle_hashes, coins={spent_coint})
+        await wallet.wallet_state_manager.add_pending_transaction(tx_record)
+
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await asyncio.sleep(2)
+
+        async def check_all_there():
+            spendable = await cc_wallet.get_cc_spendable_coins()
+            spendable_name_set = set()
+            for record in spendable:
+                spendable_name_set.add(record.coin.name())
+            puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(CC_MOD, cc_wallet.cc_info.my_genesis_checker, cc_2_hash)
+            for i in range(1, 50):
+                coin = Coin(spent_coint.name(), puzzle_hash, i)
+                if coin.name() not in spendable_name_set:
+                    return False
+            return True
+
+        await time_out_assert(15, check_all_there, True)
+        max_sent_amount = await cc_wallet.get_max_send_amount()
+
+        # 1) Generate transaction that is under the limit
+        under_limit_tx = None
+        try:
+            under_limit_tx = await cc_wallet.generate_signed_transaction(
+                [max_sent_amount - 1],
+                [ph],
+            )
+        except ValueError:
+            assert ValueError
+
+        assert under_limit_tx is not None
+
+        # 2) Generate transaction that is equal to limit
+        at_limit_tx = None
+        try:
+            at_limit_tx = await cc_wallet.generate_signed_transaction(
+                [max_sent_amount],
+                [ph],
+            )
+        except ValueError:
+            assert ValueError
+
+        assert at_limit_tx is not None
+
+        # 3) Generate transaction that is greater than limit
+        above_limit_tx = None
+        try:
+            above_limit_tx = await cc_wallet.generate_signed_transaction(
+                [max_sent_amount + 1],
+                [ph],
+            )
+        except ValueError:
+            pass
+
+        assert above_limit_tx is None

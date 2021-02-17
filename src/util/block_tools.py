@@ -248,8 +248,6 @@ class BlockTools:
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         transaction_data: Optional[SpendBundle] = None,
-        additions: Optional[List[Coin]] = None,
-        removals: Optional[List[Coin]] = None,
         seed: bytes = b"",
         time_per_block: Optional[float] = None,
         force_overflow: bool = False,
@@ -377,8 +375,13 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
+                        additions = None
+                        removals = None
                         if transaction_data_included:
                             transaction_data = None
+                        if transaction_data is not None and not transaction_data_included:
+                            additions = transaction_data.additions()
+                            removals = transaction_data.removals()
                         assert start_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
@@ -553,9 +556,13 @@ class BlockTools:
             latest_block_eos = latest_block
             overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash()
-
+            additions = None
+            removals = None
             if transaction_data_included:
                 transaction_data = None
+            if transaction_data is not None and not transaction_data_included:
+                additions = transaction_data.additions()
+                removals = transaction_data.removals()
             sub_slots_finished += 1
             log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "

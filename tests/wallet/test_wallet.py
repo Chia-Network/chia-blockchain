@@ -431,7 +431,11 @@ class TestWalletSimulator:
         # 1) Generate transaction that is under the limit
         under_limit_tx = None
         try:
-            under_limit_tx = await wallet.generate_signed_transaction(max_sent_amount - 1, ph, 0, )
+            under_limit_tx = await wallet.generate_signed_transaction(
+                max_sent_amount - 1,
+                ph,
+                0,
+            )
         except ValueError:
             assert ValueError
 
@@ -440,7 +444,11 @@ class TestWalletSimulator:
         # 2) Generate transaction that is equal to limit
         at_limit_tx = None
         try:
-            at_limit_tx = await wallet.generate_signed_transaction(max_sent_amount, ph, 0, )
+            at_limit_tx = await wallet.generate_signed_transaction(
+                max_sent_amount,
+                ph,
+                0,
+            )
         except ValueError:
             assert ValueError
 
@@ -449,7 +457,11 @@ class TestWalletSimulator:
         # 3) Generate transaction that is greater than limit
         above_limit_tx = None
         try:
-            above_limit_tx = await wallet.generate_signed_transaction(max_sent_amount + 1, ph, 0, )
+            above_limit_tx = await wallet.generate_signed_transaction(
+                max_sent_amount + 1,
+                ph,
+                0,
+            )
         except ValueError:
             pass
 
