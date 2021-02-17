@@ -63,10 +63,11 @@ jobs:
 
     - name: Checkout GUI
       run: |
-        git submodule update --init --recursive
-        cd chia-blockchain-gui
-        git checkout main
-        git pull
+        	echo "Running git submodule update --init --recursive."
+        	git submodule update --init --recursive
+#        	echo "Running git submodule update."
+#        	echo ""
+#        	git submodule update
 
     - name: Test for secrets access
       id: check_secrets

@@ -58,13 +58,14 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-	git submodule update --init --recursive
 	echo "Running git submodule update --init --recursive."
 	echo ""
-	cd chia-blockchain-gui
-	git submodule update
+	git submodule update --init --recursive
 	echo "Running git submodule update."
 	echo ""
+	git submodule update
+	cd chia-blockchain-gui
+
 	if [ "$SUBMODULE_BRANCH" ];
 	then
 		git checkout "$SUBMODULE_BRANCH"
