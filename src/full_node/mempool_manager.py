@@ -82,7 +82,8 @@ class MempoolManager:
         self, peak_header_hash: bytes32
     ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
-        Returns aggregated spendbundle that can be used for creating new block, additions and removals in that spend_bundle
+        Returns aggregated spendbundle that can be used for creating new block,
+        additions and removals in that spend_bundle
         """
         if (
             self.peak is None

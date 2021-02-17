@@ -34,7 +34,7 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.plotting.plot_tools import load_plots, PlotInfo
 from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.coin import Coin
+from src.types.blockchain_format.coin import Coin
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.blockchain_format.pool_target import PoolTarget
