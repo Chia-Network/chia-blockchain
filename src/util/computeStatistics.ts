@@ -22,7 +22,12 @@ export default function computeStatistics(
     }
 
     wallet.transactions.forEach((tx) => {
-      const { additions, type, amount, confirmed_at_height: confirmedAtHeight } = tx;
+      const {
+        additions,
+        type,
+        amount,
+        confirmed_at_height: confirmedAtHeight,
+      } = tx;
       if (additions.length === 0) {
         return;
       }
