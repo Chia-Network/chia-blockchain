@@ -86,12 +86,8 @@ jobs:
 
     - name: Checkout GUI
       run: |
-        	echo "Running git submodule update --init --recursive."
-        	git submodule update --init --recursive
-#        	echo "Running git submodule update."
-#        	echo ""
-#        	git submodule update
-
+        echo "Running git submodule update --init --recursive."
+        git submodule update --init --recursive
 
     - name: Run install script
       env:
