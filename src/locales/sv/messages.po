@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-17 07:01\n"
+"PO-Revision-Date: 2021-02-17 08:22\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1494,7 +1494,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF-underslot-iterationer"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
