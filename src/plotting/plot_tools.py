@@ -168,14 +168,18 @@ def load_plots(
                 # Try once every 20 minutes to open the file
                 continue
             if filename in provers:
-                stat_info = filename.stat()
+                try:
+                    stat_info = filename.stat()
+                except Exception as e:
+                    log.error(f"Failed to open file {filename}. {e}")
+                    continue
                 if stat_info.st_mtime == provers[filename].time_modified:
                     total_size += stat_info.st_size
                     new_provers[filename] = provers[filename]
                     continue
             try:
                 prover = DiskProver(str(filename))
-                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR / 2.0
+                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                 stat_info = filename.stat()
 
                 # TODO: consider checking if the file was just written to (which would mean that the file is still

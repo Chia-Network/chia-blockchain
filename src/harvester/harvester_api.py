@@ -1,11 +1,9 @@
 import asyncio
-import dataclasses
 import time
 from pathlib import Path
 from typing import Callable, List, Tuple
 
 from blspy import AugSchemeMPL, G2Element
-from chiapos import DiskProver
 
 from src.consensus.pot_iterations import (
     calculate_sp_interval_iters,
@@ -94,15 +92,8 @@ class HarvesterAPI:
                 try:
                     quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
                 except Exception as e:
-                    self.harvester.log.error(f"Error using prover object. Reinitializing prover object. {e}")
-                    try:
-                        self.harvester.provers[filename] = dataclasses.replace(
-                            plot_info, prover=DiskProver(str(filename))
-                        )
-                        quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
-                    except Exception as e:
-                        self.harvester.log.error(f"Error reinitializing plot {filename}. {e}")
-                        return []
+                    self.harvester.log.error(f"Error using prover object {e}")
+                    return []
 
                 responses: List[Tuple[bytes32, ProofOfSpace]] = []
                 if quality_strings is not None:
