@@ -29,6 +29,7 @@ def event_loop():
 @pytest.fixture(scope="module")
 def large_txn_hex():
     import pathlib
+
     my_dir = pathlib.Path(__file__).absolute().parent
     with open(my_dir / "large-block.hex", "r") as f:
         hex_str = f.read()
