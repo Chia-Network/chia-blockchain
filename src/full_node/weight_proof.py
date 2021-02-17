@@ -361,16 +361,44 @@ class WeightProofHandler:
                 )
                 cc_proofs, cc_infos = [], []
                 icc_proofs, icc_infos = [], []
+
+            (cc_vdf_challenge, _, cc_vdf_input, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
+                self.constants,
+                curr.finished_sub_slots,
+                blocks[curr.header_hash].overflow,
+                None if curr.height == 0 else blocks[curr.prev_header_hash],
+                BlockCache(blocks),
+                blocks[curr.header_hash].sp_total_iters(self.constants),
+                blocks[curr.header_hash].sp_iters(self.constants),
+            )
+
             # append sub slot proofs
             if curr.infused_challenge_chain_ip_proof is not None:
                 assert curr.reward_chain_block.infused_challenge_chain_ip_vdf
                 icc_proofs.append(curr.infused_challenge_chain_ip_proof)
                 icc_infos.append(curr.reward_chain_block.infused_challenge_chain_ip_vdf)
-            if curr.challenge_chain_sp_proof is not None:
-                cc_proofs.append(curr.challenge_chain_sp_proof)
 
-            if curr.challenge_chain_ip_proof is not None:
-                cc_proofs.append(curr.challenge_chain_ip_proof)
+            if curr.challenge_chain_sp_proof is not None:
+                assert curr.reward_chain_block.challenge_chain_sp_vdf
+                info = VDFInfo(
+                    curr.reward_chain_block.challenge_chain_sp_vdf.challenge,
+                    cc_vdf_iters,
+                    curr.reward_chain_block.challenge_chain_sp_vdf.output,
+                )
+                cc_proofs.append(curr.challenge_chain_sp_proof)
+                cc_infos.append(info)
+
+            cc_vdf_info = curr.reward_chain_block.challenge_chain_ip_vdf
+            if not curr.first_in_sub_slot:
+                ip_vdf_iters = uint64(curr.reward_chain_block.total_iters - blocks[curr.prev_header_hash].total_iters)
+                cc_vdf_info = VDFInfo(
+                    curr.reward_chain_block.challenge_chain_ip_vdf.challenge,
+                    ip_vdf_iters,
+                    curr.reward_chain_block.challenge_chain_ip_vdf.output,
+                )
+            cc_proofs.append(curr.challenge_chain_ip_proof)
+            cc_infos.append(cc_vdf_info)
+
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)}")
         return sub_slots_data, curr.height
@@ -692,10 +720,10 @@ def _validate_segment_slots(
     curr_ssi: uint64,
     curr_difficulty: uint64,
     ses: Optional[SubEpochSummary],
+    validate_sub_slots=False,  # todo almog remove after bluebox integration
 ) -> Tuple[bool, int, int, int]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_first_challenge = False
-    validate_sub_slots = False  # todo almog remove after bluebox integration
     for idx, sub_slot_data in enumerate(segment.sub_slots):
         if sub_slot_data.is_challenge():
             required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses)
@@ -1091,4 +1119,4 @@ def get_deficit(
             curr_deficit -= 1
         return curr_deficit
 
-    return calculate_deficit(constants, prev_block.height + 1, prev_block, overflow, num_finished_sub_slots)
+    return calculate_deficit(constants, uint32(prev_block.height + 1), prev_block, overflow, num_finished_sub_slots)
