@@ -76,6 +76,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_EPOCH_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
         "WEIGHT_PROOF_RECENT_BLOCKS": 350,
+        "DIFFICULTY_CONSTANT_FACTOR": 33554432,
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_BLOCKS": 50,
         "EPOCH_BLOCKS": 280,
@@ -149,6 +150,7 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
+        log.warning(f"Constants: {updated_constants}")
 
         self.constants = updated_constants
 
