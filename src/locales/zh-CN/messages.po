@@ -1286,7 +1286,7 @@ msgstr ""
 msgid "Syncing {progress}/{tip}"
 msgstr ""
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
 msgstr ""
 
@@ -1299,7 +1299,11 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:12
-msgid "TXCH User Fees"
+#~ msgid "TXCH User Fees"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+msgid "TXCH User Transaction Fees"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
@@ -1414,7 +1418,7 @@ msgstr ""
 msgid "Total Balance"
 msgstr ""
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -1588,7 +1592,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
 msgstr ""
 
