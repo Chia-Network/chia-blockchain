@@ -218,7 +218,7 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 58444
   wallet_peer:
     host: *self_hostname
@@ -246,7 +246,7 @@ ui:
   network_overrides: *network_overrides
   selected_network: *selected_network
 
-  # this is where the electron UI will find its daemon 
+  # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
   daemon_port: 55400
@@ -300,7 +300,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer1.beta.chia.net # Chia AWS introducer IPv4/IPv6
+    host: introducer.beta.chia.net # Chia AWS introducer IPv4/IPv6
     port: 58444
 
   ssl:
