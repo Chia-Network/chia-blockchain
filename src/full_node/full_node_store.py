@@ -435,22 +435,16 @@ class FullNodeStore:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
-                    if (
-                        not signage_point.cc_proof.normalized_to_identity
-                        and not signage_point.cc_proof.is_valid(
-                            self.constants,
-                            start_ele,
-                            cc_vdf_info_expected,
-                        )
+                    if not signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
+                        self.constants,
+                        start_ele,
+                        cc_vdf_info_expected,
                     ):
                         return False
-                    if (
-                        signage_point.cc_proof.normalized_to_identity
-                        and not signage_point.cc_proof.is_valid(
-                            self.constants,
-                            ClassgroupElement.get_default_element(),
-                            signage_point.cc_vdf,
-                        )
+                    if signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
+                        self.constants,
+                        ClassgroupElement.get_default_element(),
+                        signage_point.cc_vdf,
                     ):
                         return False
 

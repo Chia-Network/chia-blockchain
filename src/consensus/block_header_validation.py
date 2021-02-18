@@ -353,7 +353,7 @@ def validate_unfinished_header_block(
                     and not sub_slot.proofs.challenge_chain_slot_proof.is_valid(
                         constants,
                         ClassgroupElement.get_default_element(),
-                        sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
+                        sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
                     )
                 ):
                     return None, ValidationError(Err.INVALID_CC_EOS_VDF)
@@ -665,9 +665,7 @@ def validate_unfinished_header_block(
         if not skip_vdf_is_valid:
             if (
                 not header_block.challenge_chain_sp_proof.normalized_to_identity
-                and not header_block.challenge_chain_sp_proof.is_valid(
-                    constants, cc_vdf_input, target_vdf_info, None
-                )
+                and not header_block.challenge_chain_sp_proof.is_valid(constants, cc_vdf_input, target_vdf_info, None)
             ):
                 return None, ValidationError(Err.INVALID_CC_SP_VDF)
             if (
