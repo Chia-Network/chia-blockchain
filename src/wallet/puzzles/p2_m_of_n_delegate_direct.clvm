@@ -20,7 +20,7 @@
 (mod
     (M public_key_list selectors delegated_puzzle solution)
 
-    (defconstant AGG_SIG 50)
+    (include condition_codes.clvm)
 
     ;; hash a tree
     ;; This is used to calculate a puzzle hash given a puzzle program.
@@ -44,7 +44,7 @@
         )
     )
 
-    ; add_aggsig returns a list of conditions. It includes M AGGSIG conditions
+    ; add_aggsig returns a list of conditions. It includes M AGG_SIG conditions
     ;   corresponding to the given list of public keys (with the given hash)
     ;   plus the conditions that come out of the delegated puzzle.
     ;
@@ -91,7 +91,7 @@
     (defun-inline solve_puzzle (M public_key_list selectors delegated_puzzle solution)
         ; make sure we have exactly M selectors
         (assert (= M (count_selectors selectors))
-            ; return the AGGSIG conditions plus the conditions from the delegated_puzzle
+            ; return the AGG_SIG conditions plus the conditions from the delegated_puzzle
                 (add_aggsig (choose_keys selectors public_key_list)
                             (sha256tree1 delegated_puzzle)
                             delegated_puzzle

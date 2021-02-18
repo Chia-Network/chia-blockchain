@@ -1,7 +1,7 @@
 (mod
   (public_key conditions)
 
-  (defconstant AGG_SIG 50)
+  (include condition_codes.clvm)
 
   ;; hash a tree
   ;; This is used to calculate a puzzle hash given a puzzle program.
