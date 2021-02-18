@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-17 21:08\n"
+"PO-Revision-Date: 2021-02-18 22:52\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1291,12 +1291,20 @@ msgstr ""
 msgid "Syncing {progress}/{tip}"
 msgstr ""
 
-#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
-msgid "TXCH Farming Rewards"
+#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+msgid "TXCH Block Rewards"
 msgstr ""
 
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
+
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
-msgid "TXCH Fees Collected"
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+msgid "TXCH User Fees"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
@@ -1583,6 +1591,10 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+msgid "Without fees"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
