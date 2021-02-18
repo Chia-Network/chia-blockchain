@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 import pytest
 from pathlib import Path
 
@@ -12,6 +14,8 @@ from src.util.bech32m import encode_puzzle_hash
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.rpc.rpc_server import start_rpc_server
+
+log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
@@ -140,7 +144,9 @@ class TestWalletRpc:
 
             wallets = await client.get_wallets()
             assert len(wallets) == 1
+            log.warning(f"Wallets: {wallets}")
             balance = await client.get_wallet_balance(wallets[0]["id"])
+            log.warning(f"Balance: {balance}")
             assert balance["unconfirmed_wallet_balance"] == 0
 
             test_wallet_backup_path = Path("test_wallet_backup_file")

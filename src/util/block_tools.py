@@ -398,8 +398,10 @@ class BlockTools:
                             pool_target = PoolTarget(proof_of_space.pool_contract_puzzle_hash, uint32(0))
                         else:
                             if pool_reward_puzzle_hash is not None:
+                                log.warning(f"Making pool target A: {pool_reward_puzzle_hash}")
                                 pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                             else:
+                                log.warning(f"Making pool target B: {self.pool_ph}")
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         full_block, block_record = get_full_block_and_sub_record(
                             constants,
