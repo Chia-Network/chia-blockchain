@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-17 21:08\n"
+"PO-Revision-Date: 2021-02-18 22:53\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1291,13 +1291,21 @@ msgstr "Synkar"
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkroniserar {progress}/{tip}"
 
+#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+msgid "TXCH Block Rewards"
+msgstr ""
+
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
-msgid "TXCH Farming Rewards"
-msgstr "TXCH-odlingsbelöningar"
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr ""
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
-msgid "TXCH Fees Collected"
-msgstr "TXCH-avgifter som samlats in"
+#~ msgid "TXCH Fees Collected"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+msgid "TXCH User Fees"
+msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1583,6 +1591,10 @@ msgstr "Välkommen! Följande ord används för din plånboks säkerhetskopia. U
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+msgid "Without fees"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
