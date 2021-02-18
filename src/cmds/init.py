@@ -379,6 +379,17 @@ def chia_init(root_path: Path):
         "wallet.network_genesis_challenges",
         "introducer.network_genesis_challenges",
         "pool.network_genesis_challenges",
+        "ui.network_genesis_challenges",
+        "timelord.network_genesis_challenges",
+        "selected_network",
+        "full_node.selected_network",
+        "harvester.selected_network",
+        "farmer.selected_network",
+        "wallet.selected_network",
+        "introducer.selected_network",
+        "pool.selected_network",
+        "ui.selected_network",
+        "timelord.selected_network",
     ]
 
     # These are the files that will be migrated

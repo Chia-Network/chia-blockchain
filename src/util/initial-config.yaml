@@ -18,7 +18,7 @@ network_overrides: &network_overrides
     GENESIS_CHALLENGE: "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35" # std_hash(b"2")
 
 
-selected_network: &selected_network "testnet1"
+selected_network: &selected_network "testnet2"
 
 # public ssl ca is included in source code
 # Privet ssl ca is used for trusted connections between machines user owns
