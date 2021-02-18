@@ -100,6 +100,7 @@ class HarvesterAPI:
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
                         required_iters: uint64 = calculate_iterations_quality(
+                            self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
                             quality_str,
                             plot_info.prover.get_size(),
                             new_challenge.difficulty,

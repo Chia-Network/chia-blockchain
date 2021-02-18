@@ -5,7 +5,6 @@ from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.block_tools import test_constants
 from src.wallet.wallet_node import WalletNode
 from src.rpc.wallet_rpc_api import WalletRpcApi
@@ -30,11 +29,13 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Keychain,
 ) -> Dict:
+    overrides = config["network_overrides"][config["selected_network"]]
+    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     node = WalletNode(
         config,
         keychain,
         root_path,
-        consensus_constants=consensus_constants,
+        consensus_constants=updated_constants,
     )
     peer_api = WalletNodeAPI(node)
     fnp = config.get("full_node_peer")
@@ -45,7 +46,7 @@ def service_kwargs_for_wallet(
     else:
         connect_peers = []
         node.full_node_peer = None
-    genesis_challenge = consensus_constants.GENESIS_CHALLENGE
+
     kwargs = dict(
         root_path=root_path,
         node=node,
@@ -55,7 +56,7 @@ def service_kwargs_for_wallet(
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        network_id=genesis_challenge,
+        network_id=updated_constants.GENESIS_CHALLENGE,
     )
     port = config.get("port")
     if port is not None:
@@ -80,8 +81,6 @@ def main():
         config["database_path"] = f"{current}_simulation"
     else:
         constants = DEFAULT_CONSTANTS
-        genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
-        constants = constants.replace(GENESIS_CHALLENGE=genesis_challenge)
     keychain = Keychain(testing=False)
     kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
     return run_service(**kwargs)

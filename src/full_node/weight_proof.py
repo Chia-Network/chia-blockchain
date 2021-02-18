@@ -587,6 +587,7 @@ class WeightProofHandler:
             self.log.error("could not verify proof of space")
             return None
         return calculate_iterations_quality(
+            self.constants.DIFFICULTY_CONSTANT_FACTOR,
             q_str,
             challenge_sub_slot.proof_of_space.size,
             curr_diff,

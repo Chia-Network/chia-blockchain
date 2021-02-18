@@ -1,6 +1,6 @@
 from .constants import ConsensusConstants
 from src.types.blockchain_format.sized_bytes import bytes32
-from ..util.ints import uint64
+from src.util.ints import uint64
 
 testnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
@@ -9,9 +9,10 @@ testnet_kwargs = {
     "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
     "SUB_SLOT_ITERS_STARTING": 2 ** 25,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
-    # multiplied by another factor of 2^25, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_STARTING": 2 ** 24,
-    "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
+    # multiplied by another factor of DIFFICULTY_CONSTANT_FACTOR, to be used in the VDF iter calculation formula.
+    "DIFFICULTY_CONSTANT_FACTOR": 2 ** 65,
+    "DIFFICULTY_STARTING": 5,
+    "DIFFICULTY_CHANGE_MAX_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
     "SUB_EPOCH_BLOCKS": 384,  # The number of blocks per sub-epoch, mainnet 284
     "EPOCH_BLOCKS": 384 * 2,  # The number of blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
@@ -28,10 +29,10 @@ testnet_kwargs = {
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     "GENESIS_CHALLENGE": bytes32([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+        "f15f4e19248642ce92515ffb05d37fc0fadc30eb95d69b8800ae78e34c0e5d0f"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+        "0dc09d07e7cef3b57a42e08ec89a59277ef579e6833776937f601e21ec305dba"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec

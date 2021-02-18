@@ -77,6 +77,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_EPOCH_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
         "WEIGHT_PROOF_RECENT_BLOCKS": 350,
+        "DIFFICULTY_CONSTANT_FACTOR": 33554432,
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_BLOCKS": 50,
         "EPOCH_BLOCKS": 280,
@@ -148,10 +149,10 @@ class BlockTools:
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
-        self.genesis_challenge = bytes32(
-            bytes.fromhex(self._config["network_genesis_challenges"][self._config["selected_network"]])
-        )
-        self.constants = constants.replace(GENESIS_CHALLENGE=self.genesis_challenge)
+        overrides = self._config["network_overrides"][self._config["selected_network"]]
+        updated_constants = constants.replace_str_to_bytes(**overrides)
+
+        self.constants = updated_constants
 
     def init_plots(self, root_path):
         plot_dir = get_plot_dir()
@@ -394,6 +395,7 @@ class BlockTools:
                                 pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
+
                         full_block, block_record = get_full_block_and_sub_record(
                             constants,
                             blocks,
@@ -882,6 +884,7 @@ class BlockTools:
                 for proof_index, quality_str in enumerate(qualities):
 
                     required_iters = calculate_iterations_quality(
+                        constants.DIFFICULTY_CONSTANT_FACTOR,
                         quality_str,
                         plot_info.prover.get_size(),
                         difficulty,
@@ -1090,9 +1093,10 @@ def load_block_list(
             constants, challenge, sp_hash
         )
         required_iters: uint64 = calculate_iterations_quality(
+            constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_str,
             full_block.reward_chain_block.proof_of_space.size,
-            difficulty,
+            uint64(difficulty),
             sp_hash,
         )
 

@@ -742,6 +742,7 @@ class FullNodeAPI:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
             required_iters: uint64 = calculate_iterations_quality(
+                self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
                 quality_string,
                 request.proof_of_space.size,
                 difficulty,

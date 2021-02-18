@@ -156,6 +156,7 @@ def load_plots(
         all_filenames += paths
     total_size = 0
     new_provers: Dict[Path, PlotInfo] = {}
+    plot_ids: Set[bytes32] = set()
 
     if match_str is not None:
         log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
@@ -177,9 +178,11 @@ def load_plots(
                 if stat_info.st_mtime == provers[filename].time_modified:
                     total_size += stat_info.st_size
                     new_provers[filename] = provers[filename]
+                    plot_ids.add(provers[filename].prover.get_id())
                     continue
             try:
                 prover = DiskProver(str(filename))
+
                 expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                 stat_info = filename.stat()
 
@@ -191,6 +194,10 @@ def load_plots(
                         f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
                         f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                     )
+                    continue
+
+                if prover.get_id() in plot_ids:
+                    log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
                     continue
 
                 (
@@ -237,6 +244,7 @@ def load_plots(
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )
+                plot_ids.add(prover.get_id())
                 total_size += stat_info.st_size
                 changed = True
             except Exception as e:

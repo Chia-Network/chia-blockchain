@@ -5,11 +5,20 @@ ping_interval: 120
 self_hostname: &self_hostname "localhost"
 daemon_port: 55400
 
-network_genesis_challenges: &network_genesis_challenges
-  testnet0: "0000000000000000000000000000000000000000000000000000000000000000"
-  testnet1: "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"  # std_hash(b"1")
+network_overrides: &network_overrides
+  testnet0:
+    GENESIS_CHALLENGE: "0000000000000000000000000000000000000000000000000000000000000000"
+  testnet1:
+    DIFFICULTY_CONSTANT_FACTOR: 33554432
+    DIFFICULTY_STARTING: 16777216
+    GENESIS_CHALLENGE: "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"  # std_hash(b"1")
+    GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+    GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+  testnet2:
+    GENESIS_CHALLENGE: "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35" # std_hash(b"2")
 
-selected_network: &selected_network "testnet1"
+
+selected_network: &selected_network "testnet2"
 
 # public ssl ca is included in source code
 # Privet ssl ca is used for trusted connections between machines user owns
@@ -46,7 +55,7 @@ harvester:
   num_threads: 30
 
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
   # Plots are searched for in the following directories
@@ -68,7 +77,7 @@ pool:
   # Replace this with a real puzzle hash
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
 
@@ -95,7 +104,7 @@ farmer:
   # To send a share to a pool, a proof of space must have required_iters less than this number
   pool_share_threshold: 1000
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
   ssl:
@@ -135,7 +144,7 @@ timelord:
     host: *self_hostname
     port: 8000
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
   # fast_algorithm is a faster proof generation algorithm. This speed increase
   # requires much less memory usage and a does not have the risk of OOM that
@@ -165,10 +174,10 @@ full_node:
   port: 58444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v27_2.db
-  peer_db_path: db/peer_table_node.db
-  simulator_database_path: sim_db/simulator_blockchain_v27_2.db
-  simulator_peer_db_path: sim_db/peer_table_node.db
+  database_path: db/blockchain_v28_CHALLENGE.sqlite
+  peer_db_path: db/peer_table_node.sqlite
+  simulator_database_path: sim_db/simulator_blockchain_v28_CHALLENGE.sqlite
+  simulator_peer_db_path: sim_db/peer_table_node.sqlite
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -215,7 +224,7 @@ full_node:
     host: *self_hostname
     port: 8449
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
   ssl:
@@ -234,7 +243,7 @@ ui:
   # This SSH key is for the ui SSH server
   ssh_filename: config/ssh_host_key
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
   # this is where the electron UI will find its daemon 
@@ -253,7 +262,7 @@ introducer:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
   ssl:
@@ -277,11 +286,11 @@ wallet:
     port: 58444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v27_2.db
-  wallet_peers_path: wallet/db/wallet_peers.db
+  database_path: wallet/db/blockchain_wallet_v28_CHALLENGE_KEY.sqlite
+  wallet_peers_path: wallet/db/wallet_peers.sqlite
 
   logging: *logging
-  network_genesis_challenges: *network_genesis_challenges
+  network_overrides: *network_overrides
   selected_network: *selected_network
 
   target_peer_count: 5

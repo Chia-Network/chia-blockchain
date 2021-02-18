@@ -8,7 +8,6 @@ from src.farmer.farmer import Farmer
 from src.farmer.farmer_api import FarmerAPI
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.keychain import Keychain
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -35,9 +34,10 @@ def service_kwargs_for_farmer(
     if fnp is not None:
         connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
-    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
+    overrides = config["network_overrides"][config["selected_network"]]
+    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    farmer = Farmer(config, config_pool, keychain, consensus_constants.replace(GENESIS_CHALLENGE=genesis_challenge))
+    farmer = Farmer(config, config_pool, keychain, consensus_constants=updated_constants)
     peer_api = FarmerAPI(farmer)
 
     kwargs = dict(
@@ -51,7 +51,7 @@ def service_kwargs_for_farmer(
         connect_peers=connect_peers,
         auth_connect_peers=False,
         on_connect_callback=farmer.on_connect,
-        network_id=genesis_challenge,
+        network_id=updated_constants.GENESIS_CHALLENGE,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])

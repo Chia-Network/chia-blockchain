@@ -92,7 +92,10 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        self.db_path = path_from_root(root_path, config["database_path"])
+        db_path_replaced: str = config["database_path"].replace(
+            "CHALLENGE", consensus_constants.GENESIS_CHALLENGE[:8].hex()
+        )
+        self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -1207,6 +1210,7 @@ class FullNode:
         fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
         if fetched_ss is not None:
             # Already have the sub-slot
+            logging.getLogger(__name__).warning("1")
             return None, True
 
         async with self.timelord_lock:
@@ -1224,6 +1228,7 @@ class FullNode:
                     uint8(0),
                     bytes([0] * 32),
                 )
+                logging.getLogger(__name__).warning("2")
                 return (
                     make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),
                     False,
@@ -1276,10 +1281,12 @@ class FullNode:
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
+                logging.getLogger(__name__).warning("3")
                 return None, True
             else:
                 self.log.info(
                     f"End of slot not added CC challenge "
                     f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
                 )
+        logging.getLogger(__name__).warning("4")
         return None, False

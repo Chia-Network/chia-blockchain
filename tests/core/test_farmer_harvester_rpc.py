@@ -98,6 +98,10 @@ class TestRpc:
             assert num_plots > 0
             plot_dir = get_plot_dir() / "subdir"
             plot_dir.mkdir(parents=True, exist_ok=True)
+
+            plot_dir_sub = get_plot_dir() / "subdir" / "subsubdir"
+            plot_dir_sub.mkdir(parents=True, exist_ok=True)
+
             plotter = DiskPlotter()
             filename = "test_farmer_harvester_rpc_plot.plot"
             filename_2 = "test_farmer_harvester_rpc_plot2.plot"
@@ -116,6 +120,8 @@ class TestRpc:
                 False,
             )
 
+            # Making a plot with a puzzle hash encoded into it instead of pk
+            plot_id_2 = token_bytes(32)
             plotter.create_plot_disk(
                 str(plot_dir),
                 str(plot_dir),
@@ -123,7 +129,23 @@ class TestRpc:
                 filename_2,
                 18,
                 stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
-                token_bytes(32),
+                plot_id_2,
+                128,
+                0,
+                2000,
+                0,
+                False,
+            )
+
+            # Making the same plot, in a different dir. This should not be farmed
+            plotter.create_plot_disk(
+                str(plot_dir_sub),
+                str(plot_dir_sub),
+                str(plot_dir_sub),
+                filename_2,
+                18,
+                stream_plot_info_ph(std_hash(b"random ph"), bt.farmer_pk, AugSchemeMPL.key_gen(bytes([5] * 32))),
+                plot_id_2,
                 128,
                 0,
                 2000,
@@ -137,8 +159,9 @@ class TestRpc:
             assert len(await client_2.get_plot_directories()) == 1
 
             await client_2.add_plot_directory(str(plot_dir))
+            await client_2.add_plot_directory(str(plot_dir_sub))
 
-            assert len(await client_2.get_plot_directories()) == 2
+            assert len(await client_2.get_plot_directories()) == 3
 
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots + 2
@@ -149,7 +172,7 @@ class TestRpc:
             assert len(res_3["plots"]) == num_plots
 
             await client_2.remove_plot_directory(str(plot_dir))
-            assert len(await client_2.get_plot_directories()) == 1
+            assert len(await client_2.get_plot_directories()) == 2
 
         finally:
             # Checks that the RPC manages to stop the node
