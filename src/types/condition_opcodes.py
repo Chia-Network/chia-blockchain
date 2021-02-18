@@ -2,6 +2,7 @@ import enum
 from typing import Any
 
 
+# See src/wallet/puzzles/condition_codes.clvm
 class ConditionOpcode(bytes, enum.Enum):
     UNKNOWN = bytes([49])
     AGG_SIG = bytes([50])
