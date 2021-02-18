@@ -27,9 +27,10 @@ def service_kwargs_for_timelord(
 ) -> Dict:
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
+    overrides = config["network_overrides"][config["selected_network"]]
+    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
 
-    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
-    node = Timelord(config, constants.replace(GENESIS_CHALLENGE=genesis_challenge))
+    node = Timelord(config, updated_constants)
     peer_api = TimelordAPI(node)
 
     kwargs = dict(
@@ -42,7 +43,7 @@ def service_kwargs_for_timelord(
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        network_id=genesis_challenge,
+        network_id=updated_constants.GENESIS_CHALLENGE,
     )
     return kwargs
 

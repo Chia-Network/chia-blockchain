@@ -92,7 +92,10 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        self.db_path = path_from_root(root_path, config["database_path"])
+        db_path_replaced: str = config["database_path"].replace(
+            "CHALLENGE", consensus_constants.GENESIS_CHALLENGE[:8].hex()
+        )
+        self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):

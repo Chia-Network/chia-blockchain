@@ -10,6 +10,8 @@ network_overrides: &network_overrides
     DIFFICULTY_CONSTANT_FACTOR: 33554432
     DIFFICULTY_STARTING: 16777216
     GENESIS_CHALLENGE: "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"  # std_hash(b"1")
+    GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+    GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
   testnet2:
     GENESIS_CHALLENGE: "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35" # std_hash(b"2")
 
@@ -170,10 +172,10 @@ full_node:
   port: 58444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v27_2.db
-  peer_db_path: db/peer_table_node.db
-  simulator_database_path: sim_db/simulator_blockchain_v27_2.db
-  simulator_peer_db_path: sim_db/peer_table_node.db
+  database_path: db/blockchain_v28_CHALLENGE.sqlite
+  peer_db_path: db/peer_table_node.sqlite
+  simulator_database_path: sim_db/simulator_blockchain_v28_CHALLENGE.sqlite
+  simulator_peer_db_path: sim_db/peer_table_node.sqlite
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -282,8 +284,8 @@ wallet:
     port: 58444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v27_2.db
-  wallet_peers_path: wallet/db/wallet_peers.db
+  database_path: wallet/db/blockchain_wallet_v28_CHALLENGE_KEY.sqlite
+  wallet_peers_path: wallet/db/wallet_peers.sqlite
 
   logging: *logging
   network_overrides: *network_overrides

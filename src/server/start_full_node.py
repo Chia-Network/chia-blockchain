@@ -10,7 +10,6 @@ from src.full_node.full_node_api import FullNodeAPI
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 
@@ -24,11 +23,8 @@ SERVICE_NAME = "full_node"
 def service_kwargs_for_full_node(
     root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-    # genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
     overrides = config["network_overrides"][config["selected_network"]]
-    print(overrides)
-    quit()
-    updated_constants = consensus_constants.replace(overrides)
+    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
     full_node = FullNode(
         config,

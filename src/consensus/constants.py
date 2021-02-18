@@ -62,12 +62,15 @@ class ConsensusConstants:
     BLOCKS_CACHE_SIZE: uint32
 
     def replace(self, **changes):
-        for k, v in changes:
-            if isinstance(v, str):
-
-
         return dataclasses.replace(self, **changes)
 
-    def replace_from_config(self, config_dict: Dict):
+    def replace_str_to_bytes(self, **changes):
+        """
+        Overrides str (hex) values with bytes.
+        """
 
-        pass
+        for k, v in changes.items():
+            if isinstance(v, str):
+                changes[k] = bytes.fromhex(v)
+
+        return dataclasses.replace(self, **changes)
