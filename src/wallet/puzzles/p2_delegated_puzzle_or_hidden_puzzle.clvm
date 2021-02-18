@@ -4,10 +4,35 @@
 
 ; glossary of parameter names:
 
-;  hidden_puzzle_info: a reveal of the original public key and hidden puzzle
+; hidden_puzzle: a "hidden puzzle" that can be revealed and used as an alternate
+;   way to unlock the underlying funds
+;
+; synthetic_key_offset: a private key cryptographically generated using the hidden
+;   puzzle and as inputs `original_public_key`
+;
+; synthetic_public_key: the public key that is the sum of `original_public_key` and the
+;   public key corresponding to `synthetic_key_offset`
+;
+; original_public_key: a public key, where knowledge of the corresponding private key
+;   represents ownership of the file
+;
+; delegated_puzzle: a delegated puzzle, as in "graftroot", which should return the
+;   desired conditions.
+;
+; solution: the solution to the delegated puzzle
 
 
 (mod
+    ; A puzzle should commit to `synthetic_public_key`
+    ;
+    ; The solution should pass in 0 for `original_public_key` if it wants to use
+    ; an arbitrary `delegated_puzzle` (and `solution`) signed by the
+    ; `synthetic_public_key` (whose corresponding private key can be calculated
+    ; if you know the private key for `original_public_key`)
+    ;
+    ; Or you can solve the hidden puzzle by revealing the `original_public_key`,
+    ; the hidden puzzle in `delegated_puzzle`, and a solution to the hidden puzzle.
+
     (synthetic_public_key original_public_key delegated_puzzle solution)
 
     ; "assert" is a macro that wraps repeated instances of "if"
@@ -64,3 +89,11 @@
         synthetic_public_key original_public_key delegated_puzzle
         (a delegated_puzzle solution))
 )
+
+
+; the hex file disassembles to:
+;
+; (a (q (c (i 11 (q (c (i (= 5 (point_add 11 (pubkey_for_exp (sha256 11 (a 6 (c 2 (c 23 0))))))) (q 2 23 47) (q 8)) 1)) (q 4 (c 4 (c 5 (c (a 6 (c 2 (c 23 0))) 0))) (a 23 47))) 1)) (c (q 57 (c (i (l 5) (q 11 (q . 2) (a 6 (c 2 (c 9 0))) (a 6 (c 2 (c 13 0)))) (q 11 (q . 1) 5)) 1)) 1))
+;
+; This file may *not* yet compile to that. The output has been hand-tweaked to include some extra optimiziations.
+; Eventually, the compiler should produce the output above.
