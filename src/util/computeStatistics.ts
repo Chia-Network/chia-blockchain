@@ -7,14 +7,17 @@ export default function computeStatistics(
   totalChia: BigInt;
   biggestHeight: number;
   biggestRewardHeight: number;
-  coinbaseRewards: BigInt;
-  feesReward: BigInt;
+  poolCoins: BigInt;
+  farmerCoins: BigInt;
+  totalBlockRewards: BigInt;
+  userTransactionFees: BigInt;
+  blockRewards: BigInt;
 } {
   let totalChia = BigInt(0);
   let biggestHeight = 0;
   let biggestRewardHeight = 0;
-  let coinbaseRewards = BigInt(0);
-  let feesReward = BigInt(0);
+  let poolCoins = BigInt(0);
+  let farmerCoins = BigInt(0);
 
   wallets.forEach((wallet) => {
     if (!wallet) {
@@ -42,9 +45,9 @@ export default function computeStatistics(
       if (type === TransactionType.OUTGOING) {
         totalChia -= BigInt(amount);
       } else if (type === TransactionType.COINBASE_REWARD) {
-        coinbaseRewards += BigInt(amount);
+        poolCoins += BigInt(amount);
       } else if (type === TransactionType.FEE_REWARD) {
-        feesReward += BigInt(amount);
+        farmerCoins += BigInt(amount);
       }
 
       if (confirmedAtHeight > biggestHeight) {
@@ -57,11 +60,18 @@ export default function computeStatistics(
     });
   });
 
+  const totalBlockRewards = poolCoins * BigInt(8/7);
+  const userTransactionFees = farmerCoins - (BigInt(1/8) * totalBlockRewards);
+  const blockRewards = poolCoins + farmerCoins - userTransactionFees;
+
   return {
     totalChia,
     biggestHeight,
     biggestRewardHeight,
-    coinbaseRewards,
-    feesReward,
+    poolCoins,
+    farmerCoins,
+    totalBlockRewards,
+    userTransactionFees,
+    blockRewards,
   };
 }
