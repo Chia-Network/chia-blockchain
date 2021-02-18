@@ -35,7 +35,7 @@ const getScriptPath = (dist_file) => {
   if (!guessPackaged()) {
     return path.join(PY_FOLDER, PY_MODULE + '.py');
   }
-  getExecutablePath(dist_file);
+  return getExecutablePath(dist_file);
 };
 
 const getExecutablePath = (dist_file) => {
