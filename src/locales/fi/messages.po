@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-17 21:08\n"
+"PO-Revision-Date: 2021-02-18 06:25\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -59,7 +59,7 @@ msgstr "Lisää Plot-hakemisto"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Lisää Lompakko"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -77,7 +77,7 @@ msgstr "Osoite"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
 #: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Address / Puzzle hash"
-msgstr "Osoite / Tehtävätiiviste"
+msgstr "Osoite / Puzzle-tiiviste"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -170,7 +170,7 @@ msgstr "Osta"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "Värilompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -204,7 +204,7 @@ msgstr "Haastetiiviste"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia-lompakko"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -216,7 +216,7 @@ msgstr "Anna Tiedoston Koko"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Sulje"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -245,11 +245,11 @@ msgstr "Väri:"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Väritetty Kolikko"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Värikolikon Valinnat"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
