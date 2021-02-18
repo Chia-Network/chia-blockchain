@@ -30,11 +30,11 @@ def check_plots(args, root_path):
 
     if args.challenge_start is not None:
         num_start = args.challenge_start
-        if num_start > num:
-            log.warning(f"Start challenge {num_start} > {num} challenges. Setting start challenge = {num}")
-            num_start = num
+        num_end = num_start + num
     else:
         num_start = 0
+        num_end = num
+    challenges = num_end - num_start
 
     if args.grep_string is not None:
         match_str = args.grep_string
@@ -87,7 +87,7 @@ def check_plots(args, root_path):
         log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
         try:
-            for i in range(num_start, num):
+            for i in range(num_start, num_end):
                 challenge = std_hash(i.to_bytes(32, "big"))
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                     proof = pr.get_full_proof(challenge, index)
@@ -100,7 +100,6 @@ def check_plots(args, root_path):
                 return
             log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
         if total_proofs > 0:
-            challenges: int = num - num_start
             log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size

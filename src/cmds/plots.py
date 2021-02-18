@@ -36,7 +36,7 @@ def help_message():
     print("  -l: list plots with duplicate IDs")
     print("  Debugging options for chia plots check")
     print("    --debug-show-memo: shows memo to recreate the same exact plot")
-    print("    --challenge-start [start]: begins at a different [start] up to -n [challenges]")
+    print("    --challenge-start [start]: begins at a different [start] for -n [challenges]")
     print("chia plots add -d [directory] (adds a directory of plots)")
     print("chia plots remove -d [directory] (removes a directory of plots from config)")
     print("chia plots show (shows the directory of current plots)")
@@ -145,7 +145,7 @@ def make_parser(parser):
     )
     parser.add_argument(
         "--challenge-start",
-        help="Begins at a different [start] up to -n [challenges]",
+        help="Begins at a different [start] for -n [challenges]",
         type=int,
         default=None,
     )
