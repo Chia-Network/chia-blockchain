@@ -147,10 +147,10 @@ class BlockTools:
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
-        self.genesis_challenge = bytes32(
-            bytes.fromhex(self._config["network_genesis_challenges"][self._config["selected_network"]])
-        )
-        self.constants = constants.replace(GENESIS_CHALLENGE=self.genesis_challenge)
+        overrides = self._config["network_overrides"][self._config["selected_network"]]
+        updated_constants = constants.replace_str_to_bytes(**overrides)
+
+        self.constants = updated_constants
 
     def init_plots(self, root_path):
         plot_dir = get_plot_dir()
@@ -1080,7 +1080,7 @@ def load_block_list(
             constants.DIFFICULTY_CONSTANT_FACTOR,
             quality_str,
             full_block.reward_chain_block.proof_of_space.size,
-            difficulty,
+            uint64(difficulty),
             sp_hash,
         )
 

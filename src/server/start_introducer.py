@@ -6,7 +6,6 @@ from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.introducer.introducer import Introducer
 from src.introducer.introducer_api import IntroducerAPI
 from src.server.outbound_message import NodeType
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 

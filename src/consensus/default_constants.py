@@ -1,6 +1,6 @@
 from .constants import ConsensusConstants
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint64, uint128
+from src.util.ints import uint64
 
 testnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,

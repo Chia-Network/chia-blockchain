@@ -6,6 +6,8 @@ self_hostname: &self_hostname "localhost"
 daemon_port: 55400
 
 network_overrides: &network_overrides
+  testnet0:
+    GENESIS_CHALLENGE: "0000000000000000000000000000000000000000000000000000000000000000"
   testnet1:
     DIFFICULTY_CONSTANT_FACTOR: 33554432
     DIFFICULTY_STARTING: 16777216

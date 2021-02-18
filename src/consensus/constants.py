@@ -1,5 +1,4 @@
 import dataclasses
-from typing import Dict
 
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint8, uint128
