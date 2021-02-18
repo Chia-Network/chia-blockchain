@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 06:25\n"
+"PO-Revision-Date: 2021-02-18 07:22\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -310,7 +310,7 @@ msgstr "Luo"
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Luo Hajautetetun Identiteetin lompakko"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -344,15 +344,15 @@ msgstr "Luo yksityinen avain"
 
 #: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Luo pääkäyttäjälompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Luo uusi väritetty kolikko"
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
-msgstr ""
+msgstr "Luo käyttäjälompakko"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -360,7 +360,7 @@ msgstr "Luo lompakko väriä varten"
 
 #: src/components/wallet/create/WalletCreate.jsx:206
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Luo lompakko olemassa olevaa väriä varten"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -380,7 +380,7 @@ msgstr "Kaupan tila"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr ""
+msgstr "Hajautettu Lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -435,11 +435,11 @@ msgstr "Vaikeusaste"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
-msgstr ""
+msgstr "Hajautettu Identiteetti"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Hajautetun Identiteetin Valinnat"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -693,7 +693,7 @@ msgstr "Viimeisimmät Lohkohaasteet"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
-msgstr ""
+msgstr "Lataa..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
@@ -982,7 +982,7 @@ msgstr "Plotin Koko"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:27
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Plotti on {0}:n duplikaatti"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
@@ -1065,7 +1065,7 @@ msgstr "RAM enimmäismäärä"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr ""
+msgstr "Rajoitettu Lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1073,7 +1073,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:134
 msgid "Rate Limited"
-msgstr ""
+msgstr "Siirtorajoitettu"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
@@ -1082,7 +1082,7 @@ msgstr "Siirtorajoitetetun Tiedot"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Siirtorajoitetun Valinnat"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
@@ -1095,7 +1095,7 @@ msgstr "Vastaanottajan Osoite"
 
 #: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Palauta hajautetettu lompakko"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1148,7 +1148,7 @@ msgstr "Valitse Väliaikaistyöhakemisto"
 
 #: src/components/wallet/create/WalletCreate.jsx:112
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Valitse Lompakkotyyppi"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1617,7 +1617,7 @@ msgstr "korkeus:"
 
 #: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
-msgstr ""
+msgstr "ei synkronoitu"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:98
