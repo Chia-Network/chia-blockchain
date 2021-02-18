@@ -89,8 +89,12 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52",
-        "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52",
+        "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
+            "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+        ),
+        "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
+            "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
+        ),
         "TX_PER_SEC": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
         "INITIAL_FREEZE_PERIOD": 0,
@@ -153,7 +157,6 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
-        log.warning(f"Constants: {updated_constants}")
 
         self.constants = updated_constants
 
