@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 22:53\n"
+"PO-Revision-Date: 2021-02-18 23:59\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -1291,7 +1291,7 @@ msgstr "Синхронизация"
 msgid "Syncing {progress}/{tip}"
 msgstr "Синхронизация {progress}/{tip}"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
 msgstr ""
 
@@ -1304,7 +1304,11 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:12
-msgid "TXCH User Fees"
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+msgid "TXCH User Transaction Fees"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
@@ -1419,7 +1423,7 @@ msgstr "Кому"
 msgid "Total Balance"
 msgstr "Итоговый баланс"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 msgid "Total Chia Farmed"
 msgstr "Всего выращено монет"
 
@@ -1593,7 +1597,7 @@ msgstr "Добро пожаловать! Перечисленные слова �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
 msgstr ""
 
