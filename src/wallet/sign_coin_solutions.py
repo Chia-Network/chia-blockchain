@@ -16,7 +16,7 @@ async def sign_coin_solutions(
     pk_list = []
     msg_list = []
     for coin_solution in coin_solutions:
-        # Get AGGSIG conditions
+        # Get AGG_SIG conditions
         err, conditions_dict, cost = conditions_dict_for_solution(coin_solution.puzzle_reveal, coin_solution.solution)
         if err or conditions_dict is None:
             error_msg = f"Sign transaction failed, con:{conditions_dict}, error: {err}"
