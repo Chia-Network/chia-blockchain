@@ -390,6 +390,8 @@ def chia_init(root_path: Path):
         "pool.selected_network",
         "ui.selected_network",
         "timelord.selected_network",
+        "farmer.xch_target_address",
+        "pool.xch_target_address",
     ]
 
     # These are the files that will be migrated
