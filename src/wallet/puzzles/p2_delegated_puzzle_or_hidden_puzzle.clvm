@@ -62,5 +62,5 @@
 
     (possibly_prepend_aggsig
         synthetic_public_key original_public_key delegated_puzzle
-        ((c delegated_puzzle solution)))
+        (a delegated_puzzle solution))
 )

@@ -55,8 +55,8 @@ class TestChialisp:
             args(-1)
 
     def test_eval(self):
-        assert eval("code") == "((c code 1))"
-        assert eval("code", "env") == "((c code env))"
+        assert eval("code") == "(a code 1)"
+        assert eval("code", "env") == "(a code env)"
 
     def test_apply(self):
         assert apply("f", ()) == ("(f)")
@@ -64,18 +64,18 @@ class TestChialisp:
         assert apply("f", ("1", "2")) == ("(f 1 2)")
 
     def test_quote(self):
-        assert quote(1) == "(q 1)"
+        assert quote(1) == "(q . 1)"
 
     def test_make_if(self):
-        assert make_if("p", "t", "f") == "((c (i p (q t) (q f)) 1))"
+        assert make_if("p", "t", "f") == "(a (i p (q . t) (q . f)) 1)"
 
     def test_make_list(self):
-        assert make_list() == "(q ())"
-        assert make_list(1) == "(c 1 (q ()))"
-        assert make_list(1, 2) == "(c 1 (c 2 (q ())))"
+        assert make_list() == "(q . ())"
+        assert make_list(1) == "(c 1 (q . ()))"
+        assert make_list(1, 2) == "(c 1 (c 2 (q . ())))"
 
     def test_fail(self):
         assert fail("error") == "(x error)"
 
     def test_is_zero(self):
-        assert is_zero("(q 1)") == "(= (q 1) (q 0))"
+        assert is_zero("(q . 1)") == "(= (q . 1) (q . 0))"
