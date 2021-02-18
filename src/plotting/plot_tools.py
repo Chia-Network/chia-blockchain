@@ -12,7 +12,11 @@ from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
+<<<<<<< HEAD
 from src.types.blockchain_format.sized_bytes import bytes32
+=======
+from src.types.sized_bytes import bytes32
+>>>>>>> 367008599da67c80e5550bff644c0635841f87d2
 
 
 log = logging.getLogger(__name__)
