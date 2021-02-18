@@ -11,7 +11,10 @@ export default function FarmCardUserFees() {
   const value = computeStatistics(wallets);
   const loading = !wallets;
 
-  const userTransactionFees = useMemo((): number => mojo_to_chia(value?.userTransactionFees), [value?.userTransactionFees]);
+  const userTransactionFees = useMemo(() => {
+    const val = BigInt(value.userTransactionFees.round().toString());
+    return mojo_to_chia(val);
+  }, [value.userTransactionFees]);
 
   return (
     <FarmCard

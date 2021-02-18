@@ -11,14 +11,17 @@ export default function FarmCardTotalChiaFarmed() {
   const value = computeStatistics(wallets);
   const loading = !wallets;
 
-  const total = useMemo((): number => mojo_to_chia(value?.totalChia), [value?.totalChia]);
+  const totalChiaFarmed = useMemo(() => {
+    const val = BigInt(value.totalChiaFarmed.round().toString());
+    return mojo_to_chia(val);
+  }, [value.totalChiaFarmed]);
 
   return (
     <FarmCard
       title={
         <Trans>Total Chia Farmed</Trans>
       }
-      value={total}
+      value={totalChiaFarmed}
       loading={loading}
     />
   );

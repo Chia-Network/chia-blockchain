@@ -11,7 +11,10 @@ export default function FarmCardBlockRewards() {
   const value = computeStatistics(wallets);
   const loading = !wallets;
 
-  const blockRewards = useMemo((): number => mojo_to_chia(value?.blockRewards), [value?.blockRewards]);
+  const blockRewards = useMemo(() => {
+    const val = BigInt(value.blockRewards.round().toString());
+    return mojo_to_chia(val);
+  }, [value.blockRewards]);
 
   return (
     <FarmCard

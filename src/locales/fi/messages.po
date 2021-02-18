@@ -1291,13 +1291,21 @@ msgstr "Synkronoi...."
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkronoi {progress}/{tip}"
 
+#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+msgid "TXCH Block Rewards"
+msgstr ""
+
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
-msgid "TXCH Farming Rewards"
-msgstr "XCH Tuotantopalkkiot"
+#~ msgid "TXCH Farming Rewards"
+#~ msgstr "XCH Tuotantopalkkiot"
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:12
-msgid "TXCH Fees Collected"
-msgstr "Perityt TXCH veloitukset"
+#~ msgid "TXCH Fees Collected"
+#~ msgstr "Perityt TXCH veloitukset"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:12
+msgid "TXCH User Fees"
+msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1584,6 +1592,10 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+msgid "Without fees"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"

@@ -1,23 +1,23 @@
+import Big from 'big.js';
 import TransactionType from '../constants/TransactionType';
 import type Wallet from '../types/Wallet';
 
 export default function computeStatistics(
   wallets: Wallet[],
 ): {
-  totalChia: BigInt;
+  totalChiaFarmed: Big;
   biggestHeight: number;
   biggestRewardHeight: number;
-  poolCoins: BigInt;
-  farmerCoins: BigInt;
-  totalBlockRewards: BigInt;
-  userTransactionFees: BigInt;
-  blockRewards: BigInt;
+  poolCoins: Big;
+  farmerCoins: Big;
+  totalBlockRewards: Big;
+  userTransactionFees: Big;
+  blockRewards: Big;
 } {
-  let totalChia = BigInt(0);
   let biggestHeight = 0;
   let biggestRewardHeight = 0;
-  let poolCoins = BigInt(0);
-  let farmerCoins = BigInt(0);
+  let poolCoins = Big(0);
+  let farmerCoins = Big(0);
 
   wallets.forEach((wallet) => {
     if (!wallet) {
@@ -40,14 +40,10 @@ export default function computeStatistics(
         TransactionType.FEE_REWARD,
       ].includes(tx.type);
 
-      totalChia += BigInt(amount);
-
-      if (type === TransactionType.OUTGOING) {
-        totalChia -= BigInt(amount);
-      } else if (type === TransactionType.COINBASE_REWARD) {
-        poolCoins += BigInt(amount);
+      if (type === TransactionType.COINBASE_REWARD) {
+        poolCoins = poolCoins.plus(amount);
       } else if (type === TransactionType.FEE_REWARD) {
-        farmerCoins += BigInt(amount);
+        farmerCoins = farmerCoins.plus(amount);
       }
 
       if (confirmedAtHeight > biggestHeight) {
@@ -60,12 +56,13 @@ export default function computeStatistics(
     });
   });
 
-  const totalBlockRewards = poolCoins * BigInt(8 / 7);
-  const userTransactionFees = farmerCoins - BigInt(1 / 8) * totalBlockRewards;
-  const blockRewards = poolCoins + farmerCoins - userTransactionFees;
+  const totalChiaFarmed = poolCoins.plus(farmerCoins);
+  const totalBlockRewards = Big(poolCoins).times(8).div(7);
+  const userTransactionFees = Big(farmerCoins).minus(Big(totalBlockRewards).div(8));
+  const blockRewards = Big(poolCoins).plus(farmerCoins).minus(userTransactionFees);
 
   return {
-    totalChia,
+    totalChiaFarmed,
     biggestHeight,
     biggestRewardHeight,
     poolCoins,

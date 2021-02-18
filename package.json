@@ -33,6 +33,7 @@
     "@rehooks/local-storage": "^2.4.0",
     "about-window": "^1.13.4",
     "bech32": "^2.0.0",
+    "big.js": "^6.0.3",
     "byte-size": "^7.0.0",
     "bytes-iec": "^3.1.1",
     "connected-react-router": "^6.8.0",
@@ -67,6 +68,7 @@
   "devDependencies": {
     "@babel/core": "^7.12.16",
     "@lingui/cli": "^3.5.1",
+    "@types/big.js": "^6.0.2",
     "@types/jest": "^26.0.20",
     "@types/lingui__macro": "^2.7.4",
     "@types/lingui__react": "^2.8.3",
