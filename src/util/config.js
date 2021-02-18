@@ -1,6 +1,5 @@
 const yaml = require('js-yaml');
 const fs = require('fs');
-const semver = require('semver');
 const os = require('os');
 const path = require('path');
 
@@ -15,18 +14,6 @@ function loadConfig(version) {
     // finding the right config file uses this precedence
     // 1) CHIA_ROOT environment variable
     // 2) version passed in and determined by the `chia version` call
-    // 3) the version in package.json
-
-    if (version == null) {
-      // no version was passed in so get the semver out of package.json and format for chia version approach
-      const sv = semver.parse(require('../../package.json').version);
-      version = sv.version;
-
-      // package major will be 0 until release
-      if (sv.major == 0) {
-        version = `beta-0.1.${sv.patch}`;
-      }
-    }
 
     // check if CHIA_ROOT is set. it overrides everything else
     const config_root_dir =
