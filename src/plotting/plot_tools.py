@@ -12,11 +12,7 @@ from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
-<<<<<<< HEAD
 from src.types.blockchain_format.sized_bytes import bytes32
-=======
-from src.types.sized_bytes import bytes32
->>>>>>> 367008599da67c80e5550bff644c0635841f87d2
 
 
 log = logging.getLogger(__name__)
@@ -145,6 +141,7 @@ def load_plots(
     farmer_public_keys: Optional[List[G1Element]],
     pool_public_keys: Optional[List[G1Element]],
     match_str: Optional[str],
+    show_memo: bool,
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
@@ -250,10 +247,13 @@ def load_plots(
                 continue
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
-            # Uncomment next three lines if memo is needed for dev debug
-            plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, local_master_sk)
-            plot_memo_str: str = plot_memo.hex()
-            log.info(f"Memo: {plot_memo_str}")
+            if show_memo:
+                if pool_contract_puzzle_hash is None:
+                    plot_memo: bytes32 = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
+                else:
+                    plot_memo: bytes32 = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
+                plot_memo_str: str = plot_memo.hex()
+                log.info(f"Memo: {plot_memo_str}")
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"

@@ -35,6 +35,8 @@ def check_plots(args, root_path):
         log.warning("Checking for duplicate Plot IDs")
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
+    show_memo: bool = args.debug_show_memo
+
     if args.list_duplicates:
         plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config["harvester"])
         all_filenames: List[Path] = []
@@ -56,6 +58,7 @@ def check_plots(args, root_path):
         pks,
         pool_public_keys,
         match_str,
+        show_memo,
         root_path,
         open_no_key_filenames=True,
     )
