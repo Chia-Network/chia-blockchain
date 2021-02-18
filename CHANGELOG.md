@@ -6,18 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## 1.0rc1 aka Release Candidate 1 - 2021-02-17
 
 ### Added
-- 'chia wallet get_transactions' in the command line to see your transactions
-- 'chia wallet show' also shows your wallet's height
+
+- This is the first release in our release candidate series. There are still a few things that will change at the edges but the blockchain, clvm, and chialisp are in release form.
+- 'chia wallet get_transactions' in the command line to see your transactions.
+- 'chia wallet show' also shows your wallet's height.
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
 validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
 
 ### Changed
-- Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This affectes the RPC, now
-all fields that referred to sub blocks are changed to blocks
-- 'chia wallet send' now takes in TXCH or XCH as units instead of mojos
+
+- Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This effects the RPC, now
+all fields that referred to sub blocks are changed to blocks.
+- 'chia wallet send' now takes in TXCH or XCH as units instead of mojos.
+- Transactions have been further sped up.
+- The blockchain database has more careful validation.
+
+### Fixed
+
+- We updated chiapos to hopefully address some harvester crashes when moving plot files.
+- Improved validation of overflow blocks.
 
 
 ## [1.0beta27] aka Beta 1.27 - 2021-02-11
