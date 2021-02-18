@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 22:53\n"
+"PO-Revision-Date: 2021-02-18 23:59\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1291,7 +1291,7 @@ msgstr "Synkar"
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkroniserar {progress}/{tip}"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
 msgstr ""
 
@@ -1304,7 +1304,11 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:12
-msgid "TXCH User Fees"
+#~ msgid "TXCH User Fees"
+#~ msgstr "TXCH User Fees"
+
+#: src/components/farm/card/FarmCardUserFees.tsx:15
+msgid "TXCH User Transaction Fees"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
@@ -1419,7 +1423,7 @@ msgstr "Till"
 msgid "Total Balance"
 msgstr "Totalt saldo"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 msgid "Total Chia Farmed"
 msgstr "Totalt antal Chia som odlats"
 
@@ -1593,7 +1597,7 @@ msgstr "Välkommen! Följande ord används för din plånboks säkerhetskopia. U
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:12
+#: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
 msgstr ""
 
