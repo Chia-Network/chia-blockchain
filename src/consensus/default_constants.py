@@ -29,10 +29,10 @@ testnet_kwargs = {
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     "GENESIS_CHALLENGE": bytes32([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "63e0cb818a14ddb94df77dbeabd896d50d8fb3d73783380bc91f26a6e9d32ee5"
+        "f15f4e19248642ce92515ffb05d37fc0fadc30eb95d69b8800ae78e34c0e5d0f"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "9439e68fc2ac5824562d6b010035505fd63b2d3b8aad9c73e631bc05946f88cd"
+        "0dc09d07e7cef3b57a42e08ec89a59277ef579e6833776937f601e21ec305dba"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
