@@ -82,7 +82,7 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=3)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=30)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK

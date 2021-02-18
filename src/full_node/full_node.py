@@ -1281,7 +1281,6 @@ class FullNode:
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
-                logging.getLogger(__name__).warning("3")
                 return None, True
             else:
                 self.log.info(
