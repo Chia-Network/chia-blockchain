@@ -15,6 +15,8 @@ for setuptools_scm/PEP 440 reasons.
 - 'chia wallet show' also shows your wallet's height.
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
 validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
+- Added `chia plots check --debug-show-memo` to display memo in INFO log to allow recreating the same exact plot for debugging purposes. PR @eFishCent
+- Added `chia plots check --challenge-start [start]` that begins at a different `[start]` for `-n [challenges]`. Useful when you want to do more detailed checks on plots without restarting from lower challenge values you already have done. PR @eFishCent
 
 ### Changed
 

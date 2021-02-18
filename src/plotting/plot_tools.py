@@ -140,6 +140,7 @@ def load_plots(
     farmer_public_keys: Optional[List[G1Element]],
     pool_public_keys: Optional[List[G1Element]],
     match_str: Optional[str],
+    show_memo: bool,
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
@@ -244,6 +245,15 @@ def load_plots(
                 failed_to_open_filenames[filename] = int(time.time())
                 continue
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
+
+            if show_memo:
+                plot_memo: bytes32
+                if pool_contract_puzzle_hash is None:
+                    plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
+                else:
+                    plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
+                plot_memo_str: str = plot_memo.hex()
+                log.info(f"Memo: {plot_memo_str}")
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
