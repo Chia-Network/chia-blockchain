@@ -2,7 +2,6 @@ from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Dict
 
-from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
