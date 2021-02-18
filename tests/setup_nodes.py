@@ -68,7 +68,7 @@ async def setup_full_node(
     config["rpc_port"] = port + 1000
 
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, consensus_constants, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     else:
         kwargs = service_kwargs_for_full_node(local_bt.root_path, config, consensus_constants)
 
