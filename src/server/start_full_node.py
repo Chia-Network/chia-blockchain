@@ -1,3 +1,4 @@
+import logging
 import pathlib
 
 from multiprocessing import freeze_support
@@ -18,6 +19,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 "".encode("idna")
 
 SERVICE_NAME = "full_node"
+log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node(

@@ -1,3 +1,4 @@
+import logging
 import pathlib
 
 from typing import Dict
@@ -19,6 +20,9 @@ from src.server.start_service import run_service
 SERVICE_NAME = "timelord"
 
 
+log = logging.getLogger(__name__)
+
+
 def service_kwargs_for_timelord(
     root_path: pathlib.Path,
     config: Dict,
@@ -27,7 +31,7 @@ def service_kwargs_for_timelord(
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
     overrides = config["network_overrides"][config["selected_network"]]
-    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    updated_constants = constants.replace_str_to_bytes(**overrides)
 
     node = Timelord(config, updated_constants)
     peer_api = TimelordAPI(node)
