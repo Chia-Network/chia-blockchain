@@ -15,7 +15,7 @@ export default function FarmCardUserFees() {
 
   return (
     <FarmCard
-      title={<Trans>TXCH User Fees</Trans>}
+      title={<Trans>TXCH User Transaction Fees</Trans>}
       value={userTransactionFees}
       loading={loading}
     />
