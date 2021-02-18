@@ -29,12 +29,12 @@ def check_plots(args, root_path):
         num = 30
 
     if args.challenge_start is not None:
-        num_start: int = args.challenge_start
+        num_start = args.challenge_start
         if num_start > num:
             log.warning(f"Start challenge {num_start} > {num} challenges. Setting start challenge = {num}")
             num_start = num
     else:
-        num_start: int = 0
+        num_start = 0
 
     if args.grep_string is not None:
         match_str = args.grep_string
