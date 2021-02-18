@@ -404,7 +404,7 @@ def chia_init(root_path: Path):
         b27_windows_path = Path(os.path.expanduser("~/.chia/beta-0.1.27"))
         if b27_windows_path.is_dir():
             b27_new_windows_path = Path(os.path.expanduser("~/.chia/beta-1.0b27"))
-            b27_windows_path.symlink_to(b27_new_windows_path, target_is_directory=True)
+            b27_new_windows_path.symlink_to(b27_windows_path, target_is_directory=True)
 
         old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % version_number))
         manifest = MANIFEST
