@@ -16,6 +16,7 @@ export default function FarmCardBlockRewards() {
   return (
     <FarmCard
       title={<Trans>TXCH Block Rewards</Trans>}
+      description={<Trans>Without fees</Trans>}
       value={blockRewards}
       loading={loading}
     />
