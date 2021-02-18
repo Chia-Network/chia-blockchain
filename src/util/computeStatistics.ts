@@ -60,8 +60,8 @@ export default function computeStatistics(
     });
   });
 
-  const totalBlockRewards = poolCoins * BigInt(8/7);
-  const userTransactionFees = farmerCoins - (BigInt(1/8) * totalBlockRewards);
+  const totalBlockRewards = poolCoins * BigInt(8 / 7);
+  const userTransactionFees = farmerCoins - BigInt(1 / 8) * totalBlockRewards;
   const blockRewards = poolCoins + farmerCoins - userTransactionFees;
 
   return {
