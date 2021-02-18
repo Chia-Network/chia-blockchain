@@ -273,7 +273,7 @@ class TestCoinStore:
         pool_coin, farmer_coin = get_future_reward_coins(blocks[-2])
 
         coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
-        coins_pool = await coin_store.get_coin_records_by_puzzle_hash(pool_coin.puzzle_hash)
+        # coins_pool = await coin_store.get_coin_records_by_puzzle_hash(pool_coin.puzzle_hash)
         assert len(coins_farmer) == num_blocks - 2
         # Mariano mentions that we create some test plots with puzzle hash, and some with public keys
         # assert len(coins_pool) == num_blocks - 2
