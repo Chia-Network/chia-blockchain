@@ -375,8 +375,9 @@ class FullNodeAPI:
         return None
 
     @api_request
+    @peer_required
     async def new_signage_point_or_end_of_sub_slot(
-        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot
+        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -397,11 +398,47 @@ class FullNodeAPI:
 
         if new_sp.index_from_challenge == 0 and new_sp.prev_challenge_hash is not None:
             if self.full_node.full_node_store.get_sub_slot(new_sp.prev_challenge_hash) is None:
-                # If this is an end of sub slot, and we don't have the prev, request the prev instead
-                full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                    new_sp.prev_challenge_hash, uint8(0), new_sp.last_rc_infusion
-                )
-                return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
+                collected_eos = []
+                challenge_hash_to_request = new_sp.challenge_hash
+                last_rc = new_sp.last_rc_infusion
+                num_non_empty_sub_slots_seen = 0
+                for _ in range(30):
+                    if num_non_empty_sub_slots_seen >= 3:
+                        self.log.debug("Diverged from peer. Don't have the same sub-blocks")
+                        return None
+                    # If this is an end of sub slot, and we don't have the prev, request the prev instead
+                    # We want to catch up to the latest slot so we can receive signage points
+                    full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                        challenge_hash_to_request, uint8(0), last_rc
+                    )
+                    response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
+                    if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
+                        self.full_node.log.warning(f"Invalid response for slot {response}")
+                        return None
+                    collected_eos.append(response)
+                    if (
+                        self.full_node.full_node_store.get_sub_slot(
+                            response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                        )
+                        is not None
+                        or response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                        == self.full_node.constants.GENESIS_CHALLENGE
+                    ):
+                        for eos in reversed(collected_eos):
+                            await self.respond_end_of_sub_slot(eos, peer)
+                        return None
+                    if (
+                        response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
+                        != response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.number_of_iterations
+                    ):
+                        num_non_empty_sub_slots_seen += 1
+                    challenge_hash_to_request = (
+                        response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                    )
+                    last_rc = response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge
+                self.full_node.log.warning("Failed to catch up in sub-slots")
+                return None
+
         if new_sp.index_from_challenge > 0:
             if (
                 new_sp.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE

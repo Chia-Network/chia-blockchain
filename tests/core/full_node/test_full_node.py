@@ -138,6 +138,12 @@ async def setup_five_nodes():
         yield _
 
 
+@pytest.fixture(scope="function")
+async def setup_two_nodes():
+    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
+        yield _
+
+
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_inbound_connection_limit(self, setup_five_nodes):
@@ -765,7 +771,9 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
-        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-3]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-2]))
         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]))
 
         blockchain = full_node_1.full_node.blockchain
@@ -781,11 +789,68 @@ class TestFullNodeProtocol:
             peak.sub_slot_iters,
         )
 
+        peer = await connect_and_get_peer(server_1, server_2)
         res = await full_node_1.new_signage_point_or_end_of_sub_slot(
-            fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge)
+            fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge), peer
         )
         assert res.type == ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot.value
         assert fnp.RequestSignagePointOrEndOfSubSlot.from_bytes(res.data).index_from_challenge == uint8(11)
+
+        for block in blocks:
+            await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
+
+        num_slots = 20
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=num_slots)
+        slots = blocks[-1].finished_sub_slots
+
+        assert len(full_node_2.full_node.full_node_store.finished_sub_slots) <= 2
+        assert len(full_node_2.full_node.full_node_store.finished_sub_slots) <= 2
+
+        for slot in slots[:-1]:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+        assert len(full_node_1.full_node.full_node_store.finished_sub_slots) >= num_slots - 1
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12315)
+        dummy_peer = server_1.all_connections[dummy_node_id]
+        await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slots[-1]), dummy_peer)
+
+        assert len(full_node_1.full_node.full_node_store.finished_sub_slots) >= num_slots
+
+        def caught_up_slots():
+            return len(full_node_2.full_node.full_node_store.finished_sub_slots) >= num_slots
+
+        await time_out_assert(20, caught_up_slots)
+
+    @pytest.mark.asyncio
+    async def test_slot_catch_up_genesis(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+
+        peer = await connect_and_get_peer(server_1, server_2)
+        num_slots = 20
+        blocks = bt.get_consecutive_blocks(1, skip_slots=num_slots)
+        slots = blocks[-1].finished_sub_slots
+
+        assert len(full_node_2.full_node.full_node_store.finished_sub_slots) <= 2
+        assert len(full_node_2.full_node.full_node_store.finished_sub_slots) <= 2
+
+        for slot in slots[:-1]:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+        assert len(full_node_1.full_node.full_node_store.finished_sub_slots) >= num_slots - 1
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12315)
+        dummy_peer = server_1.all_connections[dummy_node_id]
+        await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slots[-1]), dummy_peer)
+
+        assert len(full_node_1.full_node.full_node_store.finished_sub_slots) >= num_slots
+
+        def caught_up_slots():
+            return len(full_node_2.full_node.full_node_store.finished_sub_slots) >= num_slots
+
+        await time_out_assert(20, caught_up_slots)
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):

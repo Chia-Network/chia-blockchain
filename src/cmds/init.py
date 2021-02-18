@@ -400,7 +400,12 @@ def chia_init(root_path: Path):
     ]
 
     # Version 19 is the first version that used the bech32m addresses
-    for version_number in range(chia_minor_release_number() - 1, 18, -1):
+    for version_number in range(27, 18, -1):
+        b27_windows_path = Path(os.path.expanduser("~/.chia/beta-0.1.27"))
+        if b27_windows_path.is_dir():
+            b27_new_windows_path = Path(os.path.expanduser("~/.chia/beta-1.0.b27"))
+            b27_windows_path.symlink_to(b27_new_windows_path, target_is_directory=True)
+
         old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % version_number))
         manifest = MANIFEST
         print(f"Checking {old_path}")
