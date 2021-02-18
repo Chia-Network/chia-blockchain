@@ -3,8 +3,7 @@
       wallet-coin-primary-input
       wallet-coin-amount)
 
-    (defconstant ASSERT_ANNOUNCEMENT 52)
-    (defconstant ASSERT_MY_COIN_ID 53)
+    (include condition_codes.clvm)
 
     (defun sha256tree (tree)
         (if (l tree)

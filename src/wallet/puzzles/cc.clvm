@@ -77,10 +77,7 @@
 
      ;;;;; start library code
 
-     (defconstant CREATE_COIN 51)
-     (defconstant CREATE_ANNOUNCEMENT 60)
-     (defconstant ASSERT_ANNOUNCEMENT 52)
-     (defconstant ASSERT_MY_COIN_ID 53)
+     (include condition_codes.clvm)
 
      (defmacro assert items
          (if (r items)

@@ -1,0 +1,18 @@
+; See src/types/condition_opcodes.py
+
+(
+    (defconstant AGG_SIG 50)
+    (defconstant CREATE_COIN 51)
+    (defconstant ASSERT_ANNOUNCEMENT 52)
+    (defconstant ASSERT_MY_COIN_ID 53)
+
+    (defconstant ASSERT_RELATIVE_TIME_EXCEEDS 54)
+    (defconstant ASSERT_BLOCK_INDEX_EXCEEDS 55)
+    (defconstant ASSERT_BLOCK_AGE_EXCEEDS 56)
+
+    (defconstant AGG_SIG_ME 57)
+    (defconstant ASSERT_FEE 58)
+    (defconstant ASSERT_TIME_EXCEEDS 59)
+
+    (defconstant CREATE_ANNOUNCEMENT 60)
+)

@@ -47,7 +47,7 @@
         )
     )
 
-    (defconstant AGG_SIG_ME 57)
+    (include condition_codes.clvm)
 
     ;; hash a tree
     ;; This is used to calculate a puzzle hash given a puzzle program.
