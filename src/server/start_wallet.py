@@ -79,6 +79,7 @@ def main():
         constants = test_constants
         current = config["database_path"]
         config["database_path"] = f"{current}_simulation"
+        config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
     keychain = Keychain(testing=False)
