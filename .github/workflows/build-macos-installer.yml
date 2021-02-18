@@ -85,11 +85,11 @@ jobs:
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
     - name: Checkout GUI
-      uses: actions/checkout@v2
-      with:
-        repository: 'Chia-Network/chia-blockchain-gui'
-        ref: 'main'
-        path: './chia-blockchain-gui'
+      run: |
+        echo "Running git submodule update --init --recursive."
+        git submodule update --init --recursive
+        cd chia-blockchain-gui
+        git status
 
     - name: Run install script
       env:
