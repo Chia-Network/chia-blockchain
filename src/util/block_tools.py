@@ -34,6 +34,7 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.plotting.plot_tools import load_plots, PlotInfo
 from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.coin import Coin
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.blockchain_format.pool_target import PoolTarget
@@ -376,8 +377,13 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
+                        additions = None
+                        removals = None
                         if transaction_data_included:
                             transaction_data = None
+                        if transaction_data is not None and not transaction_data_included:
+                            additions = transaction_data.additions()
+                            removals = transaction_data.removals()
                         assert start_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
@@ -404,6 +410,8 @@ class BlockTools:
                             start_height,
                             time_per_block,
                             transaction_data,
+                            additions,
+                            removals,
                             height_to_hash,
                             difficulty,
                             required_iters,
@@ -550,9 +558,13 @@ class BlockTools:
             latest_block_eos = latest_block
             overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash()
-
+            additions = None
+            removals = None
             if transaction_data_included:
                 transaction_data = None
+            if transaction_data is not None and not transaction_data_included:
+                additions = transaction_data.additions()
+                removals = transaction_data.removals()
             sub_slots_finished += 1
             log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
@@ -622,6 +634,8 @@ class BlockTools:
                             start_height,
                             time_per_block,
                             transaction_data,
+                            additions,
+                            removals,
                             height_to_hash,
                             difficulty,
                             required_iters,
@@ -1166,6 +1180,8 @@ def get_full_block_and_sub_record(
     start_height: uint32,
     time_per_block: float,
     transaction_data: Optional[SpendBundle],
+    additions: Optional[List[Coin]],
+    removals: Optional[List[Coin]],
     height_to_hash: Dict[uint32, bytes32],
     difficulty: uint64,
     required_iters: uint64,
@@ -1199,6 +1215,8 @@ def get_full_block_and_sub_record(
         BlockCache(blocks),
         seed,
         transaction_data,
+        additions,
+        removals,
         prev_block,
         finished_sub_slots,
     )

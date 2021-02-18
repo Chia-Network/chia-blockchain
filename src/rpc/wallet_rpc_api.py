@@ -372,6 +372,7 @@ class WalletRpcApi:
         pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
         spendable_balance = await wallet.get_spendable_balance(unspent_records)
         pending_change = await wallet.get_pending_change_balance()
+        max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
         wallet_balance = {
             "wallet_id": wallet_id,
@@ -379,6 +380,7 @@ class WalletRpcApi:
             "unconfirmed_wallet_balance": pending_balance,
             "spendable_balance": spendable_balance,
             "pending_change": pending_change,
+            "max_send_amount": max_send_amount,
         }
 
         return {"wallet_balance": wallet_balance}

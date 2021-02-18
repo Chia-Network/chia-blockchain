@@ -346,6 +346,10 @@ class RLWallet:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id())
         return spendable_am
 
+    async def get_max_send_amount(self, records=None):
+        # Rate limited wallet is a singleton, max send is same as spendable
+        return await self.get_spendable_balance()
+
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
         addition_amount = 0

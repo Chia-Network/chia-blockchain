@@ -11,17 +11,21 @@ from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 import logging
 
+from src.util.ints import uint64
+
 log = logging.getLogger(__name__)
 
 
 def final_eos_is_already_included(
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
     blocks: BlockchainInterface,
+    sub_slot_iters: uint64,
 ) -> bool:
     """
     Args:
         header_block: An overflow block, with potentially missing information about the new sub slot
         blocks: all blocks that have been included before header_block
+        sub_slot_iters: sub_slot_iters at the header_block
 
     Returns: True iff the missing sub slot was already included in a previous block. Returns False if the sub
     slot was not included yet, and therefore it is the responsibility of this block to include it
@@ -31,9 +35,11 @@ def final_eos_is_already_included(
         # We already have an included empty sub slot, which means the prev block is 2 sub slots behind.
         return False
     curr: BlockRecord = blocks.block_record(header_block.prev_header_hash)
-    seen_overflow_block = curr.overflow
+
+    # We also check if curr is close to header_block, which means it's in the same sub slot
+    seen_overflow_block = curr.overflow and (header_block.total_iters - curr.total_iters < sub_slot_iters // 2)
     while not curr.first_in_sub_slot and not curr.height == 0:
-        if curr.overflow:
+        if curr.overflow and header_block.total_iters - curr.total_iters < sub_slot_iters // 2:
             seen_overflow_block = True
         curr = blocks.block_record(curr.prev_hash)
 
