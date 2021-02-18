@@ -144,9 +144,7 @@ class TestWalletRpc:
 
             wallets = await client.get_wallets()
             assert len(wallets) == 1
-            log.warning(f"Wallets: {wallets}")
             balance = await client.get_wallet_balance(wallets[0]["id"])
-            log.warning(f"Balance: {balance}")
             assert balance["unconfirmed_wallet_balance"] == 0
 
             test_wallet_backup_path = Path("test_wallet_backup_file")

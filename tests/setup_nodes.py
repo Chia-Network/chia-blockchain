@@ -113,8 +113,10 @@ async def setup_wallet_node(
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
     db_path_key_suffix = str(first_pk.get_fingerprint())
-    db_name = f"test-wallet-db-{port}"
-    db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
+    db_name = f"test-wallet-db-{port}-KEY.sqlite"
+    db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
+    db_path = bt.root_path / db_path_replaced
+
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_name)
