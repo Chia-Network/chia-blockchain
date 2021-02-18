@@ -6,15 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.0rc1 aka Release Candidate 1 - 2021-02-17
+## 1.0rc1 aka Release Candidate 1 - 2021-02-18
 
 ### Added
 
-- This is the first release in our release candidate series. There are still a few things that will change at the edges but the blockchain, clvm, and chialisp are in release form.
-- 'chia wallet get_transactions' in the command line to see your transactions.
-- 'chia wallet show' also shows your wallet's height.
+- This is the first release in our release candidate series. There are still a few things that will change at the edges but the blockchain, clvm, and chialisp are in release form. We have one major change to chialisp/clvm that we have chosen to schedule for the next release as in this release we're breaking the way q/quote works. We also have one more revision to the VDF that will decrease the sizes of the proofs of time. We expect a few more releases in the release candidate series.
+- USe 'chia wallet get_transactions' in the command line to see your transactions.
+- 'chia wallet show' now shows your wallet's height.
+- Last Attempted Proof is now above Latest Block Challenge on the Farm page of the GUI.
+- The GUI now detects duplicate plots and also only counts unique plots and unique plot size.
+- We have integrated with crowdin to make it easier to translate the GUI. Check out [Chia Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
+- We have added Italian, Russian, and Finnish. More to come soon.
+- There is now remote UI support. [Documents](https://github.com/Chia-Network/chia-blockchain-gui/blob/main/remote.md) will temporarily live in the repository but will move to the wiki shortly. Thanks to @dkackman for this excellent addition!
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
-validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
+validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards. Huge thanks to @eFishCent for this and all of the debugging work behind the scenes confirming that plot failures were machine errors and not bugs!
 
 ### Changed
 
@@ -24,10 +29,12 @@ all fields that referred to sub blocks are changed to blocks.
 - 'chia wallet send' now takes in TXCH or XCH as units instead of mojos.
 - Transactions have been further sped up.
 - The blockchain database has more careful validation.
+- The GUI is now using bech32m.
 
 ### Fixed
 
 - We updated chiapos to hopefully address some harvester crashes when moving plot files.
+- Many of the cards on the Farming page have had bugs addressed including last block farmed, block rewards, and user fees.
 - Improved validation of overflow blocks.
 
 
