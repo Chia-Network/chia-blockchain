@@ -16,4 +16,4 @@ def best_solution_program(bundle: SpendBundle) -> SerializedProgram:
     for coin_solution in bundle.coin_solutions:
         entry = [coin_solution.coin.name(), coin_solution.solution]
         r.append(entry)
-    return SerializedProgram.from_bytes(SExp.to([binutils.assemble("#q"), r]).as_bin())
+    return SerializedProgram.from_bytes(SExp.to((binutils.assemble("#q"), r)).as_bin())

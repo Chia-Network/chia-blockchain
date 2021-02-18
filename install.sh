@@ -11,6 +11,8 @@ fi
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
 	LSB_RELEASE=$(lsb_release -rs)
+	# In case Ubuntu minimal does not come with bc
+	if [ "$(which bc |wc -l)" -eq 0 ]; then sudo apt install bc -y; fi
 	# Mint 20.04 repsonds with 20 here so 20 instead of 20.04
 	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
 fi

@@ -23,12 +23,12 @@ all fields that referred to sub blocks are changed to blocks.
 - 'chia wallet send' now takes in TXCH or XCH as units instead of mojos.
 - Transactions have been further sped up.
 - The blockchain database has more careful validation.
+- Major CLVM semantics change: quoted CLVMObjects will now be represented as a single cons pair, with the quote opcode atom in the left cell, and the quoted value in the right. This breaks all clvm code using quote, and is a hard fork.
 
 ### Fixed
 
 - We updated chiapos to hopefully address some harvester crashes when moving plot files.
 - Improved validation of overflow blocks.
-
 
 ## [1.0beta27] aka Beta 1.27 - 2021-02-11
 
