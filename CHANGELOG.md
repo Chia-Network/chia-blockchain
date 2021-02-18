@@ -15,22 +15,21 @@ for setuptools_scm/PEP 440 reasons.
 - 'chia wallet show' also shows your wallet's height.
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
 validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
-- Added `chia plots check --debug-show-memo` to display memo in INFO log to allow recreating the same exact plot for debugging purposes. PR @eFishCent
-- Added `chia plots check --challenge-start [start]` that begins at a different `[start]` for `-n [challenges]`. Useful when you want to do more detailed checks on plots without restarting from lower challenge values you already have done. PR @eFishCent
 
 ### Changed
 
 - Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This effects the RPC, now
 all fields that referred to sub blocks are changed to blocks.
+- Base difficulty and weight have increased, so difficulty of "5" in the rc1 testnet will be equivalent to "21990232555520" in the previous testnet.
 - 'chia wallet send' now takes in TXCH or XCH as units instead of mojos.
 - Transactions have been further sped up.
 - The blockchain database has more careful validation.
-- Major CLVM semantics change: quoted CLVMObjects will now be represented as a single cons pair, with the quote opcode atom in the left cell, and the quoted value in the right. This breaks all clvm code using quote, and is a hard fork.
 
 ### Fixed
 
 - We updated chiapos to hopefully address some harvester crashes when moving plot files.
 - Improved validation of overflow blocks.
+
 
 ## [1.0beta27] aka Beta 1.27 - 2021-02-11
 
