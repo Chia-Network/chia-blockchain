@@ -1,5 +1,5 @@
 from setuptools_scm import get_version
-import sys
+import sys, os
 
 
 # example: 1.0b5.dev225
