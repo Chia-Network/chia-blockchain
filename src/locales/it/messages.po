@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-19 12:45\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -59,7 +59,7 @@ msgstr "Aggiungi Cartella Plot"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Aggiungi Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -170,7 +170,7 @@ msgstr "Compra"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "Wallet CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -204,7 +204,7 @@ msgstr "Hash Sfida"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Wallet Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -216,7 +216,7 @@ msgstr "Scegli la Dimensione del Plot"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Chiudi"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -245,11 +245,11 @@ msgstr "Colore:"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Monete Colorate"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Opzioni Monete Colorate"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -310,7 +310,7 @@ msgstr "Crea"
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Crea Wallet DID"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -344,15 +344,15 @@ msgstr "Crea una nuova chiave privata"
 
 #: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Crea wallet amministratore"
 
 #: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Crea nuova moneta colorata"
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
-msgstr ""
+msgstr "Crea wallet utente"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -360,7 +360,7 @@ msgstr "Crea un wallet per colore"
 
 #: src/components/wallet/create/WalletCreate.jsx:206
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Crea un wallet per un colore esistente"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -380,7 +380,7 @@ msgstr "Stato attuale dello scambio"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr ""
+msgstr "Wallet DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -435,11 +435,11 @@ msgstr "Difficoltà"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
-msgstr ""
+msgstr "Identità Distribuita"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Opzioni Identità Distribuita"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -693,7 +693,7 @@ msgstr "Ultime Sfide Blocchi"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
-msgstr ""
+msgstr "Caricando..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
@@ -982,7 +982,7 @@ msgstr "Dimensione Plot"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:27
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Il plot è un duplicato di {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
@@ -994,7 +994,7 @@ msgstr "Plot che hanno passato il filtro"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr "I plot sono delle spazio allocato sui tuoi dischi che viene usato per coltivare e guadagnare Chia. <0>Per saperne di più</0>"
+msgstr "I plot sono dello spazio allocato sui tuoi dischi che viene usato per coltivare e guadagnare Chia. <0>Per saperne di più</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
@@ -1065,7 +1065,7 @@ msgstr "Utilizzo massimo RAM"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr ""
+msgstr "Wallet RL (Velocità Limitata)"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1073,7 +1073,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:134
 msgid "Rate Limited"
-msgstr ""
+msgstr "Velocità Limitata"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
@@ -1082,7 +1082,7 @@ msgstr "Informazioni Velocità Limitata"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Opzioni Velocità Limitata"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
@@ -1095,7 +1095,7 @@ msgstr "Indirizzo per Ricevere"
 
 #: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Recupera wallet DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1148,7 +1148,7 @@ msgstr "Seleziona Cartella Temporanea"
 
 #: src/components/wallet/create/WalletCreate.jsx:112
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Seleziona Tipo di Wallet"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1293,7 +1293,7 @@ msgstr "Sincronizzando {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
-msgstr ""
+msgstr "Ricompense Blocco TXCH"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 #~ msgid "TXCH Farming Rewards"
@@ -1309,7 +1309,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:15
 msgid "TXCH User Transaction Fees"
-msgstr ""
+msgstr "Tasse Transazioni Utente TXCH"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1367,7 +1367,7 @@ msgstr "Questo è l'ammontare di Chia che puoi utilizzare attualmente per fare t
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "Questa è la modifica in sospeso, ovvero le monete di cambio che hai inviato a te stesso, ma non sono state ancora confermate."
+msgstr "Questa è la modifica in sospeso, ovvero le monete di cambio che hai inviato a te stesso, ma che non sono state ancora confermate."
 
 #: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
@@ -1506,7 +1506,7 @@ msgstr "Pubkey utente"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
-msgstr "Iterazioni Sotto Slot VDF"
+msgstr "Iterazioni Sottoslot VDF"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1599,7 +1599,7 @@ msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amminist
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
-msgstr ""
+msgstr "Senza tasse"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
@@ -1633,7 +1633,7 @@ msgstr "altezza:"
 
 #: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
-msgstr ""
+msgstr "non sincronizzato"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:98
