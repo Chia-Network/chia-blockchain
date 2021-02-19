@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-19 05:19\n"
+"PO-Revision-Date: 2021-02-19 06:39\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -51,7 +51,7 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "增加"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
@@ -72,7 +72,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:455
 #: src/components/wallet/standard/WalletStandard.tsx:383
 msgid "Address"
-msgstr ""
+msgstr "地址"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
 #: src/components/wallet/standard/WalletStandard.tsx:333
@@ -299,14 +299,14 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
 #: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "Copy"
-msgstr ""
+msgstr "複製"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "建立"
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
@@ -326,7 +326,7 @@ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
-msgstr ""
+msgstr "建立交易"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -352,7 +352,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
-msgstr ""
+msgstr "建立使用者錢包"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
