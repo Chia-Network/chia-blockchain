@@ -8,13 +8,13 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-19 04:17\n"
 "Last-Translator: \n"
-"Language-Team: Chinese Simplified\n"
+"Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
-"X-Crowdin-Language: zh-CN\n"
+"X-Crowdin-Language: zh-TW\n"
 "X-Crowdin-File: /dev/src/locales/en/messages.po\n"
 "X-Crowdin-File-ID: 72\n"
 
@@ -130,7 +130,7 @@ msgstr ""
 #: src/components/block/Block.jsx:141
 #: src/components/block/Block.jsx:318
 msgid "Block"
-msgstr ""
+msgstr "區塊"
 
 #: src/components/block/Block.jsx:226
 msgid "Block VDF Iterations"
@@ -150,13 +150,13 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:304
 msgid "Blocks"
-msgstr ""
+msgstr "區塊"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "瀏覽"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:49
 msgid "But you are currently farming <0/>"
@@ -166,7 +166,7 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "買"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
@@ -184,7 +184,7 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "取消"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
@@ -216,7 +216,7 @@ msgstr ""
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "關閉"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -229,7 +229,7 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "彩色"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
