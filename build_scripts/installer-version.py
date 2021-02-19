@@ -11,6 +11,7 @@ def main():
         windows = False
 
     scm_full_version = get_version(root="..", relative_to=__file__)
+    print(f"scm full version is: {scm_full_version}")
     left_full_version = scm_full_version.split("+")
 
     version = left_full_version[0].split(".")
