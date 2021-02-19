@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-19 10:14\n"
+"PO-Revision-Date: 2021-02-19 11:45\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -104,13 +104,13 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "上一步"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
 #: src/components/wallet/standard/WalletStandard.tsx:192
 msgid "Balance"
-msgstr ""
+msgstr "餘額"
 
 #: src/components/block/Block.jsx:302
 msgid "Base Farmer Reward Amount"
@@ -123,7 +123,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "已過5小時最佳預估值"
 
 #: src/components/block/Block.jsx:117
 #: src/components/block/Block.jsx:129
@@ -142,7 +142,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:335
 msgid "Block hash"
-msgstr ""
+msgstr "雜湊區塊"
 
 #: src/components/block/Block.jsx:144
 msgid "Block with hash {headerHash} does not exists."
@@ -220,7 +220,7 @@ msgstr "關閉"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "關閉此節點和伺服器"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -261,7 +261,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "連線"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
@@ -310,7 +310,7 @@ msgstr "建立"
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
-msgstr ""
+msgstr "建立DID錢包"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -372,7 +372,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "由我們創造"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -435,11 +435,11 @@ msgstr "難度"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
-msgstr ""
+msgstr "分散式識別"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "分散式識別選項"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -599,7 +599,7 @@ msgstr "高度"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:47
 msgid "Help translate"
-msgstr ""
+msgstr "協助翻譯"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
@@ -612,7 +612,7 @@ msgstr "歷史"
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "主機名稱"
 
 #: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "IP address"
@@ -620,7 +620,7 @@ msgstr "IP位址"
 
 #: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "IP address / host"
-msgstr ""
+msgstr "IP位址 / 主機"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
@@ -640,7 +640,7 @@ msgstr "進行中"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Incoming"
-msgstr ""
+msgstr "接收中"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Index"
@@ -677,7 +677,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
-msgstr ""
+msgstr "金鑰"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -747,7 +747,7 @@ msgstr "登入中"
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.jsx:99
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB 上傳/下傳"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
@@ -755,16 +755,16 @@ msgstr "分鐘"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
-msgstr ""
+msgstr "更多記憶體略微提高速度"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 msgid "My Pubkey"
-msgstr ""
+msgstr "我的公鑰"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
-msgstr ""
+msgstr "新位址"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
@@ -865,12 +865,12 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:37
 msgid "Pending"
-msgstr ""
+msgstr "確認中"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:601
 #: src/components/wallet/standard/WalletStandard.tsx:225
 msgid "Pending Balance"
-msgstr ""
+msgstr "確認中餘額"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:232
@@ -880,7 +880,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:592
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "確認中總餘額"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -892,7 +892,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "請輸入有效的初始金額"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
@@ -918,7 +918,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "請輸入有效的公鑰"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 #: src/components/wallet/standard/WalletStandard.tsx:274
@@ -1053,7 +1053,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "公鑰"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1112,11 +1112,11 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "儲存"
 
 #: src/components/fullNode/FullNode.jsx:342
 msgid "Search"
-msgstr ""
+msgstr "搜尋"
 
 #: src/components/fullNode/FullNode.jsx:330
 msgid "Search block by header hash"
@@ -1199,7 +1199,7 @@ msgstr "登入"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "可用餘額"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
@@ -1243,7 +1243,7 @@ msgstr "狀態"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "狀態"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1263,7 +1263,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Stripe Size"
-msgstr ""
+msgstr "等量"
 
 #: src/components/block/Block.jsx:199
 #~ msgid "Sub Block Height"
@@ -1275,7 +1275,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
 msgid "Submit"
-msgstr ""
+msgstr "確認"
 
 #: src/components/fullNode/FullNode.jsx:149
 msgid "Synced"
@@ -1403,7 +1403,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:105
 msgid "Time Created"
-msgstr ""
+msgstr "建立時間"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "Time this trade was created at this time"
@@ -1520,11 +1520,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
 #: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "View pending balances"
-msgstr ""
+msgstr "查看確認中餘額"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:295
 msgid "View pending balances..."
-msgstr ""
+msgstr "查看確認中餘額"
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1579,7 +1579,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:194
 msgid "Weight"
-msgstr ""
+msgstr "權重"
 
 #: src/components/block/Block.jsx:197
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
