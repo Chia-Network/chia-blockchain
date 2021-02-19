@@ -84,13 +84,6 @@ jobs:
         p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
-    - name: Checkout GUI
-      run: |
-        echo "Running git submodule update --init --recursive."
-        git submodule update --init --recursive
-        cd chia-blockchain-gui
-        git status
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
