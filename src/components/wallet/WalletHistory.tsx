@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { Typography } from '@material-ui/core';
+import { Box, Tooltip, Typography } from '@material-ui/core';
 import { useSelector } from 'react-redux';
-import { Card, Table } from '@chia/core';
+import { Card, CopyToClipboard, Flex, Table } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/components/Table/Table';
 import { mojo_to_chia_string, mojo_to_colouredcoin_string } from '../../util/chia';
@@ -26,8 +26,19 @@ const getCols = (type: WalletType) => [
   },
   {
     minWidth: '150px',
-    field: (row: Row) => row.to_address,
-    tooltip: true,
+    field: (row: Row) => (
+      <Tooltip 
+        title={(
+          <Flex alignItems="center" gap={1}>
+            <Box maxWidth={200}>{row.to_address}</Box>
+            <CopyToClipboard value={row.to_address} fontSize="small" />
+          </Flex>
+        )} 
+        interactive
+      >
+        <span>{row.to_address}</span>
+      </Tooltip>
+    ),
     title: <Trans>To</Trans>,
   },
   {
