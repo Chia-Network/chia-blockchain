@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-19 18:28\n"
+"PO-Revision-Date: 2021-02-19 19:25\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -24,11 +24,11 @@ msgstr "＊想更進一步探索 Chia 區塊鍵？看看開源開發者打造的
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "0 automatically chooses bucket count"
-msgstr ""
+msgstr "0 自動選擇 bucket 數量"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "取圖器是在實際存放圖區的機器上運作的服務。塊農和取圖器會與一個完整節點溝通以取得區塊鍵狀態。以下是你的取圖器與塊農網路 學習更多"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -36,7 +36,7 @@ msgstr "接受"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "接受於："
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -142,7 +142,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:335
 msgid "Block hash"
-msgstr "雜湊區塊"
+msgstr "區塊雜湊值"
 
 #: src/components/block/Block.jsx:144
 msgid "Block with hash {headerHash} does not exists."
