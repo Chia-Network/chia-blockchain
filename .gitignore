@@ -91,3 +91,5 @@ chia-blockchain-gui/build
 build_scripts/dist
 build_scripts/*.Dmg
 chia-blockchain-gui/src/locales/_build
+build_scripts\win_build
+build_scripts/win_build
