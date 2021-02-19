@@ -1,45 +1,44 @@
-/* global BigInt */
+import Big from 'big.js';
 
-/* DEPRECATED
-export function calculate_block_reward(height) {
+const MOJO_PER_CHIA = Big(1000000000000);
+const BLOCKS_PER_YEAR = 1681920;
+
+export function calculatePoolReward(height: number): Big {
   if (height === 0) {
-    return BigInt(500000000000000000);
+    return MOJO_PER_CHIA.times(21000000).times(7/8);
   }
-  return BigInt(14000000000000);
+  if (height < 3 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(2).times(7/8);
+  }
+  if (height < 6 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(1).times(7/8);
+  }
+  if (height < 9 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(0.5).times(7/8);
+  }
+  if (height < 12 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(0.25).times(7/8);
+  }
+
+  return MOJO_PER_CHIA.times(0.125).times(7/8);
 }
 
-export function calculate_base_fee(height) {
-  return BigInt(2000000000000);
-}
-*/
-
-export function calculatePoolReward(height: number): BigInt {
+export function calculateBaseFarmerReward(height: number): Big {
   if (height === 0) {
-    return BigInt(500000000000000000);
+    return MOJO_PER_CHIA.times(21000000).times(1/8);
   }
-  if (height < 2000) {
-    return BigInt(875000000000);
+  if (height < 3 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(2).times(1/8);
   }
-  if (height < 4000) {
-    return BigInt(875000000000);
+  if (height < 6 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(1).times(1/8);
   }
-  if (height < 6000) {
-    return BigInt(875000000000);
+  if (height < 9 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(0.5).times(1/8);
   }
-
-  return BigInt(875000000000);
-}
-
-export function calculateBaseFarmerReward(height: number): BigInt {
-  if (height < 2000) {
-    return BigInt(125000000000);
-  }
-  if (height < 4000) {
-    return BigInt(125000000000);
-  }
-  if (height < 6000) {
-    return BigInt(125000000000);
+  if (height < 12 * BLOCKS_PER_YEAR) {
+    return MOJO_PER_CHIA.times(0.25).times(1/8);
   }
 
-  return BigInt(125000000000);
+  return MOJO_PER_CHIA.times(0.125).times(1/8);
 }

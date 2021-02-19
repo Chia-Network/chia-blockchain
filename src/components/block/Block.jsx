@@ -17,7 +17,7 @@ import {
   getBlockRecord,
   getBlock,
 } from '../../modules/fullnodeMessages';
-import { chia_formatter } from '../../util/chia';
+import { chia_formatter, mojo_to_chia } from '../../util/chia';
 import { calculatePoolReward, calculateBaseFarmerReward } from '../../util/blockRewards';
 import LayoutMain from '../layout/LayoutMain';
 import toBech32m from '../../util/toBech32m';
@@ -154,21 +154,11 @@ export default function Block() {
     ? blockRecord.weight - prevBlockRecord.weight
     : blockRecord?.weight ?? 0;
 
-  const poolReward = chia_formatter(
-    Number.parseFloat(calculatePoolReward(blockRecord.height)),
-    'mojo',
-  ).to('chia').toString();
+  const poolReward = mojo_to_chia(calculatePoolReward(blockRecord.height));
+  const baseFarmerReward = mojo_to_chia(calculateBaseFarmerReward(blockRecord.height));
 
-  const baseFarmerReward = chia_formatter(
-    Number.parseFloat(calculateBaseFarmerReward(blockRecord.height)),
-    'mojo',
-  ).to('chia').toString();
-
-  const chia_fees = blockRecord.fees
-    ? chia_formatter(
-      Number.parseFloat(BigInt(blockRecord.fees)),
-      'mojo',
-    ).to('chia').toString()
+  const chiaFees = blockRecord.fees
+    ? mojo_to_chia(BigInt(blockRecord.fees))
     : '';
 
   const rows = [
@@ -304,7 +294,7 @@ export default function Block() {
     },
     {
       name: <Trans>Fees Amount</Trans>,
-      value: chia_fees ? `${chia_fees} TXCH` : '',
+      value: chiaFees ? `${chiaFees} TXCH` : '',
       tooltip: (
         <Trans>
           The total transactions fees in this block. Rewarded to the farmer.
