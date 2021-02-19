@@ -61,6 +61,9 @@ def make_parser(parser):
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
+    for k in do_not_migrate_keys:
+        if k in updated:
+            updated.pop(k)
     for k, v in default.items():
         ignore = False
         if k in do_not_migrate_keys:
@@ -402,6 +405,16 @@ def chia_init(root_path: Path):
     ]
 
     manifest = MANIFEST
+
+    # Migrates rc1
+    rc1_path = Path(os.path.expanduser("~/.chia/1.0rc1"))
+    if rc1_path.is_dir():
+        r = migrate_from(rc1_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)
+        if r:
+            check_keys(root_path)
+            return 0
+
+    # Migrates windows beta27
     b27_windows_path = Path(os.path.expanduser("~/.chia/beta-0.1.27"))
     if b27_windows_path.is_dir():
         r = migrate_from(b27_windows_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)
