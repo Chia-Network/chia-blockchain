@@ -13,7 +13,6 @@ for setuptools_scm/PEP 440 reasons.
 - This is an errata release for Release Candidate 1. There were a couple of things that did not smoothly migrate from the Beta versions. Please make sure you also consult the [release notes for RC-1](https://github.com/Chia-Network/chia-blockchain/releases/tag/1.0rc1) was well.
 - Incorrect older spend to addresses were being migrated from Beta 27. This would send farming rewards to un-spendable coins.
 - Netspace was not calculating properly in RC-1.
-- The Windows installer was building with the wrong version number.
 - @eFishCent didn't get correct credit in the RC 1 release notes. They have been updated below to be correct.
 
 ## 1.0rc1 aka Release Candidate 1 - 2021-02-18
