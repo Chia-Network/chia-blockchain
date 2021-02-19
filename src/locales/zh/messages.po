@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-19 07:38\n"
+"PO-Revision-Date: 2021-02-19 09:00\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -72,7 +72,7 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:455
 #: src/components/wallet/standard/WalletStandard.tsx:383
 msgid "Address"
-msgstr "地址"
+msgstr "位址"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
 #: src/components/wallet/standard/WalletStandard.tsx:333
