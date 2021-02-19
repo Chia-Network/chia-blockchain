@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-19 20:40\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -265,7 +265,7 @@ msgstr "Yhdistä"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr "Yhdistä muihin verkkosolmuihin"
+msgstr "Yhdistä muihin verkkonoodeihin"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:162
@@ -484,7 +484,7 @@ msgstr "Kaikkien farmien sisältämien plot-tiedostojen arvoitu yhteiskoko"
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Expected Time to Win"
-msgstr "Laskennallinen Aika Palkkioon"
+msgstr "Laskennallinen Palkkioväli"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -569,11 +569,11 @@ msgstr "Valmis"
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
 msgid "Full Node"
-msgstr "Verkkosolmu"
+msgstr "Verkkonoodi"
 
 #: src/components/fullNode/FullNode.jsx:265
 msgid "Full Node Status"
-msgstr "Verkkosolmun Tila"
+msgstr "Verkkonoodin Tila"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -796,7 +796,7 @@ msgstr "Ei aiempia transaktioita"
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Node ID"
-msgstr "Solmun tunnus"
+msgstr "Noodin tunnus"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:43
 msgid "None of your plots have passed the plot filter yet."
@@ -845,7 +845,7 @@ msgstr "Tarjous"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr "Tarjouksia Tehty"
+msgstr "Tehdyt Tarjoukset"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
@@ -1186,7 +1186,7 @@ msgstr "Lähetä julkinen avaimesi Siirtorajoitetun Lompakon pääkäyttäjälle
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr "Näytä Lisäoptiot"
+msgstr "Näytä Lisävalinnat"
 
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
@@ -1293,7 +1293,7 @@ msgstr "Synkronoi {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
-msgstr ""
+msgstr "TXCH Lohkopalkkiot"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 #~ msgid "TXCH Farming Rewards"
@@ -1309,7 +1309,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:15
 msgid "TXCH User Transaction Fees"
-msgstr ""
+msgstr "TXCH Transaktioveloitukset Käyttäjälle"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1321,7 +1321,7 @@ msgstr "Väliaikaishakemiston sijainti"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "Alla verkkosolmu, johon farmarisi on kytketty. <0>Katso lisää</0>"
+msgstr "Alla noodi, johon farmarisi on yhteydessä. <0>Katso lisää</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
@@ -1329,11 +1329,11 @@ msgstr "Lohkoketjun hyväksymä minimiarvo on k=32"
 
 #: src/components/fullNode/FullNode.jsx:143
 msgid "The node is not synced"
-msgstr "Solmu ei ole synkronissa"
+msgstr "Noodi ei ole synkronoitu"
 
 #: src/components/fullNode/FullNode.jsx:131
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "Solmu synkronoi. Se lataa lohkoketjua muilta solmuilta"
+msgstr "Noodi synkronoi. Se lataa lohkoketjua muilta solmuilta"
 
 #: src/components/block/Block.jsx:267
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1391,7 +1391,7 @@ msgstr "Nykyinen saldo + avoin saldo, eli tuleva saldo avointen transaktioiden j
 
 #: src/components/fullNode/FullNode.jsx:152
 msgid "This node is fully caught up and validating the network"
-msgstr "Solmu on ajan tasalla ja todentaa lohkoketjuverkkoa"
+msgstr "Noodi on ajan tasalla ja todentaa lohkoketjuverkkoa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1437,7 +1437,7 @@ msgstr "Verkkoavaruuden Koko"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:99
 msgid "Total Plot Size:"
-msgstr "Plottitiedoston Koko:"
+msgstr "Plottien Yhteiskoko:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
@@ -1506,7 +1506,7 @@ msgstr "Käyttäjän julkinen avain"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
-msgstr "VDF -väli-iteraatoita"
+msgstr "VDF -alaiteraatioita"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1599,7 +1599,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
-msgstr ""
+msgstr "Ilman veloituksia"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
@@ -1615,7 +1615,7 @@ msgstr "Farmin Yleiskuva"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr "Solmupalvelun Yhteys"
+msgstr "Noodin Yhteys"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
