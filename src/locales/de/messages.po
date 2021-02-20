@@ -8,7 +8,7 @@ msgstr ""
 "Language: de\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-20 20:11\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -32,7 +32,7 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Akzeptieren"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
@@ -55,24 +55,24 @@ msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Plot-Verzeichnis hinzufügen"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Wallet hinzufügen"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Plot hinzufügen"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:403
 #: src/components/wallet/coloured/WalletColoured.tsx:455
 #: src/components/wallet/standard/WalletStandard.tsx:383
 msgid "Address"
-msgstr ""
+msgstr "Adresse"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
 #: src/components/wallet/standard/WalletStandard.tsx:333
@@ -86,7 +86,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
 #: src/components/wallet/standard/WalletStandard.tsx:343
 msgid "Amount"
-msgstr ""
+msgstr "Menge"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:413
 msgid "Amount ({cc_unit})"
