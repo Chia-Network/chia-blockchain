@@ -13,6 +13,8 @@ if [ "$(uname -m)" = "armv7l" ]; then
   echo ""
 	echo "WARNING:"
 	echo "Chia Blockchain requires a 64 bit OS and this is 32 bit armv7l"
+	echo "For more information:"
+	echo "https://github.com/Chia-Network/chia-blockchain/wiki/Raspberry-Pi"
 	echo "Exiting."
 	exit 1
 fi
