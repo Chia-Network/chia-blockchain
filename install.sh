@@ -8,6 +8,15 @@ if [ "$(uname)" = "Linux" ]; then
 	fi
 fi
 
+# Check for non 64 bit ARM64/Raspberry Pi installs
+if [ "$(uname -m)" = "armv7l" ]; then
+  echo ""
+	echo "WARNING:"
+	echo "Chia Blockchain requires a 64 bit OS and this is 32 bit armv7l"
+	echo "Exiting."
+	exit 1
+fi
+
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
 	LSB_RELEASE=$(lsb_release -rs)
