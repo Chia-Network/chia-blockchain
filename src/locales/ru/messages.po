@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-20 01:41\n"
+"PO-Revision-Date: 2021-02-20 02:41\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -435,11 +435,11 @@ msgstr "Сложность"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
-msgstr ""
+msgstr "Децентрализованный Идентификатор"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Настройки Децентрализованного Идентификатора"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -982,7 +982,7 @@ msgstr "Размер участка"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:27
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Плот дубликат {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
@@ -1065,7 +1065,7 @@ msgstr "Максимольное использование ОЗУ"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr ""
+msgstr "Кошелек Ограниченной Скорости"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1073,7 +1073,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:134
 msgid "Rate Limited"
-msgstr ""
+msgstr "Ограниченной Скорости"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
@@ -1082,7 +1082,7 @@ msgstr "Информация об ограничении скорости"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Настройки Ограниченной Скорости"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
@@ -1095,7 +1095,7 @@ msgstr "Адрес для получения платежа"
 
 #: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Восстанавление Кошелека Децентрализованного Идентификатора"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
