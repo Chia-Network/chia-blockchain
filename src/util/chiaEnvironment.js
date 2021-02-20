@@ -52,7 +52,7 @@ const getChiaVersion = () => {
   try {
     version = child_process.execFileSync(exePath, ['version'], {
       encoding: 'UTF-8',
-    });
+    }).trim();
   } catch (e1) {
     // that didn't work, let's try as if we're in the venv or chia is on the path
     try {
@@ -60,7 +60,7 @@ const getChiaVersion = () => {
         path.basename(exePath),
         ['version'],
         { encoding: 'UTF-8' },
-      );
+      ).trim();
     } catch (e2) {
       // that didn't work either - give up
     }
