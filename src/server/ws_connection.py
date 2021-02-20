@@ -85,6 +85,7 @@ class WSChiaConnection:
         self.close_callback = close_callback
 
         self.pending_requests: Dict[bytes32, asyncio.Event] = {}
+        self.pending_timeouts: Dict[bytes32, asyncio.Task] = {}
         self.request_results: Dict[bytes32, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
@@ -174,12 +175,17 @@ class WSChiaConnection:
                 await self.session.close()
             if self.close_event is not None:
                 self.close_event.set()
+            self.cancel_pending_timeouts()
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
             self.close_callback(self)
             raise
         self.close_callback(self)
+
+    def cancel_pending_timeouts(self):
+        for id, task in self.pending_timeouts:
+            task.cancel()
 
     async def outbound_handler(self):
         try:
@@ -276,10 +282,12 @@ class WSChiaConnection:
             if req_id in self.pending_requests:
                 self.pending_requests[req_id].set()
 
-        asyncio.create_task(time_out(message.id, timeout))
+        timeout_task = asyncio.create_task(time_out(message.id, timeout))
+        self.pending_timeouts[message.id] = timeout_task
         await event.wait()
 
         self.pending_requests.pop(message.id)
+        self.pending_timeouts.pop(message.id)
         result: Optional[Message] = None
         if message.id in self.request_results:
             result = self.request_results[message.id]
