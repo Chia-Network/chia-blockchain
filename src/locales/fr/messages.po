@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-20 13:11\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -59,7 +59,7 @@ msgstr "Ajouter un dossier de parcelles"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Ajouter un porte-monnaie"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -216,7 +216,7 @@ msgstr "Choisir la taille de la parcelle"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Fermer"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -261,33 +261,33 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Se connecter"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Se connecter à d'autres pairs"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:162
 msgid "Connected"
-msgstr ""
+msgstr "Connecté"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "En cours de connexion au porte-monnaie"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Connection Status"
-msgstr ""
+msgstr "Etat Connexion"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Etat Connexion:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Type connexion"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
