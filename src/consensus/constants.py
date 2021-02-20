@@ -1,6 +1,7 @@
 import dataclasses
 
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint64, uint32, uint8, uint128
 
 
@@ -71,7 +72,7 @@ class ConsensusConstants:
         """
 
         for k, v in changes.items():
-            if isinstance(v, str):
-                changes[k] = bytes.fromhex(v)
+            if isinstance(v, str) and v.startswith("0x"):
+                changes[k] = hexstr_to_bytes(v)
 
         return dataclasses.replace(self, **changes)

@@ -30,7 +30,7 @@ def service_kwargs_for_timelord(
 ) -> Dict:
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
-    overrides = config["network_overrides"][config["selected_network"]]
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 
     node = Timelord(config, updated_constants)

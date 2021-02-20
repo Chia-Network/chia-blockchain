@@ -229,6 +229,9 @@ async def show_async(
                     cost = "Not a transaction block"
                     tx_filter_hash = "Not a transaction block"
                 print("Block at height", block.height, ":")
+                address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+                farmer_address = encode_puzzle_hash(block.farmer_puzzle_hash, address_prefix)
+                pool_address = encode_puzzle_hash(block.pool_puzzle_hash, address_prefix)
                 print(
                     f"Header Hash            0x{block.header_hash.hex()}\n"
                     f"Timestamp              {block_time_string}\n"
@@ -248,8 +251,8 @@ async def show_async(
                     f"0x{full_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash}\n"
                     f"{full_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash}\n"
                     f"Tx Filter Hash         {tx_filter_hash}\n"
-                    f"Farmer Address         {encode_puzzle_hash(block.farmer_puzzle_hash)}\n"
-                    f"Pool Address           {encode_puzzle_hash(block.pool_puzzle_hash)}\n"
+                    f"Farmer Address         {farmer_address}\n"
+                    f"Pool Address           {pool_address}\n"
                     f"Fees Amount            {block.fees}\n"
                 )
             else:

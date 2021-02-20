@@ -24,7 +24,7 @@ def print_transaction(tx: TransactionRecord, verbose: bool) -> None:
         print(tx)
     else:
         chia_amount = Decimal(int(tx.amount)) / units["chia"]
-        to_address = encode_puzzle_hash(tx.to_puzzle_hash)
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
         print(f"Amount: {chia_amount} TXCH")
@@ -43,6 +43,8 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
+    selected = wallet_client.service.config["selected_network"]
+    prefix = wallet_client.service.config["network_overrides"]["config"][selected]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
     for i in range(0, len(txs), 5):

@@ -23,6 +23,7 @@ SERVICE_NAME = "full_node"
 def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
     constants = bt.constants
+
     node = FullNode(
         config,
         root_path=root_path,

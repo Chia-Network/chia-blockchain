@@ -712,12 +712,14 @@ def validate_unfinished_header_block(
             header_block.foliage.foliage_block_data.pool_target.puzzle_hash
             != constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH
         ):
+            breakpoint()
             log.error(f"Pool target {header_block.foliage.foliage_block_data.pool_target} hb {header_block}")
             return None, ValidationError(Err.INVALID_PREFARM)
         if (
             header_block.foliage.foliage_block_data.farmer_reward_puzzle_hash
             != constants.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH
         ):
+            breakpoint()
             return None, ValidationError(Err.INVALID_PREFARM)
     else:
         # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
