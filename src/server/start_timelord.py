@@ -1,3 +1,4 @@
+import logging
 import pathlib
 
 from typing import Dict
@@ -8,7 +9,6 @@ from src.timelord.timelord import Timelord
 from src.server.outbound_message import NodeType
 from src.timelord.timelord_api import TimelordAPI
 from src.types.peer_info import PeerInfo
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 
@@ -20,6 +20,9 @@ from src.server.start_service import run_service
 SERVICE_NAME = "timelord"
 
 
+log = logging.getLogger(__name__)
+
+
 def service_kwargs_for_timelord(
     root_path: pathlib.Path,
     config: Dict,
@@ -27,9 +30,10 @@ def service_kwargs_for_timelord(
 ) -> Dict:
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
+    overrides = config["network_overrides"][config["selected_network"]]
+    updated_constants = constants.replace_str_to_bytes(**overrides)
 
-    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
-    node = Timelord(config, constants.replace(GENESIS_CHALLENGE=genesis_challenge))
+    node = Timelord(config, updated_constants)
     peer_api = TimelordAPI(node)
 
     kwargs = dict(
@@ -42,7 +46,7 @@ def service_kwargs_for_timelord(
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        network_id=genesis_challenge,
+        network_id=updated_constants.GENESIS_CHALLENGE,
     )
     return kwargs
 

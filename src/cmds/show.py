@@ -179,7 +179,7 @@ async def show_async(args, parser):
 
                 added_blocks: List[BlockRecord] = []
                 curr = await client.get_block_record(peak.header_hash)
-                while curr is not None and len(added_blocks) < num_blocks:
+                while curr is not None and len(added_blocks) < num_blocks and curr.height > 0:
                     added_blocks.append(curr)
                     curr = await client.get_block_record(curr.prev_hash)
 

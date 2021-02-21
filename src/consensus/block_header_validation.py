@@ -67,7 +67,7 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        if final_eos_is_already_included(header_block, blocks):
+        if final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters):
             skip_overflow_last_ss_validation = False
             finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
         else:
@@ -472,6 +472,7 @@ def validate_unfinished_header_block(
 
     # Note that required iters might be from the previous slot (if we are in an overflow block)
     required_iters: uint64 = calculate_iterations_quality(
+        constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         header_block.reward_chain_block.proof_of_space.size,
         expected_difficulty,

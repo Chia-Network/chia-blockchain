@@ -68,7 +68,7 @@ async def setup_full_node(
     config["rpc_port"] = port + 1000
 
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, consensus_constants, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     else:
         kwargs = service_kwargs_for_full_node(local_bt.root_path, config, consensus_constants)
 
@@ -113,8 +113,10 @@ async def setup_wallet_node(
     first_pk = keychain.get_first_public_key()
     assert first_pk is not None
     db_path_key_suffix = str(first_pk.get_fingerprint())
-    db_name = f"test-wallet-db-{port}"
-    db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
+    db_name = f"test-wallet-db-{port}-KEY.sqlite"
+    db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
+    db_path = bt.root_path / db_path_replaced
+
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_name)
@@ -332,7 +334,7 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None, key_seed=None
+    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None, key_seed=None, starting_port=50000
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
@@ -340,7 +342,7 @@ async def setup_simulators_and_wallets(
 
     consensus_constants = constants_for_dic(dic)
     for index in range(0, simulator_count):
-        port = 50000 + index
+        port = starting_port + index
         db_name = f"blockchain_test_{port}.db"
         sim = setup_full_node(consensus_constants, db_name, port, BlockTools(consensus_constants), simulator=True)
         simulators.append(await sim.__anext__())
@@ -351,7 +353,7 @@ async def setup_simulators_and_wallets(
             seed = std_hash(uint32(index))
         else:
             seed = key_seed
-        port = 55000 + index
+        port = starting_port + 5000 + index
         wlt = setup_wallet_node(
             port,
             consensus_constants,

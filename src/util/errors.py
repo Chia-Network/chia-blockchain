@@ -133,6 +133,8 @@ class Err(Enum):
     NO_TRANSACTIONS_WHILE_SYNCING = 108
     ALREADY_INCLUDING_TRANSACTION = 109
 
+    INCOMPATIBLE_NETWORK_ID = 109
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

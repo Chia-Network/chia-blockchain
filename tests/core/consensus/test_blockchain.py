@@ -82,7 +82,7 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=3)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=30)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
@@ -195,7 +195,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
         )
-        _, err = await blockchain.validate_unfinished_block(unf, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, False)
+        err = validate_res.error
         assert err is None
         result, err, _ = await blockchain.receive_block(block)
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
@@ -210,8 +211,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
         )
-        _, err = await blockchain.validate_unfinished_block(unf, False)
-        assert err is None
+        validate_res = await blockchain.validate_unfinished_block(unf, False)
+        assert validate_res.error is None
 
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
@@ -261,6 +262,42 @@ class TestBlockHeaderValidation:
                 assert result == ReceiveBlockResult.NEW_PEAK
                 assert err is None
         assert blockchain.get_peak().height == num_blocks - 1
+
+    @pytest.mark.asyncio
+    async def test_unf_block_overflow(self, empty_blockchain):
+        blockchain = empty_blockchain
+
+        blocks = []
+        while True:
+            # This creates an overflow block, then a normal block, and then an overflow in the next sub-slot
+            # blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
+
+            await blockchain.receive_block(blocks[-2])
+
+            sb_1 = blockchain.block_record(blocks[-2].header_hash)
+
+            sb_2_next_ss = blocks[-1].total_iters - blocks[-2].total_iters < sb_1.sub_slot_iters
+            # We might not get a normal block for sb_2, and we might not get them in the right slots
+            # So this while loop keeps trying
+            if sb_1.overflow and sb_2_next_ss:
+                block = blocks[-1]
+                unf = UnfinishedBlock(
+                    [],
+                    block.reward_chain_block.get_unfinished(),
+                    block.challenge_chain_sp_proof,
+                    block.reward_chain_sp_proof,
+                    block.foliage,
+                    block.foliage_transaction_block,
+                    block.transactions_info,
+                    block.transactions_generator,
+                )
+                validate_res = await blockchain.validate_unfinished_block(unf, skip_overflow_ss_validation=True)
+                assert validate_res.error is None
+                return
+
+            await blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
     async def test_one_sb_per_two_slots(self, empty_blockchain):

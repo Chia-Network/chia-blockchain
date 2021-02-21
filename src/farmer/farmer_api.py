@@ -68,6 +68,7 @@ class FarmerAPI:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
             required_iters: uint64 = calculate_iterations_quality(
+                self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
                 computed_quality_string,
                 new_proof_of_space.proof.size,
                 sp.difficulty,

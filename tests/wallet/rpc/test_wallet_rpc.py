@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 import pytest
 from pathlib import Path
 
@@ -12,6 +14,8 @@ from src.util.bech32m import encode_puzzle_hash
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.rpc.rpc_server import start_rpc_server
+
+log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:

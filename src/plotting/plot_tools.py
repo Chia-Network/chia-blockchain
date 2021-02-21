@@ -45,7 +45,7 @@ def _get_filenames(directory: Path) -> List[Path]:
                 if child.suffix == ".plot" and not child.name.startswith("._"):
                     all_files.append(child)
             else:
-                log.info(f"Not checking subdirectory {child} - no .plot files found")
+                log.info(f"Not checking subdirectory {child}, subdirectories not added by default")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
@@ -140,6 +140,7 @@ def load_plots(
     farmer_public_keys: Optional[List[G1Element]],
     pool_public_keys: Optional[List[G1Element]],
     match_str: Optional[str],
+    show_memo: bool,
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
@@ -155,6 +156,7 @@ def load_plots(
         all_filenames += paths
     total_size = 0
     new_provers: Dict[Path, PlotInfo] = {}
+    plot_ids: Set[bytes32] = set()
 
     if match_str is not None:
         log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
@@ -168,14 +170,20 @@ def load_plots(
                 # Try once every 20 minutes to open the file
                 continue
             if filename in provers:
-                stat_info = filename.stat()
+                try:
+                    stat_info = filename.stat()
+                except Exception as e:
+                    log.error(f"Failed to open file {filename}. {e}")
+                    continue
                 if stat_info.st_mtime == provers[filename].time_modified:
                     total_size += stat_info.st_size
                     new_provers[filename] = provers[filename]
+                    plot_ids.add(provers[filename].prover.get_id())
                     continue
             try:
                 prover = DiskProver(str(filename))
-                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR / 2.0
+
+                expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                 stat_info = filename.stat()
 
                 # TODO: consider checking if the file was just written to (which would mean that the file is still
@@ -186,6 +194,10 @@ def load_plots(
                         f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
                         f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                     )
+                    continue
+
+                if prover.get_id() in plot_ids:
+                    log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
                     continue
 
                 (
@@ -232,6 +244,7 @@ def load_plots(
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )
+                plot_ids.add(prover.get_id())
                 total_size += stat_info.st_size
                 changed = True
             except Exception as e:
@@ -240,6 +253,15 @@ def load_plots(
                 failed_to_open_filenames[filename] = int(time.time())
                 continue
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
+
+            if show_memo:
+                plot_memo: bytes32
+                if pool_contract_puzzle_hash is None:
+                    plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
+                else:
+                    plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
+                plot_memo_str: str = plot_memo.hex()
+                log.info(f"Memo: {plot_memo_str}")
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"

@@ -1,7 +1,7 @@
 import dataclasses
 
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint64, uint32, uint8
+from src.util.ints import uint64, uint32, uint8, uint128
 
 
 @dataclasses.dataclass(frozen=True)
@@ -14,8 +14,10 @@ class ConsensusConstants:
     NUM_SPS_SUB_SLOT: uint32  # The number of signage points per sub-slot (including the 0th sp at the sub-slot start)
 
     SUB_SLOT_ITERS_STARTING: uint64  # The sub_slot_iters for the first epoch
+    DIFFICULTY_CONSTANT_FACTOR: uint128  # Multiplied by the difficulty to get iterations
     DIFFICULTY_STARTING: uint64  # The difficulty for the first epoch
-    DIFFICULTY_FACTOR: uint32  # The maximum factor by which difficulty and sub_slot_iters can change per epoch
+    # The maximum factor by which difficulty and sub_slot_iters can change per epoch
+    DIFFICULTY_CHANGE_MAX_FACTOR: uint32
     SUB_EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch
     EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch, must be a multiple of SUB_EPOCH_BLOCKS
 
@@ -59,4 +61,15 @@ class ConsensusConstants:
     BLOCKS_CACHE_SIZE: uint32
 
     def replace(self, **changes):
+        return dataclasses.replace(self, **changes)
+
+    def replace_str_to_bytes(self, **changes):
+        """
+        Overrides str (hex) values with bytes.
+        """
+
+        for k, v in changes.items():
+            if isinstance(v, str):
+                changes[k] = bytes.fromhex(v)
+
         return dataclasses.replace(self, **changes)

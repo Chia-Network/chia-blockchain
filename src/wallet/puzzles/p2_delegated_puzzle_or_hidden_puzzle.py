@@ -95,6 +95,6 @@ def solution_with_hidden_puzzle(
     return Program.to([puzzle, [hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle]])
 
 
-def solution_for_conditions(conditions: Program) -> Program:
+def solution_for_conditions(conditions) -> Program:
     delegated_puzzle = puzzle_for_conditions(conditions)
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))

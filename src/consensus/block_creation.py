@@ -15,7 +15,6 @@ from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.full_node.bundle_tools import best_solution_program
 from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.coin import Coin, hash_coin_list
@@ -26,7 +25,7 @@ from src.types.blockchain_format.foliage import (
     TransactionsInfo,
     FoliageBlockData,
 )
-from src.types.full_block import additions_for_npc, FullBlock
+from src.types.full_block import FullBlock
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -49,6 +48,8 @@ def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
     spend_bundle: Optional[SpendBundle],
+    additions: List[Coin],
+    removals: List[Coin],
     prev_block: Optional[BlockRecord],
     blocks: BlockchainInterface,
     total_iters_sp: uint128,
@@ -126,13 +127,11 @@ def create_foliage(
 
     solution_program: Optional[SerializedProgram] = None
     if is_transaction_block:
-        spend_bundle_fees: int = 0
         aggregate_sig: G2Element = G2Element.infinity()
         cost = uint64(0)
 
         if spend_bundle is not None:
             solution_program = best_solution_program(spend_bundle)
-            spend_bundle_fees = spend_bundle.fees()
             if spend_bundle.aggregated_signature is not None:
                 aggregate_sig = spend_bundle.aggregated_signature
 
@@ -140,6 +139,16 @@ def create_foliage(
         if solution_program is not None:
             result: CostResult = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
             cost = result.cost
+            removal_amount = 0
+            addition_amount = 0
+            for coin in removals:
+                removal_amount += coin.amount
+            for coin in additions:
+                addition_amount += coin.amount
+            spend_bundle_fees = removal_amount - addition_amount
+        else:
+            spend_bundle_fees = 0
+
         # TODO: prev generators root
         reward_claims_incorporated = []
         if height > 0:
@@ -180,17 +189,13 @@ def create_foliage(
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
                     curr = blocks.block_record(curr.prev_hash)
-        additions: List[Coin] = reward_claims_incorporated.copy()
-        npc_list = []
-        if solution_program is not None:
-            error, npc_list, _ = get_name_puzzle_conditions(solution_program, False)
-            additions += additions_for_npc(npc_list)
+        additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
             byte_array_tx.append(bytearray(coin.puzzle_hash))
-        for npc in npc_list:
-            tx_removals.append(npc.coin_name)
-            byte_array_tx.append(bytearray(npc.coin_name))
+        for coin in removals:
+            tx_removals.append(coin.name())
+            byte_array_tx.append(bytearray(coin.name()))
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
@@ -288,6 +293,8 @@ def create_unfinished_block(
     blocks: BlockchainInterface,
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
+    additions: Optional[List[Coin]] = None,
+    removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
     finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
 ) -> UnfinishedBlock:
@@ -312,6 +319,8 @@ def create_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         spend_bundle: transactions to add to the foliage block, if created
+        additions: Coins added in spend_bundle
+        removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point
         blocks: dictionary from header hash to SBR of all included SBR
         finished_sub_slots_input: finished_sub_slots at the signage point
@@ -370,11 +379,16 @@ def create_unfinished_block(
         signage_point.rc_vdf,
         rc_sp_signature,
     )
-
+    if additions is None:
+        additions = []
+    if removals is None:
+        removals = []
     (foliage, foliage_transaction_block, transactions_info, solution_program,) = create_foliage(
         constants,
         rc_block,
         spend_bundle,
+        additions,
+        removals,
         prev_block,
         blocks,
         total_iters_sp,

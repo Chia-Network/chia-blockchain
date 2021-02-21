@@ -61,6 +61,9 @@ def make_parser(parser):
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
+    for k in do_not_migrate_keys:
+        if k in updated and do_not_migrate_keys[k] == "":
+            updated.pop(k)
     for k, v in default.items():
         ignore = False
         if k in do_not_migrate_keys:
@@ -372,19 +375,56 @@ def chia_init(root_path: Path):
         "full_node.ssl",
         "introducer.ssl",
         "wallet.ssl",
+        "network_genesis_challenges",
+        "full_node.network_genesis_challenges",
+        "harvester.network_genesis_challenges",
+        "farmer.network_genesis_challenges",
+        "wallet.network_genesis_challenges",
+        "introducer.network_genesis_challenges",
+        "pool.network_genesis_challenges",
+        "ui.network_genesis_challenges",
+        "timelord.network_genesis_challenges",
+        "selected_network",
+        "full_node.selected_network",
+        "harvester.selected_network",
+        "farmer.selected_network",
+        "wallet.selected_network",
+        "introducer.selected_network",
+        "pool.selected_network",
+        "ui.selected_network",
+        "timelord.selected_network",
+        "farmer.xch_target_address",
+        "pool.xch_target_address",
     ]
 
     # These are the files that will be migrated
     MANIFEST: List[str] = [
         "config",
-        "db/blockchain_v27_2.db",
+        # "db/blockchain_v27_2.db",
         # "wallet",
     ]
 
+    manifest = MANIFEST
+
+    # Migrates rc1
+    rc1_path = Path(os.path.expanduser("~/.chia/1.0rc1"))
+    if rc1_path.is_dir():
+        r = migrate_from(rc1_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)
+        if r:
+            check_keys(root_path)
+            return 0
+
+    # Migrates windows beta27
+    b27_windows_path = Path(os.path.expanduser("~/.chia/beta-0.1.27"))
+    if b27_windows_path.is_dir():
+        r = migrate_from(b27_windows_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)
+        if r:
+            check_keys(root_path)
+            return 0
+
     # Version 19 is the first version that used the bech32m addresses
-    for version_number in range(chia_minor_release_number() - 1, 18, -1):
+    for version_number in range(27, 18, -1):
         old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % version_number))
-        manifest = MANIFEST
         print(f"Checking {old_path}")
         # This is reached if the user has updated the application, and therefore a new configuration
         # folder must be used. First we migrate the config fies, and then we migrate the private keys.

@@ -2,12 +2,10 @@ from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Dict
 
-from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.block_tools import BlockTools, test_constants
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -25,16 +23,18 @@ SERVICE_NAME = "full_node"
 def service_kwargs_for_full_node_simulator(
     root_path: Path,
     config: Dict,
-    consensus_constants: ConsensusConstants,
     bt: BlockTools,
 ) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
-    genesis_challenge = bytes32(bytes.fromhex(config["network_genesis_challenges"][config["selected_network"]]))
+    overrides = config["network_overrides"][config["selected_network"]]
+    consensus_constants = bt.constants
+    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    bt.constants = updated_constants
 
     node = FullNode(
         config,
         root_path=root_path,
-        consensus_constants=consensus_constants,
+        consensus_constants=updated_constants,
         name=SERVICE_NAME,
     )
 
@@ -50,7 +50,7 @@ def service_kwargs_for_full_node_simulator(
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
-        network_id=genesis_challenge,
+        network_id=updated_constants.GENESIS_CHALLENGE,
     )
     return kwargs
 
@@ -61,11 +61,10 @@ def main():
     config["peer_db_path"] = config["simulator_peer_db_path"]
     config["introducer_peer"]["host"] = "127.0.0.1"
     config["introducer_peer"]["port"] = 58555
-
+    config["selected_network"] = "testnet0"
     kwargs = service_kwargs_for_full_node_simulator(
         DEFAULT_ROOT_PATH,
         config,
-        test_constants,
         BlockTools(test_constants),
     )
     return run_service(**kwargs)

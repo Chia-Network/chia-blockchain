@@ -58,21 +58,23 @@ fi
 # for Mac and Windows so skip unless completing a source/developer install
 # Ubuntu special cases above
 if [ ! "$CI" ]; then
-	git submodule update --init --recursive
 	echo "Running git submodule update --init --recursive."
 	echo ""
-	cd chia-blockchain-gui
+	git submodule update --init --recursive
+	echo "Running git submodule update."
+	echo ""
 	git submodule update
+	cd chia-blockchain-gui
+
 	if [ "$SUBMODULE_BRANCH" ];
 	then
 		git checkout "$SUBMODULE_BRANCH"
+    git pull
 		echo ""
 		echo "Building the GUI with branch $SUBMODULE_BRANCH"
 		echo ""
-	else
-		git checkout main
-  fi
-  git pull
+	fi
+
 	npm install
 	npm audit fix
 	npm run locale:extract

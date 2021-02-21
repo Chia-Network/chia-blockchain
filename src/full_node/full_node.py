@@ -94,7 +94,10 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        self.db_path = path_from_root(root_path, config["database_path"])
+        db_path_replaced: str = config["database_path"].replace(
+            "CHALLENGE", consensus_constants.GENESIS_CHALLENGE[:8].hex()
+        )
+        self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -402,6 +405,7 @@ class FullNode:
         """
 
         self._state_changed("add_connection")
+        self._state_changed("sync_mode")
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
@@ -446,6 +450,7 @@ class FullNode:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.sync_store.peer_disconnected(connection.peer_node_id)
         self._state_changed("close_connection")
+        self._state_changed("sync_mode")
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
@@ -546,7 +551,7 @@ class FullNode:
                 raise ValueError("Not performing sync, already caught up.")
 
             request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
-            response = await weight_proof_peer.request_proof_of_weight(request, timeout=60)
+            response = await weight_proof_peer.request_proof_of_weight(request, timeout=90)
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
@@ -653,18 +658,27 @@ class FullNode:
                 )
 
     async def receive_block_batch(
-        self, blocks: List[FullBlock], peer: ws.WSChiaConnection, fork_point: Optional[uint32]
+        self, all_blocks: List[FullBlock], peer: ws.WSChiaConnection, fork_point: Optional[uint32]
     ) -> Tuple[bool, bool, Optional[uint32]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
+
+        blocks_to_validate: List[FullBlock] = []
+        for i, block in enumerate(all_blocks):
+            if not self.blockchain.contains_block(block.header_hash):
+                blocks_to_validate = all_blocks[i:]
+                break
+        if len(blocks_to_validate) == 0:
+            return True, False, fork_height
+
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
-        for i, block in enumerate(blocks):
+        for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_info()} {Err(pre_validation_results[i].error)}"
@@ -684,10 +698,12 @@ class FullNode:
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 await self.weight_proof_handler.create_prev_sub_epoch_segments()
-        self._state_changed("new_peak")
-        self.log.debug(
-            f"Total time for {len(blocks)} blocks: {time.time() - pre_validate_start}, advanced: {advanced_peak}"
-        )
+        if advanced_peak:
+            self._state_changed("new_peak")
+            self.log.debug(
+                f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
+                f"advanced: {advanced_peak}"
+            )
         return True, advanced_peak, fork_height
 
     async def _finish_sync(self):
@@ -754,7 +770,7 @@ class FullNode:
         if not self.sync_store.get_sync_mode():
             self.blockchain.clean_block_records()
 
-        added_eos, _, _ = self.full_node_store.new_peak(
+        added_eos, new_sps, new_ips = self.full_node_store.new_peak(
             record,
             sub_slots[0],
             sub_slots[1],
@@ -792,7 +808,7 @@ class FullNode:
             msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        # TODO: maybe broadcast new SP/IPs as well?
+        # TODO: maybe add and broadcast new SP/IPs as well?
         if record.height % 1000 == 0:
             # Occasionally clear the seen list to keep it small
             self.full_node_store.clear_seen_unfinished_blocks()
@@ -846,12 +862,15 @@ class FullNode:
         if self.blockchain.contains_block(header_hash):
             return None
 
+        pre_validation_result: Optional[PreValidationResult] = None
         if block.is_transaction_block() and block.transactions_generator is None:
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             unf_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(unfinished_rh)
             if unf_block is not None and unf_block.transactions_generator is not None:
+                pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
+                assert pre_validation_result is not None
                 block = dataclasses.replace(block, transactions_generator=unf_block.transactions_generator)
 
         async with self.blockchain.lock:
@@ -859,10 +878,10 @@ class FullNode:
             if self.blockchain.contains_block(header_hash):
                 return None
             validation_start = time.time()
-            # Tries to add the block to the blockchain
+            # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
             pre_validation_results: Optional[
                 List[PreValidationResult]
-            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block])
+            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], pre_validation_result is None)
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
@@ -876,9 +895,11 @@ class FullNode:
                         f"{block.height}: {Err(pre_validation_results[0].error).name}"
                     )
             else:
-                added, error_code, fork_height = await self.blockchain.receive_block(
-                    block, pre_validation_results[0], None
+                result_to_validate = (
+                    pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                 )
+                assert result_to_validate.required_iters == pre_validation_results[0].required_iters
+                added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
 
             validation_time = time.time() - validation_start
 
@@ -1011,14 +1032,11 @@ class FullNode:
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
-            (
-                required_iters,
-                error_code,
-            ) = await self.blockchain.validate_unfinished_block(block)
-            if error_code is not None:
-                raise ConsensusError(error_code)
+            validate_result = await self.blockchain.validate_unfinished_block(block)
+            if validate_result.error is not None:
+                raise ConsensusError(Err(validate_result.error))
 
-        assert required_iters is not None
+        assert validate_result.required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
         if self.full_node_store.get_unfinished_block(block_hash) is not None:
@@ -1032,12 +1050,12 @@ class FullNode:
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants,
             self.blockchain,
-            required_iters,
+            validate_result.required_iters,
             block,
             True,
         )
 
-        self.full_node_store.add_unfinished_block(height, block)
+        self.full_node_store.add_unfinished_block(height, block, validate_result)
         if farmed_block is True:
             self.log.info(f"🍀 ️Farmed unfinished_block {block_hash}")
         else:
@@ -1320,7 +1338,9 @@ class FullNode:
                     self.log.debug(f"Added transaction to mempool: {spend_name}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
-                    fees = transaction.fees()
+                    mempool_item = self.mempool_manager.get_mempool_item(spend_name)
+                    assert mempool_item is not None
+                    fees = mempool_item.fee
                     assert fees >= 0
                     assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(

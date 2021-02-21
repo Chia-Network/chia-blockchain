@@ -6,18 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## 1.0rc2 aka Release Candidate 2 - 2021-02-18
+
+## Fixed
+
+- This is an errata release for Release Candidate 1. There were a couple of things that did not smoothly migrate from the Beta versions. Please make sure you also consult the [release notes for RC-1](https://github.com/Chia-Network/chia-blockchain/releases/tag/1.0rc1) was well.
+- Incorrect older spend to addresses were being migrated from Beta 27. This would send farming rewards to un-spendable coins.
+- Netspace was not calculating properly in RC-1.
+- The Windows installer was building with the wrong version number.
+- @eFishCent didn't get correct credit in the RC 1 release notes. They have been updated below to be correct.
+
+## 1.0rc1 aka Release Candidate 1 - 2021-02-18
 
 ### Added
-- 'chia wallet get_transactions' in the command line to see your transactions
-- 'chia wallet show' also shows your wallet's height
+
+- This is the first release in our release candidate series. There are still a few things that will change at the edges but the blockchain, clvm, and chialisp are in release form. We have one major change to chialisp/clvm that we have chosen to schedule for the next release as in this release we're breaking the way q/quote works. We also have one more revision to the VDF that will decrease the sizes of the proofs of time. We expect a few more releases in the release candidate series.
+- Installers will now be of the pattern ChiaSetup-0.2.1.exe. `0.2` is release candidate and the final `.1` is the first release candidate.
+- Use 'chia wallet get_transactions' in the command line to see your transactions.
+- 'chia wallet show' now shows your wallet's height.
+- Last Attempted Proof is now above Latest Block Challenge on the Farm page of the GUI.
+- The GUI now detects duplicate plots and also only counts unique plots and unique plot size.
+- We have integrated with crowdin to make it easier to translate the GUI. Check out [Chia Blockchain GUI](https://crowdin.com/project/chia-blockchain) there.
+- We have added Italian, Russian, and Finnish. More to come soon.
+- There is now remote UI support. [Documents](https://github.com/Chia-Network/chia-blockchain-gui/blob/main/remote.md) will temporarily live in the repository but have moved to the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Connecting-the-UI-to-a-remote-daemon). Thanks to @dkackman for this excellent addition!
 - Added the ability to specify an address for the pool when making plots (-c flag), as opposed to a public key. The block
 validation was changed to allow blocks like these to be made. This will enable changing pools in the future, by specifying a smart transaction for your pool rewards.
+- Added `chia plots check --challenge-start [start]` that begins at a different `[start]` for `-n [challenges]`. Useful when you want to do more detailed checks on plots without restarting from lower challenge values you already have done. Huge thanks to @eFishCent for this and all of the debugging work behind the scenes confirming that plot failures were machine errors and not bugs!
 
 ### Changed
-- Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This affectes the RPC, now
-all fields that referred to sub blocks are changed to blocks
-- 'chia wallet send' now takes in TXCH or XCH as units instead of mojos
+
+- Sub blocks renamed to blocks, and blocks renamed to transaction blocks, everywhere. This effects the RPC, now
+all fields that referred to sub blocks are changed to blocks.
+- Base difficulty and weight have increased, so difficulty of "5" in the rc1 testnet will be equivalent to "21990232555520" in the previous testnet.
+- 'chia wallet send' now takes in TXCH or XCH as units instead of mojos.
+- Transactions have been further sped up.
+- The blockchain database has more careful validation.
+- The GUI is now using bech32m.
+
+### Fixed
+
+- We updated chiapos to hopefully address some harvester crashes when moving plot files.
+- Many of the cards on the Farming page have had bugs addressed including last block farmed, block rewards, and user fees.
+- Improved validation of overflow blocks.
 
 
 ## [1.0beta27] aka Beta 1.27 - 2021-02-11
