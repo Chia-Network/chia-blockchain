@@ -29,7 +29,7 @@ from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64, uint128, uint16
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import (
     validate_finished_header_block,
@@ -211,7 +211,7 @@ class Blockchain(BlockchainInterface):
             required_iters = pre_validation_result.required_iters
             assert pre_validation_result.error is None
         assert required_iters is not None
-        error_code = await validate_block_body(
+        error_code, _ = await validate_block_body(
             self.constants,
             self,
             self.block_store,
@@ -445,12 +445,12 @@ class Blockchain(BlockchainInterface):
 
     async def validate_unfinished_block(
         self, block: UnfinishedBlock, skip_overflow_ss_validation=True
-    ) -> Tuple[Optional[uint64], Optional[Err]]:
+    ) -> PreValidationResult:
         if (
             not self.contains_block(block.prev_header_hash)
             and not block.prev_header_hash == self.constants.GENESIS_CHALLENGE
         ):
-            return None, Err.INVALID_PREV_BLOCK_HASH
+            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
@@ -476,7 +476,7 @@ class Blockchain(BlockchainInterface):
         )
 
         if error is not None:
-            return None, error.code
+            return PreValidationResult(uint16(error.code.value), None, None)
 
         prev_height = (
             -1
@@ -484,7 +484,7 @@ class Blockchain(BlockchainInterface):
             else self.block_record(block.prev_header_hash).height
         )
 
-        error_code = await validate_block_body(
+        error_code, cost_result = await validate_block_body(
             self.constants,
             self,
             self.block_store,
@@ -496,9 +496,9 @@ class Blockchain(BlockchainInterface):
         )
 
         if error_code is not None:
-            return None, error_code
+            return PreValidationResult(uint16(error_code.value), None, None)
 
-        return required_iters, None
+        return PreValidationResult(None, required_iters, cost_result)
 
     async def pre_validate_blocks_multiprocessing(
         self,

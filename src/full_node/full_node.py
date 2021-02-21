@@ -664,6 +664,8 @@ class FullNode:
             if not self.blockchain.contains_block(block.header_hash):
                 blocks_to_validate = all_blocks[i:]
                 break
+        if len(blocks_to_validate) == 0:
+            return True, False, fork_height
 
         pre_validate_start = time.time()
         pre_validation_results: Optional[
@@ -1021,14 +1023,11 @@ class FullNode:
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
-            (
-                required_iters,
-                error_code,
-            ) = await self.blockchain.validate_unfinished_block(block)
-            if error_code is not None:
-                raise ConsensusError(error_code)
+            validate_result = await self.blockchain.validate_unfinished_block(block)
+            if validate_result.error is not None:
+                raise ConsensusError(Err(validate_result.error))
 
-        assert required_iters is not None
+        assert validate_result.required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
         if self.full_node_store.get_unfinished_block(block_hash) is not None:
@@ -1042,7 +1041,7 @@ class FullNode:
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants,
             self.blockchain,
-            required_iters,
+            validate_result.required_iters,
             block,
             True,
         )
