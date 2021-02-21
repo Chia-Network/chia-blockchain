@@ -403,6 +403,7 @@ class FullNode:
         """
 
         self._state_changed("add_connection")
+        self._state_changed("sync_mode")
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
@@ -447,6 +448,7 @@ class FullNode:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.sync_store.peer_disconnected(connection.peer_node_id)
         self._state_changed("close_connection")
+        self._state_changed("sync_mode")
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
