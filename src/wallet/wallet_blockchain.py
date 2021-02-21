@@ -245,7 +245,7 @@ class WalletBlockchain(BlockchainInterface):
 
         fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
         if fork_height is not None:
-            self.log.info(f"💰 Updated wallet peak to sub height {block_record.height}, weight {block_record.weight}, ")
+            self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
@@ -437,8 +437,9 @@ class WalletBlockchain(BlockchainInterface):
 
     def clean_block_records(self):
         """
-        Cleans the cache so that we only maintain relevant blocks. This removes block records that have sub
-        height < peak - BLOCKS_CACHE_SIZE. These blocks are necessary for calculating future difficulty adjustments.
+        Cleans the cache so that we only maintain relevant blocks.
+        This removes block records that have height < peak - BLOCKS_CACHE_SIZE.
+        These blocks are necessary for calculating future difficulty adjustments.
         """
 
         if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:

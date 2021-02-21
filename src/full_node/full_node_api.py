@@ -404,7 +404,7 @@ class FullNodeAPI:
                 num_non_empty_sub_slots_seen = 0
                 for _ in range(30):
                     if num_non_empty_sub_slots_seen >= 3:
-                        self.log.debug("Diverged from peer. Don't have the same sub-blocks")
+                        self.log.debug("Diverged from peer. Don't have the same blocks")
                         return None
                     # If this is an end of sub slot, and we don't have the prev, request the prev instead
                     # We want to catch up to the latest slot so we can receive signage points
