@@ -62,7 +62,7 @@ def make_parser(parser):
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
     for k in do_not_migrate_keys:
-        if k in updated:
+        if k in updated and do_not_migrate_keys[k] == "":
             updated.pop(k)
     for k, v in default.items():
         ignore = False
