@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-21 09:32\n"
+"PO-Revision-Date: 2021-02-21 10:44\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -253,7 +253,7 @@ msgstr "Opciones de Moneda de Color"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Confirmado en el bloque:"
 
 #: src/components/wallet/WalletHistory.tsx:35
 msgid "Confirmed at height {0}"
@@ -326,7 +326,7 @@ msgstr "Crear Cartera de Usuario con Tarifa Limitada"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
-msgstr ""
+msgstr "Crear operación"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -340,7 +340,7 @@ msgstr "Crear Transacción"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Crear una nueva llave privada"
 
 #: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
@@ -368,7 +368,7 @@ msgstr "Crear cartera para color existente"
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr ""
+msgstr "Creado en:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
@@ -376,7 +376,7 @@ msgstr "Creado por nosotros:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
-msgstr ""
+msgstr "Estado actual de la operación"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
@@ -422,16 +422,16 @@ msgstr "Borrar llave"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Borrar todas las llaves eliminará permanentemente las llaves de su ordenador, asegúrese de tener una copia de seguridad. ¿Esta seguro de que quiere continuar?"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, asegurase de tener un backup. ¿Está seguro de que quiere continuar?"
+msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, asegurase de tener una copia de seguridad. ¿Está seguro de que quiere continuar?"
 
 #: src/components/block/Block.jsx:212
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Difficulty"
-msgstr ""
+msgstr "Dificultad"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 msgid "Distributed Identity"
@@ -439,7 +439,7 @@ msgstr "Identidad Distribuida"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Opciones de Identidad Distribuida"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -453,7 +453,7 @@ msgstr "¿Su máquina admite hacer parcelas en paralelo?"
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "Arrastre el fichero de oferta"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -764,7 +764,7 @@ msgstr "Mi Llave Pública"
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
-msgstr ""
+msgstr "Nueva dirección"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
@@ -841,11 +841,11 @@ msgstr "Cantidad de hilos"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "Oferta"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Oferta creada"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
@@ -927,15 +927,15 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
-msgstr ""
+msgstr "Por favor, seleccione la cantidad"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Por favor, seleccione comprar o vender"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin type"
-msgstr ""
+msgstr "Por favor, seleccione el tipo de moneda"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
@@ -1359,7 +1359,7 @@ msgstr "Estas parcelas no son válidas, es posible que desee eliminarlos."
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Esta característica esta disponible solo desde la interfaz gráfica."
 
 #: src/components/wallet/standard/WalletStandard.tsx:199
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
@@ -1429,7 +1429,7 @@ msgstr "Chìa Total Cultivada"
 
 #: src/components/fullNode/FullNode.jsx:206
 msgid "Total Iterations"
-msgstr ""
+msgstr "Total de iteraciones"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
@@ -1445,27 +1445,27 @@ msgstr "Tamaño Total de Parcelas"
 
 #: src/components/block/Block.jsx:216
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Total de iteraciones VDF"
 
 #: src/components/fullNode/FullNode.jsx:208
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Total de iteraciones desde el principio de la cadena de bloques"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Operación"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Detalles de la operación"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "ID de operación"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "ID de operación:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
