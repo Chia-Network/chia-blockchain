@@ -195,7 +195,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
         )
-        _, err = await blockchain.validate_unfinished_block(unf, False)
+        validate_res = await blockchain.validate_unfinished_block(unf, False)
+        err = validate_res.error
         assert err is None
         result, err, _ = await blockchain.receive_block(block)
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
@@ -210,8 +211,8 @@ class TestBlockHeaderValidation:
             block.transactions_info,
             block.transactions_generator,
         )
-        _, err = await blockchain.validate_unfinished_block(unf, False)
-        assert err is None
+        validate_res = await blockchain.validate_unfinished_block(unf, False)
+        assert validate_res.error is None
 
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
@@ -292,8 +293,8 @@ class TestBlockHeaderValidation:
                     block.transactions_info,
                     block.transactions_generator,
                 )
-                _, error = await blockchain.validate_unfinished_block(unf, skip_overflow_ss_validation=True)
-                assert error is None
+                validate_res = await blockchain.validate_unfinished_block(unf, skip_overflow_ss_validation=True)
+                assert validate_res.error is None
                 return
 
             await blockchain.receive_block(blocks[-1])
