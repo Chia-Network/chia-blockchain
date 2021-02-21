@@ -472,14 +472,23 @@ class RLWallet:
 
         return rl_parent.coin
 
-    async def rl_generate_unsigned_transaction(self, to_puzzlehash, amount, fee):
+    async def rl_generate_unsigned_transaction(self, to_puzzlehash, amount, fee) -> List[CoinSolution]:
         spends = []
+        assert self.rl_coin_record is not None
         coin = self.rl_coin_record.coin
         puzzle_hash = coin.puzzle_hash
         pubkey = self.rl_info.user_pubkey
         rl_parent: Optional[Coin] = await self._get_rl_parent()
         if rl_parent is None:
             raise ValueError("No RL parent coin")
+
+        # these lines make mypy happy
+
+        assert pubkey is not None
+        assert self.rl_info.limit is not None
+        assert self.rl_info.interval is not None
+        assert self.rl_info.rl_origin_id is not None
+        assert self.rl_info.admin_pubkey is not None
 
         puzzle = rl_puzzle_for_pk(
             bytes(pubkey),
@@ -502,7 +511,7 @@ class RLWallet:
             fee,
         )
 
-        spends.append((puzzle, CoinSolution(coin, solution)))
+        spends.append(CoinSolution(coin, puzzle, solution))
         return spends
 
     async def generate_signed_transaction(self, amount, to_puzzle_hash, fee: uint64 = uint64(0)) -> TransactionRecord:
@@ -532,22 +541,16 @@ class RLWallet:
             name=spend_bundle.name(),
         )
 
-    async def rl_sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]) -> SpendBundle:
+    async def rl_sign_transaction(self, spends: List[CoinSolution]) -> SpendBundle:
         sigs = []
-        for puzzle, solution in spends:
-            pubkey, secretkey = await self.get_keys(solution.coin.puzzle_hash)
-            signature = AugSchemeMPL.sign(secretkey, Program.to(solution.puzzle_solution_pair).get_tree_hash())
+        for coin_solution in spends:
+            pubkey, secretkey = await self.get_keys(coin_solution.coin.puzzle_hash)
+            signature = AugSchemeMPL.sign(secretkey, Program.to(coin_solution.solution).get_tree_hash())
             sigs.append(signature)
 
         aggsig = AugSchemeMPL.aggregate(sigs)
 
-        solution_list: List[CoinSolution] = []
-        for puzzle, coin_solution in spends:
-            solution_list.append(
-                CoinSolution(coin_solution.coin, Program.to([puzzle, coin_solution.puzzle_solution_pair]))
-            )
-
-        return SpendBundle(solution_list, aggsig)
+        return SpendBundle(spends, aggsig)
 
     def generate_unsigned_clawback_transaction(self, clawback_coin: Coin, clawback_puzzle_hash: bytes32, fee):
         if (
@@ -569,7 +572,7 @@ class RLWallet:
             self.rl_info.admin_pubkey,
         )
         solution = make_clawback_solution(clawback_puzzle_hash, clawback_coin.amount, fee)
-        spends.append((puzzle, CoinSolution(coin, solution)))
+        spends.append((puzzle, CoinSolution(coin, puzzle, solution)))
         return spends
 
     async def sign_clawback_transaction(
@@ -578,14 +581,12 @@ class RLWallet:
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
-            signature = AugSchemeMPL.sign(secretkey, Program.to(solution.puzzle_solution_pair).get_tree_hash())
+            signature = AugSchemeMPL.sign(secretkey, solution.solution.get_tree_hash())
             sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
         solution_list = []
         for puzzle, coin_solution in spends:
-            solution_list.append(
-                CoinSolution(coin_solution.coin, Program.to([puzzle, coin_solution.puzzle_solution_pair]))
-            )
+            solution_list.append(coin_solution)
 
         return SpendBundle(solution_list, aggsig)
 
@@ -653,7 +654,7 @@ class RLWallet:
             rl_parent.parent_coin_info,
         )
         signature = AugSchemeMPL.sign(secretkey, solution.get_tree_hash())
-        rl_spend = CoinSolution(self.rl_coin_record.coin, Program.to([puzzle, solution]))
+        rl_spend = CoinSolution(self.rl_coin_record.coin, puzzle, solution)
 
         list_of_coinsolutions.append(rl_spend)
 
@@ -664,7 +665,7 @@ class RLWallet:
             self.rl_coin_record.coin.parent_coin_info,
             self.rl_coin_record.coin.amount,
         )
-        agg_spend = CoinSolution(consolidating_coin, Program.to([puzzle, solution]))
+        agg_spend = CoinSolution(consolidating_coin, puzzle, solution)
 
         list_of_coinsolutions.append(agg_spend)
         aggsig = AugSchemeMPL.aggregate([signature])

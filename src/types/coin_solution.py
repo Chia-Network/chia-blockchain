@@ -19,10 +19,11 @@ class CoinSolution(Streamable):
     """
 
     coin: Coin
-    puzzle_solution_pair: Program
+    puzzle_reveal: Program
+    solution: Program
 
     def additions(self) -> List[Coin]:
-        return additions_for_solution(self.coin.name(), self.puzzle_solution_pair)
+        return additions_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)
 
     def announcements(self) -> List[Announcement]:
-        return announcements_for_solution(self.coin.name(), self.puzzle_solution_pair)
+        return announcements_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)

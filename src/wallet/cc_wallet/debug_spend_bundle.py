@@ -53,15 +53,15 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
 
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
-        coin, solution_pair = coin_solution.coin, Program.to(coin_solution.puzzle_solution_pair)
-        puzzle_reveal = solution_pair.first()
-        solution = solution_pair.rest().first()
+        coin = coin_solution.coin
+        puzzle_reveal = coin_solution.puzzle_reveal
+        solution = coin_solution.solution
 
         print(f"consuming coin {dump_coin(coin)}")
         print(f"  with id {coin.name()}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
-        error, conditions, cost = conditions_dict_for_solution(Program.to([puzzle_reveal, solution]))
+        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution)
         if error:
             print(f"*** error {error}")
         elif conditions is not None:

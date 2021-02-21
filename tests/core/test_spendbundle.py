@@ -7,23 +7,28 @@ from src.util.condition_tools import (
 )
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
-from tests.keys import puzzle_program_for_index
+from src.types.blockchain_format.program import Program
 from src.util.ints import uint32
+
+from tests.keys import puzzle_program_for_index
 
 
 def test_1():
     puzzle_program_1 = puzzle_program_for_index(uint32(1))
     puzzle_program_2 = puzzle_program_for_index(uint32(2))
 
-    conditions = [
-        make_create_coin_condition(std_hash(bytes(pp)), amount)
-        for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000)]
-    ]
+    conditions = Program.to(
+        [
+            make_create_coin_condition(std_hash(bytes(pp)), amount)
+            for pp, amount in [(puzzle_program_1, 1000), (puzzle_program_2, 2000)]
+        ]
+    )
 
     assert conditions is not None
-    puzzle_hash_solution = p2_delegated_puzzle.solution_for_conditions(conditions)
+    puzzle_reveal = p2_delegated_puzzle.puzzle_reveal_for_conditions(conditions)
+    solution = p2_delegated_puzzle.solution_for_conditions(conditions)
 
-    error, output_conditions, cost = conditions_for_solution(puzzle_hash_solution)
+    error, output_conditions, cost = conditions_for_solution(puzzle_reveal, solution)
     assert error is None
     from pprint import pprint
 
