@@ -92,7 +92,11 @@ class FullNodeRpcApi:
         else:
             space = {"space": uint128(0)}
 
-        synced = await self.service.synced()
+        if self.service.server is not None:
+            is_connected = len(self.service.server.get_full_node_connections()) > 0
+        else:
+            is_connected = False
+        synced = await self.service.synced() and is_connected
         if self.full_node.mempool_manager is not None:
             mempool_size = len(self.full_node.mempool_manager.mempool.spends)
         else:
