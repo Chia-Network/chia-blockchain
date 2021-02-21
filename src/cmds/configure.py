@@ -90,17 +90,13 @@ def configure(args, parser):
         print("Default full node port updated.")
         change_made = True
     if args.set_log_level:
-        if (
-            (args.set_log_level == "CRITICAL")
-            or (args.set_log_level == "ERROR")
-            or (args.set_log_level == "WARNING")
-            or (args.set_log_level == "INFO")
-            or (args.set_log_level == "DEBUG")
-            or (args.set_log_level == "NOTSET")
-        ):
+        levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
+        if args.set_log_level in levels:
             config["logging"]["log_level"] = args.set_log_level
             print("Logging level updated. Check CHIA_ROOT/log/debug.log")
             change_made = True
+        else:
+            print(f"Logging level not updated. Use one of: {levels}")
     if args.enable_upnp is not None:
         config["full_node"]["enable_upnp"] = str2bool(args.enable_upnp)
         if str2bool(args.enable_upnp):
