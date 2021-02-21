@@ -1223,7 +1223,6 @@ class FullNode:
         fetched_ss = self.full_node_store.get_sub_slot(request.end_of_slot_bundle.challenge_chain.get_hash())
         if fetched_ss is not None:
             # Already have the sub-slot
-            logging.getLogger(__name__).warning("1")
             return None, True
 
         async with self.timelord_lock:
@@ -1299,5 +1298,4 @@ class FullNode:
                     f"End of slot not added CC challenge "
                     f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
                 )
-        logging.getLogger(__name__).warning("4")
         return None, False
