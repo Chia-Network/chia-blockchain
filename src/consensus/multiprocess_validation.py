@@ -42,6 +42,7 @@ def batch_pre_validate_blocks(
     check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
+    validate_transactions: bool,
 ) -> List[bytes]:
     assert len(header_blocks_pickled) == len(transaction_generators)
     blocks = {}
@@ -61,11 +62,11 @@ def batch_pre_validate_blocks(
                 expected_difficulty[i],
                 expected_sub_slot_iters[i],
             )
-            cost_result = None
+            cost_result: Optional[CostResult] = None
             error_int: Optional[uint16] = None
             if error is not None:
                 error_int = uint16(error.code.value)
-            if not error and generator is not None:
+            if not error and generator is not None and validate_transactions:
                 cost_result = calculate_cost_of_program(
                     SerializedProgram.from_bytes(generator), constants.CLVM_COST_RATIO_CONSTANT
                 )
@@ -83,6 +84,7 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlockchainInterface,
     blocks: Sequence[Union[FullBlock, HeaderBlock]],
     pool: ProcessPoolExecutor,
+    validate_transactions: bool,
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -90,6 +92,7 @@ async def pre_validate_blocks_multiprocessing(
     if any validation issue occurs, returns False.
 
     Args:
+        validate_transactions:
         constants_json:
         pool:
         constants:
@@ -211,6 +214,7 @@ async def pre_validate_blocks_multiprocessing(
                 True,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
+                validate_transactions,
             )
         )
     # Collect all results into one flat list

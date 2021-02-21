@@ -874,26 +874,28 @@ class FullNode:
             if self.blockchain.contains_block(header_hash):
                 return None
             validation_start = time.time()
-            # Tries to add the block to the blockchain
-            if pre_validation_result is None:
-                pre_validation_results: Optional[
-                    List[PreValidationResult]
-                ] = await self.blockchain.pre_validate_blocks_multiprocessing([block])
-                if pre_validation_results is None:
-                    raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
-                pre_validation_result = pre_validation_results[0]
-            if pre_validation_result.error is not None:
-                if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
+            # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
+            pre_validation_results: Optional[
+                List[PreValidationResult]
+            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], pre_validation_result is None)
+            if pre_validation_results is None:
+                raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
+            if pre_validation_results[0].error is not None:
+                if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                     added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
                     error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     fork_height: Optional[uint32] = None
                 else:
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
-                        f"{block.height}: {Err(pre_validation_result.error).name}"
+                        f"{block.height}: {Err(pre_validation_results[0].error).name}"
                     )
             else:
-                added, error_code, fork_height = await self.blockchain.receive_block(block, pre_validation_result, None)
+                result_to_validate = (
+                    pre_validation_results[0] if pre_validation_result is None else pre_validation_result
+                )
+                assert result_to_validate.required_iters == pre_validation_results[0].required_iters
+                added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
 
             validation_time = time.time() - validation_start
 
