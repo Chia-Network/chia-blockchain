@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-20 07:21\n"
+"PO-Revision-Date: 2021-02-21 17:18\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,7 +28,7 @@ msgstr "0 valitsee automaattisesti muistilohkojen määrän"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. Farmari ja harvesteri ovat yhteydessä solmupalveluun, jolta saavat lohkoketjun tilatiedot. Katso alta yhdistetyt harvesteripalvelut"
+msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. Farmari ja harvesteri ovat yhteydessä noodiin, jolta saavat lohkoketjun tilatiedot. Katso alta yhdistetyt harvesteripalvelut"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
