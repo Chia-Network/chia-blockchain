@@ -93,7 +93,7 @@ def configure(args, parser):
         levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
         if args.set_log_level in levels:
             config["logging"]["log_level"] = args.set_log_level
-            print("Logging level updated. Check CHIA_ROOT/log/debug.log")
+            print(f"Logging level updated. Check {DEFAULT_ROOT_PATH}/log/debug.log")
             change_made = True
         else:
             print(f"Logging level not updated. Use one of: {levels}")
