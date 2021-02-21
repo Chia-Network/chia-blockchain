@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ -z $VIRTUAL_ENV ]; then
+if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."
   echo "Execute '. ./activate' before running."
 	exit 1
