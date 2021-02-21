@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-21 06:57\n"
+"PO-Revision-Date: 2021-02-21 09:32\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -372,7 +372,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "Creado por nosotros:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -414,11 +414,11 @@ msgstr "Borrar Parcela"
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Borrar todas las llaves"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Borrar llave"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -426,7 +426,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, asegurase de tener un backup. ¿Está seguro de que quiere continuar?"
 
 #: src/components/block/Block.jsx:212
 #: src/components/fullNode/FullNode.jsx:193
@@ -774,11 +774,11 @@ msgstr "Nueva Cartera"
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr ""
+msgstr "Siguiente"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:199
 msgid "Nickname"
-msgstr ""
+msgstr "Apodo"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "No"
@@ -811,21 +811,21 @@ msgstr "No Disponible"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Not Synced"
-msgstr ""
+msgstr "No sincronizado"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "No aceptado todavía"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "No confirmado todavía"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:164
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Not connected"
-msgstr ""
+msgstr "No conectado"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
@@ -865,7 +865,7 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:37
 msgid "Pending"
-msgstr ""
+msgstr "Pendiente"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:601
 #: src/components/wallet/standard/WalletStandard.tsx:225
@@ -918,7 +918,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Por favor, introduzca una llave pública válida"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 #: src/components/wallet/standard/WalletStandard.tsx:274
@@ -1227,7 +1227,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:113
 msgid "State"
-msgstr ""
+msgstr "Estado"
 
 #: src/components/fullNode/FullNode.jsx:123
 #: src/components/fullNode/FullNode.jsx:140
@@ -1243,7 +1243,7 @@ msgstr "Estado"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "Estado:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1279,7 +1279,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:149
 msgid "Synced"
-msgstr ""
+msgstr "Sincronizado"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
