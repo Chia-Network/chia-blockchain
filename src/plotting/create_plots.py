@@ -78,10 +78,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
 
     assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
-    if args.num is not None:
-        num = args.num
-    else:
-        num = 1
+    num = args.num
 
     if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
         log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
