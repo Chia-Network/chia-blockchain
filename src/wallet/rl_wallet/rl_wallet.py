@@ -536,14 +536,16 @@ class RLWallet:
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys(solution.coin.puzzle_hash)
-            signature = AugSchemeMPL.sign(secretkey, Program.to(solution.solution).get_tree_hash())
+            signature = AugSchemeMPL.sign(secretkey, Program.to(solution.puzzle_solution_pair).get_tree_hash())
             sigs.append(signature)
 
         aggsig = AugSchemeMPL.aggregate(sigs)
 
         solution_list: List[CoinSolution] = []
         for puzzle, coin_solution in spends:
-            solution_list.append(CoinSolution(coin_solution.coin, Program.to([puzzle, coin_solution.solution])))
+            solution_list.append(
+                CoinSolution(coin_solution.coin, Program.to([puzzle, coin_solution.puzzle_solution_pair]))
+            )
 
         return SpendBundle(solution_list, aggsig)
 
@@ -576,12 +578,14 @@ class RLWallet:
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
-            signature = AugSchemeMPL.sign(secretkey, Program.to(solution.solution).get_tree_hash())
+            signature = AugSchemeMPL.sign(secretkey, Program.to(solution.puzzle_solution_pair).get_tree_hash())
             sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
         solution_list = []
         for puzzle, coin_solution in spends:
-            solution_list.append(CoinSolution(coin_solution.coin, Program.to([puzzle, coin_solution.solution])))
+            solution_list.append(
+                CoinSolution(coin_solution.coin, Program.to([puzzle, coin_solution.puzzle_solution_pair]))
+            )
 
         return SpendBundle(solution_list, aggsig)
 
