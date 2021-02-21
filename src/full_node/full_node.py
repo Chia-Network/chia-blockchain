@@ -654,18 +654,25 @@ class FullNode:
                 )
 
     async def receive_block_batch(
-        self, blocks: List[FullBlock], peer: ws.WSChiaConnection, fork_point: Optional[uint32]
+        self, all_blocks: List[FullBlock], peer: ws.WSChiaConnection, fork_point: Optional[uint32]
     ) -> Tuple[bool, bool, Optional[uint32]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
+
+        blocks_to_validate: List[FullBlock] = []
+        for i, block in enumerate(all_blocks):
+            if not self.blockchain.contains_block(block.header_hash):
+                blocks_to_validate = all_blocks[i:]
+                break
+
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
-        for i, block in enumerate(blocks):
+        for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_info()} {Err(pre_validation_results[i].error)}"
@@ -685,10 +692,12 @@ class FullNode:
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 await self.weight_proof_handler.create_prev_sub_epoch_segments()
-        self._state_changed("new_peak")
-        self.log.debug(
-            f"Total time for {len(blocks)} blocks: {time.time() - pre_validate_start}, advanced: {advanced_peak}"
-        )
+        if advanced_peak:
+            self._state_changed("new_peak")
+            self.log.debug(
+                f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
+                f"advanced: {advanced_peak}"
+            )
         return True, advanced_peak, fork_height
 
     async def _finish_sync(self):
@@ -755,7 +764,7 @@ class FullNode:
         if not self.sync_store.get_sync_mode():
             self.blockchain.clean_block_records()
 
-        added_eos, _, _ = self.full_node_store.new_peak(
+        added_eos, new_sps, new_ips = self.full_node_store.new_peak(
             record,
             sub_slots[0],
             sub_slots[1],
@@ -793,7 +802,7 @@ class FullNode:
             msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        # TODO: maybe broadcast new SP/IPs as well?
+        # TODO: maybe add and broadcast new SP/IPs as well?
         if record.height % 1000 == 0:
             # Occasionally clear the seen list to keep it small
             self.full_node_store.clear_seen_unfinished_blocks()
@@ -1228,7 +1237,6 @@ class FullNode:
                     uint8(0),
                     bytes([0] * 32),
                 )
-                logging.getLogger(__name__).warning("2")
                 return (
                     make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),
                     False,
