@@ -64,8 +64,8 @@ def get_discrepancies_for_spend_bundle(
     try:
         cc_discrepancies: Dict[str, int] = dict()
         for coinsol in trade_offer.coin_solutions:
-            puzzle = coinsol.solution.first()
-            solution = coinsol.solution.rest().first()
+            puzzle = coinsol.puzzle_solution_pair.first()
+            solution = coinsol.puzzle_solution_pair.rest().first()
             # work out the deficits between coin amount and expected output for each
             r = cc_utils.uncurry_cc(puzzle)
             if r:

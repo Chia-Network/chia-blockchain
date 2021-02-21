@@ -53,7 +53,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
 
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
-        coin, solution_pair = coin_solution.coin, Program.to(coin_solution.solution)
+        coin, solution_pair = coin_solution.coin, Program.to(coin_solution.puzzle_solution_pair)
         puzzle_reveal = solution_pair.first()
         solution = solution_pair.rest().first()
 
