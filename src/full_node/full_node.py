@@ -1328,7 +1328,11 @@ class FullNode:
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
-            cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction)
+            try:
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction)
+            except Exception as e:
+                self.mempool_manager.remove_seen(spend_name)
+                raise e
             async with self.blockchain.lock:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
