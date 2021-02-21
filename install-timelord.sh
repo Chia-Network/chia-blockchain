@@ -1,7 +1,12 @@
 #!/bin/bash
-echo "This requires the chia python virtual environment."
-echo "Execute '. ./activate' if you have not already, before running."
-echo "This version of Timelord requires CMake 3.14+ to compile vdf_client"
+
+if [ -z "$VIRTUAL_ENV" ]; then
+  echo "This requires the chia python virtual environment."
+  echo "Execute '. ./activate' before running."
+	exit 1
+fi
+
+echo "Timelord requires CMake 3.14+ to compile vdf_client"
 
 PYTHON_VERSION=$(python -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')
 echo "Python version: $PYTHON_VERSION"
