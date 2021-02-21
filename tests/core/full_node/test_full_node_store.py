@@ -6,6 +6,7 @@ import pytest
 from pytest import raises
 
 from src.consensus.blockchain import ReceiveBlockResult
+from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.signage_point import SignagePoint
@@ -13,7 +14,7 @@ from src.protocols.timelord_protocol import NewInfusionPointVDF
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint8, uint128
+from src.util.ints import uint32, uint8, uint128, uint64
 from tests.setup_nodes import test_constants, bt
 from src.util.block_tools import get_signage_point
 from tests.core.fixtures import empty_blockchain  # noqa: F401
@@ -71,7 +72,7 @@ class TestFullNodeStore:
         # Add/get unfinished block
         for height, unf_block in enumerate(unfinished_blocks):
             assert store.get_unfinished_block(unf_block.partial_hash) is None
-            store.add_unfinished_block(height, unf_block)
+            store.add_unfinished_block(height, unf_block, PreValidationResult(None, uint64(123532), None))
             assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
             store.remove_unfinished_block(unf_block.partial_hash)
             assert store.get_unfinished_block(unf_block.partial_hash) is None

@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple, Set
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
+from src.consensus.multiprocess_validation import PreValidationResult
 from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
 from src.protocols import timelord_protocol
@@ -27,7 +28,7 @@ class FullNodeStore:
     seen_unfinished_blocks: set
 
     # Unfinished blocks, keyed from reward hash
-    unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
+    unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock, PreValidationResult]]
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
@@ -102,11 +103,10 @@ class FullNodeStore:
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
 
-    def add_unfinished_block(self, height: uint32, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[unfinished_block.partial_hash] = (
-            height,
-            unfinished_block,
-        )
+    def add_unfinished_block(
+        self, height: uint32, unfinished_block: UnfinishedBlock, result: PreValidationResult
+    ) -> None:
+        self.unfinished_blocks[unfinished_block.partial_hash] = (height, unfinished_block, result)
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)
@@ -114,15 +114,18 @@ class FullNodeStore:
             return None
         return result[1]
 
-    def get_unfinished_blocks(self) -> Dict[bytes32, Tuple[uint32, UnfinishedBlock]]:
+    def get_unfinished_block_result(self, unfinished_reward_hash: bytes32) -> Optional[PreValidationResult]:
+        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+        if result is None:
+            return None
+        return result[2]
+
+    def get_unfinished_blocks(self) -> Dict[bytes32, Tuple[uint32, UnfinishedBlock, PreValidationResult]]:
         return self.unfinished_blocks
 
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
         del_keys: List[bytes32] = []
-        for partial_reward_hash, (
-            unf_height,
-            unfinished_block,
-        ) in self.unfinished_blocks.items():
+        for partial_reward_hash, (unf_height, unfinished_block, _) in self.unfinished_blocks.items():
             if unf_height < height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:

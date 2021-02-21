@@ -858,12 +858,15 @@ class FullNode:
         if self.blockchain.contains_block(header_hash):
             return None
 
+        pre_validation_result: Optional[PreValidationResult] = None
         if block.is_transaction_block() and block.transactions_generator is None:
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             unf_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(unfinished_rh)
             if unf_block is not None and unf_block.transactions_generator is not None:
+                pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
+                assert pre_validation_result is not None
                 block = dataclasses.replace(block, transactions_generator=unf_block.transactions_generator)
 
         async with self.blockchain.lock:
@@ -872,25 +875,25 @@ class FullNode:
                 return None
             validation_start = time.time()
             # Tries to add the block to the blockchain
-            pre_validation_results: Optional[
-                List[PreValidationResult]
-            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block])
-            if pre_validation_results is None:
-                raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
-            if pre_validation_results[0].error is not None:
-                if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
+            if pre_validation_result is None:
+                pre_validation_results: Optional[
+                    List[PreValidationResult]
+                ] = await self.blockchain.pre_validate_blocks_multiprocessing([block])
+                if pre_validation_results is None:
+                    raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
+                pre_validation_result = pre_validation_results[0]
+            if pre_validation_result.error is not None:
+                if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
                     added: ReceiveBlockResult = ReceiveBlockResult.DISCONNECTED_BLOCK
                     error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
                     fork_height: Optional[uint32] = None
                 else:
                     raise ValueError(
                         f"Failed to validate block {header_hash} height "
-                        f"{block.height}: {Err(pre_validation_results[0].error).name}"
+                        f"{block.height}: {Err(pre_validation_result.error).name}"
                     )
             else:
-                added, error_code, fork_height = await self.blockchain.receive_block(
-                    block, pre_validation_results[0], None
-                )
+                added, error_code, fork_height = await self.blockchain.receive_block(block, pre_validation_result, None)
 
             validation_time = time.time() - validation_start
 
@@ -1046,7 +1049,7 @@ class FullNode:
             True,
         )
 
-        self.full_node_store.add_unfinished_block(height, block)
+        self.full_node_store.add_unfinished_block(height, block, validate_result)
         if farmed_block is True:
             self.log.info(f"🍀 ️Farmed unfinished_block {block_hash}")
         else:
