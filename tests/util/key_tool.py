@@ -1,9 +1,11 @@
+from blspy import PrivateKey, AugSchemeMPL
+
 from src.util.condition_tools import (
     conditions_by_opcode,
     pkm_pairs_for_conditions_dict,
     conditions_for_solution,
 )
-from blspy import PrivateKey, AugSchemeMPL
+from src.types.blockchain_format.program import Program
 
 
 class KeyTool(dict):
@@ -22,9 +24,9 @@ class KeyTool(dict):
             raise ValueError("unknown pubkey %s" % pk)
         return AugSchemeMPL.sign(private, msg)
 
-    def signature_for_solution(self, solution, coin_name):
+    def signature_for_solution(self, puzzle: Program, solution: Program, coin_name) -> AugSchemeMPL:
         signatures = []
-        conditions = conditions_for_solution(solution)
+        conditions = conditions_for_solution(puzzle, solution)
         assert conditions[1] is not None
         conditions_dict = conditions_by_opcode(conditions[1])
         for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, coin_name):

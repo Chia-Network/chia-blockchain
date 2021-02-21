@@ -148,9 +148,8 @@ class WalletTool:
             solution = self.make_solution(condition_dic)
         else:
             solution = self.make_solution(condition_dic)
-        puzzle_solution_pair = Program.to([puzzle, solution])
 
-        spends.append(CoinSolution(coin, puzzle_solution_pair))
+        spends.append(CoinSolution(coin, puzzle, solution))
         return spends
 
     def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
@@ -160,7 +159,7 @@ class WalletTool:
         for coin_solution in coin_solutions:  # type: ignore # noqa
             secret_key = self.get_private_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-            err, con, cost = conditions_for_solution(coin_solution.puzzle_solution_pair)
+            err, con, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution)
             if not con:
                 raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)

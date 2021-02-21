@@ -25,7 +25,7 @@ def trade_status_ui_string(status: TradeStatus):
 
 
 def trade_record_to_dict(record: TradeRecord) -> Dict:
-    """ Convinence function to return only part of trade record we care about and show correct status to the ui"""
+    """ Convenience function to return only part of trade record we care about and show correct status to the ui"""
     result = {}
     result["trade_id"] = record.trade_id.hex()
     result["sent"] = record.sent
@@ -49,8 +49,8 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
     # Returns the amount of value outputted by a puzzle and solution
 
 
-def get_output_amount_for_puzzle_and_solution(puzzle, solution):
-    error, conditions, cost = conditions_dict_for_solution(Program.to([puzzle, solution]))
+def get_output_amount_for_puzzle_and_solution(puzzle: Program, solution: Program) -> int:
+    error, conditions, cost = conditions_dict_for_solution(puzzle, solution)
     total = 0
     if conditions:
         for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
@@ -64,8 +64,8 @@ def get_discrepancies_for_spend_bundle(
     try:
         cc_discrepancies: Dict[str, int] = dict()
         for coinsol in trade_offer.coin_solutions:
-            puzzle = coinsol.puzzle_solution_pair.first()
-            solution = coinsol.puzzle_solution_pair.rest().first()
+            puzzle = coinsol.puzzle_reveal
+            solution = coinsol.solution
             # work out the deficits between coin amount and expected output for each
             r = cc_utils.uncurry_cc(puzzle)
             if r:

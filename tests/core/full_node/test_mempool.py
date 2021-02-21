@@ -773,7 +773,7 @@ class TestMempool:
         assert len(unsigned) == 1
         coin_solution: CoinSolution = unsigned[0]
 
-        err, con, cost = conditions_for_solution(coin_solution.puzzle_solution_pair)
+        err, con, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution)
         assert con is not None
 
         # TODO(straya): fix this test
