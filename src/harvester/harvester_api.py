@@ -47,8 +47,6 @@ class HarvesterAPI:
             self.harvester.log.warning("Not farming any plots on this harvester. Check your configuration.")
             return
 
-        self.harvester._state_changed("plots")
-
     @peer_required
     @api_request
     async def new_signage_point_harvester(
