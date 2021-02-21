@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-21 10:44\n"
+"PO-Revision-Date: 2021-02-21 11:40\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -330,7 +330,7 @@ msgstr "Crear operación"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Crear Oferta"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:394
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
@@ -457,7 +457,7 @@ msgstr "Arrastre el fichero de oferta"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "Introduzca las 24 palabras mnemotécnicas que has guardado en orden para restaurar su cartera Chia."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -471,11 +471,11 @@ msgstr "Error"
 
 #: src/components/wallet/standard/WalletStandard.tsx:304
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "Error: No se puede enviar chia a la dirección de color. Por favor introduzca una dirección chia."
 
 #: src/components/fullNode/FullNode.jsx:212
 msgid "Estimated network space"
-msgstr ""
+msgstr "Espacio estimado de red"
 
 #: src/components/fullNode/FullNode.jsx:215
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -790,7 +790,7 @@ msgstr "Aún no hay bloques cultivados"
 
 #: src/components/wallet/WalletHistory.tsx:58
 msgid "No previous transactions"
-msgstr ""
+msgstr "No hay transacciones previas"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -849,11 +849,11 @@ msgstr "Oferta creada"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr ""
+msgstr "Enviado"
 
 #: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
-msgstr ""
+msgstr "Altura del Pico"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -861,7 +861,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
-msgstr ""
+msgstr "Hora del Pico"
 
 #: src/components/wallet/WalletHistory.tsx:37
 msgid "Pending"
@@ -875,7 +875,7 @@ msgstr "Saldo Pendiente"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:232
 msgid "Pending Change"
-msgstr ""
+msgstr "Cambio Pendiente"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:592
 #: src/components/wallet/standard/WalletStandard.tsx:218
@@ -884,21 +884,21 @@ msgstr "Saldo Pendiente Total"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Por favor, añada una pareja de operación"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Por favor, introduzca una tarifa 0. No están soportadas tarifas positivas todavía para RL."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Por favor, introduzca una cantidad inicial de monedas válida"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
 #: src/components/wallet/standard/WalletStandard.tsx:286
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "Por favor, introduzca una cantidad numérica válida"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -906,15 +906,15 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:688
 #: src/components/wallet/standard/WalletStandard.tsx:294
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Por favor, introduzca una tarifa numérica válida"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Por favor, introduzca un intervalo de longitud numérico válido"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Por favor, introduzca una cantidad para gastar numérica válida"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
@@ -923,7 +923,7 @@ msgstr "Por favor, introduzca una llave pública válida"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 #: src/components/wallet/standard/WalletStandard.tsx:274
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Por favor, termine de sincronizar antes de hacer una transacción"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1223,7 +1223,7 @@ msgstr "Duración del Intervalo de Gasto (cantidad de bloques)"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:414
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:465
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Limite de gasto (chia por intervalo): {0}"
 
 #: src/components/fullNode/FullNode.jsx:113
 msgid "State"
@@ -1263,7 +1263,7 @@ msgstr "Estado:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Stripe Size"
-msgstr ""
+msgstr "Tamaño de tira"
 
 #: src/components/block/Block.jsx:199
 #~ msgid "Sub Block Height"
@@ -1275,7 +1275,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
 msgid "Submit"
-msgstr ""
+msgstr "Enviar"
 
 #: src/components/fullNode/FullNode.jsx:149
 msgid "Synced"
@@ -1289,7 +1289,7 @@ msgstr "Sincronizando"
 
 #: src/components/fullNode/FullNode.jsx:125
 msgid "Syncing {progress}/{tip}"
-msgstr ""
+msgstr "Sincronizando {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
@@ -1329,7 +1329,7 @@ msgstr "El tamaño mínimo requerido para mainnet es k=32"
 
 #: src/components/fullNode/FullNode.jsx:143
 msgid "The node is not synced"
-msgstr ""
+msgstr "El nodo no está sincronizado"
 
 #: src/components/fullNode/FullNode.jsx:131
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -1341,11 +1341,11 @@ msgstr "La semilla utilizada para crear la parcela. Esto depende del conjunto pk
 
 #: src/components/block/Block.jsx:219
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "Número total de VDF (funcione de retardo verificable) o iteraciones de prueba de tiempo en la cadena completa hasta este sub-bloque."
 
 #: src/components/block/Block.jsx:229
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "Número total de VDF (funcione de retardo verificable) o iteraciones de prueba de tiempo en este bloque."
 
 #: src/components/block/Block.jsx:309
 msgid "The total transactions fees in this block. Rewarded to the farmer."
@@ -1367,7 +1367,7 @@ msgstr "Esta es la cantidad de chía que puede utilizar actualmente para realiza
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Esto es un cambio pendiente, los cuales son cambios de monedas que usted se ha enviado a si mismo, pero todavía no han sido confirmados."
 
 #: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
@@ -1375,7 +1375,7 @@ msgstr "Esta es la suma de las transacciones pendientes entrantes y salientes (a
 
 #: src/components/fullNode/FullNode.jsx:188
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Este es la hora del último sub-bloque pico."
 
 #: src/components/block/Block.jsx:183
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
@@ -1391,7 +1391,7 @@ msgstr "Este es el saldo total + saldo pendiente: es lo que será su saldo despu
 
 #: src/components/fullNode/FullNode.jsx:152
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Este nodo esta al día y validando la red"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1399,23 +1399,23 @@ msgstr "Esta tabla muestra la última vez que su granja intentó ganar un desaf�
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Esta operación fue incluida en la cadena de bloques a esta altura de bloque"
 
 #: src/components/fullNode/FullNode.jsx:105
 msgid "Time Created"
-msgstr ""
+msgstr "Hora de Creación"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "Time this trade was created at this time"
-msgstr ""
+msgstr "Esta operación fue creada a esta hora"
 
 #: src/components/block/Block.jsx:180
 msgid "Timestamp"
-msgstr ""
+msgstr "Marca de tiempo"
 
 #: src/components/wallet/WalletHistory.tsx:27
 msgid "To"
-msgstr ""
+msgstr "A"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
