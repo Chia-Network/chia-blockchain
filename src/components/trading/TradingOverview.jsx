@@ -190,7 +190,7 @@ const getDetailItems = (trade) => {
     colour: 'black',
     tooltip: (
       <Trans>
-        Time this trade was created at this time
+        This trade was created at this time
       </Trans>
     ),
   };
