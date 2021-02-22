@@ -1,4 +1,4 @@
-name: Build and test Ubuntu Wallet
+name: Ubuntu Wallet
 
 on:
   push:
@@ -65,7 +65,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.10.0'
+        ref: '2021-02-22'
 
     - name: Link home directory
       run: |
