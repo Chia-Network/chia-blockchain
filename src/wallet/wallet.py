@@ -116,6 +116,8 @@ class Wallet:
         addition_amount = 0
 
         for record in unconfirmed_tx:
+            if not record.is_in_mempool():
+                continue
             our_spend = False
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):

@@ -531,7 +531,7 @@ class TestFullNodeProtocol:
         spend_bundles = []
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
-            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(puzzle_hash))[0]
+            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             fee = random.randint(2, 499)
             spend_bundle = wallet_receiver.generate_signed_transaction(
