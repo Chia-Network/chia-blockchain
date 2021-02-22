@@ -4,15 +4,15 @@ from typing import List, Optional, Set, Tuple
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
 
-from clvm import run_program as default_run_program, SExp
+from clvm import run_program as default_run_program, KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
 from clvm.casts import int_from_bytes
-from clvm.operators import OPERATOR_LOOKUP
+from clvm.operators import OPERATOR_LOOKUP, OP_REWRITE
 from clvm.serialize import sexp_from_stream, sexp_buffer_from_stream, sexp_to_stream
 from clvm.EvalError import EvalError
 
 from clvm_tools.curry import curry, uncurry
 
-from clvm_rs import serialize_and_run_program, STRICT_MODE
+from clvm_rs import deserialize_and_run_program, STRICT_MODE
 
 
 def run_program(
@@ -195,6 +195,18 @@ class SerializedProgram:
             serialized_args += _serialize(args[0])
 
         max_cost = 0
-        cost, ret = serialize_and_run_program(self._buf, serialized_args, 1, 3, max_cost, flags)
+        # TODO: move this ugly magic into `clvm` "dialects"
+        native_opcode_names_by_opcode = dict(
+            ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."
+        )
+        cost, ret = deserialize_and_run_program(
+            self._buf,
+            serialized_args,
+            KEYWORD_TO_ATOM["q"][0],
+            KEYWORD_TO_ATOM["a"][0],
+            native_opcode_names_by_opcode,
+            max_cost,
+            flags,
+        )
         # TODO this could be parsed lazily
         return cost, sexp_from_stream(io.BytesIO(ret), SExp.to)
