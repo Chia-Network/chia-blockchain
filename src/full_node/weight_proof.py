@@ -1001,6 +1001,7 @@ def _validate_pospase_recent_chain(
         log.error(f"could not verify proof of space block {block.height} {overflow}")
         return None
     required_iters = calculate_iterations_quality(
+        constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         block.reward_chain_block.proof_of_space.size,
         diff,
@@ -1041,6 +1042,7 @@ def __validate_pospace(
         log.error("could not verify proof of space")
         return None
     return calculate_iterations_quality(
+        constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         challenge_sub_slot.proof_of_space.size,
         curr_diff,
