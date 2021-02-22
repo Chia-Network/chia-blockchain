@@ -133,9 +133,16 @@ class FullNode:
         self.state_changed_callback = None
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        self.uncompact_task = None
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, peak.height - 1, None)
+        if self.config["send_uncompact_interval"] != 0:
+            self.uncompact_task = asyncio.create_task(
+                self.broadcast_uncompact_blocks(
+                    self.config["send_uncompact_interval"], self.config["target_uncompact_proofs"],
+                )
+            )
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -466,6 +473,8 @@ class FullNode:
         self.mempool_manager.shut_down()
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.close())
+        if self.uncompact_task is not None:
+            self.uncompact_task.cancel()
 
     async def _await_closed(self):
         try:
@@ -1554,7 +1563,7 @@ class FullNode:
         if self.server is not None:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-    async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_blocks: int):
+    async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_proofs: int):
         while not self._shut_down:
             while self.sync_store.get_sync_mode():
                 if self._shut_down:
@@ -1573,7 +1582,7 @@ class FullNode:
             for h in range(min_height, max_height, 100):
                 # Got 10 times the target header count, sampling the target headers should contain
                 # enough randomness to split the work between blueboxes.
-                if len(broadcast_list) > target_uncompact_blocks * 10:
+                if len(broadcast_list) > target_uncompact_proofs * 10:
                     break
                 stop_height = min(h + 99, max_height)
                 headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
@@ -1640,9 +1649,9 @@ class FullNode:
             if new_min_height is None:
                 new_min_height = max(1, max_height - 1000)
             min_height = new_min_height
-            if len(broadcast_list) > target_uncompact_blocks:
+            if len(broadcast_list) > target_uncompact_proofs:
                 random.shuffle(broadcast_list)
-                broadcast_list = broadcast_list[:target_uncompact_blocks]
+                broadcast_list = broadcast_list[:target_uncompact_proofs]
             if self.sync_store.get_sync_mode():
                 continue
             if self.server is not None:

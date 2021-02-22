@@ -210,6 +210,7 @@ full_node:
   # send_uncompact_interval=1800. This sends 50 proofs every 30 minutes.
   # Set to 0 if you don't use this feature.
   send_uncompact_interval: 0
+  target_uncompact_proofs: 100
 
   farmer_peer:
       host: *self_hostname
