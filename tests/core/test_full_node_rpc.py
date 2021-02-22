@@ -130,8 +130,7 @@ class TestRpc:
             coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
-            response = await client.send_transaction(spend_bundle)
-            print(response)
+            await client.push_raw_tx(spend_bundle)
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 

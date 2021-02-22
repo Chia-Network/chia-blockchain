@@ -7,7 +7,7 @@ from typing import Dict, Optional, Tuple, List, Set
 import logging
 
 from chiabip158 import PyBIP158
-from blspy import G1Element, AugSchemeMPL, G2Element
+from blspy import G1Element, AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.block_record import BlockRecord
@@ -338,11 +338,7 @@ class MempoolManager:
 
         if validate_signature:
             # Verify aggregated signature
-            if len(pks) == 0 and len(msgs) == 0:
-                validates = new_spend.aggregated_signature == G2Element.infinity()
-            else:
-                validates = AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature)
-            if not validates:
+            if not AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature):
                 log.warning(f"Aggsig validation error {pks} {msgs} {new_spend}")
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
         # Remove all conflicting Coins and SpendBundles

@@ -25,22 +25,23 @@ class FullNodeRpcApi:
             # Blockchain
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_block": self.get_block,
+            "/get_blocks": self.get_blocks,
             "/get_block_record_by_height": self.get_block_record_by_height,
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
             "/get_unfinished_block_headers": self.get_unfinished_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
-            "/get_blocks": self.get_blocks,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
             # Coins
-            "/get_unspent_coins": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
-            "/send_transaction": self.send_transaction,
+            "/push_raw_tx": self.push_raw_tx,
             # Mempool
             # "/get_mempool": self.get_mempool,
             # "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            # Deprecated
+            "/get_unspent_coins": self.get_coin_records_by_puzzle_hash,
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:
@@ -311,7 +312,7 @@ class FullNodeRpcApi:
 
         return {"coin_record": coin_record}
 
-    async def send_transaction(self, request: Dict) -> Optional[Dict]:
+    async def push_raw_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 

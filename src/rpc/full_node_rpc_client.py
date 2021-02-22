@@ -99,5 +99,5 @@ class FullNodeRpcClient(RpcClient):
         # TODO: return block records
         return response["block_records"]
 
-    async def send_transaction(self, spend_bundle: SpendBundle):
-        return await self.fetch("send_transaction", {"spend_bundle": spend_bundle.to_json_dict()})
+    async def push_raw_tx(self, spend_bundle: SpendBundle):
+        return await self.fetch("push_raw_tx", {"spend_bundle": spend_bundle.to_json_dict()})

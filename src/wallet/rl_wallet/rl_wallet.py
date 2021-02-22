@@ -326,7 +326,7 @@ class RLWallet:
         self.rl_coin_record = await self._get_rl_coin_record()
         if self.rl_coin_record is None:
             return uint64(0)
-        peak = await self.wallet_state_manager.blockchain.get_full_peak()
+        peak = self.wallet_state_manager.blockchain.get_peak()
         height = peak.height if peak else 0
         assert self.rl_info.limit is not None
         unlocked = int(

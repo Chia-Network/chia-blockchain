@@ -3,7 +3,7 @@ from typing import Tuple
 from clvm import KEYWORD_FROM_ATOM
 
 from clvm_tools.binutils import disassemble as bu_disassemble
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL
 from src.types.blockchain_format.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.blockchain_format.program import Program
@@ -123,10 +123,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print()
     print("=" * 80)
     print()
-    if len(msgs) > 0:
-        validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
-    else:
-        validates = spend_bundle.aggregated_signature == G2Element.infinity()
+    validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
     print(f"aggregated signature check pass: {validates}")
 
 
