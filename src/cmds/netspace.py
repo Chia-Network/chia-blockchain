@@ -90,9 +90,10 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str):
 @click.option(
     "-d",
     "--delta-block-height",
-    help=("Compare a block X blocks older. "
+    help=("Compare a block X blocks older to estimate total network space. "
           "Defaults to 192 blocks (~1 hour) and Peak block as the starting block. "
-          "Use --start BLOCK_HEIGHT to specify starting block"),
+          "Use --start BLOCK_HEIGHT to specify starting block. "
+          "Use 1000 blocks to replicate the GUI estimate."),
     type=str,
     default="192"
 )
