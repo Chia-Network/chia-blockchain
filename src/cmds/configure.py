@@ -4,7 +4,6 @@ from src.util.config import (
     load_config,
     save_config,
 )
-from argparse import ArgumentParser
 from typing import Dict
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.config import str2bool
@@ -55,16 +54,26 @@ def configure(root_path, set_node_introducer, set_fullnode_port, set_log_level, 
     if change_made:
         print("Restart any running chia services for changes to take effect.")
         save_config(root_path, "config.yaml", config)
-    else:
-        help_message()
     return 0
 
 
 @click.command('configure', short_help="modify configuration")
-@click.option( "--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str, default="",)
-@click.option( "--set-fullnode-port", help="Set the port to use for the fullnode, useful for beta testing.", type=str, default="",)
-@click.option( "--set-log-level", "--log-level", "-log-level", help="Set the instance log level.", default="NOSET", type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]))
-@click.option( "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP.", type=click.Choice(["True", "False"]))
+@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str, default="",)
+@click.option(
+    "--set-fullnode-port",
+    help="Set the port to use for the fullnode, useful for beta testing.",
+    type=str,
+    default=""
+)
+@click.option(
+    "--set-log-level",
+    "--log-level",
+    "-log-level",
+    help="Set the instance log level.",
+    default="NOSET",
+    type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"])
+)
+@click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP.", type=click.Choice(["True", "False"]))
 @click.pass_context
 def configure_cmd(ctx, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
-    configure_func(ctx.obj['root_path'], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
+    configure(ctx.obj['root_path'], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)

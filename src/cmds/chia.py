@@ -4,7 +4,6 @@ import click
 from src import __version__
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.daemon.server import async_run_daemon
-from src.plotting.plot_tools import (add_plot_directory, remove_plot_directory)
 
 from src.cmds.init import init_cmd
 from src.cmds.keys import keys_cmd
@@ -16,6 +15,7 @@ from src.cmds.start import start_cmd
 from src.cmds.stop import stop_cmd
 from src.cmds.netspace import netspace_cmd
 
+
 @click.group(epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'.")
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root.", type=click.Path(), show_default=True)
 @click.pass_context
@@ -24,16 +24,20 @@ def cli(ctx, root_path):
     ctx.obj['root_path'] = root_path
     pass
 
-cli.format_help_text = lambda ctx, formatter: formatter.write(f"\n  Manage chia blockchain infrastructure ({__version__})\n")
+
+cli.format_help_text = lambda c, f: f.write(f"\n  Manage chia blockchain infrastructure ({__version__})\n")
+
 
 @cli.command('version', short_help='show version')
 def version_cmd():
     print(__version__)
 
+
 @cli.command('run_daemon', short_help='runs chia daemon')
 @click.pass_context
 def run_daemon_cmd(ctx):
     return asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx['root_path']))
+
 
 cli.add_command(keys_cmd)
 cli.add_command(plots_cmd)

@@ -6,7 +6,6 @@ from typing import List
 from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.bech32m import encode_puzzle_hash
 from src.util.keychain import (
     generate_mnemonic,
@@ -169,44 +168,64 @@ def keys_cmd(ctx):
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init.")
 
+
 @keys_cmd.command('generate', short_help="generates and adds a key to keychain")
 @click.pass_context
 def generate_cmd(ctx):
     generate_and_add()
     check_keys(ctx.obj['root_path'])
 
+
 @keys_cmd.command('show', short_help="displays all the keys in keychain")
 def show_cmd():
     show_all_keys()
 
+
 @keys_cmd.command('add', short_help="add a private key through the mnemonic")
 @click.option("--mnemonic", "-m", default=None, nargs=24, help="Enter mnemonic you want to use", type=str)
 @click.pass_context
-def add_cmd(ctx):
+def add_cmd(ctx, mnemonic):
     add_private_key_seed(" ".join(mnemonic))
     check_keys(ctx.obj['root_path'])
 
+
 @keys_cmd.command('delete', short_help="delete a key by it's pk fingerprint in hex form")
-@click.option("--fingerprint", "-f", default=None, nargs=24, help="Enter the fingerprint of the key you want to use", type=int)
+@click.option(
+    "--fingerprint",
+    "-f",
+    default=None,
+    help="Enter the fingerprint of the key you want to use",
+    type=click.INT
+)
 @click.pass_context
 def delete_cmd(ctx, fingerprint):
     delete(fingerprint)
     check_keys(ctx.obj['root_path'])
 
+
 @keys_cmd.command('delete_all', short_help="delete all private keys in keychain")
 def delete_all_cmd():
     keychain.delete_all_keys()
+
 
 @keys_cmd.command('generate_and_print', short_help="generates but does NOT add to keychain")
 def generate_and_print_cmd():
     generate_and_print()
 
+
 @keys_cmd.command('sign', short_help="sign a message with a private key")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str)
-@click.option("--fingerprint", "-f", default=None, nargs=24, help="Enter the fingerprint of the key you want to use", type=int)
+@click.option(
+    "--fingerprint",
+    "-f",
+    default=None,
+    help="Enter the fingerprint of the key you want to use",
+    type=click.INT
+)
 @click.option("--hd_path", "-t", default=None, help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str)
 def sing_cmd(message, fingerprint, hd_path):
-    sing(message, fingerprint, hd_path)
+    sign(message, fingerprint, hd_path)
+
 
 @keys_cmd.command('verify', short_help="verify a signature with a pk")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str)

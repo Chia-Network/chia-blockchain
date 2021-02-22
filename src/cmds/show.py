@@ -13,12 +13,13 @@ from src.server.outbound_message import NodeType
 from src.types.full_block import FullBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
-from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.bech32m import encode_puzzle_hash
 
-async def show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection, block_header_hash_by_height, block_by_header_hash):
+
+async def show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
+                     block_header_hash_by_height, block_by_header_hash):
 
     # TODO read configuration for rpc_port instead of assuming default
 
@@ -252,15 +253,59 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
     client.close()
     await client.await_closed()
 
+
 @click.command('show', short_help="show node information")
-@click.option("-p", "--rpc-port", help="Set the port where the Full Node is hosting the RPC interface. See the rpc_port under full_node in config.yaml.", type=int, default=8555, show_default=True)
-@click.option("-wp", "--wallet-rpc-port", help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.", type=int, default=9256, show_default=True)
-@click.option("-s", "--state", help="Show the current state of the blockchain.", is_flag=True, type=bool, default=False,)
-@click.option("-c", "--connections", help="List nodes connected to this Full Node.", is_flag=True, type=bool, default=False,)
+@click.option(
+    "-p",
+    "--rpc-port",
+    help=("Set the port where the Full Node is hosting the RPC interface. "
+          "See the rpc_port under full_node in config.yaml."),
+    type=int,
+    default=8555,
+    show_default=True
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True
+)
+@click.option(
+    "-s",
+    "--state",
+    help="Show the current state of the blockchain.",
+    is_flag=True,
+    type=bool,
+    default=False
+)
+@click.option(
+    "-c",
+    "--connections",
+    help="List nodes connected to this Full Node.",
+    is_flag=True,
+    type=bool,
+    default=False
+)
 @click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False,)
 @click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="",)
-@click.option("-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default="",)
-@click.option("-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height.", type=str, default="",)
+@click.option(
+    "-r",
+    "--remove-connection",
+    help="Remove a Node by the first 8 characters of NodeID",
+    type=str,
+    default=""
+)
+@click.option(
+    "-bh",
+    "--block-header-hash-by-height",
+    help="Look up a block header hash by block height.",
+    type=str,
+    default=""
+)
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="",)
-def show_cmd(rpc_port, wallet_rpc_port, state, connections, exit_node, add_connection, remove_connection, block_header_hash_by_height, block_by_header_hash):
-    return asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection, block_header_hash_by_height, block_by_header_hash))
+def show_cmd(rpc_port, wallet_rpc_port, state, connections, exit_node, add_connection, remove_connection,
+             block_header_hash_by_height, block_by_header_hash):
+    return asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
+                                  block_header_hash_by_height, block_by_header_hash))

@@ -3,7 +3,6 @@ from src import __version__
 import os
 import shutil
 
-from argparse import Namespace, ArgumentParser
 from typing import List, Dict, Any, Tuple
 
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -413,25 +412,15 @@ def chia_init(root_path: Path):
 
     return 0
 
-def help_message():
-    print("usage: chia init")
-    print(
-        """
-        chia init (migrate previous version configuration to current)
-        chia init -c [directory] (creates new TLS certificates signed by your CA in [directory])
-            Follow these steps to create new certifcates for a remote harvester:
-            - Make a copy of your Farming Machine CA directory: ~/.chia/[version]/config/ssl/ca
-            - Shut down all chia daemon processes with `chia stop all -d`
-            - Run `chia init -c [directory]` on your remote harvester,
-              where [directory] is the the copy of your Farming Machine CA directory
-            - Get more details on remote harvester on Chia wiki:
-              https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
-        """
-    )
-
 
 @click.command('init', short_help="create or migrate to current")
-@click.option("--create-certs", "-c", default=None, help="Create new SSL certificates based on CA in [directory]", type=click.Path())
+@click.option(
+    "--create-certs",
+    "-c",
+    default=None,
+    help="Create new SSL certificates based on CA in [directory]",
+    type=click.Path()
+)
 @click.pass_context
 def init_cmd(ctx, create_certs):
     """
@@ -447,6 +436,7 @@ def init_cmd(ctx, create_certs):
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
     init(create_certs, ctx.obj['root_path'])
+
 
 if __name__ == "__main__":
     chia_init(DEFAULT_ROOT_PATH)

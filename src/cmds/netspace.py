@@ -1,8 +1,6 @@
 import click
 import aiohttp
 import asyncio
-import time
-from time import struct_time, localtime
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.byte_types import hexstr_to_bytes
@@ -13,15 +11,12 @@ from src.rpc.full_node_rpc_client import FullNodeRpcClient
 async def netstorge_async(rpc_port, delta_block_height, start):
     """
     Calculates the estimated space on the network given two block header hases
-    # TODO: add help on failure/no args
     """
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
-        else:
-            rpc_port = rpc_port
         client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
 
         if delta_block_height:
@@ -80,10 +75,33 @@ async def netstorge_async(rpc_port, delta_block_height, start):
     client.close()
     await client.await_closed()
 
+
 @click.command('netspace', short_help='estimate space on the network')
-@click.option( "-p", "--rpc-port", help="Set the port where the Full Node is hosting the RPC interface." + "See the rpc_port under full_node in config.yaml. Defaults to 8555", type=int)
-@click.option( "-d", "--delta-block-height", help="Compare a block X blocks older." + "Defaults to 192 blocks (~1 hour) and Peak block as the starting block." + "Use --start BLOCK_HEIGHT to specify starting block", type=str, default="192",)
-@click.option( "-s", "--start", help="Newest block used to calculate estimated total network space. Defaults to Peak block.", type=str, default="",)
+@click.option(
+    "-p",
+    "--rpc-port",
+    help=("Set the port where the Full Node is hosting the RPC interface. "
+          "See the rpc_port under full_node in config.yaml. "
+          "[default: 8555]"),
+    type=int,
+    show_default=True
+)
+@click.option(
+    "-d",
+    "--delta-block-height",
+    help=("Compare a block X blocks older. "
+          "Defaults to 192 blocks (~1 hour) and Peak block as the starting block. "
+          "Use --start BLOCK_HEIGHT to specify starting block"),
+    type=str,
+    default="192"
+)
+@click.option(
+    "-s",
+    "--start",
+    help="Newest block used to calculate estimated total network space. Defaults to Peak block.",
+    type=str,
+    default=""
+)
 def netspace_cmd(rpc_port, delta_block_height, start):
     """
     Calculates the estimated space on the network given two block header hases.

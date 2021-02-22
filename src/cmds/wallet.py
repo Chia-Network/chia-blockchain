@@ -218,42 +218,75 @@ async def execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, functi
     wallet_client.close()
     await wallet_client.await_closed()
 
+
 @click.group('wallet', short_help='manage your wallet')
 def wallet_cmd():
     pass
 
+
 @wallet_cmd.command('get_transaction', short_help="get transaction")
-@click.option( "-wp", "--wallet-rpc-port", help="Set the port where the Wallet is hosting the RPC interface." + " See the rpc_port under wallet in config.yaml.", type=int, default=9256, show_default=True)
-@click.option( "-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True)
-@click.option( "-tx", "--tx_id", help="transaction id to search for", type=str, prompt="Transaction id")
+@click.option("-tx", "--tx_id", help="transaction id to search for", type=str, prompt="Transaction id")
 @click.option("--verbose", "-v", count=True, type=click.INT)
 def get_transaction_cmd(wallet_rpc_port, fingerprint, id, tx_id, verbose):
     extra_params = {"id": id, "tx_id": tx_id, "verbose": verbose}
     return asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
 
+
 @wallet_cmd.command('get_transactions', short_help="get all transactions")
-@click.option( "-wp", "--wallet-rpc-port", help="Set the port where the Wallet is hosting the RPC interface." + " See the rpc_port under wallet in config.yaml.", type=int, default=9256, show_default=True)
-@click.option( "-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True)
 @click.option("--verbose", "-v", count=True, type=click.INT)
 def get_transactions_cmd(wallet_rpc_port, fingerprint, id, verbose):
     extra_params = {"id": id, "verbose": verbose}
     return asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
 
+
 @wallet_cmd.command('send', short_help="send chia to other wallet")
-@click.option( "-wp", "--wallet-rpc-port", help="Set the port where the Wallet is hosting the RPC interface." + " See the rpc_port under wallet in config.yaml.", type=int, default=9256, show_default=True)
-@click.option( "-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True)
-@click.option( "-a", "--amount", help="How much chia to send, in TXCH/XCH", type=str,)
+@click.option("-a", "--amount", help="How much chia to send, in TXCH/XCH", type=str,)
 @click.option("-m", "--fee", help="Set the fees for the transaction.", type=str, default="0", show_default=True)
-@click.option( "-t", "--address", help="Address to send the TXCH/XCH", type=str,)
+@click.option("-t", "--address", help="Address to send the TXCH/XCH", type=str,)
 def send_cmd(wallet_rpc_port, fingerprint, wallet_id, amount, fee, address):
     extra_params = {"id": wallet_id, "amount": amount, "fee": fee, "address": address}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
 
+
 @wallet_cmd.command('show', short_help="show wallet information")
-@click.option( "-wp", "--wallet-rpc-port", help="Set the port where the Wallet is hosting the RPC interface." + " See the rpc_port under wallet in config.yaml.", type=int, default=9256, show_default=True)
-@click.option( "-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
 def show_cmd(wallet_rpc_port, fingerprint):
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))

@@ -31,7 +31,7 @@ async def create_start_daemon_connection(root_path):
 
 
 async def async_start(root_path, group, restart):
-    daemon = await create_start_daemon_connection(args.root_path)
+    daemon = await create_start_daemon_connection(root_path)
     if daemon is None:
         print("failed to create the chia start daemon")
         return 1
@@ -60,10 +60,10 @@ async def async_start(root_path, group, restart):
             print(f"{service} failed to start. Error: {error}")
     await daemon.close()
 
+
 @click.command('start', short_help="start services")
 @click.option("-r", "--restart", is_flag=True, type=bool, help="Restart of running processes")
 @click.argument("group", type=click.Choice(all_groups()))
 @click.pass_context
 def start_cmd(ctx, restart, group):
     return asyncio.get_event_loop().run_until_complete(async_start(ctx.obj['root_path'], group, restart))
-

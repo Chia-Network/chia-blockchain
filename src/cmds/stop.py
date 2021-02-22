@@ -47,6 +47,7 @@ async def async_stop(root_path, group, daemon):
     await daemon.close()
     return return_val
 
+
 @click.command('stop', short_help="stop services")
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(all_groups()))
