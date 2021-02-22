@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-21 11:40\n"
+"PO-Revision-Date: 2021-02-22 11:32\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -59,7 +59,7 @@ msgstr "Añadir Directorio de Parcela"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr "Añadir Cartera"
+msgstr "Añadir Monedero"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -170,7 +170,7 @@ msgstr "Comprar"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr "Cartera CC"
+msgstr "Monedero CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -204,7 +204,7 @@ msgstr "Desafío Hash"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr "Cartera Chia"
+msgstr "Monedero Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -274,7 +274,7 @@ msgstr "Conectado"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr "Conectar a Cartera"
+msgstr "Conectar al Monedero"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Connection Status"
@@ -310,7 +310,7 @@ msgstr "Crear"
 
 #: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
-msgstr "Crear Cartera DID"
+msgstr "Crear Monedero DID"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -318,11 +318,11 @@ msgstr "Crear Parcela"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Crear Cartera de Administrador con Tarifa Limitada"
+msgstr "Crear Monedero de Administrador con Tarifa Limitada"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Crear Cartera de Usuario con Tarifa Limitada"
+msgstr "Crear Monedero de Usuario con Tarifa Limitada"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
@@ -344,7 +344,7 @@ msgstr "Crear una nueva llave privada"
 
 #: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
-msgstr "Crear cartera de admin"
+msgstr "Crear monedero de administrador"
 
 #: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
@@ -352,15 +352,15 @@ msgstr "Crear nueva moneda de color"
 
 #: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
-msgstr "Crear cartera de usuario"
+msgstr "Crear monedero de usuario"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr "Crear cartera para color"
+msgstr "Crear monedero para color"
 
 #: src/components/wallet/create/WalletCreate.jsx:206
 msgid "Create wallet for existing colour"
-msgstr "Crear cartera para color existente"
+msgstr "Crear monedero para color existente"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -380,7 +380,7 @@ msgstr "Estado actual de la operación"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr "Cartera DID"
+msgstr "Monedero DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -457,7 +457,7 @@ msgstr "Arrastre el fichero de oferta"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "Introduzca las 24 palabras mnemotécnicas que has guardado en orden para restaurar su cartera Chia."
+msgstr "Introduzca las 24 palabras mnemotécnicas que has guardado en orden para restaurar su monedero Chia."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -665,7 +665,7 @@ msgstr "Monto Inicial"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr "Inicializar una Cartera de Usuario con Tarifa Limitada:"
+msgstr "Inicializar un Monedero de Usuario con Tarifa Limitada:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -768,7 +768,7 @@ msgstr "Nueva dirección"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr "Nueva Cartera"
+msgstr "Nuevo Monedero"
 
 #: src/components/block/Block.jsx:342
 #: src/components/wallet/WalletAdd.tsx:47
@@ -1065,7 +1065,7 @@ msgstr "Uso Máximo de RAM"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr "Cartera RL"
+msgstr "Monedero RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1086,7 +1086,7 @@ msgstr "Opciones de Tarifa Limitada"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
-msgstr "Configuración de Cartera de Usuario con Tarifa Limitada"
+msgstr "Configuración de Monedero de Usuario con Tarifa Limitada"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:451
 #: src/components/wallet/standard/WalletStandard.tsx:379
@@ -1095,7 +1095,7 @@ msgstr "Dirección de Recibir"
 
 #: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
-msgstr "Recuperar Cartera DID"
+msgstr "Recuperar Monedero DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1148,7 +1148,7 @@ msgstr "Seleccione Directorio Temporal"
 
 #: src/components/wallet/create/WalletCreate.jsx:112
 msgid "Select Wallet Type"
-msgstr "Seleccione Tipo de Cartera"
+msgstr "Seleccione Tipo de Monedero"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1178,11 +1178,11 @@ msgstr "Enviar"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:477
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr "Envíe este paquete de información al usuario de su Cartera con Tarifa Limitada, que debe usarlo para completar la configuración de su cartera:"
+msgstr "Envíe este paquete de información al usuario de su Monedero con Tarifa Limitada, que debe usarlo para completar la configuración de su monedero:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:284
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "Enviar si llave pública a su administrador de Cartera de Tarifa Limitada:"
+msgstr "Enviar si llave pública a su administrador de Monedero de Tarifa Limitada:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1563,7 +1563,7 @@ msgstr "Esperar sincronización"
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
-msgstr "Carteras"
+msgstr "Monederos"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -1591,11 +1591,11 @@ msgstr "Bienvenidos a Chia. Inicie sesión con una llave existente o cree una nu
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su cartera. Sin ellas, perderá el acceso a su cartera, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
+msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su monedero. Sin ellas, perderá el acceso a su monedero, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Cartera con Tarifa Limitada:"
+msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Monedero con Tarifa Limitada:"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
