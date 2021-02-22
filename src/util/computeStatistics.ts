@@ -58,8 +58,12 @@ export default function computeStatistics(
 
   const totalChiaFarmed = poolCoins.plus(farmerCoins);
   const totalBlockRewards = Big(poolCoins).times(8).div(7);
-  const userTransactionFees = Big(farmerCoins).minus(Big(totalBlockRewards).div(8));
-  const blockRewards = Big(poolCoins).plus(farmerCoins).minus(userTransactionFees);
+  const userTransactionFees = Big(farmerCoins).minus(
+    Big(totalBlockRewards).div(8),
+  );
+  const blockRewards = Big(poolCoins)
+    .plus(farmerCoins)
+    .minus(userTransactionFees);
 
   return {
     totalChiaFarmed,
