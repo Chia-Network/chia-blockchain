@@ -233,7 +233,7 @@ class WeightProofHandler:
         idx = 0
         while curr.height < ses_block.height:
             if blocks[curr.header_hash].is_challenge_block(self.constants):
-                log.info(f"challenge segment {idx}, starts at {curr.height} ")
+                log.debug(f"challenge segment {idx}, starts at {curr.height} ")
                 seg, height = await self._create_challenge_segment(curr, sub_epoch_n, header_blocks, blocks, first)
                 if seg is None:
                     log.error(f"failed creating segment {curr.header_hash} ")
@@ -350,7 +350,7 @@ class WeightProofHandler:
         self, start_height: uint32, header_blocks: Dict[bytes32, HeaderBlock], blocks: Dict[bytes32, BlockRecord]
     ) -> Tuple[Optional[List[SubSlotData]], uint32]:
         # gets all vdfs first sub slot after challenge block to last sub slot
-        log.info(f"slot end vdf start height {start_height}")
+        log.debug(f"slot end vdf start height {start_height}")
         curr = header_blocks[self.blockchain.height_to_hash(start_height)]
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots: List[SubSlotData] = []
