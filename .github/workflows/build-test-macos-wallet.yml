@@ -3,7 +3,7 @@ name: MacOS Wallet Tests
 on:
   push:
     branches:
-      - main
+      - '**'
     tags:
         - '**'
   pull_request:
