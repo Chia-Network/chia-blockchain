@@ -23,20 +23,20 @@ from src.cmds.netspace import netspace_cmd
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root.", type=click.Path(), show_default=True)
 @click.pass_context
-def cli(ctx: click.Context, root_path: str):
+def cli(ctx: click.Context, root_path: str) -> None:
     ctx.ensure_object(dict)
     ctx.obj['root_path'] = Path(root_path)
 
 
 @cli.command('version', short_help='show version')
-def version_cmd():
+def version_cmd() -> None:
     print(__version__)
 
 
 @cli.command('run_daemon', short_help='runs chia daemon')
 @click.pass_context
-def run_daemon_cmd(ctx: click.Context):
-    return asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj['root_path']))
+def run_daemon_cmd(ctx: click.Context) -> None:
+    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj['root_path']))
 
 
 cli.add_command(keys_cmd)
@@ -50,7 +50,7 @@ cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
 
 
-def main():
+def main() -> None:
     cli()
 
 

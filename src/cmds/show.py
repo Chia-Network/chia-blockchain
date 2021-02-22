@@ -20,7 +20,7 @@ from src.util.ints import uint16
 
 
 async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_node: bool, add_connection: str,
-                     remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str):
+                     remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str) -> None:
 
     # TODO read configuration for rpc_port instead of assuming default
 
@@ -34,7 +34,8 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
         if state:
             blockchain_state = await client.get_blockchain_state()
             if blockchain_state is None:
-                return "There is no blockchain found yet. Try again shortly."
+                print("There is no blockchain found yet. Try again shortly.")
+                return
             peak: Optional[BlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]
@@ -309,6 +310,6 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="")
 def show_cmd(rpc_port: int, wallet_rpc_port: int, state: bool, connections: bool, exit_node: bool, add_connection: str,
-             remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str):
-    return asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
+             remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str) -> None:
+    asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
                                   block_header_hash_by_height, block_by_header_hash))

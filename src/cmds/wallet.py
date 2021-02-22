@@ -19,7 +19,7 @@ from src.cmds.units import units
 from decimal import Decimal
 
 
-def print_transaction(tx: TransactionRecord, verbose: bool):
+def print_transaction(tx: TransactionRecord, verbose: bool) -> None:
     if verbose:
         print(tx)
     else:
@@ -33,14 +33,14 @@ def print_transaction(tx: TransactionRecord, verbose: bool):
         print("")
 
 
-async def get_transaction(args, wallet_client: WalletRpcClient, fingerprint: int):
+async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args['id']
     transaction_id = hexstr_to_bytes(args['tx_id'])
     tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
     print_transaction(tx, verbose=(args['verbose'] > 0))
 
 
-async def get_transactions(args, wallet_client: WalletRpcClient, fingerprint: int):
+async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args['id']
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
     if len(txs) == 0:
@@ -57,7 +57,7 @@ async def get_transactions(args, wallet_client: WalletRpcClient, fingerprint: in
                 break
 
 
-async def send(args, wallet_client: WalletRpcClient, fingerprint: int):
+async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args['id']
     amount = Decimal(args['amount'])
     fee = Decimal(args['fee'])
@@ -81,7 +81,7 @@ async def send(args, wallet_client: WalletRpcClient, fingerprint: int):
     print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
 
 
-async def print_balances(args, wallet_client: WalletRpcClient, fingerprint: int):
+async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()
 
     print(f"Wallet height: {await wallet_client.get_height_info()}")
@@ -116,7 +116,7 @@ async def print_balances(args, wallet_client: WalletRpcClient, fingerprint: int)
             )
 
 
-async def get_wallet(wallet_client: WalletRpcClient, fingerprint=None) -> Optional[Tuple[WalletRpcClient, int]]:
+async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
     fingerprints = await wallet_client.get_public_keys()
     if len(fingerprints) == 0:
         print("No keys loaded. Run 'chia keys generate' or import a key.")
@@ -148,7 +148,9 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint=None) -> Option
                     continue
                 else:
                     fingerprint = fingerprints[index]
+        assert fingerprint is not None
         log_in_response = await wallet_client.log_in(fingerprint)
+
     if log_in_response["success"] is False:
         if log_in_response["error"] == "not_initialized":
             use_cloud = True
@@ -187,7 +189,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint=None) -> Option
     return wallet_client, fingerprint
 
 
-async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_params, function: Callable):
+async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_params: dict, function: Callable) -> None:
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
@@ -213,7 +215,7 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
 
 
 @click.group('wallet', short_help='manage your wallet')
-def wallet_cmd():
+def wallet_cmd() -> None:
     pass
 
 
@@ -230,9 +232,9 @@ def wallet_cmd():
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True, required=True)
 @click.option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
 @click.option("--verbose", "-v", count=True, type=int)
-def get_transaction_cmd(wallet_rpc_port: int, fingerprint: int, id: int, tx_id: str, verbose: int):
+def get_transaction_cmd(wallet_rpc_port: int, fingerprint: int, id: int, tx_id: str, verbose: int) -> None:
     extra_params = {"id": id, "tx_id": tx_id, "verbose": verbose}
-    return asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
 
 
 @wallet_cmd.command('get_transactions', short_help="get all transactions")
@@ -247,9 +249,9 @@ def get_transaction_cmd(wallet_rpc_port: int, fingerprint: int, id: int, tx_id: 
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True, required=True)
 @click.option("--verbose", "-v", count=True, type=int)
-def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbose: bool):
+def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbose: bool) -> None:
     extra_params = {"id": id, "verbose": verbose}
-    return asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
 
 
 @wallet_cmd.command('send', short_help="send chia to other wallet")
@@ -274,7 +276,7 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbos
     required=True
 )
 @click.option("-t", "--address", help="Address to send the TXCH/XCH", type=str, required=True)
-def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str):
+def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str) -> None:
     extra_params = {"id": id, "amount": amount, "fee": fee, "address": address}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
 
@@ -289,5 +291,5 @@ def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: 
     show_default=True
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
-def show_cmd(wallet_rpc_port: int, fingerprint: int):
+def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))

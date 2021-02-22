@@ -9,7 +9,7 @@ from src.util.ints import uint16
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
-async def netstorge_async(rpc_port: int, delta_block_height: str, start: str):
+async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) -> None:
     """
     Calculates the estimated space on the network given two block header hases
     """
@@ -104,7 +104,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str):
     type=str,
     default=""
 )
-def netspace_cmd(rpc_port: int, delta_block_height: str, start: str):
+def netspace_cmd(rpc_port: int, delta_block_height: str, start: str) -> None:
     """
     Calculates the estimated space on the network given two block header hases.
     """
