@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 from clvm import KEYWORD_FROM_ATOM
 
@@ -11,6 +11,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
+from src.util.hash import std_hash
 
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
@@ -51,21 +52,25 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     pks = []
     msgs = []
 
+    created_announcements: List[List[bytes]] = []
+    asserted_annoucements = []
+
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
         coin = coin_solution.coin
         puzzle_reveal = coin_solution.puzzle_reveal
         solution = coin_solution.solution
+        coin_name = coin.name()
 
         print(f"consuming coin {dump_coin(coin)}")
-        print(f"  with id {coin.name()}")
+        print(f"  with id {coin_name}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
         error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution)
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
-            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin.name()):
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name):
                 pks.append(pk)
                 msgs.append(m)
             print()
@@ -82,6 +87,12 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                         if len(c.vars) == 2:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         print(f"  {disassemble(as_prog)}")
+                created_announcements.extend(
+                    [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_ANNOUNCEMENT, [])
+                )
+                asserted_annoucements.extend(
+                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_ANNOUNCEMENT, [])]
+                )
                 print()
             else:
                 print("(no output conditions generated)")
@@ -114,11 +125,24 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
             print(f"  {dump_coin(coin)}")
             print(f"      => created coin id {coin.name()}")
 
+    created_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_announcements]
+    if created_announcements:
+        print("created announcements")
+        for announcement, hashed in sorted(created_announcement_pairs, key=lambda _: _[-1]):
+            as_hex = [f"0x{_.hex()}" for _ in announcement]
+            print(f"  {as_hex} =>\n      {hashed}")
+
+    eor_announcements = sorted(set(_[-1] for _ in created_announcement_pairs) ^ set(asserted_annoucements))
+
     print()
     print()
     print(f"zero_coin_set = {sorted(zero_coin_set)}")
     print()
-    print(f"created announcements = {spend_bundle.announcements()}")
+    print(f"created announcements = {sorted([_[-1] for _ in created_announcement_pairs])}")
+    print()
+    print(f"asserted announcements = {sorted(asserted_annoucements)}")
+    print()
+    print(f"symdiff of announcements = {sorted(eor_announcements)}")
     print()
     print()
     print("=" * 80)
