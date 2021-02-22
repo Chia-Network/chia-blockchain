@@ -4,11 +4,12 @@ import asyncio
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.byte_types import hexstr_to_bytes
+from src.util.ints import uint16
 
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
-async def netstorge_async(rpc_port, delta_block_height, start):
+async def netstorge_async(rpc_port: int, delta_block_height: str, start: str):
     """
     Calculates the estimated space on the network given two block header hases
     """
@@ -17,7 +18,7 @@ async def netstorge_async(rpc_port, delta_block_height, start):
         self_hostname = config["self_hostname"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
-        client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
+        client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
 
         if delta_block_height:
             if start == "":
@@ -102,7 +103,7 @@ async def netstorge_async(rpc_port, delta_block_height, start):
     type=str,
     default=""
 )
-def netspace_cmd(rpc_port, delta_block_height, start):
+def netspace_cmd(rpc_port: int, delta_block_height: str, start: str):
     """
     Calculates the estimated space on the network given two block header hases.
     """

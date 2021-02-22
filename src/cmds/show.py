@@ -16,10 +16,11 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.bech32m import encode_puzzle_hash
+from src.util.ints import uint16
 
 
-async def show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
-                     block_header_hash_by_height, block_by_header_hash):
+async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_node: bool, add_connection: str,
+                     remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str):
 
     # TODO read configuration for rpc_port instead of assuming default
 
@@ -28,7 +29,7 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
         self_hostname = config["self_hostname"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
-        client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
+        client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
 
         if state:
             blockchain_state = await client.get_blockchain_state()
@@ -53,7 +54,7 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
                 )
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
-                print("\nPeak: Hash:", peak.header_hash)
+                print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
@@ -69,11 +70,11 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
                     while curr is not None and not curr.is_transaction_block:
                         curr = await client.get_block_record(curr.prev_hash)
                     peak_time = curr.timestamp
-                peak_time = struct_time(localtime(peak_time))
+                peak_time_struct = struct_time(localtime(peak_time))
 
                 print(
                     "      Time:",
-                    f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
+                    f"{time.strftime('%a %b %d %Y %T %Z', peak_time_struct)}",
                     f"                 Height: {peak.height:>10}\n",
                 )
 
@@ -101,10 +102,10 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
             else:
                 print("Blockchain has no blocks yet")
 
-            # if called together with connections, leave a blank line
-            if connections:
+            # if called together with show_connections, leave a blank line
+            if show_connections:
                 print("")
-        if connections:
+        if show_connections:
             connections = await client.get_connections()
             print("Connections:")
             print(
@@ -205,9 +206,11 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
                     difficulty = block.weight
                 if block.is_transaction_block:
                     assert full_block.transactions_info is not None
-                    block_time = struct_time(localtime(full_block.foliage_transaction_block.timestamp))
+                    block_time = struct_time(localtime(
+                        full_block.foliage_transaction_block.timestamp if full_block.foliage_transaction_block else None
+                    ))
                     block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                    cost = full_block.transactions_info.cost
+                    cost = str(full_block.transactions_info.cost)
                     tx_filter_hash = full_block.foliage_transaction_block.filter_hash
                 else:
                     block_time_string = "Not a transaction block"
@@ -303,7 +306,7 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
     default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="",)
-def show_cmd(rpc_port, wallet_rpc_port, state, connections, exit_node, add_connection, remove_connection,
-             block_header_hash_by_height, block_by_header_hash):
+def show_cmd(rpc_port: int, wallet_rpc_port: int, state: bool, connections: bool, exit_node: bool, add_connection: str,
+             remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str):
     return asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
                                   block_header_hash_by_height, block_by_header_hash))

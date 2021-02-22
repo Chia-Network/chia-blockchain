@@ -15,7 +15,7 @@ from src.util.logging import initialize_logging
 log = logging.getLogger(__name__)
 
 
-def show_plots(root_path):
+def show_plots(root_path: Path):
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually.")
     print(
@@ -30,7 +30,7 @@ def show_plots(root_path):
 
 @click.group('plots', short_help="manage your plots")
 @click.pass_context
-def plots_cmd(ctx):
+def plots_cmd(ctx: click.Context):
     """Create, add, remove and check your plots"""
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
@@ -69,12 +69,12 @@ def plots_cmd(ctx):
     default=Path("."),
     show_default=True
 )
-@click.option("-2", "--tmp2_dir", help="Second temporary directory for plotting files", type=Path, default=None,)
+@click.option("-2", "--tmp2_dir", help="Second temporary directory for plotting files", type=click.Path(), default=None)
 @click.option(
     "-d",
     "--final_dir",
     help="Final directory for plots (relative or absolute)",
-    type=Path,
+    type=click.Path(),
     default=Path("."),
     show_default=True
 )
@@ -89,30 +89,29 @@ def plots_cmd(ctx):
     is_flag=True
 )
 @click.pass_context
-def create_cmd(ctx, size, num, buffer, num_threads, buckets, stripe_size, alt_fingerprint, pool_contract_address,
-               farmer_public_key, pool_public_key, tmp_dir, tmp2_dir, final_dir, plotid, memo, nobitfield,
-               exclude_final_dir):
+def create_cmd(ctx: click.Context, size: int, num: int, buffer: int, num_threads: int, buckets: int, stripe_size: int,
+               alt_fingerprint: int, pool_contract_address: str, farmer_public_key: str, pool_public_key: str,
+               tmp_dir: str, tmp2_dir: str, final_dir: str, plotid: str, memo: str, nobitfield: bool,
+               exclude_final_dir: bool):
     class Params(object):
-        pass
-    params = Params()
-    params.size = size
-    params.num = num
-    params.buffer = buffer
-    params.num_threads = num_threads
-    params.buckets = buckets
-    params.stripe_size = stripe_size
-    params.alt_fingerprint = alt_fingerprint
-    params.pool_contract_address = pool_contract_address
-    params.farmer_public_key = farmer_public_key
-    params.pool_public_key = pool_public_key
-    params.tmp_dir = tmp_dir
-    params.tmp2_dir = tmp2_dir
-    params.final_dir = final_dir
-    params.plotid = plotid
-    params.memo = memo
-    params.nobitfield = nobitfield
-    params.exclude_final_dir = exclude_final_dir
-    create_plots(params, ctx.obj["root_path"])
+        size = size
+        num = num
+        buffer = buffer
+        num_threads = num_threads
+        buckets = buckets
+        stripe_size = stripe_size
+        alt_fingerprint = alt_fingerprint
+        pool_contract_address = pool_contract_address
+        farmer_public_key = farmer_public_key
+        pool_public_key = pool_public_key
+        tmp_dir = Path(tmp_dir)
+        tmp2_dir = Path(tmp2_dir)
+        final_dir = Path(final_dir)
+        plotid = plotid
+        memo = memo
+        nobitfield = nobitfield
+        exclude_final_dir = exclude_final_dir
+    create_plots(Params(), ctx.obj["root_path"])
 
 
 @plots_cmd.command('check', short_help="checks plots")
@@ -128,7 +127,8 @@ def create_cmd(ctx, size, num, buffer, num_threads, buckets, stripe_size, alt_fi
 @click.option("--debug-show-memo", help="Shows memo to recreate the same exact plot", default=False, is_flag=True)
 @click.option("--challenge-start", help="Begins at a different [start] for -n [challenges]", type=int, default=None)
 @click.pass_context
-def check_cmd(ctx, num, grep_string, list_duplicates, debug_show_memo, challenge_start):
+def check_cmd(ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool,
+              challenge_start: int):
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
 
 
@@ -138,12 +138,12 @@ def check_cmd(ctx, num, grep_string, list_duplicates, debug_show_memo, challenge
     "--final_dir",
     help="Final directory for plots (relative or absolute)",
     type=click.Path(),
-    default=Path("."),
+    default=".",
     show_default=True
 )
 @click.pass_context
-def add_cmd(ctx, final_dir):
-    add_plot_directory(final_dir, ctx.obj['root_path'])
+def add_cmd(ctx: click.Context, final_dir: str):
+    add_plot_directory(Path(final_dir), ctx.obj['root_path'])
 
 
 @plots_cmd.command('remove', short_help="removes a directory of plots from config")
@@ -152,15 +152,15 @@ def add_cmd(ctx, final_dir):
     "--final_dir",
     help="Final directory for plots (relative or absolute)",
     type=click.Path(),
-    default=Path("."),
+    default=".",
     show_default=True
 )
 @click.pass_context
-def remove_cmd(ctx, final_dir):
-    remove_plot_directory(final_dir, ctx.obj['root_path'])
+def remove_cmd(ctx: click.Context, final_dir: str):
+    remove_plot_directory(Path(final_dir), ctx.obj['root_path'])
 
 
 @plots_cmd.command('show', short_help="shows the directory of current plots")
 @click.pass_context
-def show_cmd(ctx):
+def show_cmd(ctx: click.Context):
     show_plots(ctx.obj['root_path'])

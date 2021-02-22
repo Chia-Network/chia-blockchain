@@ -46,7 +46,7 @@ def generate_and_add():
     add_private_key_seed(mnemonic)
 
 
-def add_private_key_seed(mnemonic):
+def add_private_key_seed(mnemonic: str):
     """
     Add a private key seed to the keyring, with the given mnemonic.
     """
@@ -97,7 +97,7 @@ def show_all_keys():
         print(mnemonic)
 
 
-def delete(fingerprint):
+def delete(fingerprint: int):
     """
     Delete a key by it's public key fingerprint (which is an int).
     """
@@ -110,7 +110,7 @@ def delete(fingerprint):
     keychain.delete_key_by_fingerprint(fingerprint)
 
 
-def sign(message, fingerprint, hd_path):
+def sign(message: str, fingerprint: int, hd_path: str):
     if message is None:
         print("Please specify the message argument -d")
         quit()
@@ -137,7 +137,7 @@ def sign(message, fingerprint, hd_path):
     print(f"Fingerprint {fingerprint} not found in keychain")
 
 
-def verify(message, public_key, signature):
+def verify(message: str, public_key: str, signature: str):
     if message is None:
         print("Please specify the message argument -d")
         quit()
@@ -150,15 +150,15 @@ def verify(message, public_key, signature):
     assert message is not None
     assert public_key is not None
     assert signature is not None
-    message = bytes(message, "utf-8")
+    messageBytes = bytes(message, "utf-8")
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
-    print(AugSchemeMPL.verify(public_key, message, signature))
+    print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
 @click.group('keys', short_help="manage your keys")
 @click.pass_context
-def keys_cmd(ctx):
+def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
     root_path: Path = ctx.obj['root_path']
     if not root_path.is_dir():
@@ -167,7 +167,7 @@ def keys_cmd(ctx):
 
 @keys_cmd.command('generate', short_help="generates and adds a key to keychain")
 @click.pass_context
-def generate_cmd(ctx):
+def generate_cmd(ctx: click.Context):
     generate_and_add()
     check_keys(ctx.obj['root_path'])
 
@@ -180,7 +180,7 @@ def show_cmd():
 @keys_cmd.command('add', short_help="add a private key through the mnemonic")
 @click.option("--mnemonic", "-m", default=None, nargs=24, help="Enter mnemonic you want to use", type=str)
 @click.pass_context
-def add_cmd(ctx, mnemonic):
+def add_cmd(ctx: click.Context, mnemonic: str):
     add_private_key_seed(" ".join(mnemonic))
     check_keys(ctx.obj['root_path'])
 
@@ -191,10 +191,10 @@ def add_cmd(ctx, mnemonic):
     "-f",
     default=None,
     help="Enter the fingerprint of the key you want to use",
-    type=click.INT
+    type=int
 )
 @click.pass_context
-def delete_cmd(ctx, fingerprint):
+def delete_cmd(ctx: click.Context, fingerprint: int):
     delete(fingerprint)
     check_keys(ctx.obj['root_path'])
 
@@ -216,10 +216,10 @@ def generate_and_print_cmd():
     "-f",
     default=None,
     help="Enter the fingerprint of the key you want to use",
-    type=click.INT
+    type=int
 )
 @click.option("--hd_path", "-t", default=None, help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str)
-def sing_cmd(message, fingerprint, hd_path):
+def sing_cmd(message: str, fingerprint: int, hd_path: str):
     sign(message, fingerprint, hd_path)
 
 
@@ -227,5 +227,5 @@ def sing_cmd(message, fingerprint, hd_path):
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str)
 @click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str)
 @click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str)
-def verify_cmd(message, public_key, signature):
+def verify_cmd(message: str, public_key: str, signature: str):
     verify(message, public_key, signature)

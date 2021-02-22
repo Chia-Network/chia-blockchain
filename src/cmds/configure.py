@@ -1,4 +1,5 @@
 import click
+from pathlib import Path
 
 from src.util.config import (
     load_config,
@@ -9,7 +10,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.config import str2bool
 
 
-def configure(root_path, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
+def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str, set_log_level: str, enable_upnp: str):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
     if set_node_introducer:
@@ -73,7 +74,7 @@ def configure(root_path, set_node_introducer, set_fullnode_port, set_log_level, 
     default="NOSET",
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"])
 )
-@click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP.", type=click.Choice(["True", "False"]))
+@click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP.", type=click.Choice(["true", "false"]))
 @click.pass_context
 def configure_cmd(ctx, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
     configure(ctx.obj['root_path'], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)

@@ -1,5 +1,6 @@
 import asyncio
 import click
+from pathlib import Path
 
 from src import __version__
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -22,9 +23,9 @@ from src.cmds.netspace import netspace_cmd
 )
 @click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root.", type=click.Path(), show_default=True)
 @click.pass_context
-def cli(ctx, root_path):
+def cli(ctx: click.Context, root_path: str):
     ctx.ensure_object(dict)
-    ctx.obj['root_path'] = root_path
+    ctx.obj['root_path'] = Path(root_path)
 
 
 @cli.command('version', short_help='show version')
@@ -34,8 +35,8 @@ def version_cmd():
 
 @cli.command('run_daemon', short_help='runs chia daemon')
 @click.pass_context
-def run_daemon_cmd(ctx):
-    return asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx['root_path']))
+def run_daemon_cmd(ctx: click.Context):
+    return asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj['root_path']))
 
 
 cli.add_command(keys_cmd)

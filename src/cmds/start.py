@@ -2,19 +2,20 @@ import click
 import asyncio
 import os
 import subprocess
+from pathlib import Path
 
 from src.daemon.client import connect_to_daemon_and_validate
 from src.util.service_groups import all_groups, services_for_groups
 
 
-def launch_start_daemon(root_path):
+def launch_start_daemon(root_path: Path):
     os.environ["CHIA_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
     process = subprocess.Popen("chia run_daemon".split(), stdout=subprocess.PIPE)
     return process
 
 
-async def create_start_daemon_connection(root_path):
+async def create_start_daemon_connection(root_path: Path):
     connection = await connect_to_daemon_and_validate(root_path)
     if connection is None:
         print("Starting daemon")
@@ -30,7 +31,7 @@ async def create_start_daemon_connection(root_path):
     return None
 
 
-async def async_start(root_path, group, restart):
+async def async_start(root_path: Path, group: str, restart: bool):
     daemon = await create_start_daemon_connection(root_path)
     if daemon is None:
         print("failed to create the chia start daemon")
@@ -61,9 +62,9 @@ async def async_start(root_path, group, restart):
     await daemon.close()
 
 
-@click.command('start', short_help="start services")
+@click.command('start', short_help="start service groups")
 @click.option("-r", "--restart", is_flag=True, type=bool, help="Restart of running processes")
 @click.argument("group", type=click.Choice(all_groups()))
 @click.pass_context
-def start_cmd(ctx, restart, group):
+def start_cmd(ctx: click.Context, restart: bool, group: str):
     return asyncio.get_event_loop().run_until_complete(async_start(ctx.obj['root_path'], group, restart))

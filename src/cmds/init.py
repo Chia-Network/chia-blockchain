@@ -1,5 +1,6 @@
 import click
 from src import __version__
+from pathlib import Path
 import os
 import shutil
 
@@ -226,7 +227,7 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
         generate_ca_signed_cert(ca_crt, ca_key, crt_path, key_path)
 
 
-def init(create_certs, root_path):
+def init(create_certs: Path, root_path: Path):
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):
@@ -422,7 +423,7 @@ def chia_init(root_path: Path):
     type=click.Path()
 )
 @click.pass_context
-def init_cmd(ctx, create_certs):
+def init_cmd(ctx: click.Context, create_certs: str):
     """
     Create a new configuration or migrate from previous versions to current
 
@@ -435,7 +436,7 @@ def init_cmd(ctx, create_certs):
     - Get more details on remote harvester on Chia wiki:
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
-    init(create_certs, ctx.obj['root_path'])
+    init(Path(create_certs), ctx.obj['root_path'])
 
 
 if __name__ == "__main__":
