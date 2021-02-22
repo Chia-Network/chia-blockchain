@@ -92,6 +92,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "TX_PER_SEC": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
         "INITIAL_FREEZE_PERIOD": 0,
+        "NETWORK": 1,
     }
 )
 
