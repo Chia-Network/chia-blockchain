@@ -211,7 +211,9 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
                     ))
                     block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
                     cost = str(full_block.transactions_info.cost)
-                    tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+                    tx_filter_hash = "Not a transaction block"
+                    if full_block.foliage_transaction_block:
+                        tx_filter_hash = full_block.foliage_transaction_block.filter_hash
                 else:
                     block_time_string = "Not a transaction block"
                     cost = "Not a transaction block"
