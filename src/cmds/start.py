@@ -64,7 +64,7 @@ async def async_start(root_path: Path, group: str, restart: bool):
 
 @click.command('start', short_help="start service groups")
 @click.option("-r", "--restart", is_flag=True, type=bool, help="Restart of running processes")
-@click.argument("group", type=click.Choice(all_groups()))
+@click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
 @click.pass_context
 def start_cmd(ctx: click.Context, restart: bool, group: str):
     return asyncio.get_event_loop().run_until_complete(async_start(ctx.obj['root_path'], group, restart))

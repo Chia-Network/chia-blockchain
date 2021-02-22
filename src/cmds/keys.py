@@ -101,31 +101,14 @@ def delete(fingerprint: int):
     """
     Delete a key by it's public key fingerprint (which is an int).
     """
-    if fingerprint is None:
-        print("Please specify the fingerprint argument -f")
-        quit()
-
-    assert fingerprint is not None
     print(f"Deleting private_key with fingerprint {fingerprint}")
     keychain.delete_key_by_fingerprint(fingerprint)
 
 
 def sign(message: str, fingerprint: int, hd_path: str):
-    if message is None:
-        print("Please specify the message argument -d")
-        quit()
-
-    if fingerprint is None or hd_path is None:
-        print("Please specify the fingerprint argument -f and hd_path argument -t")
-        quit()
-
-    assert message is not None
-
     k = Keychain()
     private_keys = k.get_all_private_keys()
 
-    assert fingerprint is not None
-    assert hd_path is not None
     path: List[uint32] = [uint32(int(i)) for i in hd_path.split("/") if i != "m"]
     for sk, _ in private_keys:
         if sk.get_g1().get_fingerprint() == fingerprint:
@@ -138,18 +121,6 @@ def sign(message: str, fingerprint: int, hd_path: str):
 
 
 def verify(message: str, public_key: str, signature: str):
-    if message is None:
-        print("Please specify the message argument -d")
-        quit()
-    if public_key is None:
-        print("Please specify the public_key argument -p")
-        quit()
-    if signature is None:
-        print("Please specify the signature argument -s")
-        quit()
-    assert message is not None
-    assert public_key is not None
-    assert signature is not None
     messageBytes = bytes(message, "utf-8")
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
@@ -178,7 +149,7 @@ def show_cmd():
 
 
 @keys_cmd.command('add', short_help="add a private key through the mnemonic")
-@click.option("--mnemonic", "-m", default=None, nargs=24, help="Enter mnemonic you want to use", type=str)
+@click.option("--mnemonic", "-m", help="Enter mnemonic you want to use", type=str)
 @click.pass_context
 def add_cmd(ctx: click.Context, mnemonic: str):
     add_private_key_seed(" ".join(mnemonic))
@@ -191,7 +162,8 @@ def add_cmd(ctx: click.Context, mnemonic: str):
     "-f",
     default=None,
     help="Enter the fingerprint of the key you want to use",
-    type=int
+    type=int,
+    required=True,
 )
 @click.pass_context
 def delete_cmd(ctx: click.Context, fingerprint: int):
@@ -210,22 +182,23 @@ def generate_and_print_cmd():
 
 
 @keys_cmd.command('sign', short_help="sign a message with a private key")
-@click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str)
+@click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
 @click.option(
     "--fingerprint",
     "-f",
     default=None,
     help="Enter the fingerprint of the key you want to use",
-    type=int
+    type=int,
+    required=True,
 )
-@click.option("--hd_path", "-t", default=None, help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str)
+@click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str, required=True)
 def sing_cmd(message: str, fingerprint: int, hd_path: str):
     sign(message, fingerprint, hd_path)
 
 
 @keys_cmd.command('verify', short_help="verify a signature with a pk")
-@click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str)
-@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str)
-@click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str)
+@click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
+@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
+@click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str, required=True)
 def verify_cmd(message: str, public_key: str, signature: str):
     verify(message, public_key, signature)
