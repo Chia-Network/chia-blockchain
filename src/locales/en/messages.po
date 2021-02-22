@@ -8,7 +8,7 @@ msgstr ""
 "Language: en\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-22 18:00\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -29,11 +29,6 @@ msgstr ""
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr ""
-
-#: src/electron-starter.js:348
-#: src/electron-starter.js:441
-msgid "About Chia Blockchain"
-msgstr "About Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -73,14 +68,6 @@ msgstr ""
 msgid "Add a Plot"
 msgstr ""
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:40
-msgid "Add a plot"
-msgstr "Add a plot"
-
-#: src/components/plot/PlotAddDirectoryDialog.tsx:69
-msgid "Add plot directory"
-msgstr "Add plot directory"
-
 #: src/components/wallet/coloured/WalletColoured.tsx:403
 #: src/components/wallet/coloured/WalletColoured.tsx:455
 #: src/components/wallet/standard/WalletStandard.tsx:383
@@ -114,18 +101,10 @@ msgstr ""
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr ""
 
-#: src/electron-starter.js:123
-msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Are you sure you want to quit? GUI Plotting and farming will stop."
-
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
 msgstr ""
-
-#: src/components/backup/BackupCreate.tsx:61
-msgid "Backup file is used to restore smart wallets."
-msgstr "Backup file is used to restore smart wallets."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
@@ -201,7 +180,6 @@ msgstr ""
 msgid "Can be backed up to mnemonic seed"
 msgstr ""
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:48
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
@@ -224,18 +202,6 @@ msgstr ""
 msgid "Challenge Hash"
 msgstr ""
 
-#: src/electron-starter.js:327
-msgid "Chat on KeyBase"
-msgstr "Chat on KeyBase"
-
-#: src/electron-starter.js:345
-msgid "Chia"
-msgstr "Chia"
-
-#: src/electron-starter.js:284
-msgid "Chia Blockchain Wiki"
-msgstr "Chia Blockchain Wiki"
-
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
 msgstr ""
@@ -248,7 +214,6 @@ msgstr ""
 msgid "Choose Plot Size"
 msgstr ""
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
 msgstr ""
@@ -278,17 +243,13 @@ msgstr ""
 msgid "Colour:"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:120
+#: src/components/wallet/create/WalletCreate.jsx:124
 msgid "Coloured Coin"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:168
+#: src/components/wallet/create/WalletCreate.jsx:182
 msgid "Coloured Coin Options"
 msgstr ""
-
-#: src/electron-starter.js:121
-msgid "Confirm"
-msgstr "Confirm"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -332,13 +293,9 @@ msgstr ""
 msgid "Connections"
 msgstr ""
 
-#: src/electron-starter.js:308
-msgid "Contribute on GitHub"
-msgstr "Contribute on GitHub"
-
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr "Copied"
+msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -350,9 +307,8 @@ msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr "Copy to Clipboard"
+msgstr ""
 
-#: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
 #: src/components/wallet/create/createRLAdmin.jsx:333
@@ -360,13 +316,9 @@ msgstr "Copy to Clipboard"
 msgid "Create"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:308
+#: src/components/wallet/create/WalletCreate.jsx:322
 msgid "Create DID wallet"
 msgstr ""
-
-#: src/components/trading/TradeManager.tsx:22
-msgid "Create Offer"
-msgstr "Create Offer"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -381,8 +333,8 @@ msgid "Create Rate Limited User Wallet"
 msgstr ""
 
 #: src/components/trading/TradeManager.tsx:22
-#~ msgid "Create Trade"
-#~ msgstr ""
+msgid "Create Trade"
+msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -394,23 +346,19 @@ msgstr ""
 msgid "Create Transaction"
 msgstr ""
 
-#: src/components/backup/BackupCreate.tsx:58
-msgid "Create a Backup"
-msgstr "Create a Backup"
-
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:244
+#: src/components/wallet/create/WalletCreate.jsx:258
 msgid "Create admin wallet"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:180
+#: src/components/wallet/create/WalletCreate.jsx:194
 msgid "Create new coloured coin"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:256
+#: src/components/wallet/create/WalletCreate.jsx:270
 msgid "Create user wallet"
 msgstr ""
 
@@ -418,7 +366,7 @@ msgstr ""
 msgid "Create wallet for colour"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:192
+#: src/components/wallet/create/WalletCreate.jsx:206
 msgid "Create wallet for existing colour"
 msgstr ""
 
@@ -437,10 +385,6 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
 msgstr ""
-
-#: src/components/selectKey/SelectKey.tsx:98
-msgid "DANGER: permanently delete private key"
-msgstr "DANGER: permanently delete private key"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
@@ -492,24 +436,16 @@ msgstr ""
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 
-#: src/electron-starter.js:230
-msgid "Developer"
-msgstr "Developer"
-
-#: src/electron-starter.js:233
-msgid "Developer Tools"
-msgstr "Developer Tools"
-
 #: src/components/block/Block.jsx:202
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Difficulty"
 msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:144
-#~ msgid "Distributed Identity"
-#~ msgstr ""
+msgid "Distributed Identity"
+msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:296
+#: src/components/wallet/create/WalletCreate.jsx:310
 msgid "Distributed Identity Options"
 msgstr ""
 
@@ -526,14 +462,6 @@ msgstr ""
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
 msgstr ""
-
-#: src/components/backup/BackupRestore.tsx:114
-msgid "Drag and drop your backup file"
-msgstr "Drag and drop your backup file"
-
-#: src/electron-starter.js:189
-msgid "Edit"
-msgstr "Edit"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -594,7 +522,7 @@ msgstr ""
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr ""
 
-#: src/components/farm/Farm.tsx:15
+#: src/components/farm/Farm.tsx:13
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
@@ -631,11 +559,6 @@ msgstr ""
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:181
-#: src/electron-starter.js:388
-msgid "File"
-msgstr "File"
-
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:70
@@ -651,14 +574,6 @@ msgstr ""
 msgid "Finished"
 msgstr ""
 
-#: src/electron-starter.js:333
-msgid "Follow on Twitter"
-msgstr "Follow on Twitter"
-
-#: src/electron-starter.js:292
-msgid "Frequently Asked Questions"
-msgstr "Frequently Asked Questions"
-
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
 msgid "Full Node"
@@ -667,10 +582,6 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:265
 msgid "Full Node Status"
 msgstr ""
-
-#: src/electron-starter.js:258
-msgid "Full Screen"
-msgstr "Full Screen"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -694,11 +605,7 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
-#: src/electron-starter.js:280
-msgid "Help"
-msgstr "Help"
-
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:47
 msgid "Help translate"
 msgstr ""
 
@@ -882,13 +789,8 @@ msgid "Nickname"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:120
 msgid "No"
 msgstr ""
-
-#: src/middleware/middleware_api.jsx:277
-msgid "No 24 word seed, since this key is imported."
-msgstr "No 24 word seed, since this key is imported."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
@@ -944,10 +846,6 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
 msgstr ""
-
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:49
-msgid "OK"
-msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
@@ -1044,12 +942,8 @@ msgid "Please select buy or sell"
 msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:63
-msgid "Please select coin colour"
-msgstr "Please select coin colour"
-
-#: src/components/trading/CreateOffer.jsx:63
-#~ msgid "Please select coin type"
-#~ msgstr ""
+msgid "Please select coin type"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
@@ -1157,14 +1051,6 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:241
-msgid "Private key {0}"
-msgstr "Private key {0}"
-
-#: src/middleware/middleware_api.jsx:251
-msgid "Private key:"
-msgstr "Private key:"
-
 #: src/components/block/Block.jsx:226
 msgid "Proof of Space Size"
 msgstr ""
@@ -1176,10 +1062,6 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
 msgstr ""
-
-#: src/middleware/middleware_api.jsx:259
-msgid "Public key:"
-msgstr "Public key:"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1197,7 +1079,7 @@ msgstr ""
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:130
+#: src/components/wallet/create/WalletCreate.jsx:134
 msgid "Rate Limited"
 msgstr ""
 
@@ -1206,7 +1088,7 @@ msgstr ""
 msgid "Rate Limited Info"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:232
+#: src/components/wallet/create/WalletCreate.jsx:246
 msgid "Rate Limited Options"
 msgstr ""
 
@@ -1219,7 +1101,7 @@ msgstr ""
 msgid "Receive Address"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:320
+#: src/components/wallet/create/WalletCreate.jsx:334
 msgid "Recover DID wallet"
 msgstr ""
 
@@ -1227,21 +1109,9 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron-starter.js:300
-msgid "Release Notes"
-msgstr "Release Notes"
-
 #: src/components/wallet/coloured/WalletColoured.tsx:205
 msgid "Rename"
 msgstr ""
-
-#: src/electron-starter.js:319
-msgid "Report an Issue..."
-msgstr "Report an Issue..."
-
-#: src/components/backup/BackupRestore.tsx:107
-msgid "Restore Smart Wallets From Backup"
-msgstr "Restore Smart Wallets From Backup"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1264,14 +1134,6 @@ msgstr ""
 msgid "Second temporary folder location"
 msgstr ""
 
-#: src/components/selectKey/SelectKey.tsx:93
-msgid "See private key"
-msgstr "See private key"
-
-#: src/middleware/middleware_api.jsx:269
-msgid "Seed:"
-msgstr "Seed:"
-
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
 msgstr ""
@@ -1292,7 +1154,7 @@ msgstr ""
 msgid "Select Temporary Directory"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:108
+#: src/components/wallet/create/WalletCreate.jsx:112
 msgid "Select Wallet Type"
 msgstr ""
 
@@ -1342,14 +1204,6 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
 msgstr ""
-
-#: src/components/backup/BackupRestore.tsx:122
-msgid "Skip"
-msgstr "Skip"
-
-#: src/electron-starter.js:402
-msgid "Speech"
-msgstr "Speech"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1509,10 +1363,6 @@ msgstr ""
 msgid "These plots are invalid, you might want to delete them."
 msgstr ""
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:44
-msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
@@ -1557,7 +1407,7 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr "This trade was created at this time"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
@@ -1670,10 +1520,6 @@ msgstr ""
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:221
-msgid "View"
-msgstr "View"
-
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
@@ -1763,16 +1609,11 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:266
-msgid "Window"
-msgstr "Window"
-
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:120
 msgid "Yes"
 msgstr ""
 
@@ -1820,3 +1661,4 @@ msgstr ""
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr ""
+
