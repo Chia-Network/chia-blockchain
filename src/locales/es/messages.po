@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-22 18:01\n"
+"PO-Revision-Date: 2021-02-22 22:55\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -320,6 +320,10 @@ msgstr "Crear"
 msgid "Create DID wallet"
 msgstr "Crear Monedero DID"
 
+#: src/components/trading/TradeManager.tsx:22
+msgid "Create Offer"
+msgstr ""
+
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr "Crear Parcela"
@@ -333,8 +337,8 @@ msgid "Create Rate Limited User Wallet"
 msgstr "Crear Monedero de Usuario con Tarifa Limitada"
 
 #: src/components/trading/TradeManager.tsx:22
-msgid "Create Trade"
-msgstr "Crear operación"
+#~ msgid "Create Trade"
+#~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -942,8 +946,12 @@ msgid "Please select buy or sell"
 msgstr "Por favor, seleccione comprar o vender"
 
 #: src/components/trading/CreateOffer.jsx:63
-msgid "Please select coin type"
-msgstr "Por favor, seleccione el tipo de moneda"
+msgid "Please select coin colour"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
