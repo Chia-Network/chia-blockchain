@@ -289,8 +289,8 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
     type=bool,
     default=False
 )
-@click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False,)
-@click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="",)
+@click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False)
+@click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
 @click.option(
     "-r",
     "--remove-connection",
@@ -305,7 +305,7 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
     type=str,
     default=""
 )
-@click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="",)
+@click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="")
 def show_cmd(rpc_port: int, wallet_rpc_port: int, state: bool, connections: bool, exit_node: bool, add_connection: str,
              remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str):
     return asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,

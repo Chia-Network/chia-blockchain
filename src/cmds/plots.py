@@ -59,7 +59,7 @@ def plots_cmd(ctx: click.Context):
     default=None,
     help="Address of where the pool reward will be sent to. Only used if alt_fingerprint and pool public key are None"
 )
-@click.option("-f", "--farmer_public_key", help="Hex farmer public key", type=str, default=None,)
+@click.option("-f", "--farmer_public_key", help="Hex farmer public key", type=str, default=None)
 @click.option("-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None)
 @click.option(
     "-t",
@@ -78,8 +78,8 @@ def plots_cmd(ctx: click.Context):
     default=Path("."),
     show_default=True
 )
-@click.option("-i", "--plotid", help="PlotID in hex for reproducing plots (debugging only)", type=str, default=None,)
-@click.option("-m", "--memo", help="Memo in hex for reproducing plots (debugging only)", type=str, default=None,)
+@click.option("-i", "--plotid", help="PlotID in hex for reproducing plots (debugging only)", type=str, default=None)
+@click.option("-m", "--memo", help="Memo in hex for reproducing plots (debugging only)", type=str, default=None)
 @click.option("-e", "--nobitfield", help="Disable bitfield", default=False, is_flag=True)
 @click.option(
     "-x",

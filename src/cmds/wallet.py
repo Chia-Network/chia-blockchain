@@ -226,7 +226,7 @@ def wallet_cmd():
     default=9256,
     show_default=True
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True)
 @click.option("-tx", "--tx_id", help="transaction id to search for", type=str, prompt="Transaction id")
 @click.option("--verbose", "-v", count=True, type=int)
@@ -244,9 +244,9 @@ def get_transaction_cmd(wallet_rpc_port: int, fingerprint: int, id: int, tx_id: 
     default=9256,
     show_default=True
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True)
-@click.option("--verbose", "-v", count=True, type=click.INT)
+@click.option("--verbose", "-v", count=True, type=int)
 def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbose: bool):
     extra_params = {"id": id, "verbose": verbose}
     return asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
@@ -261,11 +261,11 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbos
     default=9256,
     show_default=True
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int,)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True)
-@click.option("-a", "--amount", help="How much chia to send, in TXCH/XCH", type=str,)
+@click.option("-a", "--amount", help="How much chia to send, in TXCH/XCH", type=str)
 @click.option("-m", "--fee", help="Set the fees for the transaction.", type=str, default="0", show_default=True)
-@click.option("-t", "--address", help="Address to send the TXCH/XCH", type=str,)
+@click.option("-t", "--address", help="Address to send the TXCH/XCH", type=str)
 def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str):
     extra_params = {"id": id, "amount": amount, "fee": fee, "address": address}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))

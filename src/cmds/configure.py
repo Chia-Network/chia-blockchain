@@ -59,7 +59,7 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
 
 
 @click.command('configure', short_help="modify configuration")
-@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str, default="",)
+@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str, default="")
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for beta testing.",
