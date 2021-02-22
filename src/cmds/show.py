@@ -28,8 +28,6 @@ async def show_async(rpc_port, state, connections, exit_node, add_connection, re
         self_hostname = config["self_hostname"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
-        else:
-            rpc_port = rpc_port
         client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
 
         if state:

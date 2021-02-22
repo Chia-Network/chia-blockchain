@@ -25,7 +25,6 @@ from src.cmds.netspace import netspace_cmd
 def cli(ctx, root_path):
     ctx.ensure_object(dict)
     ctx.obj['root_path'] = root_path
-    pass
 
 
 @cli.command('version', short_help='show version')

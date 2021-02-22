@@ -188,18 +188,11 @@ async def get_wallet(wallet_client, fingerprint=None) -> Optional[Tuple[WalletRp
 
 
 async def execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, function: Callable):
-    if fingerprint is None:
-        fingerprint = None
-    else:
-        fingerprint = fingerprint
-
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
         if wallet_rpc_port is None:
             wallet_rpc_port = config["wallet"]["rpc_port"]
-        else:
-            wallet_rpc_port = wallet_rpc_port
         wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port, DEFAULT_ROOT_PATH, config)
         wallet_client_f = await get_wallet(wallet_client, fingerprint=fingerprint)
         if wallet_client_f is None:

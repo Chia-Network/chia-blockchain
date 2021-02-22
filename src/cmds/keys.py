@@ -105,7 +105,6 @@ def delete(fingerprint):
         print("Please specify the fingerprint argument -f")
         quit()
 
-    fingerprint = fingerprint
     assert fingerprint is not None
     print(f"Deleting private_key with fingerprint {fingerprint}")
     keychain.delete_key_by_fingerprint(fingerprint)
@@ -120,15 +119,12 @@ def sign(message, fingerprint, hd_path):
         print("Please specify the fingerprint argument -f and hd_path argument -t")
         quit()
 
-    message = message
     assert message is not None
 
     k = Keychain()
     private_keys = k.get_all_private_keys()
 
-    fingerprint = fingerprint
     assert fingerprint is not None
-    hd_path = hd_path
     assert hd_path is not None
     path: List[uint32] = [uint32(int(i)) for i in hd_path.split("/") if i != "m"]
     for sk, _ in private_keys:
