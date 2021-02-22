@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-22 18:00\n"
+"PO-Revision-Date: 2021-02-22 19:16\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -295,7 +295,7 @@ msgstr "Anslutningar"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Kopierad"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -307,7 +307,7 @@ msgstr "Kopiera"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Kopiera till Urklipp"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
@@ -334,7 +334,7 @@ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
-msgstr "Skapa affärstransaktion"
+msgstr "Skapa erbjudande"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -465,7 +465,7 @@ msgstr "Dra och släpp erbjudandefil"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "Skriv in din sparade 24-ords minnesfras för att återställa din Chia-plånbok."
+msgstr "Skriv in din sparade minnesfras på 24 ord för att återställa din Chia-plånbok."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
