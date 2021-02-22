@@ -125,24 +125,23 @@ def created_announcements_for_conditions_dict(
 
 
 def conditions_dict_for_solution(
-    solution,
+    puzzle_reveal: Program,
+    solution: Program,
 ) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]], uint64]:
-    error, result, cost = conditions_for_solution(solution)
+    error, result, cost = conditions_for_solution(puzzle_reveal, solution)
     if error or result is None:
         return error, None, uint64(0)
     return None, conditions_by_opcode(result), cost
 
 
 def conditions_for_solution(
-    solution_program,
+    puzzle_reveal: Program,
+    solution: Program,
 ) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
-    args = Program.to(solution_program)
     try:
-        puzzle_sexp = args.first()
-        solution_sexp = args.rest().first()
-        cost, r = puzzle_sexp.run_with_cost(solution_sexp)
+        cost, r = puzzle_reveal.run_with_cost(solution)
         error, result = parse_sexp_to_conditions(r)
-        return error, result, cost
+        return error, result, uint64(cost)
     except Program.EvalError:
         return Err.SEXP_ERROR, None, uint64(0)

@@ -572,8 +572,9 @@ class Blockchain(BlockchainInterface):
 
     def clean_block_records(self):
         """
-        Cleans the cache so that we only maintain relevant blocks. This removes block records that have sub
-        height < peak - BLOCKS_CACHE_SIZE. These blocks are necessary for calculating future difficulty adjustments.
+        Cleans the cache so that we only maintain relevant blocks. This removes
+        block records that have height < peak - BLOCKS_CACHE_SIZE.
+        These blocks are necessary for calculating future difficulty adjustments.
         """
 
         if len(self.__block_records) < self.constants.BLOCKS_CACHE_SIZE:

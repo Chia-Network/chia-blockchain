@@ -231,16 +231,16 @@ async def validate_block_body(
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     if peak is None or height == 0:
-        fork_sub_h: int = -1
+        fork_h: int = -1
     elif fork_point_with_peak is not None:
-        fork_sub_h = fork_point_with_peak
+        fork_h = fork_point_with_peak
     else:
-        fork_sub_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
+        fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
-    if fork_sub_h == -1:
+    if fork_h == -1:
         coin_store_reorg_height = -1
     else:
-        last_sb_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_sub_h)))
+        last_sb_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_h)))
         assert last_sb_in_common is not None
         coin_store_reorg_height = last_sb_in_common.height
 
@@ -253,7 +253,7 @@ async def validate_block_body(
         curr: Optional[FullBlock] = await block_store.get_full_block(block.prev_header_hash)
         assert curr is not None
 
-        while curr.height > fork_sub_h:
+        while curr.height > fork_h:
             removals_in_curr, additions_in_curr = curr.tx_removals_and_additions()
             for c_name in removals_in_curr:
                 removals_since_fork.add(c_name)

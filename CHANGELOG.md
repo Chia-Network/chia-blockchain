@@ -6,9 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased 1.0rc3 aka Release Candidate 3 - 2021-02-??
+
+### Added
+
+### Changed
+
+- Node batch syncing performance was increased and it now avoids re-validating blocks that node had already validated.
+- If you run install-gui.sh or install-timelord.sh without being in the venv, the script will warn you that you need to `. ./activate` and exit with error.
+- If you attempt to install on a 32 bit Pi/ARM OS, the installer exits with a helpful error message.
+- Interface improvements for `chia configure -log-level`.
+
+### Fixed
+
+- Don't load plots that don't need to load.
+- Report not synced in the GUI if not synced.
+- Some configuration values were improperly ignored in migrations.
+- Some debug logging was accidentally left in.
+
 ## 1.0rc2 aka Release Candidate 2 - 2021-02-18
 
-## Fixed
+### Fixed
 
 - This is an errata release for Release Candidate 1. There were a couple of things that did not smoothly migrate from the Beta versions. Please make sure you also consult the [release notes for RC-1](https://github.com/Chia-Network/chia-blockchain/releases/tag/1.0rc1) was well.
 - Incorrect older spend to addresses were being migrated from Beta 27. This would send farming rewards to un-spendable coins.

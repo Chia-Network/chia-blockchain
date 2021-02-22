@@ -14,9 +14,10 @@ def make_parser(parser):
     parser.add_argument(
         "-d",
         "--delta-block-height",
-        help="Compare a block X blocks older."
-        + "Defaults to 192 blocks (~1 hour) and Peak block as the starting block."
-        + "Use --start BLOCK_HEIGHT to specify starting block",
+        help="Compare a block X blocks older to estimate total network space. "
+        + "Defaults to 192 blocks (~1 hour) and Peak block as the starting block. "
+        + "Use --start BLOCK_HEIGHT to specify starting block. "
+        + "Use 1000 blocks to replicate the GUI estimate.",
         type=str,
         default="192",
     )
@@ -31,7 +32,7 @@ def make_parser(parser):
         "-p",
         "--rpc-port",
         help="Set the port where the Full Node is hosting the RPC interface."
-        + "See the rpc_port under full_node in config.yaml. Defaults to 8555",
+        + "See the rpc_port under full_node in config.yaml. Defaults to 8555.",
         type=int,
     )
     parser.set_defaults(function=netspace)

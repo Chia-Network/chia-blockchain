@@ -177,7 +177,7 @@ class Wallet:
         announcements=None,
         announcements_to_consume=None,
         fee=0,
-    ):
+    ) -> Program:
         assert fee >= 0
         condition_list = []
         if primaries:
@@ -306,8 +306,7 @@ class Wallet:
             else:
                 solution = self.make_solution()
 
-            puzzle_solution_pair = Program.to([puzzle, solution])
-            spends.append(CoinSolution(coin, puzzle_solution_pair))
+            spends.append(CoinSolution(coin, puzzle, solution))
 
         self.log.info(f"Spends is {spends}")
         return spends
@@ -391,7 +390,7 @@ class Wallet:
                 primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
                 solution = self.make_solution(primaries=primaries)
                 output_created = coin
-            list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
+            list_of_solutions.append(CoinSolution(coin, puzzle, solution))
 
         await self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
         spend_bundle = await sign_coin_solutions(list_of_solutions, self.secret_key_store.secret_key_for_public_key)
