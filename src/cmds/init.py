@@ -435,7 +435,7 @@ def init_cmd(ctx: click.Context, create_certs: str):
     - Get more details on remote harvester on Chia wiki:
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
-    init(Path(create_certs), ctx.obj['root_path'])
+    init(Path(create_certs) if create_certs is not None else None, ctx.obj['root_path'])
 
 
 if __name__ == "__main__":

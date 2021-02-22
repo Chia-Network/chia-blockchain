@@ -152,7 +152,7 @@ def show_cmd():
 @click.option("--mnemonic", "-m", help="Enter mnemonic you want to use", type=str)
 @click.pass_context
 def add_cmd(ctx: click.Context, mnemonic: str):
-    add_private_key_seed(" ".join(mnemonic))
+    add_private_key_seed(mnemonic)
     check_keys(ctx.obj['root_path'])
 
 

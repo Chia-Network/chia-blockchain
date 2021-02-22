@@ -59,19 +59,17 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
 
 
 @click.command('configure', short_help="modify configuration")
-@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str, default="")
+@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for beta testing.",
     type=str,
-    default=""
 )
 @click.option(
     "--set-log-level",
     "--log-level",
     "-log-level",
     help="Set the instance log level.",
-    default="NOSET",
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"])
 )
 @click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP.", type=click.Choice(["true", "false"]))

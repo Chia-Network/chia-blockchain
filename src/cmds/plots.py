@@ -94,23 +94,24 @@ def create_cmd(ctx: click.Context, size: int, num: int, buffer: int, num_threads
                tmp_dir: str, tmp2_dir: str, final_dir: str, plotid: str, memo: str, nobitfield: bool,
                exclude_final_dir: bool):
     class Params(object):
-        size = size
-        num = num
-        buffer = buffer
-        num_threads = num_threads
-        buckets = buckets
-        stripe_size = stripe_size
-        alt_fingerprint = alt_fingerprint
-        pool_contract_address = pool_contract_address
-        farmer_public_key = farmer_public_key
-        pool_public_key = pool_public_key
-        tmp_dir = Path(tmp_dir)
-        tmp2_dir = Path(tmp2_dir)
-        final_dir = Path(final_dir)
-        plotid = plotid
-        memo = memo
-        nobitfield = nobitfield
-        exclude_final_dir = exclude_final_dir
+        def __init__(self):
+            self.size = size
+            self.num = num
+            self.buffer = buffer
+            self.num_threads = num_threads
+            self.buckets = buckets
+            self.stripe_size = stripe_size
+            self.alt_fingerprint = alt_fingerprint
+            self.pool_contract_address = pool_contract_address
+            self.farmer_public_key = farmer_public_key
+            self.pool_public_key = pool_public_key
+            self.tmp_dir = Path(tmp_dir)
+            self.tmp2_dir = Path(tmp2_dir) if tmp2_dir else None
+            self.final_dir = Path(final_dir)
+            self.plotid = plotid
+            self.memo = memo
+            self.nobitfield = nobitfield
+            self.exclude_final_dir = exclude_final_dir
     create_plots(Params(), ctx.obj["root_path"])
 
 
