@@ -25,7 +25,7 @@ export default function TradeManager() {
         <List disablePadding>
           <Divider />
           <span key="trade_overview">
-            <ListItem 
+            <ListItem
               onClick={() => history.push(url)}
               selected={pathname === '/dashboard/trade'}
               button
@@ -40,13 +40,13 @@ export default function TradeManager() {
           </span>
           <Divider />
           <ListItem
-            selected={pathname === '/dashboard/trade/create'} 
+            selected={pathname === '/dashboard/trade/create'}
             onClick={() => history.push(`${url}/create`)}
             button
           >
             <ListItemText
               primary={
-                <Trans>Create Trade</Trans>
+                <Trans>Create Offer</Trans>
               }
               secondary=""
             />
@@ -55,7 +55,7 @@ export default function TradeManager() {
 
           <ListItem
             onClick={() => history.push(`${url}/offer`)}
-            selected={pathname === '/dashboard/trade/offer'} 
+            selected={pathname === '/dashboard/trade/offer'}
             button
           >
             <ListItemText

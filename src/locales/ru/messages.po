@@ -320,6 +320,10 @@ msgstr "Создать"
 msgid "Create DID wallet"
 msgstr "Создать DID кошелек"
 
+#: src/components/trading/TradeManager.tsx:22
+msgid "Create Offer"
+msgstr ""
+
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr "Создать участок"
@@ -333,8 +337,8 @@ msgid "Create Rate Limited User Wallet"
 msgstr "Создать кошелек пользователя с ограниченнием скорости вывода"
 
 #: src/components/trading/TradeManager.tsx:22
-msgid "Create Trade"
-msgstr "Создать сделку"
+#~ msgid "Create Trade"
+#~ msgstr "Создать сделку"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
@@ -942,8 +946,12 @@ msgid "Please select buy or sell"
 msgstr "Пожалуйста, выберите купить или продать"
 
 #: src/components/trading/CreateOffer.jsx:63
-msgid "Please select coin type"
-msgstr "Пожалуйста, выберите тип монеты"
+msgid "Please select coin colour"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:63
+#~ msgid "Please select coin type"
+#~ msgstr "Пожалуйста, выберите тип монеты"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48

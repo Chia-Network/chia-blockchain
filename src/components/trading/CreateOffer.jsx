@@ -30,7 +30,7 @@ const TradeList = () => {
 
   const tradeRows = useMemo(() => {
     return trades.map((trade) => ({
-      amount: trade.side === 'sell' 
+      amount: trade.side === 'sell'
         ? -trade.amount
         : trade.amount,
       name: wallets[trade.wallet_id].name,
@@ -61,7 +61,7 @@ export default function CreateOffer() {
         openDialog(
           <AlertDialog>
             <Trans>
-              Please select coin type
+              Please select coin colour
             </Trans>
           </AlertDialog>
         ),
@@ -90,12 +90,12 @@ export default function CreateOffer() {
       );
       return;
     }
-    const mojo = wallets[wallet_id.value].type === COLOURED_COIN 
+    const mojo = wallets[wallet_id.value].type === COLOURED_COIN
       ? colouredcoin_to_mojo(amount_input.value)
       : chia_to_mojo(amount_input.value);
 
-    const trade = buy_or_sell.value === 1 
-      ? newBuy(mojo, wallet_id.value) 
+    const trade = buy_or_sell.value === 1
+      ? newBuy(mojo, wallet_id.value)
       : newSell(mojo, wallet_id.value);
 
     dispatch(addTrade(trade));
@@ -142,7 +142,7 @@ export default function CreateOffer() {
   }
 
   return (
-    <Card 
+    <Card
       title={<Trans>Create Trade Offer</Trans>}
       actions={(
         <>
