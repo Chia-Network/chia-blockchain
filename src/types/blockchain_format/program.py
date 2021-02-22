@@ -152,6 +152,9 @@ class SerializedProgram:
     def __str__(self) -> str:
         return bytes(self).hex()
 
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, str(self))
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, SerializedProgram):
             return False
