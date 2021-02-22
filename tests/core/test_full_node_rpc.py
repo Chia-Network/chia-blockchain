@@ -101,7 +101,7 @@ class TestRpc:
             assert (await client.get_block_record_by_height(100)) is None
 
             ph = list(blocks[-1].get_included_reward_coins())[0].puzzle_hash
-            coins = await client.get_unspent_coins(ph)
+            coins = await client.get_coin_records_by_puzzle_hash(ph)
             print(coins)
             assert len(coins) >= 1
 
@@ -114,8 +114,8 @@ class TestRpc:
             ph_2 = wallet.get_new_puzzlehash()
             ph_receiver = wallet_receiver.get_new_puzzlehash()
 
-            assert len(await client.get_unspent_coins(ph)) == 0
-            assert len(await client.get_unspent_coins(ph_receiver)) == 0
+            assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 0
+            assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
             blocks = bt.get_consecutive_blocks(
                 2,
                 block_list_input=blocks,
@@ -125,8 +125,8 @@ class TestRpc:
             )
             for block in blocks[-2:]:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-            assert len(await client.get_unspent_coins(ph)) == 2
-            assert len(await client.get_unspent_coins(ph_receiver)) == 0
+            assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
+            assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
 
             coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
 
@@ -154,8 +154,15 @@ class TestRpc:
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            assert len(await client.get_unspent_coins(ph_receiver)) == 1
-            assert len(list(filter(lambda cr: not cr.spent, (await client.get_unspent_coins(ph))))) == 3
+            assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1
+            assert len(list(filter(lambda cr: not cr.spent, (await client.get_coin_records_by_puzzle_hash(ph))))) == 3
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, False)) == 3
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True)) == 4
+
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 100)) == 4
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 50, 100)) == 0
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
             assert len(await client.get_connections()) == 0
 

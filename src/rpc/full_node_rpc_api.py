@@ -287,15 +287,18 @@ class FullNodeRpcApi:
 
     async def get_coin_records_by_puzzle_hash(self, request: Dict) -> Optional[Dict]:
         """
-        Retrieves the unspent coins for a given puzzlehash.
+        Retrieves the coins for a given puzzlehash, by default returns unspent coins.
         """
         if "puzzle_hash" not in request:
             raise ValueError("Puzzle hash not in request")
-        kwargs: Dict[str, Any] = {"puzzle_hash": hexstr_to_bytes(request["puzzle_hash"])}
+        kwargs: Dict[str, Any] = {"include_spent_coins": False, "puzzle_hash": hexstr_to_bytes(request["puzzle_hash"])}
         if "start_height" in request:
             kwargs["start_height"] = uint32(request["start_height"])
         if "end_height" in request:
             kwargs["end_height"] = uint32(request["end_height"])
+
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
@@ -303,13 +306,15 @@ class FullNodeRpcApi:
 
     async def get_coin_record_by_name(self, request: Dict) -> Optional[Dict]:
         """
-        Retrieves the unspent coins for a given puzzlehash.
+        Retrieves a coin record by it's name.
         """
         if "name" not in request:
             raise ValueError("Name not in request")
         name = hexstr_to_bytes(request["name"])
 
         coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
+        if coin_record is None:
+            raise ValueError(f"Coin record 0x{name.hex()} not found")
 
         return {"coin_record": coin_record}
 
