@@ -10,7 +10,6 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
-from pathlib import Path
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.ints import uint32
 
