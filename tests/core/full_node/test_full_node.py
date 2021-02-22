@@ -145,6 +145,22 @@ async def setup_two_nodes():
         yield _
 
 
+@pytest.fixture(scope="function")
+async def wallet_nodes_mainnet():
+    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK: 0"})
+    nodes, wallets = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    wallet_a = bt.get_pool_wallet_tool()
+    wallet_receiver = WalletTool()
+    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
+
+    async for _ in async_gen:
+        yield _
+
+
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_inbound_connection_limit(self, setup_five_nodes):
@@ -904,7 +920,73 @@ class TestFullNodeProtocol:
 
         await time_out_assert(20, caught_up_slots)
 
-    # @pytest.mark.asyncio
+    @pytest.mark.asyncio
+    async def test_mainnet_softfork(self, wallet_nodes_mainnet):
+        nodes, _ = wallet_nodes_mainnet
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+
+        wallet_ph = wallet_a.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=wallet_ph,
+            pool_reward_puzzle_hash=wallet_ph,
+        )
+        for block in blocks[-3:]:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+
+        start_height = (
+            full_node_1.full_node.blockchain.get_peak().height
+            if full_node_1.full_node.blockchain.get_peak() is not None
+            else -1
+        )
+        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        # Mempool has capacity of 100, make 110 unspents that we can use
+        puzzle_hashes = []
+
+        tx_per_sec = bt.constants.TX_PER_SEC
+        sec_per_block = bt.constants.SUB_SLOT_TIME_TARGET // bt.constants.SLOT_BLOCKS_TARGET
+        block_buffer_count = bt.constants.MEMPOOL_BLOCK_BUFFER
+        mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
+
+        for _ in range(mempool_size + 1):
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            puzzle_hashes.append(receiver_puzzlehash)
+            output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
+
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100,
+            puzzle_hashes[0],
+            get_future_reward_coins(blocks[1])[0],
+            condition_dic=conditions_dict,
+        )
+        assert spend_bundle is not None
+
+        new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+
+        msg = await full_node_1.new_transaction(new_transaction)
+        assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
+
+        respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
+        await full_node_1.respond_transaction(respond_transaction_2, peer)
+
+        blocks_new = bt.get_consecutive_blocks(
+            2,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
+        )
+
+        for block in blocks_new[-2:]:
+            # MAKE invalid spendbundle, but smaller than max size
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
+
+    #
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):
     #     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
     #     wallet_a, wallet_receiver, blocks = wallet_blocks
