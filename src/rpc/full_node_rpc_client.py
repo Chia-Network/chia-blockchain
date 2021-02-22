@@ -4,6 +4,7 @@ from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
+from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.types.coin_record import CoinRecord
 from src.rpc.rpc_client import RpcClient
@@ -99,5 +100,23 @@ class FullNodeRpcClient(RpcClient):
         # TODO: return block records
         return response["block_records"]
 
-    async def push_raw_tx(self, spend_bundle: SpendBundle):
-        return await self.fetch("push_raw_tx", {"spend_bundle": spend_bundle.to_json_dict()})
+    async def push_tx(self, spend_bundle: SpendBundle):
+        return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
+
+    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+        response = await self.fetch("get_all_mempool_tx_ids", {})
+        return [bytes32(hexstr_to_bytes(tx_id_hex)) for tx_id_hex in response["tx_ids"]]
+
+    async def get_all_mempool_items(self) -> Dict[bytes32, Dict]:
+        response: Dict = await self.fetch("get_all_mempool_items", {})
+        converted: Dict[bytes32, Dict] = {}
+        for tx_id_hex, item in response["mempool_items"].items():
+            converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
+        return converted
+
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
+        try:
+            response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
+            return response["mempool_item"]
+        except Exception:
+            return None

@@ -29,7 +29,6 @@ from src.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from sortedcontainers import SortedDict
 
 from src.util.streamable import recurse_jsonify, dataclass_from_dict
 
@@ -57,8 +56,6 @@ class MempoolManager:
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
-        # old_mempools will contain transactions that were removed in the last 10 blocks
-        self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()  # pylint: disable=E1136
         self.coin_store = coin_store
 
         tx_per_sec = self.constants.TX_PER_SEC
@@ -348,7 +345,7 @@ class MempoolManager:
                 self.mempool.remove_spend(mempool_item)
 
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
-        new_item = MempoolItem(new_spend, fees_per_cost, uint64(fees), cost_result, spend_name, additions, removals)
+        new_item = MempoolItem(new_spend, uint64(fees), cost_result, spend_name, additions, removals)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
         log.info(f"add_spendbundle took {time.time() - start_time} seconds")
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None

@@ -36,10 +36,11 @@ class FullNodeRpcApi:
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
-            "/push_raw_tx": self.push_raw_tx,
+            "/push_tx": self.push_tx,
             # Mempool
-            # "/get_mempool": self.get_mempool,
-            # "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
+            "/get_all_mempool_items": self.get_all_mempool_items,
+            "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
             # Deprecated
             "/get_unspent_coins": self.get_coin_records_by_puzzle_hash,
         }
@@ -312,7 +313,7 @@ class FullNodeRpcApi:
 
         return {"coin_record": coin_record}
 
-    async def push_raw_tx(self, request: Dict) -> Optional[Dict]:
+    async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 
@@ -356,3 +357,24 @@ class FullNodeRpcApi:
         for tx_addition in tx_additions + list(reward_additions):
             addition_records.append(await self.service.coin_store.get_coin_record(tx_addition.name()))
         return {"additions": addition_records, "removals": removal_records}
+
+    async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
+        ids = list(self.service.mempool_manager.mempool.spends.keys())
+        return {"tx_ids": ids}
+
+    async def get_all_mempool_items(self, request: Dict) -> Optional[Dict]:
+        spends = {}
+        for tx_id, item in self.service.mempool_manager.mempool.spends.items():
+            spends[tx_id.hex()] = item
+        return {"mempool_items": spends}
+
+    async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
+        if "tx_id" not in request:
+            raise ValueError("No tx_id in request")
+        tx_id: bytes32 = hexstr_to_bytes(request["tx_id"])
+
+        item = self.service.mempool_manager.get_mempool_item(tx_id)
+        if item is None:
+            raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
+
+        return {"mempool_item": item}

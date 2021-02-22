@@ -7,6 +7,7 @@ from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
 from src.util.ints import uint16
@@ -130,7 +131,26 @@ class TestRpc:
             coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
-            await client.push_raw_tx(spend_bundle)
+
+            assert len(await client.get_all_mempool_items()) == 0
+            assert len(await client.get_all_mempool_tx_ids()) == 0
+            assert (await client.get_mempool_item_by_tx_id(spend_bundle.name())) is None
+
+            await client.push_tx(spend_bundle)
+
+            assert len(await client.get_all_mempool_items()) == 1
+            assert len(await client.get_all_mempool_tx_ids()) == 1
+            assert (
+                SpendBundle.from_json_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
+                == spend_bundle
+            )
+            assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()
+            assert (
+                SpendBundle.from_json_dict(
+                    (await client.get_mempool_item_by_tx_id(spend_bundle.name()))["spend_bundle"]
+                )
+                == spend_bundle
+            )
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
