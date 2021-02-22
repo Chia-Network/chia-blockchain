@@ -10,6 +10,7 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
 	CHIA_INSTALLER_VERSION="0.0.0"
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+echo "SCM Version is: $SCM_VERSION"
 
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g

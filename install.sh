@@ -8,9 +8,22 @@ if [ "$(uname)" = "Linux" ]; then
 	fi
 fi
 
+# Check for non 64 bit ARM64/Raspberry Pi installs
+if [ "$(uname -m)" = "armv7l" ]; then
+  echo ""
+	echo "WARNING:"
+	echo "Chia Blockchain requires a 64 bit OS and this is 32 bit armv7l"
+	echo "For more information:"
+	echo "https://github.com/Chia-Network/chia-blockchain/wiki/Raspberry-Pi"
+	echo "Exiting."
+	exit 1
+fi
+
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
 	LSB_RELEASE=$(lsb_release -rs)
+	# In case Ubuntu minimal does not come with bc
+	if [ "$(which bc |wc -l)" -eq 0 ]; then sudo apt install bc -y; fi
 	# Mint 20.04 repsonds with 20 here so 20 instead of 20.04
 	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
 fi

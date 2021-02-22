@@ -46,6 +46,7 @@ class Harvester:
         self.farmer_public_keys = []
         self.pool_public_keys = []
         self.match_str = None
+        self.show_memo: bool = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self.state_changed_callback = None
         self.server = None
@@ -113,6 +114,7 @@ class Harvester:
                     self.farmer_public_keys,
                     self.pool_public_keys,
                     self.match_str,
+                    self.show_memo,
                     self.root_path,
                 )
         if changed:

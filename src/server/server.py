@@ -236,6 +236,9 @@ class ChiaServer:
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
                 close_event.set()
+            elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
+                self.log.warning("Incompatible network ID. Maybe the peer is on another network")
+                close_event.set()
             elif e.code == Err.SELF_CONNECTION:
                 close_event.set()
             else:
@@ -364,6 +367,8 @@ class ChiaServer:
                 await connection.close()
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
+            elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
+                self.log.warning("Incompatible network ID. Maybe the peer is on another network")
             elif e.code == Err.SELF_CONNECTION:
                 pass
             else:

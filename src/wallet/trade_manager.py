@@ -218,9 +218,13 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             if wallet.type() == WalletType.COLOURED_COIN.value:
-                tx = await wallet.generate_signed_transaction([coin.amount], [new_ph], 0, coins={coin})
+                tx = await wallet.generate_signed_transaction(
+                    [coin.amount], [new_ph], 0, coins={coin}, ignore_max_send_amount=True
+                )
             else:
-                tx = await wallet.generate_signed_transaction(coin.amount, new_ph, 0, coins={coin})
+                tx = await wallet.generate_signed_transaction(
+                    coin.amount, new_ph, 0, coins={coin}, ignore_max_send_amount=True
+                )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
@@ -370,8 +374,8 @@ class TradeManager:
         wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
 
         for coinsol in offer_spend_bundle.coin_solutions:
-            puzzle: Program = coinsol.solution.first()
-            solution: Program = coinsol.solution.rest().first()
+            puzzle: Program = coinsol.puzzle_reveal
+            solution: Program = coinsol.solution
 
             # work out the deficits between coin amount and expected output for each
             r = cc_utils.uncurry_cc(puzzle)
@@ -474,8 +478,8 @@ class TradeManager:
             # Create SpendableCC for each of the coloured coins received
             for cc_coinsol_out in cc_coinsol_outamounts[colour]:
                 cc_coinsol = cc_coinsol_out[0]
-                puzzle = cc_coinsol.solution.first()
-                solution = cc_coinsol.solution.rest().first()
+                puzzle = cc_coinsol.puzzle_reveal
+                solution = cc_coinsol.solution
 
                 r = uncurry_cc(puzzle)
                 if r:

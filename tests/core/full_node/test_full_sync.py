@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+import logging
 import time
 from typing import List
 
@@ -36,6 +37,9 @@ def node_height_exactly(node, h):
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
+
+
+log = logging.getLogger(__name__)
 
 
 class TestFullSync:
@@ -193,15 +197,24 @@ class TestFullSync:
         assert res is None
 
         # The second node should eventually catch up to the first one, and have the
-        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
+        # same tip at height num_blocks - 1
         await time_out_assert(180, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
         await time_out_assert(180, node_height_exactly, True, full_node_3, num_blocks_initial - 1)
 
+        def fn3_is_not_syncing():
+            return not full_node_3.full_node.sync_store.get_sync_mode()
+
+        await time_out_assert(180, fn3_is_not_syncing)
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()
         for block in blocks_rest:
             await full_node_3.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            assert full_node_3.full_node.blockchain.get_peak().height >= block.height
+
+        log.warning(f"FN3 height {full_node_3.full_node.blockchain.get_peak().height}")
+
+        # TODO: fix this flaky test
         await time_out_assert(120, node_height_exactly, True, full_node_3, 999)
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)

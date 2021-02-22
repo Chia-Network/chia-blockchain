@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Set
+from typing import Dict, Optional, List, Set, Any
 import aiosqlite
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint8
@@ -16,7 +16,7 @@ class WalletTransactionStore:
     db_connection: aiosqlite.Connection
     cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
-    tx_wallet_cache: Dict[int, Set[bytes32]]
+    tx_wallet_cache: Dict[int, Dict[Any, Set[bytes32]]]
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
@@ -109,7 +109,10 @@ class WalletTransactionStore:
         self.tx_record_cache[record.name] = record
 
         if record.wallet_id in self.tx_wallet_cache:
-            self.tx_wallet_cache[record.wallet_id].add(record.name)
+            if None in self.tx_wallet_cache[record.wallet_id]:
+                self.tx_wallet_cache[record.wallet_id][None].add(record.name)
+            if record.type in self.tx_wallet_cache[record.wallet_id]:
+                self.tx_wallet_cache[record.wallet_id][record.type].add(record.name)
 
         if len(self.tx_record_cache) > self.cache_size:
             while len(self.tx_record_cache) > self.cache_size:
@@ -156,7 +159,8 @@ class WalletTransactionStore:
     async def tx_with_addition_coin(self, removal_id: bytes32, wallet_id: int) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
         result = []
-        all_records: List[TransactionRecord] = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX)
+        all_records = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX.value)
+
         for record in all_records:
             for coin in record.additions:
                 if coin.name() == removal_id:
@@ -352,15 +356,15 @@ class WalletTransactionStore:
         await cursor.close()
         return count
 
-    async def get_all_transactions(self, wallet_id: int, type=None) -> List[TransactionRecord]:
+    async def get_all_transactions(self, wallet_id: int, type: int = None) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
-        if type is None and wallet_id in self.tx_wallet_cache:
-            wallet_txs = self.tx_wallet_cache[wallet_id]
+        if wallet_id in self.tx_wallet_cache and type in self.tx_wallet_cache[wallet_id]:
+            wallet_txs = self.tx_wallet_cache[wallet_id][type]
             txs = []
-            for tx_id in wallet_txs:
-                txs.append(self.tx_record_cache[tx_id])
+            for name in wallet_txs:
+                txs.append(self.tx_record_cache[name])
             return txs
 
         if type is None:
@@ -385,8 +389,9 @@ class WalletTransactionStore:
             records.append(record)
             cache_set.add(record.name)
 
-        if type is None:
-            self.tx_wallet_cache[wallet_id] = cache_set
+        if wallet_id not in self.tx_wallet_cache:
+            self.tx_wallet_cache[wallet_id] = {}
+        self.tx_wallet_cache[wallet_id][type] = cache_set
 
         return records
 

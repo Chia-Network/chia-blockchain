@@ -375,8 +375,9 @@ class FullNodeAPI:
         return None
 
     @api_request
+    @peer_required
     async def new_signage_point_or_end_of_sub_slot(
-        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot
+        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -397,11 +398,47 @@ class FullNodeAPI:
 
         if new_sp.index_from_challenge == 0 and new_sp.prev_challenge_hash is not None:
             if self.full_node.full_node_store.get_sub_slot(new_sp.prev_challenge_hash) is None:
-                # If this is an end of sub slot, and we don't have the prev, request the prev instead
-                full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                    new_sp.prev_challenge_hash, uint8(0), new_sp.last_rc_infusion
-                )
-                return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
+                collected_eos = []
+                challenge_hash_to_request = new_sp.challenge_hash
+                last_rc = new_sp.last_rc_infusion
+                num_non_empty_sub_slots_seen = 0
+                for _ in range(30):
+                    if num_non_empty_sub_slots_seen >= 3:
+                        self.log.debug("Diverged from peer. Don't have the same blocks")
+                        return None
+                    # If this is an end of sub slot, and we don't have the prev, request the prev instead
+                    # We want to catch up to the latest slot so we can receive signage points
+                    full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                        challenge_hash_to_request, uint8(0), last_rc
+                    )
+                    response = await peer.request_signage_point_or_end_of_sub_slot(full_node_request, timeout=10)
+                    if not isinstance(response, full_node_protocol.RespondEndOfSubSlot):
+                        self.full_node.log.warning(f"Invalid response for slot {response}")
+                        return None
+                    collected_eos.append(response)
+                    if (
+                        self.full_node.full_node_store.get_sub_slot(
+                            response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                        )
+                        is not None
+                        or response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                        == self.full_node.constants.GENESIS_CHALLENGE
+                    ):
+                        for eos in reversed(collected_eos):
+                            await self.respond_end_of_sub_slot(eos, peer)
+                        return None
+                    if (
+                        response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
+                        != response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.number_of_iterations
+                    ):
+                        num_non_empty_sub_slots_seen += 1
+                    challenge_hash_to_request = (
+                        response.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                    )
+                    last_rc = response.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge
+                self.full_node.log.warning("Failed to catch up in sub-slots")
+                return None
+
         if new_sp.index_from_challenge > 0:
             if (
                 new_sp.challenge_hash != self.full_node.constants.GENESIS_CHALLENGE
@@ -641,8 +678,18 @@ class FullNodeAPI:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is None:
                     spend_bundle: Optional[SpendBundle] = None
+                    additions = None
+                    removals = None
                 else:
-                    spend_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                    mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                    if mempool_bundle is None:
+                        spend_bundle = None
+                        additions = None
+                        removals = None
+                    else:
+                        spend_bundle = mempool_bundle[0]
+                        additions = mempool_bundle[1]
+                        removals = mempool_bundle[2]
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -732,6 +779,7 @@ class FullNodeAPI:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
             required_iters: uint64 = calculate_iterations_quality(
+                self.full_node.constants.DIFFICULTY_CONSTANT_FACTOR,
                 quality_string,
                 request.proof_of_space.size,
                 difficulty,
@@ -764,6 +812,8 @@ class FullNodeAPI:
                 self.full_node.blockchain,
                 b"",
                 spend_bundle,
+                additions,
+                removals,
                 prev_b,
                 finished_sub_slots,
             )
@@ -1030,6 +1080,7 @@ class FullNodeAPI:
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
         else:
             cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(request.transaction)
+
             async with self.full_node.blockchain.lock:
                 cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
                     request.transaction, cost_result, spend_name
@@ -1038,13 +1089,15 @@ class FullNodeAPI:
                     self.log.debug(f"Added transaction to mempool: {spend_name}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
-                    fees = request.transaction.fees()
+                    mempool_item = self.full_node.mempool_manager.get_mempool_item(spend_name)
+                    assert mempool_item is not None
+                    fees = mempool_item.fee
                     assert fees >= 0
                     assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(
                         spend_name,
                         cost,
-                        uint64(request.transaction.fees()),
+                        uint64(fees),
                     )
                     msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
                     await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)

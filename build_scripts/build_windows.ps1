@@ -41,6 +41,7 @@ if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
   }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
+Write-Output "SCM Version is: $env:SCM_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"

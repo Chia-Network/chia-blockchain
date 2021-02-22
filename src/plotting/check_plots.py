@@ -27,6 +27,15 @@ def check_plots(args, root_path):
                 log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
     else:
         num = 30
+
+    if args.challenge_start is not None:
+        num_start = args.challenge_start
+        num_end = num_start + num
+    else:
+        num_start = 0
+        num_end = num
+    challenges = num_end - num_start
+
     if args.grep_string is not None:
         match_str = args.grep_string
     else:
@@ -34,6 +43,8 @@ def check_plots(args, root_path):
     if args.list_duplicates:
         log.warning("Checking for duplicate Plot IDs")
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
+
+    show_memo: bool = args.debug_show_memo
 
     if args.list_duplicates:
         plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config["harvester"])
@@ -56,6 +67,7 @@ def check_plots(args, root_path):
         pks,
         pool_public_keys,
         match_str,
+        show_memo,
         root_path,
         open_no_key_filenames=True,
     )
@@ -75,7 +87,7 @@ def check_plots(args, root_path):
         log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
         try:
-            for i in range(num):
+            for i in range(num_start, num_end):
                 challenge = std_hash(i.to_bytes(32, "big"))
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                     proof = pr.get_full_proof(challenge, index)
@@ -88,12 +100,12 @@ def check_plots(args, root_path):
                 return
             log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
         if total_proofs > 0:
-            log.info(f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}")
+            log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
         else:
             total_bad_plots += 1
-            log.error(f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}")
+            log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
     log.info("")
     log.info("")
     log.info("Summary")

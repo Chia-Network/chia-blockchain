@@ -132,6 +132,8 @@ class Err(Enum):
     INITIAL_TRANSACTION_FREEZE = 107
     NO_TRANSACTIONS_WHILE_SYNCING = 108
 
+    INCOMPATIBLE_NETWORK_ID = 109
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

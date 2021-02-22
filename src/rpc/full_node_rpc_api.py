@@ -92,7 +92,11 @@ class FullNodeRpcApi:
         else:
             space = {"space": uint128(0)}
 
-        synced = await self.service.synced()
+        if self.service.server is not None:
+            is_connected = len(self.service.server.get_full_node_connections()) > 0
+        else:
+            is_connected = False
+        synced = await self.service.synced() and is_connected
         if self.full_node.mempool_manager is not None:
             mempool_size = len(self.full_node.mempool_manager.mempool.spends)
         else:
@@ -219,7 +223,7 @@ class FullNodeRpcApi:
             return {"headers": []}
 
         response_headers: List[UnfinishedHeaderBlock] = []
-        for ub_height, block in (self.service.full_node_store.get_unfinished_blocks()).values():
+        for ub_height, block, _ in (self.service.full_node_store.get_unfinished_blocks()).values():
             if ub_height == peak.height:
                 unfinished_header_block = UnfinishedHeaderBlock(
                     block.finished_sub_slots,
@@ -259,7 +263,7 @@ class FullNodeRpcApi:
 
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
-        additional_difficulty_constant = 2 ** 25
+        additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
         eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR

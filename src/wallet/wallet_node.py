@@ -140,7 +140,12 @@ class WalletNode:
             return False
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
-        path = path_from_root(self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}")
+        db_path_replaced: str = (
+            self.config["database_path"]
+            .replace("CHALLENGE", self.constants.GENESIS_CHALLENGE[:8].hex())
+            .replace("KEY", db_path_key_suffix)
+        )
+        path = path_from_root(self.root_path, db_path_replaced)
         mkdir(path.parent)
 
         self.wallet_state_manager = await WalletStateManager.create(private_key, self.config, path, self.constants)

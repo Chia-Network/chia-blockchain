@@ -6,13 +6,12 @@ dependencies = [
     "blspy==0.3.5",  # Signature library
     "chiavdf==0.15.0",  # timelord and vdf verification
     "chiabip158==0.19",  # bip158-style wallet filters
-    "chiapos==0.12.43",  # proof of space
-    "clvm==0.8.0",
-    "clvm_rs==0.1.2",
-    "clvm_tools==0.3.1",
+    "chiapos==0.12.44",  # proof of space
+    "clvm==0.8.9",
+    "clvm_rs==0.1.3",  # noqa
+    "clvm_tools==0.3.5",  # noqa
     "aiohttp==3.7.3",  # HTTP server for full node rpc
-    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@47c7b21dd04adb1d41073ee9911a9d4b9c4b370f#egg=aiosqlite",
-    # asyncio wrapper for sqlite, to store blocks
+    "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
     "colorlog==4.7.2",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs

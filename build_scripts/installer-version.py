@@ -1,5 +1,6 @@
 from setuptools_scm import get_version
 import sys
+import os
 
 
 # example: 1.0b5.dev225
@@ -11,6 +12,7 @@ def main():
         windows = False
 
     scm_full_version = get_version(root="..", relative_to=__file__)
+    os.environ["SCM_VERSION"] = scm_full_version
     left_full_version = scm_full_version.split("+")
 
     version = left_full_version[0].split(".")

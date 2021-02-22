@@ -113,6 +113,7 @@ class WalletStateManager:
             self.log = logging.getLogger(__name__)
         self.lock = asyncio.Lock()
 
+        self.log.warning(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
         self.coin_store = await WalletCoinStore.create(self.db_connection)
         self.tx_store = await WalletTransactionStore.create(self.db_connection)
@@ -487,8 +488,8 @@ class WalletStateManager:
         farmer_rewards = set()
 
         prev = await self.blockchain.get_block_record_from_db(block.prev_hash)
-        # [sub 1] [sub 2] [block 3] [sub 4] [sub 5] [block6]
-        # [block 6] will contain rewards for [sub 1] [sub 2] [block 3]
+        # [block 1] [block 2] [tx block 3] [block 4] [block 5] [tx block 6]
+        # [tx block 6] will contain rewards for [block 1] [block 2] [tx block 3]
         while prev is not None:
             # step 1 find previous block
             if prev.is_transaction_block:

@@ -84,7 +84,7 @@
 
      (defmacro assert items
          (if (r items)
-             (list if (f items) (c assert (r items)) (q (x)))
+             (list if (f items) (c assert (r items)) (q . (x)))
              (f items)
          )
      )
@@ -92,13 +92,13 @@
      ;; utility function used by `curry_args`
      (defun fix_curry_args (items core)
        (if items
-           (qq (c (q (unquote (f items))) (unquote (fix_curry_args (r items) core))))
+           (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
            core
        )
      )
 
      ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-     (defun curry_args (func list_of_args) (qq ((c (q (unquote func)) (unquote (fix_curry_args list_of_args (q 1)))))))
+     (defun curry_args (func list_of_args) (qq ((c (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1)))))))
 
      ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
      (defun curry (func . args) (curry_args func args))
