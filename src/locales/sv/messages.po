@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-22 10:31\n"
+"PO-Revision-Date: 2021-02-22 11:32\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -114,7 +114,7 @@ msgstr "Saldo"
 
 #: src/components/block/Block.jsx:302
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Grundbelopp för odlarbelöning"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -134,7 +134,7 @@ msgstr "Block"
 
 #: src/components/block/Block.jsx:226
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "VDF-iterationer för block"
 
 #: src/components/block/Block.jsx:327
 msgid "Block at height {0} in the Chia blockchain"
@@ -697,7 +697,7 @@ msgstr "Läser in …"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "Plottar hos lokal skördare"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -910,7 +910,7 @@ msgstr "Ange en giltig numeriskt avgift"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Ange en giltig numerisk intervallängd"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
@@ -974,7 +974,7 @@ msgstr "Publik nyckel för plott"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Seed"
-msgstr ""
+msgstr "Minnesfras för plott"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:28
 msgid "Plot Size"
@@ -1309,7 +1309,7 @@ msgstr "TXCH-blockbelöningar"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:15
 msgid "TXCH User Transaction Fees"
-msgstr ""
+msgstr "TXCH-avgifter för användartransaktion"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1337,7 +1337,7 @@ msgstr "Noden synkroniserar, vilket betyder att den laddar ner block från andra
 
 #: src/components/block/Block.jsx:267
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "Den minnesfras som användes för att skapa plotten. Denna beror av den publika nyckeln för pool respektive plott."
 
 #: src/components/block/Block.jsx:219
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
