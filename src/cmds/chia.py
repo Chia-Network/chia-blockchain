@@ -49,8 +49,10 @@ cli.add_command(start_cmd)
 cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
 
+
 def main():
     cli()
+
 
 if __name__ == '__main__':
     cli()
