@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-18 23:59\n"
+"PO-Revision-Date: 2021-02-22 10:31\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -94,7 +94,7 @@ msgstr "Belopp ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "Belopp för ursprungligt mynt"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
@@ -178,7 +178,7 @@ msgstr "CC-plånbok"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "Kan säkerhetskopieras till minnesfras"
 
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -326,11 +326,11 @@ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Trade"
-msgstr ""
+msgstr "Skapa affärstransaktion"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Skapa handelserbjudande"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:394
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
@@ -376,7 +376,7 @@ msgstr "Skapad av oss:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
-msgstr ""
+msgstr "Aktuell handelsstatus"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
@@ -457,7 +457,7 @@ msgstr "Dra och släpp erbjudandefil"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "Skriv in din sparade 24-ords minnesfras för att återställa din Chia-plånbok."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -498,7 +498,7 @@ msgstr "Odling"
 
 #: src/components/block/Block.jsx:248
 msgid "Farmer Puzzle Hash"
-msgstr ""
+msgstr "Odlare-pusselhash"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
@@ -545,7 +545,7 @@ msgstr "Avgift (TXCH)"
 
 #: src/components/block/Block.jsx:306
 msgid "Fees Amount"
-msgstr ""
+msgstr "Avgiftsbelopp"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
@@ -628,11 +628,11 @@ msgstr "Om ingen anges kommer den tillfälliga mappen att användas."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr ""
+msgstr "Importera plånbok från minnesfras"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr ""
+msgstr "Importera från minnesfras (24 ord)"
 
 #: src/components/fullNode/FullNode.jsx:57
 msgid "In Progress"
@@ -759,7 +759,7 @@ msgstr "Mer minne ökar hastigheten något"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 msgid "My Pubkey"
-msgstr "Min pubkey"
+msgstr "Min publika nyckel"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
@@ -892,7 +892,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Ange ett giltigt belopp för ursprungligt mynt"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
@@ -918,7 +918,7 @@ msgstr "Ange ett giltigt spenderbart belopp"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr "Ange en giltig pubkey"
+msgstr "Ange en giltig publik nyckel"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 #: src/components/wallet/standard/WalletStandard.tsx:274
@@ -970,7 +970,7 @@ msgstr "Plottnamn"
 
 #: src/components/block/Block.jsx:240
 msgid "Plot Public Key"
-msgstr ""
+msgstr "Publik nyckel för plott"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Seed"
@@ -1010,15 +1010,15 @@ msgstr "Pool-nyckel"
 
 #: src/components/block/Block.jsx:244
 msgid "Pool Public Key"
-msgstr ""
+msgstr "Publik nyckel för pool"
 
 #: src/components/block/Block.jsx:256
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "Pool-pusselhash"
 
 #: src/components/block/Block.jsx:298
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "Belopp för pool-belöning"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1041,7 +1041,7 @@ msgstr "Föregående blockhash"
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Privat nyckel med publikt fingeravtryck {fingerprint}"
 
 #: src/components/block/Block.jsx:236
 msgid "Proof of Space Size"
@@ -1053,7 +1053,7 @@ msgstr "Hittade bevis"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr "Pubkey"
+msgstr "Publik nyckel"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1293,7 +1293,7 @@ msgstr "Synkroniserar {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "TXCH Block Rewards"
-msgstr ""
+msgstr "TXCH-blockbelöningar"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 #~ msgid "TXCH Farming Rewards"
@@ -1399,11 +1399,11 @@ msgstr "Denna tabell visar den sista tidpunkt då din odling försökte vinna en
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Denna affärstransaktion lades till i blockkedjan vid denna blockhöjd"
 
 #: src/components/fullNode/FullNode.jsx:105
 msgid "Time Created"
-msgstr ""
+msgstr "Skapad kl"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "Time this trade was created at this time"
@@ -1457,27 +1457,27 @@ msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Affärsdetaljer"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "Affärs-ID"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "Affärs-ID:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Handelsöversikt"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Affärstransaktioner kommer att visas här"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
@@ -1502,7 +1502,7 @@ msgstr "Unik identifierare"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:299
 msgid "User Pubkey"
-msgstr ""
+msgstr "Publik nyckel för användare"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
@@ -1599,7 +1599,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
-msgstr ""
+msgstr "Utan avgifter"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "Yes"
@@ -1615,7 +1615,7 @@ msgstr "Översikt över din odling"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr ""
+msgstr "Din fullständiga nods anslutning"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
