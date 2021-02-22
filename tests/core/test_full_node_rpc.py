@@ -1,5 +1,5 @@
 import pytest
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import AugSchemeMPL
 
 from src.consensus.pot_iterations import is_overflow_block
 from src.rpc.full_node_rpc_api import FullNodeRpcApi

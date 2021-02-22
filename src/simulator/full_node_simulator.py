@@ -56,7 +56,6 @@ class FullNodeSimulator(FullNodeAPI):
                 spend_bundle = None
             else:
                 spend_bundle = mempool_bundle[0]
-                self.log.warning(f"Included bundle: {spend_bundle}")
 
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash

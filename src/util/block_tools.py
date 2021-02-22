@@ -396,7 +396,7 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
-                        full_block, block_record = get_full_block_and_sub_record(
+                        full_block, block_record = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -620,7 +620,7 @@ class BlockTools:
                                 pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
-                        full_block, block_record = get_full_block_and_sub_record(
+                        full_block, block_record = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -1166,7 +1166,7 @@ def get_icc(
     )
 
 
-def get_full_block_and_sub_record(
+def get_full_block_and_block_record(
     constants: ConsensusConstants,
     blocks: Dict[uint32, BlockRecord],
     sub_slot_start_total_iters: uint128,

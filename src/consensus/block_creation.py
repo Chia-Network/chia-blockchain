@@ -132,8 +132,7 @@ def create_foliage(
 
         if spend_bundle is not None:
             solution_program = best_solution_program(spend_bundle)
-            if spend_bundle.aggregated_signature is not None:
-                aggregate_sig = spend_bundle.aggregated_signature
+            aggregate_sig = spend_bundle.aggregated_signature
 
         # Calculate the cost of transactions
         if solution_program is not None:

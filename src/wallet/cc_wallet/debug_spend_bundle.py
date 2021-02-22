@@ -126,9 +126,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     if len(msgs) > 0:
         validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
     else:
-        validates = (
-            spend_bundle.aggregated_signature is None or spend_bundle.aggregated_signature == G2Element.infinity()
-        )
+        validates = spend_bundle.aggregated_signature == G2Element.infinity()
     print(f"aggregated signature check pass: {validates}")
 
 
