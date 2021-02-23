@@ -1487,12 +1487,15 @@ class FullNode:
         await self.block_store.add_full_block(new_block, block_record)
 
     async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
+        if not request.field_vdf in FieldVDF:
+            self.log.error("Invalid FieldVDF.")
+            return
         if not await self._can_accept_compact_proof(
-            request.vdf_info, request.vdf_proof, request.height, request.field_vdf
+            request.vdf_info, request.vdf_proof, request.height, FieldVDF(request.field_vdf)
         ):
             self.log.error(f"Couldn't add compact proof of time from a bluebox: {request}.")
             return
-        await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, request.field_vdf)
+        await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, FieldVDF(request.field_vdf))
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.field_vdf, request.vdf_info),
@@ -1504,7 +1507,10 @@ class FullNode:
         header_block = await self.blockchain.get_header_block_by_height(request.height)
         if header_block is None:
             return
-        if await self._needs_compact_proof(request.vdf_info, header_block, request.field_vdf):
+        if not request.field_vdf in FieldVDF:
+            self.log.error("Invalid FieldVDF.")
+            return
+        if await self._needs_compact_proof(request.vdf_info, header_block, FieldVDF(request.field_vdf)):
             msg = make_msg(
                 ProtocolMessageTypes.request_compact_vdf,
                 full_node_protocol.RequestCompactVDF(request.height, request.field_vdf, request.vdf_info),
@@ -1552,12 +1558,15 @@ class FullNode:
         await peer.send_message(msg)
 
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
+        if not request.field_vdf in FieldVDF:
+            self.log.error("Invalid FieldVDF.")
+            return
         if not await self._can_accept_compact_proof(
-            request.vdf_info, request.vdf_proof, request.height, request.field_vdf
+            request.vdf_info, request.vdf_proof, request.height, FieldVDF(request.field_vdf)
         ):
             self.log.error(f"Couldn't add compact proof of time from a full_node: {request}.")
             return
-        await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, request.field_vdf)
+        await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, FieldVDF(request.field_vdf))
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.field_vdf, request.vdf_info),
@@ -1607,6 +1616,7 @@ class FullNode:
                                 sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type > 0
                                 or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
                             ):
+                                assert sub_slot.infused_challenge_chain is not None
                                 broadcast_list.append(
                                     timelord_protocol.NewProofOfTime(
                                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
@@ -1618,6 +1628,7 @@ class FullNode:
                             header.challenge_chain_sp_proof.witness_type > 0
                             or not header.challenge_chain_sp_proof.normalized_to_identity
                         ):
+                            assert header.reward_chain_block.challenge_chain_sp_vdf is not None
                             broadcast_list.append(
                                 timelord_protocol.NewProofOfTime(
                                     header.reward_chain_block.challenge_chain_sp_vdf,

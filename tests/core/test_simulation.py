@@ -1,9 +1,10 @@
 import pytest
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.setup_nodes import setup_full_system, test_constants, self_hostname
+from tests.setup_nodes import setup_full_system, setup_full_node, test_constants, self_hostname
 from src.util.ints import uint16
 from tests.time_out_assert import time_out_assert
 from src.types.peer_info import PeerInfo
+from src.util.block_tools import BlockTools
 
 test_constants_modified = test_constants.replace(
     **{
@@ -25,7 +26,7 @@ class TestSimulation:
     @pytest.fixture(scope="function")
     async def extra_node(self):
         b_tools = BlockTools(constants=test_constants_modified)
-        async for _ in setup_full_node(test_constants_modified, "blockchain_test_3.db", 21240, b_tools)
+        async for _ in setup_full_node(test_constants_modified, "blockchain_test_3.db", 21240, b_tools):
             yield _
 
     @pytest.fixture(scope="function")
@@ -34,7 +35,7 @@ class TestSimulation:
             yield _
 
     @pytest.mark.asyncio
-    async def test_simulation_1(self, simulation):
+    async def test_simulation_1(self, simulation, extra_node):
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
