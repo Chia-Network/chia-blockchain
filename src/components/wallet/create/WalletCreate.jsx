@@ -98,10 +98,6 @@ export const MainWalletList = () => {
     dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
-  function select_option_did() {
-    dispatch(changeCreateWallet(CREATE_DID_WALLET_OPTIONS));
-  }
-
   return (
     <Grid container spacing={0}>
       <Grid item xs={12}>
@@ -132,16 +128,6 @@ export const MainWalletList = () => {
             <ListItemText
               primary={
                 <Trans>Rate Limited</Trans>
-              }
-            />
-          </ListItem>
-          <ListItem button onClick={select_option_did}>
-            <ListItemIcon>
-              <InvertColorsIcon />
-            </ListItemIcon>
-            <ListItemText
-              primary={
-                <Trans>Distributed Identity</Trans>
               }
             />
           </ListItem>
