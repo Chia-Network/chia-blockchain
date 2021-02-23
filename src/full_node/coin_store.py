@@ -105,6 +105,30 @@ class CoinStore:
             return CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
         return None
 
+    async def get_tx_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE confirmed_index=? and coinbase=0", (height,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        coins = []
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.append(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+        return coins
+
+    async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE spent_index=? and spent=1", (height,)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        coins = []
+        for row in rows:
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coins.append(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+        return coins
+
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
         self,

@@ -1070,7 +1070,15 @@ class FullNodeAPI:
                 return msg
             header_hashes.append(self.full_node.blockchain.height_to_hash(uint32(i)))
 
-        header_blocks = await self.full_node.block_store.get_header_blocks_by_hash(header_hashes)
+        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
+        header_blocks = []
+        for block in blocks:
+            added_coins_records = await self.full_node.coin_store.get_tx_coins_added_at_height(block.height)
+            removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins = [record.coin for record in added_coins_records]
+            removal_names = [record.coin.name() for record in removed_coins_records]
+            header_block = block.get_block_header(added_coins, removal_names)
+            header_blocks.append(header_block)
 
         msg = make_msg(
             ProtocolMessageTypes.respond_header_blocks,
