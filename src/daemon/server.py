@@ -890,12 +890,12 @@ async def async_run_daemon(root_path: Path) -> int:
     if lockfile is None:
         print("daemon: already launching")
         return 2
-    return 0
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
+    return 0
 
 
 def run_daemon(root_path: Path) -> int:
