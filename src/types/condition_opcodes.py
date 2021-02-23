@@ -4,18 +4,33 @@ from typing import Any
 
 # See src/wallet/puzzles/condition_codes.clvm
 class ConditionOpcode(bytes, enum.Enum):
-    UNKNOWN = bytes([49])
-    AGG_SIG = bytes([50])
+    # UNKNOWN is ascii "0"
+    UNKNOWN = bytes([48])
+
+    # AGG_SIG is ascii "1"
+
+    # signature opcodes
+    AGG_SIG = bytes([49])
+    AGG_SIG_ME = bytes([50])
+
+    # creation opcodes
     CREATE_COIN = bytes([51])
-    ASSERT_ANNOUNCEMENT = bytes([52])
-    ASSERT_MY_COIN_ID = bytes([53])
-    ASSERT_RELATIVE_TIME_EXCEEDS = bytes([54])
-    ASSERT_BLOCK_INDEX_EXCEEDS = bytes([55])
-    ASSERT_BLOCK_AGE_EXCEEDS = bytes([56])
-    AGG_SIG_ME = bytes([57])
-    ASSERT_FEE = bytes([58])
-    ASSERT_TIME_EXCEEDS = bytes([59])
-    CREATE_ANNOUNCEMENT = bytes([60])
+    CREATE_ANNOUNCEMENT = bytes([52])
+
+    # assertions: coins & announcements
+    ASSERT_ANNOUNCEMENT = bytes([53])
+    ASSERT_MY_COIN_ID = bytes([54])
+
+    # wall-clock time
+    ASSERT_SECONDS_AGE_EXCEEDS = bytes([55])
+    ASSERT_SECONDS_NOW_EXCEEDS = bytes([56])
+
+    # block index
+    ASSERT_HEIGHT_AGE_EXCEEDS = bytes([57])
+    ASSERT_HEIGHT_NOW_EXCEEDS = bytes([58])
+
+    # fee
+    RESERVE_FEE = bytes([59])
 
     def __bytes__(self) -> bytes:
         return bytes(self.value)

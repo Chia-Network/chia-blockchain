@@ -26,11 +26,11 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_announcement,
     make_assert_my_coin_id_condition,
     make_create_coin_condition,
-    make_assert_block_index_exceeds_condition,
-    make_assert_block_age_exceeds_condition,
+    make_assert_height_now_exceeds_condition,
+    make_assert_height_age_exceeds_condition,
     make_assert_aggsig_condition,
-    make_assert_time_exceeds_condition,
-    make_assert_fee_condition,
+    make_assert_seconds_now_exceeds_condition,
+    make_reserve_fee_condition,
 )
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -106,16 +106,16 @@ class WalletTool:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:
                     ret.append(make_assert_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_TIME_EXCEEDS:
-                    ret.append(make_assert_time_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
+                    ret.append(make_assert_seconds_now_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
                     ret.append(make_assert_my_coin_id_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                    ret.append(make_assert_block_index_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                    ret.append(make_assert_block_age_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_FEE:
-                    ret.append(make_assert_fee_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
+                    ret.append(make_assert_height_now_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
+                    ret.append(make_assert_height_age_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.RESERVE_FEE:
+                    ret.append(make_reserve_fee_condition(cvp.vars[0]))
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(

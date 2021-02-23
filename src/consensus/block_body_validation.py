@@ -330,15 +330,15 @@ async def validate_block_body(
     assert_fee_sum: uint64 = uint64(0)
 
     for npc in npc_list:
-        if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
-            fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
+        if ConditionOpcode.RESERVE_FEE in npc.condition_dict:
+            fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
             for cvp in fee_list:
                 fee = int_from_bytes(cvp.vars[0])
                 assert_fee_sum = assert_fee_sum + fee
 
     # 17. Check that the assert fee sum <= fees
     if fees < assert_fee_sum:
-        return Err.ASSERT_FEE_CONDITION_FAILED, None
+        return Err.RESERVE_FEE_CONDITION_FAILED, None
 
     # 18. Check that the assert fee amount < maximum coin amount
     if fees > constants.MAX_COIN_AMOUNT:

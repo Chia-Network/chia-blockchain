@@ -30,7 +30,7 @@ def blockchain_assert_block_index_exceeds(
         return Err.INVALID_CONDITION
 
     if prev_transaction_block_height < expected_block_index:
-        return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
+        return Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED
     return None
 
 
@@ -46,7 +46,7 @@ def blockchain_assert_block_age_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     if prev_transaction_block_height < expected_block_index:
-        return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
+        return Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED
     return None
 
 
@@ -61,7 +61,7 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair, timestamp):
 
     current_time = timestamp
     if current_time <= expected_mili_time:
-        return Err.ASSERT_TIME_EXCEEDS_FAILED
+        return Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
     return None
 
 
@@ -76,7 +76,7 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent
 
     current_time = timestamp
     if current_time <= expected_mili_time + unspent.timestamp:
-        return Err.ASSERT_RELATIVE_TIME_EXCEEDS_FAILED
+        return Err.ASSERT_SECONDS_AGE_EXCEEDS_FAILED
     return None
 
 
@@ -110,13 +110,13 @@ def blockchain_check_conditions_dict(
                 error = blockchain_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
                 error = blockchain_assert_announcement(cvp, announcement_names)
-            elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
+            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
                 error = blockchain_assert_block_index_exceeds(cvp, prev_transaction_block_height)
-            elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
+            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
                 error = blockchain_assert_block_age_exceeds(cvp, unspent, prev_transaction_block_height)
-            elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
+            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
                 error = blockchain_assert_time_exceeds(cvp, timestamp)
-            elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:
+            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:
                 error = blockchain_assert_relative_time_exceeds(cvp, unspent, timestamp)
             if error:
                 return error

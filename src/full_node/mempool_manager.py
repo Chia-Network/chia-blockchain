@@ -256,8 +256,8 @@ class MempoolManager:
         assert_fee_sum: uint64 = uint64(0)
 
         for npc in npc_list:
-            if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
-                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
+            if ConditionOpcode.RESERVE_FEE in npc.condition_dict:
+                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
@@ -265,7 +265,7 @@ class MempoolManager:
             return (
                 None,
                 MempoolInclusionStatus.FAILED,
-                Err.ASSERT_FEE_CONDITION_FAILED,
+                Err.RESERVE_FEE_CONDITION_FAILED,
             )
 
         if cost == 0:
@@ -321,7 +321,7 @@ class MempoolManager:
             error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, uint32(chialisp_height))
 
             if error:
-                if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:
+                if error is Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED or error is Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED:
                     self.add_to_potential_tx_set(new_spend, spend_name, cost_result)
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break
