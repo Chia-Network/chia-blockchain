@@ -185,11 +185,9 @@ class DIDWallet:
     def id(self):
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, unspent_records=None) -> uint64:
-        if unspent_records is None:
-            record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
-                self.id()
-            )
+    async def get_confirmed_balance(self, record_list=None) -> uint64:
+        if record_list is None:
+            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
         amount: uint64 = uint64(0)
         for record in record_list:
@@ -434,13 +432,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [
-            CoinSolution(
-                coin,
-                full_puzzle,
-                fullsol
-            )
-        ]
+        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = bytes(puzhash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
@@ -502,13 +494,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [
-            CoinSolution(
-                coin,
-                full_puzzle,
-                fullsol
-            )
-        ]
+        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
 
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
@@ -642,13 +628,7 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_solutions = [
-            CoinSolution(
-                coin,
-                full_puzzle,
-                fullsol
-            )
-        ]
+        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         sigs = []
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
@@ -776,13 +756,7 @@ class DIDWallet:
         innersol = Program.to([0, coin.amount, coin.puzzle_hash, coin.name(), coin.puzzle_hash, []])
         # full solution is (parent_info my_amount innersolution)
         fullsol = Program.to([coin.parent_coin_info, coin.amount, innersol])
-        list_of_solutions = [
-            CoinSolution(
-                coin,
-                full_puzzle,
-                fullsol
-            )
-        ]
+        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
