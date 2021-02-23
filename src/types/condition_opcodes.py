@@ -22,12 +22,12 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_MY_COIN_ID = bytes([54])
 
     # wall-clock time
-    ASSERT_ABSOLUTE_TIME_EXCEEDS = bytes([55])
-    ASSERT_RELATIVE_TIME_EXCEEDS = bytes([56])
+    ASSERT_SECONDS_AGE_EXCEEDS = bytes([55])
+    ASSERT_SECONDS_NOW_EXCEEDS = bytes([56])
 
     # block index
-    ASSERT_BLOCK_INDEX_EXCEEDS = bytes([57])
-    ASSERT_BLOCK_AGE_EXCEEDS = bytes([58])
+    ASSERT_HEIGHT_NOW_EXCEEDS = bytes([57])
+    ASSERT_HEIGHT_AGE_EXCEEDS = bytes([58])
 
     # fee
     ASSERT_FEE = bytes([59])
