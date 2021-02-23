@@ -65,7 +65,7 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
