@@ -23,10 +23,12 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants, constants_dic=None
 ) -> Dict:
     overrides = config["network_overrides"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    if constants_dic is not None:
+        updated_constants = updated_constants.replace(**constants_dic)
 
     full_node = FullNode(
         config,

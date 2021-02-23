@@ -50,11 +50,11 @@ async def setup_full_node(
     introducer_port=None,
     simulator=False,
     send_uncompact_interval=30,
+    constants_dic=None,
 ):
     db_path = bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
-
     config = bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
@@ -68,9 +68,9 @@ async def setup_full_node(
     config["rpc_port"] = port + 1000
 
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt, constants_dic)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, consensus_constants)
+        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, consensus_constants, constants_dic)
 
     kwargs.update(
         parse_cli_args=False,
@@ -344,7 +344,9 @@ async def setup_simulators_and_wallets(
     for index in range(0, simulator_count):
         port = starting_port + index
         db_name = f"blockchain_test_{port}.db"
-        sim = setup_full_node(consensus_constants, db_name, port, BlockTools(consensus_constants), simulator=True)
+        sim = setup_full_node(
+            consensus_constants, db_name, port, BlockTools(consensus_constants), simulator=True, constants_dic=dic
+        )
         simulators.append(await sim.__anext__())
         node_iters.append(sim)
 
