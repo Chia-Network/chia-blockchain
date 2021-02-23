@@ -119,6 +119,7 @@ class TestDIDWallet:
         message_spend_bundle = await did_wallet_0.create_attestment(
             did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, "test.attest"
         )
+        print(f"pubkey: {pubkey}")
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -136,6 +137,7 @@ class TestDIDWallet:
             pubkey,
             test_message_spend_bundle,
         )
+        print(f"pubkey: {did_wallet_2}")
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -571,7 +573,8 @@ class TestDIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                Program.to([full_puzzle, fullsol]),
+                full_puzzle,
+                fullsol
             )
         ]
         # sign for AGG_SIG_ME
