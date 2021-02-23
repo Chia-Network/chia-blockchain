@@ -1,0 +1,92 @@
+(mod (my_puzhash parent_info message_hash mode parent innerpuzhash amount)
+  ;parent_info is either (group_parent group_innerpuzhash group_amount) if eve or parent_parent if normal
+  ;parent is parent of member in confirm case, or parent of group coin if revoke case
+  ;innerpuzhash is innerpuzhash of member in confirm case, or innerpuzhash of group coin if revoke case
+  ;amount is amount of member in confirm case, or amount of group coin if revoke case
+
+  ; EXAMPLE SOLUTION - (0xf00dbabe (0xdeadbeef 0x1234abcd 100) 0xd34db33f 1 0xfeedfeed 0xdeeddeed 200)
+
+  (defconstant OP_AGG_SIG 50)
+  (defconstant OP_CREATE_COIN 51)
+  (defconstant OP_ASSERT_CONSUMED 52)
+  (defconstant OP_ASSERT_MY_ID 53)
+  (defconstant GROUP_ID 0xf00dbabe)
+  (defconstant MEMBER_COREHASH 0xdeadbeef)
+
+  (defmacro and ARGS
+      (if ARGS
+          (qq (if (unquote (f ARGS))
+              (unquote (c and (r ARGS)))
+              ()
+          ))
+      1)
+  )
+
+  (defmacro not (ARGS)
+      (qq (if (unquote ARGS) 0 1))
+  )
+
+  ; takes a lisp tree and returns the hash of it, but allows for escape character 97 so a precomputed hash value can be used
+  (defun sha256tree0 (TREE)
+    (if (l TREE)
+        (if (and (not (l (f TREE))) (= (f TREE) 97))
+            (f (r TREE))
+            (sha256 2 (sha256tree0 (f TREE)) (sha256tree0 (r TREE)))
+        )
+        (sha256 1 TREE)
+    )
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+          (sha256 1 TREE)
+      )
+  )
+
+  ; takes a hash of the innerpuzzle and a hash of the core and creates a hash of the full puzzle using the sha256tree with escape
+  (defun create_fullpuzhash (innerpuzzlehash corehash)
+    (sha256tree0 (qq (r (c (q (unquote innerpuzzlehash)) ((c (q (97 (unquote corehash))) (a)))))))
+  )
+
+  (defun check_my_parent_is_issuer (my_puzhash (group_parent group_innerpuzhash group_amount))
+    (list OP_ASSERT_MY_ID (sha256 (sha256 group_parent (create_fullpuzhash group_innerpuzhash GROUP_COREHASH) group_amount) my_puzhash 0))
+  )
+
+  (defun check_my_parent_has_my_puzzle (my_puzhash parent_parent)
+    (list OP_ASSERT_MY_ID (sha256 (sha256 parent_parent my_puzhash 0) my_puzhash 0))
+  )
+
+  (defun confirm_membership (message_hash member_parent member_innerpuzhash member_amount my_puzhash)
+    (list (list OP_CREATE_COIN my_puzhash 0) (list OP_CREATE_COIN message_hash 0) (list OP_ASSERT_CONSUMED (sha256 (sha256 member_parent (create_fullpuzhash member_innerpuzhash MEMBER_COREHASH) member_amount) message_hash 0)))
+  )
+
+  (defun revoke_membership (message_hash group_parent group_innerpuzhash group_amount)
+    (list (list OP_ASSERT_CONSUMED (sha256 (sha256 group_parent (create_fullpuzhash group_innerpuzhash GROUP_COREHASH) group_amount) message_hash 0)))
+  )
+
+  (defun spend_type_check (mode message_hash parent innerpuzhash amount my_puzhash)
+    (if mode
+      (confirm_membership message_hash parent innerpuzhash amount my_puzhash)
+      (revoke_membership message_hash parent innerpuzhash amount)
+    )
+  )
+
+  (defun lineage_check (my_puzhash parent_info)
+    (if (l parent_info)
+      (check_my_parent_is_issuer my_puzhash parent_info)
+      (check_my_parent_has_my_puzzle my_puzhash parent_info)
+    )
+  )
+
+  ; MAIN
+
+  (c (lineage_check my_puzhash parent_info) (spend_type_check mode message_hash parent innerpuzhash amount my_puzhash))
+
+  ; HERE BE TESTS
+  ;(check_my_parent_has_my_puzzle my_puzhash parent_info)
+  ;(lineage_check my_puzhash parent_info)
+  ;(spend_type_check mode message_hash parent innerpuzhash amount my_puzhash)
+
+)
