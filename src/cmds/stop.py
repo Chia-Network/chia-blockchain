@@ -34,9 +34,9 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
     return return_val
 
 
-@click.command('stop', short_help="stop service groups")
+@click.command("stop", short_help="stop service groups")
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
 @click.pass_context
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
-    asyncio.get_event_loop().run_until_complete(async_stop(ctx.obj['root_path'], group, daemon))
+    asyncio.get_event_loop().run_until_complete(async_stop(ctx.obj["root_path"], group, daemon))

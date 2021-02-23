@@ -413,13 +413,13 @@ def chia_init(root_path: Path):
     return 0
 
 
-@click.command('init', short_help="create or migrate to current")
+@click.command("init", short_help="create or migrate to current")
 @click.option(
     "--create-certs",
     "-c",
     default=None,
     help="Create new SSL certificates based on CA in [directory]",
-    type=click.Path()
+    type=click.Path(),
 )
 @click.pass_context
 def init_cmd(ctx: click.Context, create_certs: str):
@@ -435,7 +435,7 @@ def init_cmd(ctx: click.Context, create_certs: str):
     - Get more details on remote harvester on Chia wiki:
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
-    init(Path(create_certs) if create_certs is not None else None, ctx.obj['root_path'])
+    init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"])
 
 
 if __name__ == "__main__":

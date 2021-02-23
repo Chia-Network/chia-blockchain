@@ -17,7 +17,7 @@ from src.cmds.stop import stop_cmd
 from src.cmds.netspace import netspace_cmd
 
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 @click.group(
@@ -29,18 +29,18 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.pass_context
 def cli(ctx: click.Context, root_path: str) -> None:
     ctx.ensure_object(dict)
-    ctx.obj['root_path'] = Path(root_path)
+    ctx.obj["root_path"] = Path(root_path)
 
 
-@cli.command('version', short_help='show version')
+@cli.command("version", short_help="show version")
 def version_cmd() -> None:
     print(__version__)
 
 
-@cli.command('run_daemon', short_help='runs chia daemon')
+@cli.command("run_daemon", short_help="runs chia daemon")
 @click.pass_context
 def run_daemon_cmd(ctx: click.Context) -> None:
-    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj['root_path']))
+    asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))
 
 
 cli.add_command(keys_cmd)
@@ -58,5 +58,5 @@ def main() -> None:
     cli()  # pylint: disable=no-value-for-parameter
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

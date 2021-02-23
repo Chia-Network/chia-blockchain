@@ -19,8 +19,16 @@ from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16
 
 
-async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_node: bool, add_connection: str,
-                     remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str) -> None:
+async def show_async(
+    rpc_port: int,
+    state: bool,
+    show_connections: bool,
+    exit_node: bool,
+    add_connection: str,
+    remove_connection: str,
+    block_header_hash_by_height: str,
+    block_by_header_hash: str,
+) -> None:
 
     # TODO read configuration for rpc_port instead of assuming default
 
@@ -207,9 +215,13 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
                     difficulty = block.weight
                 if block.is_transaction_block:
                     assert full_block.transactions_info is not None
-                    block_time = struct_time(localtime(
-                        full_block.foliage_transaction_block.timestamp if full_block.foliage_transaction_block else None
-                    ))
+                    block_time = struct_time(
+                        localtime(
+                            full_block.foliage_transaction_block.timestamp
+                            if full_block.foliage_transaction_block
+                            else None
+                        )
+                    )
                     block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
                     cost = str(full_block.transactions_info.cost)
                     tx_filter_hash = "Not a transaction block"
@@ -258,15 +270,17 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
     await client.await_closed()
 
 
-@click.command('show', short_help="show node information")
+@click.command("show", short_help="show node information")
 @click.option(
     "-p",
     "--rpc-port",
-    help=("Set the port where the Full Node is hosting the RPC interface. "
-          "See the rpc_port under full_node in config.yaml."),
+    help=(
+        "Set the port where the Full Node is hosting the RPC interface. "
+        "See the rpc_port under full_node in config.yaml."
+    ),
     type=int,
     default=8555,
-    show_default=True
+    show_default=True,
 )
 @click.option(
     "-wp",
@@ -274,42 +288,41 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
     type=int,
     default=9256,
-    show_default=True
+    show_default=True,
 )
+@click.option("-s", "--state", help="Show the current state of the blockchain.", is_flag=True, type=bool, default=False)
 @click.option(
-    "-s",
-    "--state",
-    help="Show the current state of the blockchain.",
-    is_flag=True,
-    type=bool,
-    default=False
-)
-@click.option(
-    "-c",
-    "--connections",
-    help="List nodes connected to this Full Node.",
-    is_flag=True,
-    type=bool,
-    default=False
+    "-c", "--connections", help="List nodes connected to this Full Node.", is_flag=True, type=bool, default=False
 )
 @click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False)
 @click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
 @click.option(
-    "-r",
-    "--remove-connection",
-    help="Remove a Node by the first 8 characters of NodeID",
-    type=str,
-    default=""
+    "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
 @click.option(
-    "-bh",
-    "--block-header-hash-by-height",
-    help="Look up a block header hash by block height.",
-    type=str,
-    default=""
+    "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height.", type=str, default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="")
-def show_cmd(rpc_port: int, wallet_rpc_port: int, state: bool, connections: bool, exit_node: bool, add_connection: str,
-             remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str) -> None:
-    asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
-                           block_header_hash_by_height, block_by_header_hash))
+def show_cmd(
+    rpc_port: int,
+    wallet_rpc_port: int,
+    state: bool,
+    connections: bool,
+    exit_node: bool,
+    add_connection: str,
+    remove_connection: str,
+    block_header_hash_by_height: str,
+    block_by_header_hash: str,
+) -> None:
+    asyncio.run(
+        show_async(
+            rpc_port,
+            state,
+            connections,
+            exit_node,
+            add_connection,
+            remove_connection,
+            block_header_hash_by_height,
+            block_by_header_hash,
+        )
+    )

@@ -127,36 +127,36 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
-@click.group('keys', short_help="manage your keys")
+@click.group("keys", short_help="manage your keys")
 @click.pass_context
 def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
-    root_path: Path = ctx.obj['root_path']
+    root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init.")
 
 
-@keys_cmd.command('generate', short_help="generates and adds a key to keychain")
+@keys_cmd.command("generate", short_help="generates and adds a key to keychain")
 @click.pass_context
 def generate_cmd(ctx: click.Context):
     generate_and_add()
-    check_keys(ctx.obj['root_path'])
+    check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command('show', short_help="displays all the keys in keychain")
+@keys_cmd.command("show", short_help="displays all the keys in keychain")
 def show_cmd():
     show_all_keys()
 
 
-@keys_cmd.command('add', short_help="add a private key through the mnemonic")
+@keys_cmd.command("add", short_help="add a private key through the mnemonic")
 @click.option("--mnemonic", "-m", help="Enter mnemonic you want to use", type=str)
 @click.pass_context
 def add_cmd(ctx: click.Context, mnemonic: str):
     add_private_key_seed(mnemonic)
-    check_keys(ctx.obj['root_path'])
+    check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command('delete', short_help="delete a key by it's pk fingerprint in hex form")
+@keys_cmd.command("delete", short_help="delete a key by it's pk fingerprint in hex form")
 @click.option(
     "--fingerprint",
     "-f",
@@ -168,20 +168,20 @@ def add_cmd(ctx: click.Context, mnemonic: str):
 @click.pass_context
 def delete_cmd(ctx: click.Context, fingerprint: int):
     delete(fingerprint)
-    check_keys(ctx.obj['root_path'])
+    check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command('delete_all', short_help="delete all private keys in keychain")
+@keys_cmd.command("delete_all", short_help="delete all private keys in keychain")
 def delete_all_cmd():
     keychain.delete_all_keys()
 
 
-@keys_cmd.command('generate_and_print', short_help="generates but does NOT add to keychain")
+@keys_cmd.command("generate_and_print", short_help="generates but does NOT add to keychain")
 def generate_and_print_cmd():
     generate_and_print()
 
 
-@keys_cmd.command('sign', short_help="sign a message with a private key")
+@keys_cmd.command("sign", short_help="sign a message with a private key")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
 @click.option(
     "--fingerprint",
@@ -196,7 +196,7 @@ def sing_cmd(message: str, fingerprint: int, hd_path: str):
     sign(message, fingerprint, hd_path)
 
 
-@keys_cmd.command('verify', short_help="verify a signature with a pk")
+@keys_cmd.command("verify", short_help="verify a signature with a pk")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
 @click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
 @click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str, required=True)

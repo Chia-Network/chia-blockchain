@@ -77,32 +77,36 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
     await client.await_closed()
 
 
-@click.command('netspace', short_help='estimate space on the network')
+@click.command("netspace", short_help="estimate space on the network")
 @click.option(
     "-p",
     "--rpc-port",
-    help=("Set the port where the Full Node is hosting the RPC interface. "
-          "See the rpc_port under full_node in config.yaml. "
-          "[default: 8555]"),
+    help=(
+        "Set the port where the Full Node is hosting the RPC interface. "
+        "See the rpc_port under full_node in config.yaml. "
+        "[default: 8555]"
+    ),
     type=int,
-    show_default=True
+    show_default=True,
 )
 @click.option(
     "-d",
     "--delta-block-height",
-    help=("Compare a block X blocks older to estimate total network space. "
-          "Defaults to 192 blocks (~1 hour) and Peak block as the starting block. "
-          "Use --start BLOCK_HEIGHT to specify starting block. "
-          "Use 1000 blocks to replicate the GUI estimate."),
+    help=(
+        "Compare a block X blocks older to estimate total network space. "
+        "Defaults to 192 blocks (~1 hour) and Peak block as the starting block. "
+        "Use --start BLOCK_HEIGHT to specify starting block. "
+        "Use 1000 blocks to replicate the GUI estimate."
+    ),
     type=str,
-    default="192"
+    default="192",
 )
 @click.option(
     "-s",
     "--start",
     help="Newest block used to calculate estimated total network space. Defaults to Peak block.",
     type=str,
-    default=""
+    default="",
 )
 def netspace_cmd(rpc_port: int, delta_block_height: str, start: str) -> None:
     """
