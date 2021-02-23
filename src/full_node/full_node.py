@@ -1487,7 +1487,7 @@ class FullNode:
         await self.block_store.add_full_block(new_block, block_record)
 
     async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
-        if not request.field_vdf in FieldVDF:
+        if request.field_vdf not in FieldVDF:
             self.log.error("Invalid FieldVDF.")
             return
         if not await self._can_accept_compact_proof(
@@ -1507,7 +1507,7 @@ class FullNode:
         header_block = await self.blockchain.get_header_block_by_height(request.height)
         if header_block is None:
             return
-        if not request.field_vdf in FieldVDF:
+        if request.field_vdf not in FieldVDF:
             self.log.error("Invalid FieldVDF.")
             return
         if await self._needs_compact_proof(request.vdf_info, header_block, FieldVDF(request.field_vdf)):
@@ -1558,7 +1558,7 @@ class FullNode:
         await peer.send_message(msg)
 
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
-        if not request.field_vdf in FieldVDF:
+        if request.field_vdf not in FieldVDF:
             self.log.error("Invalid FieldVDF.")
             return
         if not await self._can_accept_compact_proof(
