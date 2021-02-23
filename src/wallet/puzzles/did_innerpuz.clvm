@@ -4,10 +4,7 @@
   ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST_HASH are curried into the puzzle
   ;EXAMPLE SOLUTION (0xcafef00d 0x12341234 0x923bf9a7856b19d335a65f12d68957d497e1f0c16c0e14baf6d120e60753a1ce 2 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) () (0xfafafafa 0xfaf5faf5 200)) 0xfadeddab (0x22222222 0x33333333 0x44444444))
 
-  (defconstant OP_AGG_SIG 50)
-  (defconstant OP_CREATE_COIN 51)
-  (defconstant OP_ASSERT_CONSUMED 52)
-  (defconstant OP_AGG_SIG_ME 57)
+  (include condition_codes.clvm)
 
   (defmacro and ARGS
       (if ARGS
@@ -79,11 +76,11 @@
   ;recovery message module - gets values curried in to make the puzzle
   ;TODO - this should probably be imported
   (defun make_message_puzzle (recovering_coin newpuz pubkey)
-    (qq (q ((60 (unquote recovering_coin)) (50 (unquote pubkey) (unquote newpuz)))))
+    (qq (q (((unquote CREATE_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG) (unquote pubkey) (unquote newpuz)))))
   )
 
   (defun create_consume_message (coin_id my_id new_innerpuz pubkey)
-    (list OP_ASSERT_CONSUMED (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
+    (list ASSERT_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
@@ -99,11 +96,11 @@
   )
 
   (defmacro recreate_self (my_puzhash amount)
-    (qq (c OP_CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) (q ())))))
+    (qq (c CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) (q ())))))
   )
 
   (defmacro create_new_coin (amount new_puz)
-    (qq (c OP_CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q ())))))
+    (qq (c CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q ())))))
   )
 
   (defun check_messages_from_identities (mod_hash mod_hash_hash num_verifications_required identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids pubkey num_verifications)
@@ -168,8 +165,8 @@
   (if mode
     (if (= mode (q 1))
       ; mode one - create message
-      ; formerly (list (recreate_self my_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list OP_AGG_SIG_ME MY_PUBKEY new_puz))
-      (list (recreate_self my_puzhash amount) (list OP_CREATE_COIN message 0) (list OP_AGG_SIG_ME MY_PUBKEY message))
+      ; formerly (list (recreate_self my_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list AGG_SIG_ME MY_PUBKEY new_puz))
+      (list (recreate_self my_puzhash amount) (list CREATE_COIN message 0) (list AGG_SIG_ME MY_PUBKEY message))
     ; mode two - recovery
     ; check that recovery list is not empty
       (if recovery_list_reveal
@@ -181,22 +178,7 @@
       )
     )
     ; mode zero - normal spend
-    (list (create_new_coin amount message) (list OP_AGG_SIG_ME MY_PUBKEY message))
+    (list (create_new_coin amount message) (list AGG_SIG_ME MY_PUBKEY message))
   )
-
-  ;HERE BE TESTS
-
-  ; (check_messages_from_identities MOD_HASH (sha256tree1 MOD_HASH) RECOVERY_DID_LIST my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey)
-  ;(create_new_coin amount new_puz)
-  ;(list OP_AGG_SIG_ME (q "PUBKEY") new_puz)
-  ;(list (create_new_coin amount new_puz) (list OP_AGG_SIG_ME (q "PUBKEY") new_puz))
-  ;(list (recreate_self new_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list OP_AGG_SIG_ME (q "PUBKEY") new_puz) (assert_consumed_identity identity))
-  ;(create_consume_message (create_coin_ID_for_recovery (f identities_corehash_list) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids))))) identity new_puz)
-  ;(check_messages_from_identities identities_corehash_list identity (list (create_new_coin amount new_puz)) new_puz parent_innerpuzhash_amounts_for_recovery_ids)
-  ;(c (create_consume_message (create_coin_ID_for_recovery (f identities_corehash_list) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids))))) my_id new_puz) (list (create_new_coin amount new_puz)))
-  ;(list (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids)))))
-  ;(create_coin_ID_for_recovery (f identities_corehash_list) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids)))))
-  ;(attest_to_id_and_newpuz identity new_puz)
-  ;(create_message identity new_puz)
 
 )
