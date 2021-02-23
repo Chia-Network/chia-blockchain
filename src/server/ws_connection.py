@@ -184,7 +184,7 @@ class WSChiaConnection:
         self.close_callback(self)
 
     def cancel_pending_timeouts(self):
-        for id, task in self.pending_timeouts:
+        for id, task in self.pending_timeouts.items():
             task.cancel()
 
     async def outbound_handler(self):
