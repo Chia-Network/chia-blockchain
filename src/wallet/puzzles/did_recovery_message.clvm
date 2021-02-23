@@ -1,3 +1,0 @@
-(mod (recovering_coin newpuz pubkey)
-    (list (list 60 recovering_coin) (list 57 pubkey newpuz))
-)

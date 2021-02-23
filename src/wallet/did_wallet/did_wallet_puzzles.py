@@ -7,10 +7,10 @@ from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.util.ints import uint64
 from src.wallet.puzzles.load_clvm import load_clvm
+from src.types.condition_opcodes import ConditionOpcode
 
 DID_CORE_MOD = load_clvm("did_core.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
-DID_RECOVERY_MESSAGE_MOD = load_clvm("did_recovery_message.clvm")
 DID_GROUP_MOD = load_clvm("did_groups.clvm")
 
 
@@ -85,9 +85,8 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
 def create_recovery_message_puzzle(recovering_coin, newpuz, pubkey):
     if isinstance(pubkey, bytes):
         pubkey = pubkey.hex()
-    puzstring = f"(q ((60 0x{recovering_coin}) (50 0x{pubkey} 0x{newpuz})))"
+    puzstring = f"(q . ((0x{ConditionOpcode.CREATE_ANNOUNCEMENT.hex()} 0x{recovering_coin}) (0x{ConditionOpcode.AGG_SIG.hex()} 0x{pubkey} 0x{newpuz})))"
     puz = binutils.assemble(puzstring)
-    # return DID_RECOVERY_MESSAGE_MOD.curry(recovering_coin, newpuz, pubkey)
     return Program.to(puz)
 
 

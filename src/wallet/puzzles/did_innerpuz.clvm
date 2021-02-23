@@ -41,13 +41,13 @@
   ;; utility function used by `curry_args`
   (defun fix_curry_args (items core)
     (if items
-        (qq (c (q (unquote (f items))) (unquote (fix_curry_args (r items) core))))
+        (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
         core
     )
   )
 
   ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-  (defun curry_args (func list_of_args) (qq ((c (q (unquote func)) (unquote (fix_curry_args list_of_args (q 1)))))))
+  (defun curry_args (func list_of_args) (qq ((c (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1)))))))
 
   ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
   (defun curry (func . args) (curry_args func args))
@@ -76,7 +76,7 @@
   ;recovery message module - gets values curried in to make the puzzle
   ;TODO - this should probably be imported
   (defun make_message_puzzle (recovering_coin newpuz pubkey)
-    (qq (q (((unquote CREATE_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG) (unquote pubkey) (unquote newpuz)))))
+    (qq (q . (((unquote CREATE_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG) (unquote pubkey) (unquote newpuz)))))
   )
 
   (defun create_consume_message (coin_id my_id new_innerpuz pubkey)
@@ -96,11 +96,11 @@
   )
 
   (defmacro recreate_self (my_puzhash amount)
-    (qq (c CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) (q ())))))
+    (qq (c CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) (q . ())))))
   )
 
   (defmacro create_new_coin (amount new_puz)
-    (qq (c CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q ())))))
+    (qq (c CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q . ())))))
   )
 
   (defun check_messages_from_identities (mod_hash mod_hash_hash num_verifications_required identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids pubkey num_verifications)
@@ -163,7 +163,7 @@
   ;MAIN
 
   (if mode
-    (if (= mode (q 1))
+    (if (= mode (q . 1))
       ; mode one - create message
       ; formerly (list (recreate_self my_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list AGG_SIG_ME MY_PUBKEY new_puz))
       (list (recreate_self my_puzhash amount) (list CREATE_COIN message 0) (list AGG_SIG_ME MY_PUBKEY message))

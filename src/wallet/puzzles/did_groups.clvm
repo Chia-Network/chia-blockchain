@@ -47,7 +47,7 @@
 
   ; takes a hash of the innerpuzzle and a hash of the core and creates a hash of the full puzzle using the sha256tree with escape
   (defun create_fullpuzhash (innerpuzzlehash corehash)
-    (sha256tree0 (qq (r (c (q (unquote innerpuzzlehash)) ((c (q (97 (unquote corehash))) (a)))))))
+    (sha256tree0 (qq (r (c (q . (unquote innerpuzzlehash)) ((c (q . (97 (unquote corehash))) (a)))))))
   )
 
   (defun check_my_parent_is_issuer (my_puzhash (group_parent group_innerpuzhash group_amount))
