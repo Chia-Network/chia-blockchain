@@ -48,12 +48,12 @@ from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFInfo, VDFProof, FieldVDF
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof, FieldVDF
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8, uint64
 from src.util.path import mkdir, path_from_root
 from src.types.header_block import HeaderBlock
-from src.types.classgroup import ClassgroupElement
+from src.types.blockchain_format.classgroup import ClassgroupElement
 
 
 class FullNode:
@@ -1554,9 +1554,7 @@ class FullNode:
 
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
         field_vdf = FieldVDF(int(request.field_vdf))
-        if not await self._can_accept_compact_proof(
-            request.vdf_info, request.vdf_proof, request.height, field_vdf
-        ):
+        if not await self._can_accept_compact_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf):
             self.log.error(f"Couldn't add compact proof of time from a full_node: {request}.")
             return
         if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):

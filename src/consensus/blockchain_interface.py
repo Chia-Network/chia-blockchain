@@ -6,7 +6,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.ints import uint32
-from src.types.vdf import VDFInfo
+from src.types.blockchain_format.vdf import VDFInfo
 
 
 class BlockchainInterface:

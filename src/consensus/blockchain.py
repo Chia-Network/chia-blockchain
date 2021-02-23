@@ -36,7 +36,7 @@ from src.consensus.block_header_validation import (
     validate_unfinished_header_block,
 )
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
-from src.types.vdf import VDFInfo
+from src.types.blockchain_format.vdf import VDFInfo
 
 log = logging.getLogger(__name__)
 
