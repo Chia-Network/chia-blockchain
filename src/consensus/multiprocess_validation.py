@@ -85,6 +85,7 @@ async def pre_validate_blocks_multiprocessing(
     blocks: Sequence[Union[FullBlock, HeaderBlock]],
     pool: ProcessPoolExecutor,
     validate_transactions: bool,
+    check_filter: bool,
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -92,6 +93,7 @@ async def pre_validate_blocks_multiprocessing(
     if any validation issue occurs, returns False.
 
     Args:
+        check_filter:
         validate_transactions:
         constants_json:
         pool:
@@ -211,7 +213,7 @@ async def pre_validate_blocks_multiprocessing(
                 final_pickled,
                 hb_pickled,
                 generators,
-                True,
+                check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
                 validate_transactions,
