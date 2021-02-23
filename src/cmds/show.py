@@ -312,4 +312,4 @@ async def show_async(rpc_port: int, state: bool, show_connections: bool, exit_no
 def show_cmd(rpc_port: int, wallet_rpc_port: int, state: bool, connections: bool, exit_node: bool, add_connection: str,
              remove_connection: str, block_header_hash_by_height: str, block_by_header_hash: str) -> None:
     asyncio.run(show_async(rpc_port, state, connections, exit_node, add_connection, remove_connection,
-                                  block_header_hash_by_height, block_by_header_hash))
+                           block_header_hash_by_height, block_by_header_hash))
