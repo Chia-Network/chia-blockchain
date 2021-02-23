@@ -3,7 +3,7 @@ name: MacOS Core Tests
 on:
   push:
     branches:
-      - '**'
+      - main
     tags:
         - '**'
   pull_request:
