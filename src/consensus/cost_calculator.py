@@ -39,16 +39,16 @@ def calculate_cost_of_program(
                 total_vbyte_cost += len(cvp_list) * ConditionCost.AGG_SIG.value
             elif condition is ConditionOpcode.CREATE_COIN:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
-            elif condition is ConditionOpcode.ASSERT_TIME_EXCEEDS:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_TIME_EXCEEDS.value
-            elif condition is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_BLOCK_AGE_EXCEEDS.value
-            elif condition is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_BLOCK_INDEX_EXCEEDS.value
+            elif condition is ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_NOW_EXCEEDS.value
+            elif condition is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_AGE_EXCEEDS.value
+            elif condition is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_NOW_EXCEEDS.value
             elif condition is ConditionOpcode.ASSERT_MY_COIN_ID:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
-            elif condition is ConditionOpcode.ASSERT_FEE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_FEE.value
+            elif condition is ConditionOpcode.RESERVE_FEE:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.RESERVE_FEE.value
             elif condition is ConditionOpcode.CREATE_ANNOUNCEMENT:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.ASSERT_ANNOUNCEMENT:

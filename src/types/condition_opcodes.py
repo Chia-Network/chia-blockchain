@@ -26,11 +26,11 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_SECONDS_NOW_EXCEEDS = bytes([56])
 
     # block index
-    ASSERT_HEIGHT_NOW_EXCEEDS = bytes([57])
-    ASSERT_HEIGHT_AGE_EXCEEDS = bytes([58])
+    ASSERT_HEIGHT_AGE_EXCEEDS = bytes([57])
+    ASSERT_HEIGHT_NOW_EXCEEDS = bytes([58])
 
     # fee
-    ASSERT_FEE = bytes([59])
+    RESERVE_FEE = bytes([59])
 
     def __bytes__(self) -> bytes:
         return bytes(self.value)

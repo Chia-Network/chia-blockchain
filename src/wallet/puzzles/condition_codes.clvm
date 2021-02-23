@@ -1,18 +1,20 @@
 ; See src/types/condition_opcodes.py
 
 (
-    (defconstant AGG_SIG 50)
+    (defconstant AGG_SIG 49)
+    (defconstant AGG_SIG_ME 50)
+
     (defconstant CREATE_COIN 51)
-    (defconstant ASSERT_ANNOUNCEMENT 52)
-    (defconstant ASSERT_MY_COIN_ID 53)
+    (defconstant CREATE_ANNOUNCEMENT 52)
 
-    (defconstant ASSERT_RELATIVE_TIME_EXCEEDS 54)
-    (defconstant ASSERT_BLOCK_INDEX_EXCEEDS 55)
-    (defconstant ASSERT_BLOCK_AGE_EXCEEDS 56)
+    (defconstant ASSERT_ANNOUNCEMENT 53)
+    (defconstant ASSERT_MY_COIN_ID 54)
 
-    (defconstant AGG_SIG_ME 57)
-    (defconstant ASSERT_FEE 58)
-    (defconstant ASSERT_TIME_EXCEEDS 59)
+    (defconstant ASSERT_SECONDS_AGE_EXCEEDS 55)
+    (defconstant ASSERT_SECONDS_NOW_EXCEEDS 56)
 
-    (defconstant CREATE_ANNOUNCEMENT 60)
+    (defconstant ASSERT_HEIGHT_AGE_EXCEEDS 57)
+    (defconstant ASSERT_HEIGHT_NOW_EXCEEDS 58)
+
+    (defconstant RESERVE_FEE 59)
 )
