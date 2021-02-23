@@ -1,3 +1,0 @@
-files:
-  - source: /electron-react/src/locales/en/*.po
-    translation: /electron-react/src/locales/%two_letters_code%/messages.po

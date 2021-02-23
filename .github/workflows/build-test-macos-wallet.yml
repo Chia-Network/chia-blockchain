@@ -1,4 +1,4 @@
-name: MacOS Wallet
+name: MacOS Wallet Tests
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: MacOS Wallet
+    name: MacOS Wallet Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -58,7 +58,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: 'blank'
+        ref: '0.12.0'
 
     - name: Link home directory
       run: |
