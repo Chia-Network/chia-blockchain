@@ -1488,9 +1488,7 @@ class FullNode:
 
     async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = FieldVDF(int(request.field_vdf))
-        if not await self._can_accept_compact_proof(
-            request.vdf_info, request.vdf_proof, request.height, field_vdf
-        ):
+        if not await self._can_accept_compact_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf):
             self.log.error(f"Couldn't add compact proof of time from a bluebox: {request}.")
             return
         await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
