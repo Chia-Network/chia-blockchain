@@ -22,6 +22,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.ssl.create_ssl import generate_ca_signed_cert
+from src.types.blockchain_format.program import Program, SerializedProgram
 from src.types.full_block import FullBlock
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
@@ -29,6 +30,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.block_tools import get_signage_point
+from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
@@ -147,7 +149,7 @@ async def setup_two_nodes():
 
 @pytest.fixture(scope="function")
 async def wallet_nodes_mainnet():
-    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK: 0"})
+    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK": 0})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -922,8 +924,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.asyncio
     async def test_mainnet_softfork(self, wallet_nodes_mainnet):
-        nodes, _ = wallet_nodes_mainnet
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes_mainnet
         blocks = await full_node_1.get_all_full_blocks()
 
         wallet_ph = wallet_a.get_new_puzzlehash()
@@ -937,54 +938,49 @@ class TestFullNodeProtocol:
         for block in blocks[-3:]:
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
-        start_height = (
-            full_node_1.full_node.blockchain.get_peak().height
-            if full_node_1.full_node.blockchain.get_peak() is not None
-            else -1
-        )
         conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
-        peer = await connect_and_get_peer(server_1, server_2)
 
-        # Mempool has capacity of 100, make 110 unspents that we can use
-        puzzle_hashes = []
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+        conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
-        tx_per_sec = bt.constants.TX_PER_SEC
-        sec_per_block = bt.constants.SUB_SLOT_TIME_TARGET // bt.constants.SLOT_BLOCKS_TARGET
-        block_buffer_count = bt.constants.MEMPOOL_BLOCK_BUFFER
-        mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
-
-        for _ in range(mempool_size + 1):
-            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-            puzzle_hashes.append(receiver_puzzlehash)
-            output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
-            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
-
-        spend_bundle = wallet_a.generate_signed_transaction(
+        spend_bundle: SpendBundle = wallet_a.generate_signed_transaction(
             100,
-            puzzle_hashes[0],
+            32 * b"0",
             get_future_reward_coins(blocks[1])[0],
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
-
-        new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
-
-        msg = await full_node_1.new_transaction(new_transaction)
-        assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
-
-        respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
-        await full_node_1.respond_transaction(respond_transaction_2, peer)
-
+        max_size = test_constants.MAX_GENERATOR_SIZE
+        large_puzzle_reveal = (max_size + 1) * b"0"
+        under_sized = max_size * b"0"
         blocks_new = bt.get_consecutive_blocks(
-            2,
+            1,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             transaction_data=spend_bundle,
         )
 
-        for block in blocks_new[-2:]:
-            # MAKE invalid spendbundle, but smaller than max size
-            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
+        invalid_block: FullBlock = blocks_new[-1]
+        invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
+        invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
+
+        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(invalid_block)
+        assert error is not None
+        assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
+
+        blocks_new = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
+        )
+        valid_block = blocks_new[-1]
+        valid_program = SerializedProgram.from_bytes(under_sized)
+        valid_block = dataclasses.replace(valid_block, transactions_generator=valid_program)
+        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(valid_block)
+
+        assert error is None
 
     #
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):
