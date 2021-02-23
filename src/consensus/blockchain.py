@@ -36,6 +36,7 @@ from src.consensus.block_header_validation import (
     validate_unfinished_header_block,
 )
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
+from src.types.vdf import VDFInfo
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,8 @@ class Blockchain(BlockchainInterface):
     block_store: BlockStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
+    # Set holding seen compact proofs, in order to avoid duplicates.
+    _seen_compact_proofs: set
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -108,6 +111,7 @@ class Blockchain(BlockchainInterface):
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
         await self._load_chain_from_store()
+        self._seen_compact_proofs = set()
         return self
 
     def shut_down(self):
@@ -639,3 +643,10 @@ class Blockchain(BlockchainInterface):
         if segments is None:
             return None
         return segments
+
+    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
+        pot_tuple = (vdf_info, height)
+        if pot_tuple in self._seen_compact_proofs:
+            return True
+        self._seen_compact_proofs.add(pot_tuple)
+        return False

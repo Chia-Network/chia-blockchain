@@ -6,6 +6,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.ints import uint32
+from src.types.vdf import VDFInfo
 
 
 class BlockchainInterface:
@@ -68,4 +69,7 @@ class BlockchainInterface:
         self,
         sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
+        pass
+
+    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
         pass
