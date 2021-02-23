@@ -145,6 +145,7 @@ def check_cmd(ctx: click.Context, num: int, grep_string: str, list_duplicates: b
 @click.pass_context
 def add_cmd(ctx: click.Context, final_dir: str):
     add_plot_directory(Path(final_dir), ctx.obj['root_path'])
+    print(f"Added plot directory \"{final_dir}\".")
 
 
 @plots_cmd.command('remove', short_help="removes a directory of plots from config")
@@ -159,6 +160,7 @@ def add_cmd(ctx: click.Context, final_dir: str):
 @click.pass_context
 def remove_cmd(ctx: click.Context, final_dir: str):
     remove_plot_directory(Path(final_dir), ctx.obj['root_path'])
+    print(f"Removed plot directory \"{final_dir}\".")
 
 
 @plots_cmd.command('show', short_help="shows the directory of current plots")
