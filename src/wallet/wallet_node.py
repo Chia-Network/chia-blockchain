@@ -145,7 +145,7 @@ class WalletNode:
         path = path_from_root(self.root_path, db_path_replaced)
         mkdir(path.parent)
 
-        self.wallet_state_manager = await WalletStateManager.create(private_key, self.config, path, self.constants)
+        self.wallet_state_manager = await WalletStateManager.create(private_key, self.config, path, self.constants, self.server)
 
         self.wsm_close_task = None
 

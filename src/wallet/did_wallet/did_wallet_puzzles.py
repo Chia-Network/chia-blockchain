@@ -94,7 +94,7 @@ def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey)
     puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
-    coinsol = CoinSolution(coin, Program.to([puzzle, solution]))
+    coinsol = CoinSolution(coin, puzzle, solution)
     return coinsol
 
 

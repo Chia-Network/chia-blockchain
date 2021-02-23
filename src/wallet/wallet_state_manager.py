@@ -17,7 +17,8 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.full_node.weight_proof import WeightProofHandler
-from src.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
+from src.protocols.wallet_protocol import RespondPuzzleSolution, PuzzleSolutionResponse
+from src.server.server import ChiaServer
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -93,6 +94,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     weight_proof_handler: WeightProofHandler
+    server: ChiaServer
 
     @staticmethod
     async def create(
@@ -100,12 +102,14 @@ class WalletStateManager:
         config: Dict,
         db_path: Path,
         constants: ConsensusConstants,
+        server: ChiaServer,
         name: str = None,
     ):
         self = WalletStateManager()
         self.new_wallet = False
         self.config = config
         self.constants = constants
+        self.server = server
 
         if name:
             self.log = logging.getLogger(name)
@@ -193,6 +197,33 @@ class WalletStateManager:
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
+
+    async def update_wallet_puzzle_hashes(self, wallet_id):
+        derivation_paths: List[DerivationRecord] = []
+        target_wallet = self.wallets[wallet_id]
+        last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        if unused is None:
+            # This handles the case where the database has entries but they have all been used
+            unused = await self.puzzle_store.get_last_derivation_path()
+            if unused is None:
+                # This handles the case where the database is empty
+                unused = uint32(0)
+        for index in range(unused, last):
+            pubkey: G1Element = self.get_public_key(uint32(index))
+            puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+            puzzlehash: bytes32 = puzzle.get_tree_hash()
+            self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
+            derivation_paths.append(
+                DerivationRecord(
+                    uint32(index),
+                    puzzlehash,
+                    pubkey,
+                    target_wallet.wallet_info.type,
+                    uint32(target_wallet.wallet_info.id),
+                )
+            )
+        await self.puzzle_store.add_derivation_paths(derivation_paths)
 
     async def load_wallets(self):
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -964,6 +995,28 @@ class WalletStateManager:
     async def add_new_wallet(self, wallet: Any, wallet_id: int):
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
+
+    # search through the blockrecords and return the most recent coin to use a given puzzlehash
+    async def search_blockrecords_for_puzzlehash(self, puzzlehash):
+        header_hash_of_interest = None
+        heighest_block_height = 0
+        peak: Optional[BlockRecord] = self.blockchain.get_peak()
+
+        peak_block: Optional[HeaderBlockRecord] = await self.blockchain.block_store.get_header_block_record(
+            peak.header_hash
+        )
+        while peak_block is not None:
+            tx_filter = PyBIP158([b for b in peak_block.header.transactions_filter])
+            if tx_filter.Match(bytearray(puzzlehash)) and peak_block.height > heighest_block_height:
+                header_hash_of_interest = peak_block.header_hash
+                heighest_block_height = peak_block.height
+                break
+            else:
+                peak_block = await self.blockchain.block_store.get_header_block_record(
+                    peak_block.header.prev_header_hash
+                )
+
+        return heighest_block_height, header_hash_of_interest
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
         if self.peak is None:

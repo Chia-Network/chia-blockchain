@@ -96,11 +96,11 @@
   )
 
   (defmacro recreate_self (my_puzhash amount)
-    (qq (c CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) (q . ())))))
+    (qq (c CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) ()))))
   )
 
   (defmacro create_new_coin (amount new_puz)
-    (qq (c CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q . ())))))
+    (qq (c CREATE_COIN (c (unquote new_puz) (c (unquote amount) ()))))
   )
 
   (defun check_messages_from_identities (mod_hash mod_hash_hash num_verifications_required identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids pubkey num_verifications)
@@ -163,7 +163,7 @@
   ;MAIN
 
   (if mode
-    (if (= mode (q . 1))
+    (if (= mode 1)
       ; mode one - create message
       ; formerly (list (recreate_self my_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list AGG_SIG_ME MY_PUBKEY new_puz))
       (list (recreate_self my_puzhash amount) (list CREATE_COIN message 0) (list AGG_SIG_ME MY_PUBKEY message))

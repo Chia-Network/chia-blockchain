@@ -437,7 +437,8 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                Program.to([full_puzzle, fullsol]),
+                full_puzzle,
+                fullsol
             )
         ]
         # sign for AGG_SIG_ME
@@ -504,7 +505,8 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                Program.to([full_puzzle, fullsol]),
+                full_puzzle,
+                fullsol
             )
         ]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
@@ -643,7 +645,8 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                Program.to([full_puzzle, fullsol]),
+                full_puzzle,
+                fullsol
             )
         ]
         sigs = []
@@ -776,7 +779,8 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                Program.to([full_puzzle, fullsol]),
+                full_puzzle,
+                fullsol
             )
         ]
         # sign for AGG_SIG_ME
