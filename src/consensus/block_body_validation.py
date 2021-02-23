@@ -93,13 +93,9 @@ async def validate_block_body(
     # 5. The prev generators root must be valid
     # TODO(straya): implement prev generators
 
-    # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
-    if block.transactions_generator is not None:
-        if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
-            return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
-    else:
-        if block.transactions_info.generator_root != bytes([0] * 32):
-            return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
+    # 4. The foliage block hash in the foliage block must match the foliage block
+    if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
+        return Err.INVALID_FOLIAGE_BLOCK_HASH, None
 
     # 7. The reward claims must be valid for the previous blocks, and current block fees
     if height > 0:
@@ -164,6 +160,14 @@ async def validate_block_body(
                 return None, None
         return None, None
     else:
+        # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
+        if block.transactions_generator is not None:
+            if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
+                return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
+        else:
+            if block.transactions_info.generator_root != bytes([0] * 32):
+                return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
+
         if block.transactions_generator is not None:
             # Get List of names removed, puzzles hashes for removed coins and conditions crated
             if cached_cost_result is not None:
