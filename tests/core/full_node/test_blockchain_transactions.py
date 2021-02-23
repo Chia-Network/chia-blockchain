@@ -452,7 +452,7 @@ class TestBlockchainTransactions:
             [],
             seed=b"reorg since genesis",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_transaction_block=True
+            guarantee_transaction_block=True,
         )
 
         for block in new_blocks:
