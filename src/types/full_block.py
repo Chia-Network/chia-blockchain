@@ -62,8 +62,8 @@ class FullBlock(Streamable):
 
     def get_block_header(self) -> HeaderBlock:
         # Create filter
+        byte_array_tx: List[bytes32] = []
         if self.is_transaction_block():
-            byte_array_tx: List[bytes32] = []
             removals_names, addition_coins = self.tx_removals_and_additions()
 
             for coin in addition_coins:
@@ -74,10 +74,8 @@ class FullBlock(Streamable):
             for coin in self.get_included_reward_coins():
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
 
-            bip158: PyBIP158 = PyBIP158(byte_array_tx)
-            encoded_filter: bytes = bytes(bip158.GetEncoded())
-        else:
-            encoded_filter = b""
+        bip158: PyBIP158 = PyBIP158(byte_array_tx)
+        encoded_filter: bytes = bytes(bip158.GetEncoded())
 
         return HeaderBlock(
             self.finished_sub_slots,

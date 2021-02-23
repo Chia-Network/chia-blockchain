@@ -95,11 +95,9 @@ async def validate_block_body(
     # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
     if block.transactions_generator is not None:
         if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
-            log.error("Invalid case one.")
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
     else:
         if block.transactions_info.generator_root != bytes([0] * 32):
-            log.error("Invalid case two.")
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
 
     # 7. The reward claims must be valid for the previous blocks, and current block fees
@@ -216,9 +214,8 @@ async def validate_block_body(
     encoded_filter = bytes(bip158.GetEncoded())
     filter_hash = std_hash(encoded_filter)
 
-    # if filter_hash != block.foliage_transaction_block.filter_hash:
-    #     log.error(f"Left: {filter_hash}, right: {block.foliage_transaction_block.filter_hash}")
-    #     return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
+    if filter_hash != block.foliage_transaction_block.filter_hash:
+        return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
 
     # 13. Check for duplicate outputs in additions
     addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
