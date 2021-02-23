@@ -251,7 +251,7 @@ class FullNode:
                 # If we already have the unfinished block, don't fetch the transactions. In the normal case, we will
                 # already have the unfinished block, from when it was broadcast, so we just need to download the header,
                 # but not the transactions
-                fetch_tx: bool = unfinished_block is None and curr_height == target_height
+                fetch_tx: bool = unfinished_block is None or curr_height != target_height
                 curr = await peer.request_block(full_node_protocol.RequestBlock(uint32(curr_height), fetch_tx))
                 if curr is None:
                     raise ValueError(f"Failed to fetch block {curr_height} from {peer.get_peer_info()}, timed out")

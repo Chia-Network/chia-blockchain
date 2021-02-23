@@ -504,7 +504,7 @@ class Blockchain(BlockchainInterface):
         self, blocks: List[FullBlock], validate_transactions: bool = True
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
-            self.constants, self.constants_json, self, blocks, self.pool, validate_transactions
+            self.constants, self.constants_json, self, blocks, self.pool, validate_transactions, True
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:
