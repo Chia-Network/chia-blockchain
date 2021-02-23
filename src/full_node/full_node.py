@@ -1663,5 +1663,6 @@ class FullNode:
                         await self.server.send_to_all([msg], NodeType.TIMELORD)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:
+            error_stack = traceback.format_exc()
             self.log.error(f"Exception in broadcast_uncompact_blocks: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
