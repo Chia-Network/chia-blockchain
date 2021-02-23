@@ -79,7 +79,7 @@ class NewEndOfSubSlotVDF(Streamable):
 class NewProofOfTime:
     new_proof_of_time: VDFInfo
     height: uint32
-    field_vdf: FieldVDF
+    field_vdf: uint8
 
 
 @dataclass(frozen=True)
@@ -88,4 +88,4 @@ class RespondCompactProofOfTime:
     vdf_info: VDFInfo
     vdf_proof: VDFProof
     height: uint32
-    field_vdf: FieldVDF
+    field_vdf: uint8

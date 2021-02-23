@@ -740,7 +740,7 @@ class Timelord:
         # Data specific only when running in bluebox mode.
         bluebox_iteration: Optional[uint64] = None,
         height: Optional[uint32] = None,
-        field_vdf: Optional[FieldVDF] = None,
+        field_vdf: Optional[uint8] = None,
     ):
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
@@ -853,13 +853,14 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
-                    time_taken = time.time() - self.chain_start_time[chain]
-                    ips = int(iterations_needed / time_taken * 10) / 10
-                    log.info(
-                        f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
-                        f" iters, "
-                        f"Estimated IPS: {ips}, Chain: {chain}"
-                    )
+                    if not self.sanitizer_mode:
+                        time_taken = time.time() - self.chain_start_time[chain]
+                        ips = int(iterations_needed / time_taken * 10) / 10
+                        log.info(
+                            f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
+                            f" iters, "
+                            f"Estimated IPS: {ips}, Chain: {chain}"
+                        )
 
                     vdf_info: VDFInfo = VDFInfo(
                         challenge,

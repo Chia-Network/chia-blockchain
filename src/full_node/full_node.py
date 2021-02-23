@@ -138,9 +138,11 @@ class FullNode:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, peak.height - 1, None)
         if self.config["send_uncompact_interval"] != 0:
+            assert self.config["target_uncompact_proofs"] != 0
             self.uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(
-                    self.config["send_uncompact_interval"], self.config["target_uncompact_proofs"],
+                    self.config["send_uncompact_interval"],
+                    self.config["target_uncompact_proofs"],
                 )
             )
 
@@ -1564,98 +1566,102 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
     async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_proofs: int):
-        while not self._shut_down:
-            while self.sync_store.get_sync_mode():
-                if self._shut_down:
-                    return
-                await asyncio.sleep(30)
+        try:
+            while not self._shut_down:
+                while self.sync_store.get_sync_mode():
+                    if self._shut_down:
+                        return
+                    await asyncio.sleep(30)
 
-            broadcast_list: List[timelord_protocol.NewProofOfTime] = []
-            min_height = 1
-            new_min_height = None
-            max_height = self.blockchain.get_peak_height()
-            if max_height is None:
-                await asyncio.sleep(30)
-                continue
-            batches_finished = 0
-            self.log.info("Scanning the blockchain for uncompact blocks.")
-            for h in range(min_height, max_height, 100):
-                # Got 10 times the target header count, sampling the target headers should contain
-                # enough randomness to split the work between blueboxes.
-                if len(broadcast_list) > target_uncompact_proofs * 10:
-                    break
-                stop_height = min(h + 99, max_height)
-                headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
-                for header in headers:
-                    prev_broadcast_list_len = len(broadcast_list)
-                    for sub_slot in header.finished_sub_slots:
+                broadcast_list: List[timelord_protocol.NewProofOfTime] = []
+                min_height = 1
+                new_min_height = None
+                max_height = self.blockchain.get_peak_height()
+                if max_height is None:
+                    await asyncio.sleep(30)
+                    continue
+                batches_finished = 0
+                self.log.info("Scanning the blockchain for uncompact blocks.")
+                for h in range(min_height, max_height, 100):
+                    # Got 10 times the target header count, sampling the target headers should contain
+                    # enough randomness to split the work between blueboxes.
+                    if len(broadcast_list) > target_uncompact_proofs * 10:
+                        break
+                    stop_height = min(h + 99, max_height)
+                    headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
+                    for header in headers.values():
+                        prev_broadcast_list_len = len(broadcast_list)
+                        for sub_slot in header.finished_sub_slots:
+                            if (
+                                sub_slot.proofs.challenge_chain_slot_proof.witness_type > 0
+                                or not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                            ):
+                                broadcast_list.append(
+                                    timelord_protocol.NewProofOfTime(
+                                        sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
+                                        header.height,
+                                        uint8(FieldVDF.CC_EOS_VDF),
+                                    )
+                                )
+                            if sub_slot.proofs.infused_challenge_chain_slot_proof is not None and (
+                                sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type > 0
+                                or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                            ):
+                                broadcast_list.append(
+                                    timelord_protocol.NewProofOfTime(
+                                        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                                        header.height,
+                                        uint8(FieldVDF.ICC_EOS_VDF),
+                                    )
+                                )
+                        if header.challenge_chain_sp_proof is not None and (
+                            header.challenge_chain_sp_proof.witness_type > 0
+                            or not header.challenge_chain_sp_proof.normalized_to_identity
+                        ):
+                            broadcast_list.append(
+                                timelord_protocol.NewProofOfTime(
+                                    header.reward_chain_block.challenge_chain_sp_vdf,
+                                    header.height,
+                                    uint8(FieldVDF.CC_SP_VDF),
+                                )
+                            )
+
                         if (
-                            sub_slot.proofs.challenge_chain_slot_proof.witness_type > 0
-                            or not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                            header.challenge_chain_ip_proof.witness_type > 0
+                            or not header.challenge_chain_ip_proof.normalized_to_identity
                         ):
                             broadcast_list.append(
                                 timelord_protocol.NewProofOfTime(
-                                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
+                                    header.reward_chain_block.challenge_chain_ip_vdf,
                                     header.height,
-                                    FieldVDF.CC_EOS_VDF,
+                                    uint8(FieldVDF.CC_IP_VDF),
                                 )
                             )
-                        if sub_slot.proofs.infused_challenge_chain_slot_proof is not None and (
-                            sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type > 0
-                            or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-                        ):
-                            broadcast_list.append(
-                                timelord_protocol.NewProofOfTime(
-                                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                                    header.height,
-                                    FieldVDF.ICC_EOS_VDF,
-                                )
-                            )
-                    if header.challenge_chain_sp_proof is not None and (
-                        header.challenge_chain_sp_proof.witness_type > 0
-                        or not header.challenge_chain_sp_proof.normalized_to_identity
-                    ):
-                        broadcast_list.append(
-                            timelord_protocol.NewProofOfTime(
-                                header.reward_chain_block.challenge_chain_sp_vdf,
-                                header.height,
-                                FieldVDF.CC_SP_VDF,
-                            )
-                        )
+                        # This is the first header with uncompact proofs. Store its height so next time we iterate
+                        # only from here. Fix header block iteration window to at least 1000, so reorgs will be
+                        # handled correctly.
+                        if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(1, max_height - 1000):
+                            new_min_height = header.height
 
-                    if (
-                        header.challenge_chain_ip_proof.witness_type > 0
-                        or not header.challenge_chain_ip_proof.normalized_to_identity
-                    ):
-                        broadcast_list.append(
-                            timelord_protocol.NewProofOfTime(
-                                header.reward_chain_block.challenge_chain_ip_vdf,
-                                header.height,
-                                FieldVDF.CC_IP_VDF,
-                            )
-                        )
-                    # This is the first header with uncompact proofs. Store its height so next time we iterate
-                    # only from here. Fix header block iteration window to at least 1000, so reorgs will be
-                    # handled correctly.
-                    if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(1, max_height - 1000):
-                        new_min_height = header.height
+                    # Small sleep between batches.
+                    batches_finished += 1
+                    if batches_finished % 10 == 0:
+                        await asyncio.sleep(1)
 
-                # Small sleep between batches.
-                batches_finished += 1
-                if batches_finished % 10 == 0:
-                    await asyncio.sleep(1)
-
-            # We have no uncompact blocks, but mentain the block iteration window to at least 1000 blocks.
-            if new_min_height is None:
-                new_min_height = max(1, max_height - 1000)
-            min_height = new_min_height
-            if len(broadcast_list) > target_uncompact_proofs:
-                random.shuffle(broadcast_list)
-                broadcast_list = broadcast_list[:target_uncompact_proofs]
-            if self.sync_store.get_sync_mode():
-                continue
-            if self.server is not None:
-                for new_pot in broadcast_list:
-                    msg = make_msg(ProtocolMessageTypes.new_proof_of_time, new_pot)
-                    await self.server.send_to_all([msg], NodeType.TIMELORD)
-            await asyncio.sleep(uncompact_interval_scan)
+                # We have no uncompact blocks, but mentain the block iteration window to at least 1000 blocks.
+                if new_min_height is None:
+                    new_min_height = max(1, max_height - 1000)
+                min_height = new_min_height
+                if len(broadcast_list) > target_uncompact_proofs:
+                    random.shuffle(broadcast_list)
+                    broadcast_list = broadcast_list[:target_uncompact_proofs]
+                if self.sync_store.get_sync_mode():
+                    continue
+                if self.server is not None:
+                    for new_pot in broadcast_list:
+                        msg = make_msg(ProtocolMessageTypes.new_proof_of_time, new_pot)
+                        await self.server.send_to_all([msg], NodeType.TIMELORD)
+                await asyncio.sleep(uncompact_interval_scan)
+        except Exception as e:
+            self.log.error(f"Exception in broadcast_uncompact_blocks: {e}")
+            self.log.error(f"Exception Stack: {error_stack}")

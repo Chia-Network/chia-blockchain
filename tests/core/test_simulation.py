@@ -44,7 +44,7 @@ class TestSimulation:
             cc_sp = [False, False]
             cc_ip = [False, False]
             for index, headers in enumerate([headers_1, headers_2]):
-                for header in headers:
+                for header in headers.values():
                     for sub_slot in header.finished_sub_slots:
                         if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
                             cc_eos[index] = True

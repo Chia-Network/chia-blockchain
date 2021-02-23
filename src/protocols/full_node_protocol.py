@@ -165,7 +165,7 @@ class RequestMempoolTransactions(Streamable):
 @streamable
 class NewCompactVDF(Streamable):
     height: uint32
-    field_vdf: FieldVDF
+    field_vdf: uint8
     vdf_info: VDFInfo
 
 
@@ -173,7 +173,7 @@ class NewCompactVDF(Streamable):
 @streamable
 class RequestCompactVDF(Streamable):
     height: uint32
-    field_vdf: FieldVDF
+    field_vdf: uint8
     vdf_info: VDFInfo
 
 
@@ -181,7 +181,7 @@ class RequestCompactVDF(Streamable):
 @streamable
 class RespondCompactVDF(Streamable):
     height: uint32
-    field_vdf: FieldVDF
+    field_vdf: uint8
     vdf_info: VDFInfo
     vdf_proof: VDFProof
 
