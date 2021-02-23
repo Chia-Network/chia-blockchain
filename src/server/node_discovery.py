@@ -117,6 +117,8 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             peer_info = peer.get_peer_info()
+            if peer_info is None:
+                return
             if peer_info.host not in self.connection_time_pretest:
                 self.connection_time_pretest[peer_info.host] = time.time()
             if time.time() - self.connection_time_pretest[peer_info.host] > 600:

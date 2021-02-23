@@ -127,7 +127,6 @@ def create_foliage(
 
     solution_program: Optional[SerializedProgram] = None
     if is_transaction_block:
-        spend_bundle_fees: int = 0
         aggregate_sig: G2Element = G2Element.infinity()
         cost = uint64(0)
 

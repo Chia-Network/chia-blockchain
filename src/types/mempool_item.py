@@ -6,12 +6,13 @@ from src.types.blockchain_format.coin import Coin
 from src.types.spend_bundle import SpendBundle
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)
-class MempoolItem:
+@streamable
+class MempoolItem(Streamable):
     spend_bundle: SpendBundle
-    fee_per_cost: float
     fee: uint64
     cost_result: CostResult
     spend_bundle_name: bytes32
@@ -21,6 +22,10 @@ class MempoolItem:
     def __lt__(self, other):
         # TODO test to see if it's < or >
         return self.fee_per_cost < other.fee_per_cost
+
+    @property
+    def fee_per_cost(self) -> float:
+        return int(self.fee) / int(self.cost_result.cost)
 
     @property
     def name(self) -> bytes32:

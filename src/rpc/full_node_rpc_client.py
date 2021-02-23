@@ -2,7 +2,9 @@ from typing import Dict, Optional, List, Tuple
 from src.types.full_block import FullBlock
 from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
+from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.types.coin_record import CoinRecord
 from src.rpc.rpc_client import RpcClient
@@ -69,10 +71,21 @@ class FullNodeRpcClient(RpcClient):
             return None
         return network_space_bytes_estimate["space"]
 
-    async def get_unspent_coins(self, puzzle_hash: bytes32) -> List:
-        d = {"puzzle_hash": puzzle_hash.hex()}
+    async def get_coin_records_by_puzzle_hash(
+        self,
+        puzzle_hash: bytes32,
+        include_spent_coins: bool = True,
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+    ) -> List:
+        d = {"puzzle_hash": puzzle_hash.hex(), "include_spent_coins": include_spent_coins}
+        if start_height is not None:
+            d["start_height"] = start_height
+        if end_height is not None:
+            d["end_height"] = end_height
         return [
-            CoinRecord.from_json_dict(coin) for coin in ((await self.fetch("get_unspent_coins", d))["coin_records"])
+            CoinRecord.from_json_dict(coin)
+            for coin in ((await self.fetch("get_coin_records_by_puzzle_hash", d))["coin_records"])
         ]
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
@@ -97,3 +110,24 @@ class FullNodeRpcClient(RpcClient):
             return []
         # TODO: return block records
         return response["block_records"]
+
+    async def push_tx(self, spend_bundle: SpendBundle):
+        return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
+
+    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+        response = await self.fetch("get_all_mempool_tx_ids", {})
+        return [bytes32(hexstr_to_bytes(tx_id_hex)) for tx_id_hex in response["tx_ids"]]
+
+    async def get_all_mempool_items(self) -> Dict[bytes32, Dict]:
+        response: Dict = await self.fetch("get_all_mempool_items", {})
+        converted: Dict[bytes32, Dict] = {}
+        for tx_id_hex, item in response["mempool_items"].items():
+            converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
+        return converted
+
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict]:
+        try:
+            response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
+            return response["mempool_item"]
+        except Exception:
+            return None

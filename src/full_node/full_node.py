@@ -45,6 +45,8 @@ from src.types.full_block import FullBlock
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 
 from src.util.errors import ConsensusError, Err
@@ -389,7 +391,7 @@ class FullNode:
         if (
             curr is None
             or curr.timestamp is None
-            or curr.timestamp < uint64(int(now - 60 * 20))
+            or curr.timestamp < uint64(int(now - 60 * 7))
             or self.sync_store.get_sync_mode()
         ):
             return False
@@ -1301,3 +1303,63 @@ class FullNode:
                     f"{request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}"
                 )
         return None, False
+
+    async def respond_transaction(
+        self,
+        transaction: SpendBundle,
+        spend_name: bytes32,
+        peer: Optional[ws.WSChiaConnection] = None,
+        test: bool = False,
+    ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+        if self.sync_store.get_sync_mode():
+            return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
+        if not test and not (await self.synced()):
+            return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
+        peak_height = self.blockchain.get_peak_height()
+        if peak_height is None or peak_height <= self.constants.INITIAL_FREEZE_PERIOD:
+            return MempoolInclusionStatus.FAILED, Err.INITIAL_TRANSACTION_FREEZE
+
+        if self.mempool_manager.seen(spend_name):
+            return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
+        self.mempool_manager.add_and_maybe_pop_seen(spend_name)
+        self.log.debug(f"Processing transaction: {spend_name}")
+        # Ignore if syncing
+        if self.sync_store.get_sync_mode():
+            status = MempoolInclusionStatus.FAILED
+            error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
+        else:
+            try:
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction)
+            except Exception as e:
+                self.mempool_manager.remove_seen(spend_name)
+                raise e
+            async with self.blockchain.lock:
+                if self.mempool_manager.get_spendbundle(spend_name) is not None:
+                    self.mempool_manager.remove_seen(spend_name)
+                    return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
+                cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
+                if status == MempoolInclusionStatus.SUCCESS:
+                    self.log.debug(f"Added transaction to mempool: {spend_name}")
+                    # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
+                    # vector.
+                    mempool_item = self.mempool_manager.get_mempool_item(spend_name)
+                    assert mempool_item is not None
+                    fees = mempool_item.fee
+                    assert fees >= 0
+                    assert cost is not None
+                    new_tx = full_node_protocol.NewTransaction(
+                        spend_name,
+                        cost,
+                        uint64(transaction.fees()),
+                    )
+                    msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
+                    if peer is None:
+                        await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                    else:
+                        await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                else:
+                    self.mempool_manager.remove_seen(spend_name)
+                    self.log.warning(
+                        f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
+                    )
+        return status, error

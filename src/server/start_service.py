@@ -55,7 +55,7 @@ class Service:
         self._node_type = node_type
         self._service_name = service_name
         self._rpc_task = None
-        self._network_id = network_id
+        self._network_id: bytes32 = network_id
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
@@ -125,7 +125,7 @@ class Service:
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
         ]
-        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
+        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id.hex()}")
 
         self._rpc_close_task = None
         if self._rpc_info:

@@ -147,9 +147,8 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print()
     print("=" * 80)
     print()
-    if len(msgs) > 0:
-        validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
-        print(f"aggregated signature check pass: {validates}")
+    validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
+    print(f"aggregated signature check pass: {validates}")
 
 
 def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:

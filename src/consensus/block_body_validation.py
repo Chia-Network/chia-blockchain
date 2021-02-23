@@ -1,7 +1,7 @@
 import collections
 from typing import Union, Optional, Set, List, Dict, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -378,13 +378,8 @@ async def validate_block_body(
     if not block.transactions_info.aggregated_signature:
         return Err.BAD_AGGREGATE_SIGNATURE, None
 
-    if len(pairs_pks) == 0:
-        if len(pairs_msgs) != 0 or block.transactions_info.aggregated_signature != G2Element.infinity():
-            return Err.BAD_AGGREGATE_SIGNATURE, None
-    else:
-        # noinspection PyTypeChecker
-        validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
-        if not validates:
-            return Err.BAD_AGGREGATE_SIGNATURE, None
+    # noinspection PyTypeChecker
+    if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+        return Err.BAD_AGGREGATE_SIGNATURE, None
 
     return None, result

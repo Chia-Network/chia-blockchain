@@ -44,7 +44,6 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
-from src.util.errors import Err
 from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
 from src.util.merkle_set import MerkleSet
@@ -157,54 +156,8 @@ class FullNodeAPI:
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (new_transaction)
         """
-        # Ignore if syncing
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-        if not test and not (await self.full_node.synced()):
-            return None
-        peak_height = self.full_node.blockchain.get_peak_height()
-        if peak_height is None or peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD:
-            return None
-
-        # Ignore if we have already added this transaction
         spend_name = tx.transaction.name()
-        if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
-            return None
-
-        # This is important because we might not have added the spend bundle, but we are about to add it, so it
-        # prevents double processing
-        if self.full_node.mempool_manager.seen(spend_name):
-            return None
-        # Adds it to seen so we don't double process
-        self.full_node.mempool_manager.add_and_maybe_pop_seen(spend_name)
-
-        # Do the expensive pre-validation outside the lock
-        cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(tx.transaction)
-
-        async with self.full_node.blockchain.lock:
-            # Check for unnecessary addition
-            if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
-                self.full_node.mempool_manager.remove_seen(spend_name)
-                return None
-            # Performs DB operations within the lock
-            cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
-                tx.transaction, cost_result, spend_name
-            )
-            if status == MempoolInclusionStatus.SUCCESS:
-                fees = tx.transaction.fees()
-                self.log.debug(f"Added transaction to mempool: {spend_name} cost: {cost} fees {fees}")
-                assert fees >= 0
-                assert cost is not None
-                new_tx = full_node_protocol.NewTransaction(
-                    spend_name,
-                    cost,
-                    uint64(tx.transaction.fees()),
-                )
-                message = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
-                await self.server.send_to_all_except([message], NodeType.FULL_NODE, peer.peer_node_id)
-            else:
-                self.full_node.mempool_manager.remove_seen(spend_name)
-                self.log.warning(f"Was not able to add transaction with id {spend_name}, {status} error: {error}")
+        await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 
     @api_request
@@ -1061,56 +1014,12 @@ class FullNodeAPI:
 
     @api_request
     async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
-        # Ignore if syncing
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-        if not (await self.full_node.synced()):
-            return None
-        peak_height = self.full_node.blockchain.get_peak_height()
-        if peak_height is None or peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD:
-            return None
         spend_name = request.transaction.name()
-        if self.full_node.mempool_manager.seen(spend_name):
-            return None
-        self.full_node.mempool_manager.add_and_maybe_pop_seen(spend_name)
-        self.log.debug(f"Processing transaction: {spend_name}")
-        # Ignore if syncing
-        if self.full_node.sync_store.get_sync_mode():
-            status = MempoolInclusionStatus.FAILED
-            error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
-        else:
-            cost_result = await self.full_node.mempool_manager.pre_validate_spendbundle(request.transaction)
-
-            async with self.full_node.blockchain.lock:
-                cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
-                    request.transaction, cost_result, spend_name
-                )
-                if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.debug(f"Added transaction to mempool: {spend_name}")
-                    # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
-                    # vector.
-                    mempool_item = self.full_node.mempool_manager.get_mempool_item(spend_name)
-                    assert mempool_item is not None
-                    fees = mempool_item.fee
-                    assert fees >= 0
-                    assert cost is not None
-                    new_tx = full_node_protocol.NewTransaction(
-                        spend_name,
-                        cost,
-                        uint64(fees),
-                    )
-                    msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
-                    await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)
-                else:
-                    self.log.warning(
-                        f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
-                    )
-
+        status, error = await self.full_node.respond_transaction(request.transaction, spend_name)
         error_name = error.name if error is not None else None
         if status == MempoolInclusionStatus.SUCCESS:
             response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         else:
-            self.full_node.mempool_manager.remove_seen(spend_name)
             # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
             if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
                 response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS.value), None)

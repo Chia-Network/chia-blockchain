@@ -368,8 +368,16 @@ class WalletStateManager:
     async def synced(self):
         if self.sync_mode is True:
             return False
-        full_peak = await self.blockchain.get_full_peak()
-        if full_peak is not None and full_peak.foliage_transaction_block.timestamp > int(time.time()) - 10 * 60:
+        peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        if peak is None:
+            return False
+
+        curr = peak
+        while not curr.is_transaction_block and not curr.height == 0:
+            curr = self.blockchain.try_block_record(curr.prev_hash)
+            if curr is None:
+                return False
+        if curr.is_transaction_block and curr.timestamp > int(time.time()) - 7 * 60:
             return True
         return False
 

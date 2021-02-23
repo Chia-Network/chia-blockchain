@@ -450,8 +450,9 @@ class CCWallet:
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
         addition_amount = 0
-
         for record in unconfirmed_tx:
+            if not record.is_in_mempool():
+                continue
             our_spend = False
             for coin in record.removals:
                 # Don't count eve spend as change

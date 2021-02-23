@@ -1,5 +1,6 @@
 # flake8: noqa: F811, F401
 import asyncio
+import dataclasses
 
 import aiohttp
 import pytest
@@ -352,6 +353,57 @@ class TestFullNodeProtocol:
         await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
+        # This next section tests making unfinished block with transactions, and then submitting the finished block
+        ph = wallet_a.get_new_puzzlehash()
+        ph_receiver = wallet_receiver.get_new_puzzlehash()
+        blocks = await full_node_1.get_all_full_blocks()
+        blocks = bt.get_consecutive_blocks(
+            2,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=ph,
+            pool_reward_puzzle_hash=ph,
+        )
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-2]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]))
+        coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+
+        spend_bundle = wallet_a.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
+
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
+            force_overflow=True,
+            seed=b"random seed",
+        )
+        block = blocks[-1]
+        unf = UnfinishedBlock(
+            block.finished_sub_slots[:-1],  # Since it's overflow
+            block.reward_chain_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage,
+            block.foliage_transaction_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
+        result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
+        assert result is not None
+        assert result.cost_result is not None and result.cost_result.cost > 0
+
+        assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
+        assert block.transactions_generator is not None
+        block_no_transactions = dataclasses.replace(block, transactions_generator=None)
+        assert block_no_transactions.transactions_generator is None
+
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block_no_transactions))
+        assert full_node_1.full_node.blockchain.contains_block(block.header_hash)
+
     @pytest.mark.asyncio
     async def test_new_peak(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
@@ -479,7 +531,7 @@ class TestFullNodeProtocol:
         spend_bundles = []
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
-            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(puzzle_hash))[0]
+            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             fee = random.randint(2, 499)
             spend_bundle = wallet_receiver.generate_signed_transaction(

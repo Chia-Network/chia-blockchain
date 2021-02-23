@@ -9,10 +9,13 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased 1.0rc3 aka Release Candidate 3 - 2021-02-??
 
 ### Added
+- RPC api: /push_tx. Using this RPC, you can spend custom chialisp programs. You need to make a SpendBundle, which
+includes the puzzle reveal (chialisp), a solution (chialisp) and a signature
+- RPC apis to query the mempool
 
 ### Changed
 
-- Node batch syncing performance was increased and it now avoids re-validating blocks that node had already validated.
+- Node batch syncing performance was increased, and it now avoids re-validating blocks that node had already validated.
 - If you run install-gui.sh or install-timelord.sh without being in the venv, the script will warn you that you need to `. ./activate` and exit with error.
 - If you attempt to install on a 32 bit Pi/ARM OS, the installer exits with a helpful error message.
 - Interface improvements for `chia configure -log-level`.

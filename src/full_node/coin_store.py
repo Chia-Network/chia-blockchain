@@ -106,10 +106,19 @@ class CoinStore:
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
-    async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[CoinRecord]:
+    async def get_coin_records_by_puzzle_hash(
+        self,
+        include_spent_coins: bool,
+        puzzle_hash: bytes32,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2 ** 32) - 1),
+    ) -> List[CoinRecord]:
+
         coins = set()
         cursor = await self.coin_record_db.execute(
-            "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            f"SELECT * from coin_record WHERE puzzle_hash=? AND confirmed_index>=? AND confirmed_index<? "
+            f"{'' if include_spent_coins else 'AND spent=0'}",
+            (puzzle_hash.hex(), start_height, end_height),
         )
         rows = await cursor.fetchall()
 
@@ -150,16 +159,6 @@ class CoinStore:
             (block_index,),
         )
         await c2.close()
-
-    async def get_unspent_coin_records(self) -> List[CoinRecord]:
-        coins = set()
-        cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE spent=0")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
-        return list(coins)
 
     # Store CoinRecord in DB and ram cache
     async def _add_coin_record(self, record: CoinRecord) -> None:

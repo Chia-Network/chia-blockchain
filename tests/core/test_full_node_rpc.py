@@ -1,27 +1,35 @@
 import pytest
+from blspy import AugSchemeMPL
 
 from src.consensus.pot_iterations import is_overflow_block
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
+from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
+from src.util.hash import std_hash
 from src.util.ints import uint16
-from tests.setup_nodes import setup_two_nodes, test_constants, bt, self_hostname
+from src.util.wallet_tools import WalletTool
+from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
 class TestRpc:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        async for _ in setup_two_nodes(test_constants):
+        async for _ in setup_simulators_and_wallets(2, 0, {}):
             yield _
 
     @pytest.mark.asyncio
     async def test1(self, two_nodes):
         num_blocks = 5
         test_rpc_port = uint16(21522)
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+        nodes, _ = two_nodes
+        full_node_api_1, full_node_api_2 = nodes
+        server_1 = full_node_api_1.full_node.server
+        server_2 = full_node_api_2.full_node.server
 
         def stop_node_cb():
             full_node_api_1._close()
@@ -53,7 +61,7 @@ class TestRpc:
             assert state["sub_slot_iters"] > 0
 
             blocks = bt.get_consecutive_blocks(num_blocks)
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_transaction_block=True)
+            blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             assert len(await client.get_unfinished_block_headers()) == 0
             assert len((await client.get_block_records(0, 100))) == 0
@@ -88,16 +96,73 @@ class TestRpc:
 
             assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
-            assert len((await client.get_block_records(0, 100))) == num_blocks + 1
+            assert len((await client.get_block_records(0, 100))) == num_blocks * 2
 
             assert (await client.get_block_record_by_height(100)) is None
 
             ph = list(blocks[-1].get_included_reward_coins())[0].puzzle_hash
-            coins = await client.get_unspent_coins(ph)
+            coins = await client.get_coin_records_by_puzzle_hash(ph)
+            print(coins)
             assert len(coins) >= 1
 
             additions, removals = await client.get_additions_and_removals(blocks[-1].header_hash)
             assert len(additions) >= 2 and len(removals) == 0
+
+            wallet = WalletTool()
+            wallet_receiver = WalletTool(AugSchemeMPL.key_gen(std_hash(b"123123")))
+            ph = wallet.get_new_puzzlehash()
+            ph_2 = wallet.get_new_puzzlehash()
+            ph_receiver = wallet_receiver.get_new_puzzlehash()
+
+            assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 0
+            assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
+            blocks = bt.get_consecutive_blocks(
+                2,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                farmer_reward_puzzle_hash=ph,
+                pool_reward_puzzle_hash=ph,
+            )
+            for block in blocks[-2:]:
+                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
+            assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
+
+            coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
+
+            assert len(await client.get_all_mempool_items()) == 0
+            assert len(await client.get_all_mempool_tx_ids()) == 0
+            assert (await client.get_mempool_item_by_tx_id(spend_bundle.name())) is None
+
+            await client.push_tx(spend_bundle)
+
+            assert len(await client.get_all_mempool_items()) == 1
+            assert len(await client.get_all_mempool_tx_ids()) == 1
+            assert (
+                SpendBundle.from_json_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
+                == spend_bundle
+            )
+            assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()
+            assert (
+                SpendBundle.from_json_dict(
+                    (await client.get_mempool_item_by_tx_id(spend_bundle.name()))["spend_bundle"]
+                )
+                == spend_bundle
+            )
+
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1
+            assert len(list(filter(lambda cr: not cr.spent, (await client.get_coin_records_by_puzzle_hash(ph))))) == 3
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, False)) == 3
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True)) == 4
+
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 100)) == 4
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 50, 100)) == 0
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
+            assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
             assert len(await client.get_connections()) == 0
 
