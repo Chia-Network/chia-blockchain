@@ -81,6 +81,12 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
 
 
+async def new_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["id"]
+    res = await wallet_client.get_next_address(wallet_id)
+    print(res)
+
+
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()
 
@@ -287,3 +293,19 @@ def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: 
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
 def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
+
+
+@wallet_cmd.command("new_address", short_help="add a new wallet address")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True,
+)
+@click.option("-i", "--id", help="Id of the wallet to use.", type=int, default=1, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use.", type=int)
+def new_address_cmd(wallet_rpc_port: int, id, fingerprint: int) -> None:
+    extra_params = {"id": id}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, new_address))
