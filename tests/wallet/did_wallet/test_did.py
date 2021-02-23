@@ -570,13 +570,7 @@ class TestDIDWallet:
             ]
         )
 
-        list_of_solutions = [
-            CoinSolution(
-                coin,
-                full_puzzle,
-                fullsol
-            )
-        ]
+        list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)

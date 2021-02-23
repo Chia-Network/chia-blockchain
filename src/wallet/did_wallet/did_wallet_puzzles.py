@@ -85,7 +85,7 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
 def create_recovery_message_puzzle(recovering_coin, newpuz, pubkey):
     if isinstance(pubkey, bytes):
         pubkey = pubkey.hex()
-    puzstring = f"(q . ((0x{ConditionOpcode.CREATE_ANNOUNCEMENT.hex()} 0x{recovering_coin}) (0x{ConditionOpcode.AGG_SIG.hex()} 0x{pubkey} 0x{newpuz})))"
+    puzstring = f"(q . ((0x{ConditionOpcode.CREATE_ANNOUNCEMENT.hex()} 0x{recovering_coin}) (0x{ConditionOpcode.AGG_SIG.hex()} 0x{pubkey} 0x{newpuz})))" # noqa
     puz = binutils.assemble(puzstring)
     return Program.to(puz)
 
