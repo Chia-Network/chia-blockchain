@@ -1,6 +1,7 @@
 import asyncio
 import time
 import logging
+import pathlib
 
 import pytest
 
@@ -11,9 +12,10 @@ from src.full_node.mempool_check_conditions import (
     get_puzzle_and_solution_for_coin,
 )
 from src.types.blockchain_format.program import SerializedProgram
-from src.util.byte_types import hexstr_to_bytes
 from tests.setup_nodes import test_constants, bt
 from clvm_tools import binutils
+
+from .make_big_block import make_big_block_generator
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -26,14 +28,27 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="module")
-def large_txn_hex():
-    import pathlib
+def large_block_generator(size):
+    # make a small block and hash it
+    # use this in the name for the cached big block
+    # the idea is, if the algorithm for building the big block changes,
+    # the name of the cache file will also change
+
+    small_generator = make_big_block_generator(1)
+    name = small_generator.get_tree_hash().hex()[:16]
 
     my_dir = pathlib.Path(__file__).absolute().parent
-    with open(my_dir / "large-block.hex", "r") as f:
-        hex_str = f.read()
-        yield hex_str
+    hex_path = my_dir / f"large-block-{name}-{size}.hex"
+    try:
+        with open(hex_path) as f:
+            hex_str = f.read()
+            return bytes.fromhex(hex_str)
+    except FileNotFoundError:
+        generator = make_big_block_generator(size)
+        blob = bytes(generator)
+        with open(hex_path, "w") as f:
+            f.write(blob.hex())
+        return blob
 
 
 class TestCostCalculation:
@@ -146,8 +161,9 @@ class TestCostCalculation:
         assert error is None
 
     @pytest.mark.asyncio
-    async def test_tx_generator_speed(self, large_txn_hex):
-        generator = hexstr_to_bytes(large_txn_hex)
+    async def test_tx_generator_speed(self):
+        LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
+        generator = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator)
 
         start_time = time.time()
@@ -155,7 +171,7 @@ class TestCostCalculation:
         end_time = time.time()
         duration = end_time - start_time
         assert err is None
-        assert len(npc) == 687
+        assert len(npc) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
         assert duration < 3
