@@ -1,3 +1,4 @@
+import click
 import traceback
 
 import aiohttp
@@ -12,115 +13,37 @@ from src.server.outbound_message import NodeType
 from src.types.full_block import FullBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
-from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.bech32m import encode_puzzle_hash
+from src.util.ints import uint16
 
 
-def make_parser(parser):
-
-    parser.add_argument(
-        "-s",
-        "--state",
-        help="Show the current state of the blockchain.",
-        type=str2bool,
-        nargs="?",
-        const=True,
-        default=False,
-    )
-
-    parser.add_argument(
-        "-c",
-        "--connections",
-        help="List nodes connected to this Full Node.",
-        type=str2bool,
-        nargs="?",
-        const=True,
-        default=False,
-    )
-
-    parser.add_argument(
-        "-b",
-        "--block-by-header-hash",
-        help="Look up a block by block header hash.",
-        type=str,
-        default="",
-    )
-
-    parser.add_argument(
-        "-bh",
-        "--block-header-hash-by-height",
-        help="Look up a block header hash by block height.",
-        type=str,
-        default="",
-    )
-
-    parser.add_argument(
-        "-a",
-        "--add-connection",
-        help="Connect to another Full Node by ip:port",
-        type=str,
-        default="",
-    )
-
-    parser.add_argument(
-        "-r",
-        "--remove-connection",
-        help="Remove a Node by the first 8 characters of NodeID",
-        type=str,
-        default="",
-    )
-
-    parser.add_argument(
-        "-e",
-        "--exit-node",
-        help="Shut down the running Full Node",
-        nargs="?",
-        const=True,
-        default=False,
-    )
-
-    parser.add_argument(
-        "-p",
-        "--rpc-port",
-        help="Set the port where the Full Node is hosting the RPC interface."
-        + " See the rpc_port under full_node in config.yaml."
-        + "Defaults to 8555",
-        type=int,
-        default=8555,
-    )
-
-    parser.add_argument(
-        "-wp",
-        "--wallet-rpc-port",
-        help="Set the port where the Wallet is hosting the RPC interface."
-        + " See the rpc_port under wallet in config.yaml."
-        + "Defaults to 9256",
-        type=int,
-        default=9256,
-    )
-
-    parser.set_defaults(function=show)
-
-
-async def show_async(args, parser):
+async def show_async(
+    rpc_port: int,
+    state: bool,
+    show_connections: bool,
+    exit_node: bool,
+    add_connection: str,
+    remove_connection: str,
+    block_header_hash_by_height: str,
+    block_by_header_hash: str,
+) -> None:
 
     # TODO read configuration for rpc_port instead of assuming default
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
-        if "rpc_port" not in args or args.rpc_port is None:
+        if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
-        else:
-            rpc_port = args.rpc_port
-        client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
+        client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
 
-        if args.state:
+        if state:
             blockchain_state = await client.get_blockchain_state()
             if blockchain_state is None:
-                return "There is no blockchain found yet. Try again shortly."
+                print("There is no blockchain found yet. Try again shortly.")
+                return
             peak: Optional[BlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]
@@ -140,7 +63,7 @@ async def show_async(args, parser):
                 )
             if synced:
                 print("Current Blockchain Status: Full Node Synced")
-                print("\nPeak: Hash:", peak.header_hash)
+                print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
@@ -156,11 +79,11 @@ async def show_async(args, parser):
                     while curr is not None and not curr.is_transaction_block:
                         curr = await client.get_block_record(curr.prev_hash)
                     peak_time = curr.timestamp
-                peak_time = struct_time(localtime(peak_time))
+                peak_time_struct = struct_time(localtime(peak_time))
 
                 print(
                     "      Time:",
-                    f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
+                    f"{time.strftime('%a %b %d %Y %T %Z', peak_time_struct)}",
                     f"                 Height: {peak.height:>10}\n",
                 )
 
@@ -188,10 +111,10 @@ async def show_async(args, parser):
             else:
                 print("Blockchain has no blocks yet")
 
-            # if called together with connections, leave a blank line
-            if args.connections:
+            # if called together with show_connections, leave a blank line
+            if show_connections:
                 print("")
-        if args.connections:
+        if show_connections:
             connections = await client.get_connections()
             print("Connections:")
             print(
@@ -235,18 +158,18 @@ async def show_async(args, parser):
                     )
                 print(con_str)
             # if called together with state, leave a blank line
-            if args.state:
+            if state:
                 print("")
-        if args.exit_node:
+        if exit_node:
             node_stop = await client.stop_node()
             print(node_stop, "Node stopped.")
-        if args.add_connection:
-            if ":" not in args.add_connection:
+        if add_connection:
+            if ":" not in add_connection:
                 print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
             else:
                 ip, port = (
-                    ":".join(args.add_connection.split(":")[:-1]),
-                    args.add_connection.split(":")[-1],
+                    ":".join(add_connection.split(":")[:-1]),
+                    add_connection.split(":")[-1],
                 )
                 print(f"Connecting to {ip}, {port}")
                 try:
@@ -254,34 +177,34 @@ async def show_async(args, parser):
                 except Exception:
                     # TODO: catch right exception
                     print(f"Failed to connect to {ip}:{port}")
-        if args.remove_connection:
+        if remove_connection:
             result_txt = ""
-            if len(args.remove_connection) != 8:
+            if len(remove_connection) != 8:
                 result_txt = "Invalid NodeID. Do not include '.'."
             else:
                 connections = await client.get_connections()
                 for con in connections:
-                    if args.remove_connection == con["node_id"].hex()[:8]:
-                        print("Attempting to disconnect", "NodeID", args.remove_connection)
+                    if remove_connection == con["node_id"].hex()[:8]:
+                        print("Attempting to disconnect", "NodeID", remove_connection)
                         try:
                             await client.close_connection(con["node_id"])
                         except Exception:
-                            result_txt = f"Failed to disconnect NodeID {args.remove_connection}"
+                            result_txt = f"Failed to disconnect NodeID {remove_connection}"
                         else:
-                            result_txt = f"NodeID {args.remove_connection}... {NodeType(con['type']).name} "
+                            result_txt = f"NodeID {remove_connection}... {NodeType(con['type']).name} "
                             f"{con['peer_host']} disconnected."
                     elif result_txt == "":
-                        result_txt = f"NodeID {args.remove_connection}... not found."
+                        result_txt = f"NodeID {remove_connection}... not found."
             print(result_txt)
-        if args.block_header_hash_by_height != "":
-            block_header = await client.get_block_record_by_height(args.block_header_hash_by_height)
+        if block_header_hash_by_height != "":
+            block_header = await client.get_block_record_by_height(block_header_hash_by_height)
             if block_header is not None:
-                print(f"Header hash of block {args.block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
+                print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
             else:
-                print("Block height", args.block_header_hash_by_height, "not found.")
-        if args.block_by_header_hash != "":
-            block: Optional[BlockRecord] = await client.get_block_record(hexstr_to_bytes(args.block_by_header_hash))
-            full_block: Optional[FullBlock] = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
+                print("Block height", block_header_hash_by_height, "not found.")
+        if block_by_header_hash != "":
+            block: Optional[BlockRecord] = await client.get_block_record(hexstr_to_bytes(block_by_header_hash))
+            full_block: Optional[FullBlock] = await client.get_block(hexstr_to_bytes(block_by_header_hash))
             # Would like to have a verbose flag for this
             if block is not None:
                 assert full_block is not None
@@ -292,10 +215,18 @@ async def show_async(args, parser):
                     difficulty = block.weight
                 if block.is_transaction_block:
                     assert full_block.transactions_info is not None
-                    block_time = struct_time(localtime(full_block.foliage_transaction_block.timestamp))
+                    block_time = struct_time(
+                        localtime(
+                            full_block.foliage_transaction_block.timestamp
+                            if full_block.foliage_transaction_block
+                            else None
+                        )
+                    )
                     block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                    cost = full_block.transactions_info.cost
-                    tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+                    cost = str(full_block.transactions_info.cost)
+                    tx_filter_hash = "Not a transaction block"
+                    if full_block.foliage_transaction_block:
+                        tx_filter_hash = full_block.foliage_transaction_block.filter_hash
                 else:
                     block_time_string = "Not a transaction block"
                     cost = "Not a transaction block"
@@ -325,11 +256,11 @@ async def show_async(args, parser):
                     f"Fees Amount            {block.fees}\n"
                 )
             else:
-                print("Block with header hash", args.block_header_hash_by_height, "not found.")
+                print("Block with header hash", block_header_hash_by_height, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
-            print(f"Connection error. Check if full node rpc is running at {args.rpc_port}")
+            print(f"Connection error. Check if full node rpc is running at {rpc_port}")
             print("This is normal if full node is still starting up.")
         else:
             tb = traceback.format_exc()
@@ -339,5 +270,59 @@ async def show_async(args, parser):
     await client.await_closed()
 
 
-def show(args, parser):
-    return asyncio.run(show_async(args, parser))
+@click.command("show", short_help="show node information")
+@click.option(
+    "-p",
+    "--rpc-port",
+    help=(
+        "Set the port where the Full Node is hosting the RPC interface. "
+        "See the rpc_port under full_node in config.yaml."
+    ),
+    type=int,
+    default=8555,
+    show_default=True,
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    type=int,
+    default=9256,
+    show_default=True,
+)
+@click.option("-s", "--state", help="Show the current state of the blockchain.", is_flag=True, type=bool, default=False)
+@click.option(
+    "-c", "--connections", help="List nodes connected to this Full Node.", is_flag=True, type=bool, default=False
+)
+@click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False)
+@click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
+@click.option(
+    "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
+)
+@click.option(
+    "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height.", type=str, default=""
+)
+@click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="")
+def show_cmd(
+    rpc_port: int,
+    wallet_rpc_port: int,
+    state: bool,
+    connections: bool,
+    exit_node: bool,
+    add_connection: str,
+    remove_connection: str,
+    block_header_hash_by_height: str,
+    block_by_header_hash: str,
+) -> None:
+    asyncio.run(
+        show_async(
+            rpc_port,
+            state,
+            connections,
+            exit_node,
+            add_connection,
+            remove_connection,
+            block_header_hash_by_height,
+            block_by_header_hash,
+        )
+    )
