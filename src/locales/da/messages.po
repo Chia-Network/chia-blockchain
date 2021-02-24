@@ -8,7 +8,7 @@ msgstr ""
 "Language: da\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-24 17:09\n"
+"PO-Revision-Date: 2021-02-24 19:09\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -544,7 +544,7 @@ msgstr "Farmer kører ikke"
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "Farmer tjener blok belønning og transaktionsgebyrer ved at bruge diskplads til at hjælpe netværket med at sikre transaktioner. Her vil dine plotfiler blive listet når de er tilføjet. <0>Lær mere</0>"
 
-#: src/components/farm/Farm.tsx:13
+#: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
@@ -627,7 +627,7 @@ msgstr ""
 msgid "Height"
 msgstr "Højde"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:47
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:48
 msgid "Help translate"
 msgstr "Hjælp med oversættelse"
 
@@ -814,7 +814,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:274
+#: src/middleware/middleware_api.jsx:277
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1085,11 +1085,11 @@ msgstr "Tidligere Blok Hash"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privat nøgle med public fingeraftryk {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:240
+#: src/middleware/middleware_api.jsx:241
 msgid "Private key {0}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:248
+#: src/middleware/middleware_api.jsx:251
 msgid "Private key:"
 msgstr ""
 
@@ -1105,7 +1105,7 @@ msgstr "Beviser Fundet"
 msgid "Pubkey"
 msgstr "Pubnøgle"
 
-#: src/middleware/middleware_api.jsx:256
+#: src/middleware/middleware_api.jsx:259
 msgid "Public key:"
 msgstr ""
 
@@ -1188,7 +1188,7 @@ msgstr "Sekundær midlertidlig folder placering"
 msgid "See private key"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:266
+#: src/middleware/middleware_api.jsx:269
 msgid "Seed:"
 msgstr ""
 
