@@ -51,10 +51,11 @@ jobs:
         node-version: '12.x'
 
     - name: Check npm audit and locale on ${{ matrix.os }}
+      shell: bash
       run: |
         npm install
-        npm audit --audit-level=high
-        if [ $? ne 0 ]; then echo "npm audit failed!" && exit 1; fi
+        if ! output=$(npm audit --audit-level=high); then echo "$output" && exit 1; fi
+        echo "$output"
         npm run locale:extract
         if [ "$(git diff-index --quiet HEAD)" ]; then echo "locales need to be extracted!" && exit 1; fi
         git status
