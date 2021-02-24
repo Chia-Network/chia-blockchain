@@ -14,7 +14,7 @@ jobs:
   build:
     name: MacOS Core Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 70
+    timeout-minutes: 140
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -58,7 +58,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.12.0'
+        ref: 'blank'
         fetch-depth: 1
 
     - name: Link home directory
