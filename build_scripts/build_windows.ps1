@@ -5,6 +5,8 @@ $ErrorActionPreference = "Stop"
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
+git status
+
 Write-Output "   ---"
 Write-Output "curl miniupnpc"
 Write-Output "   ---"
@@ -41,7 +43,6 @@ if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
   }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
-Write-Output "SCM Version is: $env:SCM_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -73,6 +74,8 @@ Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
 
+git status
+
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
@@ -82,6 +85,7 @@ npm install
 npm run locale:extract
 npm run locale:compile
 
+git status
 
 Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
@@ -112,6 +116,8 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
+git status
+
 If ($env:HAS_SECRET) {
    Write-Output "   ---"
    Write-Output "Add timestamp and verify signature"
@@ -121,6 +127,8 @@ If ($env:HAS_SECRET) {
    }   Else    {
    Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
 }
+
+git status
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"

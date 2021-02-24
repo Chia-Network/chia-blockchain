@@ -103,10 +103,12 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
-        clang --version
         cd ./chia-blockchain-gui
         npm install
         npm audit fix
+        npm run locale:extract
+        npm run locale:compile
+        git status
         cd ../build_scripts
         sh build_macos.sh
 
