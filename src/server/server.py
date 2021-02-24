@@ -443,7 +443,17 @@ class ChiaServer:
                         coroutine = f(full_message.data, connection)
                     else:
                         coroutine = f(full_message.data)
-                    response: Optional[Message] = await asyncio.wait_for(coroutine, timeout=300)
+
+                    async def wrapped_coroutine():
+                        try:
+                            result = await coroutine
+                            return result
+                        except Exception as e:
+                            tb = traceback.format_exc()
+                            connection.log.error(f"Exception: {e}, {connection.get_peer_info()}. {tb}")
+                            raise e
+
+                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=300)
                     connection.log.debug(
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"

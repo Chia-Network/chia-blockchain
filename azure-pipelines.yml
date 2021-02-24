@@ -36,8 +36,6 @@ steps:
       keychain: temp
       deleteCert: true
 
-  #  since we're installing miniupnpc below,
-  #  only cbor2 will end up in wheels/
   - script: |
       python -m venv venv
       ln -s venv/bin/activate .
@@ -51,7 +49,7 @@ steps:
   - script: |
       . ./activate
       clang --version
-      pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+      pip wheel --use-pep517 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
       pip install --no-index --find-links=./wheels/ chia-blockchain
     displayName: "Build and install wheels"
 

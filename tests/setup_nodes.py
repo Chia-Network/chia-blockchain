@@ -54,7 +54,6 @@ async def setup_full_node(
     db_path = bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
-
     config = bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
@@ -67,11 +66,12 @@ async def setup_full_node(
         config["introducer_peer"] = None
     config["port"] = port
     config["rpc_port"] = port + 1000
-
+    overrides = config["network_overrides"][config["selected_network"]]
+    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
         kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, consensus_constants)
+        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 
     kwargs.update(
         parse_cli_args=False,
@@ -359,7 +359,14 @@ async def setup_simulators_and_wallets(
     for index in range(0, simulator_count):
         port = starting_port + index
         db_name = f"blockchain_test_{port}.db"
-        sim = setup_full_node(consensus_constants, db_name, port, BlockTools(consensus_constants), simulator=True)
+        bt_tools = BlockTools(consensus_constants, const_dict=dic)  # block tools modifies constants
+        sim = setup_full_node(
+            bt_tools.constants,
+            db_name,
+            port,
+            bt_tools,
+            simulator=True,
+        )
         simulators.append(await sim.__anext__())
         node_iters.append(sim)
 
@@ -369,10 +376,11 @@ async def setup_simulators_and_wallets(
         else:
             seed = key_seed
         port = starting_port + 5000 + index
+        bt_tools = BlockTools(consensus_constants, const_dict=dic)  # block tools modifies constants
         wlt = setup_wallet_node(
             port,
-            consensus_constants,
-            BlockTools(consensus_constants),
+            bt_tools.constants,
+            bt_tools,
             None,
             key_seed=seed,
             starting_height=starting_height,

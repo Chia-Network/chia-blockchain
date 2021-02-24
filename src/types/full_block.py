@@ -60,12 +60,15 @@ class FullBlock(Streamable):
     def is_transaction_block(self):
         return self.foliage_transaction_block is not None
 
-    def get_block_header(self) -> HeaderBlock:
+    def get_block_header(self, addition_coins=None, removals_names=None) -> HeaderBlock:
         # Create filter
         byte_array_tx: List[bytes32] = []
         if self.is_transaction_block():
-            removals_names, addition_coins = self.tx_removals_and_additions()
+            if addition_coins is None or removals_names is None:
+                removals_names, addition_coins = self.tx_removals_and_additions()
 
+            assert removals_names is not None
+            assert addition_coins is not None
             for coin in addition_coins:
                 byte_array_tx.append(bytearray(coin.puzzle_hash))
             for name in removals_names:

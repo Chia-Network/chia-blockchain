@@ -92,6 +92,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "TX_PER_SEC": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
         "INITIAL_FREEZE_PERIOD": 0,
+        "NETWORK": 1,
     }
 )
 
@@ -105,9 +106,7 @@ class BlockTools:
     """
 
     def __init__(
-        self,
-        constants: ConsensusConstants = test_constants,
-        root_path: Optional[Path] = None,
+        self, constants: ConsensusConstants = test_constants, root_path: Optional[Path] = None, const_dict=None
     ):
         self._tempdir = None
         if root_path is None:
@@ -151,7 +150,8 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
-
+        if const_dict is not None:
+            updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
     def init_plots(self, root_path):

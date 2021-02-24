@@ -22,6 +22,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.ssl.create_ssl import generate_ca_signed_cert
+from src.types.blockchain_format.program import Program, SerializedProgram
 from src.types.full_block import FullBlock
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
@@ -29,6 +30,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.block_tools import get_signage_point
+from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
@@ -142,6 +144,22 @@ async def setup_five_nodes():
 @pytest.fixture(scope="function")
 async def setup_two_nodes():
     async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
+        yield _
+
+
+@pytest.fixture(scope="function")
+async def wallet_nodes_mainnet():
+    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK": 0}, starting_port=40000)
+    nodes, wallets = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    wallet_a = bt.get_pool_wallet_tool()
+    wallet_receiver = WalletTool()
+    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
+
+    async for _ in async_gen:
         yield _
 
 
@@ -904,7 +922,67 @@ class TestFullNodeProtocol:
 
         await time_out_assert(20, caught_up_slots)
 
-    # @pytest.mark.asyncio
+    @pytest.mark.asyncio
+    async def test_mainnet_softfork(self, wallet_nodes_mainnet):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes_mainnet
+        blocks = await full_node_1.get_all_full_blocks()
+
+        wallet_ph = wallet_a.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=wallet_ph,
+            pool_reward_puzzle_hash=wallet_ph,
+        )
+        for block in blocks[-3:]:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+
+        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+        conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
+
+        spend_bundle: SpendBundle = wallet_a.generate_signed_transaction(
+            100,
+            32 * b"0",
+            get_future_reward_coins(blocks[1])[0],
+            condition_dic=conditions_dict,
+        )
+        assert spend_bundle is not None
+        max_size = test_constants.MAX_GENERATOR_SIZE
+        large_puzzle_reveal = (max_size + 1) * b"0"
+        under_sized = max_size * b"0"
+        blocks_new = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
+        )
+
+        invalid_block: FullBlock = blocks_new[-1]
+        invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
+        invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
+
+        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(invalid_block)
+        assert error is not None
+        assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
+
+        blocks_new = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
+        )
+        valid_block = blocks_new[-1]
+        valid_program = SerializedProgram.from_bytes(under_sized)
+        valid_block = dataclasses.replace(valid_block, transactions_generator=valid_program)
+        result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(valid_block)
+
+        assert error is None
+
+    #
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):
     #     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
     #     wallet_a, wallet_receiver, blocks = wallet_blocks
