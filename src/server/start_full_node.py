@@ -23,17 +23,13 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants, constants_dic=None
+    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-    overrides = config["network_overrides"][config["selected_network"]]
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
-    if constants_dic is not None:
-        updated_constants = updated_constants.replace(**constants_dic)
 
     full_node = FullNode(
         config,
         root_path=root_path,
-        consensus_constants=updated_constants,
+        consensus_constants=consensus_constants,
     )
     api = FullNodeAPI(full_node)
 
@@ -51,7 +47,7 @@ def service_kwargs_for_full_node(
         upnp_ports=upnp_list,
         server_listen_ports=[config["port"]],
         on_connect_callback=full_node.on_connect,
-        network_id=updated_constants.GENESIS_CHALLENGE,
+        network_id=consensus_constants.GENESIS_CHALLENGE,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
@@ -60,7 +56,9 @@ def service_kwargs_for_full_node(
 
 def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    overrides = config["network_overrides"][config["selected_network"]]
+    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
     return run_service(**kwargs)
 
 
