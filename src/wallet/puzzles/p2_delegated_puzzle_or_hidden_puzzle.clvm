@@ -93,7 +93,7 @@
 
 ; the hex file disassembles to:
 ;
-; (a (q #a (i 11 (q (c (i (= 5 (point_add 11 (pubkey_for_exp (sha256 11 (a 6 (c 2 (c 23 0))))))) (q (c 23 47)) (q 8)) 1)) (q 4 (c 4 (c 5 (c (a 6 (c 2 (c 23 0))) 0))) (a 23 47))) 1) (c (q 50 (c (i (l 5) (q 11 (q . 2) (a 6 (c 2 (c 9 0))) (a 6 (c 2 (c 13 0)))) (q 11 (q . 1) 5)) 1)) 1))
+; (a (q #a (i 11 (q a (i (= 5 (point_add 11 (pubkey_for_exp (sha256 11 (a 6 (c 2 (c 23 0))))))) (q a 23 47) (q 8)) 1) (q 4 (c 4 (c 5 (c (a 6 (c 2 (c 23 0))) 0))) (a 23 47))) 1) (c (q 50 a (i (l 5) (q 11 (q . 2) (a 6 (c 2 (c 9 0))) (a 6 (c 2 (c 13 0)))) (q 11 (q . 1) 5)) 1) 1))
 ;
 ; This file may *not* yet compile to that. The output has been hand-tweaked to include some extra optimiziations.
 ; Eventually, the compiler should produce the output above.
