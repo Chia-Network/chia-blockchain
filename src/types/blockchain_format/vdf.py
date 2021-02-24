@@ -45,7 +45,7 @@ class VDFInfo(Streamable):
     output: ClassgroupElement
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 @streamable
 class VDFProof(Streamable):
     witness_type: uint8
@@ -53,9 +53,9 @@ class VDFProof(Streamable):
     normalized_to_identity: bool
 
     def __init__(self, witness_type: uint8, witness: bytes, normalized_to_identity: bool = False):
-        self.witness_type = witness_type
-        self.witness = witness
-        self.normalized_to_identity = normalized_to_identity
+        object.__setattr__(self, "witness_type", witness_type)
+        object.__setattr__(self, "witness", witness)
+        object.__setattr__(self, "normalized_to_identity", normalized_to_identity)
 
     def is_valid(
         self,
