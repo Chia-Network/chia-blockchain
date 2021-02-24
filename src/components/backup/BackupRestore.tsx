@@ -1,4 +1,5 @@
 import React, { DragEvent } from 'react';
+import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
   Box,
@@ -156,7 +157,9 @@ function UIPart() {
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Typography variant="h4" component="h1" gutterBottom>
-            Restore Smart Wallets From Backup
+            <Trans>
+              Restore Smart Wallets From Backup
+            </Trans>
           </Typography>
 
           <StyledDropPaper
@@ -166,7 +169,9 @@ function UIPart() {
             onDragLeave={(e) => handleDragLeave(e)}
           >
             <Typography variant="subtitle1">
-              Drag and drop your backup file
+              <Trans>
+                Drag and drop your backup file
+              </Trans>
             </Typography>
           </StyledDropPaper>
 
@@ -179,7 +184,7 @@ function UIPart() {
               color="primary"
               className={classes.submit}
             >
-              Skip
+              <Trans>Skip</Trans>
             </Button>
           </Container>
         </Flex>

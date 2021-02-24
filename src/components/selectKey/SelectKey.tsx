@@ -147,7 +147,7 @@ export default function SelectKey() {
                         }
                       />
                       <ListItemSecondaryAction>
-                        <Tooltip title="See private key">
+                        <Tooltip title={<Trans>See private key</Trans>}>
                           <IconButton
                             edge="end"
                             aria-label="show"
@@ -156,7 +156,7 @@ export default function SelectKey() {
                             <VisibilityIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="DANGER: permanently delete private key">
+                        <Tooltip title={<Trans>DANGER: permanently delete private key</Trans>}>
                           <IconButton
                             edge="end"
                             aria-label="delete"

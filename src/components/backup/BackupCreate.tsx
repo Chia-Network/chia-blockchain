@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
 import { makeStyles } from '@material-ui/core/styles';
 import Modal from '@material-ui/core/Modal';
 import { Button } from '@material-ui/core';
@@ -58,9 +59,11 @@ export default function BackupCreate() {
       aria-describedby="simple-modal-description"
     >
       <div style={modalStyle} className={classes.paper}>
-        <h2 id="simple-modal-title">Create a Backup</h2>
+        <h2 id="simple-modal-title">
+          <Trans>Create a Backup</Trans>
+        </h2>
         <p id="simple-modal-description">
-          Backup file is used to restore smart wallets.
+          <Trans>Backup file is used to restore smart wallets.</Trans>
         </p>
         <Button
           style={{
@@ -72,7 +75,7 @@ export default function BackupCreate() {
           }}
           onClick={handleCreateBackup}
         >
-          Create
+          <Trans>Create</Trans>
         </Button>
       </div>
     </Modal>

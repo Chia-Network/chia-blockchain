@@ -1,5 +1,8 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
 import { AlertDialog } from '@chia/core';
+import styled from 'styled-components';
+import { Grid, Typography } from '@material-ui/core';
 import {
   get_address,
   format_message,
@@ -56,6 +59,10 @@ import {
   DISTRIBUTED_ID,
 } from '../util/wallet_types';
 const config = require('../config/config');
+
+const StyledTypographyDD = styled(Typography)`
+  word-break: break-all;
+`;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -227,19 +234,51 @@ export const handle_message = async (store, payload) => {
     }
     */
   } else if (payload.command === 'get_private_key') {
-    const text =
-      `Private key: ${payload.data.private_key.sk}\n` +
-      `Public key: ${payload.data.private_key.pk}\n${
-        payload.data.private_key.seed
-          ? `seed: ${payload.data.private_key.seed}`
-          : 'No 24 word seed, since this key is imported.'
-      }`;
     store.dispatch(
       openDialog(
         <AlertDialog
-          title={`Private key ${payload.data.private_key.fingerprint}`}
+          title={
+            <Trans>Private key {payload.data.private_key.fingerprint}</Trans>
+          }
         >
-          {text}
+          <Grid
+            container
+            component="dl" // mount a Definition List
+            spacing={2}
+          >
+            <Grid item>
+              <Typography component="dt" variant="subtitle2">
+                <Trans>Private key:</Trans>
+              </Typography>
+              <StyledTypographyDD component="dd" variant="body2">
+                {payload.data.private_key.sk}
+              </StyledTypographyDD>
+            </Grid>
+            <Grid item>
+              <Typography component="dt" variant="subtitle2">
+                <Trans>Public key: </Trans>
+              </Typography>
+              <StyledTypographyDD component="dd" variant="body2">
+                {payload.data.private_key.pk}
+              </StyledTypographyDD>
+            </Grid>
+            <Grid item>
+              {payload.data.private_key.seed ? (
+                <>
+                  <Typography component="dt" variant="subtitle2">
+                    <Trans>Seed: </Trans>
+                  </Typography>
+                  <StyledTypographyDD component="dd" variant="body2">
+                    {payload.data.private_key.seed}
+                  </StyledTypographyDD>
+                </>
+              ) : (
+                <Typography component="dd" variant="body2">
+                  <Trans>No 24 word seed, since this key is imported.</Trans>
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
         </AlertDialog>,
       ),
     );

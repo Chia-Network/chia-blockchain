@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { Trans } from '@lingui/macro';
 import { Button, ButtonProps, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@material-ui/core';
 
 type Props = {
@@ -60,7 +61,7 @@ ConfirmDialog.defaultProps = {
   onClose: () => {},
   title: undefined,
   children: undefined,
-  cancelTitle: 'Cancel',
-  confirmTitle: 'Ok',
+  cancelTitle: <Trans>Cancel</Trans>,
+  confirmTitle: <Trans>OK</Trans>,
   confirmColor: 'default',
 };
