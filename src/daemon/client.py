@@ -84,7 +84,7 @@ class DaemonProxy:
         data = {"service": service_name}
         request = self.format_request("is_running", data)
         response = await self._get(request)
-        if response["data"] is not None and "is_running" in response["data"]:
+        if "is_running" in response["data"]:
             return bool(response["data"]["is_running"])
         return False
 
@@ -126,7 +126,7 @@ async def connect_to_daemon_and_validate(root_path: Path) -> Optional[DaemonProx
         connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"], ssl_context)
         r = await connection.ping()
 
-        if r["data"] is not None and "value" in r["data"] and r["data"]["value"] == "pong":
+        if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
     except Exception:
         print("Daemon not started yet")

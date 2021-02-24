@@ -55,12 +55,11 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
                 continue
         print(f"{service}: ", end="", flush=True)
         msg = await daemon.start_service(service_name=service)
-        if msg["data"] is not None:
-            success = msg["data"]["success"]
+        success = msg["data"]["success"]
 
         if success is True:
             print("started")
-        elif msg["data"] is not None:
+        else:
             error = msg["data"]["error"]
             if error == not_launched_error_message:
                 print("Waiting for genesis challenge, network not launched yet.")

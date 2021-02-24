@@ -299,10 +299,7 @@ class WebSocketServer:
 
             return None, []
 
-        data = None
-        if "data" in message:
-            data = message["data"]
-
+        data = message["data"]
         commands_with_data = [
             "start_service",
             "start_plotting",
@@ -312,7 +309,7 @@ class WebSocketServer:
             "register_service",
             "get_status",
         ]
-        if not isinstance(data, dict) and command in commands_with_data:
+        if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
         elif command == "ping":
             response = await ping()
