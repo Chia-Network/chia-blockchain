@@ -20,19 +20,13 @@ from .full_node_simulator import FullNodeSimulator
 SERVICE_NAME = "full_node"
 
 
-def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools, constants_dic=None) -> Dict:
+def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
-    overrides = config["network_overrides"][config["selected_network"]]
-    consensus_constants = bt.constants
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
-    bt.constants = updated_constants
-    if constants_dic is not None:
-        updated_constants = updated_constants.replace(**constants_dic)
-
+    constants = bt.constants
     node = FullNode(
         config,
         root_path=root_path,
-        consensus_constants=updated_constants,
+        consensus_constants=constants,
         name=SERVICE_NAME,
     )
 
@@ -48,7 +42,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
-        network_id=updated_constants.GENESIS_CHALLENGE,
+        network_id=constants.GENESIS_CHALLENGE,
     )
     return kwargs
 
