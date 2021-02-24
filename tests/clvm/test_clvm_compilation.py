@@ -17,7 +17,7 @@ wallet_program_files = set(
         "src/wallet/puzzles/p2_conditions.clvm",
         "src/wallet/puzzles/p2_delegated_conditions.clvm",
         "src/wallet/puzzles/p2_delegated_puzzle.clvm",
-        # "src/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm", This puzzle is currently being hand-compiled
+        "src/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm",
         "src/wallet/puzzles/p2_m_of_n_delegate_direct.clvm",
         "src/wallet/puzzles/p2_puzzle_hash.clvm",
         "src/wallet/puzzles/rl_aggregation.clvm",
