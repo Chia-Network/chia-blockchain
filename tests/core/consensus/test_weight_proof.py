@@ -187,27 +187,6 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_validate_segment(self, default_400_blocks):
-        blocks = default_400_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        summaries_list: List[SubEpochSummary] = []
-        for key in sorted(summaries.keys()):
-            summaries_list.append(summaries[key])
-
-        wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
-
-        res, _, _, _ = _validate_segment_slots(
-            test_constants,
-            wp.sub_epoch_segments[0],
-            test_constants.SUB_SLOT_ITERS_STARTING,
-            test_constants.DIFFICULTY_STARTING,
-            None,
-        )
-
-        assert res
-
-    @pytest.mark.asyncio
     async def test_weight_proof1000(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
