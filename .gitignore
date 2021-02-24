@@ -91,4 +91,5 @@ build
 build_scripts/dist
 build_scripts/*.Dmg
 src/locales/_build
-daemon
+daemon/
+win_code_sign_cert.p12
