@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-24 02:31\n"
+"PO-Revision-Date: 2021-02-24 14:58\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -295,7 +295,7 @@ msgstr "Yhteydet"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Kopioitu"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -307,7 +307,7 @@ msgstr "Kopioi"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Kopioi Leikepöydälle"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
 #: src/components/wallet/create/createNewColouredCoin.jsx:148
@@ -322,7 +322,7 @@ msgstr "Luo Hajautetetun Identiteetin lompakko"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Luo Tarjous"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -348,7 +348,7 @@ msgstr "Tarjoa"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
 #: src/components/wallet/standard/WalletStandard.tsx:324
 msgid "Create Transaction"
-msgstr "Tee Siirto"
+msgstr "Luo Transaktio"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
@@ -947,7 +947,7 @@ msgstr "Valitse osta tai myy"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Valitse kolikon väri"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1415,7 +1415,7 @@ msgstr "Taulukko näyttää viimeisimmän ajankohdan, jolloin farmisi on yrittä
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Kaupan luotihetki"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
