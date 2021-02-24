@@ -6,13 +6,13 @@ import signal
 import subprocess
 import sys
 import traceback
+from pathlib import Path
 from enum import Enum
 import uuid
 import time
-from typing import Dict, Any, List, Tuple, Optional
-from sys import platform
+from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
 from concurrent.futures import ThreadPoolExecutor
-from websockets import serve, ConnectionClosedOK, WebSocketException
+from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
@@ -67,7 +67,7 @@ if getattr(sys, "frozen", False):
 
     def executable_for_service(service_name):
         application_path = os.path.dirname(sys.executable)
-        if platform == "win32" or platform == "cygwin":
+        if sys.platform == "win32" or sys.platform == "cygwin":
             executable = name_map[service_name]
             path = f"{application_path}/{executable}.exe"
             return path
@@ -89,14 +89,14 @@ async def ping():
 
 
 class WebSocketServer:
-    def __init__(self, root_path, ca_crt_path, ca_key_path, crt_path, key_path):
+    def __init__(self, root_path: Path, ca_crt_path: Path, ca_key_path: Path, crt_path: Path, key_path: Path):
         self.root_path = root_path
         self.log = log
         self.services: Dict = dict()
         self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, List[Any]] = dict()  # service_name : [WebSocket]
-        self.remote_address_map: Dict[Any, str] = dict()  # socket: service_name
-        self.ping_job = None
+        self.connections: Dict[str, List[WebSocketServerProtocol]] = dict()  # service_name : [WebSocket]
+        self.remote_address_map: Dict[WebSocketServerProtocol, str] = dict()  # socket: service_name
+        self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
@@ -130,7 +130,7 @@ class WebSocketServer:
         await self.websocket_server.wait_closed()
         self.log.info("Daemon WebSocketServer closed")
 
-    def cancel_task_safe(self, task):
+    def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
             try:
                 task.cancel()
@@ -143,7 +143,7 @@ class WebSocketServer:
         self.websocket_server.close()
         return {"success": True}
 
-    async def safe_handle(self, websocket, path):
+    async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
         service_name = ""
         try:
             async for message in websocket:
@@ -154,8 +154,8 @@ class WebSocketServer:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
                     error = {"success": False, "error": f"{e}"}
-                    response = format_response(message, error)
-                    sockets_to_use = 0
+                    response = format_response(decoded, error)
+                    sockets_to_use = []
                 if len(sockets_to_use) > 0:
                     for socket in sockets_to_use:
                         try:
@@ -180,7 +180,7 @@ class WebSocketServer:
             self.remove_connection(websocket)
             await websocket.close()
 
-    def remove_connection(self, websocket):
+    def remove_connection(self, websocket: WebSocketServerProtocol):
         service_name = None
         if websocket in self.remote_address_map:
             service_name = self.remote_address_map[websocket]
@@ -217,7 +217,9 @@ class WebSocketServer:
         if restart is True:
             self.ping_job = asyncio.create_task(self.ping_task())
 
-    async def handle_message(self, websocket, message) -> Tuple[Optional[str], List[Any]]:
+    async def handle_message(
+        self, websocket: WebSocketServerProtocol, message: Dict[str, Any]
+    ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -235,22 +237,33 @@ class WebSocketServer:
         data = None
         if "data" in message:
             data = message["data"]
-        if command == "ping":
+
+        commands_with_data = [
+            "start_service",
+            "start_plotting",
+            "stop_plotting",
+            "stop_service",
+            "is_running",
+            "register_service",
+        ]
+        if not isinstance(data, dict) and command in commands_with_data:
+            response = {"success": False, "error": f'{command} requires "data"'}
+        elif command == "ping":
             response = await ping()
         elif command == "start_service":
-            response = await self.start_service(data)
+            response = await self.start_service(cast(Dict[str, Any], data))
         elif command == "start_plotting":
-            response = await self.start_plotting(data)
+            response = await self.start_plotting(cast(Dict[str, Any], data))
         elif command == "stop_plotting":
-            response = await self.stop_plotting(data)
+            response = await self.stop_plotting(cast(Dict[str, Any], data))
         elif command == "stop_service":
-            response = await self.stop_service(data)
+            response = await self.stop_service(cast(Dict[str, Any], data))
         elif command == "is_running":
-            response = await self.is_running(data)
+            response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
-            response = await self.register_service(websocket, data)
+            response = await self.register_service(websocket, cast(Dict[str, Any], data))
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
@@ -308,7 +321,7 @@ class WebSocketServer:
     def state_changed(self, service: str, state: str):
         asyncio.create_task(self._state_changed(service, state))
 
-    async def _watch_file_changes(self, id: str, loop):
+    async def _watch_file_changes(self, id: str, loop: asyncio.AbstractEventLoop):
         config = self._get_plots_queue_item(id)
 
         if config is None:
@@ -330,7 +343,7 @@ class WebSocketServer:
             else:
                 time.sleep(0.5)
 
-    async def _track_plotting_progress(self, id: str, loop):
+    async def _track_plotting_progress(self, id: str, loop: asyncio.AbstractEventLoop):
         config = self._get_plots_queue_item(id)
 
         if config is None:
@@ -339,7 +352,7 @@ class WebSocketServer:
         async for hit_word, hit_sentence in self._watch_file_changes(id, loop):
             break
 
-    def _build_plotting_command_args(self, request, ignoreCount):
+    def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         service_name = request["service"]
 
         k = request["k"]
@@ -385,7 +398,7 @@ class WebSocketServer:
         config = next(item for item in self.plots_queue if item["id"] == id)
         return config
 
-    def _run_next_serial_plotting(self, loop):
+    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop):
         next_plot_id = None
 
         for item in self.plots_queue:
@@ -395,7 +408,7 @@ class WebSocketServer:
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop))
 
-    async def _start_plotting(self, id: str, loop):
+    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop):
         current_process = None
         try:
             log.info(f"Starting plotting with ID {id}")
@@ -449,7 +462,7 @@ class WebSocketServer:
                 self.services[service_name].remove(current_process)
             self._run_next_serial_plotting(loop)
 
-    async def start_plotting(self, request):
+    async def start_plotting(self, request: Dict[str, Any]):
         service_name = request["service"]
 
         delay = request.get("delay", 0)
@@ -491,7 +504,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, request):
+    async def stop_plotting(self, request: Dict[str, Any]):
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -519,7 +532,7 @@ class WebSocketServer:
             pass
             return {"success": False}
 
-    async def start_service(self, request):
+    async def start_service(self, request: Dict[str, Any]):
         service_command = request["service"]
         error = None
         success = False
@@ -554,13 +567,13 @@ class WebSocketServer:
         response = {"success": success, "service": service_command, "error": error}
         return response
 
-    async def stop_service(self, request):
+    async def stop_service(self, request: Dict[str, Any]):
         service_name = request["service"]
         result = await kill_service(self.root_path, self.services, service_name)
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request):
+    async def is_running(self, request: Dict[str, Any]):
         service_name = request["service"]
 
         if service_name == service_plotter:
@@ -597,7 +610,7 @@ class WebSocketServer:
         response = {"success": True}
         return response
 
-    async def register_service(self, websocket, request):
+    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]):
         self.log.info(f"Register service {request}")
         service = request["service"]
         if service not in self.connections:
@@ -620,7 +633,7 @@ class WebSocketServer:
         return response
 
 
-def daemon_launch_lock_path(root_path):
+def daemon_launch_lock_path(root_path: Path) -> Path:
     """
     A path to a file that is lock when a daemon is launching but not yet started.
     This prevents multiple instances from launching.
@@ -628,7 +641,7 @@ def daemon_launch_lock_path(root_path):
     return root_path / "run" / "start-daemon.launching"
 
 
-def pid_path_for_service(root_path, service, id=""):
+def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
     """
     Generate a path for a PID file for the given service name.
     """
@@ -636,11 +649,11 @@ def pid_path_for_service(root_path, service, id=""):
     return root_path / "run" / f"{pid_name}{id}.pid"
 
 
-def plotter_log_path(root_path, id):
+def plotter_log_path(root_path: Path, id: str):
     return root_path / "plotter" / f"plotter_log_{id}.txt"
 
 
-def launch_plotter(root_path, service_name, service_array, id):
+def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str):
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -673,7 +686,7 @@ def launch_plotter(root_path, service_name, service_array, id):
     return process, pid_path
 
 
-def launch_service(root_path, service_command):
+def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, Path]:
     """
     Launch a child process.
     """
@@ -694,7 +707,7 @@ def launch_service(root_path, service_command):
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
-    if platform == "win32" or platform == "cygwin":
+    if sys.platform == "win32" or sys.platform == "cygwin":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         creationflags = 0
@@ -714,10 +727,12 @@ def launch_service(root_path, service_command):
     return process, pid_path
 
 
-async def kill_process(process, root_path, service_name, id, delay_before_kill=15) -> bool:
+async def kill_process(
+    process: subprocess.Popen, root_path: Path, service_name: str, id: str, delay_before_kill: int = 15
+) -> bool:
     pid_path = pid_path_for_service(root_path, service_name, id)
 
-    if platform == "win32" or platform == "cygwin":
+    if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
         # pylint: disable=E1101
         kill(process.pid, signal.SIGBREAK)  # type: ignore
@@ -748,7 +763,9 @@ async def kill_process(process, root_path, service_name, id, delay_before_kill=1
     return True
 
 
-async def kill_service(root_path, services, service_name, delay_before_kill=15) -> bool:
+async def kill_service(
+    root_path: Path, services: Dict[str, subprocess.Popen], service_name: str, delay_before_kill: int = 15
+) -> bool:
     process = services.get(service_name)
     if process is None:
         return False
@@ -758,24 +775,24 @@ async def kill_service(root_path, services, service_name, delay_before_kill=15) 
     return result
 
 
-def is_running(services, service_name):
+def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool:
     process = services.get(service_name)
     return process is not None and process.poll() is None
 
 
-def create_server_for_daemon(root_path):
+def create_server_for_daemon(root_path: Path):
     routes = web.RouteTableDef()
 
     services: Dict = dict()
 
     @routes.get("/daemon/ping/")
-    async def ping(request):
+    async def ping(request: web.Request) -> web.Response:
         return web.Response(text="pong")
 
     @routes.get("/daemon/service/start/")
-    async def start_service(request):
+    async def start_service(request: web.Request) -> web.Response:
         service_name = request.query.get("service")
-        if not validate_service(service_name):
+        if service_name is None or not validate_service(service_name):
             r = f"{service_name} unknown service"
             return web.Response(text=str(r))
 
@@ -794,19 +811,26 @@ def create_server_for_daemon(root_path):
         return web.Response(text=str(r))
 
     @routes.get("/daemon/service/stop/")
-    async def stop_service(request):
+    async def stop_service(request: web.Request) -> web.Response:
         service_name = request.query.get("service")
-        r = await kill_service(root_path, services, service_name)
+        if service_name is None:
+            r = f"{service_name} unknown service"
+            return web.Response(text=str(r))
+        r = str(await kill_service(root_path, services, service_name))
         return web.Response(text=str(r))
 
     @routes.get("/daemon/service/is_running/")
-    async def is_running_handler(request):
+    async def is_running_handler(request: web.Request) -> web.Response:
         service_name = request.query.get("service")
-        r = is_running(services, service_name)
+        if service_name is None:
+            r = f"{service_name} unknown service"
+            return web.Response(text=str(r))
+
+        r = str(is_running(services, service_name))
         return web.Response(text=str(r))
 
     @routes.get("/daemon/exit/")
-    async def exit(request):
+    async def exit(request: web.Request):
         jobs = []
         for k in services.keys():
             jobs.append(kill_service(root_path, services, k))
@@ -818,7 +842,7 @@ def create_server_for_daemon(root_path):
         # request to exit
 
 
-def singleton(lockfile, text="semaphore"):
+def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
     """
     Open a lockfile exclusively.
     """
@@ -841,7 +865,7 @@ def singleton(lockfile, text="semaphore"):
     return f
 
 
-async def async_run_daemon(root_path):
+async def async_run_daemon(root_path: Path) -> int:
     chia_init(root_path)
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
@@ -871,9 +895,10 @@ async def async_run_daemon(root_path):
     create_server_for_daemon(root_path)
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
+    return 0
 
 
-def run_daemon(root_path):
+def run_daemon(root_path: Path) -> int:
     return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path))
 
 
