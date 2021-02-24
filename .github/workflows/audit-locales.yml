@@ -2,15 +2,9 @@ name: Check npm audit and locales
 
 on:
   push:
-    branches:
-      - '**'
     branches-ignore:
       - 'main'
-    tags:
-        - '**'
   pull_request:
-    branches:
-      - '**'
     branches-ignore:
       - 'main'
 
