@@ -14,7 +14,7 @@ jobs:
   build:
     name: Ubuntu Wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 100
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -65,7 +65,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: 'blank'
+        ref: '0.13.0'
         fetch-depth: 1
 
     - name: Link home directory
