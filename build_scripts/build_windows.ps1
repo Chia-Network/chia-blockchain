@@ -67,6 +67,7 @@ Write-Output "pip install chia-blockchain"
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 
 git status
+chia init
 chia version
 
 Write-Output "   ---"

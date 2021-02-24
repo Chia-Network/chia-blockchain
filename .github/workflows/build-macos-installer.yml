@@ -105,6 +105,7 @@ jobs:
       run: |
         . ./activate
         git status
+        chia init
         chia version
         clang --version
         cd ./chia-blockchain-gui
