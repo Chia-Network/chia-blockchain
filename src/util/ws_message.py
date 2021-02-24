@@ -1,7 +1,12 @@
 from secrets import token_bytes
-from typing import Dict, Any, TypedDict
+from typing import Dict, Any, Type
 
 from src.util.json_util import dict_to_json_str
+
+try:
+    from typings import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
 
 
 # Messages must follow this format
@@ -13,17 +18,13 @@ from src.util.json_util import dict_to_json_str
 #           }
 
 
-WsRpcMessage = TypedDict(
-    "WsRpcMessage",
-    {
-        "command": str,
-        "ack": bool,
-        "data": Dict[str, Any],
-        "request_id": str,
-        "destination": str,
-        "origin": str,
-    },
-)
+class WsRpcMessage(TypedDict):
+    command: str
+    ack: bool
+    data: Dict[str, Any]
+    request_id: str
+    destination: str
+    origin: str
 
 
 def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -> str:
@@ -49,14 +50,14 @@ def create_payload(command: str, data: Dict[str, Any], origin: str, destination:
 
 
 def create_payload_dict(command: str, data: Dict[str, Any], origin: str, destination: str) -> WsRpcMessage:
-    return {
-        "command": command,
-        "ack": False,
-        "data": data,
-        "request_id": token_bytes().hex(),
-        "destination": destination,
-        "origin": origin,
-    }
+    return WsRpcMessage(
+        command=command,
+        ack=False,
+        data=data,
+        request_id=token_bytes().hex(),
+        destination=destination,
+        origin=origin,
+    )
 
 
 def pong() -> Dict[str, Any]:
