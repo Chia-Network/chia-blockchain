@@ -544,7 +544,7 @@ msgstr "Фермер не запущен"
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 
-#: src/components/farm/Farm.tsx:13
+#: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
@@ -627,7 +627,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:47
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:48
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
@@ -814,7 +814,7 @@ msgstr "Псевдоним"
 msgid "No"
 msgstr "Нет"
 
-#: src/middleware/middleware_api.jsx:274
+#: src/middleware/middleware_api.jsx:277
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1085,11 +1085,11 @@ msgstr "Хэш предыдущего блока"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Приватный ключ с публичным отпечатком {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:240
+#: src/middleware/middleware_api.jsx:241
 msgid "Private key {0}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:248
+#: src/middleware/middleware_api.jsx:251
 msgid "Private key:"
 msgstr ""
 
@@ -1105,7 +1105,7 @@ msgstr "Доказательств найдено"
 msgid "Pubkey"
 msgstr "Публичный ключ"
 
-#: src/middleware/middleware_api.jsx:256
+#: src/middleware/middleware_api.jsx:259
 msgid "Public key:"
 msgstr ""
 
@@ -1188,7 +1188,7 @@ msgstr "Расположение второй временной папки"
 msgid "See private key"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:266
+#: src/middleware/middleware_api.jsx:269
 msgid "Seed:"
 msgstr ""
 
