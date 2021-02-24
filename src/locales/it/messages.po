@@ -8,7 +8,7 @@ msgstr ""
 "Language: it\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-22 22:55\n"
+"PO-Revision-Date: 2021-02-24 02:31\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -243,11 +243,11 @@ msgstr "Stringa Colore"
 msgid "Colour:"
 msgstr "Colore:"
 
-#: src/components/wallet/create/WalletCreate.jsx:124
+#: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
 msgstr "Monete Colorate"
 
-#: src/components/wallet/create/WalletCreate.jsx:182
+#: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
 msgstr "Opzioni Monete Colorate"
 
@@ -316,7 +316,7 @@ msgstr ""
 msgid "Create"
 msgstr "Crea"
 
-#: src/components/wallet/create/WalletCreate.jsx:322
+#: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
 msgstr "Crea Wallet DID"
 
@@ -354,15 +354,15 @@ msgstr "Crea Transazione"
 msgid "Create a new private key"
 msgstr "Crea una nuova chiave privata"
 
-#: src/components/wallet/create/WalletCreate.jsx:258
+#: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
 msgstr "Crea wallet amministratore"
 
-#: src/components/wallet/create/WalletCreate.jsx:194
+#: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
 msgstr "Crea nuova moneta colorata"
 
-#: src/components/wallet/create/WalletCreate.jsx:270
+#: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
 msgstr "Crea wallet utente"
 
@@ -370,7 +370,7 @@ msgstr "Crea wallet utente"
 msgid "Create wallet for colour"
 msgstr "Crea un wallet per colore"
 
-#: src/components/wallet/create/WalletCreate.jsx:206
+#: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
 msgstr "Crea un wallet per un colore esistente"
 
@@ -446,10 +446,10 @@ msgid "Difficulty"
 msgstr "Difficoltà"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
-msgid "Distributed Identity"
-msgstr "Identità Distribuita"
+#~ msgid "Distributed Identity"
+#~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:310
+#: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
 msgstr "Opzioni Identità Distribuita"
 
@@ -1087,7 +1087,7 @@ msgstr "Wallet RL (Velocità Limitata)"
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:134
+#: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
 msgstr "Velocità Limitata"
 
@@ -1096,7 +1096,7 @@ msgstr "Velocità Limitata"
 msgid "Rate Limited Info"
 msgstr "Informazioni Velocità Limitata"
 
-#: src/components/wallet/create/WalletCreate.jsx:246
+#: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
 msgstr "Opzioni Velocità Limitata"
 
@@ -1109,7 +1109,7 @@ msgstr "Setup Utente Wallet a Velocità Limitata"
 msgid "Receive Address"
 msgstr "Indirizzo per Ricevere"
 
-#: src/components/wallet/create/WalletCreate.jsx:334
+#: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
 msgstr "Recupera wallet DID"
 
@@ -1162,7 +1162,7 @@ msgstr "Seleziona Offerta"
 msgid "Select Temporary Directory"
 msgstr "Seleziona Cartella Temporanea"
 
-#: src/components/wallet/create/WalletCreate.jsx:112
+#: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
 msgstr "Seleziona Tipo di Wallet"
 
