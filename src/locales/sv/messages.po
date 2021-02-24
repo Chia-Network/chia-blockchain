@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-24 17:09\n"
+"PO-Revision-Date: 2021-02-24 19:09\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -544,7 +544,7 @@ msgstr "Odlaren körs inte"
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "Odlare tjänar blockbelöningar och transaktionsavgifter genom att dedikera ledigt utrymme till nätverket för att hjälpa till att säkra transaktioner. Detta är vad din odling gör när du väl har lagt till en plott. <0>Läs mer</0>"
 
-#: src/components/farm/Farm.tsx:13
+#: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
@@ -627,7 +627,7 @@ msgstr "Huvudhash"
 msgid "Height"
 msgstr "Höjd"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:47
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:48
 msgid "Help translate"
 msgstr "Hjälp till med översättning"
 
@@ -814,7 +814,7 @@ msgstr "Smeknamn"
 msgid "No"
 msgstr "Nej"
 
-#: src/middleware/middleware_api.jsx:274
+#: src/middleware/middleware_api.jsx:277
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1085,11 +1085,11 @@ msgstr "Föregående blockhash"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privat nyckel med publikt fingeravtryck {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:240
+#: src/middleware/middleware_api.jsx:241
 msgid "Private key {0}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:248
+#: src/middleware/middleware_api.jsx:251
 msgid "Private key:"
 msgstr ""
 
@@ -1105,7 +1105,7 @@ msgstr "Hittade bevis"
 msgid "Pubkey"
 msgstr "Publik nyckel"
 
-#: src/middleware/middleware_api.jsx:256
+#: src/middleware/middleware_api.jsx:259
 msgid "Public key:"
 msgstr ""
 
@@ -1188,7 +1188,7 @@ msgstr "Andra tillfällig mapp"
 msgid "See private key"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:266
+#: src/middleware/middleware_api.jsx:269
 msgid "Seed:"
 msgstr ""
 
