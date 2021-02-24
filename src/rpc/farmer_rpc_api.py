@@ -2,7 +2,7 @@ from typing import Callable, Dict, List
 
 from src.farmer.farmer import Farmer
 from src.util.byte_types import hexstr_to_bytes
-from src.util.ws_message import create_payload_dict, Response
+from src.util.ws_message import create_payload_dict, WsRpcMessage
 
 
 class FarmerRpcApi:
@@ -16,7 +16,7 @@ class FarmerRpcApi:
             "/get_signage_points": self.get_signage_points,
         }
 
-    async def _state_changed(self, change: str, change_data: Dict) -> List[Response]:
+    async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
         if change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})

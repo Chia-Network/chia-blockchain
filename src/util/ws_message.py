@@ -13,15 +13,12 @@ from src.util.json_util import dict_to_json_str
 #           }
 
 
-Request = TypedDict(
-    "Request", {"command": str, "data": Optional[Dict[str, Any]], "request_id": str, "destination": str, "origin": str}
-)
-Response = TypedDict(
-    "Response",
+WsRpcMessage = TypedDict(
+    "WsRpcMessage",
     {
         "command": str,
         "ack": bool,
-        "data": Optional[Dict[str, Any]],
+        "data": Dict[str, Any],
         "request_id": str,
         "destination": str,
         "origin": str,
@@ -29,7 +26,7 @@ Response = TypedDict(
 )
 
 
-def format_response(incoming_msg: Request, response_data: Dict[str, Any]) -> str:
+def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -> str:
     """
     Formats the response into standard format.
     """
@@ -46,13 +43,13 @@ def format_response(incoming_msg: Request, response_data: Dict[str, Any]) -> str
     return json_str
 
 
-def create_payload(command: str, data: Optional[Dict[str, Any]], origin: str, destination: str) -> str:
+def create_payload(command: str, data: Dict[str, Any], origin: str, destination: str) -> str:
     response = create_payload_dict(command, data, origin, destination)
     return dict_to_json_str(response)
 
 
-def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: str, destination: str) -> Response:
-    return Response(
+def create_payload_dict(command: str, data: Dict[str, Any], origin: str, destination: str) -> WsRpcMessage:
+    return WsRpcMessage(
         command=command,
         ack=False,
         data=data,
@@ -62,6 +59,6 @@ def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: st
     )
 
 
-def pong():
+def pong() -> Dict[str, Any]:
     response = {"success": True}
     return response

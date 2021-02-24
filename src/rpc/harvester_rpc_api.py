@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List
 
 from src.harvester.harvester import Harvester
-from src.util.ws_message import create_payload_dict, Response
+from src.util.ws_message import create_payload_dict, WsRpcMessage
 
 
 class HarvesterRpcApi:
@@ -19,7 +19,7 @@ class HarvesterRpcApi:
             "/remove_plot_directory": self.remove_plot_directory,
         }
 
-    async def _state_changed(self, change: str) -> List[Response]:
+    async def _state_changed(self, change: str) -> List[WsRpcMessage]:
         if change == "plots":
             data = await self.get_plots({})
             payload = create_payload_dict("get_plots", data, self.service_name, "wallet_ui")

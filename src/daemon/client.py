@@ -8,7 +8,7 @@ import websockets
 
 from src.server.server import ssl_context_for_client
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ws_message import create_payload_dict, Response, Request
+from src.util.ws_message import create_payload_dict, WsRpcMessage
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
 
@@ -21,7 +21,7 @@ class DaemonProxy:
         self.websocket = None
         self.ssl_context = ssl_context
 
-    def format_request(self, command: str, data: Dict[str, Any] = None) -> Request:
+    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
@@ -45,7 +45,7 @@ class DaemonProxy:
         asyncio.create_task(listener())
         await asyncio.sleep(1)
 
-    async def _get(self, request: Request) -> Response:
+    async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
@@ -68,13 +68,13 @@ class DaemonProxy:
 
         return response
 
-    async def start_service(self, service_name: str) -> Response:
+    async def start_service(self, service_name: str) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("start_service", data)
         response = await self._get(request)
         return response
 
-    async def stop_service(self, service_name: str, delay_before_kill: int = 15) -> Response:
+    async def stop_service(self, service_name: str, delay_before_kill: int = 15) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("stop_service", data)
         response = await self._get(request)
@@ -88,15 +88,15 @@ class DaemonProxy:
             return bool(response["data"]["is_running"])
         return False
 
-    async def ping(self) -> Response:
-        request = self.format_request("ping")
+    async def ping(self) -> WsRpcMessage:
+        request = self.format_request("ping", {})
         response = await self._get(request)
         return response
 
     async def close(self):
         await self.websocket.close()
 
-    async def exit(self) -> Response:
+    async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})
         return await self._get(request)
 

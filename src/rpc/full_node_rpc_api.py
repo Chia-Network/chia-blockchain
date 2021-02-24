@@ -10,7 +10,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint64, uint32, uint128
-from src.util.ws_message import create_payload_dict, Response
+from src.util.ws_message import create_payload_dict, WsRpcMessage
 from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
 
@@ -46,7 +46,7 @@ class FullNodeRpcApi:
             "/get_unspent_coins": self.get_coin_records_by_puzzle_hash,
         }
 
-    async def _state_changed(self, change: str) -> List[Response]:
+    async def _state_changed(self, change: str) -> List[WsRpcMessage]:
         payloads = []
         if change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
