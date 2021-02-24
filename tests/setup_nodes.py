@@ -57,8 +57,8 @@ async def setup_full_node(
     config = bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
-    config["target_uncompact_proofs"] = 100
-    config["peer_connect_interval"] = 3
+    config["target_uncompact_proofs"] = 30
+    config["peer_connect_interval"] = 50
     if introducer_port is not None:
         config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port

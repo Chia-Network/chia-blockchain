@@ -4,6 +4,7 @@ import io
 import logging
 import time
 import traceback
+import random
 from typing import Dict, List, Optional, Tuple, Callable
 
 from chiavdf import create_discriminant
@@ -893,24 +894,37 @@ class Timelord:
     async def _manage_discriminant_queue_sanitizer(self):
         while not self._shut_down:
             async with self.lock:
-                while len(self.pending_bluebox_info) > 0 and len(self.free_clients) > 0:
-                    info = self.pending_bluebox_info[0]
-                    ip, reader, writer = self.free_clients[0]
-                    self.process_communication_tasks.append(
-                        asyncio.create_task(
-                            self._do_process_communication(
-                                Chain.BLUEBOX,
-                                info.new_proof_of_time.challenge,
-                                ClassgroupElement.get_default_element(),
-                                ip,
-                                reader,
-                                writer,
-                                info.new_proof_of_time.number_of_iterations,
-                                info.height,
-                                info.field_vdf,
+                try:
+                    while len(self.pending_bluebox_info) > 0 and len(self.free_clients) > 0:
+                        # Select randomly the field_vdf we're creating a compact vdf for.
+                        # This is done because CC_SP and CC_IP are more frequent than
+                        # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
+                        target_field_vdf = random.randint(1, 4)
+                        info = next(
+                            (info for info in self.pending_bluebox_info if info.field_vdf == target_field_vdf),
+                            None,
+                        )
+                        if info is None:
+                            # Nothing fount with target_field_vdf, just pick the first VDFInfo.
+                            info = self.pending_bluebox_info[0]
+                        ip, reader, writer = self.free_clients[0]
+                        self.process_communication_tasks.append(
+                            asyncio.create_task(
+                                self._do_process_communication(
+                                    Chain.BLUEBOX,
+                                    info.new_proof_of_time.challenge,
+                                    ClassgroupElement.get_default_element(),
+                                    ip,
+                                    reader,
+                                    writer,
+                                    info.new_proof_of_time.number_of_iterations,
+                                    info.height,
+                                    info.field_vdf,
+                                )
                             )
                         )
-                    )
-                    self.pending_bluebox_info = self.pending_bluebox_info[1:]
-                    self.free_clients = self.free_clients[1:]
+                        self.pending_bluebox_info.remove(info)
+                        self.free_clients = self.free_clients[1:]
+                except Exception as e:
+                    log.error(f"Exception manage discriminant queue: {e}")
             await asyncio.sleep(0.1)

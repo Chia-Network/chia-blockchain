@@ -50,7 +50,12 @@ class VDFInfo(Streamable):
 class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes
-    normalized_to_identity: bool = False
+    normalized_to_identity: bool
+
+    def __init__(self, witness_type: uint8, witness: bytes, normalized_to_identity: bool = False):
+        self.witness_type = witness_type
+        self.witness = witness
+        self.normalized_to_identity = normalized_to_identity
 
     def is_valid(
         self,
