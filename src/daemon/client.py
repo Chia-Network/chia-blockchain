@@ -8,7 +8,7 @@ import websockets
 
 from src.server.server import ssl_context_for_client
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ws_message import create_payload, Response, Request
+from src.util.ws_message import create_payload_dict, Response, Request
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
 
@@ -22,8 +22,7 @@ class DaemonProxy:
         self.ssl_context = ssl_context
 
     def format_request(self, command: str, data: Dict[str, Any] = None) -> Request:
-        request = create_payload(command, data, "client", "daemon", False)
-        assert isinstance(request, dict)
+        request = create_payload_dict(command, data, "client", "daemon")
         return request
 
     async def start(self):

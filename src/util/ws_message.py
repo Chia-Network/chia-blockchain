@@ -46,10 +46,13 @@ def format_response(incoming_msg: Request, response_data: Dict[str, Any]) -> str
     return json_str
 
 
-def create_payload(
-    command: str, data: Optional[Dict[str, Any]], origin: str, destination: str, string=True
-) -> Union[Response, str]:
-    response = Response(
+def create_payload(command: str, data: Optional[Dict[str, Any]], origin: str, destination: str) -> str:
+    response = create_payload_dict(command, data, origin, destination)
+    return dict_to_json_str(response)
+
+
+def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: str, destination: str) -> Response:
+    return Response(
         command=command,
         ack=False,
         data=data,
@@ -57,12 +60,6 @@ def create_payload(
         destination=destination,
         origin=origin,
     )
-
-    if string:
-        json_str = dict_to_json_str(response)
-        return json_str
-    else:
-        return response
 
 
 def pong():

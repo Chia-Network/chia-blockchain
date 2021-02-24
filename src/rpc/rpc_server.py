@@ -12,7 +12,7 @@ from src.server.server import ssl_context_for_server
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
-from src.util.ws_message import create_payload, format_response, pong
+from src.util.ws_message import create_payload, create_payload_dict, format_response, pong
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint16
 
@@ -54,12 +54,11 @@ class RpcServer:
             data = await self.get_connections({})
             if data is not None:
 
-                payload = create_payload(
+                payload = create_payload_dict(
                     "get_connections",
                     data,
                     self.service_name,
                     "wallet_ui",
-                    string=False,
                 )
                 payloads.append(payload)
         for payload in payloads:
