@@ -33,7 +33,6 @@ setuptools_scm>=4.1.2
 # No Dependencies
 
 PyYAML~=5.4.1
-cbor2~=5.2.0
 colorlog~=4.7.2
 keyring~=21.5.0
 bitstring~=3.1.7
