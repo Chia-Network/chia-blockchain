@@ -65,7 +65,7 @@ class FullBlock(Streamable):
         byte_array_tx: List[bytes32] = []
         if self.is_transaction_block():
             byte_array_tx: List[bytes32] = []
-            if addition_coins is None and removals_names is None:
+            if addition_coins is None or removals_names is None:
                 removals_names, addition_coins = self.tx_removals_and_additions()
 
             assert removals_names is not None
