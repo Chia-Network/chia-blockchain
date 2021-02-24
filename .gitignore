@@ -91,3 +91,4 @@ build
 build_scripts/dist
 build_scripts/*.Dmg
 src/locales/_build
+daemon
