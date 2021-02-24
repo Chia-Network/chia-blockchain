@@ -46,8 +46,9 @@ def large_block_generator(size):
     except FileNotFoundError:
         generator = make_big_block_generator(size)
         blob = bytes(generator)
-        with open(hex_path, "w") as f:
-            f.write(blob.hex())
+        #  TODO: Re-enable large-block*.hex but cache in ~/.chia/subdir
+        #  with open(hex_path, "w") as f:
+        #      f.write(blob.hex())
         return blob
 
 
