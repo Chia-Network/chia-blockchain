@@ -291,7 +291,7 @@ async def validate_block_body(
                     height,
                     uint32(0),
                     False,
-                    False,
+                    (rem in coinbases_since_fork),
                     block.foliage_transaction_block.timestamp,
                 )
                 removal_coin_records[new_unspent.name] = new_unspent
