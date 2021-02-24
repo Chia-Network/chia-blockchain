@@ -5,6 +5,8 @@ $ErrorActionPreference = "Stop"
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
+git status
+
 Write-Output "   ---"
 Write-Output "curl miniupnpc"
 Write-Output "   ---"
@@ -23,8 +25,10 @@ else
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
 Write-Output "   ---"
+git status
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
+git status
 python -m pip install --upgrade pip
 pip install wheel pep517
 pip install pywin32
@@ -62,16 +66,25 @@ pip install --no-index --find-links=.\win_build\ miniupnpc
 Write-Output "pip install chia-blockchain"
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 
+git status
+chia version
+
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
 pyinstaller --log-level INFO daemon_windows.spec
+
+git status
+chia version
 
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
+
+git status
+chia version
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
@@ -82,6 +95,8 @@ npm install
 npm run locale:extract
 npm run locale:compile
 
+git status
+chia version
 
 Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
@@ -97,6 +112,9 @@ Write-Output "Increase the stack for chia command for (chia plots create) chiapo
 editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
+git status
+chia version
+
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
 $packageName = "Chia-$packageVersion"
 
@@ -107,10 +125,16 @@ Write-Output "electron-packager"
 electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
 Write-Output "   ---"
 
+git status
+chia version
+
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
+
+git status
+chia version
 
 If ($env:HAS_SECRET) {
    Write-Output "   ---"

@@ -89,6 +89,7 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: |
+        git status
         sh install.sh
 
     - name: Setup Node 12.x
@@ -103,6 +104,8 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
+        git status
+        chia version
         clang --version
         cd ./chia-blockchain-gui
         npm install
