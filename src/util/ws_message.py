@@ -1,5 +1,5 @@
 from secrets import token_bytes
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Union, TypedDict
 
 from src.util.json_util import dict_to_json_str
 
@@ -13,7 +13,23 @@ from src.util.json_util import dict_to_json_str
 #           }
 
 
-def format_response(incoming_msg: Dict[str, Any], response_data: Dict[str, Any]) -> str:
+Request = TypedDict(
+    "Request", {"command": str, "data": Optional[Dict[str, Any]], "request_id": str, "destination": str, "origin": str}
+)
+Response = TypedDict(
+    "Response",
+    {
+        "command": str,
+        "ack": bool,
+        "data": Optional[Dict[str, Any]],
+        "request_id": str,
+        "destination": str,
+        "origin": str,
+    },
+)
+
+
+def format_response(incoming_msg: Request, response_data: Dict[str, Any]) -> str:
     """
     Formats the response into standard format.
     """
@@ -30,15 +46,17 @@ def format_response(incoming_msg: Dict[str, Any], response_data: Dict[str, Any])
     return json_str
 
 
-def create_payload(command: str, data: Dict[str, Any], origin: str, destination: str, string=True):
-    response = {
-        "command": command,
-        "ack": False,
-        "data": data,
-        "request_id": token_bytes().hex(),
-        "destination": destination,
-        "origin": origin,
-    }
+def create_payload(
+    command: str, data: Optional[Dict[str, Any]], origin: str, destination: str, string=True
+) -> Union[Response, str]:
+    response = Response(
+        command=command,
+        ack=False,
+        data=data,
+        request_id=token_bytes().hex(),
+        destination=destination,
+        origin=origin,
+    )
 
     if string:
         json_str = dict_to_json_str(response)

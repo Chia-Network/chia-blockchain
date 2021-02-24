@@ -19,7 +19,7 @@ from src.server.server import ssl_context_for_server, ssl_context_for_root
 from src.ssl.create_ssl import get_mozzila_ca_crt
 from src.util.setproctitle import setproctitle
 from src.util.validate_alert import validate_alert
-from src.util.ws_message import format_response, create_payload
+from src.util.ws_message import format_response, create_payload, Request
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config, save_config
 from src.util.chia_logging import initialize_logging
@@ -283,7 +283,7 @@ class WebSocketServer:
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
-        self, websocket: WebSocketServerProtocol, message: Dict[str, Any]
+        self, websocket: WebSocketServerProtocol, message: Request
     ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
