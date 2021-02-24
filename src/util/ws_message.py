@@ -49,14 +49,14 @@ def create_payload(command: str, data: Dict[str, Any], origin: str, destination:
 
 
 def create_payload_dict(command: str, data: Dict[str, Any], origin: str, destination: str) -> WsRpcMessage:
-    return WsRpcMessage(
-        command=command,
-        ack=False,
-        data=data,
-        request_id=token_bytes().hex(),
-        destination=destination,
-        origin=origin,
-    )
+    return {
+        "command": command,
+        "ack": False,
+        "data": data,
+        "request_id": token_bytes().hex(),
+        "destination": destination,
+        "origin": origin,
+    }
 
 
 def pong() -> Dict[str, Any]:
