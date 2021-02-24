@@ -6,7 +6,7 @@ dependencies = [
     "blspy==0.3.5",  # Signature library
     "chiavdf==0.15.0",  # timelord and vdf verification
     "chiabip158==0.19",  # bip158-style wallet filters
-    "chiapos==0.12.44",  # proof of space
+    "chiapos==0.12.45",  # proof of space
     "clvm==0.9.0",
     "clvm_rs==0.1.3",  # noqa
     "clvm_tools==0.4.1",  # noqa
