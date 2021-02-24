@@ -7,8 +7,6 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
 from src.util.bech32m import encode_puzzle_hash
-from src.util.config import load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,

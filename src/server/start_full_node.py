@@ -56,7 +56,7 @@ def service_kwargs_for_full_node(
 
 def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    overrides = config["network_overrides"][config["selected_network"]]
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
     return run_service(**kwargs)

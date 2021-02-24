@@ -42,7 +42,6 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
-            "/get_network_info": self.get_network_info,
             # Deprecated
             "/get_unspent_coins": self.get_coin_records_by_puzzle_hash,
         }
