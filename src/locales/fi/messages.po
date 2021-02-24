@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-22 22:55\n"
+"PO-Revision-Date: 2021-02-24 02:31\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -243,11 +243,11 @@ msgstr "Värin Teksti"
 msgid "Colour:"
 msgstr "Väri:"
 
-#: src/components/wallet/create/WalletCreate.jsx:124
+#: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
 msgstr "Väritetty Kolikko"
 
-#: src/components/wallet/create/WalletCreate.jsx:182
+#: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
 msgstr "Värikolikon Valinnat"
 
@@ -316,7 +316,7 @@ msgstr ""
 msgid "Create"
 msgstr "Luo"
 
-#: src/components/wallet/create/WalletCreate.jsx:322
+#: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
 msgstr "Luo Hajautetetun Identiteetin lompakko"
 
@@ -354,15 +354,15 @@ msgstr "Tee Siirto"
 msgid "Create a new private key"
 msgstr "Luo yksityinen avain"
 
-#: src/components/wallet/create/WalletCreate.jsx:258
+#: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
 msgstr "Luo pääkäyttäjälompakko"
 
-#: src/components/wallet/create/WalletCreate.jsx:194
+#: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
 msgstr "Luo uusi väritetty kolikko"
 
-#: src/components/wallet/create/WalletCreate.jsx:270
+#: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
 msgstr "Luo käyttäjälompakko"
 
@@ -370,7 +370,7 @@ msgstr "Luo käyttäjälompakko"
 msgid "Create wallet for colour"
 msgstr "Luo lompakko väriä varten"
 
-#: src/components/wallet/create/WalletCreate.jsx:206
+#: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
 msgstr "Luo lompakko olemassa olevaa väriä varten"
 
@@ -446,10 +446,10 @@ msgid "Difficulty"
 msgstr "Vaikeusaste"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
-msgid "Distributed Identity"
-msgstr "Hajautettu Identiteetti"
+#~ msgid "Distributed Identity"
+#~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:310
+#: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
 msgstr "Hajautetun Identiteetin Valinnat"
 
@@ -1087,7 +1087,7 @@ msgstr "Rajoitettu Lompakko"
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:134
+#: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
 msgstr "Siirtorajoitettu"
 
@@ -1096,7 +1096,7 @@ msgstr "Siirtorajoitettu"
 msgid "Rate Limited Info"
 msgstr "Siirtorajoitetetun Tiedot"
 
-#: src/components/wallet/create/WalletCreate.jsx:246
+#: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
 msgstr "Siirtorajoitetun Valinnat"
 
@@ -1109,7 +1109,7 @@ msgstr "Siirtorajoitetun Lompakon Asennus"
 msgid "Receive Address"
 msgstr "Vastaanottajan Osoite"
 
-#: src/components/wallet/create/WalletCreate.jsx:334
+#: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
 msgstr "Palauta hajautetettu lompakko"
 
@@ -1162,7 +1162,7 @@ msgstr "Valitse Tarjous"
 msgid "Select Temporary Directory"
 msgstr "Valitse Väliaikaistyöhakemisto"
 
-#: src/components/wallet/create/WalletCreate.jsx:112
+#: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
 msgstr "Valitse Lompakkotyyppi"
 
