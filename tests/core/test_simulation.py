@@ -78,4 +78,4 @@ class TestSimulation:
         peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
         await server3.start_client(PeerInfo(self_hostname, uint16(21237)))
         await server3.start_client(PeerInfo(self_hostname, uint16(21238)))
-        await time_out_assert(1000, node_height_at_least, True, node3, peak_height)
+        await time_out_assert(3000, node_height_at_least, True, node3, peak_height)
