@@ -13,6 +13,7 @@ const locales: { [char: string]: string } = {
   ru: 'Русский',
   sk: 'Slovenčina',
   fi: 'Suomi',
+  sv: 'Svenska', 
   "zh-CN": '中文 (中国)',
 };
 

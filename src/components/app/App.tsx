@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
-import { i18n } from "@lingui/core"
+import { i18n } from '@lingui/core';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
-import { en, fi, it, ru, sk, zh } from 'make-plural/plurals';
+import { en, fi, it, ru, sk, sv, zh } from 'make-plural/plurals';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
@@ -18,6 +18,7 @@ import catalogFi from '../../locales/fi/messages';
 import catalogIt from '../../locales/it/messages';
 import catalogRu from '../../locales/ru/messages';
 import catalogSk from '../../locales/sk/messages';
+import catalogSv from '../../locales/sv/messages';
 import catalogZhCN from '../../locales/zh-CN/messages';
 import useLocale from '../../hooks/useLocale';
 import './App.css';
@@ -29,6 +30,7 @@ i18n.loadLocaleData('fi', { plurals: fi });
 i18n.loadLocaleData('it', { plurals: it });
 i18n.loadLocaleData('ru', { plurals: ru });
 i18n.loadLocaleData('sk', { plurals: sk });
+i18n.loadLocaleData('sv', { plurals: sv });
 i18n.loadLocaleData('zh-CN', { plurals: zh });
 
 // @ts-ignore
@@ -41,6 +43,8 @@ i18n.load('it', catalogIt.messages);
 i18n.load('ru', catalogRu.messages);
 // @ts-ignore
 i18n.load('sk', catalogSk.messages);
+// @ts-ignore
+i18n.load('sv', catalogSv.messages);
 // @ts-ignore
 i18n.load('zh-CN', catalogZhCN.messages);
 
