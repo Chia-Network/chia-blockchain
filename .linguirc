@@ -4,7 +4,7 @@
     "include": ["<rootDir>/src"],
     "exclude": ["**/node_modules/**"]
   }],
-  "locales": ["en", "fi", "it", "ru", "sk", "zh-CN"],
+  "locales": ["en", "fi", "it", "ru", "sk", "sv", "zh-CN"],
   "format": "po",
   "sourceLocale": "en",
   "fallbackLocales": {

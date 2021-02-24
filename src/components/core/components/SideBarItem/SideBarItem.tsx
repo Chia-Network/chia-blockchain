@@ -16,6 +16,11 @@ const StyledListItemIcon = styled(ListItemIcon)`
   min-width: auto;
 `;
 
+const StyledListItemText = styled(ListItemText)`
+  white-space: initial !important;
+  text-align: center;
+`;
+
 type Props = {
   to: string;
   title: ReactNode;
@@ -41,7 +46,7 @@ export default function SideBarItem(props: Props) {
   return (
     <StyledListItem button selected={isSelected} onClick={() => handleClick()}>
       <StyledListItemIcon>{icon}</StyledListItemIcon>
-      <ListItemText primary={title} />
+      <StyledListItemText primary={title} />
     </StyledListItem>
   );
 }
