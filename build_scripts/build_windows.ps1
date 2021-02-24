@@ -83,6 +83,7 @@ Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
+dir .
 
 git status
 chia version
