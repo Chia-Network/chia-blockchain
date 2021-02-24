@@ -66,6 +66,7 @@ jobs:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
         ref: '0.12.0'
+        fetch-depth: 1
 
     - name: Link home directory
       run: |

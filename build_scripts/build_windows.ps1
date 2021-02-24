@@ -25,10 +25,8 @@ else
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
 Write-Output "   ---"
-git status
 python -m venv venv
 . .\venv\Scripts\Activate.ps1
-git status
 python -m pip install --upgrade pip
 pip install wheel pep517
 pip install pywin32
@@ -45,7 +43,6 @@ if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
   }
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
-Write-Output "SCM Version is: $env:SCM_VERSION"
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -66,27 +63,18 @@ pip install --no-index --find-links=.\win_build\ miniupnpc
 Write-Output "pip install chia-blockchain"
 pip install --no-index --find-links=.\win_build\ chia-blockchain
 
-git status
-chia init
-chia version
-
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
 pyinstaller --log-level INFO daemon_windows.spec
-
-git status
-chia version
 
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\" -Recurse
 Set-Location -Path "..\chia-blockchain-gui" -PassThru
-dir .
 
 git status
-chia version
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
@@ -98,7 +86,6 @@ npm run locale:extract
 npm run locale:compile
 
 git status
-chia version
 
 Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
@@ -114,9 +101,6 @@ Write-Output "Increase the stack for chia command for (chia plots create) chiapo
 editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
-git status
-chia version
-
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
 $packageName = "Chia-$packageVersion"
 
@@ -127,16 +111,12 @@ Write-Output "electron-packager"
 electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
 Write-Output "   ---"
 
-git status
-chia version
-
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
 git status
-chia version
 
 If ($env:HAS_SECRET) {
    Write-Output "   ---"
@@ -147,6 +127,8 @@ If ($env:HAS_SECRET) {
    }   Else    {
    Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
 }
+
+git status
 
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
