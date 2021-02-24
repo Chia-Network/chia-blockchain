@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-22 22:54\n"
+"PO-Revision-Date: 2021-02-24 02:31\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -243,11 +243,11 @@ msgstr ""
 msgid "Colour:"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:124
+#: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:182
+#: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
 msgstr ""
 
@@ -316,7 +316,7 @@ msgstr ""
 msgid "Create"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:322
+#: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
 msgstr ""
 
@@ -354,15 +354,15 @@ msgstr ""
 msgid "Create a new private key"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:258
+#: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:194
+#: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:270
+#: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
 msgstr ""
 
@@ -370,7 +370,7 @@ msgstr ""
 msgid "Create wallet for colour"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:206
+#: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
 msgstr ""
 
@@ -446,10 +446,10 @@ msgid "Difficulty"
 msgstr "Zložitosť"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
-msgid "Distributed Identity"
-msgstr ""
+#~ msgid "Distributed Identity"
+#~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:310
+#: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
 msgstr ""
 
@@ -1087,7 +1087,7 @@ msgstr ""
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:134
+#: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
 msgstr ""
 
@@ -1096,7 +1096,7 @@ msgstr ""
 msgid "Rate Limited Info"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:246
+#: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
 msgstr ""
 
@@ -1109,7 +1109,7 @@ msgstr ""
 msgid "Receive Address"
 msgstr "Adresa príjemcu"
 
-#: src/components/wallet/create/WalletCreate.jsx:334
+#: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
 msgstr ""
 
@@ -1162,7 +1162,7 @@ msgstr ""
 msgid "Select Temporary Directory"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:112
+#: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
 msgstr ""
 
