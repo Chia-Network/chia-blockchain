@@ -6,26 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased 1.0rc3 aka Release Candidate 3 - 2021-02-??
+## 1.0rc3 aka Release Candidate 3 - 2021-02-25
 
 ### Added
-- RPC api: /push_tx. Using this RPC, you can spend custom chialisp programs. You need to make a SpendBundle, which
-includes the puzzle reveal (chialisp), a solution (chialisp) and a signature
-- RPC apis to query the mempool
+
+- RC3 is a new chain to support the last major chialisp changes. TXCH from the RC1/2 chain do not come forward to this chain but plots and keys continue to work as usual.
+- We have lowered the transaction lock to the first 5000 blocks to facilitate testing. We also started this chain at a lower difficulty.
+- A new RPC api: /push_tx. Using this RPC, you can spend custom chialisp programs. You need to make a SpendBundle, which includes the puzzle reveal (chialisp), a solution (chialisp) and a signature.
+- You can now use the RPC apis to query the mempool.
+- There is now a Swedish translations. Huge thanks to @ordtrogen. Also thanks were due to Tuomo Honkanen @f00b4r (Finnish), (Italian), and @Bibop182 (Russian). Quite a few more are almost complete and ready for inclusion. You can help translate and review translations at our [crowdin project](https://crowdin.com/project/chia-blockchain).
+- You can obtain a new wallet receive address on the command line with `chia wallet new_address`. Thanks to @jespino for this and a lot more in the next section below.
+- You will now see Your Harvester Network in the GUI even if you have no plots.
 
 ### Changed
 
+- All chialisp opcodes have been renumbered. This should be the last major breaking change for chialisp and the clvm. There are a couple minor enhancements still needed for mainnet launch, but they mayor may not require minor breaking changes. We will be restarting testnet chains on a mostly weekly basis either way.
 - Node batch syncing performance was increased, and it now avoids re-validating blocks that node had already validated.
+- The entire CLI has been ported to [Click](https://click.palletsprojects.com/en/7.x/). Huge thanks to @jespino for the big assist and @unparalleled-js for the [recommendation and the initial start](https://github.com/Chia-Network/chia-blockchain/issues/464). This will make building out the CLI much easier. There are some subtle changes and some shortcuts are not there anymore. `chia -h` and `chia SUBCOMMAND -h` can be your guide.
+- We have upgraded Electron to 11.3 to support Apple Silicon. There are still one or two issues in our build chain for Apple Silicon but we should have an M1 native build shortly.
+- The websocket address is no longer displayed in the GUI unless it is running as a remote GUI. Thanks @dkackman !
+- `chia plots check` now will continue checking after it finds an error in a plot to the total number of checks you specified.
 - If you run install-gui.sh or install-timelord.sh without being in the venv, the script will warn you that you need to `. ./activate` and exit with error.
-- If you attempt to install on a 32 bit Pi/ARM OS, the installer exits with a helpful error message.
-- Interface improvements for `chia configure -log-level`.
+- If you attempt to install on a 32 bit Pi/ARM OS, the installer exits with a helpful error message. You  can still fail when running under a 64 bit kernel but using a 32 bit Python 3.
+- The application is now more aware of whether it is running a testnet or mainnet. This impacts wallet's display behavior and certain blockchain validation rules.
+- Interface improvements for `chia netspace`.
+- Now that aiosqlite included our upstream improvements we install version 0.17.0.
+- `chia init` only migrates release candidate directories. The versioned sub directories under `~/chia` will be going away before mainnet.
 
 ### Fixed
 
-- Don't load plots that don't need to load.
-- Report not synced in the GUI if not synced.
+- The GUI was often getting stuck on connecting to wallet. We beleive we have resolved this.
+- We identified and fixed an issue where harvester would crash, especially when loading plots or checking a large amount of plots.
+- The software now reports not synced in the GUI if not synced or being behind by 7 minutes or more.
+- Difficulty was set too high for the RC1/2 chain. This lead to odd rewards behaviour as well as difficulty artificially could not fall as low as it should.
+- Don't load plots that don't need to be loaded.
+- We made various fixes and changes to weight proofs.
 - Some configuration values were improperly ignored in migrations.
 - Some debug logging was accidentally left in.
+- `chia configure -log-level` was broken.
+- We believe we finally have the Windows Installer obtaining the correct version information at build time.
+- The application was sometimes not cancel pending items when closing certain websockets.
+- Fixed filter hash and generator validation.
+- Recursive replace was being called from the test suite.
 
 ## 1.0rc2 aka Release Candidate 2 - 2021-02-18
 
