@@ -11,7 +11,7 @@ const WebSocketConnection = (props) => {
     timeout = setTimeout(() => {
       const { host } = props;
       dispatch(wsConnect(host));
-    }, 300);
+    }, 3000);
   }
 
   if (!timeout && !connected && !connecting) {
