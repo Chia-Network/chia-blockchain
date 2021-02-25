@@ -28,7 +28,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 
-- All chialisp opcodes have been renumbered. This should be the last major breaking change for chialisp and the clvm. There are a couple minor enhancements still needed for mainnet launch, but they mayor may not require minor breaking changes. We will be restarting testnet chains on a mostly weekly basis either way.
+- All chialisp opcodes have been renumbered. This should be the last major breaking change for chialisp and the clvm. There are a couple minor enhancements still needed for mainnet launch, but they may or may not require minor breaking changes. We will be restarting testnet chains on a mostly weekly basis either way.
 - Node batch syncing performance was increased, and it now avoids re-validating blocks that node had already validated.
 - The entire CLI has been ported to [Click](https://click.palletsprojects.com/en/7.x/). Huge thanks to @jespino for the big assist and @unparalleled-js for the [recommendation and the initial start](https://github.com/Chia-Network/chia-blockchain/issues/464). This will make building out the CLI much easier. There are some subtle changes and some shortcuts are not there anymore. `chia -h` and `chia SUBCOMMAND -h` can be your guide.
 - We have upgraded Electron to 11.3 to support Apple Silicon. There are still one or two issues in our build chain for Apple Silicon but we should have an M1 native build shortly.
