@@ -8,8 +8,8 @@ from src.util.condition_tools import parse_sexp_to_conditions
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.util.ints import uint32
 
-address1 = "txch17gqxp6vnq90ypl8kzn56c2jejcva90tf6sh2dumw05nrxwggf2lskq2es5"  # Gene wallet (m/12381/8444/2/59):
-address2 = "txch1n4l69tm4s4ekju9uce6xaq7fym8mkzcxrrn77xngl9ej7t8nd8ks409lhk"  # mariano main key
+address1 = "txch1k50glwkdffp2mrqq64rsgjtxj4waphuf72stqayz4qqk6mj9hd4qp7lrek"  # Gene wallet (m/12381/8444/2/51):
+address2 = "txch1430mtj60hvzyuyz4t45dyxwjdjsvphhl2fgreyry362reca4zpkszhjd3e"  # farmer1 key (m/12381/8444/2/51)
 
 ph1 = decode_puzzle_hash(address1)
 ph2 = decode_puzzle_hash(address2)
