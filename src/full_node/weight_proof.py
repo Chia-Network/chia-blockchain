@@ -656,7 +656,7 @@ def _map_summaries(
 
     for idx, data in enumerate(sub_epoch_data):
         ses = SubEpochSummary(
-            ses_hash if idx > 0 else data.reward_chain_hash,
+            ses_hash,
             data.reward_chain_hash,
             data.num_blocks_overflow,
             data.new_difficulty,
