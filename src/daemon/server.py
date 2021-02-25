@@ -214,6 +214,8 @@ class WebSocketServer:
             async for message in websocket:
                 try:
                     decoded = json.loads(message)
+                    if "data" not in decoded:
+                        decoded["data"] = {}
                     response, sockets_to_use = await self.handle_message(websocket, decoded)
                 except Exception as e:
                     tb = traceback.format_exc()
