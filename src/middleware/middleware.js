@@ -38,7 +38,8 @@ const socketMiddleware = () => {
   let socket = null;
   let connected = false;
 
-  const onOpen = (store) => (event) => {
+  const onOpen = (store, wsConnectInterval) => (event) => {
+    clearInterval(wsConnectInterval);
     connected = true;
     store.dispatch(actions.wsConnected(event.target.url));
     store.dispatch(registerService('wallet_ui'));
@@ -75,32 +76,36 @@ const socketMiddleware = () => {
   return (store) => (next) => (action) => {
     switch (action.type) {
       case 'WS_CONNECT':
-        if (socket !== null) {
-          socket.close();
-        }
-        // connect to the remote host
-        try {
-          const key_path = remote.getGlobal('key_path');
-          const cert_path = remote.getGlobal('cert_path');
+        let wsConnectInterval = setInterval(() => {
+          if (socket !== null && (socket.readyState == 0 || socket.readyState == 1)) {
+            console.log("Already connected, not reconnecting.");
+            console.log(socket.readyState);
+            return;
+          }
+          // connect to the remote host
+          try {
+            const key_path = remote.getGlobal('key_path');
+            const cert_path = remote.getGlobal('cert_path');
 
-          const options = {
-            cert: fs.readFileSync(cert_path),
-            key: fs.readFileSync(key_path),
-            rejectUnauthorized: false,
-          };
-          socket = new WS(action.host, options);
-        } catch {
-          connected = false;
-          store.dispatch(actions.wsDisconnected());
-          console.log('Failed connection to', action.host);
-          break;
-        }
+            const options = {
+              cert: fs.readFileSync(cert_path),
+              key: fs.readFileSync(key_path),
+              rejectUnauthorized: false,
+            };
+            socket = new WS(action.host, options);
+          } catch {
+            connected = false;
+            store.dispatch(actions.wsDisconnected());
+            console.log('Failed connection to', action.host);
+            return;
+          }
 
-        // websocket handlers
-        socket.onmessage = onMessage(store);
-        socket.onclose = onClose(store);
-        socket.addEventListener('open', onOpen(store));
-        break;
+          // websocket handlers
+          socket.onmessage = onMessage(store);
+          socket.onclose = onClose(store);
+          socket.addEventListener('open', onOpen(store, wsConnectInterval));
+         }, 1000);
+         break;
       case 'WS_DISCONNECT':
         if (socket !== null) {
           socket.close();

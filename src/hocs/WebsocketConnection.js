@@ -5,18 +5,11 @@ const WebSocketConnection = (props) => {
   const dispatch = useDispatch();
   const connected = useSelector((state) => state.websocket.connected);
   const connecting = useSelector((state) => state.websocket.connecting);
-  let timeout = null;
 
-  function connect() {
-    timeout = setTimeout(() => {
-      const { host } = props;
-      dispatch(wsConnect(host));
-    }, 3000);
-  }
-
-  if (!timeout && !connected && !connecting) {
+  if (!connected && !connecting) {
     dispatch(wsConnecting());
-    connect();
+    const { host } = props;
+    dispatch(wsConnect(host));
   }
 
   return props.children;
