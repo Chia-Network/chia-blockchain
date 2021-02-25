@@ -11,13 +11,16 @@ from src.full_node.mempool_check_conditions import (
     get_name_puzzle_conditions,
     get_puzzle_and_solution_for_coin,
 )
-from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.program import Program, SerializedProgram
+from src.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
+
 from tests.setup_nodes import test_constants, bt
 from clvm_tools import binutils
 
-from .make_big_block import make_big_block_generator
+from .make_block_generator import make_block_generator
 
 BURN_PUZZLE_HASH = b"0" * 32
+SMALL_BLOCK_GENERATOR = make_block_generator(1)
 
 log = logging.getLogger(__name__)
 
@@ -34,8 +37,7 @@ def large_block_generator(size):
     # the idea is, if the algorithm for building the big block changes,
     # the name of the cache file will also change
 
-    small_generator = make_big_block_generator(1)
-    name = small_generator.get_tree_hash().hex()[:16]
+    name = SMALL_BLOCK_GENERATOR.get_tree_hash().hex()[:16]
 
     my_dir = pathlib.Path(__file__).absolute().parent
     hex_path = my_dir / f"large-block-{name}-{size}.hex"
@@ -44,7 +46,7 @@ def large_block_generator(size):
             hex_str = f.read()
             return bytes.fromhex(hex_str)
     except FileNotFoundError:
-        generator = make_big_block_generator(size)
+        generator = make_block_generator(size)
         blob = bytes(generator)
         #  TODO: Re-enable large-block*.hex but cache in ~/.chia/subdir
         #  with open(hex_path, "w") as f:
@@ -111,18 +113,16 @@ class TestCostCalculation:
             coinbase,
         )
         assert spend_bundle is not None
+
+        pk = bytes.fromhex(
+            "88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280"
+        )
+        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)
+        disassembly = binutils.disassemble(puzzle)
         program = SerializedProgram.from_bytes(
             binutils.assemble(
-                "(q . ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"
-                " (((c (q . ((c (q . ((c (i 11 (q . ((c (i (= 5 (point_add 11"
-                " (pubkey_for_exp (sha256 11 ((c 6 (c 2 (c 23 (q . ())))))))))"
-                " (q . ((c 23 47))) (q . (x))) 1))) (q . (c (c 4 (c 5 (c ((c 6 (c 2"
-                " (c 23 (q . ()))))) (q . ())))) ((c 23 47))))) 1))) (c (q . (57 (c"
-                " (i (l 5) (q . (sha256 (q . 2) ((c 6 (c 2 (c 9 (q . ()))))) ((c 6 (c"
-                " 2 (c 13 (q . ()))))))) (q . (sha256 (q . 1) 5))) 1))) 1)))) (c"
-                " (q . 0x88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43"
-                "f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280)"
-                ' 1))) (() (q . ((65 "00000000000000000000000000000000" 0x0cbba106e000))) ())))))'
+                f"(q . ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"
+                f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
             ).as_bin()
         )
         error, npc_list, cost = get_name_puzzle_conditions(program, True)
@@ -136,26 +136,13 @@ class TestCostCalculation:
 
     @pytest.mark.asyncio
     async def test_clvm_strict_mode(self):
-        program = SerializedProgram.from_bytes(
-            # this is a valid generator program except the first clvm
-            # if-condition, that depends on executing an unknown operator
-            # ("0xfe"). In strict mode, this should fail, but in non-strict
-            # mode, the unknown operator should be treated as if it returns ().
-            binutils.assemble(
-                "(i (a (q . 0xfe) (q . ())) (q . ()) "
-                "(q . ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"
-                " (((c (q . ((c (q . ((c (i 11 (q . ((c (i (= 5 (point_add 11"
-                " (pubkey_for_exp (sha256 11 ((c 6 (c 2 (c 23 (q . ())))))))))"
-                " (q . ((c 23 47))) (q . (x))) 1))) (q . (c (c 4 (c 5 (c ((c 6 (c 2"
-                " (c 23 (q . ()))))) (q . ())))) ((c 23 47))))) 1))) (c (q . (57 (c"
-                " (i (l 5) (q . (sha256 (q . 2) ((c 6 (c 2 (c 9 (q . ()))))) ((c 6 (c"
-                " 2 (c 13 (q . ()))))))) (q . (sha256 (q . 1) 5))) 1))) 1)))) (c"
-                " (q . 0x88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43"
-                "f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280)"
-                ' 1))) (() (q . ((51 "00000000000000000000000000000000" 0x0cbba106e000))) ())))))'
-                ")"
-            ).as_bin()
-        )
+        block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR))
+        disassembly = binutils.disassemble(block)
+        # this is a valid generator program except the first clvm
+        # if-condition, that depends on executing an unknown operator
+        # ("0xfe"). In strict mode, this should fail, but in non-strict
+        # mode, the unknown operator should be treated as if it returns ().
+        program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         error, npc_list, cost = get_name_puzzle_conditions(program, True)
         assert error is not None
         error, npc_list, cost = get_name_puzzle_conditions(program, False)
@@ -179,14 +166,21 @@ class TestCostCalculation:
 
     @pytest.mark.asyncio
     async def test_standard_tx(self):
+        # this isn't a real public key, but we don't care
+        public_key = bytes.fromhex(
+            "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
+        )
+        puzzle_program = SerializedProgram.from_bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(public_key))
+        conditions = binutils.assemble(
+            "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
+            " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
+        )
+        solution_program = SerializedProgram.from_bytes(
+            p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
+        )
 
-        puzzle = "((c (q . ((c (q . ((c (i 11 (q . ((c (i (= 5 (point_add 11 (pubkey_for_exp (sha256 11 ((c 6 (c 2 (c 23 (q . ()))))))))) (q . ((c 23 47))) (q . (x))) 1))) (q . (c (c 4 (c 5 (c ((c 6 (c 2 (c 23 (q . ()))))) (q . ())))) ((c 23 47))))) 1))) (c (q . (57 (c (i (l 5) (q . (sha256 (q . 2) ((c 6 (c 2 (c 9 (q . ()))))) ((c 6 (c 2 (c 13 (q . ()))))))) (q . (sha256 (q . 1) 5))) 1))) 1)))) (c (q . 0xaf949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21) 1)))"  # noqa: E501
-
-        solution = "(() (q . ((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10) (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))) ())"  # noqa: E501
         time_start = time.time()
         total_cost = 0
-        puzzle_program = SerializedProgram.from_bytes(binutils.assemble(puzzle).as_bin())
-        solution_program = SerializedProgram.from_bytes(binutils.assemble(solution).as_bin())
         for i in range(0, 1000):
             cost, result = puzzle_program.run_with_cost(solution_program)
             total_cost += cost
