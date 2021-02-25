@@ -1723,4 +1723,3 @@ msgstr ""
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr ""
-
