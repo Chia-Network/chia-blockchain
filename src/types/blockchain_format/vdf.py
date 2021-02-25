@@ -45,17 +45,12 @@ class VDFInfo(Streamable):
     output: ClassgroupElement
 
 
-@dataclass(frozen=True, init=False)
+@dataclass(frozen=True)
 @streamable
 class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes
     normalized_to_identity: bool
-
-    def __init__(self, witness_type: uint8, witness: bytes, normalized_to_identity: bool = False):
-        object.__setattr__(self, "witness_type", witness_type)
-        object.__setattr__(self, "witness", witness)
-        object.__setattr__(self, "normalized_to_identity", normalized_to_identity)
 
     def is_valid(
         self,
@@ -89,7 +84,7 @@ class VDFProof(Streamable):
 
 
 # Stores, for a given VDF, the field that uses it.
-class FieldVDF(IntEnum):
+class CompressibleVDFField(IntEnum):
     CC_EOS_VDF = 1
     ICC_EOS_VDF = 2
     CC_SP_VDF = 3

@@ -507,7 +507,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
                     "proofs.infused_challenge_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890"),
+                    VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
@@ -738,7 +738,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
                     "proofs.challenge_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890"),
+                    VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
@@ -808,7 +808,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
                     "proofs.reward_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890"),
+                    VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
@@ -1053,7 +1053,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1],
                     "reward_chain_sp_proof",
-                    VDFProof(uint8(0), std_hash(b"")),
+                    VDFProof(uint8(0), std_hash(b""), False),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
                 return
@@ -1095,7 +1095,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1],
                     "challenge_chain_sp_proof",
-                    VDFProof(uint8(0), std_hash(b"")),
+                    VDFProof(uint8(0), std_hash(b""), False),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SP_VDF
                 return
@@ -1412,7 +1412,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "challenge_chain_ip_proof",
-            VDFProof(uint8(0), std_hash(b"")),
+            VDFProof(uint8(0), std_hash(b""), False),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_IP_VDF
 
@@ -1440,7 +1440,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_ip_proof",
-            VDFProof(uint8(0), std_hash(b"")),
+            VDFProof(uint8(0), std_hash(b""), False),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_IP_VDF
 
@@ -1471,7 +1471,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "infused_challenge_chain_ip_proof",
-            VDFProof(uint8(0), std_hash(b"")),
+            VDFProof(uint8(0), std_hash(b""), False),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
 

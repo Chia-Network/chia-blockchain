@@ -740,6 +740,7 @@ class Timelord:
         writer: asyncio.StreamWriter,
         # Data specific only when running in bluebox mode.
         bluebox_iteration: Optional[uint64] = None,
+        header_hash: Optional[bytes32] = None,
         height: Optional[uint32] = None,
         field_vdf: Optional[uint8] = None,
     ):
@@ -790,14 +791,15 @@ class Timelord:
                 async with self.lock:
                     self.allows_iters.append(chain)
             else:
-                assert chain is Chain.BLUEBOX
-                assert bluebox_iteration is not None
-                prefix = str(len(str(bluebox_iteration)))
-                if len(str(bluebox_iteration)) < 10:
-                    prefix = "0" + prefix
-                iter_str = prefix + str(bluebox_iteration)
-                writer.write(iter_str.encode())
-                await writer.drain()
+                async with self.lock:
+                    assert chain is Chain.BLUEBOX
+                    assert bluebox_iteration is not None
+                    prefix = str(len(str(bluebox_iteration)))
+                    if len(str(bluebox_iteration)) < 10:
+                        prefix = "0" + prefix
+                    iter_str = prefix + str(bluebox_iteration)
+                    writer.write(iter_str.encode())
+                    await writer.drain()
 
             # Listen to the client until "STOP" is received.
             while True:
@@ -880,11 +882,14 @@ class Timelord:
                         async with self.lock:
                             self.proofs_finished.append((chain, vdf_info, vdf_proof))
                     else:
-                        writer.write(b"010")
-                        await writer.drain()
-                        assert height is not None
+                        async with self.lock:
+                            writer.write(b"010")
+                            await writer.drain()
+                        assert header_hash is not None
                         assert field_vdf is not None
-                        response = timelord_protocol.RespondCompactProofOfTime(vdf_info, vdf_proof, height, field_vdf)
+                        response = timelord_protocol.RespondCompactProofOfTime(
+                            vdf_info, vdf_proof, header_hash, height, field_vdf
+                        )
                         if self.server is not None:
                             message = make_msg(ProtocolMessageTypes.respond_compact_vdf_timelord, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
@@ -905,7 +910,7 @@ class Timelord:
                             None,
                         )
                         if info is None:
-                            # Nothing fount with target_field_vdf, just pick the first VDFInfo.
+                            # Nothing found with target_field_vdf, just pick the first VDFInfo.
                             info = self.pending_bluebox_info[0]
                         ip, reader, writer = self.free_clients[0]
                         self.process_communication_tasks.append(
@@ -918,6 +923,7 @@ class Timelord:
                                     reader,
                                     writer,
                                     info.new_proof_of_time.number_of_iterations,
+                                    info.header_hash,
                                     info.height,
                                     info.field_vdf,
                                 )
