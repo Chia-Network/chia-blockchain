@@ -29,10 +29,10 @@ testnet_kwargs = {
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     "GENESIS_CHALLENGE": bytes32([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "f15f4e19248642ce92515ffb05d37fc0fadc30eb95d69b8800ae78e34c0e5d0f"
+        "bc4fd6c394fe90c6097afbfa6ab5927743e2210ecf689dad477be8eb408745d5"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "0dc09d07e7cef3b57a42e08ec89a59277ef579e6833776937f601e21ec305dba"
+        "4ad98e66a019f11b60a8279514d13105b65588865e2a8e794b5b73d5646174f6"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
@@ -57,7 +57,7 @@ testnet_kwargs = {
     "BLOCKS_CACHE_SIZE": 5000,  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 3*MAX_SUB_SLOT_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
-    "INITIAL_FREEZE_PERIOD": 10000,  # Transaction are disabled first 10000 blocks
+    "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 10000 blocks
     "NETWORK": 0,
     "MAX_GENERATOR_SIZE": 1000000,
 }

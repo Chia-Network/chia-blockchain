@@ -136,7 +136,7 @@ class FullNode:
         self.uncompact_task = None
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
-            await self.peak_post_processing(full_peak, peak, peak.height - 1, None)
+            await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
         if self.config["send_uncompact_interval"] != 0:
             assert self.config["target_uncompact_proofs"] != 0
             self.uncompact_task = asyncio.create_task(

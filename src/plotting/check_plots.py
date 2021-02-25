@@ -85,19 +85,19 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
         log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
-        try:
-            for i in range(num_start, num_end):
-                challenge = std_hash(i.to_bytes(32, "big"))
-                for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
+        for i in range(num_start, num_end):
+            challenge = std_hash(i.to_bytes(32, "big"))
+            for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
+                try:
                     proof = pr.get_full_proof(challenge, index)
                     total_proofs += 1
                     ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                     assert quality_str == ver_quality_str
-        except BaseException as e:
-            if isinstance(e, KeyboardInterrupt):
-                log.warning("Interrupted, closing")
-                return
-            log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+                except BaseException as e:
+                    if isinstance(e, KeyboardInterrupt):
+                        log.warning("Interrupted, closing")
+                        return
+                    log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
         if total_proofs > 0:
             log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
