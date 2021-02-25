@@ -22,7 +22,7 @@ from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint64, uint8
 from src.util.wallet_tools import WalletTool
-from tests.recursive_replace import recursive_replace
+from src.util.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
 from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
