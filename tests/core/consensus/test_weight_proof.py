@@ -32,7 +32,12 @@ from src.full_node.weight_proof import (  # type: ignore
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
-from tests.core.fixtures import default_1000_blocks, default_400_blocks, default_10000_blocks
+from tests.core.fixtures import (
+    default_1000_blocks,
+    default_400_blocks,
+    default_10000_blocks,
+    pre_genesis_empty_slots_1000_blocks,
+)
 
 
 @pytest.fixture(scope="session")
@@ -189,6 +194,19 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof1000(self, default_1000_blocks):
         blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof1000_pre_genesis_empty_slots(self, pre_genesis_empty_slots_1000_blocks):
+        blocks = pre_genesis_empty_slots_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
