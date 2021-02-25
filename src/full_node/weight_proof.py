@@ -330,7 +330,7 @@ class WeightProofHandler:
         while curr.height < header_block.height:
             if curr is None:
                 log.error("failed fetching block")
-                return None
+                return None, None
             if len(curr.finished_sub_slots) > 0:
                 for idx, sub_slot in enumerate(curr.finished_sub_slots):
                     curr_icc_info = None
@@ -896,7 +896,7 @@ def sub_slot_data_vdf_input(
     ssd: Optional[SubSlotData] = None
     if is_overflow and new_sub_slot and prev_segment is None:
         if sub_slots[sub_slot_idx - 2].cc_slot_end is None:
-            for ssd_idx in reversed(range(0, sub_slot_idx - 2)):
+            for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
                 ssd = sub_slots[ssd_idx]
                 if ssd.cc_slot_end is not None:
                     ssd = sub_slots[ssd_idx + 1]
