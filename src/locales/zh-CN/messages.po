@@ -622,7 +622,7 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:48
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
 msgstr ""
 

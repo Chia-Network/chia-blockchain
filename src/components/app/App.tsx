@@ -4,7 +4,7 @@ import { I18nProvider } from '@lingui/react';
 import { i18n } from '@lingui/core';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
-import { en, fi, it, ru, sk, sv, zh } from 'make-plural/plurals';
+import { en, fi, it, ru, sk, sv, zh, es } from 'make-plural/plurals';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
@@ -14,6 +14,7 @@ import WebSocketConnection from '../../hocs/WebsocketConnection';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
 import catalogEn from '../../locales/en/messages';
+import catalogEs from '../../locales/es/messages';
 import catalogFi from '../../locales/fi/messages';
 import catalogIt from '../../locales/it/messages';
 import catalogRu from '../../locales/ru/messages';
@@ -26,6 +27,7 @@ import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
 
 i18n.loadLocaleData('en', { plurals: en });
+i18n.loadLocaleData('es', { plurals: es });
 i18n.loadLocaleData('fi', { plurals: fi });
 i18n.loadLocaleData('it', { plurals: it });
 i18n.loadLocaleData('ru', { plurals: ru });
@@ -35,6 +37,8 @@ i18n.loadLocaleData('zh-CN', { plurals: zh });
 
 // @ts-ignore
 i18n.load('en', catalogEn.messages);
+// @ts-ignore
+i18n.load('es', catalogEs.messages);
 // @ts-ignore
 i18n.load('fi', catalogFi.messages);
 // @ts-ignore

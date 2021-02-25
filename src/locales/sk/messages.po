@@ -627,7 +627,7 @@ msgstr "Poradie hlavičky"
 msgid "Height"
 msgstr "Poradie"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:48
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
 msgstr ""
 

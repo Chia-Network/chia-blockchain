@@ -9,6 +9,7 @@ import useOpenExternal from '../../../../hooks/useOpenExternal';
 // https://www.codetwo.com/admins-blog/list-of-office-365-language-id/
 const locales: { [char: string]: string } = {
   en: 'English',
+  es: 'Español',
   it: 'Italiano',
   ru: 'Русский',
   sk: 'Slovenčina',

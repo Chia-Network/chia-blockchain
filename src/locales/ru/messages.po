@@ -627,7 +627,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:48
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
