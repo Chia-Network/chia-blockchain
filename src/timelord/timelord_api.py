@@ -70,7 +70,7 @@ class TimelordAPI:
                     self.timelord.total_unfinished += 1
 
     @api_request
-    async def new_proof_of_time(self, vdf_info: timelord_protocol.NewProofOfTime):
+    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
         async with self.timelord.lock:
             if not self.timelord.sanitizer_mode:
                 return

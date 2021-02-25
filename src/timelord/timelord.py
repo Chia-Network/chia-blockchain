@@ -87,7 +87,7 @@ class Timelord:
         self.total_infused: int = 0
         self.state_changed_callback: Optional[Callable] = None
         self.sanitizer_mode = self.config["sanitizer_mode"]
-        self.pending_bluebox_info: List[timelord_protocol.NewProofOfTime] = []
+        self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -887,6 +887,7 @@ class Timelord:
                             await writer.drain()
                         assert header_hash is not None
                         assert field_vdf is not None
+                        assert height is not None
                         response = timelord_protocol.RespondCompactProofOfTime(
                             vdf_info, vdf_proof, header_hash, height, field_vdf
                         )
