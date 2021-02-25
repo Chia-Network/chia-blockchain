@@ -37,7 +37,7 @@ def conditions_for_payment(coin) -> Program:
     return Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])
 
 
-def make_big_block_generator(count: int) -> SerializedProgram:
+def make_block_generator(count: int) -> SerializedProgram:
     puzzle_hash_db: Dict = dict()
     coins = [make_fake_coin(_, puzzle_hash_db) for _ in range(count)]
 
