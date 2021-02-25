@@ -133,7 +133,7 @@ class FullNode:
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
-            await self.peak_post_processing(full_peak, peak, peak.height - 1, None)
+            await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
 
     def set_server(self, server: ChiaServer):
         self.server = server
