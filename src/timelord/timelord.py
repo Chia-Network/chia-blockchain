@@ -101,6 +101,8 @@ class Timelord:
         self._shut_down = True
         for task in self.process_communication_tasks:
             task.cancel()
+        if self.main_loop is not None:
+            self.main_loop.cancel()
 
     async def _await_closed(self):
         pass
