@@ -1072,12 +1072,11 @@ def __validate_pospace(
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
 ) -> Optional[uint64]:
-    if first_in_sub_epoch and segment.sub_epoch_n == 0:
+    if first_in_sub_epoch and segment.sub_epoch_n == 0 and idx == 0:
         cc_sub_slot_hash = constants.GENESIS_CHALLENGE
     else:
         cc_sub_slot_hash = __get_cc_sub_slot(segment.sub_slots, idx, ses).get_hash()
 
-    # find challenge block sub slot
     sub_slot_data: SubSlotData = segment.sub_slots[idx]
 
     if sub_slot_data.signage_point_index and is_overflow_block(constants, sub_slot_data.signage_point_index):
