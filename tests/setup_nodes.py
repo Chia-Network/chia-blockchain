@@ -65,7 +65,7 @@ async def setup_full_node(
         config["introducer_peer"] = None
     config["port"] = port
     config["rpc_port"] = port + 1000
-    overrides = config["network_overrides"][config["selected_network"]]
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
         kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
