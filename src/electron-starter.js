@@ -66,7 +66,8 @@ if (!setupEvents.handleSquirrelEvent()) {
       show: false,
       webPreferences: {
         preload: __dirname + "/preload.js",
-        nodeIntegration: true
+        nodeIntegration: true,
+        enableRemoteModule: true
       }
     });
 

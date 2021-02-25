@@ -15,7 +15,7 @@ type Props = {
 
 export default function CopyToClipboard(props: Props) {
   const { value, fontSize, clearCopiedDelay } = props;
-  const [_, copyToClipboard] = useCopyToClipboard();
+  const [, copyToClipboard] = useCopyToClipboard();
   const [copied, setCopied] = useState<boolean>(false);
   const timeout = useTimeout(() => {
     setCopied(false);
