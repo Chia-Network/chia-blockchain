@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 07:51\n"
+"PO-Revision-Date: 2021-02-25 08:54\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -108,7 +108,7 @@ msgstr "Tillbaka"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Säkerhetskopierad fil används för att återställa smarta plånböcker."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
@@ -358,7 +358,7 @@ msgstr "Skapa transaktion"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr ""
+msgstr "Skapa en säkerhetskopia"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
@@ -483,7 +483,7 @@ msgstr "Dra och släpp erbjudandefil"
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
-msgstr ""
+msgstr "Drag och släpp din säkerhetskopierade fil"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -1265,7 +1265,7 @@ msgstr "Logga in"
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Skip"
-msgstr ""
+msgstr "Hoppa över"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
