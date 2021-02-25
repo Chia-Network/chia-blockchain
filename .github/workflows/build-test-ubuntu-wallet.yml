@@ -99,6 +99,11 @@ jobs:
         . ./activate
         venv/bin/python -m pip install -r requirements-dev.txt
 
+    - name: Test clvm code with pytest
+      run: |
+        . ./activate
+        ./venv/bin/py.test tests/clvm -s -v --durations 0
+
     - name: Test blockchain code with pytest
       run: |
         . ./activate
