@@ -8,7 +8,7 @@ msgstr ""
 "Language: ro\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 08:32\n"
+"PO-Revision-Date: 2021-02-26 09:33\n"
 "Last-Translator: \n"
 "Language-Team: Romanian\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
@@ -1218,86 +1218,86 @@ msgstr "Selecteaza tipul portofelului"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Selectati destinatia finala pentru folderul in care doriti sa fie stocat plotul. Va recomandam sa utilizati un hard disk mare si lent (cum ar fi un HDD extern)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Selectati destinatia temporara pentru folderul in care doriti sa fie stocat plotul. Va recomandam sa utilizati un SSD rapid."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "Selectat"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr ""
+msgstr "Vinde"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:433
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:795
 #: src/components/wallet/standard/WalletStandard.tsx:361
 msgid "Send"
-msgstr ""
+msgstr "Trimite"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:477
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Trimiteti acest pachet de informatii utilizatorului dvs. Rate Limited Wallet, care trebuie sa il utilizeze pentru a finaliza configurarea portofelului:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:284
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Trimite-ti pubkey-ul tau la administratorul de portofel Rate Limited:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Arata Optiuni Avansate"
 
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Latura"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "Inregistreaza-te"
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Skip"
-msgstr ""
+msgstr "Sari"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Suma care poate fi cheltuita"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "Suma care poate fi cheltuita per Interval"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
 #: src/components/wallet/standard/WalletStandard.tsx:199
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Balanta care poate fi cheltuita"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:407
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:458
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Interval de cheltuieli (numar de blocuri): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Lungimea intervalului pentru cheltuieli (numar de blocuri)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:414
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:465
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Limita de cheltuieli (chia per interval): {0}"
 
 #: src/components/fullNode/FullNode.jsx:113
 msgid "State"
-msgstr ""
+msgstr "Stare"
 
 #: src/components/fullNode/FullNode.jsx:123
 #: src/components/fullNode/FullNode.jsx:140
@@ -1309,11 +1309,11 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:93
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "Status:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
