@@ -8,7 +8,7 @@ msgstr ""
 "Language: ro\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 09:33\n"
+"PO-Revision-Date: 2021-02-26 10:31\n"
 "Last-Translator: \n"
 "Language-Team: Romanian\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
@@ -1563,48 +1563,48 @@ msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
-msgstr ""
+msgstr "Tip"
 
 #: src/components/fullNode/FullNode.jsx:111
 msgid "Unfinished"
-msgstr ""
+msgstr "Neterminat"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Identificator unic"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:299
 msgid "User Pubkey"
-msgstr ""
+msgstr "Pubkey Utilizator"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "Iteratii sub slot VDF"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
-msgstr ""
+msgstr "Vezualizeaza loguri"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "Vizualizeaza oferta"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
 #: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "View pending balances"
-msgstr ""
+msgstr "Vizualizeaza balanta in asteptare"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:295
 msgid "View pending balances..."
-msgstr ""
+msgstr "Vizualizeaza balanta in asteptare..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:25
 msgid "Wait for synchronization"
-msgstr ""
+msgstr "Asteapta sincronizarea"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1637,7 +1637,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
-msgstr ""
+msgstr "Portofele"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -1645,23 +1645,23 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:92
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Vrei sa castigi mai multi Chia? Adauga mai multe ploturi la ferma ta."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Doriti să aveți o intarziere inainte de inceperea urmatorului plot?"
 
 #: src/components/block/Block.jsx:184
 msgid "Weight"
-msgstr ""
+msgstr "Greutate"
 
 #: src/components/block/Block.jsx:187
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Greutatea este dificultatea totala adaugata a tuturor subblocurilor până la acesta inclusiv"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Bine ati venit la Chia. Va rugam logati-va cu o cheie existenta, sau creati o noua cheie."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
