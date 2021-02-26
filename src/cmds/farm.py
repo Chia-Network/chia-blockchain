@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import asyncio
 from decimal import Decimal
 
@@ -146,7 +146,7 @@ async def is_farmer_running(farmer_rpc_port: int) -> bool:
     return is_running
 
 
-async def get_challenges(farmer_rpc_port: int) -> Optional[Dict[str, Any]]:
+async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]:
     signage_points = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
