@@ -8,7 +8,7 @@ msgstr ""
 "Language: ro\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 20:05\n"
+"PO-Revision-Date: 2021-02-26 06:19\n"
 "Last-Translator: \n"
 "Language-Team: Romanian\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "Vrei sa explorezi blocurile Chia mai mult? Verifică <0>Chia Explorer</0> construit de catre un dezvoltator open source."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "0 automatically chooses bucket count"
