@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 00:19\n"
+"PO-Revision-Date: 2021-02-26 20:02\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -973,7 +973,7 @@ msgstr "Por favor, seleccione comprar o vender"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr "Por favor seleccione el color de moneda"
+msgstr "Por favor, seleccione el color de moneda"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -982,12 +982,12 @@ msgstr "Por favor seleccione el color de moneda"
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr "Por favor especifique el directorio final"
+msgstr "Por favor, especifique el directorio final"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr "Por favor especifique el directorio temporal"
+msgstr "Por favor, especifique el directorio temporal"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1423,7 +1423,7 @@ msgstr "Las tarifas totales de transacciones en este bloque. Recompensado al gra
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr "Estas parcelas no son válidas, es posible que desee eliminarlos."
+msgstr "Estas parcelas no son válidas, es posible que desee eliminarlas."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
@@ -1661,7 +1661,7 @@ msgstr "El peso es la dificultad agregada total de todos los sub-bloques hasta e
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr "Bienvenidos a Chia. Inicie sesión con una llave existente o cree una nueva."
+msgstr "Bienvenidos a Chia. Por favor inicie sesión con una llave existente o cree una nueva."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
