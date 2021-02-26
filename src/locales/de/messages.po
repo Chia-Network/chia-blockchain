@@ -8,7 +8,7 @@ msgstr ""
 "Language: de\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 20:05\n"
+"PO-Revision-Date: 2021-02-26 00:19\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -234,73 +234,73 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Farbe"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
-msgstr ""
+msgstr "Farb-Info"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Farbband"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:185
 msgid "Colour:"
-msgstr ""
+msgstr "Farbe:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Farbige Münze"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Optionen für farbige Münze"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Bestätigt mit Block:"
 
 #: src/components/wallet/WalletHistory.tsx:39
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Bestätigt bei Höhe {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Verbinde"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Verbinde zu anderen Peers"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:162
 msgid "Connected"
-msgstr ""
+msgstr "Verbunden"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Verbinde mit Brieftasche"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Connection Status"
-msgstr ""
+msgstr "Verbindungsstatus"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Verbindungsstatus:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Verbindungsart"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
-msgstr ""
+msgstr "Verbindungen"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Kopiert"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -308,11 +308,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
 #: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "Copy"
-msgstr ""
+msgstr "Kopie"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Kopiere in die Zwischenablage"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -320,27 +320,27 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Erstelle"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Erstelle DID Brieftasche"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Erstelle Angebot"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
-msgstr ""
+msgstr "Erstelle Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr ""
+msgstr "Erstelle beschränkte Admin-Brieftasche"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr ""
+msgstr "Erstelle beschränkte Benutzer-Brieftasche"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -348,25 +348,25 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Erstelle Handelsangebot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:394
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
 #: src/components/wallet/standard/WalletStandard.tsx:324
 msgid "Create Transaction"
-msgstr ""
+msgstr "Erstelle Transaktion"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr ""
+msgstr "Erstelle Sicherungskopie"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Erstelle einen neuen privaten Schlüssel"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Erstelle Admin Brieftasche"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
