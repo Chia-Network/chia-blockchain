@@ -8,7 +8,7 @@ msgstr ""
 "Language: ro\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 07:30\n"
+"PO-Revision-Date: 2021-02-26 08:32\n"
 "Last-Translator: \n"
 "Language-Team: Romanian\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
@@ -266,41 +266,41 @@ msgstr "Confirmat la inaltimea {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Conecteaza"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Conecteaza la alte 'peers'"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:162
 msgid "Connected"
-msgstr ""
+msgstr "Conectat"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Se conecteaza la portofel"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Connection Status"
-msgstr ""
+msgstr "Statutul conexiunii"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Statutul conexiunii:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Tipul conexiunii"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
-msgstr ""
+msgstr "Conexiuni"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Copiat"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -308,11 +308,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
 #: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "Copy"
-msgstr ""
+msgstr "Copiaza"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Copiaza in Clipboard"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -320,23 +320,23 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Creeaza"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Creaza portofel DID"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Creeaza oferta"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
-msgstr ""
+msgstr "Creeaza plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr ""
+msgstr "Creati un portofel administrativ cu tarif limitat"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
@@ -603,135 +603,135 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:265
 msgid "Full Node Status"
-msgstr ""
+msgstr "Stare nod complet"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "Genereaza culoare noua"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "Harvester ID"
-msgstr ""
+msgstr "ID-ul 'Harvesterului'"
 
 #: src/components/fullNode/FullNode.jsx:73
 msgid "Header Hash"
-msgstr ""
+msgstr "Hashul Headerului"
 
 #: src/components/block/Block.jsx:166
 msgid "Header hash"
-msgstr ""
+msgstr "hashul Headerului"
 
 #: src/components/block/Block.jsx:180
 #: src/components/fullNode/FullNode.jsx:92
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Height"
-msgstr ""
+msgstr "Inaltime"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
-msgstr ""
+msgstr "Ajuta la traducere"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr ""
+msgstr "Ascunde optiunile avansate"
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "History"
-msgstr ""
+msgstr "Istoric"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "Numele gazdei"
 
 #: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "IP address"
-msgstr ""
+msgstr "Adresa IP"
 
 #: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "IP address / host"
-msgstr ""
+msgstr "IP-ul adresa/gazda"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr ""
+msgstr "Daca nu este selectat niciunul, atunci va fi implicit directorul temporar."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr ""
+msgstr "Importa portofelul din Mnemonics"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr ""
+msgstr "Importa din Mnemonics (24 cuvinte)"
 
 #: src/components/fullNode/FullNode.jsx:57
 msgid "In Progress"
-msgstr ""
+msgstr "In progres"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Incoming"
-msgstr ""
+msgstr "Primite"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Index"
-msgstr ""
+msgstr "Index"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "Indica daca această oferta a fost creata de noi"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "Indica cand a fost acceptata oferta"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:341
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:490
 msgid "Info Packet"
-msgstr ""
+msgstr "Pachet info"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
-msgstr ""
+msgstr "Suma initiala"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "Initializati un portofel de utilizator cu tarif limitat:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "Interval"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:40
 msgid "K-Size"
-msgstr ""
+msgstr "Marimea K"
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
-msgstr ""
+msgstr "Chei"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr ""
+msgstr "Ultima incercare de proba"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "Last Height Farmed"
-msgstr ""
+msgstr "Ultima inaltime farmata"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr ""
+msgstr "Ultimele provocari la bloc"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
-msgstr ""
+msgstr "Incarcare..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "Ploturi locale ale 'Harvesterului'"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
-msgstr ""
+msgstr "Logare"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -777,83 +777,83 @@ msgstr ""
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.jsx:99
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB Up/Down"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
-msgstr ""
+msgstr "Minute"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
-msgstr ""
+msgstr "Mai multa memorie creste usor viteza"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
 msgid "My Pubkey"
-msgstr ""
+msgstr "Cheia mea publica"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
-msgstr ""
+msgstr "Adresa noua"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr ""
+msgstr "Portofel nou"
 
 #: src/components/block/Block.jsx:332
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr ""
+msgstr "Urmatorul"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:199
 msgid "Nickname"
-msgstr ""
+msgstr "Porecla"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "No"
-msgstr ""
+msgstr "Nu"
 
 #: src/middleware/middleware_api.jsx:277
 msgid "No 24 word seed, since this key is imported."
-msgstr ""
+msgstr "Fara seed de 24 de cuvinte, deoarece aceasta cheie este importata."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "Nici un bloc farmat pana acum"
 
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "No previous transactions"
-msgstr ""
+msgstr "Nici o tranzactie anterioara"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Node ID"
-msgstr ""
+msgstr "ID-ul Nodului"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:43
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "Niciunul dintre ploturile tale nu a trecut inca de filtru."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "Indisponibil"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Not Synced"
-msgstr ""
+msgstr "Nesincronizat"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "Nu a fost acceptat inca"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "Nu a fost confirmat inca"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:164
@@ -1087,39 +1087,39 @@ msgstr ""
 
 #: src/middleware/middleware_api.jsx:241
 msgid "Private key {0}"
-msgstr ""
+msgstr "Cheia privata {0}"
 
 #: src/middleware/middleware_api.jsx:251
 msgid "Private key:"
-msgstr ""
+msgstr "Cheia privata:"
 
 #: src/components/block/Block.jsx:226
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "Marimea 'Proof of Space'"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "Dovezi gasite"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "Pubkey"
 
 #: src/middleware/middleware_api.jsx:259
 msgid "Public key:"
-msgstr ""
+msgstr "Cheia publica:"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
-msgstr ""
+msgstr "In asteptare"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "Utilizarea maxima de RAM"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr ""
+msgstr "Portofel RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1127,41 +1127,41 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "Tarif limitat"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Info tarif limitat"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Optiuni tarif limitat"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Setare portofel limitat pentru utilizatori"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:451
 #: src/components/wallet/standard/WalletStandard.tsx:379
 msgid "Receive Address"
-msgstr ""
+msgstr "Adresa de primire"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Recuperare portofel DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Improspateaza ploturile"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:205
 msgid "Rename"
-msgstr ""
+msgstr "Redenumeste"
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Smart Wallets From Backup"
-msgstr ""
+msgstr "Restaureaza portofel inteligent din Backup"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1170,51 +1170,51 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "Salveaza"
 
 #: src/components/fullNode/FullNode.jsx:342
 msgid "Search"
-msgstr ""
+msgstr "Cauta"
 
 #: src/components/fullNode/FullNode.jsx:330
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Cauta bloc dupa header hash"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Locatia celui de al doilea folder temporar"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr ""
+msgstr "Vezi cheia privata"
 
 #: src/middleware/middleware_api.jsx:269
 msgid "Seed:"
-msgstr ""
+msgstr "Seed:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Selecteaza al 2-lea Director temporar"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Selecteaza Directorul final"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr ""
+msgstr "Selecteaza cheia"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Selecteaza oferta"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Selecteaza Directorul temporar"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Selecteaza tipul portofelului"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
