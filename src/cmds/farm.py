@@ -1,24 +1,19 @@
-import click
-import sys
-import time
 import math
-from datetime import datetime
-from typing import Tuple, Optional, Callable, List, Dict, Any
+from typing import Optional, Dict, Any
+import asyncio
+from decimal import Decimal
+
+import click
 
 import aiohttp
-import asyncio
 
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.rpc.farmer_rpc_client import FarmerRpcClient
-from src.util.bech32m import encode_puzzle_hash
-from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.ints import uint64, uint16
-from src.cmds.units import units
-from decimal import Decimal
+from src.util.ints import uint16
 from src.wallet.util.transaction_type import TransactionType
 
 MINUTES_PER_BLOCK = (24 * 60) / 4608  # 0.3125
@@ -178,9 +173,10 @@ async def challenges(farmer_rpc_port: int) -> None:
 
     signage_points.reverse()
     for signage_point in signage_points:
-        print(
-            f"Hash: {signage_point['signage_point']['challenge_hash']}, Index: {signage_point['signage_point']['signage_point_index']}"
-        )
+        print((
+            f"Hash: {signage_point['signage_point']['challenge_hash']}"
+            f"Index: {signage_point['signage_point']['signage_point_index']}"
+        ))
 
 
 async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
@@ -287,7 +283,10 @@ def farm_cmd() -> None:
 @click.option(
     "-hp",
     "--harvester-rpc-port",
-    help="Set the port where the Harvester is hosting the RPC interface. See the rpc_port under harvester in config.yaml.",
+    help=(
+        "Set the port where the Harvester is hosting the RPC interface."
+        "See the rpc_port under harvester in config.yaml."
+    ),
     type=int,
     default=8560,
     show_default=True,
@@ -310,9 +309,7 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
 @click.option(
     "-fp",
     "--farmer-rpc-port",
-    help=(
-        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml."
-    ),
+    help="Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml.",
     type=int,
     default=8559,
     show_default=True,
