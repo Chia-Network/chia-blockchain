@@ -8,7 +8,7 @@ msgstr ""
 "Language: ro\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 11:31\n"
+"PO-Revision-Date: 2021-02-26 12:29\n"
 "Last-Translator: \n"
 "Language-Team: Romanian\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
@@ -1437,47 +1437,47 @@ msgstr "Aceasta este suma de Chia pe care o puteți utiliza în prezent pentru a
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Aceasta este schimbarea în așteptare, care sunt monede de schimb pe care vi le-ați trimis catre dvs, dar care nu au fost încă confirmate."
 
 #: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Aceasta este suma tranzacțiilor în așteptare primite și ieșite (neincluse încă în blockchain). Aceasta nu include recompensele."
 
 #: src/components/fullNode/FullNode.jsx:188
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Acesta este momentul celui mai recent subbloc peak."
 
 #: src/components/block/Block.jsx:173
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Acesta este momentul în care blocul a fost creat de farmer, care este înainte de a fi finalizat cu o 'proof of time'"
 
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Aceasta este cantitatea totală de chia din blockchain la subblocul peak curent care este controlat de cheile dvs. private. Include recompense înghețate, dar nu tranzacții în așteptare de intrare și de ieșire."
 
 #: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Acesta este soldul total + soldul în așteptare: acesta va fi soldul dvs. după confirmarea tuturor tranzacțiilor în așteptare."
 
 #: src/components/fullNode/FullNode.jsx:152
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Acest nod este complet prins și validează rețeaua"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
-msgstr ""
+msgstr "Acest tabel vă arată ultima dată când ferma dvs. a încercat să câștige o provocare de bloc."
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Această tranzactie a fost creată în acest moment"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Această tranzacție a fost inclusă pe blockchain la această înălțime a blocului"
 
 #: src/components/fullNode/FullNode.jsx:105
 msgid "Time Created"
-msgstr ""
+msgstr "Creata in timp"
 
 #: src/components/trading/TradingOverview.jsx:192
 #~ msgid "Time this trade was created at this time"
@@ -1485,81 +1485,81 @@ msgstr ""
 
 #: src/components/block/Block.jsx:170
 msgid "Timestamp"
-msgstr ""
+msgstr "Timestamp-ul"
 
 #: src/components/wallet/WalletHistory.tsx:31
 msgid "To"
-msgstr ""
+msgstr "Catre"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Total Balance"
-msgstr ""
+msgstr "Balanta totala"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Total Chia farmati"
 
 #: src/components/fullNode/FullNode.jsx:206
 msgid "Total Iterations"
-msgstr ""
+msgstr "Iteratii totale"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "Spatiul din retea total"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:99
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Marimea totala a ploturilor:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Dimensiunea totală a ploturilor"
 
 #: src/components/block/Block.jsx:206
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Totalul iteratiilor VDF"
 
 #: src/components/fullNode/FullNode.jsx:208
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Totalul iteratiilor de la inceputul blockchain-ului"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Tranzactii"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Detaliile tranzactiilor"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "ID-ul tranzactiei"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "ID-ul tranzactiei:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Prezentare tranzactie"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Tranzactiile vor aparea aici"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "Tranzactionare"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "Istoria tranzactiilor"
 
 #: src/components/block/Block.jsx:265
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Filtru Hash Tranzacții"
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
