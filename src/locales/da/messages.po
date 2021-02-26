@@ -8,7 +8,7 @@ msgstr ""
 "Language: da\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 20:05\n"
+"PO-Revision-Date: 2021-02-26 19:04\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -59,7 +59,7 @@ msgstr "Tilføj plot folder"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Tilføj pung"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -108,7 +108,7 @@ msgstr "Tilbage"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Backup til at gendanne smart pung"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
