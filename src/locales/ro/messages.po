@@ -8,7 +8,7 @@ msgstr ""
 "Language: ro\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 06:19\n"
+"PO-Revision-Date: 2021-02-26 07:30\n"
 "Last-Translator: \n"
 "Language-Team: Romanian\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
@@ -24,60 +24,60 @@ msgstr "Vrei sa explorezi blocurile Chia mai mult? Verifică <0>Chia Explorer</0
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "0 automatically chooses bucket count"
-msgstr ""
+msgstr "0 alege automat numărul de buckets"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "Un harvester este un serviciu care rulează pe o mașină în care plot (urile) sunt efectiv stocate. Un farmer și un harvester comunica cu un nod complet pentru a vedea starea lanțului. Vedeți mai jos rețeaua dvs. de harvesters conectate Aflați mai multe"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Accept"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Acceptat la:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:76
 msgid "Action"
-msgstr ""
+msgstr "Actiune"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "Actions"
-msgstr ""
+msgstr "Actiuni"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Adauga"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Adaugati folderul cu ploturi"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Adaugati portofelul"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Adaugati un plot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:403
 #: src/components/wallet/coloured/WalletColoured.tsx:455
 #: src/components/wallet/standard/WalletStandard.tsx:383
 msgid "Address"
-msgstr ""
+msgstr "Adresa"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
 #: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Adresa / hash puzzle"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -86,95 +86,95 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
 #: src/components/wallet/standard/WalletStandard.tsx:343
 msgid "Amount"
-msgstr ""
+msgstr "Suma"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:413
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Suma ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "Suma pentru moneda initiala"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Sunteti sigur ca vreti sa stergeti plotul? Plotul nu va putea fi recuperat."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Inapoi"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Fisierul backup este utilizat pentru restaurarea portofelelor inteligente."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
 #: src/components/wallet/standard/WalletStandard.tsx:192
 msgid "Balance"
-msgstr ""
+msgstr "Sold"
 
 #: src/components/block/Block.jsx:292
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Recompensa de baza pentru Farmer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "Mai jos sunt provocările pentru blocul actual. Este posibil să aveți sau nu un 'proof of space' pentru aceste provocări. Aceste blocuri nu conțin în prezent un 'proof of time'."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "Cea mai buna estimare pentru ultimele 5 ore"
 
 #: src/components/block/Block.jsx:117
 #: src/components/block/Block.jsx:129
 #: src/components/block/Block.jsx:141
 #: src/components/block/Block.jsx:308
 msgid "Block"
-msgstr ""
+msgstr "Bloc"
 
 #: src/components/block/Block.jsx:216
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "Iteratiile VDF pentru bloc"
 
 #: src/components/block/Block.jsx:317
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Blocul la inaltimea {0} in blockchainul Chia"
 
 #: src/components/fullNode/FullNode.jsx:335
 msgid "Block hash"
-msgstr ""
+msgstr "Bloc hash"
 
 #: src/components/block/Block.jsx:144
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "Blocul cu hashul {headerHash} nu exista."
 
 #: src/components/fullNode/FullNode.jsx:304
 msgid "Blocks"
-msgstr ""
+msgstr "Blocuri"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Navigheaza"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:49
 msgid "But you are currently farming <0/>"
-msgstr ""
+msgstr "Dar tu farmezi acum <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Cumpara"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "Portofel CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -182,87 +182,87 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "Poate fi facut backup la 'mnemonic seed'"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:48
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Anulare"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Anulati si cheltuiti"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "Atentie, stergerea acestor ploturi le va sterge definitiv. Verifica daca dispozitivele de stocare sunt conectate corespunzator."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Provocare"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Hashul provocarii"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Portofel Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Alegeti numarul de ploturi"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Alegeti marimea plotului"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Inchide"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Inchide nodul si serverul"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Monede:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Culoare"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
-msgstr ""
+msgstr "Informatii despre culoare"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Stringul culorii"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:185
 msgid "Colour:"
-msgstr ""
+msgstr "Culoare:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Monede colorate"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Optiuni monede colorate"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Confirmat la blocul:"
 
 #: src/components/wallet/WalletHistory.tsx:39
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Confirmat la inaltimea {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
