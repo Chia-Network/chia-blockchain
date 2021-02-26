@@ -32,10 +32,10 @@ def compute_wallets_stats(wallets):
 
     pool_coins = Decimal(0)
     for wallet in wallets:
-        if 'transactions' not in wallet:
+        if "transactions" not in wallet:
             continue
 
-        for tx in (wallet['transactions'] or []):
+        for tx in wallet["transactions"] or []:
             if len(tx.additions) == 0:
                 continue
 
@@ -74,7 +74,9 @@ async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
         self_hostname = config["self_hostname"]
         if harvester_rpc_port is None:
             harvester_rpc_port = config["harvester"]["rpc_port"]
-        harvester_client = await HarvesterRpcClient.create(self_hostname, uint16(harvester_rpc_port), DEFAULT_ROOT_PATH, config)
+        harvester_client = await HarvesterRpcClient.create(
+            self_hostname, uint16(harvester_rpc_port), DEFAULT_ROOT_PATH, config
+        )
         plots = await harvester_client.get_plots()
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
@@ -127,6 +129,7 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
     await wallet_client.await_closed()
     return stats
 
+
 async def is_farmer_running(farmer_rpc_port: int) -> bool:
     is_running = False
     try:
@@ -167,6 +170,7 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[Dict[str, Any]]:
     await farmer_client.await_closed()
     return signage_points
 
+
 async def challenges(farmer_rpc_port: int) -> None:
     signage_points = await get_challenges(farmer_rpc_port)
     if signage_points is None:
@@ -174,7 +178,9 @@ async def challenges(farmer_rpc_port: int) -> None:
 
     signage_points.reverse()
     for signage_point in signage_points:
-        print(f"Hash: {signage_point['signage_point']['challenge_hash']}, Index: {signage_point['signage_point']['signage_point_index']}")
+        print(
+            f"Hash: {signage_point['signage_point']['challenge_hash']}, Index: {signage_point['signage_point']['signage_point_index']}"
+        )
 
 
 async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
@@ -208,7 +214,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
 
     total_plot_size = 0
     if plots is not None:
-        total_plot_size = sum(map(lambda x: x['file_size'], plots['plots']))
+        total_plot_size = sum(map(lambda x: x["file_size"], plots["plots"]))
 
         print(f"Plot count: {len(plots['plots'])}")
 
@@ -237,21 +243,20 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Estimated network space: Unknown")
 
     if blockchain_state is not None and plots is not None:
-        proportion = total_plot_size / blockchain_state['space'] if blockchain_state['space'] else 0
-        minutes = MINUTES_PER_BLOCK / proportion if proportion  else 0
+        proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else 0
+        minutes = MINUTES_PER_BLOCK / proportion if proportion else 0
 
         print("Expected time to win: ", end="")
         if minutes == 0:
             print("Unknown")
-        elif (minutes > 60 * 24):
+        elif minutes > 60 * 24:
             print(f"{math.floor(minutes/(60*24))} days")
-        elif (minutes > 60):
+        elif minutes > 60:
             print(f"{math.floor(minutes/60)} hours")
         else:
             print(f"{math.floor(minutes)} minutes")
     else:
         print("Expected time to win: Unknown")
-
 
 
 @click.group("farm", short_help="manage your farm")
@@ -291,8 +296,7 @@ def farm_cmd() -> None:
     "-fp",
     "--farmer-rpc-port",
     help=(
-        "Set the port where the Farmer is hosting the RPC interface. "
-        "See the rpc_port under farmer in config.yaml."
+        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml."
     ),
     type=int,
     default=8559,
@@ -301,13 +305,13 @@ def farm_cmd() -> None:
 def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
+
 @farm_cmd.command("challenges", short_help="show the lastest challenges")
 @click.option(
     "-fp",
     "--farmer-rpc-port",
     help=(
-        "Set the port where the Farmer is hosting the RPC interface. "
-        "See the rpc_port under farmer in config.yaml."
+        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml."
     ),
     type=int,
     default=8559,
