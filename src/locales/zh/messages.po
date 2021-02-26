@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 23:23\n"
+"PO-Revision-Date: 2021-02-26 00:19\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -108,59 +108,59 @@ msgstr "后退"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "备份文件可以用来恢复智能钱包"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
 #: src/components/wallet/standard/WalletStandard.tsx:192
 msgid "Balance"
-msgstr ""
+msgstr "余额"
 
 #: src/components/block/Block.jsx:292
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "基础挖矿奖励数量"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "下面是当前区块的挑战。 你的plot或许包含了对这些挑战的空间证明。这些区块目前还未包含时间证明。"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "基于前5小时的最佳估计"
 
 #: src/components/block/Block.jsx:117
 #: src/components/block/Block.jsx:129
 #: src/components/block/Block.jsx:141
 #: src/components/block/Block.jsx:308
 msgid "Block"
-msgstr ""
+msgstr "区块"
 
 #: src/components/block/Block.jsx:216
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "区块可验证延迟函数迭代"
 
 #: src/components/block/Block.jsx:317
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Chia 区块链上高度为 {0} 的区块"
 
 #: src/components/fullNode/FullNode.jsx:335
 msgid "Block hash"
-msgstr ""
+msgstr "区块哈希"
 
 #: src/components/block/Block.jsx:144
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "哈希为 {headerHash} 的区块不存在。"
 
 #: src/components/fullNode/FullNode.jsx:304
 msgid "Blocks"
-msgstr ""
+msgstr "区块"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "浏览"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:49
 msgid "But you are currently farming <0/>"
@@ -170,7 +170,7 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "购买"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
@@ -201,27 +201,27 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "挑战"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "挑战哈希"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia钱包"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "选择Plot文件数量"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:16
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "选择Plot文件大小"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "关闭"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -234,7 +234,7 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "色彩"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
@@ -246,11 +246,11 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:185
 msgid "Colour:"
-msgstr ""
+msgstr "色彩："
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "染色币"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
@@ -435,29 +435,29 @@ msgstr ""
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "Delete Plot"
-msgstr ""
+msgstr "删除Plot文件"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "删除所有密钥"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "删除密钥"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "删除所有密钥将会把你的密钥永久删除，请确保你已备份。确定还要继续吗？"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "删除密钥将会把此密钥永久删除，请确保你已备份。确定还要继续吗？"
 
 #: src/components/block/Block.jsx:202
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Difficulty"
-msgstr ""
+msgstr "难度"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -465,16 +465,16 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "分布式身份选项"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr ""
+msgstr "你的机器上有已经完成的Plot文件吗？ <0>添加Plot路径</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr ""
+msgstr "你的机器支持并行P盘吗？"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
@@ -497,7 +497,7 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "错误"
 
 #: src/components/wallet/standard/WalletStandard.tsx:304
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -567,11 +567,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:780
 #: src/components/wallet/standard/WalletStandard.tsx:348
 msgid "Fee"
-msgstr ""
+msgstr "费用"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 msgid "Fee (TXCH)"
-msgstr ""
+msgstr "费用 (TXCH)"
 
 #: src/components/block/Block.jsx:296
 msgid "Fees Amount"
@@ -599,11 +599,11 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
 msgid "Full Node"
-msgstr ""
+msgstr "全节点"
 
 #: src/components/fullNode/FullNode.jsx:265
 msgid "Full Node Status"
-msgstr ""
+msgstr "全节点状态"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -625,19 +625,19 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:92
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Height"
-msgstr ""
+msgstr "高度"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
-msgstr ""
+msgstr "帮助翻译"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr ""
+msgstr "隐藏高级选项"
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "History"
-msgstr ""
+msgstr "历史"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
@@ -646,7 +646,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeConnections.jsx:93
 msgid "IP address"
-msgstr ""
+msgstr "IP地址"
 
 #: src/components/fullNode/FullNodeConnections.jsx:162
 msgid "IP address / host"
@@ -666,7 +666,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
 msgid "In Progress"
-msgstr ""
+msgstr "进行中"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Incoming"
