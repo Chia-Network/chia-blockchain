@@ -8,7 +8,7 @@ msgstr ""
 "Language: da\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 19:04\n"
+"PO-Revision-Date: 2021-02-26 20:02\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -142,7 +142,7 @@ msgstr "Blok VDF iterationer"
 
 #: src/components/block/Block.jsx:317
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Block ved højde {0} i Chia blockchainen"
 
 #: src/components/fullNode/FullNode.jsx:335
 msgid "Block hash"
@@ -164,7 +164,7 @@ msgstr "Gennemse"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:49
 msgid "But you are currently farming <0/>"
-msgstr ""
+msgstr "Men du høster lige nu <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -174,7 +174,7 @@ msgstr "Køb"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC Pung"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -209,7 +209,7 @@ msgstr "Udfordringshash"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia Pung"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -221,7 +221,7 @@ msgstr "Vælg plotfil størrelse"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Luk"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -234,7 +234,7 @@ msgstr "Mønter:"
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Farve"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
@@ -250,15 +250,15 @@ msgstr "Farve:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Farvet Mønt"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Farvet Mønt Indstillinger"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Bekræftet ved block:"
 
 #: src/components/wallet/WalletHistory.tsx:39
 msgid "Confirmed at height {0}"
@@ -266,41 +266,41 @@ msgstr "Bekræftet ved højde {0}"
 
 #: src/components/fullNode/FullNodeConnections.jsx:179
 msgid "Connect"
-msgstr ""
+msgstr "Forbind"
 
 #: src/components/fullNode/FullNodeConnections.jsx:155
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Forbundet med andre brugere"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:162
 msgid "Connected"
-msgstr ""
+msgstr "Forbundet"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Forbinder pung"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Connection Status"
-msgstr ""
+msgstr "Forbindelses Status"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Forbindelses Status:"
 
 #: src/components/fullNode/FullNodeConnections.jsx:102
 msgid "Connection type"
-msgstr ""
+msgstr "Forbindelses Type"
 
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
-msgstr ""
+msgstr "Forbindelser"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Kopieret"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -308,11 +308,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
 #: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "Copy"
-msgstr ""
+msgstr "Kopier"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Kopier til Udklipsholder"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -320,11 +320,11 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Opret"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Opret DID pung"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
