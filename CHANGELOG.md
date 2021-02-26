@@ -6,13 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased aka Release Candidate 4 - 2020-0?-??
-
-### Added
-
-### Changed
+## Release Candidate 4 - 2020-02-25
 
 ### Fixed
+
+- This is a bug fix release for RC3. There was an unexpected interaction between the GUI and the Click cli tool regarding Windows that made GUI plotting not start on all GUIs.
 
 ## 1.0rc3 aka Release Candidate 3 - 2021-02-25
 
