@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 02:16\n"
+"PO-Revision-Date: 2021-02-26 03:11\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1395,7 +1395,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "主网要求的最小绘图大小为k=32"
 
 #: src/components/fullNode/FullNode.jsx:143
 msgid "The node is not synced"
