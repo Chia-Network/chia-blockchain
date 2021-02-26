@@ -173,10 +173,12 @@ async def challenges(farmer_rpc_port: int) -> None:
 
     signage_points.reverse()
     for signage_point in signage_points:
-        print((
-            f"Hash: {signage_point['signage_point']['challenge_hash']}"
-            f"Index: {signage_point['signage_point']['signage_point_index']}"
-        ))
+        print(
+            (
+                f"Hash: {signage_point['signage_point']['challenge_hash']}"
+                f"Index: {signage_point['signage_point']['signage_point_index']}"
+            )
+        )
 
 
 async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
