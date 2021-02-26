@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 20:05\n"
+"PO-Revision-Date: 2021-02-26 13:38\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -402,7 +402,7 @@ msgstr "Aktuell handelsstatus"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr ""
+msgstr "VARNING: permanent ta bort privat nyckel"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
@@ -1161,7 +1161,7 @@ msgstr "Byt namn"
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Smart Wallets From Backup"
-msgstr ""
+msgstr "Återställ smarta plånböcker från säkerhetskopia"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1186,7 +1186,7 @@ msgstr "Andra tillfällig mapp"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr ""
+msgstr "Visa privat nyckel"
 
 #: src/middleware/middleware_api.jsx:269
 msgid "Seed:"
