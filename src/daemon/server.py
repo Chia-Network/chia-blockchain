@@ -379,6 +379,8 @@ class WebSocketServer:
         command_args.append(f"-r {r}")
         command_args.append(f"-s {s}")
 
+        self.log.warning(f"command_args is: {command_args}")
+
         if a is not None:
             command_args.append(f"-a {a}")
 
