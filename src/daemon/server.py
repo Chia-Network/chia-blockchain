@@ -369,18 +369,28 @@ class WebSocketServer:
 
         command_args: List[str] = []
         command_args += service_name.split(" ")
-        command_args.append(f"-k {k}")
-        command_args.append(f"-n {n}")
-        command_args.append(f"-t {t}")
-        command_args.append(f"-2 {t2}")
-        command_args.append(f"-d {d}")
-        command_args.append(f"-b {b}")
-        command_args.append(f"-u {u}")
-        command_args.append(f"-r {r}")
-        command_args.append(f"-s {s}")
+        command_args.append(f"-k")
+        command_args.append(f"{k}")
+        command_args.append(f"-n")
+        command_args.append(f"{n}")
+        command_args.append(f"-t")
+        command_args.append(f"{t}")
+        command_args.append(f"-2")
+        command_args.append(f"{t2}")
+        command_args.append(f"-d")
+        command_args.append(f"{d}")
+        command_args.append(f"-b")
+        command_args.append(f"{b}")
+        command_args.append(f"-u")
+        command_args.append(f"{u}")
+        command_args.append(f"-r")
+        command_args.append(f"{r}")
+        command_args.append(f"-s")
+        command_args.append(f"{s}")
 
         if a is not None:
-            command_args.append(f"-a {a}")
+            command_args.append(f"-a")
+            command_args.append(f"{a}")
 
         if e is True:
             command_args.append("-e")
@@ -427,6 +437,7 @@ class WebSocketServer:
 
             service_name = config["service_name"]
             command_args = config["command_args"]
+
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process
