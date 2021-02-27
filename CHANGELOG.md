@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Release Candidate 5 - 2020-??-??
+
+### Added
+
+- `chia plots check` will list out all the failed plot filenames at the end of the report. PR @eFishCent
+
+### Fixed
+- `chia plots check` shouldn't crash when encountering plots that cause RuntimeError. PR @eFishCent
+
 ## Release Candidate 4 - 2020-02-25
 
 ### Fixed
