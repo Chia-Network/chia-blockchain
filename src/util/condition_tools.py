@@ -21,7 +21,7 @@ def parse_sexp_to_condition(
     If it fails, returns an Error
     """
     if not sexp.listp():
-        return Err.SEXP_ERROR, None
+        return Err.INVALID_CONDITION, None
     items = sexp.as_python()
     if not isinstance(items[0], bytes):
         return Err.INVALID_CONDITION, None

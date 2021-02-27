@@ -18,5 +18,5 @@ def puzzle_for_pk(public_key: Program) -> Program:
     return MOD.curry(public_key)
 
 
-def solution_for_conditions(puzzle_reveal: Program, conditions: Program) -> Program:
-    return conditions
+def solution_for_conditions(conditions: Program) -> Program:
+    return conditions.to([conditions])
