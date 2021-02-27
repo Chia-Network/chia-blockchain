@@ -8,7 +8,7 @@ msgstr ""
 "Language: da\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-27 00:23\n"
+"PO-Revision-Date: 2021-02-27 01:22\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -820,78 +820,78 @@ msgstr "Ingen 24 ord seed, da denne nøgle allerede er importeret."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "Ingen blokke farmet endnu"
 
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "No previous transactions"
-msgstr ""
+msgstr "Ingen tidligere transaktioner"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.jsx:90
 msgid "Node ID"
-msgstr ""
+msgstr "Node ID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:43
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "Ingen af dine plotfiler har passeret plotfilteret endnu."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "Ikke Tilgængelig"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Not Synced"
-msgstr ""
+msgstr "Ikke Synkroniseret"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "Ikke accepteret endnu"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "Ikke bekrætet endnu"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:164
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Not connected"
-msgstr ""
+msgstr "Ikke forbundet"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr ""
+msgstr "Ikke fundet Plotfiler"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "Nummer af spande"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr ""
+msgstr "Nummer af tråde"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:49
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "Bud"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Bud Oprettet"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr ""
+msgstr "Udgående"
 
 #: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
-msgstr ""
+msgstr "Top Højde"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -899,44 +899,44 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
-msgstr ""
+msgstr "Top Tidspunkt"
 
 #: src/components/wallet/WalletHistory.tsx:41
 msgid "Pending"
-msgstr ""
+msgstr "Afventende"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:601
 #: src/components/wallet/standard/WalletStandard.tsx:225
 msgid "Pending Balance"
-msgstr ""
+msgstr "Afventende Balance"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
 #: src/components/wallet/standard/WalletStandard.tsx:232
 msgid "Pending Change"
-msgstr ""
+msgstr "Afventende Ændring"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:592
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Afventende Total Balance"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Venligst tilføj et handelspar"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Venligst indtast 0 gebyr. Positive gebyr ikke understøttet endnu for RL."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Indtast venligst et gyldigt indledende mønt beløb"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
 #: src/components/wallet/standard/WalletStandard.tsx:286
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "Venligst indtast et gyldigt numerisk beløb"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -944,36 +944,36 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:688
 #: src/components/wallet/standard/WalletStandard.tsx:294
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Venligst indtast et gyldigt numerisk gebyr"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Venligst indtast et gyldigt numerisk interval længde"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Venligst indtast et gyldigt brugbart beløb"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Venligst indtast en gyldig pubkey"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 #: src/components/wallet/standard/WalletStandard.tsx:274
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Venligst udfør synkronisering før du opretter en transaktion"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
-msgstr ""
+msgstr "Vælg beløb"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Vælg køb eller sælg"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Vælg mønt farve"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -982,49 +982,49 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "Vælg slut folder"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "Vælg midlertidig folder"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
-msgstr ""
+msgstr "Plot"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:7
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
-msgstr ""
+msgstr "Plot Antal"
 
 #: src/components/block/Block.jsx:254
 msgid "Plot Id"
-msgstr ""
+msgstr "Plot ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:60
 msgid "Plot Key"
-msgstr ""
+msgstr "Plot Nøgle"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "Plot Name"
-msgstr ""
+msgstr "Plot Navn"
 
 #: src/components/block/Block.jsx:230
 msgid "Plot Public Key"
-msgstr ""
+msgstr "Plot Offentlig Nøgle"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Seed"
-msgstr ""
+msgstr "Plot Seed"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:28
 msgid "Plot Size"
-msgstr ""
+msgstr "Plot Størrelse"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:27
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Plot er en duplikat af {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
@@ -1087,11 +1087,11 @@ msgstr "Privat nøgle med public fingeraftryk {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:241
 msgid "Private key {0}"
-msgstr ""
+msgstr "Privat nøgle {0}"
 
 #: src/middleware/middleware_api.jsx:251
 msgid "Private key:"
-msgstr ""
+msgstr "Privat nøgle:"
 
 #: src/components/block/Block.jsx:226
 msgid "Proof of Space Size"
@@ -1107,7 +1107,7 @@ msgstr "Pubnøgle"
 
 #: src/middleware/middleware_api.jsx:259
 msgid "Public key:"
-msgstr ""
+msgstr "Offentlig nøgle:"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1119,7 +1119,7 @@ msgstr "RAM max forbrug"
 
 #: src/components/wallet/Wallets.tsx:41
 msgid "RL Wallet"
-msgstr ""
+msgstr "RL Pung"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1127,7 +1127,7 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "Rate Begrænset"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
@@ -1411,73 +1411,73 @@ msgstr "Det seed der er brugt tul at generer plotfilen. Dette er afhængig af po
 
 #: src/components/block/Block.jsx:209
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "Det samlede nummer af VDF (verifiable delay function) eller bevis af tid gentagelser på den samlede kæde op til denne blok."
 
 #: src/components/block/Block.jsx:219
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "Det samlede nummer af VDF (verifiable delay function) eller bevis af tid gentagelser på denne blok."
 
 #: src/components/block/Block.jsx:299
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "Det samlede transaktionsgebyr i denne blok. Belønnet til farmeren."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr ""
+msgstr "Disse plotfiler er invalide, måske vil du fjerne dem."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Denne funktion er kun tilgængelig fra GUI."
 
 #: src/components/wallet/standard/WalletStandard.tsx:199
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Dette er beløbet af Chia du kan bruge på transaktioner nu. Dette eksluderer afventende belønninger fra farmede gevinster, afventende indkomne transaktioner, og Chia du lige har brugt, men ikke er skrevet til blokkæden endnu."
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Dette er den afventende ændring, som er vekslet til dig selv, men ikke er bekræftet endnu."
 
 #: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Dette er summen af indkommende og udgående afventende transaktioner (ikke skrevet ind i blokkæden endnu). Dette er ekslusivt farmede gevinster."
 
 #: src/components/fullNode/FullNode.jsx:188
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Dette er tidstemplet for den sidste blok."
 
 #: src/components/block/Block.jsx:173
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Dette er tidstemplet fra blokken da den blev farmet af farmeren, hvilket er før den blev færdiggjordt med et bevis af tid"
 
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Dette er det tottale beløb af chia i blokkæden ved den nuværende sidste blok, som er kontrolleret af din privat nøgle. Dette inkluderer frosne farmer gevinster, men ikke afventende indkommende og udgående transaktioner."
 
 #: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Dette er den totalle + afventende balance: det er hvad din balance vil være når alle afventende transaktioner er bevist."
 
 #: src/components/fullNode/FullNode.jsx:152
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Denne node er fuldt synkroniseret og validerer netværket"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge."
-msgstr ""
+msgstr "Denne tabel vise dig den sidste gang din farmer prøvede at vinde en blok udfordring."
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Dette handel er lavet på dette tidspunkt"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Denne handel blev inkluderet i blokkæden i denne blok"
 
 #: src/components/fullNode/FullNode.jsx:105
 msgid "Time Created"
-msgstr ""
+msgstr "Tid Oprettet"
 
 #: src/components/trading/TradingOverview.jsx:192
 #~ msgid "Time this trade was created at this time"
@@ -1485,126 +1485,126 @@ msgstr ""
 
 #: src/components/block/Block.jsx:170
 msgid "Timestamp"
-msgstr ""
+msgstr "Tidsstempel"
 
 #: src/components/wallet/WalletHistory.tsx:31
 msgid "To"
-msgstr ""
+msgstr "Til"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "Total Balance"
-msgstr ""
+msgstr "Total Balance"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Total Chia Farmet"
 
 #: src/components/fullNode/FullNode.jsx:206
 msgid "Total Iterations"
-msgstr ""
+msgstr "Total iterationer"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "Total Netværks Plads"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:99
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Total Plot Størrelse:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Total Størrelse af Plotfiler"
 
 #: src/components/block/Block.jsx:206
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Total VDF Iterationer"
 
 #: src/components/fullNode/FullNode.jsx:208
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Total iterationer siden blokkædens start"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Handel Detaljer"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "Handel ID"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "Handel ID:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Handel Overblik"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Handler vil blive listet her"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "Handler"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "Handelshistorik"
 
 #: src/components/block/Block.jsx:265
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Transaktionsfilter Hash"
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
-msgstr ""
+msgstr "Type"
 
 #: src/components/fullNode/FullNode.jsx:111
 msgid "Unfinished"
-msgstr ""
+msgstr "Ikke Afsluttet"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Unik identifikator"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:299
 msgid "User Pubkey"
-msgstr ""
+msgstr "Bruger Pubkey"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF blok iterationer"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
-msgstr ""
+msgstr "Vis Log"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "Vis Handel"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
 #: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "View pending balances"
-msgstr ""
+msgstr "Vis afventende balance"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:295
 msgid "View pending balances..."
-msgstr ""
+msgstr "Vis afventende balance..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:25
 msgid "Wait for synchronization"
-msgstr ""
+msgstr "Afvent synkronisering"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1637,7 +1637,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
-msgstr ""
+msgstr "Punge"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -1645,15 +1645,15 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:92
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Vil du tjene flere Chia? Tilføj flere plotfiler til din farmer."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Vil du have en forsinkelse før det næste plot starter?"
 
 #: src/components/block/Block.jsx:184
 msgid "Weight"
-msgstr ""
+msgstr "Vægt"
 
 #: src/components/block/Block.jsx:187
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
