@@ -26,13 +26,10 @@ def puzzle_for_pk(public_key: bytes) -> Program:
     return MOD.curry(public_key)
 
 
-def puzzle_reveal_for_conditions(conditions: Program) -> Program:
-    return p2_conditions.puzzle_for_conditions(conditions)
-
-
 def solution_for_conditions(conditions) -> Program:
-    return Program.to(0)
+    delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
+    return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
 
 
 def solution_for_delegated_puzzle(delegated_puzzle: Program, delegated_solution: Program) -> Program:
-    return Program.to([delegated_puzzle, delegated_solution])
+    return delegated_puzzle.to([delegated_puzzle, delegated_solution])
