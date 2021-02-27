@@ -86,13 +86,13 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
         log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
-        caught_exception: Bool = False
+        caught_exception: bool = False
         for i in range(num_start, num_end):
             challenge = std_hash(i.to_bytes(32, "big"))
-# Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
+            # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
             try:
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
-# Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
+                    # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
                         proof = pr.get_full_proof(challenge, index)
                         total_proofs += 1
@@ -110,9 +110,9 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                     return
                 log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                 caught_exception = True
-            if caught_exception == True:
+            if caught_exception is True:
                 break
-        if total_proofs > 0 and caught_exception == False:
+        if total_proofs > 0 and caught_exception is False:
             log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
