@@ -24,10 +24,12 @@
 """Reference implementation for Bech32m and segwit addresses."""
 from src.types.blockchain_format.sized_bytes import bytes32
 
+from typing import Tuple, Optional, List
+
 CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
 
-def bech32_polymod(values):
+def bech32_polymod(values: List[int]) -> int:
     """Internal function that computes the Bech32 checksum."""
     generator = [0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3]
     chk = 1
@@ -39,7 +41,7 @@ def bech32_polymod(values):
     return chk
 
 
-def bech32_hrp_expand(hrp):
+def bech32_hrp_expand(hrp: str) -> List[int]:
     """Expand the HRP into values for checksum computation."""
     return [ord(x) >> 5 for x in hrp] + [0] + [ord(x) & 31 for x in hrp]
 
@@ -47,23 +49,23 @@ def bech32_hrp_expand(hrp):
 M = 0x2BC830A3
 
 
-def bech32_verify_checksum(hrp, data):
+def bech32_verify_checksum(hrp: str, data: List[int]) -> bool:
     return bech32_polymod(bech32_hrp_expand(hrp) + data) == M
 
 
-def bech32_create_checksum(hrp, data):
+def bech32_create_checksum(hrp: str, data: List[int]) -> List[int]:
     values = bech32_hrp_expand(hrp) + data
     polymod = bech32_polymod(values + [0, 0, 0, 0, 0, 0]) ^ M
     return [(polymod >> 5 * (5 - i)) & 31 for i in range(6)]
 
 
-def bech32_encode(hrp, data):
+def bech32_encode(hrp: str, data: List[int]) -> str:
     """Compute a Bech32 string given HRP and data values."""
     combined = data + bech32_create_checksum(hrp, data)
     return hrp + "1" + "".join([CHARSET[d] for d in combined])
 
 
-def bech32_decode(bech):
+def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
     """Validate a Bech32 string, and determine HRP and data."""
     if (any(ord(x) < 33 or ord(x) > 126 for x in bech)) or (bech.lower() != bech and bech.upper() != bech):
         return (None, None)
@@ -80,7 +82,7 @@ def bech32_decode(bech):
     return hrp, data[:-6]
 
 
-def convertbits(data, frombits, tobits, pad=True):
+def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True):
     """General power-of-2 base conversion."""
     acc = 0
     bits = 0
