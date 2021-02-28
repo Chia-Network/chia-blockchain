@@ -1437,7 +1437,9 @@ class FullNode:
         - Checks if the provided vdf_info is correct, assuming it refers to the start of sub-slot.
         - Checks if the existing proof was non-compact. Ignore this proof if we already have a compact proof.
         """
-        # TODO(Florin): Use a cache for recent proofs, and ignore proof if it was already received.
+        is_fully_compactified = self.block_store.is_fully_compactified(header_hash)
+        if is_fully_compactified is None or is_fully_compactified:
+            return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             return False
         if not vdf_proof.is_valid(self.constants, ClassgroupElement.get_default_element(), vdf_info):
@@ -1506,6 +1508,9 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+        is_fully_compactified = self.block_store.is_fully_compactified(request.header_hash)
+        if is_fully_compactified is None or is_fully_compactified:
+            return False
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
         if header_block is None:
             return
@@ -1594,6 +1599,13 @@ class FullNode:
                 if max_height is None:
                     await asyncio.sleep(30)
                     continue
+                # Calculate 'min_height' correctly the first time this task is launched, using the db.
+                while min_height < max(0, max_height - 1000):
+                    header_hash = self.blockchain.height_to_hash(min_height)
+                    if self.block_store.is_fully_compactified(header_hash):
+                        min_height += 1
+                    else:
+                        break
                 batches_finished = 0
                 self.log.info("Scanning the blockchain for uncompact blocks.")
                 for h in range(min_height, max_height, 100):
