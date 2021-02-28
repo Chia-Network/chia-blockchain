@@ -77,6 +77,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     total_good_plots: Counter = Counter()
     total_bad_plots = 0
     total_size = 0
+    bad_plots_list: List[Path] = []
 
     for plot_path, plot_info in provers.items():
         pr = plot_info.prover
@@ -85,26 +86,37 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
         log.info(f"\tLocal sk: {plot_info.local_sk}")
         total_proofs = 0
+        caught_exception: bool = False
         for i in range(num_start, num_end):
             challenge = std_hash(i.to_bytes(32, "big"))
-            for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
-                try:
-                    proof = pr.get_full_proof(challenge, index)
-                    total_proofs += 1
-                    ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
-                    assert quality_str == ver_quality_str
-                except BaseException as e:
-                    if isinstance(e, KeyboardInterrupt):
-                        log.warning("Interrupted, closing")
-                        return
-                    log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
-        if total_proofs > 0:
+            # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
+            try:
+                for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
+                    # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
+                    try:
+                        proof = pr.get_full_proof(challenge, index)
+                        total_proofs += 1
+                        ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
+                        assert quality_str == ver_quality_str
+                    except AssertionError as e:
+                        log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+                        caught_exception = True
+            except BaseException as e:
+                if isinstance(e, KeyboardInterrupt):
+                    log.warning("Interrupted, closing")
+                    return
+                log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
+                caught_exception = True
+            if caught_exception is True:
+                break
+        if total_proofs > 0 and caught_exception is False:
             log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
         else:
             total_bad_plots += 1
             log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            bad_plots_list.append(plot_path)
     log.info("")
     log.info("")
     log.info("Summary")
@@ -114,7 +126,9 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"{count} plots of size {k}")
     grand_total_bad = total_bad_plots + len(failed_to_open_filenames)
     if grand_total_bad > 0:
-        log.warning(f"{grand_total_bad} invalid plots")
+        log.warning(f"{grand_total_bad} invalid plots found:")
+        for bad_plot_path in bad_plots_list:
+            log.warning(f"{bad_plot_path}")
     if len(no_key_filenames) > 0:
         log.warning(
             f"There are {len(no_key_filenames)} plots with a farmer or pool public key that "

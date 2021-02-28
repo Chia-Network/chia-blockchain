@@ -23,7 +23,7 @@ from src.wallet.puzzles.genesis_by_coin_id_with_0 import create_genesis_or_zero_
 from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import create_genesis_puzzle_or_zero_coin_checker
 
 
-CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
+CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 
 NULL_SIGNATURE = G2Element.generator() * 0
 

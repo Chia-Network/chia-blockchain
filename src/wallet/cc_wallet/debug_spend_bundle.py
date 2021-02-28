@@ -14,7 +14,7 @@ from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.hash import std_hash
 
 
-CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
+CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 

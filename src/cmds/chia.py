@@ -15,6 +15,7 @@ from src.cmds.show import show_cmd
 from src.cmds.start import start_cmd
 from src.cmds.stop import stop_cmd
 from src.cmds.netspace import netspace_cmd
+from src.cmds.farm import farm_cmd
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -52,6 +53,7 @@ cli.add_command(show_cmd)
 cli.add_command(start_cmd)
 cli.add_command(stop_cmd)
 cli.add_command(netspace_cmd)
+cli.add_command(farm_cmd)
 
 
 def main() -> None:

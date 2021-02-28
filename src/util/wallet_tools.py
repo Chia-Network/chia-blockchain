@@ -59,7 +59,7 @@ class WalletTool:
         self.next_address = uint32(self.next_address + 1)
         return self.next_address
 
-    def get_private_key_for_puzzle_hash(self, puzzle_hash) -> PrivateKey:
+    def get_private_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> PrivateKey:
         if puzzle_hash in self.puzzle_pk_cache:
             child = self.puzzle_pk_cache[puzzle_hash]
             private = master_sk_to_wallet_sk(self.private_key, uint32(child))
@@ -89,7 +89,7 @@ class WalletTool:
         puzzle = self.get_new_puzzle()
         return puzzle.get_tree_hash()
 
-    def sign(self, value, pubkey) -> G2Element:
+    def sign(self, value: bytes, pubkey: bytes) -> G2Element:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
         return AugSchemeMPL.sign(privatekey, value)
 
@@ -125,7 +125,7 @@ class WalletTool:
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]],
         fee: int = 0,
-        secret_key=None,
+        secret_key: Optional[PrivateKey] = None,
     ) -> List[CoinSolution]:
         spends = []
         spend_value = coin.amount
