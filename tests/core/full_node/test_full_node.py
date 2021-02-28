@@ -76,7 +76,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
     url = f"wss://{self_hostname}:{server._port}/ws"
-    ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+    ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
         NodeType.FULL_NODE,
         ws,

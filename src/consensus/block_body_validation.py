@@ -253,9 +253,9 @@ async def validate_block_body(
         if fork_h == -1:
             coin_store_reorg_height = -1
         else:
-            last_sb_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_h)))
-            assert last_sb_in_common is not None
-            coin_store_reorg_height = last_sb_in_common.height
+            last_block_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_h)))
+            assert last_block_in_common is not None
+            coin_store_reorg_height = last_block_in_common.height
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}

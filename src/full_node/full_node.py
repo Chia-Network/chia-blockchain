@@ -604,7 +604,7 @@ class FullNode:
                 if peer.closed:
                     to_remove.append(peer)
                     continue
-                response = await peer.request_blocks(request)
+                response = await peer.request_blocks(request, timeout=15)
                 if response is None:
                     await peer.close()
                     to_remove.append(peer)
