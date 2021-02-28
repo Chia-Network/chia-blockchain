@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
 import {
   Folder as FolderIcon,
   Delete as DeleteIcon,
@@ -52,12 +53,14 @@ export default function PlotAddDirectoryDialog(props: Props) {
       open={open}
     >
       <DialogTitle id="confirmation-dialog-title">
-        Add a plot
+        <Trans>Add a plot</Trans>
       </DialogTitle>
       <DialogContent dividers>
         <Typography>
-          This allows you to add a directory that has plots in it. If you have
-          not created any plots, go to the plotting screen.
+          <Trans>
+            This allows you to add a directory that has plots in it. If you have
+            not created any plots, go to the plotting screen.
+          </Trans>
         </Typography>
         <Box display="flex">
           <List dense>
@@ -89,14 +92,14 @@ export default function PlotAddDirectoryDialog(props: Props) {
               variant="contained"
               color="primary"
             >
-              Add plot directory
+              <Trans>Add plot directory</Trans>
             </Button>
           </Box>
         </Box>
       </DialogContent>
       <DialogActions>
         <Button autoFocus onClick={handleClose} color="secondary">
-          Close
+          <Trans>Close</Trans>
         </Button>
       </DialogActions>
     </Dialog>
