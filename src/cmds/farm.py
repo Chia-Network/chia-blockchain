@@ -166,12 +166,15 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
     return signage_points
 
 
-async def challenges(farmer_rpc_port: int) -> None:
+async def challenges(farmer_rpc_port: int, limit: int) -> None:
     signage_points = await get_challenges(farmer_rpc_port)
     if signage_points is None:
         return
 
     signage_points.reverse()
+    if limit != 0:
+        signage_points = signage_points[:limit]
+
     for signage_point in signage_points:
         print(
             (
@@ -316,5 +319,13 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
     default=8559,
     show_default=True,
 )
-def challenges_cmd(farmer_rpc_port: int) -> None:
-    asyncio.run(challenges(farmer_rpc_port))
+@click.option(
+    "-l",
+    "--limit",
+    help="Limit the number of challenges shown. Use 0 to disable the limit.",
+    type=click.IntRange(0),
+    default=20,
+    show_default=True,
+)
+def challenges_cmd(farmer_rpc_port: int, limit: int) -> None:
+    asyncio.run(challenges(farmer_rpc_port, limit))
