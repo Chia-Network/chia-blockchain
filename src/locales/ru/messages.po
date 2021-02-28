@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-25 20:05\n"
+"PO-Revision-Date: 2021-02-28 00:49\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -108,7 +108,7 @@ msgstr "Назад"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Файл резервной копии используется для восстановления умных кошельков."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:285
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
@@ -300,7 +300,7 @@ msgstr "Подключения"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Скопировано"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:459
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
@@ -312,7 +312,7 @@ msgstr "Копировать"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Скопировать в буфер обмена"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -328,7 +328,7 @@ msgstr "Создать DID кошелек"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Создать Предложение"
 
 #: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
@@ -358,7 +358,7 @@ msgstr "Создать транзакцию"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr ""
+msgstr "Создать Резервную Копию"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
@@ -402,7 +402,7 @@ msgstr "Текущий торговый статус"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr ""
+msgstr "ОПАСНОСТЬ: удалить закрытый ключ навсегда"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
@@ -483,7 +483,7 @@ msgstr "Перетащите сюда файл с предложением сд�
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
-msgstr ""
+msgstr "Перетащите файл резервной копии"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -816,7 +816,7 @@ msgstr "Нет"
 
 #: src/middleware/middleware_api.jsx:277
 msgid "No 24 word seed, since this key is imported."
-msgstr ""
+msgstr "Нет 24 слов семя, так как этот ключ импортируется."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:11
 msgid "No blocks farmed yet"
@@ -875,7 +875,7 @@ msgstr "Количество потоков"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:49
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
@@ -973,7 +973,7 @@ msgstr "Пожалуйста, выберите купить или продат�
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Пожалуйста, выберите тип монеты"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1087,11 +1087,11 @@ msgstr "Приватный ключ с публичным отпечатком {
 
 #: src/middleware/middleware_api.jsx:241
 msgid "Private key {0}"
-msgstr ""
+msgstr "Закрытый ключ {0}"
 
 #: src/middleware/middleware_api.jsx:251
 msgid "Private key:"
-msgstr ""
+msgstr "Закрытый ключ:"
 
 #: src/components/block/Block.jsx:226
 msgid "Proof of Space Size"
@@ -1107,7 +1107,7 @@ msgstr "Публичный ключ"
 
 #: src/middleware/middleware_api.jsx:259
 msgid "Public key:"
-msgstr ""
+msgstr "Открытый ключ:"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1161,7 +1161,7 @@ msgstr "Переименовать"
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Smart Wallets From Backup"
-msgstr ""
+msgstr "Восстановить Умные Кошельки Из Резервной Копии"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1186,11 +1186,11 @@ msgstr "Расположение второй временной папки"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr ""
+msgstr "Увидеть закрытый ключ"
 
 #: src/middleware/middleware_api.jsx:269
 msgid "Seed:"
-msgstr ""
+msgstr "Семя:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
@@ -1265,7 +1265,7 @@ msgstr "Войти в систему"
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Skip"
-msgstr ""
+msgstr "Пропускать"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1469,7 +1469,7 @@ msgstr "Эта таблица показывает вам, когда ваша �
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Сделка была создана в это время"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
