@@ -42,7 +42,7 @@ async def show_async(
         if state:
             blockchain_state = await client.get_blockchain_state()
             if blockchain_state is None:
-                print("There is no blockchain found yet. Try again shortly.")
+                print("There is no blockchain found yet. Try again shortly")
                 return
             peak: Optional[BlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
@@ -67,7 +67,7 @@ async def show_async(
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
             else:
-                print("\nSearching for an initial chain.")
+                print("\nSearching for an initial chain\n")
                 print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
 
             if peak is not None:
@@ -162,7 +162,7 @@ async def show_async(
                 print("")
         if exit_node:
             node_stop = await client.stop_node()
-            print(node_stop, "Node stopped.")
+            print(node_stop, "Node stopped")
         if add_connection:
             if ":" not in add_connection:
                 print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
@@ -180,7 +180,7 @@ async def show_async(
         if remove_connection:
             result_txt = ""
             if len(remove_connection) != 8:
-                result_txt = "Invalid NodeID. Do not include '.'."
+                result_txt = "Invalid NodeID. Do not include '.'"
             else:
                 connections = await client.get_connections()
                 for con in connections:
@@ -192,16 +192,16 @@ async def show_async(
                             result_txt = f"Failed to disconnect NodeID {remove_connection}"
                         else:
                             result_txt = f"NodeID {remove_connection}... {NodeType(con['type']).name} "
-                            f"{con['peer_host']} disconnected."
+                            f"{con['peer_host']} disconnected"
                     elif result_txt == "":
-                        result_txt = f"NodeID {remove_connection}... not found."
+                        result_txt = f"NodeID {remove_connection}... not found"
             print(result_txt)
         if block_header_hash_by_height != "":
             block_header = await client.get_block_record_by_height(block_header_hash_by_height)
             if block_header is not None:
                 print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
             else:
-                print("Block height", block_header_hash_by_height, "not found.")
+                print("Block height", block_header_hash_by_height, "not found")
         if block_by_header_hash != "":
             block: Optional[BlockRecord] = await client.get_block_record(hexstr_to_bytes(block_by_header_hash))
             full_block: Optional[FullBlock] = await client.get_block(hexstr_to_bytes(block_by_header_hash))
@@ -256,12 +256,12 @@ async def show_async(
                     f"Fees Amount            {block.fees}\n"
                 )
             else:
-                print("Block with header hash", block_header_hash_by_height, "not found.")
+                print("Block with header hash", block_header_hash_by_height, "not found")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if full node rpc is running at {rpc_port}")
-            print("This is normal if full node is still starting up.")
+            print("This is normal if full node is still starting up")
         else:
             tb = traceback.format_exc()
             print(f"Exception from 'show' {tb}")
@@ -270,13 +270,13 @@ async def show_async(
     await client.await_closed()
 
 
-@click.command("show", short_help="show node information")
+@click.command("show", short_help="Show node information")
 @click.option(
     "-p",
     "--rpc-port",
     help=(
         "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml."
+        "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
     default=8555,
@@ -285,14 +285,14 @@ async def show_async(
 @click.option(
     "-wp",
     "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
     default=9256,
     show_default=True,
 )
-@click.option("-s", "--state", help="Show the current state of the blockchain.", is_flag=True, type=bool, default=False)
+@click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
-    "-c", "--connections", help="List nodes connected to this Full Node.", is_flag=True, type=bool, default=False
+    "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=False
 )
 @click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False)
 @click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
@@ -300,9 +300,9 @@ async def show_async(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
 @click.option(
-    "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height.", type=str, default=""
+    "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
-@click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash.", type=str, default="")
+@click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
 def show_cmd(
     rpc_port: int,
     wallet_rpc_port: int,

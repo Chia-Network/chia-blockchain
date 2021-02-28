@@ -135,7 +135,7 @@ def migrate_from(
         print("same as new path, exiting")
         return 1
     if not old_root.is_dir():
-        print(f"{old_root} not found - this is ok if you did not install this version.")
+        print(f"{old_root} not found - this is ok if you did not install this version")
         return 0
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
@@ -241,7 +241,7 @@ def init(create_certs: Path, root_path: Path):
                 print(f"** Directory {create_certs} does not exist **")
         else:
             print(f"** {root_path} does not exist **")
-            print("** please run `chia init` to migrate or create new config files **")
+            print("** Please run `chia init` to migrate or create new config files **")
     else:
         return chia_init(root_path)
 
@@ -310,7 +310,7 @@ def chia_init(root_path: Path):
         print(
             f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
             f"Please unset the environment variable and run chia init again\n"
-            f"or manually migrate config.yaml."
+            f"or manually migrate config.yaml"
         )
 
     print(f"Chia directory {root_path}")
@@ -398,7 +398,7 @@ def chia_init(root_path: Path):
     return 0
 
 
-@click.command("init", short_help="create or migrate to current")
+@click.command("init", short_help="Create or migrate the configuration")
 @click.option(
     "--create-certs",
     "-c",

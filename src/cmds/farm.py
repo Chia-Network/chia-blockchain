@@ -190,7 +190,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
 
-    print("Farmin status: ", end="")
+    print("Farming status: ", end="")
     if blockchain_state is None:
         print("Not available")
     elif blockchain_state["sync"]["sync_mode"]:
@@ -211,7 +211,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Total chia farmed: Unknown")
         print("User transaction fees: Unknown")
         print("Block rewards: Unkown")
-        print("Last height farmerd: Unkown")
+        print("Last height farmed: Unkown")
 
     total_plot_size = 0
     if plots is not None:
@@ -260,18 +260,18 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Expected time to win: Unknown")
 
 
-@click.group("farm", short_help="manage your farm")
+@click.group("farm", short_help="Manage your farm")
 def farm_cmd() -> None:
     pass
 
 
-@farm_cmd.command("summary", short_help="summary farming information")
+@farm_cmd.command("summary", short_help="Summary farming information")
 @click.option(
     "-p",
     "--rpc-port",
     help=(
         "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml."
+        "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
     default=8555,
@@ -280,7 +280,7 @@ def farm_cmd() -> None:
 @click.option(
     "-wp",
     "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml.",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
     default=9256,
     show_default=True,
@@ -289,8 +289,8 @@ def farm_cmd() -> None:
     "-hp",
     "--harvester-rpc-port",
     help=(
-        "Set the port where the Harvester is hosting the RPC interface."
-        "See the rpc_port under harvester in config.yaml."
+        "Set the port where the Harvester is hosting the RPC interface"
+        "See the rpc_port under harvester in config.yaml"
     ),
     type=int,
     default=8560,
@@ -300,7 +300,7 @@ def farm_cmd() -> None:
     "-fp",
     "--farmer-rpc-port",
     help=(
-        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml."
+        "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml"
     ),
     type=int,
     default=8559,
@@ -310,11 +310,11 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
 
-@farm_cmd.command("challenges", short_help="show the lastest challenges")
+@farm_cmd.command("challenges", short_help="Show the lastest challenges")
 @click.option(
     "-fp",
     "--farmer-rpc-port",
-    help="Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml.",
+    help="Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml",
     type=int,
     default=8559,
     show_default=True,
@@ -322,7 +322,7 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
 @click.option(
     "-l",
     "--limit",
-    help="Limit the number of challenges shown. Use 0 to disable the limit.",
+    help="Limit the number of challenges shown. Use 0 to disable the limit",
     type=click.IntRange(0),
     default=20,
     show_default=True,

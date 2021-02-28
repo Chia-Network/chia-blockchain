@@ -17,10 +17,10 @@ log = logging.getLogger(__name__)
 
 def show_plots(root_path: Path):
     print("Directories where plots are being searched for:")
-    print("Note that subdirectories must be added manually.")
+    print("Note that subdirectories must be added manually")
     print(
         "Add with 'chia plots add -d [dir]' and remove with"
-        + " 'chia plots remove -d [dir]'."
+        + " 'chia plots remove -d [dir]'"
         + " Scan and check plots with 'chia plots check'"
     )
     print()
@@ -28,23 +28,23 @@ def show_plots(root_path: Path):
         print(f"{str_path}")
 
 
-@click.group("plots", short_help="manage your plots")
+@click.group("plots", short_help="Manage your plots")
 @click.pass_context
 def plots_cmd(ctx: click.Context):
     """Create, add, remove and check your plots"""
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
-        raise RuntimeError("Please initialize (or migrate) your config directory with chia init.")
+        raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
     initialize_logging("", {"log_stdout": True}, root_path)
 
 
-@plots_cmd.command("create", short_help="creates plots")
+@plots_cmd.command("create", short_help="Create plots")
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
 @click.option("-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=4608, show_default=True)
 @click.option("-r", "--num_threads", help="Number of threads to use", type=int, default=2, show_default=True)
-@click.option("-u", "--buckets", help="Number of buckets", type=int, default=0)
-@click.option("-s", "--stripe_size", help="Stripe size", type=int, default=0)
+@click.option("-u", "--buckets", help="Number of buckets", type=int, default=128, show_default=True)
+@click.option("-s", "--stripe_size", help="Stripe size", type=int, default=65536, show_default=True)
 @click.option(
     "-a",
     "--alt_fingerprint",
@@ -128,7 +128,7 @@ def create_cmd(
     create_plots(Params(), ctx.obj["root_path"])
 
 
-@plots_cmd.command("check", short_help="checks plots")
+@plots_cmd.command("check", short_help="Checks plots")
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=None)
 @click.option(
     "-g",
@@ -147,7 +147,7 @@ def check_cmd(
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
 
 
-@plots_cmd.command("add", short_help="adds a directory of plots")
+@plots_cmd.command("add", short_help="Adds a directory of plots")
 @click.option(
     "-d",
     "--final_dir",
@@ -162,7 +162,7 @@ def add_cmd(ctx: click.Context, final_dir: str):
     print(f'Added plot directory "{final_dir}".')
 
 
-@plots_cmd.command("remove", short_help="removes a directory of plots from config")
+@plots_cmd.command("remove", short_help="Removes a directory of plots from config.yaml")
 @click.option(
     "-d",
     "--final_dir",
@@ -177,7 +177,7 @@ def remove_cmd(ctx: click.Context, final_dir: str):
     print(f'Removed plot directory "{final_dir}".')
 
 
-@plots_cmd.command("show", short_help="shows the directory of current plots")
+@plots_cmd.command("show", short_help="Shows the directory of current plots")
 @click.pass_context
 def show_cmd(ctx: click.Context):
     show_plots(ctx.obj["root_path"])
