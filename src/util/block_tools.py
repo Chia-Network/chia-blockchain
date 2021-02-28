@@ -154,7 +154,7 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-    def init_plots(self, root_path):
+    def init_plots(self, root_path: Path):
         plot_dir = get_plot_dir()
         mkdir(plot_dir)
         temp_dir = plot_dir / "tmp"
@@ -1072,7 +1072,7 @@ def get_plot_dir():
 
 
 def load_block_list(
-    block_list: List[FullBlock], constants
+    block_list: List[FullBlock], constants: ConsensusConstants
 ) -> Tuple[Dict[uint32, bytes32], uint64, Dict[uint32, BlockRecord]]:
     difficulty = 0
     height_to_hash: Dict[uint32, bytes32] = {}
@@ -1112,7 +1112,7 @@ def load_block_list(
 
 
 def get_icc(
-    constants,
+    constants: ConsensusConstants,
     vdf_end_total_iters: uint128,
     finished_sub_slots: List[EndOfSubSlotBundle],
     latest_block: BlockRecord,

@@ -53,7 +53,7 @@ def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: by
     return G1Element.from_bytes(r.as_atom())
 
 
-def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32):
+def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32) -> PrivateKey:
     secret_exponent = int.from_bytes(bytes(secret_key), "big")
     public_key = secret_key.get_g1()
     synthetic_offset = calculate_synthetic_offset(public_key, hidden_puzzle_hash)
