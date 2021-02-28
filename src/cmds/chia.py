@@ -23,22 +23,22 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
-    epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'.",
+    epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
-@click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root.", type=click.Path(), show_default=True)
+@click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
 @click.pass_context
 def cli(ctx: click.Context, root_path: str) -> None:
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
 
 
-@cli.command("version", short_help="show version")
+@cli.command("version", short_help="Show chia version")
 def version_cmd() -> None:
     print(__version__)
 
 
-@cli.command("run_daemon", short_help="runs chia daemon")
+@cli.command("run_daemon", short_help="Runs chia daemon")
 @click.pass_context
 def run_daemon_cmd(ctx: click.Context) -> None:
     asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))

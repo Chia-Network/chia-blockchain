@@ -32,7 +32,7 @@ def generate_and_print():
     mnemonic = generate_mnemonic()
     print("Generating private key. Mnemonic (24 secret words):")
     print(mnemonic)
-    print("Note that this key has not been added to the keychain. Run chia keys add_seed -m [MNEMONICS] to add")
+    print("Note that this key has not been added to the keychain. Run chia keys add_seed -m \"[MNEMONICS]\" to add")
     return mnemonic
 
 
@@ -42,7 +42,7 @@ def generate_and_add():
     """
 
     mnemonic = generate_mnemonic()
-    print("Generating private key.")
+    print("Generating private key")
     add_private_key_seed(mnemonic)
 
 
@@ -70,7 +70,7 @@ def show_all_keys():
 
     private_keys = keychain.get_all_private_keys()
     if len(private_keys) == 0:
-        print("There are no saved private keys.")
+        print("There are no saved private keys")
         return
     print("Showing all private keys:")
     for sk, seed in private_keys:
@@ -99,7 +99,7 @@ def show_all_keys():
 
 def delete(fingerprint: int):
     """
-    Delete a key by it's public key fingerprint (which is an int).
+    Delete a key by its public key fingerprint (which is an integer).
     """
     print(f"Deleting private_key with fingerprint {fingerprint}")
     keychain.delete_key_by_fingerprint(fingerprint)
@@ -127,28 +127,28 @@ def verify(message: str, public_key: str, signature: str):
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 
-@click.group("keys", short_help="manage your keys")
+@click.group("keys", short_help="Manage your keys")
 @click.pass_context
 def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
-        raise RuntimeError("Please initialize (or migrate) your config directory with chia init.")
+        raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
 
 
-@keys_cmd.command("generate", short_help="generates and adds a key to keychain")
+@keys_cmd.command("generate", short_help="Generates and adds a key to keychain")
 @click.pass_context
 def generate_cmd(ctx: click.Context):
     generate_and_add()
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("show", short_help="displays all the keys in keychain")
+@keys_cmd.command("show", short_help="Displays all the keys in keychain")
 def show_cmd():
     show_all_keys()
 
 
-@keys_cmd.command("add", short_help="add a private key through the mnemonic")
+@keys_cmd.command("add", short_help="Add a private key by mnemonic in quotes")
 @click.option("--mnemonic", "-m", help="Enter mnemonic you want to use", type=str)
 @click.pass_context
 def add_cmd(ctx: click.Context, mnemonic: str):
@@ -156,7 +156,7 @@ def add_cmd(ctx: click.Context, mnemonic: str):
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("delete", short_help="delete a key by it's pk fingerprint in hex form")
+@keys_cmd.command("delete", short_help="Delete a key by it's pk fingerprint in hex form")
 @click.option(
     "--fingerprint",
     "-f",
@@ -171,17 +171,17 @@ def delete_cmd(ctx: click.Context, fingerprint: int):
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("delete_all", short_help="delete all private keys in keychain")
+@keys_cmd.command("delete_all", short_help="Delete all private keys in keychain")
 def delete_all_cmd():
     keychain.delete_all_keys()
 
 
-@keys_cmd.command("generate_and_print", short_help="generates but does NOT add to keychain")
+@keys_cmd.command("generate_and_print", short_help="Generates but does NOT add to keychain")
 def generate_and_print_cmd():
     generate_and_print()
 
 
-@keys_cmd.command("sign", short_help="sign a message with a private key")
+@keys_cmd.command("sign", short_help="Sign a message with a private key")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
 @click.option(
     "--fingerprint",
@@ -192,11 +192,11 @@ def generate_and_print_cmd():
     required=True,
 )
 @click.option("--hd_path", "-t", help="Enter the HD path in the form 'm/12381/8444/n/n'", type=str, required=True)
-def sing_cmd(message: str, fingerprint: int, hd_path: str):
+def sign_cmd(message: str, fingerprint: int, hd_path: str):
     sign(message, fingerprint, hd_path)
 
 
-@keys_cmd.command("verify", short_help="verify a signature with a pk")
+@keys_cmd.command("verify", short_help="Verify a signature with a pk")
 @click.option("--message", "-d", default=None, help="Enter the message to sign in UTF-8", type=str, required=True)
 @click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
 @click.option("--signature", "-s", default=None, help="Enter the signature in hex", type=str, required=True)
