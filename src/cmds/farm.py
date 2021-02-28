@@ -322,7 +322,7 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
 @click.option(
     "-l",
     "--limit",
-    help="Limit the number of challenges shown. Use 0 for disable the limit.",
+    help="Limit the number of challenges shown. Use 0 to disable the limit.",
     type=click.IntRange(0),
     default=20,
     show_default=True,
