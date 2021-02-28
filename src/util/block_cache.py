@@ -34,7 +34,7 @@ class BlockCache(BlockchainInterface):
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
 
-    def height_to_block_record(self, height: uint32, check_db=False) -> BlockRecord:
+    def height_to_block_record(self, height: uint32, check_db: bool = False) -> BlockRecord:
         header_hash = self.height_to_hash(height)
         return self.block_record(header_hash)
 
