@@ -68,6 +68,8 @@ export default function App() {
 
   useEffect(() => {
     i18n.activate(locale);
+    // @ts-ignore
+    window.ipcRenderer.send("set-locale", locale)
   }, [locale]);
 
   useEffect(() => {

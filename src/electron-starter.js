@@ -19,6 +19,35 @@ if (!setupEvents.handleSquirrelEvent()) {
   const local_test =  require("./config/config").local_test;
   const url = require("url");
   const os = require("os");
+  const { i18n } = require("@lingui/core");
+  const { en, fi, it, ru, sk, sv, zh, es } = require('make-plural/plurals');
+  const catalogEn = require("./locales/en/messages");
+  const catalogEs = require('./locales/es/messages');
+  const catalogFi = require('./locales/fi/messages');
+  const catalogIt = require('./locales/it/messages');
+  const catalogRu = require('./locales/ru/messages');
+  const catalogSk = require('./locales/sk/messages');
+  const catalogSv = require('./locales/sv/messages');
+  const catalogZhCN = require('./locales/zh-CN/messages');
+
+  i18n.loadLocaleData('en', { plurals: en });
+  i18n.loadLocaleData('es', { plurals: es });
+  i18n.loadLocaleData('fi', { plurals: fi });
+  i18n.loadLocaleData('it', { plurals: it });
+  i18n.loadLocaleData('ru', { plurals: ru });
+  i18n.loadLocaleData('sk', { plurals: sk });
+  i18n.loadLocaleData('sv', { plurals: sv });
+  i18n.loadLocaleData('zh-CN', { plurals: zh });
+  i18n.load('en', catalogEn.messages);
+  i18n.load('es', catalogEs.messages);
+  i18n.load('fi', catalogFi.messages);
+  i18n.load('it', catalogIt.messages);
+  i18n.load('ru', catalogRu.messages);
+  i18n.load('sk', catalogSk.messages);
+  i18n.load('sv', catalogSv.messages);
+  i18n.load('zh-CN', catalogZhCN.messages);
+
+  i18n.activate('en');
 
   const ensureSingleInstance = () => {
     const gotTheLock = app.requestSingleInstanceLock();
@@ -37,7 +66,7 @@ if (!setupEvents.handleSquirrelEvent()) {
       });
     }
   };
-  
+
   ensureSingleInstance();
 
   // this needs to happen early in startup so all processes share the same global config
@@ -115,10 +144,10 @@ if (!setupEvents.handleSquirrelEvent()) {
       e.preventDefault();
       var choice = dialog.showMessageBoxSync({
         type: "question",
-        buttons: ["No", "Yes"],
-        title: "Confirm",
+        buttons: [i18n._(/*i18n*/{id: "No"}), i18n._(/*i18n*/{id: "Yes"})],
+        title: i18n._(/*i18n*/{id: "Confirm"}),
         message:
-          "Are you sure you want to quit? GUI Plotting and farming will stop."
+          i18n._(/*i18n*/{id: "Are you sure you want to quit? GUI Plotting and farming will stop."})
       });
       if (choice == 0) {
         return;
@@ -168,10 +197,15 @@ if (!setupEvents.handleSquirrelEvent()) {
     );
   });
 
+  ipcMain.on("set-locale", (event, locale) => {
+    i18n.activate(locale || 'en');
+    app.applicationMenu = createMenu();
+  });
+
   const getMenuTemplate = () => {
     const template = [
       {
-        label: "File",
+        label: i18n._(/*i18n*/{id: "File"}),
         submenu: [
           {
             role: "quit"
@@ -179,7 +213,7 @@ if (!setupEvents.handleSquirrelEvent()) {
         ]
       },
       {
-        label: "Edit",
+        label: i18n._(/*i18n*/{id: "Edit"}),
         submenu: [
           {
             role: "undo"
@@ -211,7 +245,7 @@ if (!setupEvents.handleSquirrelEvent()) {
         ]
       },
       {
-        label: "View",
+        label: i18n._(/*i18n*/{id: "View"}),
         submenu: [
           {
             role: "reload"
@@ -220,10 +254,10 @@ if (!setupEvents.handleSquirrelEvent()) {
             role: "forcereload"
           },
           {
-            label: "Developer",
+            label: i18n._(/*i18n*/{id: "Developer"}),
             submenu: [
               {
-                label: "Developer Tools",
+                label: i18n._(/*i18n*/{id: "Developer Tools"}),
                 accelerator:
                   process.platform === "darwin"
                     ? "Alt+Command+I"
@@ -248,7 +282,7 @@ if (!setupEvents.handleSquirrelEvent()) {
             type: "separator"
           },
           {
-            label: "Full Screen",
+            label: i18n._(/*i18n*/{id: "Full Screen"}),
             type: "checkbox",
             accelerator: process.platform === "darwin" ? "Ctrl+Command+F" : "F11",
             click: () => windows.main.toggleFullScreen()
@@ -256,7 +290,7 @@ if (!setupEvents.handleSquirrelEvent()) {
         ]
       },
       {
-        label: "Window",
+        label: i18n._(/*i18n*/{id: "Window"}),
         submenu: [
           {
             role: "minimize"
@@ -270,11 +304,11 @@ if (!setupEvents.handleSquirrelEvent()) {
         ]
       },
       {
-        label: "Help",
+        label: i18n._(/*i18n*/{id: "Help"}),
         role: "help",
         submenu: [
           {
-            label: "Chia Blockchain Wiki",
+            label: i18n._(/*i18n*/{id: "Chia Blockchain Wiki"}),
             click: () => {
               openExternal(
                 "https://github.com/Chia-Network/chia-blockchain/wiki"
@@ -282,7 +316,7 @@ if (!setupEvents.handleSquirrelEvent()) {
             }
           },
           {
-            label: "Frequently Asked Questions",
+            label: i18n._(/*i18n*/{id: "Frequently Asked Questions"}),
             click: () => {
               openExternal(
                 "https://github.com/Chia-Network/chia-blockchain/wiki/FAQ"
@@ -290,7 +324,7 @@ if (!setupEvents.handleSquirrelEvent()) {
             }
           },
           {
-            label: "Release Notes",
+            label: i18n._(/*i18n*/{id: "Release Notes"}),
             click: () => {
               openExternal(
                 "https://github.com/Chia-Network/chia-blockchain/releases"
@@ -298,7 +332,7 @@ if (!setupEvents.handleSquirrelEvent()) {
             }
           },
           {
-            label: "Contribute on GitHub",
+            label: i18n._(/*i18n*/{id: "Contribute on GitHub"}),
             click: () => {
               openExternal(
                 "https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md"
@@ -309,7 +343,7 @@ if (!setupEvents.handleSquirrelEvent()) {
             type: "separator"
           },
           {
-            label: "Report an Issue...",
+            label: i18n._(/*i18n*/{id: "Report an Issue..."}),
             click: () => {
               openExternal(
                 "https://github.com/Chia-Network/chia-blockchain/issues"
@@ -317,13 +351,13 @@ if (!setupEvents.handleSquirrelEvent()) {
             }
           },
           {
-            label: "Chat on KeyBase",
+            label: i18n._(/*i18n*/{id: "Chat on KeyBase"}),
             click: () => {
               openExternal("https://keybase.io/team/chia_network.public");
             }
           },
           {
-            label: "Follow on Twitter",
+            label: i18n._(/*i18n*/{id: "Follow on Twitter"}),
             click: () => {
               openExternal("https://twitter.com/chia_project");
             }
@@ -335,10 +369,10 @@ if (!setupEvents.handleSquirrelEvent()) {
     if (process.platform === "darwin") {
       // Chia Blockchain menu (Mac)
       template.unshift({
-        label: "Chia",
+        label: i18n._(/*i18n*/{id: "Chia"}),
         submenu: [
           {
-            label: "About " + "Chia Blockchain",
+            label: i18n._(/*i18n*/{id: "About Chia Blockchain"}),
             click: () =>
               openAboutWindow({
                 homepage: "https://www.chia.net/",
@@ -378,7 +412,7 @@ if (!setupEvents.handleSquirrelEvent()) {
 
       // File menu (MacOS)
       template.splice(1, 1, {
-        label: "File",
+        label: i18n._(/*i18n*/{id: "File"}),
         submenu: [
           {
             role: "close"
@@ -392,7 +426,7 @@ if (!setupEvents.handleSquirrelEvent()) {
           type: "separator"
         },
         {
-          label: "Speech",
+          label: i18n._(/*i18n*/{id: "Speech"}),
           submenu: [
             {
               role: "startspeaking"
@@ -431,7 +465,7 @@ if (!setupEvents.handleSquirrelEvent()) {
           type: "separator"
         },
         {
-          label: "About " + "Chia Blockchain",
+          label: i18n._(/*i18n*/{id: "About Chia Blockchain"}),
           click: () =>
             openAboutWindow({
               homepage: "https://www.chia.net/",
