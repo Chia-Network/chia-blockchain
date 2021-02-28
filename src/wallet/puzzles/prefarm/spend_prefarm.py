@@ -48,6 +48,7 @@ async def main():
         sb_farmer = SpendBundle([CoinSolution(farmer_prefarm, p_farmer_2, p_solution)], G2Element.infinity())
         sb_pool = SpendBundle([CoinSolution(pool_prefarm, p_pool_2, p_solution)], G2Element.infinity())
 
+        print(sb_pool, sb_farmer)
         # res = await client.push_tx(sb_farmer)
         # res = await client.push_tx(sb_pool)
 

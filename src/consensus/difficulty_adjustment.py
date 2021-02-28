@@ -256,7 +256,7 @@ def get_next_sub_slot_iters(
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
-    last_block_prev: BlockRecord = _get_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
 
     # Ensure we get a tx block for the last block as well, and that it is before the signage point
     last_block_curr = prev_b
@@ -339,7 +339,7 @@ def get_next_difficulty(
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 
-    last_block_prev: BlockRecord = _get_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
 
     # Ensure we get a tx block for the last block as well, and that it is before the signage point
     last_block_curr = prev_b
