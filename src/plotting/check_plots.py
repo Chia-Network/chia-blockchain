@@ -98,10 +98,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                         total_proofs += 1
                         ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                         assert quality_str == ver_quality_str
-                    except BaseException as e:
-                        if isinstance(e, KeyboardInterrupt):
-                            log.warning("Interrupted, closing")
-                            return
+                    except AssertionError as e:
                         log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
                         caught_exception = True
             except BaseException as e:
