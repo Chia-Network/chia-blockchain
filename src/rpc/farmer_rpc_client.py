@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+
 from src.rpc.rpc_client import RpcClient
 from src.types.blockchain_format.sized_bytes import bytes32
 

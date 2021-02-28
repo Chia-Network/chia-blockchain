@@ -1,15 +1,12 @@
+from src.types.blockchain_format.program import Program
+from src.util.condition_tools import (aggsig_in_conditions_dict,
+                                      conditions_by_opcode,
+                                      conditions_for_solution,
+                                      created_outputs_for_conditions_dict)
 from src.util.hash import std_hash
-from src.util.condition_tools import (
-    conditions_by_opcode,
-    aggsig_in_conditions_dict,
-    created_outputs_for_conditions_dict,
-    conditions_for_solution,
-)
+from src.util.ints import uint32
 from src.wallet.puzzles import p2_delegated_puzzle
 from src.wallet.puzzles.puzzle_utils import make_create_coin_condition
-from src.types.blockchain_format.program import Program
-from src.util.ints import uint32
-
 from tests.keys import puzzle_program_for_index
 
 

@@ -1,4 +1,5 @@
 from typing import Any
+
 import aiosqlite
 
 from src.util.byte_types import hexstr_to_bytes

@@ -1,7 +1,7 @@
 from typing import Union
 
-from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.block_record import BlockRecord
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.types.header_block import HeaderBlock
 
 

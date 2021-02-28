@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from src.util.streamable import streamable, Streamable
-from src.wallet.util.wallet_types import WalletType
 from src.util.ints import uint32
+from src.util.streamable import Streamable, streamable
+from src.wallet.util.wallet_types import WalletType
 
 
 @dataclass(frozen=True)

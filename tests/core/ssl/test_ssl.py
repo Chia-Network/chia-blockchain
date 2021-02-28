@@ -1,6 +1,8 @@
 import asyncio
+
 import aiohttp
 import pytest
+
 from src.protocols.shared_protocol import protocol_version
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer, ssl_context_for_client
@@ -9,14 +11,9 @@ from src.ssl.create_ssl import generate_ca_signed_cert
 from src.types.peer_info import PeerInfo
 from src.util.block_tools import test_constants
 from src.util.ints import uint16
-from tests.setup_nodes import (
-    setup_simulators_and_wallets,
-    self_hostname,
-    setup_farmer_harvester,
-    setup_introducer,
-    bt,
-    setup_timelord,
-)
+from tests.setup_nodes import (bt, self_hostname, setup_farmer_harvester,
+                               setup_introducer, setup_simulators_and_wallets,
+                               setup_timelord)
 
 
 async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context) -> bool:

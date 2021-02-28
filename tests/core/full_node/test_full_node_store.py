@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from secrets import token_bytes
+
 import pytest
 from pytest import raises
 
@@ -13,12 +14,11 @@ from src.full_node.signage_point import SignagePoint
 from src.protocols.timelord_protocol import NewInfusionPointVDF
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
-from src.util.hash import std_hash
-from src.util.ints import uint32, uint8, uint128, uint64
-from tests.setup_nodes import test_constants, bt
 from src.util.block_tools import get_signage_point
+from src.util.hash import std_hash
+from src.util.ints import uint8, uint32, uint64, uint128
 from tests.core.fixtures import empty_blockchain  # noqa: F401
-
+from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 

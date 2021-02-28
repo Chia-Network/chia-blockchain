@@ -3,7 +3,7 @@ from typing import Optional
 
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
-from src.util.streamable import streamable, Streamable
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

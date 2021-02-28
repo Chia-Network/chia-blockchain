@@ -1,21 +1,20 @@
 import asyncio
-import click
 from pathlib import Path
 
-from src import __version__
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.daemon.server import async_run_daemon
+import click
 
+from src import __version__
+from src.cmds.configure import configure_cmd
 from src.cmds.init import init_cmd
 from src.cmds.keys import keys_cmd
+from src.cmds.netspace import netspace_cmd
 from src.cmds.plots import plots_cmd
-from src.cmds.wallet import wallet_cmd
-from src.cmds.configure import configure_cmd
 from src.cmds.show import show_cmd
 from src.cmds.start import start_cmd
 from src.cmds.stop import stop_cmd
-from src.cmds.netspace import netspace_cmd
-
+from src.cmds.wallet import wallet_cmd
+from src.daemon.server import async_run_daemon
+from src.util.default_root import DEFAULT_ROOT_PATH
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 

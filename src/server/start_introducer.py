@@ -1,15 +1,13 @@
 import pathlib
-
 from typing import Dict
 
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.introducer.introducer import Introducer
 from src.introducer.introducer_api import IntroducerAPI
 from src.server.outbound_message import NodeType
+from src.server.start_service import run_service
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-
-from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

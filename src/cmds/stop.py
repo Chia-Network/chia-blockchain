@@ -1,7 +1,8 @@
-import click
-import sys
 import asyncio
+import sys
 from pathlib import Path
+
+import click
 
 from src.daemon.client import connect_to_daemon_and_validate
 from src.util.service_groups import all_groups, services_for_groups

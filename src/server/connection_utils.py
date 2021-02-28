@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import List, Any, Tuple, Optional
+from typing import Any, List, Optional, Tuple
 
 from src.server.ws_connection import WSChiaConnection
 

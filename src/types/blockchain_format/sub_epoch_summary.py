@@ -1,5 +1,5 @@
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint8, uint64

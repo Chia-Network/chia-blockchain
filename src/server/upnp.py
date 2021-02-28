@@ -1,4 +1,5 @@
 import logging
+
 import miniupnpc
 
 log = logging.getLogger(__name__)

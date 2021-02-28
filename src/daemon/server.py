@@ -5,24 +5,27 @@ import os
 import signal
 import subprocess
 import sys
-import traceback
-from pathlib import Path
-from enum import Enum
-import uuid
 import time
-from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
+import traceback
+import uuid
 from concurrent.futures import ThreadPoolExecutor
-from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+
+from websockets import (ConnectionClosedOK, WebSocketException,
+                        WebSocketServerProtocol, serve)
+
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
-from src.util.setproctitle import setproctitle
-from src.util.ws_message import format_response, create_payload
-from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
+from src.util.json_util import dict_to_json_str
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
+from src.util.setproctitle import setproctitle
+from src.util.ws_message import create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()
 

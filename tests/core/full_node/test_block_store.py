@@ -1,14 +1,15 @@
 import asyncio
 import random
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import aiosqlite
 import pytest
-from src.full_node.block_store import BlockStore
+
 from src.consensus.blockchain import Blockchain
+from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from tests.setup_nodes import test_constants, bt
+from tests.setup_nodes import bt, test_constants
 
 
 @pytest.fixture(scope="module")

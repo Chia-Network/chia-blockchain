@@ -1,14 +1,14 @@
-import json
-from typing import Dict, Any
-
 import asyncio
+import json
+from typing import Any, Dict
+
 import websockets
 
 from src.server.server import ssl_context_for_client
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ws_message import create_payload
-from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
+from src.util.json_util import dict_to_json_str
+from src.util.ws_message import create_payload
 
 
 class DaemonProxy:

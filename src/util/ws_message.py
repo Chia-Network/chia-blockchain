@@ -1,8 +1,7 @@
 from secrets import token_bytes
-from typing import Dict, Any
+from typing import Any, Dict
 
 from src.util.json_util import dict_to_json_str
-
 
 # Messages must follow this format
 # Message = { "command" "command_name",

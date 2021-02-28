@@ -1,7 +1,7 @@
 import dataclasses
 
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint64, uint32, uint8, uint128
+from src.util.ints import uint8, uint32, uint64, uint128
 
 
 @dataclasses.dataclass(frozen=True)

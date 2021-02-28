@@ -1,9 +1,9 @@
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 from src.consensus.block_record import BlockRecord
-from src.types.header_block import HeaderBlock
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.header_block import HeaderBlock
 from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.ints import uint32
 
