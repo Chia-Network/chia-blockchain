@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-01 03:02\n"
+"PO-Revision-Date: 2021-03-01 04:05\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1244,7 +1244,7 @@ msgstr "Skicka"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:477
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Skicka detta infopaket till användaren av din spenderbegränsade plånbok, som måste använda det för att slutföra skapandet av deras plånbok:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:284
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
