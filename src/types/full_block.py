@@ -144,8 +144,7 @@ class FullBlock(Streamable):
             ):
                 return False
             if (
-                sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-                and (
+                sub_slot.proofs.infused_challenge_chain_slot_proof is not None and (
                     sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type != 0
                     or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
                 )
@@ -158,6 +157,7 @@ class FullBlock(Streamable):
         if self.challenge_chain_ip_proof.witness_type != 0 or not self.challenge_chain_ip_proof.normalized_to_identity:
             return False
         return True
+
 
 def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
     additions: List[Coin] = []

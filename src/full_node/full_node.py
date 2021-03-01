@@ -1437,7 +1437,7 @@ class FullNode:
         - Checks if the provided vdf_info is correct, assuming it refers to the start of sub-slot.
         - Checks if the existing proof was non-compact. Ignore this proof if we already have a compact proof.
         """
-        is_fully_compactified = self.block_store.is_fully_compactified(header_hash)
+        is_fully_compactified = await self.block_store.is_fully_compactified(header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
@@ -1508,7 +1508,7 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
-        is_fully_compactified = self.block_store.is_fully_compactified(request.header_hash)
+        is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return False
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
@@ -1585,6 +1585,7 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
     async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_proofs: int):
+        min_height: Optional[int] = 0
         try:
             while not self._shut_down:
                 while self.sync_store.get_sync_mode():
@@ -1593,19 +1594,16 @@ class FullNode:
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
-                min_height = 0
                 new_min_height = None
                 max_height = self.blockchain.get_peak_height()
                 if max_height is None:
                     await asyncio.sleep(30)
                     continue
                 # Calculate 'min_height' correctly the first time this task is launched, using the db.
-                while min_height < max(0, max_height - 1000):
-                    header_hash = self.blockchain.height_to_hash(min_height)
-                    if self.block_store.is_fully_compactified(header_hash):
-                        min_height += 1
-                    else:
-                        break
+                assert min_height is not None
+                min_height = await self.block_store.get_first_not_compactified(min_height)
+                if min_height is None or min_height > max(0, max_height - 1000):
+                    min_height = max(0, max_height - 1000)
                 batches_finished = 0
                 self.log.info("Scanning the blockchain for uncompact blocks.")
                 for h in range(min_height, max_height, 100):
@@ -1675,7 +1673,7 @@ class FullNode:
                         # This is the first header with uncompact proofs. Store its height so next time we iterate
                         # only from here. Fix header block iteration window to at least 1000, so reorgs will be
                         # handled correctly.
-                        if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(1, max_height - 1000):
+                        if prev_broadcast_list_len == 0 and len(broadcast_list) > 0 and h <= max(0, max_height - 1000):
                             new_min_height = header.height
 
                     # Small sleep between batches.
@@ -1685,7 +1683,7 @@ class FullNode:
 
                 # We have no uncompact blocks, but mentain the block iteration window to at least 1000 blocks.
                 if new_min_height is None:
-                    new_min_height = max(1, max_height - 1000)
+                    new_min_height = max(0, max_height - 1000)
                 min_height = new_min_height
                 if len(broadcast_list) > target_uncompact_proofs:
                     random.shuffle(broadcast_list)

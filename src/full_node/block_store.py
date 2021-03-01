@@ -330,3 +330,13 @@ class BlockStore:
         if row is None:
             return None
         return bool(row[0])
+
+    async def get_first_not_compactified(self, min_height: int) -> Optional[int]:
+        cursor = await self.db.execute(
+            "SELECT MIN(height) from full_blocks WHERE is_fully_compactified=0 AND height>=?", (min_height)
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is None:
+            return None
+        return int(row[0])
