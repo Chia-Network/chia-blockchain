@@ -1,8 +1,10 @@
 from src.types.blockchain_format.program import Program
-from src.util.condition_tools import (aggsig_in_conditions_dict,
-                                      conditions_by_opcode,
-                                      conditions_for_solution,
-                                      created_outputs_for_conditions_dict)
+from src.util.condition_tools import (
+    aggsig_in_conditions_dict,
+    conditions_by_opcode,
+    conditions_for_solution,
+    created_outputs_for_conditions_dict,
+)
 from src.util.hash import std_hash
 from src.util.ints import uint32
 from src.wallet.puzzles import p2_delegated_puzzle

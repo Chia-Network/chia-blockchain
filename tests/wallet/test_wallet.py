@@ -2,12 +2,13 @@ import asyncio
 
 import pytest
 
-from src.consensus.block_rewards import (calculate_base_farmer_reward,
-                                         calculate_pool_reward)
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.protocols.full_node_protocol import RespondBlock
 from src.server.server import ChiaServer
-from src.simulator.simulator_protocol import (FarmNewBlockProtocol,
-                                              ReorgProtocol)
+from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from src.wallet.util.transaction_type import TransactionType

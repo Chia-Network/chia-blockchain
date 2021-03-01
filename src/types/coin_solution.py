@@ -3,8 +3,7 @@ from typing import List
 
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
-from src.util.chain_utils import (additions_for_solution,
-                                  announcements_for_solution)
+from src.util.chain_utils import additions_for_solution, announcements_for_solution
 from src.util.streamable import Streamable, streamable
 
 from .announcement import Announcement

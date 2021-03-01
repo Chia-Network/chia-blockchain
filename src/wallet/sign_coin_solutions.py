@@ -4,8 +4,10 @@ from blspy import AugSchemeMPL, PrivateKey
 
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
-from src.util.condition_tools import (conditions_dict_for_solution,
-                                      pkm_pairs_for_conditions_dict)
+from src.util.condition_tools import (
+    conditions_dict_for_solution,
+    pkm_pairs_for_conditions_dict,
+)
 
 
 async def sign_coin_solutions(

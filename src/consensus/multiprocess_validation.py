@@ -5,19 +5,16 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from src.consensus.block_header_validation import \
-    validate_finished_header_block
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from src.consensus.difficulty_adjustment import \
-    get_sub_slot_iters_and_difficulty
+from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.get_block_challenge import get_block_challenge
 from src.consensus.network_type import NetworkType
-from src.consensus.pot_iterations import (calculate_iterations_quality,
-                                          is_overflow_block)
+from src.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.full_block import FullBlock

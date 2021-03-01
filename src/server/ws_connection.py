@@ -14,6 +14,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint8, uint16
+
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from src.util.network import class_for_type
 

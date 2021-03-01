@@ -7,17 +7,23 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from src.consensus.block_header_validation import (
-    validate_finished_header_block, validate_unfinished_header_block)
+    validate_finished_header_block,
+    validate_unfinished_header_block,
+)
 from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
-    get_next_difficulty, get_next_sub_slot_iters,
-    get_sub_slot_iters_and_difficulty)
+    get_next_difficulty,
+    get_next_sub_slot_iters,
+    get_sub_slot_iters_and_difficulty,
+)
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.multiprocess_validation import (
-    PreValidationResult, pre_validate_blocks_multiprocessing)
+    PreValidationResult,
+    pre_validate_blocks_multiprocessing,
+)
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.header_block import HeaderBlock

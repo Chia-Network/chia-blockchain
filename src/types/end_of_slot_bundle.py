@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from src.types.blockchain_format.slots import (ChallengeChainSubSlot,
-                                               InfusedChallengeChainSubSlot,
-                                               RewardChainSubSlot,
-                                               SubSlotProofs)
+from src.types.blockchain_format.slots import (
+    ChallengeChainSubSlot,
+    InfusedChallengeChainSubSlot,
+    RewardChainSubSlot,
+    SubSlotProofs,
+)
 from src.util.streamable import Streamable, streamable
 
 

@@ -9,8 +9,10 @@ from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import SpendBundle
-from src.util.condition_tools import (conditions_dict_for_solution,
-                                      pkm_pairs_for_conditions_dict)
+from src.util.condition_tools import (
+    conditions_dict_for_solution,
+    pkm_pairs_for_conditions_dict,
+)
 from src.util.hash import std_hash
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101

@@ -13,8 +13,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
-from websockets import (ConnectionClosedOK, WebSocketException,
-                        WebSocketServerProtocol, serve)
+from websockets import (
+    ConnectionClosedOK,
+    WebSocketException,
+    WebSocketServerProtocol,
+    serve,
+)
 
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill

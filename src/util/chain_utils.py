@@ -3,8 +3,10 @@ from typing import List
 from src.types.announcement import Announcement
 from src.types.blockchain_format.coin import Coin
 from src.util.condition_tools import (
-    conditions_dict_for_solution, created_announcements_for_conditions_dict,
-    created_outputs_for_conditions_dict)
+    conditions_dict_for_solution,
+    created_announcements_for_conditions_dict,
+    created_outputs_for_conditions_dict,
+)
 
 
 def additions_for_solution(coin_name, puzzle_reveal, solution) -> List[Coin]:

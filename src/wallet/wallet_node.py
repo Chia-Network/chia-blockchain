@@ -14,17 +14,18 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.constants import ConsensusConstants
 from src.consensus.multiprocess_validation import PreValidationResult
 from src.protocols import wallet_protocol
-from src.protocols.full_node_protocol import (RequestProofOfWeight,
-                                              RespondProofOfWeight)
+from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.wallet_protocol import (RejectAdditionsRequest,
-                                           RejectRemovalsRequest,
-                                           RequestAdditions,
-                                           RequestHeaderBlocks,
-                                           RespondAdditions,
-                                           RespondBlockHeader,
-                                           RespondHeaderBlocks,
-                                           RespondRemovals)
+from src.protocols.wallet_protocol import (
+    RejectAdditionsRequest,
+    RejectRemovalsRequest,
+    RequestAdditions,
+    RequestHeaderBlocks,
+    RespondAdditions,
+    RespondBlockHeader,
+    RespondHeaderBlocks,
+    RespondRemovals,
+)
 from src.server.node_discovery import WalletPeers
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.server import ChiaServer
@@ -37,8 +38,11 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint128
 from src.util.keychain import Keychain
-from src.util.merkle_set import (MerkleSet, confirm_included_already_hashed,
-                                 confirm_not_included_already_hashed)
+from src.util.merkle_set import (
+    MerkleSet,
+    confirm_included_already_hashed,
+    confirm_not_included_already_hashed,
+)
 from src.util.path import mkdir, path_from_root
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.derivation_record import DerivationRecord

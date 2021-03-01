@@ -17,8 +17,7 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.full_node.weight_proof import WeightProofHandler
-from src.protocols.wallet_protocol import (PuzzleSolutionResponse,
-                                           RespondPuzzleSolution)
+from src.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -32,8 +31,7 @@ from src.util.ints import uint32, uint64, uint128
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.derivation_record import DerivationRecord
-from src.wallet.derive_keys import (master_sk_to_backup_sk,
-                                    master_sk_to_wallet_sk)
+from src.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.settings.user_settings import UserSettings

@@ -15,8 +15,7 @@ from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.coin_store import CoinStore
 from src.full_node.mempool import Mempool
-from src.full_node.mempool_check_conditions import \
-    mempool_check_conditions_dict
+from src.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord

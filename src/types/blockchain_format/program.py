@@ -6,8 +6,7 @@ from clvm import run_program as default_run_program
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
-from clvm.serialize import (sexp_buffer_from_stream, sexp_from_stream,
-                            sexp_to_stream)
+from clvm.serialize import sexp_buffer_from_stream, sexp_from_stream, sexp_to_stream
 from clvm_rs import STRICT_MODE, deserialize_and_run_program
 from clvm_tools.curry import curry, uncurry
 

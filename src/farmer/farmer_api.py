@@ -4,8 +4,10 @@ from typing import Callable, Optional
 from blspy import AugSchemeMPL, G2Element
 
 import src.server.ws_connection as ws
-from src.consensus.pot_iterations import (calculate_iterations_quality,
-                                          calculate_sp_interval_iters)
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_interval_iters,
+)
 from src.farmer.farmer import Farmer
 from src.protocols import farmer_protocol, harvester_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes

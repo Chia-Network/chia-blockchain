@@ -6,8 +6,11 @@ from typing import Dict, List
 from blspy import G1Element
 from chiapos import Verifier
 
-from src.plotting.plot_tools import (find_duplicate_plot_IDs,
-                                     get_plot_filenames, load_plots)
+from src.plotting.plot_tools import (
+    find_duplicate_plot_IDs,
+    get_plot_filenames,
+    load_plots,
+)
 from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.keychain import Keychain

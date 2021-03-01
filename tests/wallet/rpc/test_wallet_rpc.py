@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from src.consensus.block_rewards import (calculate_base_farmer_reward,
-                                         calculate_pool_reward)
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.rpc.rpc_server import start_rpc_server
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.rpc.wallet_rpc_client import WalletRpcClient

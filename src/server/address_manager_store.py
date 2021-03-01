@@ -3,9 +3,13 @@ from typing import Dict, List, Tuple
 
 import aiosqlite
 
-from src.server.address_manager import (BUCKET_SIZE, NEW_BUCKET_COUNT,
-                                        NEW_BUCKETS_PER_ADDRESS,
-                                        AddressManager, ExtendedPeerInfo)
+from src.server.address_manager import (
+    BUCKET_SIZE,
+    NEW_BUCKET_COUNT,
+    NEW_BUCKETS_PER_ADDRESS,
+    AddressManager,
+    ExtendedPeerInfo,
+)
 
 log = logging.getLogger(__name__)
 

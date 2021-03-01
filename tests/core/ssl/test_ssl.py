@@ -11,9 +11,14 @@ from src.ssl.create_ssl import generate_ca_signed_cert
 from src.types.peer_info import PeerInfo
 from src.util.block_tools import test_constants
 from src.util.ints import uint16
-from tests.setup_nodes import (bt, self_hostname, setup_farmer_harvester,
-                               setup_introducer, setup_simulators_and_wallets,
-                               setup_timelord)
+from tests.setup_nodes import (
+    bt,
+    self_hostname,
+    setup_farmer_harvester,
+    setup_introducer,
+    setup_simulators_and_wallets,
+    setup_timelord,
+)
 
 
 async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context) -> bool:

@@ -12,13 +12,19 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import CoinSolution, SpendBundle
 from src.util.ints import uint64
 from src.wallet.cc_wallet.cc_utils import (
-    CC_MOD, cc_puzzle_for_inner_puzzle, cc_puzzle_hash_for_inner_puzzle_hash,
-    spend_bundle_for_spendable_ccs, spendable_cc_list_from_coin_solution)
+    CC_MOD,
+    cc_puzzle_for_inner_puzzle,
+    cc_puzzle_hash_for_inner_puzzle_hash,
+    spend_bundle_for_spendable_ccs,
+    spendable_cc_list_from_coin_solution,
+)
 from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
-from src.wallet.puzzles.genesis_by_coin_id_with_0 import \
-    create_genesis_or_zero_coin_checker
-from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import \
-    create_genesis_puzzle_or_zero_coin_checker
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
+    create_genesis_or_zero_coin_checker,
+)
+from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import (
+    create_genesis_puzzle_or_zero_coin_checker,
+)
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 

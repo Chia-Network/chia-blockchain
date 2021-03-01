@@ -15,12 +15,16 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_utils
-from src.wallet.cc_wallet.cc_utils import (CC_MOD, SpendableCC,
-                                           spend_bundle_for_spendable_ccs,
-                                           uncurry_cc)
+from src.wallet.cc_wallet.cc_utils import (
+    CC_MOD,
+    SpendableCC,
+    spend_bundle_for_spendable_ccs,
+    uncurry_cc,
+)
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.puzzles.genesis_by_coin_id_with_0 import \
-    genesis_coin_id_for_genesis_coin_checker
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
+    genesis_coin_id_for_genesis_coin_checker,
+)
 from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.trading.trade_store import TradeStore
@@ -28,7 +32,8 @@ from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.trade_utils import (
     get_discrepancies_for_spend_bundle,
     get_output_amount_for_puzzle_and_solution,
-    get_output_discrepancy_for_puzzle_and_solution)
+    get_output_discrepancy_for_puzzle_and_solution,
+)
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet

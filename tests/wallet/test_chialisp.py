@@ -1,7 +1,20 @@
 import pytest
 
-from src.wallet.chialisp import (apply, args, cons, eval, fail, first, is_zero,
-                                 make_if, make_list, nth, quote, rest, sexp)
+from src.wallet.chialisp import (
+    apply,
+    args,
+    cons,
+    eval,
+    fail,
+    first,
+    is_zero,
+    make_if,
+    make_list,
+    nth,
+    quote,
+    rest,
+    sexp,
+)
 
 
 class TestChialisp:

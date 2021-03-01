@@ -13,12 +13,19 @@ from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH, calculate_synthetic_secret_key, puzzle_for_pk,
-    solution_for_conditions)
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+    puzzle_for_pk,
+    solution_for_conditions,
+)
 from src.wallet.puzzles.puzzle_utils import (
-    make_assert_announcement, make_assert_my_coin_id_condition,
-    make_assert_seconds_now_exceeds_condition, make_create_announcement,
-    make_create_coin_condition, make_reserve_fee_condition)
+    make_assert_announcement,
+    make_assert_my_coin_id_condition,
+    make_assert_seconds_now_exceeds_condition,
+    make_create_announcement,
+    make_create_coin_condition,
+    make_reserve_fee_condition,
+)
 from src.wallet.secret_key_store import SecretKeyStore
 from src.wallet.sign_coin_solutions import sign_coin_solutions
 from src.wallet.transaction_record import TransactionRecord

@@ -12,8 +12,11 @@ from src.util.condition_tools import conditions_dict_for_solution
 from src.util.ints import uint64
 from src.wallet.puzzles.cc_loader import CC_MOD, LOCK_INNER_PUZZLE
 from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
-    genesis_coin_id_for_genesis_coin_checker, lineage_proof_for_coin,
-    lineage_proof_for_genesis, lineage_proof_for_zero)
+    genesis_coin_id_for_genesis_coin_checker,
+    lineage_proof_for_coin,
+    lineage_proof_for_genesis,
+    lineage_proof_for_zero,
+)
 
 NULL_SIGNATURE = G2Element.generator() * 0
 

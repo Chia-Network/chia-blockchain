@@ -17,22 +17,33 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.util.byte_types import hexstr_to_bytes
-from src.util.condition_tools import (conditions_dict_for_solution,
-                                      pkm_pairs_for_conditions_dict)
+from src.util.condition_tools import (
+    conditions_dict_for_solution,
+    pkm_pairs_for_conditions_dict,
+)
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.json_util import dict_to_json_str
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.cc_wallet.cc_utils import (
-    CC_MOD, SpendableCC, cc_puzzle_for_inner_puzzle,
-    cc_puzzle_hash_for_inner_puzzle_hash, get_lineage_proof_from_coin_and_puz,
-    spend_bundle_for_spendable_ccs, uncurry_cc)
+    CC_MOD,
+    SpendableCC,
+    cc_puzzle_for_inner_puzzle,
+    cc_puzzle_hash_for_inner_puzzle_hash,
+    get_lineage_proof_from_coin_and_puz,
+    spend_bundle_for_spendable_ccs,
+    uncurry_cc,
+)
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
     create_genesis_or_zero_coin_checker,
-    genesis_coin_id_for_genesis_coin_checker, lineage_proof_for_genesis)
+    genesis_coin_id_for_genesis_coin_checker,
+    lineage_proof_for_genesis,
+)
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH, calculate_synthetic_secret_key)
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType

@@ -9,7 +9,9 @@ from clvm_tools import binutils
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.mempool_check_conditions import (
-    get_name_puzzle_conditions, get_puzzle_and_solution_for_coin)
+    get_name_puzzle_conditions,
+    get_puzzle_and_solution_for_coin,
+)
 from src.types.blockchain_format.program import Program, SerializedProgram
 from src.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import bt, test_constants

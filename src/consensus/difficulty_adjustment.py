@@ -9,8 +9,10 @@ from src.types.header_block import HeaderBlock
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.ints import uint8, uint32, uint64, uint128
-from src.util.significant_bits import (count_significant_bits,
-                                       truncate_to_significant_bits)
+from src.util.significant_bits import (
+    count_significant_bits,
+    truncate_to_significant_bits,
+)
 
 
 def _get_blocks_at_height(

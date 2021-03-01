@@ -5,8 +5,10 @@ from typing import Optional
 import pytest
 
 from src.consensus.block_record import BlockRecord
-from src.consensus.block_rewards import (calculate_base_farmer_reward,
-                                         calculate_pool_reward)
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol

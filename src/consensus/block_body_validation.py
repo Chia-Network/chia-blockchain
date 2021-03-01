@@ -7,11 +7,12 @@ from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
 from src.consensus.block_record import BlockRecord
-from src.consensus.block_rewards import (calculate_base_farmer_reward,
-                                         calculate_pool_reward)
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.consensus.block_root_validation import validate_block_merkle_roots
-from src.consensus.blockchain_check_conditions import \
-    blockchain_check_conditions_dict
+from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.coinbase import create_farmer_coin, create_pool_coin
 from src.consensus.constants import ConsensusConstants
@@ -26,8 +27,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.full_block import (FullBlock, additions_for_npc,
-                                  announcements_for_npc)
+from src.types.full_block import FullBlock, additions_for_npc, announcements_for_npc
 from src.types.name_puzzle_condition import NPC
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.condition_tools import pkm_pairs_for_conditions_dict

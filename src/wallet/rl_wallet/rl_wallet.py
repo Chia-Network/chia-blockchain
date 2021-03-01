@@ -18,9 +18,13 @@ from src.util.streamable import Streamable, streamable
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
-    make_clawback_solution, rl_make_aggregation_puzzle,
-    rl_make_aggregation_solution, rl_make_solution_mode_2, rl_puzzle_for_pk,
-    solution_for_rl)
+    make_clawback_solution,
+    rl_make_aggregation_puzzle,
+    rl_make_aggregation_solution,
+    rl_make_solution_mode_2,
+    rl_puzzle_for_pk,
+    solution_for_rl,
+)
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType

@@ -16,7 +16,9 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
-    can_finish_sub_and_full_epoch, get_sub_slot_iters_and_difficulty)
+    can_finish_sub_and_full_epoch,
+    get_sub_slot_iters_and_difficulty,
+)
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -27,10 +29,18 @@ from src.full_node.mempool_manager import MempoolManager
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sync_store import SyncStore
 from src.full_node.weight_proof import WeightProofHandler
-from src.protocols import (farmer_protocol, full_node_protocol,
-                           timelord_protocol, wallet_protocol)
-from src.protocols.full_node_protocol import (RejectBlocks, RequestBlocks,
-                                              RespondBlock, RespondBlocks)
+from src.protocols import (
+    farmer_protocol,
+    full_node_protocol,
+    timelord_protocol,
+    wallet_protocol,
+)
+from src.protocols.full_node_protocol import (
+    RejectBlocks,
+    RequestBlocks,
+    RespondBlock,
+    RespondBlocks,
+)
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, make_msg

@@ -3,7 +3,9 @@ from typing import List, Optional, Tuple
 
 from src.types.blockchain_format.foliage import Foliage
 from src.types.blockchain_format.reward_chain_block import (
-    RewardChainBlock, RewardChainBlockUnfinished)
+    RewardChainBlock,
+    RewardChainBlockUnfinished,
+)
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof

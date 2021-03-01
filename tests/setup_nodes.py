@@ -12,8 +12,7 @@ from src.server.start_introducer import service_kwargs_for_introducer
 from src.server.start_service import Service
 from src.server.start_timelord import service_kwargs_for_timelord
 from src.server.start_wallet import service_kwargs_for_wallet
-from src.simulator.start_simulator import \
-    service_kwargs_for_full_node_simulator
+from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from src.timelord.timelord_launcher import kill_processes, spawn_process
 from src.types.peer_info import PeerInfo
 from src.util.bech32m import encode_puzzle_hash

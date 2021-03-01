@@ -2,8 +2,10 @@ import asyncio
 
 import pytest
 
-from src.consensus.block_rewards import (calculate_base_farmer_reward,
-                                         calculate_pool_reward)
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.consensus.blockchain import ReceiveBlockResult
 from src.protocols import full_node_protocol, wallet_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes

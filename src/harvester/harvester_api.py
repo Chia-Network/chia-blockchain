@@ -5,8 +5,10 @@ from typing import Callable, List, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 
-from src.consensus.pot_iterations import (calculate_iterations_quality,
-                                          calculate_sp_interval_iters)
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_interval_iters,
+)
 from src.harvester.harvester import Harvester
 from src.plotting.plot_tools import PlotInfo
 from src.protocols import harvester_protocol

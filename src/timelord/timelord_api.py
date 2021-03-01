@@ -2,8 +2,7 @@ import logging
 from typing import Callable, Optional
 
 from src.protocols import timelord_protocol
-from src.timelord.timelord import (Chain, IterationType, Timelord,
-                                   iters_from_block)
+from src.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
 from src.util.api_decorators import api_request
 from src.util.ints import uint64
 

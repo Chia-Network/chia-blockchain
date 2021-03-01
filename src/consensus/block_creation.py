@@ -7,8 +7,10 @@ from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from src.consensus.block_record import BlockRecord
-from src.consensus.block_rewards import (calculate_base_farmer_reward,
-                                         calculate_pool_reward)
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.coinbase import create_farmer_coin, create_pool_coin
 from src.consensus.constants import ConsensusConstants
@@ -16,14 +18,19 @@ from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.signage_point import SignagePoint
 from src.types.blockchain_format.coin import Coin, hash_coin_list
-from src.types.blockchain_format.foliage import (Foliage, FoliageBlockData,
-                                                 FoliageTransactionBlock,
-                                                 TransactionsInfo)
+from src.types.blockchain_format.foliage import (
+    Foliage,
+    FoliageBlockData,
+    FoliageTransactionBlock,
+    TransactionsInfo,
+)
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.reward_chain_block import (
-    RewardChainBlock, RewardChainBlockUnfinished)
+    RewardChainBlock,
+    RewardChainBlockUnfinished,
+)
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle

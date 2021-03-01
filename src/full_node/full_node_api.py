@@ -9,21 +9,28 @@ from chiabip158 import PyBIP158
 import src.server.ws_connection as ws
 from src.consensus.block_creation import create_unfinished_block
 from src.consensus.block_record import BlockRecord
-from src.consensus.pot_iterations import (calculate_ip_iters,
-                                          calculate_iterations_quality,
-                                          calculate_sp_iters)
+from src.consensus.pot_iterations import (
+    calculate_ip_iters,
+    calculate_iterations_quality,
+    calculate_sp_iters,
+)
 from src.full_node.full_node import FullNode
-from src.full_node.mempool_check_conditions import \
-    get_puzzle_and_solution_for_coin
+from src.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from src.full_node.signage_point import SignagePoint
-from src.protocols import (farmer_protocol, full_node_protocol,
-                           introducer_protocol, timelord_protocol,
-                           wallet_protocol)
+from src.protocols import (
+    farmer_protocol,
+    full_node_protocol,
+    introducer_protocol,
+    timelord_protocol,
+    wallet_protocol,
+)
 from src.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.wallet_protocol import (PuzzleSolutionResponse,
-                                           RejectHeaderBlocks,
-                                           RejectHeaderRequest)
+from src.protocols.wallet_protocol import (
+    PuzzleSolutionResponse,
+    RejectHeaderBlocks,
+    RejectHeaderRequest,
+)
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.types.blockchain_format.coin import Coin, hash_coin_list
 from src.types.blockchain_format.pool_target import PoolTarget

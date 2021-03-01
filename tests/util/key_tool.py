@@ -1,9 +1,11 @@
 from blspy import AugSchemeMPL, PrivateKey
 
 from src.types.blockchain_format.program import Program
-from src.util.condition_tools import (conditions_by_opcode,
-                                      conditions_for_solution,
-                                      pkm_pairs_for_conditions_dict)
+from src.util.condition_tools import (
+    conditions_by_opcode,
+    conditions_for_solution,
+    pkm_pairs_for_conditions_dict,
+)
 
 
 class KeyTool(dict):

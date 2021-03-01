@@ -2,8 +2,7 @@ from blspy import AugSchemeMPL
 
 from src.util.ints import uint32
 from src.wallet.derive_keys import master_sk_to_wallet_sk
-from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import \
-    puzzle_for_pk
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
 MASTER_KEY = AugSchemeMPL.key_gen(bytes([1] * 32))
 

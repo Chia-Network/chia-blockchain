@@ -21,8 +21,7 @@ from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.trade_record import TradeRecord
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.backup_utils import (download_backup, get_backup_info,
-                                          upload_backup)
+from src.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
