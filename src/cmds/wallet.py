@@ -408,7 +408,7 @@ def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, 
 )
 @click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def create_rate_limited_cmd(
+def create_rate_limited_admin_cmd(
     wallet_rpc_port: int, interval: int, limit: str, amount: str, fee: str, public_key: str, fingerprint: int
 ) -> None:
     final_fee = uint64(int(Decimal(fee) * units["chia"]))
