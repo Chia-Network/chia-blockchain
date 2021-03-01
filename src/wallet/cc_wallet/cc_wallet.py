@@ -247,7 +247,7 @@ class CCWallet:
                 program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
             )
             self.cost_of_single_tx = cost_result.cost
-            self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
+            self.log.info(f"Cost of a single tx for CC wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
         current_cost = 0

@@ -6,7 +6,8 @@ from typing import Dict, Optional, List, Any, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
-
+from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
+from src.full_node.bundle_tools import best_solution_program
 from src.protocols import wallet_protocol
 from src.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
 from src.server.outbound_message import NodeType
@@ -776,6 +777,24 @@ class DIDWallet:
             self.wallet_info.id, unspent_records
         )
         return spendable_am
+
+    async def get_max_send_amount(self, records=None):
+        if self.cost_of_single_tx is None:
+            tx = await self.create_spend(
+                self.did_info.current_inner.get_tree_hash()
+            )
+            program = best_solution_program(tx.spend_bundle)
+            # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+            cost_result: CostResult = calculate_cost_of_program(
+                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+            )
+            self.cost_of_single_tx = cost_result.cost
+            self.log.info(f"Cost of a single tx for DID wallet: {self.cost_of_single_tx}")
+
+        spendable_balance = await self.get_spendable_balance()
+        max_send_amount = spendable_balance - self.cost_of_single_tx
+
+        return max_send_amount
 
     async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
         self.log.info(f"Adding parent {name}: {parent}")
