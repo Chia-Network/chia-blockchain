@@ -26,12 +26,7 @@ from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
-from src.types.weight_proof import (
-    SubEpochChallengeSegment,
-    SubEpochData,
-    SubSlotData,
-    WeightProof,
-)
+from src.types.weight_proof import SubEpochChallengeSegment, SubEpochData, SubSlotData, WeightProof
 from src.util.block_cache import BlockCache
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint32, uint64, uint128

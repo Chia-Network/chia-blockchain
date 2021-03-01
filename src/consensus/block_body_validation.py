@@ -7,10 +7,7 @@ from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
 from src.consensus.block_record import BlockRecord
-from src.consensus.block_rewards import (
-    calculate_base_farmer_reward,
-    calculate_pool_reward,
-)
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.block_root_validation import validate_block_merkle_roots
 from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.consensus.blockchain_interface import BlockchainInterface

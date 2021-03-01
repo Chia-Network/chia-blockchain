@@ -4,11 +4,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
-from src.util.condition_tools import (
-    conditions_by_opcode,
-    conditions_for_solution,
-    pkm_pairs_for_conditions_dict,
-)
+from src.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 

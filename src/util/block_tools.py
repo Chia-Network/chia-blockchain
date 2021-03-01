@@ -15,10 +15,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from src.cmds.init import create_all_ssl, create_default_chia_config
 from src.cmds.plots import create_plots
-from src.consensus.block_creation import (
-    create_unfinished_block,
-    unfinished_block_to_full_block,
-)
+from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.coinbase import create_puzzlehash_for_pk
@@ -63,11 +60,7 @@ from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.util.path import mkdir
 from src.util.vdf_prover import get_vdf_info_and_proof
 from src.util.wallet_tools import WalletTool
-from src.wallet.derive_keys import (
-    master_sk_to_farmer_sk,
-    master_sk_to_pool_sk,
-    master_sk_to_wallet_sk,
-)
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{

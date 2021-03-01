@@ -3,10 +3,7 @@ from typing import List
 
 import pytest
 
-from src.consensus.block_rewards import (
-    calculate_base_farmer_reward,
-    calculate_pool_reward,
-)
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.full_node.mempool_manager import MempoolManager
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.blockchain_format.coin import Coin

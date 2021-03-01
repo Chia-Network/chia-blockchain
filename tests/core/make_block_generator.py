@@ -9,10 +9,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint64
-from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    puzzle_for_pk,
-    solution_for_conditions,
-)
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 
 def puzzle_hash_for_index(index: int, puzzle_hash_db: dict) -> bytes:

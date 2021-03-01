@@ -10,11 +10,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_from_bytes, int_to_bytes
-from src.util.condition_tools import (
-    conditions_by_opcode,
-    conditions_for_solution,
-    pkm_pairs_for_conditions_dict,
-)
+from src.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
 from src.util.ints import uint32, uint64
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (

@@ -2,10 +2,7 @@ import asyncio
 
 import pytest
 
-from src.consensus.block_rewards import (
-    calculate_base_farmer_reward,
-    calculate_pool_reward,
-)
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.protocols.full_node_protocol import RespondBlock
 from src.server.server import ChiaServer
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol

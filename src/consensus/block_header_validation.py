@@ -10,10 +10,7 @@ from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from src.consensus.get_block_challenge import (
-    final_eos_is_already_included,
-    get_block_challenge,
-)
+from src.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -24,11 +21,7 @@ from src.consensus.pot_iterations import (
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.slots import (
-    ChallengeChainSubSlot,
-    RewardChainSubSlot,
-    SubSlotProofs,
-)
+from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock

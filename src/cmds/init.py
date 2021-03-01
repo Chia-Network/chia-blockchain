@@ -8,11 +8,7 @@ import yaml
 
 from src import __version__
 from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.ssl.create_ssl import (
-    generate_ca_signed_cert,
-    get_chia_ca_crt_key,
-    make_ca_cert,
-)
+from src.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
 from src.util.bech32m import encode_puzzle_hash
 from src.util.config import (
     create_default_chia_config,

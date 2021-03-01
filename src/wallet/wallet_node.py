@@ -38,11 +38,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint128
 from src.util.keychain import Keychain
-from src.util.merkle_set import (
-    MerkleSet,
-    confirm_included_already_hashed,
-    confirm_not_included_already_hashed,
-)
+from src.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
 from src.util.path import mkdir, path_from_root
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.derivation_record import DerivationRecord

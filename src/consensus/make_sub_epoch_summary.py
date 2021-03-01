@@ -10,11 +10,7 @@ from src.consensus.difficulty_adjustment import (
     get_next_difficulty,
     get_next_sub_slot_iters,
 )
-from src.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_sp_iters,
-    is_overflow_block,
-)
+from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.full_block import FullBlock
 from src.types.unfinished_block import UnfinishedBlock

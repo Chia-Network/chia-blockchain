@@ -17,10 +17,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.util.byte_types import hexstr_to_bytes
-from src.util.condition_tools import (
-    conditions_dict_for_solution,
-    pkm_pairs_for_conditions_dict,
-)
+from src.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.json_util import dict_to_json_str
 from src.wallet.block_record import HeaderBlockRecord

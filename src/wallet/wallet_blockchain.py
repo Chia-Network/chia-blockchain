@@ -6,10 +6,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from src.consensus.block_header_validation import (
-    validate_finished_header_block,
-    validate_unfinished_header_block,
-)
+from src.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
@@ -20,10 +17,7 @@ from src.consensus.difficulty_adjustment import (
 )
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.multiprocess_validation import (
-    PreValidationResult,
-    pre_validate_blocks_multiprocessing,
-)
+from src.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.header_block import HeaderBlock

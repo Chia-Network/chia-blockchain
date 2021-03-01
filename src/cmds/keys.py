@@ -9,11 +9,7 @@ from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint32
 from src.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic
-from src.wallet.derive_keys import (
-    master_sk_to_farmer_sk,
-    master_sk_to_pool_sk,
-    master_sk_to_wallet_sk,
-)
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 keychain: Keychain = Keychain()
 

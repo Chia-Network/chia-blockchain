@@ -5,10 +5,7 @@ from typing import List, Optional, Set, Tuple
 import aiosqlite
 import pytest
 
-from src.consensus.block_rewards import (
-    calculate_base_farmer_reward,
-    calculate_pool_reward,
-)
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.coinbase import create_farmer_coin, create_pool_coin
 from src.full_node.block_store import BlockStore

@@ -3,10 +3,7 @@ import asyncio
 from blspy import G2Element
 from clvm_tools import binutils
 
-from src.consensus.block_rewards import (
-    calculate_base_farmer_reward,
-    calculate_pool_reward,
-)
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.types.blockchain_format.program import Program
 from src.types.coin_solution import CoinSolution
