@@ -149,7 +149,9 @@ def show_cmd():
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic in quotes")
-@click.option("--mnemonic", "-m", help="Enter mnemonic you want to use", type=str)
+@click.option(
+    "--mnemonic", "-m", help="Enter the mnemonic you want to use surrounded by a single pair of quotes", type=str
+)
 @click.pass_context
 def add_cmd(ctx: click.Context, mnemonic: str):
     add_private_key_seed(mnemonic)
