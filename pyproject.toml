@@ -7,3 +7,7 @@ local_scheme = "no-local-version"
 
 [tool.black]
 line-length = 120
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
