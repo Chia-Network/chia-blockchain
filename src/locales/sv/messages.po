@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-27 15:45\n"
+"PO-Revision-Date: 2021-03-01 03:02\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -926,7 +926,7 @@ msgstr "Ange ett handelspar"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Ange 0 som avgift. Positiv avgift stöds ännu inte för RL."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
@@ -1218,11 +1218,11 @@ msgstr "Välj plånbokstyp"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr "Välj den mapp där du vill att de färdiga plottarna ska sparas. Vi rekommenderar att du använder en stor, långsam hårddisk (t.ex. en extern HDD)."
+msgstr "Välj den slutliga mapp där du vill att plotten ska sparas. Vi rekommenderar att du använder en stor, långsam hårddisk (t. ex. en extern HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Välj den tillfälliga mapp där du vill att plotten ska sparas. Vi rekommenderar att du använder en snabb SSD."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
