@@ -4,7 +4,7 @@ from src.util.ints import uint64
 
 testnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
-    "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,  # Must be less than half of SLOT_BLOCKS_TARGET
+    "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 16,  # Must be less than half of SLOT_BLOCKS_TARGET
     "MAX_SUB_SLOT_BLOCKS": 128,  # Must be less than half of SUB_EPOCH_BLOCKS
     "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
     "SUB_SLOT_ITERS_STARTING": 2 ** 27,
