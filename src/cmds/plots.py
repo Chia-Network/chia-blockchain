@@ -9,7 +9,7 @@ from src.plotting.plot_tools import (
 )
 from src.plotting.create_plots import create_plots
 from src.plotting.check_plots import check_plots
-from src.util.logging import initialize_logging
+from src.util.chia_logging import initialize_logging
 
 
 log = logging.getLogger(__name__)

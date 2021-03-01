@@ -12,15 +12,18 @@ import uuid
 import time
 from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
 from concurrent.futures import ThreadPoolExecutor
+
+import aiohttp
 from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
 from src.util.setproctitle import setproctitle
+from src.util.validate_alert import validate_alert
 from src.util.ws_message import format_response, create_payload
 from src.util.json_util import dict_to_json_str
-from src.util.config import load_config
-from src.util.logging import initialize_logging
+from src.util.config import load_config, save_config
+from src.util.chia_logging import initialize_logging
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
 
@@ -42,6 +45,18 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 service_plotter = "chia plots create"
+
+
+async def fetch(url: str):
+    session = aiohttp.ClientSession()
+    try:
+        response = await session.get(url, ssl=None)
+        await session.close()
+        return await response.text()
+    except Exception as e:
+        await session.close()
+        log.error(f"Exception while fetching {url}, exception: {e}")
+        return None
 
 
 class PlotState(str, Enum):
@@ -102,6 +117,7 @@ class WebSocketServer:
         self.daemon_port = self.net_config["daemon_port"]
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
+        self.shut_down = False
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -125,10 +141,8 @@ class WebSocketServer:
             ssl=self.ssl_context,
         )
 
+        self.alert_task = asyncio.create_task(self.check_for_alerts())
         self.log.info("Waiting Daemon WebSocketServer closure")
-        print("Daemon server started", flush=True)
-        await self.websocket_server.wait_closed()
-        self.log.info("Daemon WebSocketServer closed")
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -138,10 +152,41 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self):
+        self.shut_down = True
         self.cancel_task_safe(self.ping_job)
         await self.exit()
         self.websocket_server.close()
+        self.cancel_task_safe(self.alert_task)
         return {"success": True}
+
+    async def check_for_alerts(self):
+        while True:
+            try:
+                if self.shut_down:
+                    break
+                await asyncio.sleep(2)
+                selected = self.net_config["selected_network"]
+                alert_url = self.net_config["network_overrides"][selected]["STATUS_URL"]
+                response = await fetch(alert_url)
+                if response is None:
+                    continue
+
+                json_response = json.loads(response)
+                if "data" in json_response:
+                    pubkey = self.net_config["network_overrides"][selected]["CHIA_ALERTS_PUBKEY"]
+                    validated = validate_alert(response, pubkey)
+                    if validated is False:
+                        self.log.error(f"Error unable to validate alert! {response}")
+                        continue
+
+                    data = json_response["data"]
+                    data_json = json.loads(data)
+                    challenge = data_json["genesis_challenge"]
+                    self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] = challenge
+                    save_config(self.root_path, "config.yaml", self.net_config)
+                    # launch
+            except Exception as e:
+                log.error(f"Exception in check alerts task: {e}")
 
     async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
         service_name = ""
@@ -898,6 +943,8 @@ async def async_run_daemon(root_path: Path) -> int:
     create_server_for_daemon(root_path)
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
+    await ws_server.websocket_server.wait_closed()
+    log.info("Daemon WebSocketServer closed")
     return 0
 
 

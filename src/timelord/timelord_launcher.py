@@ -6,7 +6,7 @@ import socket
 import time
 
 import pkg_resources
-from src.util.logging import initialize_logging
+from src.util.chia_logging import initialize_logging
 from src.util.config import load_config
 from typing import List
 from src.util.default_root import DEFAULT_ROOT_PATH
