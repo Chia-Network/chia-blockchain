@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from src.rpc.rpc_client import RpcClient
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -128,6 +128,13 @@ class WalletRpcClient(RpcClient):
 
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
+
+    async def create_new_wallet(self, wallet_type: str, data: Dict[str, Any]) -> None:
+        return await self.fetch("create_new_wallet", {
+            "wallet_type": wallet_type,
+            "host": "https://backup.chia.net",
+            **data,
+        })
 
 
 # TODO: add APIs for coloured coins and RL wallet

@@ -3,7 +3,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 import click
@@ -233,6 +233,17 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
     await wallet_client.await_closed()
 
 
+async def create_new_wallet(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    data = await wallet_client.create_new_wallet(args['wallet_type'], args['data'])
+    if data and data['success']:
+        if args['wallet_type'] == "cc_wallet" and args['mode'] == "new":
+            print("New colour created: ", data['colour'])
+        elif args['wallet_type'] == "cc_wallet" and args['mode'] == "existing":
+            print("New colour wallet created.")
+    else:
+        print("Unable to create the new wallet")
+
+
 @click.group("wallet", short_help="Manage your wallet")
 def wallet_cmd() -> None:
     pass
@@ -322,3 +333,50 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
 def get_address_cmd(wallet_rpc_port: int, id, fingerprint: int) -> None:
     extra_params = {"id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
+
+
+@wallet_cmd.group("create", short_help="Create new wallets")
+def wallet_create_cmd():
+    pass
+
+
+@wallet_create_cmd.command("coloured-coin", short_help="Create a coloured coin wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=9256,
+    show_default=True,
+)
+@click.option("-c", "--colour-id", help="Id of the colour for the new wallet", type=str)
+@click.option("-a", "--amount", help="How much chia to destroy to create this coloured coin, in TXCH/XCH", type=str)
+@click.option(
+    "-m", "--fee", help="Set the fees for the transaction", type=str, default="0", show_default=True, required=True
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, fee: str, fingerprint: int) -> None:
+    if not colour_id and not amount:
+        print((
+            "You must use --amount to create a new coloured coin or --colour-id "
+            "to create a wallet of an existing colour, but at least one."
+        ))
+        sys.exit(1)
+    if colour_id and amount:
+        print((
+            "You can use --amount to create a new coloured coin or --colour-id "
+            "to create a wallet of an existing colour, but not both."
+        ))
+        sys.exit(1)
+
+    final_fee = uint64(int(Decimal(fee) * units["chia"]))
+    data: Dict[str, Any] = {"fee": final_fee}
+    if colour_id:
+        data['mode'] = "existing"
+        data['colour'] = colour_id
+    else:
+        data['mode'] = "new"
+        final_amount = uint64(int(Decimal(amount) * units["chia"]))
+        data['amount'] = final_amount
+    extra_params = {"wallet_type": "cc_wallet", "data": data}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
