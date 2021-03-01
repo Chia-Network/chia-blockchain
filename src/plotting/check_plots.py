@@ -20,8 +20,8 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
             log.warning("Not opening plot files")
         else:
             if num < 5:
-                num = 5
                 log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
+                num = 5
             if num < 30:
                 log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
     else:
