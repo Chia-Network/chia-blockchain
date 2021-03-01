@@ -236,10 +236,15 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
 async def create_new_wallet(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     data = await wallet_client.create_new_wallet(args["wallet_type"], args["data"])
     if data and data["success"]:
-        if args["wallet_type"] == "cc_wallet" and args["mode"] == "new":
+        if args["wallet_type"] == "cc_wallet" and args["data"]["mode"] == "new":
             print("New colour created: ", data["colour"])
-        elif args["wallet_type"] == "cc_wallet" and args["mode"] == "existing":
+        elif args["wallet_type"] == "cc_wallet" and args["data"]["mode"] == "existing":
             print("New colour wallet created.")
+        elif args["wallet_type"] == "rl_wallet" and args["data"]["rl_type"] == "user":
+            print("Public key:", data["pubkey"])
+            print("Send this information to your rate limited wallet admin.")
+        elif args["wallet_type"] == "rl_wallet" and args["data"]["rl_type"] == "admin":
+            print("Rate limited wallet created.")
     else:
         print("Unable to create the new wallet")
 
@@ -383,4 +388,45 @@ def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, 
         final_amount = uint64(int(Decimal(amount) * units["chia"]))
         data["amount"] = final_amount
     extra_params = {"wallet_type": "cc_wallet", "data": data}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
+
+
+@wallet_create_cmd.command("rate-limited-admin", short_help="Create a rate limited admin wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=9256,
+    show_default=True,
+)
+@click.option("-i", "--interval", help="Spending interval length (Number of blocks).", type=int, required=True)
+@click.option("-l", "--limit", help="Spendable amount per interval, in TXCH/XCH.", type=str, required=True)
+@click.option("-a", "--amount", help="Amount for initial coin. in TXCH/XCH.", type=str, required=True)
+@click.option(
+    "-m", "--fee", help="Set the fees for the transaction", type=str, default="0", show_default=True, required=True
+)
+@click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def create_rate_limited_cmd(wallet_rpc_port: int, interval: int, limit: str, amount: str, fee: str, public_key: str, fingerprint: int) -> None:
+    final_fee = uint64(int(Decimal(fee) * units["chia"]))
+    final_amount = uint64(int(Decimal(amount) * units["chia"]))
+    final_limit = uint64(int(Decimal(limit) * units["chia"]))
+    data: Dict[str, Any] = {"fee": final_fee, "amount": final_amount, "pubkey": public_key, "limit": final_limit, "rl_type": "admin", "interval": interval}
+    extra_params = {"wallet_type": "rl_wallet", "data": data}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
+
+
+@wallet_create_cmd.command("rate-limited-user", short_help="Create a rate limited user wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=9256,
+    show_default=True,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def create_rate_limited_user_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
+    extra_params = {"wallet_type": "rl_wallet", "data": {"rl_type": "user"}}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
