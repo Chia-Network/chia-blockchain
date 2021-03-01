@@ -70,8 +70,8 @@ async def default_10000_blocks_compact():
 
 def persistent_blocks(
     num_of_blocks: int,
-    db_name: str, seed:
-    bytes = b"",
+    db_name: str,
+    seed: bytes = b"",
     empty_sub_slots=0,
     normalized_to_identity: bool = False,
 ):

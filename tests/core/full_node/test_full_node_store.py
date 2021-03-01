@@ -18,6 +18,7 @@ from src.util.ints import uint32, uint8, uint128, uint64
 from tests.setup_nodes import test_constants, bt
 from src.util.block_tools import get_signage_point
 from tests.core.fixtures import empty_blockchain  # noqa: F401
+from src.util.block_cache import BlockCache
 
 
 log = logging.getLogger(__name__)
@@ -31,9 +32,9 @@ def event_loop():
 
 class TestFullNodeStore:
     @pytest.mark.asyncio
-    async def test_basic_store(self, empty_blockchain):
+    async def test_basic_store(self, empty_blockchain, normalized_to_identity: bool = False):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(10, seed=b"1234")
+        blocks = bt.get_consecutive_blocks(10, seed=b"1234", normalized_to_identity=normalized_to_identity)
 
         store = await FullNodeStore.create(test_constants)
 
@@ -77,7 +78,7 @@ class TestFullNodeStore:
             store.remove_unfinished_block(unf_block.partial_hash)
             assert store.get_unfinished_block(unf_block.partial_hash) is None
 
-        blocks = bt.get_consecutive_blocks(1, skip_slots=5)
+        blocks = bt.get_consecutive_blocks(1, skip_slots=5, normalized_to_identity=normalized_to_identity)
         sub_slots = blocks[0].finished_sub_slots
         assert len(sub_slots) == 5
 
@@ -140,8 +141,8 @@ class TestFullNodeStore:
         )
 
         # Test adding non genesis peak directly
-        blocks = bt.get_consecutive_blocks(2, skip_slots=2)
-        blocks = bt.get_consecutive_blocks(3, block_list_input=blocks)
+        blocks = bt.get_consecutive_blocks(2, skip_slots=2, normalized_to_identity=normalized_to_identity)
+        blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, normalized_to_identity=normalized_to_identity)
         for block in blocks:
             await blockchain.receive_block(block)
             sb = blockchain.block_record(block.header_hash)
@@ -150,7 +151,7 @@ class TestFullNodeStore:
             assert res[0] is None
 
         # Add reorg blocks
-        blocks_reorg = bt.get_consecutive_blocks(20)
+        blocks_reorg = bt.get_consecutive_blocks(20, normalized_to_identity=normalized_to_identity)
         for block in blocks_reorg:
             res, _, _ = await blockchain.receive_block(block)
             if res == ReceiveBlockResult.NEW_PEAK:
@@ -160,7 +161,9 @@ class TestFullNodeStore:
                 assert res[0] is None
 
         # Add slots to the end
-        blocks_2 = bt.get_consecutive_blocks(1, block_list_input=blocks_reorg, skip_slots=2)
+        blocks_2 = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_reorg, skip_slots=2, normalized_to_identity=normalized_to_identity
+        )
         for slot in blocks_2[-1].finished_sub_slots:
             store.new_finished_sub_slot(slot, blockchain, blockchain.get_peak())
 
@@ -184,7 +187,9 @@ class TestFullNodeStore:
 
         blocks = blocks_reorg
         while True:
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, normalized_to_identity=normalized_to_identity
+            )
             res, _, _ = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
                 sb = blockchain.block_record(blocks[-1].header_hash)
@@ -202,7 +207,9 @@ class TestFullNodeStore:
         assert len(store.finished_sub_slots) == 2
 
         # Add slots to the end, except for the last one, which we will use to test invalid SP
-        blocks_2 = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3)
+        blocks_2 = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, skip_slots=3, normalized_to_identity=normalized_to_identity
+        )
         for slot in blocks_2[-1].finished_sub_slots[:-1]:
             store.new_finished_sub_slot(slot, blockchain, blockchain.get_peak())
         finished_sub_slots = blocks_2[-1].finished_sub_slots
@@ -256,6 +263,7 @@ class TestFullNodeStore:
                     finished_sub_slots[:slot_offset],
                     peak.sub_slot_iters,
                 )
+                assert sp.cc_vdf is not None
                 saved_sp_hash = sp.cc_vdf.output.get_hash()
                 assert store.new_signage_point(i, blockchain, peak, peak.sub_slot_iters, sp)
 
@@ -312,7 +320,7 @@ class TestFullNodeStore:
         for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
             sp = get_signage_point(
                 test_constants,
-                {},
+                BlockCache({}, {}),
                 None,
                 uint128(0),
                 uint8(i),
@@ -321,7 +329,7 @@ class TestFullNodeStore:
             )
             assert store.new_signage_point(i, {}, None, peak.sub_slot_iters, sp)
 
-        blocks_3 = bt.get_consecutive_blocks(1, skip_slots=2)
+        blocks_3 = bt.get_consecutive_blocks(1, skip_slots=2, normalized_to_identity=normalized_to_identity)
         for slot in blocks_3[-1].finished_sub_slots:
             store.new_finished_sub_slot(slot, {}, None)
         assert len(store.finished_sub_slots) == 3
@@ -334,7 +342,7 @@ class TestFullNodeStore:
             ):
                 sp = get_signage_point(
                     test_constants,
-                    {},
+                    BlockCache({}, {}),
                     None,
                     slot_offset * peak.sub_slot_iters,
                     uint8(i),
@@ -344,8 +352,10 @@ class TestFullNodeStore:
                 assert store.new_signage_point(i, {}, None, peak.sub_slot_iters, sp)
 
         # Test adding signage points after genesis
-        blocks_4 = bt.get_consecutive_blocks(1)
-        blocks_5 = bt.get_consecutive_blocks(1, block_list_input=blocks_4, skip_slots=1)
+        blocks_4 = bt.get_consecutive_blocks(1, normalized_to_identity=normalized_to_identity)
+        blocks_5 = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_4, skip_slots=1, normalized_to_identity=normalized_to_identity
+        )
 
         # If this is not the case, fix test to find a block that is
         assert (
@@ -359,7 +369,7 @@ class TestFullNodeStore:
             sb.signage_point_index + test_constants.NUM_SP_INTERVALS_EXTRA,
             test_constants.NUM_SPS_SUB_SLOT,
         ):
-            if is_overflow_block(test_constants, i):
+            if is_overflow_block(test_constants, uint8(i)):
                 finished_sub_slots = blocks_5[-1].finished_sub_slots
             else:
                 finished_sub_slots = []
@@ -377,10 +387,12 @@ class TestFullNodeStore:
 
         # Test future EOS cache
         store.initialize_genesis_sub_slot()
-        blocks = bt.get_consecutive_blocks(1)
+        blocks = bt.get_consecutive_blocks(1, normalized_to_identity=normalized_to_identity)
         await blockchain.receive_block(blocks[-1])
         while True:
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+            blocks = bt.get_consecutive_blocks(
+                1, block_list_input=blocks, normalized_to_identity=normalized_to_identity
+            )
             await blockchain.receive_block(blocks[-1])
             sb = blockchain.block_record(blocks[-1].header_hash)
             if sb.first_in_sub_slot:
@@ -404,7 +416,7 @@ class TestFullNodeStore:
 
         # Test future IP cache
         store.initialize_genesis_sub_slot()
-        blocks = bt.get_consecutive_blocks(60)
+        blocks = bt.get_consecutive_blocks(60, normalized_to_identity=normalized_to_identity)
 
         for block in blocks[:5]:
             await blockchain.receive_block(block)
@@ -446,3 +458,7 @@ class TestFullNodeStore:
 
         # If flaky, increase the number of blocks created
         assert case_0 and case_1
+
+    @pytest.mark.asyncio
+    async def test_basic_store_compact_blockchain(self, empty_blockchain):
+        await self.test_basic_store(empty_blockchain, True)

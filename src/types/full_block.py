@@ -143,11 +143,9 @@ class FullBlock(Streamable):
                 or not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
             ):
                 return False
-            if (
-                sub_slot.proofs.infused_challenge_chain_slot_proof is not None and (
-                    sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type != 0
-                    or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-                )
+            if sub_slot.proofs.infused_challenge_chain_slot_proof is not None and (
+                sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type != 0
+                or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
             ):
                 return False
         if self.challenge_chain_sp_proof is not None and (

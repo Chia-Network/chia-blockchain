@@ -28,6 +28,7 @@ from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
 from tests.core.fixtures import default_400_blocks  # noqa: F401
 from tests.core.fixtures import default_10000_blocks  # noqa: F401
+from tests.core.fixtures import default_10000_blocks_compact  # noqa: F401
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
@@ -1580,6 +1581,13 @@ class TestReorgs:
 
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height
+
+    @pytest.mark.asyncio
+    async def test_long_compact_blockchain(self, empty_blockchain, default_10000_blocks_compact):
+        b = empty_blockchain
+        for block in default_10000_blocks_compact:
+            assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+        assert b.get_peak().height == len(default_10000_blocks_compact) - 1
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
