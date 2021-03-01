@@ -8,7 +8,7 @@ msgstr ""
 "Language: is\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-01 00:56\n"
+"PO-Revision-Date: 2021-03-01 20:55\n"
 "Last-Translator: \n"
 "Language-Team: Icelandic\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -32,7 +32,7 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Samþykkt"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
@@ -51,7 +51,7 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Bæta við"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
@@ -86,7 +86,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
 #: src/components/wallet/standard/WalletStandard.tsx:343
 msgid "Amount"
-msgstr ""
+msgstr "Upphæð"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:413
 msgid "Amount ({cc_unit})"
@@ -104,7 +104,7 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Til baka"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
@@ -189,7 +189,7 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Hætta við"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
@@ -221,7 +221,7 @@ msgstr ""
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Loka"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -229,28 +229,28 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Mynt:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Litur"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:180
 msgid "Colour Info"
-msgstr ""
+msgstr "Lita upplýsingar"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Lita strengur"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:185
 msgid "Colour:"
-msgstr ""
+msgstr "Litur:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Lituð mynt"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
