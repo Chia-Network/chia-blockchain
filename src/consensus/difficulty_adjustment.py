@@ -25,7 +25,7 @@ def _get_blocks_at_height(
     """
     Return a consecutive list of BlockRecords starting at target_height, returning a maximum of
     max_num_blocks. Assumes all block records are present. Does a slot linear search, if the blocks are not
-    in the path of the peak.
+    in the path of the peak. Can only fetch ancestors of prev_b.
 
     Args:
         blocks: dict from header hash to BlockRecord.
@@ -37,13 +37,15 @@ def _get_blocks_at_height(
     if blocks.contains_height(prev_b.height):
         header_hash = blocks.height_to_hash(prev_b.height)
         if header_hash == prev_b.header_hash:
-            # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
+            # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain. We can directly
+            # use the height_to_block_record method
             block_list: List[BlockRecord] = []
             for h in range(target_height, target_height + max_num_blocks):
                 assert blocks.contains_height(uint32(h))
                 block_list.append(blocks.height_to_block_record(uint32(h)))
             return block_list
-        # slow fetching, goes back one by one
+
+    # Slow fetching, goes back one by one, since we are in a fork
     curr_b: BlockRecord = prev_b
     target_blocks = []
     while curr_b.height >= target_height:
@@ -55,73 +57,75 @@ def _get_blocks_at_height(
     return list(reversed(target_blocks))
 
 
-def _get_last_transaction_block_in_previous_epoch(
+def _get_second_to_last_transaction_block_in_previous_epoch(
     constants: ConsensusConstants,
     blocks: BlockchainInterface,
-    prev_b: BlockRecord,
+    last_b: BlockRecord,
 ) -> BlockRecord:
     """
-    Retrieves the last transaction block (not block) in the previous epoch, which is infused before the last block in
-    the epoch. This will be used for difficulty adjustment.
+    Retrieves the second to last transaction block in the previous epoch.
 
     Args:
         constants: consensus constants being used for this chain
         blocks: dict from header hash to block of all relevant blocks
-        prev_b: last-block in the current epoch.
+        last_b: last-block in the current epoch.
 
            prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
             v                       v                                v         v
       |.B...B....B. B....B...|......B....B.....B...B.|.B.B.B..|..B...B.B.B...|.B.B.B. B.|........
             PREV EPOCH                 CURR EPOCH                               NEW EPOCH
 
-     The blocks selected for the timestamps are the last block which is also a transaction block, and which
-     is infused before the final block in the epoch. Block at height 0 is an exception.
-    # TODO: check edge cases here
+     The blocks selected for the timestamps are the second to last transaction blocks in each epoch.
+     Block at height 0 is an exception.
     """
-    height_in_next_epoch = prev_b.height + constants.MAX_SUB_SLOT_BLOCKS + 3
+
+    # This height is guaranteed to be in the next epoch
+    height_in_next_epoch = last_b.height + constants.MAX_SUB_SLOT_BLOCKS + 3
     height_epoch_surpass: uint32 = uint32(height_in_next_epoch - (height_in_next_epoch % constants.EPOCH_BLOCKS))
     height_prev_epoch_surpass: uint32 = uint32(height_epoch_surpass - constants.EPOCH_BLOCKS)
+
+    assert height_prev_epoch_surpass % constants.EPOCH_BLOCKS == height_prev_epoch_surpass % constants.EPOCH_BLOCKS == 0
     if (height_in_next_epoch - height_epoch_surpass) > (3 * constants.MAX_SUB_SLOT_BLOCKS):
         raise ValueError(
-            f"Height at {prev_b.height + 1} should not create a new epoch, it is far past the epoch barrier"
+            f"Height at {last_b.height + 1} should not create a new epoch, it is far past the epoch barrier"
         )
 
     if height_prev_epoch_surpass == 0:
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
-        # the last block in the previous epoch, which would be height -1
-        return _get_blocks_at_height(blocks, prev_b, uint32(0))[0]
+        # a block in the previous epoch, which would be height < 0
+        return _get_blocks_at_height(blocks, last_b, uint32(0))[0]
 
     # If the prev slot is the first slot, the iterations start at 0
-    # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
-    first_sb_in_epoch: BlockRecord
+    # We will compute the timestamps of the 2nd to last block in epoch, as well as the total iterations at infusion
     prev_slot_start_iters: uint128
     prev_slot_time_start: uint64
 
+    # The target block must be in this range
     fetched_blocks = _get_blocks_at_height(
         blocks,
-        prev_b,
+        last_b,
         uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_BLOCKS - 1),
         uint32(2 * constants.MAX_SUB_SLOT_BLOCKS + 1),
     )
 
-    # This is the last sb in the slot at which we surpass the height. The last block in epoch will be before this.
+    # This is the last block in the slot at which we surpass the height. The last block in epoch will be before this.
     fetched_index: int = constants.MAX_SUB_SLOT_BLOCKS
-    last_sb_in_slot: BlockRecord = fetched_blocks[fetched_index]
+    last_block_in_slot: BlockRecord = fetched_blocks[fetched_index]
     fetched_index += 1
-    assert last_sb_in_slot.height == height_prev_epoch_surpass - 1
+    assert last_block_in_slot.height == height_prev_epoch_surpass - 1
     curr_b: BlockRecord = fetched_blocks[fetched_index]
     assert curr_b.height == height_prev_epoch_surpass
 
     # Wait until the slot finishes with a challenge chain infusion at start of slot
     # Note that there are no overflow blocks at the start of new epochs
     while curr_b.sub_epoch_summary_included is None:
-        last_sb_in_slot = curr_b
+        last_block_in_slot = curr_b
         curr_b = fetched_blocks[fetched_index]
         fetched_index += 1
 
     # Backtrack to find the last block before the signage point
-    curr_b = blocks.block_record(last_sb_in_slot.prev_hash)
-    while curr_b.total_iters > last_sb_in_slot.sp_total_iters(constants) or not curr_b.is_transaction_block:
+    curr_b = blocks.block_record(last_block_in_slot.prev_hash)
+    while curr_b.total_iters > last_block_in_slot.sp_total_iters(constants) or not curr_b.is_transaction_block:
         curr_b = blocks.block_record(curr_b.prev_hash)
 
     return curr_b
@@ -252,7 +256,7 @@ def get_next_sub_slot_iters(
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
-    last_block_prev: BlockRecord = _get_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
 
     # Ensure we get a tx block for the last block as well, and that it is before the signage point
     last_block_curr = prev_b
@@ -335,7 +339,7 @@ def get_next_difficulty(
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 
-    last_block_prev: BlockRecord = _get_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
+    last_block_prev: BlockRecord = _get_second_to_last_transaction_block_in_previous_epoch(constants, blocks, prev_b)
 
     # Ensure we get a tx block for the last block as well, and that it is before the signage point
     last_block_curr = prev_b

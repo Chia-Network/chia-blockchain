@@ -271,8 +271,9 @@ class RpcServer:
 
                 async with session.ws_connect(
                     f"wss://{self_hostname}:{daemon_port}",
-                    autoclose=False,
+                    autoclose=True,
                     autoping=True,
+                    heartbeat=60,
                     ssl_context=self.ssl_context,
                     max_msg_size=100 * 1024 * 1024,
                 ) as ws:
