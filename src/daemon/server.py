@@ -103,6 +103,9 @@ async def ping():
     return response
 
 
+not_launched_error_message = "Network not launched yet, waiting for genesis challenge"
+
+
 class WebSocketServer:
     def __init__(self, root_path: Path, ca_crt_path: Path, ca_key_path: Path, crt_path: Path, key_path: Path):
         self.root_path = root_path
@@ -118,6 +121,7 @@ class WebSocketServer:
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
+        self.activated = False
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -140,8 +144,14 @@ class WebSocketServer:
             ping_timeout=300,
             ssl=self.ssl_context,
         )
+        selected = self.net_config["selected_network"]
+        challenge = self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"]
 
-        self.alert_task = asyncio.create_task(self.check_for_alerts())
+        if challenge is None:
+            self.activated = False
+            self.alert_task = asyncio.create_task(self.check_for_alerts())
+        else:
+            self.activated = True
         self.log.info("Waiting Daemon WebSocketServer closure")
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
@@ -184,7 +194,9 @@ class WebSocketServer:
                     challenge = data_json["genesis_challenge"]
                     self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] = challenge
                     save_config(self.root_path, "config.yaml", self.net_config)
-                    # launch
+                    self.activated = True
+                    await self.start_services()
+
             except Exception as e:
                 log.error(f"Exception in check alerts task: {e}")
 
@@ -549,6 +561,11 @@ class WebSocketServer:
 
         return response
 
+    async def start_services(self):
+        services = ["chia_full_node", "chia_farmer", "chia_harvester", "chia_wallet"]
+        for service in services:
+            await self.start_service({"service": service})
+
     async def stop_plotting(self, request: Dict[str, Any]):
         id = request["id"]
         config = self._get_plots_queue_item(id)
@@ -582,6 +599,14 @@ class WebSocketServer:
 
     async def start_service(self, request: Dict[str, Any]):
         service_command = request["service"]
+        if self.activated is False:
+            response = {
+                "success": False,
+                "service": service_command,
+                "error": "Network not launched yet, waiting for genesis challenge",
+            }
+            return response
+
         error = None
         success = False
         testing = False
@@ -943,6 +968,7 @@ async def async_run_daemon(root_path: Path) -> int:
     create_server_for_daemon(root_path)
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
+    assert ws_server.websocket_server is not None
     await ws_server.websocket_server.wait_closed()
     log.info("Daemon WebSocketServer closed")
     return 0

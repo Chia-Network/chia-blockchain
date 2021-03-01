@@ -5,7 +5,6 @@ from secrets import token_bytes
 from typing import Dict, List, Optional
 from src.consensus.constants import ConsensusConstants
 from src.daemon.server import (
-    async_run_daemon,
     create_server_for_daemon,
     WebSocketServer,
     daemon_launch_lock_path,

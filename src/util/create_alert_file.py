@@ -1,12 +1,8 @@
-import json
 from pathlib import Path
 from typing import List
-
 from blspy import AugSchemeMPL
-
 from src.util.ints import uint32
 from src.util.keychain import Keychain
-from src.util.hash import std_hash
 from src.util.validate_alert import validate_alert_file, create_alert_file
 
 ready = True

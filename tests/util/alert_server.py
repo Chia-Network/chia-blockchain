@@ -1,3 +1,4 @@
+import argparse
 from typing import Any
 from aiohttp import web
 import asyncio
@@ -45,3 +46,39 @@ class AlertServer:
         await runner.setup()
         site = web.TCPSite(runner, None, self.port)
         await site.start()
+
+
+async def run_and_wait(file_path, port):
+    server = await AlertServer.create_alert_server(Path(file_path), port)
+    await server.run()
+    await server.shut_down_event.wait()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-file_path", type=str, dest="file_path")
+    parser.add_argument("-port", type=str, dest="port")
+
+    port = None
+    file_path = None
+
+    for key, value in vars(parser.parse_args()).items():
+        if key == "port":
+            port = value
+        elif key == "file_path":
+            file_path = value
+        else:
+            print(f"Invalid argument {key}")
+
+    if port is None or file_path is None:
+        print(
+            "Missing arguments, example usage:\n\n"
+            "python src/util/alert_server.py -p 4000 -file_path /home/user/alert.txt\n"
+        )
+        quit()
+
+    return asyncio.get_event_loop().run_until_complete(run_and_wait(file_path, port))
+
+
+if __name__ == "__main__":
+    main()
