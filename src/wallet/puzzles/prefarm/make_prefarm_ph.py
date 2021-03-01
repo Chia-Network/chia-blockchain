@@ -1,11 +1,14 @@
 from clvm.casts import int_from_bytes
 from clvm_tools import binutils
 
+from src.consensus.block_rewards import (
+    calculate_base_farmer_reward,
+    calculate_pool_reward,
+)
 from src.types.blockchain_format.program import Program
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.condition_tools import parse_sexp_to_conditions
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.util.ints import uint32
 
 address1 = "txch1k50glwkdffp2mrqq64rsgjtxj4waphuf72stqayz4qqk6mj9hd4qp7lrek"  # Gene wallet (m/12381/8444/2/51):

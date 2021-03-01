@@ -5,8 +5,8 @@ from chiavdf import prove
 from src.consensus.constants import ConsensusConstants
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.vdf import VDFProof, VDFInfo
-from src.util.ints import uint64, uint8
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.util.ints import uint8, uint64
 
 
 def get_vdf_info_and_proof(

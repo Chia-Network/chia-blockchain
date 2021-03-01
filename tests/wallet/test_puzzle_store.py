@@ -1,13 +1,15 @@
 import asyncio
-from secrets import token_bytes
 from pathlib import Path
-import pytest
+from secrets import token_bytes
+
 import aiosqlite
+import pytest
 from blspy import AugSchemeMPL
+
 from src.util.ints import uint32
-from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
+from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 
 
 @pytest.fixture(scope="module")

@@ -1,11 +1,12 @@
-import click
 import asyncio
 import os
 import subprocess
 from pathlib import Path
 from typing import Optional
 
-from src.daemon.client import connect_to_daemon_and_validate, DaemonProxy
+import click
+
+from src.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from src.util.service_groups import all_groups, services_for_groups
 
 

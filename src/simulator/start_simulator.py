@@ -13,7 +13,6 @@ from src.util.path import mkdir, path_from_root
 
 from .full_node_simulator import FullNodeSimulator
 
-
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
 

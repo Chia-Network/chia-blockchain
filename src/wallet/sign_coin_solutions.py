@@ -1,5 +1,7 @@
 from typing import Callable, List, Optional
+
 from blspy import AugSchemeMPL, PrivateKey
+
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import (

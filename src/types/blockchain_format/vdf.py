@@ -1,15 +1,15 @@
 import logging
 import traceback
 from dataclasses import dataclass
-from typing import Optional, Tuple, Dict
+from typing import Dict, Optional, Tuple
 
-from chiavdf import create_discriminant
+from chiavdf import create_discriminant, verify_n_wesolowski
+
+from src.consensus.constants import ConsensusConstants
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
-from chiavdf import verify_n_wesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
-from src.consensus.constants import ConsensusConstants
 
 log = logging.getLogger(__name__)
 

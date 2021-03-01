@@ -3,7 +3,7 @@ import json
 from typing import Any
 
 import aiohttp
-from blspy import PublicKeyMPL, SignatureMPL, AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, PrivateKey, PublicKeyMPL, SignatureMPL
 from cryptography.fernet import Fernet
 
 from src.util.byte_types import hexstr_to_bytes

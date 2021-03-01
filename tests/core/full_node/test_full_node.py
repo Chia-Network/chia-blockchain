@@ -1,15 +1,14 @@
 # flake8: noqa: F811, F401
 import asyncio
 import dataclasses
+import logging
+import random
+import time
+from secrets import token_bytes
+from typing import Dict, Tuple
 
 import aiohttp
 import pytest
-import random
-import time
-import logging
-from typing import Dict, Tuple
-from secrets import token_bytes
-
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -18,34 +17,39 @@ from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
 from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.protocols.shared_protocol import protocol_version
+from src.server.address_manager import AddressManager
 from src.server.outbound_message import NodeType
-from src.server.server import ssl_context_for_client, ChiaServer
+from src.server.server import ChiaServer, ssl_context_for_client
 from src.server.ws_connection import WSChiaConnection
 from src.ssl.create_ssl import generate_ca_signed_cert
 from src.types.blockchain_format.program import Program, SerializedProgram
-from src.types.full_block import FullBlock
-from src.types.peer_info import TimestampedPeerInfo, PeerInfo
-from src.server.address_manager import AddressManager
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
+from src.types.full_block import FullBlock
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.block_tools import get_signage_point
+from src.util.clvm import int_to_bytes
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint16, uint32, uint64, uint8
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.condition_opcodes import ConditionOpcode
+from src.util.ints import uint8, uint16, uint32, uint64
 from src.util.wallet_tools import WalletTool
 from tests.core.full_node.test_coin_store import get_future_reward_coins
-from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
-from src.util.clvm import int_to_bytes
 from tests.core.full_node.test_full_sync import node_height_at_least
+from tests.setup_nodes import (
+    bt,
+    self_hostname,
+    setup_simulators_and_wallets,
+    test_constants,
+)
 from tests.time_out_assert import (
     time_out_assert,
     time_out_assert_custom_interval,
     time_out_messages,
 )
-from src.protocols.shared_protocol import protocol_version
 
 log = logging.getLogger(__name__)
 

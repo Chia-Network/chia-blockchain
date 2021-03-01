@@ -1,21 +1,20 @@
-import click
-import traceback
-
-import aiohttp
 import asyncio
 import time
-from time import struct_time, localtime
-
+import traceback
+from time import localtime, struct_time
 from typing import List, Optional
 
+import aiohttp
+import click
+
 from src.consensus.block_record import BlockRecord
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.server.outbound_message import NodeType
 from src.types.full_block import FullBlock
-from src.rpc.full_node_rpc_client import FullNodeRpcClient
+from src.util.bech32m import encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16
 
 

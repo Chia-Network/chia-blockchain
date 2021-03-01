@@ -1,19 +1,17 @@
 import pathlib
-
 from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.farmer.farmer import Farmer
 from src.farmer.farmer_api import FarmerAPI
+from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.server.outbound_message import NodeType
+from src.server.start_service import run_service
 from src.types.peer_info import PeerInfo
-from src.util.keychain import Keychain
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.rpc.farmer_rpc_api import FarmerRpcApi
-
-from src.server.start_service import run_service
+from src.util.keychain import Keychain
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")

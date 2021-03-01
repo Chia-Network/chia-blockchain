@@ -1,40 +1,39 @@
 import collections
-from typing import Union, Optional, Set, List, Dict, Tuple
+import logging
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.block_rewards import (
-    calculate_pool_reward,
     calculate_base_farmer_reward,
+    calculate_pool_reward,
 )
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.coinbase import create_pool_coin, create_farmer_coin
-from src.consensus.constants import ConsensusConstants
-from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_root_validation import validate_block_merkle_roots
+from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.consensus.blockchain_interface import BlockchainInterface
+from src.consensus.coinbase import create_farmer_coin, create_pool_coin
+from src.consensus.constants import ConsensusConstants
+from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
+from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.network_type import NetworkType
 from src.full_node.block_store import BlockStore
-from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.coin_store import CoinStore
-from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
-from src.consensus.block_record import BlockRecord
-from src.types.blockchain_format.coin import Coin
-from src.types.coin_record import CoinRecord
 from src.types.announcement import Announcement
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc, announcements_for_npc
 from src.types.name_puzzle_condition import NPC
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint64, uint32
-
-import logging
+from src.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

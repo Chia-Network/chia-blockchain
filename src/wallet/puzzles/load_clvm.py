@@ -1,7 +1,6 @@
 import pathlib
 
 import pkg_resources
-
 from clvm_tools.clvmc import compile_clvm
 
 from src.types.blockchain_format.program import Program, SerializedProgram

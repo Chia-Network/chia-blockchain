@@ -6,8 +6,8 @@ from typing import Callable, List, Tuple
 from blspy import AugSchemeMPL, G2Element
 
 from src.consensus.pot_iterations import (
-    calculate_sp_interval_iters,
     calculate_iterations_quality,
+    calculate_sp_interval_iters,
 )
 from src.harvester.harvester import Harvester
 from src.plotting.plot_tools import PlotInfo
@@ -19,7 +19,7 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
-from src.util.ints import uint8, uint64, uint32
+from src.util.ints import uint8, uint32, uint64
 
 
 class HarvesterAPI:

@@ -1,8 +1,6 @@
 from typing import Any, Dict
 
 from src.wallet.key_val_store import KeyValStore
-
-
 from src.wallet.settings.default_settings import default_settings
 from src.wallet.settings.settings_objects import BackupInitialized
 

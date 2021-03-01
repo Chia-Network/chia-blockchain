@@ -3,9 +3,9 @@ from binascii import hexlify
 
 from clvm_tools import binutils
 
-from src.types.condition_opcodes import ConditionOpcode
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.condition_opcodes import ConditionOpcode
 from src.util.ints import uint64
 from src.wallet.chialisp import sexp
 from src.wallet.puzzles.load_clvm import load_clvm

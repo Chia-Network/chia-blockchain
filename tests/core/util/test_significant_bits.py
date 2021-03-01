@@ -1,7 +1,8 @@
 import unittest
+
 from src.util.significant_bits import (
-    truncate_to_significant_bits,
     count_significant_bits,
+    truncate_to_significant_bits,
 )
 
 

@@ -1,16 +1,16 @@
+import logging
+from pathlib import Path
+
 import click
 
-from pathlib import Path
-import logging
+from src.plotting.check_plots import check_plots
+from src.plotting.create_plots import create_plots
 from src.plotting.plot_tools import (
     add_plot_directory,
-    remove_plot_directory,
     get_plot_directories,
+    remove_plot_directory,
 )
-from src.plotting.create_plots import create_plots
-from src.plotting.check_plots import check_plots
 from src.util.logging import initialize_logging
-
 
 log = logging.getLogger(__name__)
 

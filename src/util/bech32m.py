@@ -22,9 +22,9 @@
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
 
 """Reference implementation for Bech32m and segwit addresses."""
-from src.types.blockchain_format.sized_bytes import bytes32
+from typing import List, Optional, Tuple
 
-from typing import Tuple, Optional, List
+from src.types.blockchain_format.sized_bytes import bytes32
 
 CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 

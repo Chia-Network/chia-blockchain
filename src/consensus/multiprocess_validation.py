@@ -3,9 +3,10 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict, Union, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from src.consensus.block_header_validation import validate_finished_header_block
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
@@ -13,16 +14,15 @@ from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficult
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.get_block_challenge import get_block_challenge
 from src.consensus.network_type import NetworkType
-from src.consensus.pot_iterations import is_overflow_block, calculate_iterations_quality
-from src.consensus.block_record import BlockRecord
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
+from src.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
 from src.util.block_cache import BlockCache
 from src.util.errors import Err
-from src.util.ints import uint64, uint16
-from src.util.streamable import dataclass_from_dict, streamable, Streamable
+from src.util.ints import uint16, uint64
+from src.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
 

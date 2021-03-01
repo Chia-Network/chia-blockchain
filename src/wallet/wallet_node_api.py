@@ -1,4 +1,4 @@
-from src.protocols import wallet_protocol, full_node_protocol, introducer_protocol
+from src.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from src.server.outbound_message import NodeType
 from src.server.ws_connection import WSChiaConnection
 from src.types.mempool_inclusion_status import MempoolInclusionStatus

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint128

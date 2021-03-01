@@ -1,15 +1,16 @@
-import signal
 import asyncio
 import logging
 import pathlib
+import signal
 import socket
 import time
+from typing import List
 
 import pkg_resources
-from src.util.logging import initialize_logging
+
 from src.util.config import load_config
-from typing import List
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.logging import initialize_logging
 from src.util.setproctitle import setproctitle
 
 active_processes: List = []

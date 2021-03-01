@@ -1,9 +1,9 @@
-from unittest import TestCase
 from pathlib import Path
+from unittest import TestCase
 
-from src.types.blockchain_format.program import SerializedProgram, Program
 from clvm_tools.clvmc import compile_clvm
 
+from src.types.blockchain_format.program import Program, SerializedProgram
 
 wallet_program_files = set(
     [

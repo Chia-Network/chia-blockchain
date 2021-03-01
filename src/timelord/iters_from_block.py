@@ -1,9 +1,9 @@
-from typing import Union, Tuple, Optional
+from typing import Optional, Tuple, Union
 
 from src.consensus.pot_iterations import (
+    calculate_ip_iters,
     calculate_iterations_quality,
     calculate_sp_iters,
-    calculate_ip_iters,
 )
 from src.types.blockchain_format.reward_chain_block import (
     RewardChainBlock,
