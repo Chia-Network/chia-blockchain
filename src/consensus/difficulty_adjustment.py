@@ -126,11 +126,11 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
         fetched_index += 1
 
     # Backtrack to find the second to last tx block
-    found_tx_block = 0
+    found_tx_block = 1 if curr_b.is_transaction_block else 0
     while found_tx_block < 2:
+        curr_b = blocks.block_record(curr_b.prev_hash)
         if curr_b.is_transaction_block:
             found_tx_block += 1
-        curr_b = blocks.block_record(curr_b.prev_hash)
 
     return curr_b
 
