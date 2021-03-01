@@ -408,11 +408,20 @@ def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, 
 )
 @click.option("--public_key", "-p", default=None, help="Enter the pk in hex", type=str, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def create_rate_limited_cmd(wallet_rpc_port: int, interval: int, limit: str, amount: str, fee: str, public_key: str, fingerprint: int) -> None:
+def create_rate_limited_cmd(
+    wallet_rpc_port: int, interval: int, limit: str, amount: str, fee: str, public_key: str, fingerprint: int
+) -> None:
     final_fee = uint64(int(Decimal(fee) * units["chia"]))
     final_amount = uint64(int(Decimal(amount) * units["chia"]))
     final_limit = uint64(int(Decimal(limit) * units["chia"]))
-    data: Dict[str, Any] = {"fee": final_fee, "amount": final_amount, "pubkey": public_key, "limit": final_limit, "rl_type": "admin", "interval": interval}
+    data: Dict[str, Any] = {
+        "fee": final_fee,
+        "amount": final_amount,
+        "pubkey": public_key,
+        "limit": final_limit,
+        "rl_type": "admin",
+        "interval": interval,
+    }
     extra_params = {"wallet_type": "rl_wallet", "data": data}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
 
