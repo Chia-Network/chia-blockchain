@@ -116,3 +116,47 @@ class TestDos:
         except ServerDisconnectedError:
             pass
         await session.close()
+
+    @pytest.mark.asyncio
+    async def test_bad_handshake_and_ban(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        server_1.invalid_protocol_ban_seconds = 3
+        # Use the server_2 ssl information to connect to server_1, and send a huge message
+        timeout = ClientTimeout(total=10)
+        session = ClientSession(timeout=timeout)
+        url = f"wss://{self_hostname}:{server_1._port}/ws"
+
+        ssl_context = ssl_context_for_client(
+            server_2.chia_ca_crt_path, server_2.chia_ca_key_path, server_2.p2p_crt_path, server_2.p2p_key_path
+        )
+        ws = await session.ws_connect(
+            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+        )
+        await ws.send_bytes(bytes([1] * (1024)))
+
+        response: WSMessage = await ws.receive()
+        print(response)
+        assert response.type == WSMsgType.CLOSE
+        assert response.data == WSCloseCode.PROTOCOL_ERROR
+        await ws.close()
+
+        # Now test that the ban is active
+        assert ws.closed
+        try:
+            await session.ws_connect(
+                url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+            )
+            assert False
+        except ServerDisconnectedError:
+            pass
+        await asyncio.sleep(4)
+
+        # Ban expired
+        await session.ws_connect(
+            url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
+        )
+
+        await session.close()

@@ -9,7 +9,7 @@ from typing import Any, List, Dict, Callable, Optional, Set, Tuple
 
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
-from aiohttp import web, ClientTimeout, client_exceptions, ClientSession
+from aiohttp import web, ClientTimeout, client_exceptions, ClientSession, WSCloseCode
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -128,6 +128,8 @@ class ChiaServer:
         self.api_tasks: Dict[bytes32, asyncio.Task] = {}
         self.tasks_from_peer: Dict[bytes32, Set[bytes32]] = {}
         self.banned_peers: Dict[str, float] = {}
+        self.invalid_protocol_ban_seconds = 10
+        self.api_exception_ban_seconds = 10
 
     def my_id(self):
         """ If node has public cert use that one for id, if not use private."""
@@ -244,7 +246,7 @@ class ChiaServer:
                     self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
             if connection is not None:
-                await connection.close()
+                await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning("Invalid handshake with peer. Maybe the peer is running old software.")
                 close_event.set()
@@ -258,6 +260,8 @@ class ChiaServer:
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
         except Exception as e:
+            if connection is not None:
+                await connection.close(ws_close_code=WSCloseCode.PROTOCOL_ERROR, error=Err.UNKNOWN)
             error_stack = traceback.format_exc()
             self.log.error(f"Exception {e}, exception Stack: {error_stack}")
             close_event.set()
@@ -266,6 +270,8 @@ class ChiaServer:
         return ws
 
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
+        # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
+        # on TLS public keys
         if connection.peer_node_id in self.all_connections:
             con = self.all_connections[connection.peer_node_id]
             await con.close()
@@ -380,7 +386,7 @@ class ChiaServer:
             self.log.info(f"{e}")
         except ProtocolError as e:
             if connection is not None:
-                await connection.close()
+                await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
                 self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
@@ -391,6 +397,8 @@ class ChiaServer:
                 error_stack = traceback.format_exc()
                 self.log.error(f"Exception {e}, exception Stack: {error_stack}")
         except Exception as e:
+            if connection is not None:
+                await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
             error_stack = traceback.format_exc()
             self.log.error(f"Exception {e}, exception Stack: {error_stack}")
 
@@ -493,7 +501,8 @@ class ChiaServer:
                     else:
                         connection.log.debug(f"Exception: {e} while closing connection")
                         pass
-                    await connection.close()
+                    # TODO: actually throw one of the errors from errors.py and pass this to close
+                    await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:
                     if task_id in self.api_tasks:
                         self.api_tasks.pop(task_id)

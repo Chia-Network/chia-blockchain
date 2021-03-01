@@ -555,17 +555,18 @@ class FullNode:
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
-                await weight_proof_peer.close()
+                await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.height != heaviest_peak_height:
-                await weight_proof_peer.close()
+                await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.weight != heaviest_peak_weight:
-                await weight_proof_peer.close()
+                await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
             validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
             if not validated:
+                await weight_proof_peer.close(600)
                 raise ValueError("Weight proof validation failed")
 
             self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")

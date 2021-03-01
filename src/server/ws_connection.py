@@ -154,7 +154,7 @@ class WSChiaConnection:
         self.inbound_task = asyncio.create_task(self.inbound_handler())
         return True
 
-    async def close(self, ban_time: int = 0):
+    async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
         Closes the connection, and finally calls the close_callback on the server, so the connections gets removed
         from the global list.
@@ -164,13 +164,18 @@ class WSChiaConnection:
             return
         self.closed = True
 
+        if error is None:
+            message = b""
+        else:
+            message = str(int(error.value)).encode("utf-8")
+
         try:
             if self.inbound_task is not None:
                 self.inbound_task.cancel()
             if self.outbound_task is not None:
                 self.outbound_task.cancel()
             if self.ws is not None and self.ws._closed is False:
-                await self.ws.close()
+                await self.ws.close(code=ws_close_code, message=message)
             if self.session is not None:
                 await self.session.close()
             if self.close_event is not None:
@@ -184,7 +189,7 @@ class WSChiaConnection:
         self.close_callback(self, ban_time)
 
     def cancel_pending_timeouts(self):
-        for id, task in self.pending_timeouts.items():
+        for _, task in self.pending_timeouts.items():
             task.cancel()
 
     async def outbound_handler(self):
