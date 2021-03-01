@@ -92,7 +92,7 @@ class DIDWallet:
             amount=uint64(amount),
             fee_amount=uint64(0),
             confirmed=False,
-            sent=uint32(0),
+            sent=uint32(10),
             spend_bundle=None,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
@@ -100,7 +100,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=spend_bundle.name(),
+            name=token_bytes(),
         )
         regular_record = TransactionRecord(
             confirmed_at_height=uint32(0),
