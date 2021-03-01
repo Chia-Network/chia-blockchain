@@ -76,7 +76,8 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
             PREV EPOCH                 CURR EPOCH                               NEW EPOCH
 
      The blocks selected for the timestamps are the second to last transaction blocks in each epoch.
-     Block at height 0 is an exception.
+     Block at height 0 is an exception. Note that H mod EPOCH_BLOCKS where H is the height of the first block in the
+     epoch, must be >= 0, and < 128.
     """
 
     # This height is guaranteed to be in the next epoch
@@ -108,24 +109,27 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
         uint32(2 * constants.MAX_SUB_SLOT_BLOCKS + 1),
     )
 
-    # This is the last block in the slot at which we surpass the height. The last block in epoch will be before this.
+    # We want to find the last block in the slot at which we surpass the height.
+    # The last block in epoch will be before this.
     fetched_index: int = constants.MAX_SUB_SLOT_BLOCKS
-    last_block_in_slot: BlockRecord = fetched_blocks[fetched_index]
-    fetched_index += 1
-    assert last_block_in_slot.height == height_prev_epoch_surpass - 1
     curr_b: BlockRecord = fetched_blocks[fetched_index]
-    assert curr_b.height == height_prev_epoch_surpass
+    fetched_index += 1
+    assert curr_b.height == height_prev_epoch_surpass - 1
+    next_b: BlockRecord = fetched_blocks[fetched_index]
+    assert next_b.height == height_prev_epoch_surpass
 
     # Wait until the slot finishes with a challenge chain infusion at start of slot
     # Note that there are no overflow blocks at the start of new epochs
-    while curr_b.sub_epoch_summary_included is None:
-        last_block_in_slot = curr_b
-        curr_b = fetched_blocks[fetched_index]
+    while next_b.sub_epoch_summary_included is None:
+        curr_b = next_b
+        next_b = fetched_blocks[fetched_index]
         fetched_index += 1
 
-    # Backtrack to find the last block before the signage point
-    curr_b = blocks.block_record(last_block_in_slot.prev_hash)
-    while curr_b.total_iters > last_block_in_slot.sp_total_iters(constants) or not curr_b.is_transaction_block:
+    # Backtrack to find the second to last tx block
+    found_tx_block = 0
+    while found_tx_block < 2:
+        if curr_b.is_transaction_block:
+            found_tx_block += 1
         curr_b = blocks.block_record(curr_b.prev_hash)
 
     return curr_b
