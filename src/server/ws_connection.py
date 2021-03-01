@@ -5,7 +5,7 @@ import traceback
 
 from typing import Any, Callable, Optional, List, Dict
 
-from aiohttp import WSMessage, WSMsgType
+from aiohttp import WSMessage, WSMsgType, WSCloseCode
 
 from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
@@ -154,7 +154,7 @@ class WSChiaConnection:
         self.inbound_task = asyncio.create_task(self.inbound_handler())
         return True
 
-    async def close(self):
+    async def close(self, ban_time: int = 0):
         """
         Closes the connection, and finally calls the close_callback on the server, so the connections gets removed
         from the global list.
@@ -179,9 +179,9 @@ class WSChiaConnection:
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
-            self.close_callback(self)
+            self.close_callback(self, ban_time)
             raise
-        self.close_callback(self)
+        self.close_callback(self, ban_time)
 
     def cancel_pending_timeouts(self):
         for id, task in self.pending_timeouts.items():
@@ -363,6 +363,14 @@ class WSChiaConnection:
             self.bytes_read += len(data)
             self.last_message_time = time.time()
             return full_message_loaded
+        elif message.type == WSMsgType.ERROR:
+            self.log.error(f"WebSocket Error: {message}")
+            if message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
+                asyncio.create_task(self.close(300))
+            else:
+                asyncio.create_task(self.close())
+            await asyncio.sleep(3)
+
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
             asyncio.create_task(self.close())

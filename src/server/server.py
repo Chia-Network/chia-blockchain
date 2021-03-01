@@ -85,7 +85,7 @@ class ChiaServer:
         self._ping_interval = ping_interval
         self._network_id = network_id
 
-        # Taks list to keep references to tasks, so they don't get GCd
+        # Task list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
 
         if name:
@@ -127,6 +127,7 @@ class ChiaServer:
         self.received_message_callback: Optional[Callable] = None
         self.api_tasks: Dict[bytes32, asyncio.Task] = {}
         self.tasks_from_peer: Dict[bytes32, Set[bytes32]] = {}
+        self.banned_peers: Dict[str, float] = {}
 
     def my_id(self):
         """ If node has public cert use that one for id, if not use private."""
@@ -156,6 +157,14 @@ class ChiaServer:
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
                 await connection.close()
+
+            # Also garbage collect banned_peers dict
+            to_remove_ban = []
+            for peer_ip, ban_until_time in self.banned_peers.items():
+                if time.time() > ban_until_time:
+                    to_remove_ban.append(peer_ip)
+            for peer_ip in to_remove_ban:
+                del self.banned_peers[peer_ip]
 
     async def start_server(self, on_connect: Callable = None):
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
@@ -190,6 +199,9 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
+        if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
+            self.log.warning(f"Peer {request.remote} is banned, refusing connection")
+            return None
         ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
         await ws.prepare(request)
         close_event = asyncio.Event()
@@ -290,6 +302,10 @@ class ChiaServer:
         if self.is_duplicate_or_self_connection(target_node):
             return False
 
+        if target_node.host in self.banned_peers and time.time() < self.banned_peers[target_node.host]:
+            self.log.warning(f"Peer {target_node.host} is still banned, not connecting to it")
+            return False
+
         if auth:
             ssl_context = ssl_context_for_client(
                 self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
@@ -383,8 +399,16 @@ class ChiaServer:
 
         return False
 
-    def connection_closed(self, connection: WSChiaConnection):
+    def connection_closed(self, connection: WSChiaConnection, ban_time: int):
         self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
+        ban_until: float = time.time() + ban_time
+        self.log.warning(f"Banning {connection.peer_host} until {ban_until}")
+        if connection.peer_host in self.banned_peers:
+            if ban_until > self.banned_peers[connection.peer_host]:
+                self.banned_peers[connection.peer_host] = ban_until
+        else:
+            self.banned_peers[connection.peer_host] = ban_until
+
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
         if connection.connection_type is not None:
