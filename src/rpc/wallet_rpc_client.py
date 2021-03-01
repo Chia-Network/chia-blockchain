@@ -130,11 +130,14 @@ class WalletRpcClient(RpcClient):
         return await self.fetch("get_farmed_amount", {})
 
     async def create_new_wallet(self, wallet_type: str, data: Dict[str, Any]) -> None:
-        return await self.fetch("create_new_wallet", {
-            "wallet_type": wallet_type,
-            "host": "https://backup.chia.net",
-            **data,
-        })
+        return await self.fetch(
+            "create_new_wallet",
+            {
+                "wallet_type": wallet_type,
+                "host": "https://backup.chia.net",
+                **data,
+            },
+        )
 
 
 # TODO: add APIs for coloured coins and RL wallet

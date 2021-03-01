@@ -234,11 +234,11 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
 
 
 async def create_new_wallet(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    data = await wallet_client.create_new_wallet(args['wallet_type'], args['data'])
-    if data and data['success']:
-        if args['wallet_type'] == "cc_wallet" and args['mode'] == "new":
-            print("New colour created: ", data['colour'])
-        elif args['wallet_type'] == "cc_wallet" and args['mode'] == "existing":
+    data = await wallet_client.create_new_wallet(args["wallet_type"], args["data"])
+    if data and data["success"]:
+        if args["wallet_type"] == "cc_wallet" and args["mode"] == "new":
+            print("New colour created: ", data["colour"])
+        elif args["wallet_type"] == "cc_wallet" and args["mode"] == "existing":
             print("New colour wallet created.")
     else:
         print("Unable to create the new wallet")
@@ -357,26 +357,30 @@ def wallet_create_cmd():
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def create_coloured_coin_cmd(wallet_rpc_port: int, colour_id: str, amount: str, fee: str, fingerprint: int) -> None:
     if not colour_id and not amount:
-        print((
-            "You must use --amount to create a new coloured coin or --colour-id "
-            "to create a wallet of an existing colour, but at least one."
-        ))
+        print(
+            (
+                "You must use --amount to create a new coloured coin or --colour-id "
+                "to create a wallet of an existing colour, but at least one."
+            )
+        )
         sys.exit(1)
     if colour_id and amount:
-        print((
-            "You can use --amount to create a new coloured coin or --colour-id "
-            "to create a wallet of an existing colour, but not both."
-        ))
+        print(
+            (
+                "You can use --amount to create a new coloured coin or --colour-id "
+                "to create a wallet of an existing colour, but not both."
+            )
+        )
         sys.exit(1)
 
     final_fee = uint64(int(Decimal(fee) * units["chia"]))
     data: Dict[str, Any] = {"fee": final_fee}
     if colour_id:
-        data['mode'] = "existing"
-        data['colour'] = colour_id
+        data["mode"] = "existing"
+        data["colour"] = colour_id
     else:
-        data['mode'] = "new"
+        data["mode"] = "new"
         final_amount = uint64(int(Decimal(amount) * units["chia"]))
-        data['amount'] = final_amount
+        data["amount"] = final_amount
     extra_params = {"wallet_type": "cc_wallet", "data": data}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_new_wallet))
