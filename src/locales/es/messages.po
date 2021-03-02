@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-02 01:03\n"
+"PO-Revision-Date: 2021-03-02 04:28\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,12 +28,12 @@ msgstr "0 elige automáticamente la cantidad de cubos"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Un cosechador es un servicio que se ejecuta en una máquina en donde actualmente se almacena(n) la(s) parcela(s). Un granjero y un cosechador hablan con un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
+msgstr "Un cosechador es un servicio que se ejecuta en una máquina en donde actualmente se almacena(n) la(s) parcela(s). Un agricultor y un cosechador hablan con un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
 
 #: src/electron-starter.js:348
 #: src/electron-starter.js:441
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Acerca de Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -75,11 +75,11 @@ msgstr "Añadir una Parcela"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr ""
+msgstr "Añadir una parcela"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr ""
+msgstr "Añadir directorio de parcelas"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:403
 #: src/components/wallet/coloured/WalletColoured.tsx:455
@@ -135,7 +135,7 @@ msgstr "Balance"
 
 #: src/components/block/Block.jsx:292
 msgid "Base Farmer Reward Amount"
-msgstr "Monto Base de Recompensa del Granjero"
+msgstr "Monto Base de Recompensa del Agricultor"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -226,15 +226,15 @@ msgstr "Desafío Hash"
 
 #: src/electron-starter.js:327
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Chatear en Keybase"
 
 #: src/electron-starter.js:345
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron-starter.js:284
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Wiki de Cadena de Bloques Chia"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -288,7 +288,7 @@ msgstr "Opciones de Moneda de Color"
 
 #: src/electron-starter.js:121
 msgid "Confirm"
-msgstr ""
+msgstr "Confirmar"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -334,7 +334,7 @@ msgstr "Conexiones"
 
 #: src/electron-starter.js:308
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Contribuir en GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -494,11 +494,11 @@ msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, ase
 
 #: src/electron-starter.js:230
 msgid "Developer"
-msgstr ""
+msgstr "Desarrollador"
 
 #: src/electron-starter.js:233
 msgid "Developer Tools"
-msgstr ""
+msgstr "Herramientas de Desarrollador"
 
 #: src/components/block/Block.jsx:202
 #: src/components/fullNode/FullNode.jsx:193
@@ -533,7 +533,7 @@ msgstr "Arrastra y suelta tu archivo de respaldo"
 
 #: src/electron-starter.js:189
 msgid "Edit"
-msgstr ""
+msgstr "Editar"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -578,21 +578,21 @@ msgstr "Granja"
 
 #: src/components/block/Block.jsx:238
 msgid "Farmer Puzzle Hash"
-msgstr "Enigma Hash de Granjero"
+msgstr "Enigma Hash de Agricultor"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "El Granjero no está conectado"
+msgstr "El Agricultor no está conectado"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "El Granjero no está funcionando"
+msgstr "El Agricultor no está funcionando"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr "Los Granjeros obtienen recompensas de bloque y tarifas de transacción al asignar espacio libre a la red para ayudar a asegurar las transacciones. Aquí es donde estará su granja una vez que agregue una parcela. <0> Más información </0>"
+msgstr "Los agricultores obtienen recompensas en bloque y tarifas de transacción al asignar espacio libre a la red para ayudar a asegurar las transacciones. Aquí es donde estará su granja una vez que agregue una parcela. <0> Más información </0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
@@ -634,7 +634,7 @@ msgstr "Monto de tarifas"
 #: src/electron-starter.js:181
 #: src/electron-starter.js:388
 msgid "File"
-msgstr ""
+msgstr "Archivo"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -653,11 +653,11 @@ msgstr "Finalizado"
 
 #: src/electron-starter.js:333
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Seguir en Twitter"
 
 #: src/electron-starter.js:292
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Preguntas Frecuentes"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
@@ -670,7 +670,7 @@ msgstr "Estado de Nodo Completo"
 
 #: src/electron-starter.js:258
 msgid "Full Screen"
-msgstr ""
+msgstr "Pantalla Completa"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -696,7 +696,7 @@ msgstr "Altura"
 
 #: src/electron-starter.js:280
 msgid "Help"
-msgstr ""
+msgstr "Ayuda"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
@@ -1229,7 +1229,7 @@ msgstr "Actualizar Parcelas"
 
 #: src/electron-starter.js:300
 msgid "Release Notes"
-msgstr ""
+msgstr "Notas de lanzamiento"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:205
 msgid "Rename"
@@ -1237,7 +1237,7 @@ msgstr "Renombrar"
 
 #: src/electron-starter.js:319
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Reportar un problema..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Smart Wallets From Backup"
@@ -1475,7 +1475,7 @@ msgstr "Ubicación de la carpeta temporal"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "El nodo completo al que está conectado su granjero se encuentra a continuación. <0> Más información </0>"
+msgstr "El nodo completo al que está conectado su agricultor se encuentra a continuación. <0> Más información </0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:36
 msgid "The minimum required size for mainnet is k=32"
@@ -1503,7 +1503,7 @@ msgstr "Número total de VDF (funcione de retardo verificable) o iteraciones de 
 
 #: src/components/block/Block.jsx:299
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr "Las tarifas totales de transacciones en este bloque. Recompensado al granjero."
+msgstr "Las tarifas totales de transacciones en este bloque. Recompensado al agricultor."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
@@ -1511,7 +1511,7 @@ msgstr "Estas parcelas no son válidas, es posible que desee eliminarlas."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "Esto le permite agregar un directorio que tiene parcelas. Si no ha creado ninguna parcela, vaya a la pantalla de crear parcelas."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
@@ -1672,7 +1672,7 @@ msgstr "Iteraciones VDF Sub Slot"
 
 #: src/electron-starter.js:221
 msgid "View"
-msgstr ""
+msgstr "Vista"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1765,7 +1765,7 @@ msgstr "Cuando reciba el paquete de información de configuración de su adminis
 
 #: src/electron-starter.js:266
 msgid "Window"
-msgstr ""
+msgstr "Ventana"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
