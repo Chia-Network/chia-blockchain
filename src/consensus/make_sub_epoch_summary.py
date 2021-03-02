@@ -48,8 +48,8 @@ def make_sub_epoch_summary(
         new_sub_slot_iters: sub slot iters in new epoch
     """
     assert prev_prev_block.height == blocks_included_height - 2
-    # If first sub_epoch. Adds MAX_SUB_SLOT_BLOCKS because blocks_included_height might be behind
-    if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1:
+    # First sub_epoch
+    if blocks_included_height // constants.SUB_EPOCH_BLOCKS <= 1:
         return SubEpochSummary(
             constants.GENESIS_CHALLENGE,
             constants.GENESIS_CHALLENGE,

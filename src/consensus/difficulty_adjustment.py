@@ -64,7 +64,7 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
     Args:
         constants: consensus constants being used for this chain
         blocks: dict from header hash to block of all relevant blocks
-        last_b: last-block in the current epoch.
+        last_b: last-block in the current epoch, or last block we have seen, if potentially finishing epoch soon
 
            prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
             v                       v                                v         v
@@ -76,8 +76,10 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
      epoch, must be >= 0, and < 128.
     """
 
-    # This height is guaranteed to be in the next epoch
-    height_in_next_epoch = last_b.height + 1
+    # This height is guaranteed to be in the next epoch (even when last_b is not actually the last block)
+    height_in_next_epoch = (
+        last_b.height + 2 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 5
+    )
     height_epoch_surpass: uint32 = uint32(height_in_next_epoch - (height_in_next_epoch % constants.EPOCH_BLOCKS))
     height_prev_epoch_surpass: uint32 = uint32(height_epoch_surpass - constants.EPOCH_BLOCKS)
 
@@ -241,9 +243,11 @@ def can_finish_soon_sub_and_full_epoch(
             return False, False
 
     # For checking new epoch, make sure the epoch blocks are aligned
-    if (
-        (height + 1) % constants.EPOCH_BLOCKS > constants.MAX_SUB_SLOT_BLOCKS
-        and future_sb_height % constants.EPOCH_BLOCKS > constants.MAX_SUB_SLOT_BLOCKS
+
+    if (height + 1) % constants.EPOCH_BLOCKS > (
+        2 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+    ) and future_sb_height % constants.EPOCH_BLOCKS > (
+        2 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
     ):
         return True, False
     return True, True
