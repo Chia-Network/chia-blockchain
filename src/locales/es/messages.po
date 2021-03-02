@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-02-26 20:02\n"
+"PO-Revision-Date: 2021-03-02 01:03\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -29,6 +29,11 @@ msgstr "0 elige automáticamente la cantidad de cubos"
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un cosechador es un servicio que se ejecuta en una máquina en donde actualmente se almacena(n) la(s) parcela(s). Un granjero y un cosechador hablan con un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
+
+#: src/electron-starter.js:348
+#: src/electron-starter.js:441
+msgid "About Chia Blockchain"
+msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -68,6 +73,14 @@ msgstr "Añadir Monedero"
 msgid "Add a Plot"
 msgstr "Añadir una Parcela"
 
+#: src/components/plot/PlotAddDirectoryDialog.tsx:40
+msgid "Add a plot"
+msgstr ""
+
+#: src/components/plot/PlotAddDirectoryDialog.tsx:69
+msgid "Add plot directory"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:403
 #: src/components/wallet/coloured/WalletColoured.tsx:455
 #: src/components/wallet/standard/WalletStandard.tsx:383
@@ -100,6 +113,10 @@ msgstr "Cantidad Para Moneda Inicial"
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "¿Está seguro de que desea eliminar la parcela? La parcela no se puede recuperar."
+
+#: src/electron-starter.js:123
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -207,6 +224,18 @@ msgstr "Desafío"
 msgid "Challenge Hash"
 msgstr "Desafío Hash"
 
+#: src/electron-starter.js:327
+msgid "Chat on KeyBase"
+msgstr ""
+
+#: src/electron-starter.js:345
+msgid "Chia"
+msgstr ""
+
+#: src/electron-starter.js:284
+msgid "Chia Blockchain Wiki"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
 msgstr "Monedero Chia"
@@ -219,6 +248,7 @@ msgstr "Elegir la cantidad de Parcelas"
 msgid "Choose Plot Size"
 msgstr "Elegir el Tamaño de la Parcela"
 
+#: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
 msgstr "Cerrar"
@@ -255,6 +285,10 @@ msgstr "Moneda de Color"
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
 msgstr "Opciones de Moneda de Color"
+
+#: src/electron-starter.js:121
+msgid "Confirm"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -297,6 +331,10 @@ msgstr "Tipo de Conexión"
 #: src/components/fullNode/FullNodeConnections.jsx:78
 msgid "Connections"
 msgstr "Conexiones"
+
+#: src/electron-starter.js:308
+msgid "Contribute on GitHub"
+msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -454,6 +492,14 @@ msgstr "Borrar todas las llaves eliminará permanentemente las llaves de su orde
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, asegurase de tener una copia de seguridad. ¿Está seguro de que quiere continuar?"
 
+#: src/electron-starter.js:230
+msgid "Developer"
+msgstr ""
+
+#: src/electron-starter.js:233
+msgid "Developer Tools"
+msgstr ""
+
 #: src/components/block/Block.jsx:202
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Difficulty"
@@ -484,6 +530,10 @@ msgstr "Arrastre el fichero de oferta"
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
 msgstr "Arrastra y suelta tu archivo de respaldo"
+
+#: src/electron-starter.js:189
+msgid "Edit"
+msgstr ""
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -581,6 +631,11 @@ msgstr "Monto de tarifas"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
+#: src/electron-starter.js:181
+#: src/electron-starter.js:388
+msgid "File"
+msgstr ""
+
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:70
@@ -596,6 +651,14 @@ msgstr "Ubicación de la Carpeta Final"
 msgid "Finished"
 msgstr "Finalizado"
 
+#: src/electron-starter.js:333
+msgid "Follow on Twitter"
+msgstr ""
+
+#: src/electron-starter.js:292
+msgid "Frequently Asked Questions"
+msgstr ""
+
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
 msgid "Full Node"
@@ -604,6 +667,10 @@ msgstr "Nodo Completo"
 #: src/components/fullNode/FullNode.jsx:265
 msgid "Full Node Status"
 msgstr "Estado de Nodo Completo"
+
+#: src/electron-starter.js:258
+msgid "Full Screen"
+msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -626,6 +693,10 @@ msgstr "Encabezado de hash"
 #: src/components/fullNode/FullNodeConnections.jsx:107
 msgid "Height"
 msgstr "Altura"
+
+#: src/electron-starter.js:280
+msgid "Help"
+msgstr ""
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
@@ -811,6 +882,7 @@ msgid "Nickname"
 msgstr "Apodo"
 
 #: src/components/trading/TradingOverview.jsx:212
+#: src/electron-starter.js:120
 msgid "No"
 msgstr "No"
 
@@ -1155,9 +1227,17 @@ msgstr "Recuperar Monedero DID"
 msgid "Refresh Plots"
 msgstr "Actualizar Parcelas"
 
+#: src/electron-starter.js:300
+msgid "Release Notes"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:205
 msgid "Rename"
 msgstr "Renombrar"
+
+#: src/electron-starter.js:319
+msgid "Report an Issue..."
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Smart Wallets From Backup"
@@ -1266,6 +1346,10 @@ msgstr "Iniciar Sesión"
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Skip"
 msgstr "Saltar"
+
+#: src/electron-starter.js:402
+msgid "Speech"
+msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1425,6 +1509,10 @@ msgstr "Las tarifas totales de transacciones en este bloque. Recompensado al gra
 msgid "These plots are invalid, you might want to delete them."
 msgstr "Estas parcelas no son válidas, es posible que desee eliminarlas."
 
+#: src/components/plot/PlotAddDirectoryDialog.tsx:44
+msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
+msgstr ""
+
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
@@ -1582,6 +1670,10 @@ msgstr "Llave Pública de Usuario"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteraciones VDF Sub Slot"
 
+#: src/electron-starter.js:221
+msgid "View"
+msgstr ""
+
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
@@ -1671,11 +1763,16 @@ msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de segur
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Monedero con Tarifa Limitada:"
 
+#: src/electron-starter.js:266
+msgid "Window"
+msgstr ""
+
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
 msgstr "Sin tarifas"
 
 #: src/components/trading/TradingOverview.jsx:212
+#: src/electron-starter.js:120
 msgid "Yes"
 msgstr "Sí"
 
