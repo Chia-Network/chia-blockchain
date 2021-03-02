@@ -36,7 +36,7 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
 async def async_start(root_path: Path, group: str, restart: bool) -> None:
     daemon = await create_start_daemon_connection(root_path)
     if daemon is None:
-        print("failed to create the chia start daemon")
+        print("Failed to create the chia daemon")
         return
 
     for service in services_for_groups(group):
@@ -50,7 +50,7 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
                 else:
                     print("stop failed")
             else:
-                print("already running, use `-r` to restart")
+                print("Already running, use `-r` to restart")
                 continue
         print(f"{service}: ", end="", flush=True)
         msg = await daemon.start_service(service_name=service)
@@ -64,8 +64,8 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
     await daemon.close()
 
 
-@click.command("start", short_help="start service groups")
-@click.option("-r", "--restart", is_flag=True, type=bool, help="Restart of running processes")
+@click.command("start", short_help="Start service groups")
+@click.option("-r", "--restart", is_flag=True, type=bool, help="Restart running services")
 @click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
 @click.pass_context
 def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:

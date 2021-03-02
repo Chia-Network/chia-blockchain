@@ -278,9 +278,14 @@ class WSChiaConnection:
 
         # If the timeout passes, we set the event
         async def time_out(req_id, req_timeout):
-            await asyncio.sleep(req_timeout)
-            if req_id in self.pending_requests:
-                self.pending_requests[req_id].set()
+            try:
+                await asyncio.sleep(req_timeout)
+                if req_id in self.pending_requests:
+                    self.pending_requests[req_id].set()
+            except asyncio.CancelledError:
+                if req_id in self.pending_requests:
+                    self.pending_requests[req_id].set()
+                raise
 
         timeout_task = asyncio.create_task(time_out(message.id, timeout))
         self.pending_timeouts[message.id] = timeout_task

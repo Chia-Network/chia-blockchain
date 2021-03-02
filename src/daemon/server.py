@@ -369,18 +369,18 @@ class WebSocketServer:
 
         command_args: List[str] = []
         command_args += service_name.split(" ")
-        command_args.append(f"-k={k}")
-        command_args.append(f"-n={n}")
-        command_args.append(f"-t={t}")
-        command_args.append(f"-2={t2}")
-        command_args.append(f"-d={d}")
-        command_args.append(f"-b={b}")
-        command_args.append(f"-u={u}")
-        command_args.append(f"-r={r}")
-        command_args.append(f"-s={s}")
+        command_args.append(f"-k{k}")
+        command_args.append(f"-n{n}")
+        command_args.append(f"-t{t}")
+        command_args.append(f"-2{t2}")
+        command_args.append(f"-d{d}")
+        command_args.append(f"-b{b}")
+        command_args.append(f"-u{u}")
+        command_args.append(f"-r{r}")
+        command_args.append(f"-s{s}")
 
         if a is not None:
-            command_args.append(f"-a={a}")
+            command_args.append(f"-a{a}")
 
         if e is True:
             command_args.append("-e")

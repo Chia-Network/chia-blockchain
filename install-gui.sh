@@ -71,6 +71,7 @@ if [ ! "$CI" ]; then
 
 	if [ "$SUBMODULE_BRANCH" ];
 	then
+    git fetch
 		git checkout "$SUBMODULE_BRANCH"
     git pull
 		echo ""
