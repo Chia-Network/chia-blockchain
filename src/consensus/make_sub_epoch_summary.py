@@ -49,7 +49,7 @@ def make_sub_epoch_summary(
     """
     assert prev_prev_block.height == blocks_included_height - 2
     # If first sub_epoch. Adds MAX_SUB_SLOT_BLOCKS because blocks_included_height might be behind
-    if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS == 1:
+    if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1:
         return SubEpochSummary(
             constants.GENESIS_CHALLENGE,
             constants.GENESIS_CHALLENGE,
