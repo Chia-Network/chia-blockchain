@@ -103,12 +103,12 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
     # in it's sub slot must be a transaction block. If that is the only transaction block in the sub-slot, the last
     # block in the previous sub-slot from that must also be a transaction block (therefore -1 is used).
     # The max height for the new epoch to start is surpass + 2*MAX_SUB_SLOT_BLOCKS + MIN_BLOCKS_PER_CHALLENGE_BLOCK - 3,
-    # since we might have a deficit > 0 when surpass is hit. The +2 is added just in case
+    # since we might have a deficit > 0 when surpass is hit. The +3 is added just in case
     fetched_blocks = _get_blocks_at_height(
         blocks,
         last_b,
         uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_BLOCKS - 1),
-        uint32(3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 2),
+        uint32(3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3),
     )
 
     # We want to find the last block in the slot at which we surpass the height.
@@ -230,7 +230,7 @@ def can_finish_soon_sub_and_full_epoch(
 
     assert prev_header_hash is not None
 
-    if 1 < (height + 1) % constants.SUB_EPOCH_BLOCKS <= constants.MAX_SUB_SLOT_BLOCKS:
+    if 1 < ((height + 1) % constants.SUB_EPOCH_BLOCKS) <= constants.MAX_SUB_SLOT_BLOCKS:
         already_included_ses = False
         curr: BlockRecord = blocks.block_record(prev_header_hash)
         while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
