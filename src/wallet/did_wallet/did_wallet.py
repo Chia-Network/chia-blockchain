@@ -326,7 +326,7 @@ class DIDWallet:
             raise e
         return
 
-    async def load_backup(self, filename):
+    async def load_backup(self, filename: str):
         try:
             f = open(filename, "r")
             details = f.readline().split(":")
