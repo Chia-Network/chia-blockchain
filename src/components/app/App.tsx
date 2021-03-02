@@ -1,13 +1,11 @@
 import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
-import { i18n } from '@lingui/core';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
-import "../../load-locales";
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import WebSocketConnection from '../../hocs/WebsocketConnection';
@@ -17,6 +15,7 @@ import useLocale from '../../hooks/useLocale';
 import './App.css';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
+import i18n from '../../config/locales';
 
 export default function App() {
   const { value: darkMode } = useDarkMode();

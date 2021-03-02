@@ -30,8 +30,8 @@ msgstr "0 alege automat numărul de buckets"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un harvester este un serviciu care rulează pe o mașină în care plot (urile) sunt efectiv stocate. Un farmer și un harvester comunica cu un nod complet pentru a vedea starea lanțului. Vedeți mai jos rețeaua dvs. de harvesters conectate Aflați mai multe"
 
-#: src/electron-starter.js:348
-#: src/electron-starter.js:441
+#: src/electron-starter.js:353
+#: src/electron-starter.js:446
 msgid "About Chia Blockchain"
 msgstr ""
 
@@ -114,7 +114,7 @@ msgstr "Suma pentru moneda initiala"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Sunteti sigur ca vreti sa stergeti plotul? Plotul nu va putea fi recuperat."
 
-#: src/electron-starter.js:123
+#: src/electron-starter.js:125
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr ""
 
@@ -224,15 +224,15 @@ msgstr "Provocare"
 msgid "Challenge Hash"
 msgstr "Hashul provocarii"
 
-#: src/electron-starter.js:327
+#: src/electron-starter.js:332
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron-starter.js:345
+#: src/electron-starter.js:350
 msgid "Chia"
 msgstr ""
 
-#: src/electron-starter.js:284
+#: src/electron-starter.js:289
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
@@ -286,7 +286,7 @@ msgstr "Monede colorate"
 msgid "Coloured Coin Options"
 msgstr "Opțiuni monede colorate"
 
-#: src/electron-starter.js:121
+#: src/electron-starter.js:123
 msgid "Confirm"
 msgstr ""
 
@@ -332,7 +332,7 @@ msgstr "Tipul conexiunii"
 msgid "Connections"
 msgstr "Conexiuni"
 
-#: src/electron-starter.js:308
+#: src/electron-starter.js:313
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -492,11 +492,11 @@ msgstr "Ștergerea tuturor cheilor va elimina definitiv cheile de pe computer, a
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Ștergerea tuturor cheilor va elimina definitiv cheile de pe computer, asigurați-vă că aveți copii de rezervă. Esti sigur ca vrei sa continui?"
 
-#: src/electron-starter.js:230
+#: src/electron-starter.js:235
 msgid "Developer"
 msgstr ""
 
-#: src/electron-starter.js:233
+#: src/electron-starter.js:238
 msgid "Developer Tools"
 msgstr ""
 
@@ -531,7 +531,7 @@ msgstr "Drag and drop fisierul cu oferta"
 msgid "Drag and drop your backup file"
 msgstr "Drag and drop fisierul backup"
 
-#: src/electron-starter.js:189
+#: src/electron-starter.js:194
 msgid "Edit"
 msgstr ""
 
@@ -631,8 +631,8 @@ msgstr "Suma taxe"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:181
-#: src/electron-starter.js:388
+#: src/electron-starter.js:186
+#: src/electron-starter.js:393
 msgid "File"
 msgstr ""
 
@@ -651,11 +651,11 @@ msgstr "Locatia folderului final"
 msgid "Finished"
 msgstr "Terminat"
 
-#: src/electron-starter.js:333
+#: src/electron-starter.js:338
 msgid "Follow on Twitter"
 msgstr ""
 
-#: src/electron-starter.js:292
+#: src/electron-starter.js:297
 msgid "Frequently Asked Questions"
 msgstr ""
 
@@ -668,7 +668,7 @@ msgstr "Nod complet"
 msgid "Full Node Status"
 msgstr "Stare nod complet"
 
-#: src/electron-starter.js:258
+#: src/electron-starter.js:263
 msgid "Full Screen"
 msgstr ""
 
@@ -694,7 +694,7 @@ msgstr "hashul Headerului"
 msgid "Height"
 msgstr "Inaltime"
 
-#: src/electron-starter.js:280
+#: src/electron-starter.js:285
 msgid "Help"
 msgstr ""
 
@@ -882,7 +882,7 @@ msgid "Nickname"
 msgstr "Porecla"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:120
+#: src/electron-starter.js:122
 msgid "No"
 msgstr "Nu"
 
@@ -1227,7 +1227,7 @@ msgstr "Recuperare portofel DID"
 msgid "Refresh Plots"
 msgstr "Improspateaza ploturile"
 
-#: src/electron-starter.js:300
+#: src/electron-starter.js:305
 msgid "Release Notes"
 msgstr ""
 
@@ -1235,7 +1235,7 @@ msgstr ""
 msgid "Rename"
 msgstr "Redenumeste"
 
-#: src/electron-starter.js:319
+#: src/electron-starter.js:324
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1347,7 +1347,7 @@ msgstr "Inregistreaza-te"
 msgid "Skip"
 msgstr "Sari"
 
-#: src/electron-starter.js:402
+#: src/electron-starter.js:407
 msgid "Speech"
 msgstr ""
 
@@ -1670,7 +1670,7 @@ msgstr "Pubkey Utilizator"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteratii sub slot VDF"
 
-#: src/electron-starter.js:221
+#: src/electron-starter.js:226
 msgid "View"
 msgstr ""
 
@@ -1763,7 +1763,7 @@ msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portof
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cand primiti pachetul de informatii despre configurare de la administratorul dvs., introduceti-l mai jos pentru a finaliza configurarea portofelului dvs. limitat:"
 
-#: src/electron-starter.js:266
+#: src/electron-starter.js:271
 msgid "Window"
 msgstr ""
 
@@ -1772,7 +1772,7 @@ msgid "Without fees"
 msgstr "Fara taxe"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:120
+#: src/electron-starter.js:122
 msgid "Yes"
 msgstr "Da"
 
@@ -1820,4 +1820,3 @@ msgstr "sincronizat"
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "se sincronizeaza"
-

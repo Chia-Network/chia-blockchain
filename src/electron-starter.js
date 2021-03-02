@@ -19,8 +19,7 @@ if (!setupEvents.handleSquirrelEvent()) {
   const local_test =  require("./config/config").local_test;
   const url = require("url");
   const os = require("os");
-  require("./load-locales");
-  const { i18n } = require("@lingui/core");
+  const i18n = require("./config/locales");
 
   const ensureSingleInstance = () => {
     const gotTheLock = app.requestSingleInstanceLock();
