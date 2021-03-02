@@ -703,13 +703,11 @@ def _validate_segments(
     curr_sub_epoch_n = -1
     prev_ses: Optional[SubEpochSummary] = None
     first_sub_epoch_segment = True
-    prev_segment = None
     for idx, segment in enumerate(weight_proof.sub_epoch_segments):
         curr_difficulty, curr_ssi = _get_curr_diff_ssi(constants, segment.sub_epoch_n, summaries)
         if curr_sub_epoch_n < segment.sub_epoch_n:
             log.info(f"validate sub epoch {segment.sub_epoch_n}")
             first_sub_epoch_segment = True
-            prev_segment = None
             # recreate RewardChainSubSlot for next ses rc_hash
             if segment.sub_epoch_n > 0:
                 rc_sub_slot = __get_rc_sub_slot(constants, segment, summaries, curr_ssi)
@@ -720,7 +718,7 @@ def _validate_segments(
                 return False
         log.debug(f"validate segment {idx}")
         valid_segment, ip_iters, slot_iters, slots = _validate_segment_slots(
-            constants, segment, prev_segment, curr_ssi, curr_difficulty, prev_ses, first_sub_epoch_segment
+            constants, segment, curr_ssi, curr_difficulty, prev_ses, first_sub_epoch_segment
         )
         first_sub_epoch_segment = False
         prev_ses = None
@@ -731,7 +729,6 @@ def _validate_segments(
         total_slot_iters += slot_iters
         total_slots += slots
         total_ip_iters += ip_iters
-        prev_segment = segment
         curr_sub_epoch_n = segment.sub_epoch_n
     avg_ip_iters = total_ip_iters / total_blocks
     avg_slot_iters = total_slot_iters / total_slots
@@ -745,7 +742,6 @@ def _validate_segments(
 def _validate_segment_slots(
     constants: ConsensusConstants,
     segment: SubEpochChallengeSegment,
-    prev_segment: Optional[SubEpochChallengeSegment],
     curr_ssi: uint64,
     curr_difficulty: uint64,
     ses: Optional[SubEpochSummary],
