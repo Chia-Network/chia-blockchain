@@ -84,10 +84,9 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
     height_prev_epoch_surpass: uint32 = uint32(height_epoch_surpass - constants.EPOCH_BLOCKS)
 
     assert height_prev_epoch_surpass % constants.EPOCH_BLOCKS == height_prev_epoch_surpass % constants.EPOCH_BLOCKS == 0
-    if (height_in_next_epoch - height_epoch_surpass) > (3 * constants.MAX_SUB_SLOT_BLOCKS):
-        raise ValueError(
-            f"Height at {last_b.height + 1} should not create a new epoch, it is far past the epoch barrier"
-        )
+
+    # Sanity check, don't go too far past epoch barrier
+    assert (height_in_next_epoch - height_epoch_surpass) < (5 * constants.MAX_SUB_SLOT_BLOCKS)
 
     if height_prev_epoch_surpass == 0:
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
