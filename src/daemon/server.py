@@ -121,7 +121,7 @@ class WebSocketServer:
         self.websocket_server = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
-        self.activated = False
+        self.genesis_initialized = False
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -148,10 +148,10 @@ class WebSocketServer:
         challenge = self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"]
 
         if challenge is None:
-            self.activated = False
+            self.genesis_initialized = False
             self.alert_task = asyncio.create_task(self.check_for_alerts())
         else:
-            self.activated = True
+            self.genesis_initialized = True
         self.log.info("Waiting Daemon WebSocketServer closure")
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
@@ -200,7 +200,7 @@ class WebSocketServer:
                     challenge = data_json["genesis_challenge"]
                     self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] = challenge
                     save_config(self.root_path, "config.yaml", self.net_config)
-                    self.activated = True
+                    self.genesis_initialized = True
                     await self.start_services()
                     break
             except Exception as e:
@@ -308,6 +308,7 @@ class WebSocketServer:
             "stop_service",
             "is_running",
             "register_service",
+            "get_status",
         ]
         if not isinstance(data, dict) and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
@@ -327,12 +328,18 @@ class WebSocketServer:
             response = await self.stop()
         elif command == "register_service":
             response = await self.register_service(websocket, cast(Dict[str, Any], data))
+        elif command == "get_status":
+            response = self.get_status()
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
         return full_response, [websocket]
+
+    def get_status(self):
+        response = {"success": True, "genesis_initialized": self.genesis_initialized}
+        return response
 
     def plot_queue_to_payload(self, plot_queue_item):
         error = plot_queue_item.get("error")
@@ -605,7 +612,7 @@ class WebSocketServer:
 
     async def start_service(self, request: Dict[str, Any]):
         service_command = request["service"]
-        if self.activated is False:
+        if self.genesis_initialized is False:
             response = {
                 "success": False,
                 "service": service_command,
