@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-02 15:58\n"
+"PO-Revision-Date: 2021-03-02 16:54\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -33,7 +33,7 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. F
 #: src/electron-starter.js:348
 #: src/electron-starter.js:441
 msgid "About Chia Blockchain"
-msgstr "Chia Lohkoketjusta"
+msgstr "Chia-lohkoketjusta"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -234,7 +234,7 @@ msgstr "Chia"
 
 #: src/electron-starter.js:284
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia-lohkoketjun Wiki"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -288,7 +288,7 @@ msgstr "Värikolikon Valinnat"
 
 #: src/electron-starter.js:121
 msgid "Confirm"
-msgstr ""
+msgstr "Vahvista"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -334,7 +334,7 @@ msgstr "Yhteydet"
 
 #: src/electron-starter.js:308
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Anna panoksesi GitHubissa"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -494,11 +494,11 @@ msgstr "Avaimen poisto poistaa sen tietokoneeltasi. Varmista että sinulla on va
 
 #: src/electron-starter.js:230
 msgid "Developer"
-msgstr ""
+msgstr "Kehittäjälle"
 
 #: src/electron-starter.js:233
 msgid "Developer Tools"
-msgstr ""
+msgstr "Kehitystyökalut"
 
 #: src/components/block/Block.jsx:202
 #: src/components/fullNode/FullNode.jsx:193
@@ -533,7 +533,7 @@ msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 
 #: src/electron-starter.js:189
 msgid "Edit"
-msgstr ""
+msgstr "Muokkaa"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -634,7 +634,7 @@ msgstr "Palkkiosumma"
 #: src/electron-starter.js:181
 #: src/electron-starter.js:388
 msgid "File"
-msgstr ""
+msgstr "Tiedosto"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -653,11 +653,11 @@ msgstr "Valmis"
 
 #: src/electron-starter.js:333
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Seuraa Twitterissä"
 
 #: src/electron-starter.js:292
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Usein Kysytyt Kysymykset"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:365
@@ -670,7 +670,7 @@ msgstr "Verkkonoodin Tila"
 
 #: src/electron-starter.js:258
 msgid "Full Screen"
-msgstr ""
+msgstr "Kokoruutu"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -696,7 +696,7 @@ msgstr "Lohkokorkeus"
 
 #: src/electron-starter.js:280
 msgid "Help"
-msgstr ""
+msgstr "Helppiä"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
@@ -1229,7 +1229,7 @@ msgstr "Päivitä Plot-tiedostot"
 
 #: src/electron-starter.js:300
 msgid "Release Notes"
-msgstr ""
+msgstr "Version Muutokset"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:205
 msgid "Rename"
@@ -1237,7 +1237,7 @@ msgstr "Nimeä Uudelleen"
 
 #: src/electron-starter.js:319
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Raportoi Ongelma..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Smart Wallets From Backup"
@@ -1349,7 +1349,7 @@ msgstr "Ohita"
 
 #: src/electron-starter.js:402
 msgid "Speech"
-msgstr ""
+msgstr "Puhe"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1511,7 +1511,7 @@ msgstr "Näitä plot-tiedostoja ei löydy tai ne ovat viallisia."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "Lisää plottitiedostoja sisältävä kansio. Jos sinulla ei ole vielä plotteja, siirry plottausnäkymään."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
@@ -1672,7 +1672,7 @@ msgstr "VDF -alaiteraatioita"
 
 #: src/electron-starter.js:221
 msgid "View"
-msgstr ""
+msgstr "Näkymä"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:48
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
