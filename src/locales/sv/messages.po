@@ -51,6 +51,7 @@ msgstr "Åtgärd"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
+#: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
 msgstr "Åtgärder"
 
@@ -298,11 +299,12 @@ msgstr "Bekräftad vid block:"
 msgid "Confirmed at height {0}"
 msgstr "Bekräftad vid höjd {0}"
 
-#: src/components/fullNode/FullNodeConnections.jsx:179
+#: src/components/fullNode/FullNodeAddConnection.tsx:65
 msgid "Connect"
 msgstr "Anslut"
 
-#: src/components/fullNode/FullNodeConnections.jsx:155
+#: src/components/fullNode/FullNodeAddConnection.tsx:49
+#: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
 msgstr "Anslut till andra peer-datorer"
 
@@ -324,11 +326,11 @@ msgstr "Anslutningsstatus"
 msgid "Connection Status:"
 msgstr "Anslutningsstatus:"
 
-#: src/components/fullNode/FullNodeConnections.jsx:102
+#: src/components/fullNode/FullNodeConnections.tsx:50
 msgid "Connection type"
 msgstr "Anslutningstyp"
 
-#: src/components/fullNode/FullNodeConnections.jsx:78
+#: src/components/fullNode/FullNodeConnections.tsx:73
 msgid "Connections"
 msgstr "Anslutningar"
 
@@ -460,7 +462,6 @@ msgstr "Datum"
 msgid "Delay"
 msgstr "Fördröjning"
 
-#: src/components/fullNode/FullNodeConnections.jsx:110
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/PlotAction.tsx:43
 #: src/components/plot/queue/PlotQueueActions.tsx:26
@@ -660,7 +661,7 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:365
+#: src/components/fullNode/FullNode.jsx:351
 msgid "Full Node"
 msgstr "Fullständig nod"
 
@@ -690,7 +691,7 @@ msgstr "Huvudhash"
 
 #: src/components/block/Block.jsx:180
 #: src/components/fullNode/FullNode.jsx:92
-#: src/components/fullNode/FullNodeConnections.jsx:107
+#: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Höjd"
 
@@ -715,11 +716,11 @@ msgstr "Historik"
 msgid "Host Name"
 msgstr "Värdnamn"
 
-#: src/components/fullNode/FullNodeConnections.jsx:93
+#: src/components/fullNode/FullNodeConnections.tsx:27
 msgid "IP address"
 msgstr "IP-adress"
 
-#: src/components/fullNode/FullNodeConnections.jsx:162
+#: src/components/fullNode/FullNodeAddConnection.tsx:56
 msgid "IP address / host"
 msgstr "IP-adress/värd"
 
@@ -846,7 +847,7 @@ msgstr "Loggar in"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
-#: src/components/fullNode/FullNodeConnections.jsx:99
+#: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
 msgstr "MiB upp/ner"
 
@@ -900,7 +901,7 @@ msgstr "Inga tidigare transaktioner"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
-#: src/components/fullNode/FullNodeConnections.jsx:90
+#: src/components/fullNode/FullNodeConnections.tsx:23
 msgid "Node ID"
 msgstr "Node-ID"
 
@@ -1136,8 +1137,8 @@ msgstr "Belopp för pool-belöning"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
-#: src/components/fullNode/FullNodeConnections.jsx:96
-#: src/components/fullNode/FullNodeConnections.jsx:168
+#: src/components/fullNode/FullNodeAddConnection.tsx:59
+#: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "Port"
 msgstr "Port"
 
