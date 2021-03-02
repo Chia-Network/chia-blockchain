@@ -25,8 +25,8 @@ msgstr ""
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr ""
 
-#: src/electron-starter.js:348
-#: src/electron-starter.js:441
+#: src/electron-starter.js:354
+#: src/electron-starter.js:447
 msgid "About Chia Blockchain"
 msgstr ""
 
@@ -109,7 +109,7 @@ msgstr ""
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr ""
 
-#: src/electron-starter.js:123
+#: src/electron-starter.js:126
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr ""
 
@@ -219,15 +219,15 @@ msgstr ""
 msgid "Challenge Hash"
 msgstr ""
 
-#: src/electron-starter.js:327
+#: src/electron-starter.js:333
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron-starter.js:345
+#: src/electron-starter.js:351
 msgid "Chia"
 msgstr ""
 
-#: src/electron-starter.js:284
+#: src/electron-starter.js:290
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
@@ -281,7 +281,7 @@ msgstr ""
 msgid "Coloured Coin Options"
 msgstr ""
 
-#: src/electron-starter.js:121
+#: src/electron-starter.js:124
 msgid "Confirm"
 msgstr ""
 
@@ -327,7 +327,7 @@ msgstr ""
 msgid "Connections"
 msgstr ""
 
-#: src/electron-starter.js:308
+#: src/electron-starter.js:314
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -487,11 +487,11 @@ msgstr ""
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 
-#: src/electron-starter.js:230
+#: src/electron-starter.js:236
 msgid "Developer"
 msgstr ""
 
-#: src/electron-starter.js:233
+#: src/electron-starter.js:239
 msgid "Developer Tools"
 msgstr ""
 
@@ -526,7 +526,7 @@ msgstr ""
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron-starter.js:189
+#: src/electron-starter.js:195
 msgid "Edit"
 msgstr ""
 
@@ -626,8 +626,8 @@ msgstr ""
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:181
-#: src/electron-starter.js:388
+#: src/electron-starter.js:187
+#: src/electron-starter.js:394
 msgid "File"
 msgstr ""
 
@@ -646,11 +646,11 @@ msgstr ""
 msgid "Finished"
 msgstr ""
 
-#: src/electron-starter.js:333
+#: src/electron-starter.js:339
 msgid "Follow on Twitter"
 msgstr ""
 
-#: src/electron-starter.js:292
+#: src/electron-starter.js:298
 msgid "Frequently Asked Questions"
 msgstr ""
 
@@ -663,7 +663,7 @@ msgstr ""
 msgid "Full Node Status"
 msgstr ""
 
-#: src/electron-starter.js:258
+#: src/electron-starter.js:264
 msgid "Full Screen"
 msgstr ""
 
@@ -689,7 +689,7 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
-#: src/electron-starter.js:280
+#: src/electron-starter.js:286
 msgid "Help"
 msgstr ""
 
@@ -877,7 +877,7 @@ msgid "Nickname"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:120
+#: src/electron-starter.js:123
 msgid "No"
 msgstr ""
 
@@ -1222,7 +1222,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron-starter.js:300
+#: src/electron-starter.js:306
 msgid "Release Notes"
 msgstr ""
 
@@ -1230,7 +1230,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron-starter.js:319
+#: src/electron-starter.js:325
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1342,7 +1342,7 @@ msgstr ""
 msgid "Skip"
 msgstr ""
 
-#: src/electron-starter.js:402
+#: src/electron-starter.js:408
 msgid "Speech"
 msgstr ""
 
@@ -1665,7 +1665,7 @@ msgstr ""
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:221
+#: src/electron-starter.js:227
 msgid "View"
 msgstr ""
 
@@ -1758,7 +1758,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:266
+#: src/electron-starter.js:272
 msgid "Window"
 msgstr ""
 
@@ -1767,7 +1767,7 @@ msgid "Without fees"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:120
+#: src/electron-starter.js:123
 msgid "Yes"
 msgstr ""
 
