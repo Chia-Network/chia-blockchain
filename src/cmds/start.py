@@ -65,7 +65,8 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
                 print("Waiting for genesis challenge, network not launched yet.")
                 while True:
                     if await daemon.is_running(service_name=service):
-                        print("Network launched")
+                        print("Network launched! ")
+                        break
                     else:
                         await asyncio.sleep(2)
 

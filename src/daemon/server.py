@@ -50,7 +50,7 @@ service_plotter = "chia plots create"
 async def fetch(url: str):
     session = aiohttp.ClientSession()
     try:
-        response = await session.get(url, ssl=None)
+        response = await session.get(url)
         await session.close()
         return await response.text()
     except Exception as e:
@@ -175,15 +175,16 @@ class WebSocketServer:
                 if self.shut_down:
                     break
                 await asyncio.sleep(2)
+
                 selected = self.net_config["selected_network"]
-                alert_url = self.net_config["network_overrides"][selected]["STATUS_URL"]
+                alert_url = self.net_config["ALERTS_URL"]
                 response = await fetch(alert_url)
                 if response is None:
                     continue
 
                 json_response = json.loads(response)
                 if "data" in json_response:
-                    pubkey = self.net_config["network_overrides"][selected]["CHIA_ALERTS_PUBKEY"]
+                    pubkey = self.net_config["CHIA_ALERTS_PUBKEY"]
                     validated = validate_alert(response, pubkey)
                     if validated is False:
                         self.log.error(f"Error unable to validate alert! {response}")
@@ -196,7 +197,7 @@ class WebSocketServer:
                     save_config(self.root_path, "config.yaml", self.net_config)
                     self.activated = True
                     await self.start_services()
-
+                    break
             except Exception as e:
                 log.error(f"Exception in check alerts task: {e}")
 

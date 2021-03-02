@@ -32,6 +32,8 @@ network_overrides: &network_overrides
       address_prefix: "txch"
 
 selected_network: &selected_network "testnet4"
+ALERTS_URL: http://testnet5.chia.net/status
+CHIA_ALERTS_PUBKEY: 883b977a4ccd5730c5f14da5efd40405c834927b2fa86e70d576e5f46f35a19b45817a5d1e2b09beacf94b1e926bab80
 
 # public ssl ca is included in source code
 # Privet ssl ca is used for trusted connections between machines user owns
