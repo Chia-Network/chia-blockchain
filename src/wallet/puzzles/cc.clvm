@@ -291,8 +291,8 @@
        (if
          (f lineage-proof)
          (is-parent-cc lineage-proof-parameters my-coin-info (r lineage-proof))
-         (a (genesis-coin-checker-for-lpp lineage-proof-parameters)
-             (list lineage-proof-parameters my-coin-info (r lineage-proof)))
+         ((c (genesis-coin-checker-for-lpp lineage-proof-parameters)
+             (list lineage-proof-parameters my-coin-info (r lineage-proof))))
        )
      )
 
@@ -333,7 +333,7 @@
     (main
         ;; cache some stuff: output conditions, and lineage-proof-parameters
         (list mod-hash (sha256tree1 mod-hash) genesis-coin-checker (sha256tree1 genesis-coin-checker))
-        (a inner-puzzle inner-puzzle-solution)
+        ((c inner-puzzle inner-puzzle-solution))
         prev-coin-bundle
         my-coin-bundle
         next-coin-bundle

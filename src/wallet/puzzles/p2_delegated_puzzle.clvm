@@ -15,5 +15,5 @@
   )
 
   (c (list AGG_SIG_ME public_key (sha256tree1 delegated_puzzle))
-    (a delegated_puzzle delegated_puzzle_solution))
+    ((c delegated_puzzle delegated_puzzle_solution)))
 )
