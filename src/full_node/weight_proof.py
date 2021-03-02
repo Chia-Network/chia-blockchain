@@ -404,20 +404,22 @@ class WeightProofHandler:
             icc_ip_info = curr.reward_chain_block.infused_challenge_chain_ip_vdf
         if curr.challenge_chain_sp_proof is not None:
             assert curr.reward_chain_block.challenge_chain_sp_vdf
-            (_, _, _, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
-                self.constants,
-                curr.finished_sub_slots,
-                block_record.overflow,
-                None if curr.height == 0 else blocks[curr.prev_header_hash],
-                BlockCache(blocks),
-                block_record.sp_total_iters(self.constants),
-                block_record.sp_iters(self.constants),
-            )
-            cc_sp_vdf_info = VDFInfo(
-                curr.reward_chain_block.challenge_chain_sp_vdf.challenge,
-                cc_vdf_iters,
-                curr.reward_chain_block.challenge_chain_sp_vdf.output,
-            )
+            cc_sp_vdf_info = curr.reward_chain_block.challenge_chain_sp_vdf
+            if not curr.challenge_chain_sp_proof.normalized_to_identity:
+                (_, _, _, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
+                    self.constants,
+                    curr.finished_sub_slots,
+                    block_record.overflow,
+                    None if curr.height == 0 else blocks[curr.prev_header_hash],
+                    BlockCache(blocks),
+                    block_record.sp_total_iters(self.constants),
+                    block_record.sp_iters(self.constants),
+                )
+                cc_sp_vdf_info = VDFInfo(
+                    curr.reward_chain_block.challenge_chain_sp_vdf.challenge,
+                    cc_vdf_iters,
+                    curr.reward_chain_block.challenge_chain_sp_vdf.output,
+                )
             cc_sp_proof = curr.challenge_chain_sp_proof
             cc_sp_info = cc_sp_vdf_info
         return SubSlotData(
@@ -565,8 +567,6 @@ async def _challenge_block_vdfs(
                 cc_vdf_iters,
                 header_block.reward_chain_block.challenge_chain_sp_vdf.output,
             )
-    log.info(f"block {header_block.height} ip vdf { header_block.reward_chain_block.challenge_chain_ip_vdf}")
-    log.info(f"block {header_block.height} sp vdf { cc_sp_info}")
     ssd = SubSlotData(
         header_block.reward_chain_block.proof_of_space,
         header_block.challenge_chain_sp_proof,
@@ -717,7 +717,7 @@ def _validate_segments(
             if not summaries[segment.sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
                 log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                 return False
-        log.info(f"validate segment {idx}")
+        log.debug(f"validate segment {idx}")
         valid_segment, ip_iters, slot_iters, slots = _validate_segment_slots(
             constants, segment, prev_segment, curr_ssi, curr_difficulty, prev_ses, first_sub_epoch_segment
         )
@@ -749,13 +749,13 @@ def _validate_segment_slots(
     curr_difficulty: uint64,
     ses: Optional[SubEpochSummary],
     first_segment_in_se: bool,
-    validate_sub_slots=False,  # todo almog remove after bluebox integration
+    validate_sub_slots=True,  # todo almog remove after bluebox integration
 ) -> Tuple[bool, int, int, int]:
     ip_iters, slot_iters, slots = 0, 0, 0
-    after_challeng = False
+    after_challenge = False
     for idx, sub_slot_data in enumerate(segment.sub_slots):
         if sub_slot_data.is_challenge():
-            after_challeng = True
+            after_challenge = True
             required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses, first_segment_in_se)
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0)
@@ -763,10 +763,10 @@ def _validate_segment_slots(
             ip_iters = ip_iters + calculate_ip_iters(  # type: ignore
                 constants, curr_ssi, sub_slot_data.signage_point_index, required_iters
             )
-            if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, prev_segment, curr_ssi):
+            if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate challenge slot {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        elif validate_sub_slots and after_challeng:
+        elif validate_sub_slots and after_challenge:
             if not _validate_sub_slot_data(constants, idx, segment.sub_slots, prev_segment, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
@@ -779,7 +779,6 @@ def _validate_challenge_block_vdfs(
     constants: ConsensusConstants,
     sub_slot_idx: int,
     sub_slots: List[SubSlotData],
-    prev_segment: Optional[SubEpochChallengeSegment],
     ssi: uint64,
 ) -> bool:
     sub_slot_data = sub_slots[sub_slot_idx]
@@ -792,30 +791,26 @@ def _validate_challenge_block_vdfs(
             prev_ssd = sub_slots[sub_slot_idx - 1]
             new_sub_slot = prev_ssd.cc_slot_end is not None
             sp_input = sub_slot_data_vdf_input(
-                constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, new_sub_slot, ssi, prev_segment
+                constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, new_sub_slot, ssi
             )
         if not sub_slot_data.cc_signage_point.is_valid(constants, sp_input, sub_slot_data.cc_sp_vdf_info):
             log.error(f"failed to validate challenge chain signage point 2 {sub_slot_data.cc_sp_vdf_info}")
             return False
     assert sub_slot_data.cc_infusion_point
     assert sub_slot_data.cc_ip_vdf_info
-    if sub_slot_data.cc_infusion_point.normalized_to_identity:
-        ip_input = ClassgroupElement.get_default_element()
-        cc_ip_vdf_info = sub_slot_data.cc_ip_vdf_info
-    else:
-        ip_input = ClassgroupElement.get_default_element()
-        cc_ip_vdf_info = sub_slot_data.cc_ip_vdf_info
-        if sub_slot_idx >= 1:
-            prev_ssd = sub_slots[sub_slot_idx - 1]
-            if prev_ssd.cc_slot_end is None:
-                assert prev_ssd.cc_ip_vdf_info
-                assert prev_ssd.total_iters
-                assert sub_slot_data.total_iters
-                ip_input = prev_ssd.cc_ip_vdf_info.output
-                ip_vdf_iters = uint64(sub_slot_data.total_iters - prev_ssd.total_iters)
-                cc_ip_vdf_info = VDFInfo(
-                    sub_slot_data.cc_ip_vdf_info.challenge, ip_vdf_iters, sub_slot_data.cc_ip_vdf_info.output
-                )
+    ip_input = ClassgroupElement.get_default_element()
+    cc_ip_vdf_info = sub_slot_data.cc_ip_vdf_info
+    if not sub_slot_data.cc_infusion_point.normalized_to_identity and sub_slot_idx >= 1:
+        prev_ssd = sub_slots[sub_slot_idx - 1]
+        if prev_ssd.cc_slot_end is None:
+            assert prev_ssd.cc_ip_vdf_info
+            assert prev_ssd.total_iters
+            assert sub_slot_data.total_iters
+            ip_input = prev_ssd.cc_ip_vdf_info.output
+            ip_vdf_iters = uint64(sub_slot_data.total_iters - prev_ssd.total_iters)
+            cc_ip_vdf_info = VDFInfo(
+                sub_slot_data.cc_ip_vdf_info.challenge, ip_vdf_iters, sub_slot_data.cc_ip_vdf_info.output
+            )
     if not sub_slot_data.cc_infusion_point.is_valid(constants, ip_input, cc_ip_vdf_info):
         log.error(f"failed to validate challenge chain infusion point {sub_slot_data.cc_ip_vdf_info}")
         return False
@@ -826,63 +821,66 @@ def _validate_sub_slot_data(
     constants: ConsensusConstants,
     sub_slot_idx: int,
     sub_slots: List[SubSlotData],
-    prev_segment: Optional[SubEpochChallengeSegment],
     ssi,
 ) -> bool:
-    sub_slot = sub_slots[sub_slot_idx]
-    input = ClassgroupElement.get_default_element()
+    sub_slot_data = sub_slots[sub_slot_idx]
+    assert sub_slot_idx > 0
     prev_ssd = sub_slots[sub_slot_idx - 1]
-    new_sub_slot = prev_ssd.cc_slot_end is not None
-    if sub_slot_idx > 0 and prev_ssd.cc_slot_end_info is None and not prev_ssd.is_challenge():
-        if prev_ssd.icc_ip_vdf_info is not None:
-            input = prev_ssd.icc_ip_vdf_info.output
-    if sub_slot.cc_slot_end_info is not None:
-        if sub_slot.icc_slot_end is not None and sub_slot.icc_slot_end_info is not None:
-            if not sub_slot.icc_slot_end.is_valid(constants, input, sub_slot.icc_slot_end_info, None):
-                log.error(f"failed icc slot end validation  {sub_slot.icc_slot_end_info} ")
+    if sub_slot_data.is_end_of_slot():
+        if sub_slot_data.icc_slot_end is not None:
+            input = ClassgroupElement.get_default_element()
+            if not sub_slot_data.icc_slot_end.normalized_to_identity and prev_ssd.icc_ip_vdf_info is not None:
+                input = prev_ssd.icc_ip_vdf_info.output
+            if not sub_slot_data.icc_slot_end.is_valid(constants, input, sub_slot_data.icc_slot_end_info, None):
+                log.error(f"failed icc slot end validation  {sub_slot_data.icc_slot_end_info} ")
                 return False
-        assert sub_slot.cc_slot_end_info is not None
-        assert sub_slot.cc_slot_end_info
-        assert sub_slot.cc_slot_end
+        assert sub_slot_data.cc_slot_end_info is not None
+        assert sub_slot_data.cc_slot_end_info
+        assert sub_slot_data.cc_slot_end
         input = ClassgroupElement.get_default_element()
-        if prev_ssd.cc_slot_end is None:
+        if (not prev_ssd.is_end_of_slot()) and (not sub_slot_data.cc_slot_end.normalized_to_identity):
             assert prev_ssd.cc_ip_vdf_info
             input = prev_ssd.cc_ip_vdf_info.output
-        if not sub_slot.cc_slot_end.is_valid(constants, input, sub_slot.cc_slot_end_info):
-            log.error(f"failed cc slot end validation  {sub_slot.cc_slot_end_info}")
+        if not sub_slot_data.cc_slot_end.is_valid(constants, input, sub_slot_data.cc_slot_end_info):
+            log.error(f"failed cc slot end validation  {sub_slot_data.cc_slot_end_info}")
             return False
     else:
-        if sub_slot.icc_infusion_point is not None and sub_slot.icc_ip_vdf_info is not None:
+        if sub_slot_data.icc_infusion_point is not None and sub_slot_data.icc_ip_vdf_info is not None:
             input = ClassgroupElement.get_default_element()
             if not prev_ssd.is_challenge() and prev_ssd.icc_ip_vdf_info is not None:
                 input = prev_ssd.icc_ip_vdf_info.output
-            if not sub_slot.icc_infusion_point.is_valid(constants, input, sub_slot.icc_ip_vdf_info, None):
-                log.error(f"failed icc infusion point vdf validation  {sub_slot.icc_slot_end_info} ")
+            if not sub_slot_data.icc_infusion_point.is_valid(constants, input, sub_slot_data.icc_ip_vdf_info, None):
+                log.error(f"failed icc infusion point vdf validation  {sub_slot_data.icc_slot_end_info} ")
                 return False
 
-        assert sub_slot.signage_point_index is not None
-        is_overflow = is_overflow_block(constants, sub_slot.signage_point_index)
-        input = sub_slot_data_vdf_input(
-            constants, sub_slot, sub_slot_idx, sub_slots, is_overflow, new_sub_slot, ssi, prev_segment
-        )
-        if sub_slot.cc_signage_point:
-            assert sub_slot.cc_sp_vdf_info
-            if not sub_slot.cc_signage_point.is_valid(constants, input, sub_slot.cc_sp_vdf_info):
-                log.error(f"failed cc signage point vdf validation  {sub_slot.cc_sp_vdf_info}")
+        assert sub_slot_data.signage_point_index is not None
+        if sub_slot_data.cc_signage_point:
+            assert sub_slot_data.cc_sp_vdf_info
+            input = ClassgroupElement.get_default_element()
+            if not sub_slot_data.cc_signage_point.normalized_to_identity:
+                is_overflow = is_overflow_block(constants, sub_slot_data.signage_point_index)
+                input = sub_slot_data_vdf_input(
+                    constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, prev_ssd.is_end_of_slot(), ssi
+                )
+
+            if not sub_slot_data.cc_signage_point.is_valid(constants, input, sub_slot_data.cc_sp_vdf_info):
+                log.error(f"failed cc signage point vdf validation  {sub_slot_data.cc_sp_vdf_info}")
                 return False
         input = ClassgroupElement.get_default_element()
-        assert sub_slot.cc_ip_vdf_info
-        assert sub_slot.cc_infusion_point
-        cc_ip_vdf_info = sub_slot.cc_ip_vdf_info
-        if prev_ssd.cc_slot_end is None:
+        assert sub_slot_data.cc_ip_vdf_info
+        assert sub_slot_data.cc_infusion_point
+        cc_ip_vdf_info = sub_slot_data.cc_ip_vdf_info
+        if not sub_slot_data.cc_infusion_point.normalized_to_identity and prev_ssd.cc_slot_end is None:
             assert prev_ssd.cc_ip_vdf_info
             input = prev_ssd.cc_ip_vdf_info.output
-            assert sub_slot.total_iters
+            assert sub_slot_data.total_iters
             assert prev_ssd.total_iters
-            ip_vdf_iters = uint64(sub_slot.total_iters - prev_ssd.total_iters)
-            cc_ip_vdf_info = VDFInfo(sub_slot.cc_ip_vdf_info.challenge, ip_vdf_iters, sub_slot.cc_ip_vdf_info.output)
-        if not sub_slot.cc_infusion_point.is_valid(constants, input, cc_ip_vdf_info):
-            log.error(f"failed cc infusion point vdf validation  {sub_slot.cc_slot_end_info}")
+            ip_vdf_iters = uint64(sub_slot_data.total_iters - prev_ssd.total_iters)
+            cc_ip_vdf_info = VDFInfo(
+                sub_slot_data.cc_ip_vdf_info.challenge, ip_vdf_iters, sub_slot_data.cc_ip_vdf_info.output
+            )
+        if not sub_slot_data.cc_infusion_point.is_valid(constants, input, cc_ip_vdf_info):
+            log.error(f"failed cc infusion point vdf validation  {sub_slot_data.cc_slot_end_info}")
             return False
     return True
 
@@ -895,12 +893,11 @@ def sub_slot_data_vdf_input(
     is_overflow: bool,
     new_sub_slot: bool,
     ssi: uint64,
-    prev_segment: Optional[SubEpochChallengeSegment],
 ):
     input = ClassgroupElement.get_default_element()
     sp_total_iters = get_sp_total_iters(constants, is_overflow, ssi, sub_slot_data)
     ssd: Optional[SubSlotData] = None
-    if is_overflow and new_sub_slot and prev_segment is None:
+    if is_overflow and new_sub_slot:
         if sub_slots[sub_slot_idx - 2].cc_slot_end is None:
             for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
                 ssd = sub_slots[ssd_idx]
@@ -910,26 +907,6 @@ def sub_slot_data_vdf_input(
                 if not (ssd.total_iters > sp_total_iters):
                     break
             if ssd and ssd.cc_ip_vdf_info is not None:
-                if ssd.total_iters < sp_total_iters:
-                    input = ssd.cc_ip_vdf_info.output
-        return input
-    elif is_overflow and new_sub_slot and prev_segment is not None:
-        new_sub_slots = prev_segment.sub_slots + sub_slots
-        new_index = len(prev_segment.sub_slots) - 1 + sub_slot_idx
-        if sub_slots[sub_slot_idx - 2].cc_slot_end is None:
-            sub_slots_seen = 0
-            for ssd_idx in reversed(range(0, new_index)):
-                ssd = new_sub_slots[ssd_idx]
-                if ssd.cc_slot_end is not None:
-                    if sub_slots_seen == 0:
-                        sub_slots_seen += 1
-                        continue
-                    ssd = sub_slots[ssd_idx + 1]
-                    break
-                if not (ssd.total_iters > sp_total_iters):
-                    break
-            assert ssd is not None
-            if ssd.cc_ip_vdf_info is not None:
                 if ssd.total_iters < sp_total_iters:
                     input = ssd.cc_ip_vdf_info.output
         return input
@@ -1287,16 +1264,22 @@ def handle_end_of_slot(
     eos_vdf_iters: uint64,
 ):
     assert sub_slot.infused_challenge_chain
-    icc_info = VDFInfo(
-        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
-        eos_vdf_iters,
-        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
-    )
-    cc_info = VDFInfo(
-        sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-        eos_vdf_iters,
-        sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
-    )
+    if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
+        icc_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+    else:
+        icc_info = VDFInfo(
+            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
+            eos_vdf_iters,
+            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
+        )
+    if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+        cc_info = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
+    else:
+        cc_info = VDFInfo(
+            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+            eos_vdf_iters,
+            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
+        )
 
     assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
     return SubSlotData(

@@ -256,7 +256,7 @@ class TestWeightProof:
 
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point = await wpf.validate_weight_proof(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
