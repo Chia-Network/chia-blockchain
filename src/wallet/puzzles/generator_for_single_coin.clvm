@@ -11,5 +11,5 @@
   )
 
   ; main
-  (check_for_coinname ((c block_program (q . ()))) coinname)
+  (check_for_coinname (a block_program (q . ())) coinname)
 )
