@@ -181,13 +181,17 @@
      )
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
+     ;; prohibit CREATE_ANNOUNCEMENT
      (defun-inline morph-condition (condition lineage-proof-parameters)
        (if (= (f condition) CREATE_COIN)
          (list CREATE_COIN
                (cc-puzzle-hash lineage-proof-parameters (f (r condition)))
                (f (r (r condition)))
          )
-         condition
+         (if (= (f condition) CREATE_ANNOUNCEMENT)
+           (x)
+           condition
+         )
        )
      )
 
