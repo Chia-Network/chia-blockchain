@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-02 01:03\n"
+"PO-Revision-Date: 2021-03-02 15:58\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -33,7 +33,7 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. F
 #: src/electron-starter.js:348
 #: src/electron-starter.js:441
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Chia Lohkoketjusta"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -75,11 +75,11 @@ msgstr "Plottaa tiedosto"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr ""
+msgstr "Plottaa tiedosto"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr ""
+msgstr "Lisää plottihakemisto"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:403
 #: src/components/wallet/coloured/WalletColoured.tsx:455
@@ -116,7 +116,7 @@ msgstr "Haluatko tuhota plotin? Plottia ei voi palauttaa."
 
 #: src/electron-starter.js:123
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "Haluatko lopettaa? Käyttöliittymäplottaus ja farmi sammutetaan."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -226,11 +226,11 @@ msgstr "Haastetiiviste"
 
 #: src/electron-starter.js:327
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Keskustele KeyBasessa"
 
 #: src/electron-starter.js:345
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron-starter.js:284
 msgid "Chia Blockchain Wiki"
@@ -1765,7 +1765,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 
 #: src/electron-starter.js:266
 msgid "Window"
-msgstr ""
+msgstr "Ikkuna"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 msgid "Without fees"
