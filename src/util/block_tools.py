@@ -1032,6 +1032,7 @@ def finish_block(
             ClassgroupElement.get_default_element(),
             cc_ip_vdf.challenge,
             ip_iters,
+            True,
         )
     deficit = calculate_deficit(
         constants,
