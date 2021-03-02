@@ -8,7 +8,7 @@ msgstr ""
 "Language: es\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-02 04:28\n"
+"PO-Revision-Date: 2021-03-02 05:24\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -116,7 +116,7 @@ msgstr "¿Está seguro de que desea eliminar la parcela? La parcela no se puede 
 
 #: src/electron-starter.js:123
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "¿Está seguro que quiere salir? Sembrar y Cultivar en el GUI se detendrán."
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -520,7 +520,7 @@ msgstr "¿Usted tiene parcelas existentes en este equipo? <0>Añadir Directorio 
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr "¿Su máquina admite hacer parcelas en paralelo?"
+msgstr "¿Su máquina admite sembrar en paralelo?"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
@@ -1112,11 +1112,11 @@ msgstr "A las parcelas se les asigna espacio en tu disco duro que se usa para cu
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
-msgstr "Plantando"
+msgstr "Sembrando"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr "Plantar en paralelo puede ahorrar tiempo. De lo contrario, agregue la(s) parcela(s) a la cola."
+msgstr "Sembrar en paralelo puede ahorrar tiempo. De lo contrario, agregue la(s) parcela(s) a la cola."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 msgid "Pool Key"
@@ -1349,7 +1349,7 @@ msgstr "Saltar"
 
 #: src/electron-starter.js:402
 msgid "Speech"
-msgstr ""
+msgstr "Habla"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1467,7 +1467,7 @@ msgstr "TXCH Tarifas de Transacción de Usuario"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Los archivos temporales se crean durante el proceso de hacer parcelas que excede el tamaño de los archivos finales de las parcelas. Asegúrese de tener suficiente espacio. <0> Más información </0>"
+msgstr "Los archivos temporales se crean durante el proceso de siembra que excede el tamaño de los archivos finales de las parcelas. Asegúrese de tener suficiente espacio. <0> Más información </0>"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
@@ -1537,7 +1537,7 @@ msgstr "Este es la hora del último sub-bloque pico."
 
 #: src/components/block/Block.jsx:173
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr "Este es el momento en que el granjero creó el bloque, que es antes de que se finalice con una prueba de tiempo"
+msgstr "Este es el momento en que el agricultor creó el bloque, que es antes de que se finalice con una prueba de tiempo"
 
 #: src/components/wallet/standard/WalletStandard.tsx:193
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
