@@ -9,7 +9,7 @@ from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.get_block_challenge import get_block_challenge
 from src.consensus.network_type import NetworkType
@@ -142,7 +142,9 @@ async def pre_validate_blocks_multiprocessing(
     for block in blocks:
         if block.height != 0 and prev_b is None:
             prev_b = block_records.block_record(block.prev_header_hash)
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, block, prev_b, block_records)
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+            constants, len(block.finished_sub_slots) > 0, prev_b, block_records
+        )
 
         if block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
             log.warning(f"Block: {block.reward_chain_block}")

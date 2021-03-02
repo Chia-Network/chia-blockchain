@@ -15,8 +15,8 @@ from src.consensus.block_creation import unfinished_block_to_full_block
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
-    get_sub_slot_iters_and_difficulty,
-    can_finish_sub_and_full_epoch,
+    get_next_sub_slot_iters_and_difficulty,
+    can_finish_sub_and_full_epoch_unfinished,
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
@@ -1012,13 +1012,12 @@ class FullNode:
             elif prev_b is not None:
                 # If the prev can finish an epoch, then we are in a new epoch
                 prev_prev = self.blockchain.try_block_record(prev_b.prev_hash)
-                _, can_finish_epoch = can_finish_sub_and_full_epoch(
+                _, can_finish_epoch = can_finish_sub_and_full_epoch_unfinished(
                     self.constants,
+                    self.blockchain,
                     prev_b.height,
                     prev_b.deficit,
-                    self.blockchain,
                     prev_b.header_hash if prev_prev is not None else None,
-                    False,
                 )
                 if can_finish_epoch:
                     first_ss_new_epoch = True
@@ -1062,9 +1061,9 @@ class FullNode:
         else:
             self.log.info(f"Added unfinished_block {block_hash}, not farmed")
 
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
-            block,
+            len(block.finished_sub_slots) > 0,
             prev_b,
             self.blockchain,
         )
@@ -1156,9 +1155,9 @@ class FullNode:
             unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
             overflow,
         )
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
-            dataclasses.replace(unfinished_block, finished_sub_slots=finished_sub_slots),
+            len(finished_sub_slots) > 0,
             prev_b,
             self.blockchain,
         )

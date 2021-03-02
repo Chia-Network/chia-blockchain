@@ -19,7 +19,7 @@ testnet_kwargs = {
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
-    "MIN_PLOT_SIZE": 18,  # 32 for mainnet
+    "MIN_PLOT_SIZE": 32,  # 32 for mainnet
     "MAX_PLOT_SIZE": 59,
     "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
@@ -54,7 +54,7 @@ testnet_kwargs = {
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     "MAX_BLOCK_COST_CLVM": 23077872,
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "BLOCKS_CACHE_SIZE": 5000,  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 3*MAX_SUB_SLOT_BLOCKS"
+    "BLOCKS_CACHE_SIZE": (384 * 2) + (128 * 3),  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 3*MAX_SUB_SLOT_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 10000 blocks

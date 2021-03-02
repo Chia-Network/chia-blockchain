@@ -48,7 +48,8 @@ class FoliageBlockData(Streamable):
 @streamable
 class Foliage(Streamable):
     # The entire foliage block, containing signature and the unsigned back pointer
-    # The hash of this is the "header hash"
+    # The hash of this is the "header hash". Note that for unfinished blocks, the prev_block_hash
+    # Is the prev from the signage point, and can be replaced with a more recent block
     prev_block_hash: bytes32
     reward_block_hash: bytes32
     foliage_block_data: FoliageBlockData

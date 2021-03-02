@@ -72,6 +72,8 @@ from src.consensus.default_constants import DEFAULT_CONSTANTS
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
+        "MIN_PLOT_SIZE": 18,
+        "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
         "DIFFICULTY_STARTING": 2 ** 12,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_BLOCKS": 140,

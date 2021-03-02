@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
+from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch_finished
 from src.consensus.get_block_challenge import (
     get_block_challenge,
     final_eos_is_already_included,
@@ -87,21 +87,15 @@ def validate_unfinished_header_block(
     else:
         assert prev_b is not None
         height = uint32(prev_b.height + 1)
-        if prev_b.sub_epoch_summary_included is not None:
-            can_finish_se, can_finish_epoch = False, False
+        if new_sub_slot:
+            can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch_finished(
+                constants,
+                blocks,
+                prev_b,
+            )
         else:
-            if new_sub_slot:
-                can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-                    constants,
-                    prev_b.height,
-                    prev_b.deficit,
-                    blocks,
-                    prev_b.prev_hash,
-                    False,
-                )
-            else:
-                can_finish_se = False
-                can_finish_epoch = False
+            can_finish_se = False
+            can_finish_epoch = False
 
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: Optional[bytes32] = None

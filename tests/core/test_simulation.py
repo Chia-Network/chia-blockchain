@@ -7,6 +7,7 @@ from src.types.peer_info import PeerInfo
 
 test_constants_modified = test_constants.replace(
     **{
+        "MIN_PLOT_SIZE": 18,
         "DIFFICULTY_STARTING": 2 ** 8,
         "DISCRIMINANT_SIZE_BITS": 1024,
         "SUB_EPOCH_BLOCKS": 140,
