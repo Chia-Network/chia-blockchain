@@ -77,8 +77,11 @@ const socketMiddleware = () => {
     switch (action.type) {
       case 'WS_CONNECT':
         let wsConnectInterval = setInterval(() => {
-          if (socket !== null && (socket.readyState == 0 || socket.readyState == 1)) {
-            console.log("Already connected, not reconnecting.");
+          if (
+            socket !== null &&
+            (socket.readyState == 0 || socket.readyState == 1)
+          ) {
+            console.log('Already connected, not reconnecting.');
             console.log(socket.readyState);
             return;
           }
@@ -104,8 +107,8 @@ const socketMiddleware = () => {
           socket.onmessage = onMessage(store);
           socket.onclose = onClose(store);
           socket.addEventListener('open', onOpen(store, wsConnectInterval));
-         }, 1000);
-         break;
+        }, 1000);
+        break;
       case 'WS_DISCONNECT':
         if (socket !== null) {
           socket.close();

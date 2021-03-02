@@ -347,31 +347,12 @@ function SearchBlock() {
 }
 
 export default function FullNode() {
-  const dispatch = useDispatch();
-
-  const connections = useSelector((state) => state.full_node_state.connections);
-  const connectionError = useSelector(
-    (state) => state.full_node_state.open_connection_error,
-  );
-
-  const openConnectionCallback = (host, port) => {
-    dispatch(openConnection(host, port));
-  };
-  const closeConnectionCallback = (node_id) => {
-    dispatch(closeConnection(node_id));
-  };
-
   return (
     <LayoutMain title={<Trans>Full Node</Trans>}>
       <Flex flexDirection="column" gap={3}>
         <FullNodeStatus />
         <BlocksCard />
-        <FullNodeConnections
-          connections={connections}
-          connectionError={connectionError}
-          openConnection={openConnectionCallback}
-          closeConnection={closeConnectionCallback}
-        />
+        <FullNodeConnections />
         <SearchBlock />
       </Flex>
     </LayoutMain>
