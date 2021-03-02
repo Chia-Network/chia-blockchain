@@ -409,13 +409,14 @@ class ChiaServer:
 
     def connection_closed(self, connection: WSChiaConnection, ban_time: int):
         self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
-        ban_until: float = time.time() + ban_time
-        self.log.warning(f"Banning {connection.peer_host} until {ban_until}")
-        if connection.peer_host in self.banned_peers:
-            if ban_until > self.banned_peers[connection.peer_host]:
+        if ban_time > 0:
+            ban_until: float = time.time() + ban_time
+            self.log.info(f"Banning {connection.peer_host} until {ban_until}")
+            if connection.peer_host in self.banned_peers:
+                if ban_until > self.banned_peers[connection.peer_host]:
+                    self.banned_peers[connection.peer_host] = ban_until
+            else:
                 self.banned_peers[connection.peer_host] = ban_until
-        else:
-            self.banned_peers[connection.peer_host] = ban_until
 
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
