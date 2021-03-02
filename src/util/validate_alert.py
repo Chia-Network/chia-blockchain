@@ -35,9 +35,17 @@ def create_alert_file(alert_file_path: Path, key, genesis_challenge_preimage: st
     }
     data: str = json.dumps(file_dict)
     signature = AugSchemeMPL.sign(key, bytes(data, "utf-8"))
-    print(f"Signature: {signature}")
     file_data = {"data": data, "signature": f"{signature}"}
     file_data_json = json.dumps(file_data)
     alert_file_path.write_text(file_data_json)
 
-    print(f"Written to {alert_file_path}")
+
+def create_not_ready_alert_file(alert_file_path: Path, key):
+    file_dict = {
+        "ready": False,
+    }
+    data: str = json.dumps(file_dict)
+    signature = AugSchemeMPL.sign(key, bytes(data, "utf-8"))
+    file_data = {"data": data, "signature": f"{signature}"}
+    file_data_json = json.dumps(file_data)
+    alert_file_path.write_text(file_data_json)

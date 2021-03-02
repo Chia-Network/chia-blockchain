@@ -192,6 +192,11 @@ class WebSocketServer:
 
                     data = json_response["data"]
                     data_json = json.loads(data)
+                    if data_json["ready"] is False:
+                        # Network not launched yet
+                        log.info("Network is not ready yet")
+                        continue
+
                     challenge = data_json["genesis_challenge"]
                     self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] = challenge
                     save_config(self.root_path, "config.yaml", self.net_config)

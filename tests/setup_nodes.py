@@ -60,8 +60,8 @@ async def setup_daemon(port, alert_url, pubkey):
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     config["selected_network"] = "testnet5"
-    config["network_overrides"]["testnet5"]["STATUS_URL"] = alert_url
-    config["network_overrides"]["testnet5"]["CHIA_ALERTS_PUBKEY"] = pubkey
+    config["ALERTS_URL"] = alert_url
+    config["CHIA_ALERTS_PUBKEY"] = pubkey
     btools._config = config
     save_config(root_path, "config.yaml", btools._config)
     assert lockfile is not None

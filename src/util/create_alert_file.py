@@ -3,36 +3,25 @@ from typing import List
 from blspy import AugSchemeMPL
 from src.util.ints import uint32
 from src.util.keychain import Keychain
-from src.util.validate_alert import validate_alert_file, create_alert_file
+from src.util.validate_alert import validate_alert_file, create_alert_file, create_not_ready_alert_file
 
-ready = True
 bitcoin_hash = None
 bram_message = None
 
-print("")
-print("___________ BITCOIN BLOCK HASH ____________")
+status = None
 while True:
-    bitcoin_hash = input("Insert Bitcoin block hash: ")
-    print(f"Bitcoin block hash = {bitcoin_hash}")
-    y_n = input("Does this look good (y/n): ").lower()
-    if y_n == "y":
+    status_input = input("What is the status of this alert? (ready/not ready)").lower()
+    if status_input == "ready":
+        status = True
         break
-
-print("")
-print("___________ BRAM MESSAGE ____________")
-while True:
-    bram_message = input("Insert message from Bram: ")
-    print(f"Bram message = {bram_message}")
-    y_n = input("Does this look good (y/n): ").lower()
-    if y_n == "y":
+    elif status_input == "not ready":
+        status = False
         break
-
-genesis_challenge_preimage = f"bitcoin_hash:{bitcoin_hash},bram_message:{bram_message}"
-
+    else:
+        print("Unknown input")
 
 keychain: Keychain = Keychain()
-print("")
-print("___________ SELECT KEY ____________")
+print("\n___________ SELECT KEY ____________")
 
 private_keys = keychain.get_all_private_keys()
 if len(private_keys) == 0:
@@ -40,13 +29,11 @@ if len(private_keys) == 0:
     quit()
 print("Showing all private keys:")
 for sk, seed in private_keys:
-    print("")
-    print("Fingerprint:", sk.get_g1().get_fingerprint())
-print("")
+    print("\nFingerprint:", sk.get_g1().get_fingerprint())
 
 selected_key = None
 while True:
-    user_input = input("Enter fingerprint of the key you want to use, or enter Q to quit: ").lower()
+    user_input = input("\nEnter fingerprint of the key you want to use, or enter Q to quit: ").lower()
     if user_input == "q":
         quit()
     for sk, seed in private_keys:
@@ -60,8 +47,7 @@ while True:
     if selected_key is not None:
         break
 
-print("")
-print("___________ HD PATH ____________")
+print("\n___________ HD PATH ____________")
 while True:
     hd_path = input("Enter the HD path in the form 'm/12381/8444/n/n', or enter Q to quit: ").lower()
     if hd_path == "q":
@@ -92,12 +78,36 @@ while True:
         break
 f_path: Path = Path(file_path)
 
-create_alert_file(f_path, selected_key, genesis_challenge_preimage)
+if status is True:
+    print("")
+    print("___________ BITCOIN BLOCK HASH ____________")
+    while True:
+        bitcoin_hash = input("Insert Bitcoin block hash: ")
+        print(f"Bitcoin block hash = {bitcoin_hash}")
+        y_n = input("Does this look good (y/n): ").lower()
+        if y_n == "y":
+            break
 
-pubkey = f"{bytes(selected_key.get_g1()).hex()}"
-validated = validate_alert_file(f_path, pubkey)
-if validated:
-    print(f"Signature has passed validation for pubkey: {pubkey}")
+    print("")
+    print("___________ BRAM MESSAGE ____________")
+    while True:
+        bram_message = input("Insert message from Bram: ")
+        print(f"Bram message = {bram_message}")
+        y_n = input("Does this look good (y/n): ").lower()
+        if y_n == "y":
+            break
+
+    genesis_challenge_preimage = f"bitcoin_hash:{bitcoin_hash},bram_message:{bram_message}"
+
+    create_alert_file(f_path, selected_key, genesis_challenge_preimage)
+    print(f"Alert written to file {f_path}")
+    pubkey = f"{bytes(selected_key.get_g1()).hex()}"
+    validated = validate_alert_file(f_path, pubkey)
+    if validated:
+        print(f"Signature has passed validation for pubkey: {pubkey}")
+    else:
+        print(f"Signature has failed validation for pubkey: {pubkey}")
+        assert False
 else:
-    print(f"Signature has failed validation for pubkey: {pubkey}")
-    assert False
+    create_not_ready_alert_file(f_path, selected_key)
+    print(f"Alert written to file {f_path}")

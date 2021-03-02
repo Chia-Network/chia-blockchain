@@ -1,8 +1,10 @@
+import asyncio
+
 import pytest
 from blspy import PrivateKey
 
 from src.util.hash import std_hash
-from src.util.validate_alert import create_alert_file
+from src.util.validate_alert import create_alert_file, create_not_ready_alert_file
 from tests.setup_nodes import setup_daemon
 from tests.util.alert_server import AlertServer
 from tests.time_out_assert import time_out_assert
@@ -26,12 +28,19 @@ class TestDaemonAlerts:
         alert_file_path = daemon.root_path / "alert.txt"
 
         alert_server = await AlertServer.create_alert_server(alert_file_path, 59000)
+        create_not_ready_alert_file(alert_file_path, master_sk)
+        await alert_server.run()
+        expected_genesis = None
+
+        def check_genesis(expected):
+            return daemon.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] == expected
+
+        await asyncio.sleep(10)
+        await time_out_assert(15, check_genesis, True, expected_genesis)
+
         preimage = "This is test preimage!"
         expected_genesis = std_hash(bytes(preimage, "utf-8")).hex()
+        alert_file_path.unlink()
         create_alert_file(alert_file_path, master_sk, "This is test preimage!")
-        await alert_server.run()
 
-        def check_genesis():
-            return daemon.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] == expected_genesis
-
-        await time_out_assert(15, check_genesis, True)
+        await time_out_assert(15, check_genesis, True, expected_genesis)
