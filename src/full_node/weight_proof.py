@@ -275,10 +275,7 @@ class WeightProofHandler:
     ) -> Tuple[Optional[SubEpochChallengeSegment], uint32]:
         assert self.blockchain is not None
         sub_slots: List[SubSlotData] = []
-        log.info(f"create challenge segment block {header_block.header_hash} block height {header_block.height} ")
-        log.info(f"compact cc ip ? {header_block.challenge_chain_ip_proof.normalized_to_identity}")
-        if header_block.challenge_chain_sp_proof is not None:
-            log.info(f"compact cc sp ? {header_block.challenge_chain_sp_proof.normalized_to_identity}")
+        log.debug(f"create challenge segment block {header_block.header_hash} block height {header_block.height} ")
         # VDFs from sub slots before challenge block
         first_sub_slots, first_rc_end_of_slot_vdf = await self.__first_sub_slot_vdfs(
             header_block, header_blocks, blocks, first_segment_in_sub_epoch
