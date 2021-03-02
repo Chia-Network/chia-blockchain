@@ -5,6 +5,7 @@ class Chain(Enum):
     CHALLENGE_CHAIN = 1
     REWARD_CHAIN = 2
     INFUSED_CHALLENGE_CHAIN = 3
+    BLUEBOX = 4
 
 
 class IterationType(Enum):

@@ -1085,3 +1085,30 @@ class FullNodeAPI:
             wallet_protocol.RespondHeaderBlocks(request.start_height, request.end_height, header_blocks),
         )
         return msg
+
+    @api_request
+    async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        await self.full_node.respond_compact_vdf_timelord(request)
+
+    @peer_required
+    @api_request
+    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        await self.full_node.new_compact_vdf(request, peer)
+
+    @peer_required
+    @api_request
+    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        await self.full_node.request_compact_vdf(request, peer)
+
+    @peer_required
+    @api_request
+    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        await self.full_node.respond_compact_vdf(request, peer)

@@ -1,9 +1,10 @@
 import pytest
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.setup_nodes import setup_full_system, test_constants, self_hostname
+from tests.setup_nodes import setup_full_system, setup_full_node, test_constants, self_hostname
 from src.util.ints import uint16
 from tests.time_out_assert import time_out_assert
 from src.types.peer_info import PeerInfo
+from src.util.block_tools import BlockTools
 
 test_constants_modified = test_constants.replace(
     **{
@@ -23,36 +24,58 @@ test_constants_modified = test_constants.replace(
 
 class TestSimulation:
     @pytest.fixture(scope="function")
+    async def extra_node(self):
+        b_tools = BlockTools(constants=test_constants_modified)
+        async for _ in setup_full_node(test_constants_modified, "blockchain_test_3.db", 21240, b_tools):
+            yield _
+
+    @pytest.fixture(scope="function")
     async def simulation(self):
         async for _ in setup_full_system(test_constants_modified):
             yield _
 
     @pytest.mark.asyncio
-    async def test_simulation_1(self, simulation):
-        node1, node2, _, _, _, _, _, server1 = simulation
+    async def test_simulation_1(self, simulation, extra_node):
+        node1, node2, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(1000, node_height_at_least, True, node2, 7)
 
+        async def has_compact(node1, node2):
+            peak_height_1 = node1.full_node.blockchain.get_peak_height()
+            headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1)
+            peak_height_2 = node2.full_node.blockchain.get_peak_height()
+            headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2)
+            cc_eos = [False, False]
+            icc_eos = [False, False]
+            cc_sp = [False, False]
+            cc_ip = [False, False]
+            for index, headers in enumerate([headers_1, headers_2]):
+                for header in headers.values():
+                    for sub_slot in header.finished_sub_slots:
+                        if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+                            cc_eos[index] = True
+                        if (
+                            sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                            and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                        ):
+                            icc_eos[index] = True
+                    if (
+                        header.challenge_chain_sp_proof is not None
+                        and header.challenge_chain_sp_proof.normalized_to_identity
+                    ):
+                        cc_sp[index] = True
+                    if header.challenge_chain_ip_proof.normalized_to_identity:
+                        cc_ip[index] = True
 
-#         # async def has_compact(node1, node2, max_height):
-#         #     for h in range(1, max_height):
-#         #         blocks_1: List[FullBlock] = await node1.full_node.block_store.get_full_blocks_at([uint32(h)])
-#         #         blocks_2: List[FullBlock] = await node2.full_node.block_store.get_full_blocks_at([uint32(h)])
-#         #         has_compact_1 = False
-#         #         has_compact_2 = False
-#         #         for block in blocks_1:
-#         #             assert block.proof_of_time is not None
-#         #             if block.proof_of_time.witness_type == 0:
-#         #                 has_compact_1 = True
-#         #                 break
-#         #         for block in blocks_2:
-#         #             assert block.proof_of_time is not None
-#         #             if block.proof_of_time.witness_type == 0:
-#         #                 has_compact_2 = True
-#         #                 break
-#         #         if has_compact_1 and has_compact_2:
-#         #             return True
-#         #     return True
-#         #
-#         # await time_out_assert_custom_interval(120, 2, has_compact, True, node1, node2, max_height)
+            return (
+                cc_eos == [True, True] and icc_eos == [True, True] and cc_sp == [True, True] and cc_ip == [True, True]
+            )
+
+        await time_out_assert(3000, has_compact, True, node1, node2)
+        node3 = extra_node
+        server3 = node3.full_node.server
+        peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
+        await server3.start_client(PeerInfo(self_hostname, uint16(21237)))
+        await server3.start_client(PeerInfo(self_hostname, uint16(21238)))
+        await time_out_assert(3000, node_height_at_least, True, node3, peak_height)

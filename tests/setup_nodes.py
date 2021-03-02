@@ -57,7 +57,8 @@ async def setup_full_node(
     config = bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
-    config["peer_connect_interval"] = 3
+    config["target_uncompact_proofs"] = 30
+    config["peer_connect_interval"] = 50
     if introducer_port is not None:
         config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port
@@ -232,6 +233,19 @@ async def setup_introducer(port):
     await service.wait_closed()
 
 
+async def setup_vdf_client(port):
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
+
+    def stop():
+        asyncio.create_task(kill_processes())
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+
+    yield vdf_task_1
+    await kill_processes()
+
+
 async def setup_vdf_clients(port):
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
     vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2))
@@ -253,6 +267,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
     config["sanitizer_mode"] = sanitizer
+    config["fast_algorithm"] = False
     if sanitizer:
         config["vdf_server"]["port"] = 7999
 
@@ -403,8 +418,8 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         setup_timelord(21236, 21237, False, consensus_constants, b_tools),
         setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10),
         setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10),
-        # setup_vdf_clients(7999),
-        # setup_timelord(21239, 21238, True, consensus_constants),
+        setup_vdf_client(7999),
+        setup_timelord(21239, 21238, True, consensus_constants, b_tools),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
@@ -421,8 +436,8 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
     timelord, timelord_server = await node_iters[4].__anext__()
     node_api_1 = await node_iters[5].__anext__()
     node_api_2 = await node_iters[6].__anext__()
-    # vdf_sanitizer = await node_iters[7].__anext__()
-    # sanitizer, sanitizer_server = await node_iters[8].__anext__()
+    vdf_sanitizer = await node_iters[7].__anext__()
+    sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
     yield (
         node_api_1,
@@ -432,6 +447,8 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         introducer,
         timelord,
         vdf_clients,
+        vdf_sanitizer,
+        sanitizer,
         node_api_1.full_node.server,
     )
 

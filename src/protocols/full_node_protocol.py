@@ -3,7 +3,6 @@ from typing import List, Optional
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.blockchain_format.slots import SubSlotProofs
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -163,21 +162,30 @@ class RequestMempoolTransactions(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RequestCompactVDFs(Streamable):
+class NewCompactVDF(Streamable):
     height: uint32
+    header_hash: bytes32
+    field_vdf: uint8
+    vdf_info: VDFInfo
 
 
 @dataclass(frozen=True)
 @streamable
-class RespondCompactVDFs(Streamable):
+class RequestCompactVDF(Streamable):
     height: uint32
     header_hash: bytes32
-    end_of_slot_proofs: List[SubSlotProofs]  # List of challenge eos vdf and reward eos vdf
-    cc_sp_proof: Optional[VDFProof]  # If not first sp
-    rc_sp_proof: Optional[VDFProof]  # If not first sp
-    cc_ip_proof: VDFProof
-    icc_ip_proof: Optional[VDFProof]
-    rc_ip_proof: VDFProof
+    field_vdf: uint8
+    vdf_info: VDFInfo
+
+
+@dataclass(frozen=True)
+@streamable
+class RespondCompactVDF(Streamable):
+    height: uint32
+    header_hash: bytes32
+    field_vdf: uint8
+    vdf_info: VDFInfo
+    vdf_proof: VDFProof
 
 
 @dataclass(frozen=True)
