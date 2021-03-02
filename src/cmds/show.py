@@ -30,8 +30,6 @@ async def show_async(
     block_by_header_hash: str,
 ) -> None:
 
-    # TODO read configuration for rpc_port instead of assuming default
-
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
@@ -175,7 +173,6 @@ async def show_async(
                 try:
                     await client.open_connection(ip, int(port))
                 except Exception:
-                    # TODO: catch right exception
                     print(f"Failed to connect to {ip}:{port}")
         if remove_connection:
             result_txt = ""
