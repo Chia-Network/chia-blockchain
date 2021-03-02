@@ -561,6 +561,7 @@ async def _challenge_block_vdfs(
     cc_sp_info = None
     if header_block.reward_chain_block.challenge_chain_sp_vdf:
         cc_sp_info = header_block.reward_chain_block.challenge_chain_sp_vdf
+        assert header_block.challenge_chain_sp_proof
         if not header_block.challenge_chain_sp_proof.normalized_to_identity:
             cc_sp_info = VDFInfo(
                 header_block.reward_chain_block.challenge_chain_sp_vdf.challenge,
@@ -767,7 +768,7 @@ def _validate_segment_slots(
                 log.error(f"failed to validate challenge slot {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
         elif validate_sub_slots and after_challenge:
-            if not _validate_sub_slot_data(constants, idx, segment.sub_slots, prev_segment, curr_ssi):
+            if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
         slot_iters = slot_iters + curr_ssi  # type: ignore
@@ -830,7 +831,9 @@ def _validate_sub_slot_data(
         if sub_slot_data.icc_slot_end is not None:
             input = ClassgroupElement.get_default_element()
             if not sub_slot_data.icc_slot_end.normalized_to_identity and prev_ssd.icc_ip_vdf_info is not None:
+                assert prev_ssd.icc_ip_vdf_info
                 input = prev_ssd.icc_ip_vdf_info.output
+            assert sub_slot_data.icc_slot_end_info
             if not sub_slot_data.icc_slot_end.is_valid(constants, input, sub_slot_data.icc_slot_end_info, None):
                 log.error(f"failed icc slot end validation  {sub_slot_data.icc_slot_end_info} ")
                 return False
@@ -1264,6 +1267,7 @@ def handle_end_of_slot(
     eos_vdf_iters: uint64,
 ):
     assert sub_slot.infused_challenge_chain
+    assert sub_slot.proofs.infused_challenge_chain_slot_proof
     if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
         icc_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
     else:
