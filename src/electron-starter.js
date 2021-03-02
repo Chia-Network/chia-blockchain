@@ -56,6 +56,7 @@ if (!setupEvents.handleSquirrelEvent()) {
 
   let mainWindow = null;
   let decidedToClose = false;
+  let isClosing = false;
 
   const createWindow = () => {
     decidedToClose = false;
@@ -115,22 +116,27 @@ if (!setupEvents.handleSquirrelEvent()) {
         return;
       }
       e.preventDefault();
-      var choice = dialog.showMessageBoxSync({
-        type: "question",
-        buttons: [i18n._(/*i18n*/{id: "No"}), i18n._(/*i18n*/{id: "Yes"})],
-        title: i18n._(/*i18n*/{id: "Confirm"}),
-        message:
-          i18n._(/*i18n*/{id: "Are you sure you want to quit? GUI Plotting and farming will stop."})
-      });
-      if (choice == 0) {
-        return;
+      if (!isClosing) {
+          isClosing = true
+          var choice = dialog.showMessageBoxSync({
+            type: "question",
+            buttons: [i18n._(/*i18n*/{id: "No"}), i18n._(/*i18n*/{id: "Yes"})],
+            title: i18n._(/*i18n*/{id: "Confirm"}),
+            message:
+              i18n._(/*i18n*/{id: "Are you sure you want to quit? GUI Plotting and farming will stop."})
+          });
+          if (choice == 0) {
+            isClosing = false
+            return;
+          }
+          isClosing = false
+          decidedToClose = true;
+          mainWindow.webContents.send("exit-daemon");
+          mainWindow.setBounds({ height: 500, width: 500 });
+          ipcMain.on("daemon-exited", (event, args) => {
+            mainWindow.close();
+          });
       }
-      decidedToClose = true;
-      mainWindow.webContents.send("exit-daemon");
-      mainWindow.setBounds({ height: 500, width: 500 });
-      ipcMain.on("daemon-exited", (event, args) => {
-        mainWindow.close();
-      });
     });
   };
 
