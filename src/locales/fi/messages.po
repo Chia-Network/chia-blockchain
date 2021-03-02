@@ -698,7 +698,7 @@ msgstr "Lohkokorkeus"
 msgid "Help"
 msgstr "Helppiä"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
 msgid "Help translate"
 msgstr "Auta kääntämisessä"
 

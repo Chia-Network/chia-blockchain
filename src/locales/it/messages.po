@@ -698,7 +698,7 @@ msgstr "Altezza"
 msgid "Help"
 msgstr "Aiuto"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
 msgid "Help translate"
 msgstr "Aiuta a tradurre"
 
