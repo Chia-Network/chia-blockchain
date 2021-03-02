@@ -24,7 +24,7 @@
   )
 
   (defun atom_from_stream (input_file input_bits)
-    (if (= input_bits (q 0x80))
+    (if (= input_bits (quote 0x80))
       (list () input_file)
       (if (>s input_bits MAX_SINGLE_BYTE)
         (atom_from_stream_part_two (get_bitcount input_bits input_file))
@@ -41,19 +41,19 @@
             (if (>s input_bits MAX_SIX_BYTE)
               (x "bad encoding")
               ; six byte
-              (list (concat (logand (q 0x03) input_bits) (substr input_file 0 4)) (substr input_file 4 (strlen input_file)))
+              (list (concat (logand (quote 0x03) input_bits) (substr input_file 0 4)) (substr input_file 4 (strlen input_file)))
             )
             ; five byte
-            (list (concat (logand (q 0x07) input_bits) (substr input_file 0 3)) (substr input_file 3 (strlen input_file)))
+            (list (concat (logand (quote 0x07) input_bits) (substr input_file 0 3)) (substr input_file 3 (strlen input_file)))
           )
           ; four byte
-          (list (concat (logand (q 0x0f) input_bits) (substr input_file 0 2)) (substr input_file 2 (strlen input_file)))
+          (list (concat (logand (quote 0x0f) input_bits) (substr input_file 0 2)) (substr input_file 2 (strlen input_file)))
         )
         ;three byte
-        (list (concat (logand (q 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1 (strlen input_file)))
+        (list (concat (logand (quote 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1 (strlen input_file)))
       )
       ;two byte
-      (list (logand (q 0x3f) input_bits) input_file)
+      (list (logand (quote 0x3f) input_bits) input_file)
     )
   )
 
