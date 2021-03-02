@@ -33,7 +33,7 @@ async def empty_blockchain():
     db_path.unlink()
 
 
-block_format_version = "rc4_beta0"
+block_format_version = "rc4_beta1"
 
 
 @pytest.fixture(scope="session")
@@ -96,7 +96,7 @@ def persistent_blocks(
         except EOFError:
             print("\n error reading db file")
 
-    return new_test_db(file_path, num_of_blocks, seed, empty_sub_slots)
+    return new_test_db(file_path, num_of_blocks, seed, empty_sub_slots, normalized_to_identity)
 
 
 def new_test_db(
