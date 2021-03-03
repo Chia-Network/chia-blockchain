@@ -189,7 +189,7 @@
                (f (r (r condition)))
          )
          (if (= (f condition) CREATE_ANNOUNCEMENT)
-           (x)
+           (list CREATE_ANNOUNCEMENT (concat 0xcc (f (r condition))))
            condition
          )
        )
@@ -225,10 +225,10 @@
      ;; create the `ASSERT_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
      (defun-inline create-assert-next-announcement-condition (this-coin-info this-subtotal next-coin-info)
        (list ASSERT_ANNOUNCEMENT
-             (calculate-annoucement-id this-coin-info
+            (calculate-annoucement-id this-coin-info
                                             this-subtotal
                                             next-coin-info
-             )
+            )
        )
      )
 

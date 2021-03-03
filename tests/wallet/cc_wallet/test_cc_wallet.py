@@ -2,12 +2,13 @@ import asyncio
 from typing import List
 
 import pytest
-
+import time
 from src.full_node.mempool_manager import MempoolManager
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.blockchain_format.coin import Coin
 from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.announcement import Announcement
 from src.util.ints import uint16, uint32, uint64
 from src.wallet.cc_wallet.cc_utils import cc_puzzle_hash_for_inner_puzzle_hash
 from src.wallet.puzzles.cc_loader import CC_MOD
@@ -17,6 +18,9 @@ from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from tests.time_out_assert import time_out_assert
+from src.wallet.cc_wallet.cc_utils import SpendableCC, spend_bundle_for_spendable_ccs
+from src.wallet.util.transaction_type import TransactionType
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
 
 
 @pytest.fixture(scope="module")
@@ -47,7 +51,7 @@ class TestCCWallet:
     async def three_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
-
+    """
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 3
@@ -544,3 +548,180 @@ class TestCCWallet:
             pass
 
         assert above_limit_tx is None
+    """
+    @pytest.mark.asyncio
+    async def test_cc_announcement_innerpuz(self, two_wallet_nodes):
+        num_blocks = 3
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+        tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.get_send_queue()
+        tx_record = tx_queue[0]
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+
+        colour = cc_wallet.get_colour()
+
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(wallet_node_2.wallet_state_manager, wallet2, colour)
+
+        # custom generate_signed_transaction with CREATE_ANNOUNCEMENT in innerpuz
+        amounts = [20]
+        cc_ph = await cc_wallet_2.get_new_cc_puzzle_hash()
+        puzzle_hashes = [cc_ph]
+        total_outgoing = 20
+        selected_coins = await cc_wallet.select_coins(uint64(total_outgoing))
+        total_amount = sum([x.amount for x in selected_coins])
+        change = total_amount - total_outgoing
+        primaries = []
+        for amount, puzzle_hash in zip(amounts, puzzle_hashes):
+            primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
+
+        if change > 0:
+            changepuzzlehash = await cc_wallet.get_new_inner_hash()
+            primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
+
+        coin = list(selected_coins)[0]
+        inner_puzzle = await cc_wallet.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+
+        if cc_wallet.cc_info.my_genesis_checker is None:
+            raise ValueError("My genesis checker is None")
+
+        genesis_id = genesis_coin_id_for_genesis_coin_checker(cc_wallet.cc_info.my_genesis_checker)
+
+        spendable_cc_list = []
+        innersol_list = []
+        sigs = []
+        first = True
+        announces = [bytes("test", "utf-8")]
+        for coin in selected_coins:
+            consumes = [Announcement(coin.name(), bytes.fromhex("74657374")).name()]
+            coin_inner_puzzle = await cc_wallet.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+            if first:
+                innersol = cc_wallet.standard_wallet.make_solution(
+                    primaries=primaries, announcements=announces, announcements_to_consume=consumes
+                )
+            else:
+                innersol = cc_wallet.standard_wallet.make_solution()
+            innersol_list.append(innersol)
+            lineage_proof = await cc_wallet.get_lineage_proof_for_coin(coin)
+            assert lineage_proof is not None
+            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
+            sigs = sigs + await cc_wallet.get_sigs(coin_inner_puzzle, innersol, coin.name())
+
+        spend_bundle = spend_bundle_for_spendable_ccs(
+            CC_MOD,
+            cc_wallet.cc_info.my_genesis_checker,
+            spendable_cc_list,
+            innersol_list,
+            sigs,
+        )
+
+        txr = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=puzzle_hashes[0],
+            amount=uint64(total_outgoing),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=cc_wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+        )
+        await wallet.wallet_state_manager.add_pending_transaction(txr)
+        time.sleep(3)
+        await time_out_assert(
+            15, tx_in_pool, False, full_node_api.full_node.mempool_manager, txr.spend_bundle.name()
+        )
+
+        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 0)
+        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 0)
+
+        announces = [bytes("test", "utf-8")]
+        spendable_cc_list = []
+        innersol_list = []
+        sigs = []
+        first = True
+        for coin in selected_coins:
+            consumes = [Announcement(coin.name(), bytes.fromhex("cc74657374")).name()]
+            coin_inner_puzzle = await cc_wallet.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+            if first:
+                innersol = cc_wallet.standard_wallet.make_solution(
+                    primaries=primaries, announcements=announces, announcements_to_consume=consumes
+                )
+            else:
+                innersol = cc_wallet.standard_wallet.make_solution()
+            innersol_list.append(innersol)
+            lineage_proof = await cc_wallet.get_lineage_proof_for_coin(coin)
+            assert lineage_proof is not None
+            spendable_cc_list.append(SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof))
+            sigs = sigs + await cc_wallet.get_sigs(coin_inner_puzzle, innersol, coin.name())
+
+        spend_bundle = spend_bundle_for_spendable_ccs(
+            CC_MOD,
+            cc_wallet.cc_info.my_genesis_checker,
+            spendable_cc_list,
+            innersol_list,
+            sigs,
+        )
+
+        txr = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=puzzle_hashes[0],
+            amount=uint64(total_outgoing),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=cc_wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=spend_bundle.name(),
+        )
+        breakpoint()
+        await wallet.wallet_state_manager.add_pending_transaction(txr)
+        time.sleep(10)
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, txr.spend_bundle.name()
+        )
+
+        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 20)
+        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 20)
