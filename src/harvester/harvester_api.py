@@ -24,6 +24,7 @@ from src.util.ints import uint8, uint64, uint32
 from src.plotting.plot_tools import parse_plot_info
 from src.wallet.derive_keys import master_sk_to_local_sk
 
+
 class HarvesterAPI:
     harvester: Harvester
 
