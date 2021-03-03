@@ -73,6 +73,7 @@ from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.plotting.plot_tools import parse_plot_info
 from src.wallet.derive_keys import master_sk_to_local_sk
 
+
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 2 ** 12,
