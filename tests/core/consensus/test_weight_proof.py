@@ -17,6 +17,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.block_cache import BlockCache
 from src.util.block_tools import test_constants
+from tests.setup_nodes import bt
 
 try:
     from reprlib import repr
@@ -232,12 +233,24 @@ class TestWeightProof:
     async def test_weight_proof1000__blocks_compact(self, default_1000_blocks_compact):
         blocks = default_1000_blocks_compact
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-        header = header_cache[height_to_hash[118]]
-        prev_sb = blockchain.block_record(header.prev_header_hash)
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(test_constants, header, prev_sb, blockchain)
-        validate_finished_header_block(test_constants, blockchain, header, False, difficulty, sub_slot_iters, False)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof1000_partial_blocks_compact(self, default_1000_blocks_compact):
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            100,
+            block_list_input=default_1000_blocks_compact,
+            seed=b"asdfghjkl",
+            normalized_to_identity=False,
+        )
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None

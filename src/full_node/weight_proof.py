@@ -760,7 +760,7 @@ def _validate_segment_slots(
     curr_difficulty: uint64,
     ses: Optional[SubEpochSummary],
     first_segment_in_se: bool,
-    validate_sub_slots=True,  # todo almog remove after bluebox integration
+    validate_sub_slots=False,  # todo almog remove after bluebox integration
 ) -> Tuple[bool, int, int, int]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
@@ -832,7 +832,7 @@ def _validate_sub_slot_data(
     constants: ConsensusConstants,
     sub_slot_idx: int,
     sub_slots: List[SubSlotData],
-    ssi,
+    ssi: uint64,
 ) -> bool:
     sub_slot_data = sub_slots[sub_slot_idx]
     assert sub_slot_idx > 0
