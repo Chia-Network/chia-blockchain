@@ -88,7 +88,6 @@ class TestFullNodeStore:
                 BlockCache({}),
                 None,
                 sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                False,
             )
             == []
         )
@@ -108,15 +107,12 @@ class TestFullNodeStore:
             assert store.new_finished_sub_slot(sub_slots[i], {}, None) is not None
             assert store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())[0] == sub_slots[i]
 
-        assert (
-            store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash(), False)
-            == sub_slots
-        )
+        assert store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
         with raises(ValueError):
-            store.get_finished_sub_slots(None, {}, sub_slots[-1].challenge_chain.get_hash(), True)
+            store.get_finished_sub_slots(BlockCache({}), None, std_hash(b"not a valid hash"))
 
         assert (
-            store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-2].challenge_chain.get_hash(), False)
+            store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-2].challenge_chain.get_hash())
             == sub_slots[:-1]
         )
 
@@ -142,7 +138,6 @@ class TestFullNodeStore:
                 blockchain,
                 peak,
                 sub_slots[-1].challenge_chain.get_hash(),
-                False,
             )
             == []
         )
