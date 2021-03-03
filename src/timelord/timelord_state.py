@@ -71,7 +71,10 @@ class LastState:
             self.reward_challenge_cache = state.previous_reward_challenges
             self.last_challenge_sb_or_eos_total_iters = self.peak.last_challenge_sb_or_eos_total_iters
             self.new_epoch = False
-            self.passed_ses_height_but_not_yet_included = state.passes_ses_height_but_not_yet_included
+            if (self.peak.reward_chain_block.height + 1) % self.constants.SUB_EPOCH_BLOCKS == 0:
+                self.passed_ses_height_but_not_yet_included = True
+            else:
+                self.passed_ses_height_but_not_yet_included = state.passes_ses_height_but_not_yet_included
         elif isinstance(state, EndOfSubSlotBundle):
             self.state_type = StateType.END_OF_SUB_SLOT
             if self.peak is not None:
