@@ -1,4 +1,4 @@
-name: Ubuntu Core Tests
+name: Ubuntu Blockchain Tests
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu Core Tests
+    name: Ubuntu Blockchain Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
