@@ -351,7 +351,7 @@ class WeightProofHandler:
                     if sub_slot.infused_challenge_chain is not None:
                         curr_icc_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
                     sub_slots_data.append(handle_finished_slots(sub_slot, curr_icc_info))
-                tmp_sub_slots_data: List[SubSlotData] = []
+                tmp_sub_slots_data = []
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
 
@@ -397,7 +397,7 @@ class WeightProofHandler:
                     if idx == 0:
                         eos_vdf_iters = uint64(prev_rec.sub_slot_iters - prev_rec.ip_iters(self.constants))
                     sub_slots_data.append(handle_end_of_slot(sub_slot, eos_vdf_iters))
-                tmp_sub_slots_data: List[SubSlotData] = []
+                tmp_sub_slots_data = []
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
@@ -1342,6 +1342,9 @@ def get_sp_total_iters(constants: ConsensusConstants, is_overflow: bool, ssi: ui
 
 def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
     if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
-        if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
+        if sub_slot.proofs.infused_challenge_chain_slot_proof is not None:
+            if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
+                return True
+        else:
             return True
     return False
