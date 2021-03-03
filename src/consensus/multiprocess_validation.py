@@ -67,7 +67,7 @@ def batch_pre_validate_blocks(
             error_int: Optional[uint16] = None
             if error is not None:
                 error_int = uint16(error.code.value)
-            if constants_dict["NETWORK"] == NetworkType.MAINNET.value:
+            if constants_dict["NETWORK_TYPE"] == NetworkType.MAINNET.value:
                 cost_result = None
             else:
                 if not error and generator is not None and validate_transactions:

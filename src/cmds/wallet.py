@@ -8,9 +8,10 @@ import aiohttp
 import asyncio
 
 from src.rpc.wallet_rpc_client import WalletRpcClient
+from src.server.start_wallet import SERVICE_NAME
 from src.util.bech32m import encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
-from src.util.config import load_config
+from src.util.config import load_config, load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint64, uint16
 from src.wallet.transaction_record import TransactionRecord
@@ -19,15 +20,15 @@ from src.cmds.units import units
 from decimal import Decimal
 
 
-def print_transaction(tx: TransactionRecord, verbose: bool) -> None:
+def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
     if verbose:
         print(tx)
     else:
         chia_amount = Decimal(int(tx.amount)) / units["chia"]
-        to_address = encode_puzzle_hash(tx.to_puzzle_hash)
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount: {chia_amount} TXCH")
+        print(f"Amount: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
@@ -36,18 +37,22 @@ def print_transaction(tx: TransactionRecord, verbose: bool) -> None:
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     transaction_id = hexstr_to_bytes(args["tx_id"])
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
-    print_transaction(tx, verbose=(args["verbose"] > 0))
+    print_transaction(tx, verbose=(args["verbose"] > 0), name=name)
 
 
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
     for i in range(0, len(txs), 5):
         for j in range(0, 5):
-            print_transaction(txs[i + j], verbose=(args["verbose"] > 0))
+            print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name)
         print("Press q to quit, or c to continue")
         while True:
             entered_key = sys.stdin.read(1)

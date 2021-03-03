@@ -85,6 +85,7 @@ class WalletRpcApi:
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
             "/get_transaction_count": self.get_transaction_count,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
+            "/get_network_info": self.get_network_info,
         }
 
     async def _state_changed(self, *args) -> List[str]:
@@ -270,6 +271,12 @@ class WalletRpcApi:
         else:
             return {"height": peak.height}
 
+    async def get_network_info(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+        network_name = self.service.config["selected_network"]
+        address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
+        return {"network_name": network_name, "network_prefix": address_prefix}
+
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
@@ -412,10 +419,11 @@ class WalletRpcApi:
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
         formatted_transactions = []
-
+        selected = self.service.config["selected_network"]
+        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
         for tx in transactions:
             formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash)
+            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
             formatted_transactions.append(formatted)
 
         return {
@@ -435,13 +443,14 @@ class WalletRpcApi:
 
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-
+        selected = self.service.config["selected_network"]
+        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
         if wallet.type() == WalletType.STANDARD_WALLET:
             raw_puzzle_hash = await wallet.get_new_puzzlehash()
-            address = encode_puzzle_hash(raw_puzzle_hash)
+            address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         elif wallet.type() == WalletType.COLOURED_COIN:
             raw_puzzle_hash = await wallet.get_new_inner_hash()
-            address = encode_puzzle_hash(raw_puzzle_hash)
+            address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
 

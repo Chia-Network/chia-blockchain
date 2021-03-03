@@ -65,12 +65,14 @@ def check_keys(new_root):
     stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
     stop_searching_for_pool = "xch_target_address" not in config["pool"]
     number_of_ph_to_search = 500
+    selected = config["selected_network"]
+    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     for i in range(number_of_ph_to_search):
         if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
             break
         for sk, _ in all_sks:
             all_targets.append(
-                encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()))
+                encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix)
             )
             if all_targets[-1] == config["farmer"].get("xch_target_address"):
                 stop_searching_for_farmer = True

@@ -256,7 +256,14 @@ class TestCoinStore:
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
         num_blocks = 20
-        blocks = bt.get_consecutive_blocks(num_blocks, guarantee_transaction_block=True)
+        farmer_ph = 32 * b"0"
+        pool_ph = 32 * b"1"
+        blocks = bt.get_consecutive_blocks(
+            num_blocks,
+            farmer_reward_puzzle_hash=farmer_ph,
+            pool_reward_puzzle_hash=pool_ph,
+            guarantee_transaction_block=True,
+        )
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -270,10 +277,9 @@ class TestCoinStore:
             assert res == ReceiveBlockResult.NEW_PEAK
         assert b.get_peak().height == num_blocks - 1
 
-        pool_coin, farmer_coin = get_future_reward_coins(blocks[-2])
+        coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(True, pool_ph)
+        coins_pool = await coin_store.get_coin_records_by_puzzle_hash(True, farmer_ph)
 
-        coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(True, farmer_coin.puzzle_hash)
-        coins_pool = await coin_store.get_coin_records_by_puzzle_hash(True, pool_coin.puzzle_hash)
         assert len(coins_farmer) == num_blocks - 2
         assert len(coins_pool) == num_blocks - 2
 

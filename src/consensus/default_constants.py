@@ -58,7 +58,7 @@ testnet_kwargs = {
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 10000 blocks
-    "NETWORK": 0,
+    "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
 }
 

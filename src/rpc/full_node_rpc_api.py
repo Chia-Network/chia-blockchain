@@ -33,6 +33,7 @@ class FullNodeRpcApi:
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
+            "/get_network_info": self.get_network_info,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
@@ -132,6 +133,11 @@ class FullNodeRpcApi:
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
         return response
+
+    async def get_network_info(self, request: Dict):
+        network_name = self.service.config["selected_network"]
+        address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
+        return {"network_name": network_name, "network_prefix": address_prefix}
 
     async def get_block(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
