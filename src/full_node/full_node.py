@@ -998,7 +998,7 @@ class FullNode:
                 num_blocks_in_ss += 1
 
         if num_blocks_in_ss > self.constants.MAX_SUB_SLOT_BLOCKS:
-            # TODO: count overflow blocks separately (also in validation)
+            # TODO: potentially allow overflow blocks here, which count for the next slot
             self.log.warning("Too many blocks added, not adding block")
             return
 
@@ -1097,8 +1097,8 @@ class FullNode:
         if target_rc_hash == self.constants.GENESIS_CHALLENGE:
             prev_b = None
         else:
-            # Find the prev block, starts looking backwards from the peak
-            # TODO: should we look at end of slots too?
+            # Find the prev block, starts looking backwards from the peak. target_rc_hash must be the hash of a block
+            # and not an end of slot (since we just looked through the slots and backtracked)
             curr: Optional[BlockRecord] = self.blockchain.get_peak()
 
             for _ in range(10):

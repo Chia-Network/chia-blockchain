@@ -86,10 +86,6 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
     assert height_prev_epoch_surpass % constants.EPOCH_BLOCKS == height_prev_epoch_surpass % constants.EPOCH_BLOCKS == 0
 
     # Sanity check, don't go too far past epoch barrier
-    print("Last block height: ", last_b.height)
-    print("Height in nexzt", height_in_next_epoch)
-    print("Surpass:", height_epoch_surpass)
-    print("Max SS: ", constants.MAX_SUB_SLOT_BLOCKS, constants.EPOCH_BLOCKS)
     assert (height_in_next_epoch - height_epoch_surpass) < (5 * constants.MAX_SUB_SLOT_BLOCKS)
 
     if height_prev_epoch_surpass == 0:
@@ -141,10 +137,6 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
 
 
 def height_can_be_first_in_epoch(constants: ConsensusConstants, height: uint32) -> bool:
-    print(f"A: {height}")
-    print(f"B: {height - (height % constants.SUB_EPOCH_BLOCKS)}")
-    print(f"C: {(height - (height % constants.SUB_EPOCH_BLOCKS)) % constants.EPOCH_BLOCKS}")
-    print("")
     return (height - (height % constants.SUB_EPOCH_BLOCKS)) % constants.EPOCH_BLOCKS == 0
 
 
