@@ -18,7 +18,7 @@ from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
 from src.server.upnp import upnp_remap_port
 from src.types.peer_info import PeerInfo
-from src.util.logging import initialize_logging
+from src.util.chia_logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from src.util.setproctitle import setproctitle
 from src.rpc.rpc_server import start_rpc_server

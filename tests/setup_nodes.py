@@ -4,10 +4,17 @@ import signal
 from secrets import token_bytes
 from typing import Dict, List, Optional
 from src.consensus.constants import ConsensusConstants
+from src.daemon.server import (
+    create_server_for_daemon,
+    WebSocketServer,
+    daemon_launch_lock_path,
+    singleton,
+)
 from src.full_node.full_node_api import FullNodeAPI
 from src.timelord.timelord_launcher import spawn_process, kill_processes
 from src.util.block_tools import BlockTools, test_constants
 from src.types.peer_info import PeerInfo
+from src.util.config import save_config
 from src.util.hash import std_hash
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
@@ -40,6 +47,31 @@ async def _teardown_nodes(node_aiters: List) -> None:
             await sublist_awaitable
         except StopAsyncIteration:
             pass
+
+
+async def setup_daemon(port, alert_url, pubkey):
+    btools = BlockTools(constants=test_constants)
+    root_path = btools.root_path
+    config = btools.config
+    config["port"] = port
+    lockfile = singleton(daemon_launch_lock_path(root_path))
+    crt_path = root_path / config["daemon_ssl"]["private_crt"]
+    key_path = root_path / config["daemon_ssl"]["private_key"]
+    ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
+    ca_key_path = root_path / config["private_ssl_ca"]["key"]
+    config["selected_network"] = "testnet5"
+    config["ALERTS_URL"] = alert_url
+    config["CHIA_ALERTS_PUBKEY"] = pubkey
+    btools._config = config
+    save_config(root_path, "config.yaml", btools._config)
+    assert lockfile is not None
+    create_server_for_daemon(btools.root_path)
+    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    await ws_server.start()
+
+    yield ws_server
+
+    await ws_server.stop()
 
 
 async def setup_full_node(

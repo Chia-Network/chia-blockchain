@@ -17,6 +17,10 @@ network_overrides: &network_overrides
     testnet4:
       GENESIS_CHALLENGE: "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a" # std_hash(b"4")
       NETWORK_TYPE: 1
+    testnet5:
+      GENESIS_CHALLENGE: null
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "bc4fd6c394fe90c6097afbfa6ab5927743e2210ecf689dad477be8eb408745d5"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "4ad98e66a019f11b60a8279514d13105b65588865e2a8e794b5b73d5646174f6"
   config:
     mainnet:
       address_prefix: "xch"
@@ -24,8 +28,12 @@ network_overrides: &network_overrides
       address_prefix: "txch"
     testnet4:
       address_prefix: "txch"
+    testnet5:
+      address_prefix: "txch"
 
-selected_network: &selected_network "testnet4"
+selected_network: &selected_network "testnet5"
+ALERTS_URL: https://testnet5.chia.net/status
+CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
 # public ssl ca is included in source code
 # Privet ssl ca is used for trusted connections between machines user owns
