@@ -21,6 +21,8 @@ class TimelordAPI:
     @api_request
     async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord):
         async with self.timelord.lock:
+            if self.timelord.sanitizer_mode:
+                return
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(
@@ -42,6 +44,8 @@ class TimelordAPI:
     @api_request
     async def new_unfinished_block(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlock):
         async with self.timelord.lock:
+            if self.timelord.sanitizer_mode:
+                return
             try:
                 sp_iters, ip_iters = iters_from_block(
                     self.timelord.constants,
@@ -64,3 +68,10 @@ class TimelordAPI:
                         self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                     self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
                     self.timelord.total_unfinished += 1
+
+    @api_request
+    async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
+        async with self.timelord.lock:
+            if not self.timelord.sanitizer_mode:
+                return
+            self.timelord.pending_bluebox_info.append(vdf_info)

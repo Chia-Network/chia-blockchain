@@ -34,6 +34,7 @@ from src.consensus.block_header_validation import (
     validate_unfinished_header_block,
 )
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
+from src.types.blockchain_format.vdf import VDFInfo
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +74,8 @@ class Blockchain(BlockchainInterface):
     block_store: BlockStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
+    # Set holding seen compact proofs, in order to avoid duplicates.
+    _seen_compact_proofs: Set[Tuple[VDFInfo, uint32]]
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -106,6 +109,7 @@ class Blockchain(BlockchainInterface):
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
         await self._load_chain_from_store()
+        self._seen_compact_proofs = set()
         return self
 
     def shut_down(self):
@@ -575,6 +579,14 @@ class Blockchain(BlockchainInterface):
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         return await self.block_store.get_header_blocks_in_range(start, stop)
 
+    async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
+        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height)
+        if len(header_dict) == 0:
+            return None
+        if header_hash not in header_dict:
+            return None
+        return header_dict[header_hash]
+
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if header_hash in self.__block_records:
             return self.__block_records[header_hash]
@@ -616,3 +628,14 @@ class Blockchain(BlockchainInterface):
         if segments is None:
             return None
         return segments
+
+    # Returns 'True' if the info is already in the set, otherwise returns 'False' and stores it.
+    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
+        pot_tuple = (vdf_info, height)
+        if pot_tuple in self._seen_compact_proofs:
+            return True
+        # Periodically cleanup to keep size small. TODO: make this smarter, like FIFO.
+        if len(self._seen_compact_proofs) > 10000:
+            self._seen_compact_proofs.clear()
+        self._seen_compact_proofs.add(pot_tuple)
+        return False

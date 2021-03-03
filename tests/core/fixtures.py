@@ -33,7 +33,7 @@ async def empty_blockchain():
     db_path.unlink()
 
 
-block_format_version = "b28_1"
+block_format_version = "rc4_nofixtureyet"
 
 
 @pytest.fixture(scope="session")
@@ -63,7 +63,18 @@ async def default_20000_blocks():
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
 
 
-def persistent_blocks(num_of_blocks: int, db_name: str, seed: bytes = b"", empty_sub_slots=0):
+@pytest.fixture(scope="session")
+async def default_10000_blocks_compact():
+    return persistent_blocks(10000, f"test_blocks_10000_compact_{block_format_version}.db", normalized_to_identity=True)
+
+
+def persistent_blocks(
+    num_of_blocks: int,
+    db_name: str,
+    seed: bytes = b"",
+    empty_sub_slots=0,
+    normalized_to_identity: bool = False,
+):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     block_path_dir = Path("~/.chia/blocks").expanduser()
@@ -85,12 +96,19 @@ def persistent_blocks(num_of_blocks: int, db_name: str, seed: bytes = b"", empty
         except EOFError:
             print("\n error reading db file")
 
-    return new_test_db(file_path, num_of_blocks, seed, empty_sub_slots)
+    return new_test_db(file_path, num_of_blocks, seed, empty_sub_slots, normalized_to_identity)
 
 
-def new_test_db(path: Path, num_of_blocks: int, seed: bytes, empty_sub_slots: int):
+def new_test_db(
+    path: Path, num_of_blocks: int, seed: bytes, empty_sub_slots: int, normalized_to_identity: bool = False
+):
     print(f"create {path} with {num_of_blocks} blocks with ")
-    blocks: List[FullBlock] = bt.get_consecutive_blocks(num_of_blocks, seed=seed, skip_slots=empty_sub_slots)
+    blocks: List[FullBlock] = bt.get_consecutive_blocks(
+        num_of_blocks,
+        seed=seed,
+        skip_slots=empty_sub_slots,
+        normalized_to_identity=normalized_to_identity,
+    )
     block_bytes_list: List[bytes] = []
     for block in blocks:
         block_bytes_list.append(bytes(block))

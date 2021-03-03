@@ -213,10 +213,10 @@ full_node:
   recent_peer_threshold: 6000
 
   # Send to a Bluebox (sanatizing timelord) uncompact blocks once every
-  # 'send_uncompact_interval' seconds. The recommended value is
-  # send_uncompact_interval=1800. This sends 50 proofs every 30 minutes.
-  # Set to 0 if you don't use this feature.
+  # 'send_uncompact_interval' seconds. Set to 0 if you don't use this feature.
   send_uncompact_interval: 0
+  # At every 'send_uncompact_interval' seconds, send blueboxes 'target_uncompact_proofs' proofs to be normalized.
+  target_uncompact_proofs: 100
 
   farmer_peer:
       host: *self_hostname

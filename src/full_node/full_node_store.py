@@ -258,10 +258,22 @@ class FullNodeStore:
             number_of_iterations=sub_slot_iters,
         ):
             return None
-        if not eos.proofs.challenge_chain_slot_proof.is_valid(
-            self.constants,
-            cc_start_element,
-            partial_cc_vdf_info,
+        if (
+            not eos.proofs.challenge_chain_slot_proof.normalized_to_identity
+            and not eos.proofs.challenge_chain_slot_proof.is_valid(
+                self.constants,
+                cc_start_element,
+                partial_cc_vdf_info,
+            )
+        ):
+            return None
+        if (
+            eos.proofs.challenge_chain_slot_proof.normalized_to_identity
+            and not eos.proofs.challenge_chain_slot_proof.is_valid(
+                self.constants,
+                ClassgroupElement.get_default_element(),
+                eos.challenge_chain.challenge_chain_end_of_slot_vdf,
+            )
         ):
             return None
 
@@ -292,8 +304,20 @@ class FullNodeStore:
                 number_of_iterations=icc_iters,
             ):
                 return None
-            if not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                self.constants, icc_start_element, partial_icc_vdf_info
+            if (
+                not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
+                    self.constants, icc_start_element, partial_icc_vdf_info
+                )
+            ):
+                return None
+            if (
+                eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
+                    self.constants,
+                    ClassgroupElement.get_default_element(),
+                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                )
             ):
                 return None
         else:
@@ -411,10 +435,16 @@ class FullNodeStore:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
-                    if not signage_point.cc_proof.is_valid(
+                    if not signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
                         self.constants,
                         start_ele,
                         cc_vdf_info_expected,
+                    ):
+                        return False
+                    if signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
+                        self.constants,
+                        ClassgroupElement.get_default_element(),
+                        signage_point.cc_vdf,
                     ):
                         return False
 

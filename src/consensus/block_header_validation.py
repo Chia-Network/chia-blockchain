@@ -197,10 +197,23 @@ def validate_unfinished_header_block(
                         number_of_iterations=icc_iters_committed,
                     ):
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
-                    if not skip_vdf_is_valid and not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
-                        constants, icc_vdf_input, target_vdf_info, None
-                    ):
-                        return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
+                    if not skip_vdf_is_valid:
+                        if (
+                            not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                            and not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
+                                constants, icc_vdf_input, target_vdf_info, None
+                            )
+                        ):
+                            return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
+                        if (
+                            sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                            and not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
+                                constants,
+                                ClassgroupElement.get_default_element(),
+                                sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                            )
+                        ):
+                            return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
 
                     if sub_slot.reward_chain.deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                         # 2g. Check infused challenge sub-slot hash in challenge chain, deficit 16
@@ -323,12 +336,25 @@ def validate_unfinished_header_block(
             ):
                 return None, ValidationError(Err.INVALID_CC_EOS_VDF, "wrong challenge chain end of slot vdf")
 
-            # Pass in None for target info since we are only checking the proof from the temporary point,
-            # but the challenge_chain_end_of_slot_vdf actually starts from the start of slot (for light clients)
-            if not skip_vdf_is_valid and not sub_slot.proofs.challenge_chain_slot_proof.is_valid(
-                constants, cc_start_element, partial_cc_vdf_info, None
-            ):
-                return None, ValidationError(Err.INVALID_CC_EOS_VDF)
+            if not skip_vdf_is_valid:
+                # Pass in None for target info since we are only checking the proof from the temporary point,
+                # but the challenge_chain_end_of_slot_vdf actually starts from the start of slot (for light clients)
+                if (
+                    not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                    and not sub_slot.proofs.challenge_chain_slot_proof.is_valid(
+                        constants, cc_start_element, partial_cc_vdf_info, None
+                    )
+                ):
+                    return None, ValidationError(Err.INVALID_CC_EOS_VDF)
+                if (
+                    sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                    and not sub_slot.proofs.challenge_chain_slot_proof.is_valid(
+                        constants,
+                        ClassgroupElement.get_default_element(),
+                        sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
+                    )
+                ):
+                    return None, ValidationError(Err.INVALID_CC_EOS_VDF)
 
             if genesis_block:
                 # 2r. Check deficit (MIN_SUB.. deficit edge case for genesis block)
@@ -553,7 +579,7 @@ def validate_unfinished_header_block(
             ChallengeChainSubSlot(dummy_vdf_info, None, None, None, None),
             None,
             RewardChainSubSlot(dummy_vdf_info, bytes32([0] * 32), None, uint8(0)),
-            SubSlotProofs(VDFProof(uint8(0), b""), None, VDFProof(uint8(0), b"")),
+            SubSlotProofs(VDFProof(uint8(0), b"", False), None, VDFProof(uint8(0), b"", False)),
         )
         sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]
     else:
@@ -635,10 +661,21 @@ def validate_unfinished_header_block(
             number_of_iterations=sp_iters,
         ):
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
-        if not skip_vdf_is_valid and not header_block.challenge_chain_sp_proof.is_valid(
-            constants, cc_vdf_input, target_vdf_info, None
-        ):
-            return None, ValidationError(Err.INVALID_CC_SP_VDF)
+        if not skip_vdf_is_valid:
+            if (
+                not header_block.challenge_chain_sp_proof.normalized_to_identity
+                and not header_block.challenge_chain_sp_proof.is_valid(constants, cc_vdf_input, target_vdf_info, None)
+            ):
+                return None, ValidationError(Err.INVALID_CC_SP_VDF)
+            if (
+                header_block.challenge_chain_sp_proof.normalized_to_identity
+                and not header_block.challenge_chain_sp_proof.is_valid(
+                    constants,
+                    ClassgroupElement.get_default_element(),
+                    header_block.reward_chain_block.challenge_chain_sp_vdf,
+                )
+            ):
+                return None, ValidationError(Err.INVALID_CC_SP_VDF)
     else:
         assert overflow is not None
         if header_block.reward_chain_block.challenge_chain_sp_vdf is not None:
@@ -923,14 +960,26 @@ def validate_finished_header_block(
         log.error(f"{header_block.reward_chain_block.challenge_chain_ip_vdf }. expected {expected}")
         log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
-    if not header_block.challenge_chain_ip_proof.is_valid(
-        constants,
-        cc_vdf_output,
-        cc_target_vdf_info,
-        None,
+    if (
+        not header_block.challenge_chain_ip_proof.normalized_to_identity
+        and not header_block.challenge_chain_ip_proof.is_valid(
+            constants,
+            cc_vdf_output,
+            cc_target_vdf_info,
+            None,
+        )
     ):
         log.error(f"Did not validate, output {cc_vdf_output}")
         log.error(f"Block: {header_block}")
+        return None, ValidationError(Err.INVALID_CC_IP_VDF)
+    if (
+        header_block.challenge_chain_ip_proof.normalized_to_identity
+        and not header_block.challenge_chain_ip_proof.is_valid(
+            constants,
+            ClassgroupElement.get_default_element(),
+            header_block.reward_chain_block.challenge_chain_ip_vdf,
+        )
+    ):
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
 
     # 30. Check reward chain infusion point VDF

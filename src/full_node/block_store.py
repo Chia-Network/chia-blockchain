@@ -26,7 +26,7 @@ class BlockStore:
         self.db = connection
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
-            "  is_block tinyint, block blob)"
+            "  is_block tinyint, is_fully_compactified tinyint, block blob)"
         )
 
         # Block records
@@ -44,6 +44,7 @@ class BlockStore:
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on full_blocks(is_block)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
@@ -71,11 +72,12 @@ class BlockStore:
     async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(block.header_hash, block)
         cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
                 block.header_hash.hex(),
                 block.height,
                 int(block.is_transaction_block()),
+                int(block.is_fully_compactified()),
                 bytes(block),
             ),
         )
@@ -319,3 +321,23 @@ class BlockStore:
             (header_hash.hex(),),
         )
         await cursor_2.close()
+
+    async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
+        cursor = await self.db.execute(
+            "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (header_hash.hex(),)
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is None:
+            return None
+        return bool(row[0])
+
+    async def get_first_not_compactified(self, min_height: int) -> Optional[int]:
+        cursor = await self.db.execute(
+            "SELECT MIN(height) from full_blocks WHERE is_fully_compactified=0 AND height>=?", (min_height,)
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is None:
+            return None
+        return int(row[0])

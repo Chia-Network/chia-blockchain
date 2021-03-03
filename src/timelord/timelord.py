@@ -4,6 +4,7 @@ import io
 import logging
 import time
 import traceback
+import random
 from typing import Dict, List, Optional, Tuple, Callable
 
 from chiavdf import create_discriminant
@@ -85,11 +86,15 @@ class Timelord:
         self.total_unfinished: int = 0
         self.total_infused: int = 0
         self.state_changed_callback: Optional[Callable] = None
+        self.sanitizer_mode = self.config["sanitizer_mode"]
+        self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
-        self.main_loop = asyncio.create_task(self._manage_chains())
-
+        if not self.sanitizer_mode:
+            self.main_loop = asyncio.create_task(self._manage_chains())
+        else:
+            self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
             self.config["vdf_server"]["host"],
@@ -213,7 +218,7 @@ class Timelord:
         # Adjust all unfinished blocks iterations to the peak.
         new_unfinished_blocks = []
         self.proofs_finished = []
-        for chain in Chain:
+        for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN]:
             self.iters_to_submit[chain] = []
             self.iters_submitted[chain] = []
         self.iteration_to_proof_type = {}
@@ -290,7 +295,7 @@ class Timelord:
             )
 
     async def _submit_iterations(self):
-        for chain in Chain:
+        for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN]:
             if chain in self.allows_iters:
                 # log.info(f"Trying to submit for chain {chain}.")
                 _, _, writer = self.chain_type_to_stream[chain]
@@ -744,6 +749,11 @@ class Timelord:
         ip: str,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
+        # Data specific only when running in bluebox mode.
+        bluebox_iteration: Optional[uint64] = None,
+        header_hash: Optional[bytes32] = None,
+        height: Optional[uint32] = None,
+        field_vdf: Optional[uint8] = None,
     ):
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
@@ -751,12 +761,15 @@ class Timelord:
             # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
             # the timelord tells the vdf_client what to execute.
             async with self.lock:
-                if self.config["fast_algorithm"]:
-                    # Run n-wesolowski (fast) algorithm.
-                    writer.write(b"N")
+                if self.sanitizer_mode:
+                    writer.write(b"S")
                 else:
-                    # Run two-wesolowski (slow) algorithm.
-                    writer.write(b"T")
+                    if self.config["fast_algorithm"]:
+                        # Run n-wesolowski (fast) algorithm.
+                        writer.write(b"N")
+                    else:
+                        # Run two-wesolowski (slow) algorithm.
+                        writer.write(b"T")
                 await writer.drain()
 
             prefix = str(len(str(disc)))
@@ -785,8 +798,20 @@ class Timelord:
                 return
 
             log.info("Got handshake with VDF client.")
-            async with self.lock:
-                self.allows_iters.append(chain)
+            if not self.sanitizer_mode:
+                async with self.lock:
+                    self.allows_iters.append(chain)
+            else:
+                async with self.lock:
+                    assert chain is Chain.BLUEBOX
+                    assert bluebox_iteration is not None
+                    prefix = str(len(str(bluebox_iteration)))
+                    if len(str(bluebox_iteration)) < 10:
+                        prefix = "0" + prefix
+                    iter_str = prefix + str(bluebox_iteration)
+                    writer.write(iter_str.encode())
+                    await writer.drain()
+
             # Listen to the client until "STOP" is received.
             while True:
                 try:
@@ -842,13 +867,14 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
-                    time_taken = time.time() - self.chain_start_time[chain]
-                    ips = int(iterations_needed / time_taken * 10) / 10
-                    log.info(
-                        f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
-                        f" iters, "
-                        f"Estimated IPS: {ips}, Chain: {chain}"
-                    )
+                    if not self.sanitizer_mode:
+                        time_taken = time.time() - self.chain_start_time[chain]
+                        ips = int(iterations_needed / time_taken * 10) / 10
+                        log.info(
+                            f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
+                            f" iters, "
+                            f"Estimated IPS: {ips}, Chain: {chain}"
+                        )
 
                     vdf_info: VDFInfo = VDFInfo(
                         challenge,
@@ -858,11 +884,65 @@ class Timelord:
                     vdf_proof: VDFProof = VDFProof(
                         witness_type,
                         proof_bytes,
+                        self.sanitizer_mode,
                     )
 
                     if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
                         log.error("Invalid proof of time!")
-                    async with self.lock:
-                        self.proofs_finished.append((chain, vdf_info, vdf_proof))
+                    if not self.sanitizer_mode:
+                        async with self.lock:
+                            self.proofs_finished.append((chain, vdf_info, vdf_proof))
+                    else:
+                        async with self.lock:
+                            writer.write(b"010")
+                            await writer.drain()
+                        assert header_hash is not None
+                        assert field_vdf is not None
+                        assert height is not None
+                        response = timelord_protocol.RespondCompactProofOfTime(
+                            vdf_info, vdf_proof, header_hash, height, field_vdf
+                        )
+                        if self.server is not None:
+                            message = make_msg(ProtocolMessageTypes.respond_compact_vdf_timelord, response)
+                            await self.server.send_to_all([message], NodeType.FULL_NODE)
         except ConnectionResetError as e:
             log.info(f"Connection reset with VDF client {e}")
+
+    async def _manage_discriminant_queue_sanitizer(self):
+        while not self._shut_down:
+            async with self.lock:
+                try:
+                    while len(self.pending_bluebox_info) > 0 and len(self.free_clients) > 0:
+                        # Select randomly the field_vdf we're creating a compact vdf for.
+                        # This is done because CC_SP and CC_IP are more frequent than
+                        # CC_EOS and ICC_EOS. This guarantees everything is picked uniformly.
+                        target_field_vdf = random.randint(1, 4)
+                        info = next(
+                            (info for info in self.pending_bluebox_info if info.field_vdf == target_field_vdf),
+                            None,
+                        )
+                        if info is None:
+                            # Nothing found with target_field_vdf, just pick the first VDFInfo.
+                            info = self.pending_bluebox_info[0]
+                        ip, reader, writer = self.free_clients[0]
+                        self.process_communication_tasks.append(
+                            asyncio.create_task(
+                                self._do_process_communication(
+                                    Chain.BLUEBOX,
+                                    info.new_proof_of_time.challenge,
+                                    ClassgroupElement.get_default_element(),
+                                    ip,
+                                    reader,
+                                    writer,
+                                    info.new_proof_of_time.number_of_iterations,
+                                    info.header_hash,
+                                    info.height,
+                                    info.field_vdf,
+                                )
+                            )
+                        )
+                        self.pending_bluebox_info.remove(info)
+                        self.free_clients = self.free_clients[1:]
+                except Exception as e:
+                    log.error(f"Exception manage discriminant queue: {e}")
+            await asyncio.sleep(0.1)

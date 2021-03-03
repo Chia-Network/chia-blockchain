@@ -6,6 +6,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.weight_proof import SubEpochChallengeSegment
 from src.util.ints import uint32
+from src.types.blockchain_format.vdf import VDFInfo
 
 
 class BlockchainInterface:
@@ -51,6 +52,9 @@ class BlockchainInterface:
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
         pass
 
+    async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
+        pass
+
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if self.contains_block(header_hash):
             return self.block_record(header_hash)
@@ -65,4 +69,7 @@ class BlockchainInterface:
         self,
         sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
+        pass
+
+    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
         pass

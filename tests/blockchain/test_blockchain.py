@@ -28,6 +28,7 @@ from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
 from tests.core.fixtures import default_400_blocks  # noqa: F401
 from tests.core.fixtures import default_10000_blocks  # noqa: F401
+from tests.core.fixtures import default_10000_blocks_compact  # noqa: F401
 
 log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
@@ -507,7 +508,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
                     "proofs.infused_challenge_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890"),
+                    VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
@@ -738,7 +739,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
                     "proofs.challenge_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890"),
+                    VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
@@ -808,7 +809,7 @@ class TestBlockHeaderValidation:
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
                     "proofs.reward_chain_slot_proof",
-                    VDFProof(uint8(0), b"1239819023890"),
+                    VDFProof(uint8(0), b"1239819023890", False),
                 )
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
@@ -1053,7 +1054,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1],
                     "reward_chain_sp_proof",
-                    VDFProof(uint8(0), std_hash(b"")),
+                    VDFProof(uint8(0), std_hash(b""), False),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
                 return
@@ -1095,7 +1096,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     blocks[-1],
                     "challenge_chain_sp_proof",
-                    VDFProof(uint8(0), std_hash(b"")),
+                    VDFProof(uint8(0), std_hash(b""), False),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SP_VDF
                 return
@@ -1412,7 +1413,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "challenge_chain_ip_proof",
-            VDFProof(uint8(0), std_hash(b"")),
+            VDFProof(uint8(0), std_hash(b""), False),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_IP_VDF
 
@@ -1440,7 +1441,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "reward_chain_ip_proof",
-            VDFProof(uint8(0), std_hash(b"")),
+            VDFProof(uint8(0), std_hash(b""), False),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_IP_VDF
 
@@ -1471,7 +1472,7 @@ class TestBlockHeaderValidation:
         block_bad = recursive_replace(
             blocks[-1],
             "infused_challenge_chain_ip_proof",
-            VDFProof(uint8(0), std_hash(b"")),
+            VDFProof(uint8(0), std_hash(b""), False),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
 
@@ -1580,6 +1581,13 @@ class TestReorgs:
 
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height
+
+    @pytest.mark.asyncio
+    async def test_long_compact_blockchain(self, empty_blockchain, default_10000_blocks_compact):
+        b = empty_blockchain
+        for block in default_10000_blocks_compact:
+            assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+        assert b.get_peak().height == len(default_10000_blocks_compact) - 1
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):

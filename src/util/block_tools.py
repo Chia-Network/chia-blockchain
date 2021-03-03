@@ -267,6 +267,7 @@ class BlockTools:
         force_overflow: bool = False,
         skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
         guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
+        normalized_to_identity: bool = False,  # CC_EOS, ICC_EOS, CC_SP, CC_IP vdf proofs are normalized to identity.
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -364,6 +365,7 @@ class BlockTools:
                         uint8(signage_point_index),
                         finished_sub_slots_at_sp,
                         sub_slot_iters,
+                        normalized_to_identity,
                     )
                     if signage_point_index == 0:
                         cc_sp_output_hash: bytes32 = slot_cc_challenge
@@ -435,6 +437,7 @@ class BlockTools:
                             signage_point,
                             latest_block,
                             seed,
+                            normalized_to_identity=normalized_to_identity,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -495,7 +498,14 @@ class BlockTools:
             # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
             # in order for light clients to validate.
             cc_vdf = VDFInfo(cc_vdf.challenge, sub_slot_iters, cc_vdf.output)
-
+            if normalized_to_identity:
+                _, cc_proof = get_vdf_info_and_proof(
+                    constants,
+                    ClassgroupElement.get_default_element(),
+                    cc_vdf.challenge,
+                    sub_slot_iters,
+                    True,
+                )
             if pending_ses:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
             else:
@@ -538,6 +548,14 @@ class BlockTools:
                     icc_eos_iters,
                     icc_ip_vdf.output,
                 )
+                if normalized_to_identity:
+                    _, icc_ip_proof = get_vdf_info_and_proof(
+                        constants,
+                        ClassgroupElement.get_default_element(),
+                        icc_ip_vdf.challenge,
+                        icc_eos_iters,
+                        True,
+                    )
                 icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_block.deficit == 0 else None
@@ -600,6 +618,7 @@ class BlockTools:
                         uint8(signage_point_index),
                         finished_sub_slots_eos,
                         sub_slot_iters,
+                        normalized_to_identity,
                     )
                     if signage_point_index == 0:
                         cc_sp_output_hash = slot_cc_challenge
@@ -661,6 +680,7 @@ class BlockTools:
                             seed,
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
+                            normalized_to_identity=normalized_to_identity,
                         )
 
                         if block_record.is_transaction_block:
@@ -942,6 +962,7 @@ def get_signage_point(
     signage_point_index: uint8,
     finished_sub_slots: List[EndOfSubSlotBundle],
     sub_slot_iters: uint64,
+    normalized_to_identity: bool = False,
 ) -> SignagePoint:
     if signage_point_index == 0:
         return SignagePoint(None, None, None, None)
@@ -981,6 +1002,14 @@ def get_signage_point(
         rc_vdf_iters,
     )
     cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters)
+    if normalized_to_identity:
+        _, cc_sp_proof = get_vdf_info_and_proof(
+            constants,
+            ClassgroupElement.get_default_element(),
+            cc_sp_vdf.challenge,
+            sp_iters,
+            True,
+        )
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
 
 
@@ -999,6 +1028,7 @@ def finish_block(
     latest_block: BlockRecord,
     sub_slot_iters: uint64,
     difficulty: uint64,
+    normalized_to_identity: bool = False,
 ):
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
@@ -1017,6 +1047,14 @@ def finish_block(
         new_ip_iters,
     )
     cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
+    if normalized_to_identity:
+        _, cc_ip_proof = get_vdf_info_and_proof(
+            constants,
+            ClassgroupElement.get_default_element(),
+            cc_ip_vdf.challenge,
+            ip_iters,
+            True,
+        )
     deficit = calculate_deficit(
         constants,
         uint32(latest_block.height + 1),
@@ -1215,6 +1253,7 @@ def get_full_block_and_block_record(
     seed: bytes = b"",
     overflow_cc_challenge: bytes32 = None,
     overflow_rc_challenge: bytes32 = None,
+    normalized_to_identity: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
@@ -1261,6 +1300,7 @@ def get_full_block_and_block_record(
         prev_block,
         sub_slot_iters,
         difficulty,
+        normalized_to_identity,
     )
 
     return full_block, block_record

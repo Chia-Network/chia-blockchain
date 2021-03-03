@@ -136,6 +136,26 @@ class FullBlock(Streamable):
 
         return removals, additions
 
+    def is_fully_compactified(self) -> bool:
+        for sub_slot in self.finished_sub_slots:
+            if (
+                sub_slot.proofs.challenge_chain_slot_proof.witness_type != 0
+                or not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+            ):
+                return False
+            if sub_slot.proofs.infused_challenge_chain_slot_proof is not None and (
+                sub_slot.proofs.infused_challenge_chain_slot_proof.witness_type != 0
+                or not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+            ):
+                return False
+        if self.challenge_chain_sp_proof is not None and (
+            self.challenge_chain_sp_proof.witness_type != 0 or not self.challenge_chain_sp_proof.normalized_to_identity
+        ):
+            return False
+        if self.challenge_chain_ip_proof.witness_type != 0 or not self.challenge_chain_ip_proof.normalized_to_identity:
+            return False
+        return True
+
 
 def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
     additions: List[Coin] = []
