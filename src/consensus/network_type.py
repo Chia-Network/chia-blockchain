@@ -7,3 +7,4 @@ class NetworkType(IntEnum):
     TESTNET_2 = 2
     TESTNET_3 = 3
     TESTNET_4 = 4
+    TESTNET_5 = 5
