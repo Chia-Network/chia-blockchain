@@ -49,7 +49,9 @@ def make_sub_epoch_summary(
     """
     assert prev_prev_block.height == blocks_included_height - 2
     # First sub_epoch
-    if blocks_included_height // constants.SUB_EPOCH_BLOCKS <= 1:
+    # This is not technically because more blocks can potentially be included than 2*MAX_SUB_SLOT_BLOCKS,
+    # But assuming less than 128 overflow blocks get infused in the first 2 slots, it's not an issue
+    if (blocks_included_height + constants.MAX_SUB_SLOT_BLOCKS) // constants.SUB_EPOCH_BLOCKS <= 1:
         return SubEpochSummary(
             constants.GENESIS_CHALLENGE,
             constants.GENESIS_CHALLENGE,
