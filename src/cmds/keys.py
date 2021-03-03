@@ -7,6 +7,8 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
 from src.util.bech32m import encode_puzzle_hash
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
@@ -63,13 +65,15 @@ def add_private_key_seed(mnemonic: str):
         return
 
 
-def show_all_keys(config):
+def show_all_keys():
     """
     Prints all keys and mnemonics (if available).
     """
-
+    root_path = DEFAULT_ROOT_PATH
+    config = load_config(root_path, "config.yaml")
     private_keys = keychain.get_all_private_keys()
-    prefix = config["network_overrides"]["address_prefix"]
+    selected = config["selected_network"]
+    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     if len(private_keys) == 0:
         print("There are no saved private keys")
         return
