@@ -13,6 +13,7 @@ from src.full_node.signage_point import SignagePoint
 from src.protocols.timelord_protocol import NewInfusionPointVDF
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
+from src.util.block_cache import BlockCache
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint8, uint128, uint64
 from tests.setup_nodes import test_constants, bt
@@ -84,8 +85,8 @@ class TestFullNodeStore:
 
         assert (
             store.get_finished_sub_slots(
+                BlockCache({}),
                 None,
-                {},
                 sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                 False,
             )
@@ -107,11 +108,17 @@ class TestFullNodeStore:
             assert store.new_finished_sub_slot(sub_slots[i], {}, None) is not None
             assert store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())[0] == sub_slots[i]
 
-        assert store.get_finished_sub_slots(None, {}, sub_slots[-1].challenge_chain.get_hash(), False) == sub_slots
+        assert (
+            store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash(), False)
+            == sub_slots
+        )
         with raises(ValueError):
             store.get_finished_sub_slots(None, {}, sub_slots[-1].challenge_chain.get_hash(), True)
 
-        assert store.get_finished_sub_slots(None, {}, sub_slots[-2].challenge_chain.get_hash(), False) == sub_slots[:-1]
+        assert (
+            store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-2].challenge_chain.get_hash(), False)
+            == sub_slots[:-1]
+        )
 
         # Test adding genesis peak
         await blockchain.receive_block(blocks[0])
@@ -132,8 +139,8 @@ class TestFullNodeStore:
 
         assert (
             store.get_finished_sub_slots(
-                peak,
                 blockchain,
+                peak,
                 sub_slots[-1].challenge_chain.get_hash(),
                 False,
             )

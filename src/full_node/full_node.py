@@ -1132,6 +1132,7 @@ class FullNode:
         prev_b: Optional[BlockRecord] = None
 
         target_rc_hash = request.reward_chain_ip_vdf.challenge
+        last_slot_cc_hash = request.challenge_chain_ip_vdf.challenge
 
         # Backtracks through end of slot objects, should work for multiple empty sub slots
         for eos, _, _ in reversed(self.full_node_store.finished_sub_slots):
@@ -1160,16 +1161,12 @@ class FullNode:
                 return None
 
         # TODO: finished slots is not correct
-        overflow = is_overflow_block(
-            self.constants,
-            unfinished_block.reward_chain_block.signage_point_index,
-        )
         finished_sub_slots = self.full_node_store.get_finished_sub_slots(
-            prev_b,
             self.blockchain,
-            unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
-            overflow,
+            prev_b,
+            last_slot_cc_hash,
         )
+
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(finished_sub_slots) > 0,

@@ -599,64 +599,38 @@ class FullNodeStore:
 
     def get_finished_sub_slots(
         self,
-        prev_b: Optional[BlockRecord],
         block_records: BlockchainInterface,
-        pos_ss_challenge_hash: bytes32,
-        extra_sub_slot: bool = False,
+        prev_b: Optional[BlockRecord],
+        last_challenge_hash: bytes32,
     ) -> List[EndOfSubSlotBundle]:
         """
-        Returns all sub slots that have been completed between the prev sb and the new block we will create,
-        which is denoted from the pos_challenge hash, and extra_sub_slot.
-        NOTE: In the case of the overflow, passing in extra_sub_slot=True will add the necessary sub-slot. This might
-        not be available until later though.
-        # TODO: review this code
-        """
-        assert len(self.finished_sub_slots) >= 1
-        pos_index: Optional[int] = None
-        final_index: int = -1
+        Retrieves the EndOfSubSlotBundles that are in the store either:
+        1. From the starting challenge if prev_b is None
+        2. That are not included in the blockchain with peak of prev_b if prev_b is not None
 
-        if prev_b is not None:
+        Stops at last_challenge_hash
+        """
+        if prev_b is None:
+            # The first sub slot must be None
+            assert self.finished_sub_slots[0][0] is None
+            if last_challenge_hash == self.constants.GENESIS_CHALLENGE:
+                return []
+            final_sub_slot_in_chain: bytes32 = self.constants.GENESIS_CHALLENGE
+        else:
             curr: BlockRecord = prev_b
-            assert curr is not None
             while not curr.first_in_sub_slot:
                 curr = block_records.block_record(curr.prev_hash)
             assert curr is not None
             assert curr.finished_challenge_slot_hashes is not None
-            final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
-        else:
-            final_sub_slot_in_chain = self.constants.GENESIS_CHALLENGE
-            final_index = 0
+            final_sub_slot_in_chain = curr.finished_challenge_slot_hashes[-1]
 
-        if pos_ss_challenge_hash == self.constants.GENESIS_CHALLENGE:
-            pos_index = 0
-        if prev_b is None:
-            final_index = 0
-            for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
-                    pos_index = index
-        else:
-            for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if sub_slot is None:
-                    continue
-                if sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
-                    pos_index = index
-                if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
-                    final_index = index
-                if sub_slot is None and final_sub_slot_in_chain == self.constants.GENESIS_CHALLENGE:
-                    final_index = index
-
-        if pos_index is None or final_index is None:
-            raise ValueError(f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} ")
-
-        if extra_sub_slot:
-            new_final_index = pos_index + 1
-        else:
-            new_final_index = pos_index
-        if len(self.finished_sub_slots) < new_final_index + 1:
-            raise ValueError("Don't have enough sub-slots")
-
-        return [
-            sub_slot
-            for sub_slot, _, _, in self.finished_sub_slots[final_index + 1 : new_final_index + 1]
-            if sub_slot is not None
-        ]
+        collected_sub_slots: List[EndOfSubSlotBundle] = []
+        found_last_challenge_hash = False
+        for sub_slot, sps, total_iters in self.finished_sub_slots[1:]:
+            assert sub_slot is not None
+            collected_sub_slots.append(sub_slot)
+            if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
+                found_last_challenge_hash = True
+                break
+        assert found_last_challenge_hash
+        return collected_sub_slots
