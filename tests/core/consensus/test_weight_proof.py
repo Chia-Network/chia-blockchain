@@ -6,14 +6,18 @@ from typing import Dict, Optional, List, Tuple
 
 import aiosqlite
 import pytest
+
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.block_cache import BlockCache
 from src.util.block_tools import test_constants
+from tests.setup_nodes import bt
 
 try:
     from reprlib import repr
@@ -25,7 +29,7 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
-    _map_summaries,
+    _map_sub_epoch_summaries,
     _validate_summaries_weight,
     _validate_segment_slots,
 )
@@ -36,6 +40,7 @@ from tests.core.fixtures import (
     default_1000_blocks,
     default_400_blocks,
     default_10000_blocks,
+    default_10000_blocks_compact,
     pre_genesis_empty_slots_1000_blocks,
 )
 
@@ -137,7 +142,7 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
     wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
     assert wp is not None
     # sub epoch summaries validate hashes
-    summaries, sub_epoch_data_weight = _map_summaries(
+    summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
         test_constants.SUB_EPOCH_BLOCKS,
         test_constants.GENESIS_CHALLENGE,
         wp.sub_epochs,
@@ -163,7 +168,7 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
-        summaries, sub_epoch_data_weight = _map_summaries(
+        summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
             wpf.constants.SUB_EPOCH_BLOCKS,
             wpf.constants.GENESIS_CHALLENGE,
             wp.sub_epochs,
@@ -208,6 +213,38 @@ class TestWeightProof:
     async def test_weight_proof1000_pre_genesis_empty_slots(self, pre_genesis_empty_slots_1000_blocks):
         blocks = pre_genesis_empty_slots_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof10000__blocks_compact(self, default_10000_blocks_compact):
+        blocks = default_10000_blocks_compact
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
+    async def test_weight_proof1000_partial_blocks_compact(self, default_1000_blocks_compact):
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            100,
+            block_list_input=default_1000_blocks_compact,
+            seed=b"asdfghjkl",
+            normalized_to_identity=False,
+        )
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
@@ -226,7 +263,7 @@ class TestWeightProof:
 
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point = await wpf.validate_weight_proof(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -303,38 +340,35 @@ class TestWeightProof:
     async def test_weight_proof_from_database(self):
         connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
-        sub_blocks, peak = await block_store.get_block_records()
-        headers = await block_store.get_header_blocks_in_range(0, 100225)
+        blocks, peak = await block_store.get_block_records()
+        peak_height = blocks[peak].height
+        headers = await block_store.get_header_blocks_in_range(0, peak_height)
         sub_height_to_hash = {}
         sub_epoch_summaries = {}
-        peak = await block_store.get_full_blocks_at([100225])
-        if len(sub_blocks) == 0:
+        # peak_header = await block_store.get_full_blocks_at([peak_height])
+        if len(blocks) == 0:
             return None, None
 
         assert peak is not None
-        peak_height = sub_blocks[peak[0].header_hash].height
 
         # Sets the other state variables (peak_height and height_to_hash)
-        curr: BlockRecord = sub_blocks[peak[0].header_hash]
+        curr: BlockRecord = blocks[peak]
         while True:
             sub_height_to_hash[curr.height] = curr.header_hash
             if curr.sub_epoch_summary_included is not None:
                 sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
             if curr.height == 0:
                 break
-            curr = sub_blocks[curr.prev_hash]
+            curr = blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
-        block_cache = BlockCache(sub_blocks, headers, sub_height_to_hash, sub_epoch_summaries)
+        block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
-        await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
-        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
-        valid, fork_point = wpf.validate_weight_proof(wp)
+        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 50])
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         await connection.close()
         assert valid
-        f = open("wp.txt", "a")
-        f.write(f"{wp}")
-        f.close()
+        print(f"size of proof is {get_size(wp)}")
 
 
 def get_size(obj, seen=None):

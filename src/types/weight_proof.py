@@ -60,6 +60,11 @@ class SubSlotData(Streamable):
             return True
         return False
 
+    def is_end_of_slot(self):
+        if self.cc_slot_end is not None:
+            return True
+        return False
+
 
 @dataclass(frozen=True)
 @streamable
