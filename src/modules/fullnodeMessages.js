@@ -1,6 +1,5 @@
 import { service_full_node } from '../util/service_names';
 import { async_api } from './message';
-import { i18n } from '@lingui/core';
 
 export const fullNodeMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
