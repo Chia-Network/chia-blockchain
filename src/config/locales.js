@@ -1,6 +1,6 @@
 const { i18n } = require('@lingui/core');
 const { en, fi, it, ro, ru, sk, sv, zh, es } = require('make-plural/plurals');
-const catalogEn = require("../locales/en/messages");
+const catalogEn = require('../locales/en/messages');
 const catalogEs = require('../locales/es/messages');
 const catalogFi = require('../locales/fi/messages');
 const catalogIt = require('../locales/it/messages');
