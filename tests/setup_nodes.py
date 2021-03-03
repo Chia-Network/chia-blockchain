@@ -65,7 +65,7 @@ async def setup_full_node(
         config["introducer_peer"] = None
     config["port"] = port
     config["rpc_port"] = port + 1000
-    overrides = config["network_overrides"][config["selected_network"]]
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
         kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
@@ -184,10 +184,10 @@ async def setup_farmer(
     config = bt.config["farmer"]
     config_pool = bt.config["pool"]
 
-    config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph)
+    config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
     config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
     config["port"] = port
-    config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph)
+    config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
         config["full_node_peer"]["host"] = self_hostname

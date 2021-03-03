@@ -26,7 +26,7 @@ def service_kwargs_for_harvester(
     consensus_constants: ConsensusConstants,
 ) -> Dict:
     connect_peers = [PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])]
-    overrides = config["network_overrides"][config["selected_network"]]
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
     harvester = Harvester(root_path, config, updated_constants)

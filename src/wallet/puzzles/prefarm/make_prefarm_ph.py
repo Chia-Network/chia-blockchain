@@ -30,8 +30,9 @@ def make_puzzle(amount: int) -> int:
     puzzle_hash = puzzle_prog.get_tree_hash()
 
     solution = "()"
+    prefix = "xch"
     print("PH", puzzle_hash)
-    print(f"Address: {encode_puzzle_hash(puzzle_hash)}")
+    print(f"Address: {encode_puzzle_hash(puzzle_hash, prefix)}")
 
     result = puzzle_prog.run(solution)
     error, result_human = parse_sexp_to_conditions(result)
@@ -45,7 +46,7 @@ def make_puzzle(amount: int) -> int:
             assert len(cvp.vars) == 2
             total_chia += int_from_bytes(cvp.vars[1])
             print(
-                f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(cvp.vars[0])},"
+                f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(cvp.vars[0], prefix)},"
                 f" amount: {int_from_bytes(cvp.vars[1])}"
             )
     return total_chia

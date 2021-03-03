@@ -98,7 +98,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "TX_PER_SEC": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
         "INITIAL_FREEZE_PERIOD": 0,
-        "NETWORK": 1,
+        "NETWORK_TYPE": 1,
     }
 )
 
@@ -154,7 +154,7 @@ class BlockTools:
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
-        overrides = self._config["network_overrides"][self._config["selected_network"]]
+        overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
         if const_dict is not None:
             updated_constants = updated_constants.replace(**const_dict)
@@ -201,7 +201,7 @@ class BlockTools:
             )
             # Create more plots, but to a pool address instead of public key
             args.pool_public_key = None
-            args.pool_contract_address = encode_puzzle_hash(self.pool_ph)
+            args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
             args.num = num_pool_address_plots
             create_plots(
                 args,

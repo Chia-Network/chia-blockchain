@@ -34,7 +34,7 @@ def service_kwargs_for_farmer(
     if fnp is not None:
         connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
-    overrides = config["network_overrides"][config["selected_network"]]
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
     farmer = Farmer(config, config_pool, keychain, consensus_constants=updated_constants)
