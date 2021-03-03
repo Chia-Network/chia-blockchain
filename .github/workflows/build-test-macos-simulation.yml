@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: MacOS Core Tests
+    name: MacOS Simulation Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:

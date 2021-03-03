@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Ubuntu Core Tests
+    name: Ubuntu Simulation Tests
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
