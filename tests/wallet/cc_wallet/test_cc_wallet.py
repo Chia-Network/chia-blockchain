@@ -506,6 +506,7 @@ class TestCCWallet:
             return True
 
         await time_out_assert(15, check_all_there, True)
+        await asyncio.sleep(5)
         max_sent_amount = await cc_wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
