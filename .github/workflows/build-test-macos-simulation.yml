@@ -1,4 +1,4 @@
-name: MacOS Core Tests
+name: MacOS Simulation Tests
 
 on:
   push:
