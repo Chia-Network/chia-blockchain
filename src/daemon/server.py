@@ -515,12 +515,15 @@ class WebSocketServer:
         process = config["process"]
 
         try:
+            run_next = False
             if process is not None and state == PlotState.RUNNING:
+                run_next = True
                 await kill_process(process, self.root_path, service_plotter, id)
             self.plots_queue.remove(config)
 
-            loop = asyncio.get_event_loop()
-            self._run_next_serial_plotting(loop)
+            if run_next:
+                loop = asyncio.get_event_loop()
+                self._run_next_serial_plotting(loop)
 
             self.state_changed(service_plotter, "removed")
             return {"success": True}
