@@ -365,6 +365,16 @@ class FullNode:
                 last_csb_or_eos = curr.total_iters
             else:
                 last_csb_or_eos = curr.ip_sub_slot_total_iters(self.constants)
+
+            curr = peak
+            passed_ses_height_but_not_yet_included = True
+            while (curr.height % self.constants.SUB_EPOCH_BLOCKS) != 0:
+                if curr.sub_epoch_summary_included:
+                    passed_ses_height_but_not_yet_included = False
+                curr = self.blockchain.block_record(curr.prev_hash)
+            if curr.sub_epoch_summary_included or curr.height == 0:
+                passed_ses_height_but_not_yet_included = False
+
             timelord_new_peak: timelord_protocol.NewPeakTimelord = timelord_protocol.NewPeakTimelord(
                 peak_block.reward_chain_block,
                 difficulty,
@@ -373,6 +383,7 @@ class FullNode:
                 ses,
                 recent_rc,
                 last_csb_or_eos,
+                passed_ses_height_but_not_yet_included,
             )
 
             msg = make_msg(ProtocolMessageTypes.new_peak_timelord, timelord_new_peak)

@@ -541,8 +541,15 @@ class Timelord:
 
                     if self.last_state.get_infused_sub_epoch_summary() is not None:
                         new_sub_epoch_summary = None
+                        passed_ses_height_but_not_yet_included = False
                     else:
                         new_sub_epoch_summary = block.sub_epoch_summary
+                        if new_reward_chain_block.height % self.constants.SUB_EPOCH_BLOCKS == 0:
+                            passed_ses_height_but_not_yet_included = True
+                        else:
+                            passed_ses_height_but_not_yet_included = (
+                                self.last_state.get_passed_ses_height_but_not_yet_included()
+                            )
 
                     self.new_peak = timelord_protocol.NewPeakTimelord(
                         new_reward_chain_block,
@@ -552,6 +559,7 @@ class Timelord:
                         new_sub_epoch_summary,
                         self.last_state.reward_challenge_cache,
                         last_csb_or_eos,
+                        passed_ses_height_but_not_yet_included,
                     )
                     if self.total_unfinished > 0:
                         infusion_rate = int(self.total_infused / self.total_unfinished * 100)
