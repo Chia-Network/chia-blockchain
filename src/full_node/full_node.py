@@ -19,7 +19,7 @@ from src.consensus.difficulty_adjustment import (
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
-from src.consensus.pot_iterations import is_overflow_block, calculate_sp_iters
+from src.consensus.pot_iterations import calculate_sp_iters
 from src.consensus.block_record import BlockRecord
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -1160,7 +1160,6 @@ class FullNode:
                 self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                 return None
 
-        # TODO: finished slots is not correct
         finished_sub_slots = self.full_node_store.get_finished_sub_slots(
             self.blockchain,
             prev_b,
@@ -1205,26 +1204,8 @@ class FullNode:
             sp_total_iters,
             difficulty,
         )
-        first_ss_new_epoch = False
         if not self.has_valid_pool_sig(block):
             self.log.warning("Trying to make a pre-farm block but height is not 0")
-            return None
-        if len(block.finished_sub_slots) > 0:
-            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                first_ss_new_epoch = True
-        else:
-            curr = prev_b
-            while (curr is not None) and not curr.first_in_sub_slot:
-                curr = self.blockchain.block_record(curr.prev_hash)
-            if (
-                curr is not None
-                and curr.first_in_sub_slot
-                and curr.sub_epoch_summary_included is not None
-                and curr.sub_epoch_summary_included.new_difficulty is not None
-            ):
-                first_ss_new_epoch = True
-        if first_ss_new_epoch and overflow:
-            # No overflow blocks in the first sub-slot of each epoch
             return None
         try:
             await self.respond_block(full_node_protocol.RespondBlock(block))

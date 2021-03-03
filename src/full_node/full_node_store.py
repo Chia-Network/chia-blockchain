@@ -601,36 +601,42 @@ class FullNodeStore:
         self,
         block_records: BlockchainInterface,
         prev_b: Optional[BlockRecord],
-        last_challenge_hash: bytes32,
+        last_challenge_to_add: bytes32,
     ) -> List[EndOfSubSlotBundle]:
         """
         Retrieves the EndOfSubSlotBundles that are in the store either:
         1. From the starting challenge if prev_b is None
         2. That are not included in the blockchain with peak of prev_b if prev_b is not None
 
-        Stops at last_challenge_hash
+        Stops at last_challenge
         """
         if prev_b is None:
             # The first sub slot must be None
             assert self.finished_sub_slots[0][0] is None
-            if last_challenge_hash == self.constants.GENESIS_CHALLENGE:
-                return []
-            final_sub_slot_in_chain: bytes32 = self.constants.GENESIS_CHALLENGE
+            challenge_in_chain: bytes32 = self.constants.GENESIS_CHALLENGE
         else:
             curr: BlockRecord = prev_b
             while not curr.first_in_sub_slot:
                 curr = block_records.block_record(curr.prev_hash)
             assert curr is not None
             assert curr.finished_challenge_slot_hashes is not None
-            final_sub_slot_in_chain = curr.finished_challenge_slot_hashes[-1]
+            challenge_in_chain = curr.finished_challenge_slot_hashes[-1]
+
+        if last_challenge_to_add == challenge_in_chain:
+            # No additional slots to add
+            return []
 
         collected_sub_slots: List[EndOfSubSlotBundle] = []
-        found_last_challenge_hash = False
+        found_last_challenge = False
+        found_connecting_challenge = False
         for sub_slot, sps, total_iters in self.finished_sub_slots[1:]:
             assert sub_slot is not None
             collected_sub_slots.append(sub_slot)
-            if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
-                found_last_challenge_hash = True
+            if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge == challenge_in_chain:
+                found_connecting_challenge = True
+            if found_connecting_challenge and sub_slot.challenge_chain.get_hash() == last_challenge_to_add:
+                found_last_challenge = True
                 break
-        assert found_last_challenge_hash
+        if not found_last_challenge:
+            raise ValueError(f"Did not find hash {last_challenge_to_add} connected to " f"{challenge_in_chain}")
         return collected_sub_slots
