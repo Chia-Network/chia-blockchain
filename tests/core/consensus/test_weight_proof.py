@@ -40,7 +40,7 @@ from tests.core.fixtures import (
     default_1000_blocks,
     default_400_blocks,
     default_10000_blocks,
-    default_1000_blocks_compact,
+    default_10000_blocks_compact,
     pre_genesis_empty_slots_1000_blocks,
 )
 
@@ -224,8 +224,8 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof1000__blocks_compact(self, default_1000_blocks_compact):
-        blocks = default_1000_blocks_compact
+    async def test_weight_proof10000__blocks_compact(self, default_10000_blocks_compact):
+        blocks = default_10000_blocks_compact
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
