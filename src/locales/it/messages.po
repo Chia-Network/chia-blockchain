@@ -30,8 +30,8 @@ msgstr "0 sceglie automaticamente il conteggio di bucket"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un harvester è un servizio eseguito sulla macchina in cui i plot sono realmente conservati. Un farmer e un harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
 
-#: src/electron-starter.js:353
-#: src/electron-starter.js:446
+#: src/electron-starter.js:354
+#: src/electron-starter.js:447
 msgid "About Chia Blockchain"
 msgstr "Sulla Blockchain Chia"
 
@@ -115,7 +115,11 @@ msgstr "Importo Per Moneta Iniziale"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Sei sicuro di voler eliminare il plot? Il plot non può essere recuperato."
 
-#: src/electron-starter.js:125
+#: src/components/fullNode/FullNodeCloseConnection.tsx:23
+msgid "Are you sure you want to disconnect?"
+msgstr ""
+
+#: src/electron-starter.js:126
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Sei sicuro di voler uscire? Il plotting ed il farming da GUI si interromperanno."
 
@@ -162,7 +166,7 @@ msgstr "Blocco Iterazioni VDF"
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Blocco all'altezza {0} nella blockchain Chia"
 
-#: src/components/fullNode/FullNode.jsx:335
+#: src/components/fullNode/FullNode.jsx:331
 msgid "Block hash"
 msgstr "Hash del blocco"
 
@@ -170,7 +174,7 @@ msgstr "Hash del blocco"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Il blocco con hash {headerHash} non esiste."
 
-#: src/components/fullNode/FullNode.jsx:304
+#: src/components/fullNode/FullNode.jsx:300
 msgid "Blocks"
 msgstr "Blocchi"
 
@@ -202,7 +206,8 @@ msgstr "Wallet CC"
 msgid "Can be backed up to mnemonic seed"
 msgstr "Può essere eseguito il backup su seed mnemonico"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:48
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
+#: src/components/fullNode/FullNodeAddConnection.tsx:67
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
@@ -225,15 +230,15 @@ msgstr "Sfida"
 msgid "Challenge Hash"
 msgstr "Hash Sfida"
 
-#: src/electron-starter.js:332
+#: src/electron-starter.js:333
 msgid "Chat on KeyBase"
 msgstr "Chatta su KeyBase"
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:351
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:290
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchain Chia"
 
@@ -287,9 +292,13 @@ msgstr "Monete Colorate"
 msgid "Coloured Coin Options"
 msgstr "Opzioni Monete Colorate"
 
-#: src/electron-starter.js:123
+#: src/electron-starter.js:124
 msgid "Confirm"
 msgstr "Conferma"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Confirm Disconnect"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -299,17 +308,17 @@ msgstr "Confermato al blocco:"
 msgid "Confirmed at height {0}"
 msgstr "Confermato all'altezza {0}"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:65
+#: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
 msgstr "Connettiti"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:49
+#: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
 msgstr "Connettiti con altri peer"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/FullNode.jsx:158
 msgid "Connected"
 msgstr "Connesso"
 
@@ -317,7 +326,7 @@ msgstr "Connesso"
 msgid "Connecting to wallet"
 msgstr "Connettendo al wallet"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connection Status"
 msgstr "Stato della Connessione"
 
@@ -334,7 +343,7 @@ msgstr "Tipo di connessione"
 msgid "Connections"
 msgstr "Connessioni"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:314
 msgid "Contribute on GitHub"
 msgstr "Contribuisci su GitHub"
 
@@ -493,18 +502,22 @@ msgstr "Eliminando tutte le chiavi queste saranno rimosse definitivamente dal tu
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Eliminando la chiave questa sarà rimossa definitivamente dal tuo computer, assicurati di avere un backup. Sei sicuro di voler continuare?"
 
-#: src/electron-starter.js:235
+#: src/electron-starter.js:236
 msgid "Developer"
 msgstr "Sviluppatore"
 
-#: src/electron-starter.js:238
+#: src/electron-starter.js:239
 msgid "Developer Tools"
 msgstr "Strumenti Sviluppatore"
 
 #: src/components/block/Block.jsx:202
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:189
 msgid "Difficulty"
 msgstr "Difficoltà"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -532,7 +545,7 @@ msgstr "Trascina e rilascia il file dell'offerta"
 msgid "Drag and drop your backup file"
 msgstr "Trascina e rilascia il tuo file di backup"
 
-#: src/electron-starter.js:194
+#: src/electron-starter.js:195
 msgid "Edit"
 msgstr "Modifica"
 
@@ -554,11 +567,11 @@ msgstr "Errore"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Errore: impossibile inviare chia ad un indirizzo colorato. Perfavore inserisci un indirizzo chia."
 
-#: src/components/fullNode/FullNode.jsx:212
+#: src/components/fullNode/FullNode.jsx:208
 msgid "Estimated network space"
 msgstr "Spazio della rete stimato"
 
-#: src/components/fullNode/FullNode.jsx:215
+#: src/components/fullNode/FullNode.jsx:211
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Stima della somma di tutto lo spazio disco plottato da tutti i farmer nella rete"
 
@@ -632,8 +645,8 @@ msgstr "Ammontare delle Fee"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:186
-#: src/electron-starter.js:393
+#: src/electron-starter.js:187
+#: src/electron-starter.js:394
 msgid "File"
 msgstr "File"
 
@@ -647,29 +660,29 @@ msgstr "Nome file"
 msgid "Final folder location"
 msgstr "Posizione della cartella finale"
 
-#: src/components/fullNode/FullNode.jsx:55
-#: src/components/fullNode/FullNode.jsx:111
+#: src/components/fullNode/FullNode.jsx:51
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Finished"
 msgstr "Finito"
 
-#: src/electron-starter.js:338
+#: src/electron-starter.js:339
 msgid "Follow on Twitter"
 msgstr "Segui su Twitter"
 
-#: src/electron-starter.js:297
+#: src/electron-starter.js:298
 msgid "Frequently Asked Questions"
 msgstr "Domande Frequenti"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:351
+#: src/components/fullNode/FullNode.jsx:347
 msgid "Full Node"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:265
+#: src/components/fullNode/FullNode.jsx:261
 msgid "Full Node Status"
 msgstr "Stato del Full Node"
 
-#: src/electron-starter.js:263
+#: src/electron-starter.js:264
 msgid "Full Screen"
 msgstr "Schermo Intero"
 
@@ -681,7 +694,7 @@ msgstr "Genera Nuovo Colore"
 msgid "Harvester ID"
 msgstr "ID Harvester"
 
-#: src/components/fullNode/FullNode.jsx:73
+#: src/components/fullNode/FullNode.jsx:69
 msgid "Header Hash"
 msgstr "Hash Header"
 
@@ -690,16 +703,16 @@ msgid "Header hash"
 msgstr "Hash Header"
 
 #: src/components/block/Block.jsx:180
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:88
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Altezza"
 
-#: src/electron-starter.js:285
+#: src/electron-starter.js:286
 msgid "Help"
 msgstr "Aiuto"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
 msgstr "Aiuta a tradurre"
 
@@ -720,7 +733,7 @@ msgstr "Nome Host"
 msgid "IP address"
 msgstr "Indirizzo IP"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:56
+#: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
 msgstr "Indirizzo IP / host"
 
@@ -736,7 +749,7 @@ msgstr "Importa Wallet dalle Mnemonic"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importa dalle Mnemonic (24 parole)"
 
-#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNode.jsx:53
 msgid "In Progress"
 msgstr "In Corso"
 
@@ -883,7 +896,7 @@ msgid "Nickname"
 msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:122
+#: src/electron-starter.js:123
 msgid "No"
 msgstr "No"
 
@@ -916,7 +929,7 @@ msgstr "Nessuno dei tuoi plot ha ancora passato il filtro per plot."
 msgid "Not Available"
 msgstr "Non Disponibile"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:137
 msgid "Not Synced"
 msgstr "Non Sincronizzato"
 
@@ -929,8 +942,8 @@ msgid "Not confirmed yet"
 msgstr "Ancora non confermato"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:164
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Not connected"
 msgstr "Non connesso"
 
@@ -946,7 +959,7 @@ msgstr "Numero di bucket"
 msgid "Number of threads"
 msgstr "Numero di thread"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:49
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
 msgstr "OK"
 
@@ -962,7 +975,7 @@ msgstr "Offerte Create"
 msgid "Outgoing"
 msgstr "In uscita"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:175
 msgid "Peak Height"
 msgstr "Altezza Picco"
 
@@ -970,7 +983,7 @@ msgstr "Altezza Picco"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:180
 msgid "Peak Time"
 msgstr "Tempo Picco"
 
@@ -1137,7 +1150,7 @@ msgstr "Ammontare della Ricompensa della Pool"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
-#: src/components/fullNode/FullNodeAddConnection.tsx:59
+#: src/components/fullNode/FullNodeAddConnection.tsx:62
 #: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "Port"
 msgstr "Porta"
@@ -1228,7 +1241,7 @@ msgstr "Recupera wallet DID"
 msgid "Refresh Plots"
 msgstr "Aggiorna Plot"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:306
 msgid "Release Notes"
 msgstr "Note di Rilascio"
 
@@ -1236,7 +1249,7 @@ msgstr "Note di Rilascio"
 msgid "Rename"
 msgstr "Rinomina"
 
-#: src/electron-starter.js:324
+#: src/electron-starter.js:325
 msgid "Report an Issue..."
 msgstr "Segnala un Problema..."
 
@@ -1253,11 +1266,11 @@ msgstr "Ripristina degli Smart Wallet Dal Backup"
 msgid "Save"
 msgstr "Salva"
 
-#: src/components/fullNode/FullNode.jsx:342
+#: src/components/fullNode/FullNode.jsx:338
 msgid "Search"
 msgstr "Cerca"
 
-#: src/components/fullNode/FullNode.jsx:330
+#: src/components/fullNode/FullNode.jsx:326
 msgid "Search block by header hash"
 msgstr "Cerca blocco dal header hash"
 
@@ -1348,7 +1361,7 @@ msgstr "Registrati"
 msgid "Skip"
 msgstr "Salta"
 
-#: src/electron-starter.js:407
+#: src/electron-starter.js:408
 msgid "Speech"
 msgstr "Speech"
 
@@ -1380,14 +1393,14 @@ msgstr "Lunghezza Intervallo di Spesa (numero di blocchi)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite di Spesa (chia per intervallo): {0}"
 
-#: src/components/fullNode/FullNode.jsx:113
+#: src/components/fullNode/FullNode.jsx:109
 msgid "State"
 msgstr "Condizione"
 
-#: src/components/fullNode/FullNode.jsx:123
-#: src/components/fullNode/FullNode.jsx:140
-#: src/components/fullNode/FullNode.jsx:148
-#: src/components/fullNode/FullNode.jsx:170
+#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:144
+#: src/components/fullNode/FullNode.jsx:166
 #: src/components/plot/overview/PlotOverviewPlots.tsx:73
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
@@ -1432,7 +1445,7 @@ msgstr "Dimensione Striscia"
 msgid "Submit"
 msgstr "Invia"
 
-#: src/components/fullNode/FullNode.jsx:149
+#: src/components/fullNode/FullNode.jsx:145
 msgid "Synced"
 msgstr "Sincronizzato"
 
@@ -1442,7 +1455,7 @@ msgstr "Sincronizzato"
 msgid "Syncing"
 msgstr "Sincronizzando"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:121
 msgid "Syncing {progress}/{tip}"
 msgstr "Sincronizzando {progress}/{tip}"
 
@@ -1482,11 +1495,11 @@ msgstr "Il full node a cui è connesso il tuo farmer è di seguito. <0>Per saper
 msgid "The minimum required size for mainnet is k=32"
 msgstr "La dimensione minima richiesta per la mainnet è k=32"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:139
 msgid "The node is not synced"
 msgstr "Il nodo non è sincronizzato"
 
-#: src/components/fullNode/FullNode.jsx:131
+#: src/components/fullNode/FullNode.jsx:127
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Il nodo si sta sincronizzando, ovvero sta scaricando i blocchi da altri nodi, per raggiungere l'ultimo blocco nella blockchain"
 
@@ -1532,7 +1545,7 @@ msgstr "Questa è la modifica in sospeso, ovvero le monete di cambio che hai inv
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (non ancora incluse nella blockchain). Questo non include le ricompense coltivate."
 
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/fullNode/FullNode.jsx:184
 msgid "This is the time of the latest peak sub block."
 msgstr "Questo è il tempo dell'ultimo sottoblocco di picco."
 
@@ -1548,7 +1561,7 @@ msgstr "Questo è l'ammontare totale di chia nella blockchain nell'attuale sotto
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Questo è il bilancio totale + il bilancio in attesa: questo è il bilancio che apparirà dopo che tutte le transazioni in attesa saranno confermate."
 
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:148
 msgid "This node is fully caught up and validating the network"
 msgstr "Questo nodo è pronto e sta validando la rete"
 
@@ -1564,7 +1577,7 @@ msgstr "Questo scambio è stato creato in questo momento"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Questo commercio è stato incluso sulla blockchain a questa altezza di blocco"
 
-#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:101
 msgid "Time Created"
 msgstr "Creato al Tempo"
 
@@ -1590,7 +1603,7 @@ msgstr "Bilancio Totale"
 msgid "Total Chia Farmed"
 msgstr "Totale Chia Coltivati"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:202
 msgid "Total Iterations"
 msgstr "Iterazioni in Totale"
 
@@ -1610,7 +1623,7 @@ msgstr "Dimensione Totale dei Plot"
 msgid "Total VDF Iterations"
 msgstr "Totale Iterazioni VDF"
 
-#: src/components/fullNode/FullNode.jsx:208
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total iterations since the start of the blockchain"
 msgstr "Totale iterazioni dall'inizio della blockchain"
 
@@ -1654,7 +1667,7 @@ msgstr "Filtro Hash Transazioni"
 msgid "Type"
 msgstr "Tipo"
 
-#: src/components/fullNode/FullNode.jsx:111
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Unfinished"
 msgstr "Non completato"
 
@@ -1667,11 +1680,11 @@ msgstr "Identificatore unico"
 msgid "User Pubkey"
 msgstr "Pubkey utente"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:196
 msgid "VDF Sub Slot Iterations"
 msgstr "Iterazioni Sottoslot VDF"
 
-#: src/electron-starter.js:226
+#: src/electron-starter.js:227
 msgid "View"
 msgstr "Visualizza"
 
@@ -1764,7 +1777,7 @@ msgstr "Benvenuto! Le parole seguenti sono utilizzate per il backup del tuo wall
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amministratore, inseriscile sotto per completare il setup del tuo Wallet a Velocità Limitata (RL):"
 
-#: src/electron-starter.js:271
+#: src/electron-starter.js:272
 msgid "Window"
 msgstr "Finestra"
 
@@ -1773,7 +1786,7 @@ msgid "Without fees"
 msgstr "Senza tasse"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:122
+#: src/electron-starter.js:123
 msgid "Yes"
 msgstr "Sì"
 

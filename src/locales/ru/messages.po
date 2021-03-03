@@ -30,8 +30,8 @@ msgstr "Значение 0 автоматически выбирает коли�
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Комбайн - это служба, работающая на машине, в которой фактически хранятся участки. Фермер и комбайн разговаривают с полным узлом, чтобы увидеть состояние цепи. Просмотрите сеть своих подключенных комбайнов ниже. <0>Подробнее</0>"
 
-#: src/electron-starter.js:353
-#: src/electron-starter.js:446
+#: src/electron-starter.js:354
+#: src/electron-starter.js:447
 msgid "About Chia Blockchain"
 msgstr ""
 
@@ -115,7 +115,11 @@ msgstr "Начальное количество монет"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Вы уверены, что хотите удалить участок? Участок не подлежит восстановлению."
 
-#: src/electron-starter.js:125
+#: src/components/fullNode/FullNodeCloseConnection.tsx:23
+msgid "Are you sure you want to disconnect?"
+msgstr ""
+
+#: src/electron-starter.js:126
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr ""
 
@@ -162,7 +166,7 @@ msgstr "VDF итераций блока"
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Блок на высоте {0} в блокчейне Chia"
 
-#: src/components/fullNode/FullNode.jsx:335
+#: src/components/fullNode/FullNode.jsx:331
 msgid "Block hash"
 msgstr "Хэш блока"
 
@@ -170,7 +174,7 @@ msgstr "Хэш блока"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Блок с хешем {headerHash} не существует."
 
-#: src/components/fullNode/FullNode.jsx:304
+#: src/components/fullNode/FullNode.jsx:300
 msgid "Blocks"
 msgstr "Блоки"
 
@@ -202,7 +206,8 @@ msgstr "Кошелек Цветной Монеты"
 msgid "Can be backed up to mnemonic seed"
 msgstr "может быть сохранен в качестве резервной копии при помощи мнемонического зерна"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:48
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
+#: src/components/fullNode/FullNodeAddConnection.tsx:67
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
@@ -225,15 +230,15 @@ msgstr "Испытание"
 msgid "Challenge Hash"
 msgstr "Хэш испытания"
 
-#: src/electron-starter.js:332
+#: src/electron-starter.js:333
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:351
 msgid "Chia"
 msgstr ""
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:290
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
@@ -287,8 +292,12 @@ msgstr "Цветная Монета"
 msgid "Coloured Coin Options"
 msgstr "Настройки Цветной Монеты"
 
-#: src/electron-starter.js:123
+#: src/electron-starter.js:124
 msgid "Confirm"
+msgstr ""
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Confirm Disconnect"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:202
@@ -299,17 +308,17 @@ msgstr "Подтверждено на блоке:"
 msgid "Confirmed at height {0}"
 msgstr "Подтверждено на высоте {0}"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:65
+#: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
 msgstr "Подключиться"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:49
+#: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
 msgstr "Подключиться к другим узлам"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/FullNode.jsx:158
 msgid "Connected"
 msgstr "Подключен"
 
@@ -317,7 +326,7 @@ msgstr "Подключен"
 msgid "Connecting to wallet"
 msgstr "Подключение к кошельку"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connection Status"
 msgstr "Состояние соединения"
 
@@ -334,7 +343,7 @@ msgstr "Тип подключения"
 msgid "Connections"
 msgstr "Подключения"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:314
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -493,18 +502,22 @@ msgstr "Удаление всех ключей приведет к безвоз�
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Удаление ключа приведет к безвозвратному удалению ключа с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
 
-#: src/electron-starter.js:235
+#: src/electron-starter.js:236
 msgid "Developer"
 msgstr ""
 
-#: src/electron-starter.js:238
+#: src/electron-starter.js:239
 msgid "Developer Tools"
 msgstr ""
 
 #: src/components/block/Block.jsx:202
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:189
 msgid "Difficulty"
 msgstr "Сложность"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -532,7 +545,7 @@ msgstr "Перетащите сюда файл с предложением сд�
 msgid "Drag and drop your backup file"
 msgstr "Перетащите файл резервной копии"
 
-#: src/electron-starter.js:194
+#: src/electron-starter.js:195
 msgid "Edit"
 msgstr ""
 
@@ -554,11 +567,11 @@ msgstr "Ошибка"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Ошибка: не удается отправить чиа на цветной адрес. Пожалуйста, введите адрес chia."
 
-#: src/components/fullNode/FullNode.jsx:212
+#: src/components/fullNode/FullNode.jsx:208
 msgid "Estimated network space"
 msgstr "Расчетное пространство сети"
 
-#: src/components/fullNode/FullNode.jsx:215
+#: src/components/fullNode/FullNode.jsx:211
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Оценка размера всего дискового пространства, занимаемого участками суммарно всех фермеров в сети"
 
@@ -632,8 +645,8 @@ msgstr "Объем коммисий"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:186
-#: src/electron-starter.js:393
+#: src/electron-starter.js:187
+#: src/electron-starter.js:394
 msgid "File"
 msgstr ""
 
@@ -647,29 +660,29 @@ msgstr "Имя файла"
 msgid "Final folder location"
 msgstr "Путь к папке для окончательного хранения"
 
-#: src/components/fullNode/FullNode.jsx:55
-#: src/components/fullNode/FullNode.jsx:111
+#: src/components/fullNode/FullNode.jsx:51
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Finished"
 msgstr "Завершен"
 
-#: src/electron-starter.js:338
+#: src/electron-starter.js:339
 msgid "Follow on Twitter"
 msgstr ""
 
-#: src/electron-starter.js:297
+#: src/electron-starter.js:298
 msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:351
+#: src/components/fullNode/FullNode.jsx:347
 msgid "Full Node"
 msgstr "Полный узел"
 
-#: src/components/fullNode/FullNode.jsx:265
+#: src/components/fullNode/FullNode.jsx:261
 msgid "Full Node Status"
 msgstr "Статус полного узла"
 
-#: src/electron-starter.js:263
+#: src/electron-starter.js:264
 msgid "Full Screen"
 msgstr ""
 
@@ -681,7 +694,7 @@ msgstr "Сгенерировать новый цвет"
 msgid "Harvester ID"
 msgstr "Идентификатор комбайна"
 
-#: src/components/fullNode/FullNode.jsx:73
+#: src/components/fullNode/FullNode.jsx:69
 msgid "Header Hash"
 msgstr "Хэш заголовка"
 
@@ -690,16 +703,16 @@ msgid "Header hash"
 msgstr "Хэш заголовка"
 
 #: src/components/block/Block.jsx:180
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:88
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Высота"
 
-#: src/electron-starter.js:285
+#: src/electron-starter.js:286
 msgid "Help"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
@@ -720,7 +733,7 @@ msgstr "Имя хоста"
 msgid "IP address"
 msgstr "IP адрес"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:56
+#: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
 msgstr "IP адрес / хост"
 
@@ -736,7 +749,7 @@ msgstr "Импортировать кошелек из мнемоники"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Импорт мнемоники (24 слова)"
 
-#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNode.jsx:53
 msgid "In Progress"
 msgstr "В процессе"
 
@@ -883,7 +896,7 @@ msgid "Nickname"
 msgstr "Псевдоним"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:122
+#: src/electron-starter.js:123
 msgid "No"
 msgstr "Нет"
 
@@ -916,7 +929,7 @@ msgstr "Ни один из ваших участков пока не проше�
 msgid "Not Available"
 msgstr "Не определено"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:137
 msgid "Not Synced"
 msgstr "Не синхронизирован"
 
@@ -929,8 +942,8 @@ msgid "Not confirmed yet"
 msgstr "Еще не подтверждено"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:164
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Not connected"
 msgstr "Нет подключения"
 
@@ -946,7 +959,7 @@ msgstr "Количество вёдер"
 msgid "Number of threads"
 msgstr "Количество потоков"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:49
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
 msgstr "OK"
 
@@ -962,7 +975,7 @@ msgstr "Предложение создано"
 msgid "Outgoing"
 msgstr "Исходящие"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:175
 msgid "Peak Height"
 msgstr "Пиковая высота"
 
@@ -970,7 +983,7 @@ msgstr "Пиковая высота"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:180
 msgid "Peak Time"
 msgstr "Пиковое время"
 
@@ -1137,7 +1150,7 @@ msgstr "Сумма вознаграждения пула"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
-#: src/components/fullNode/FullNodeAddConnection.tsx:59
+#: src/components/fullNode/FullNodeAddConnection.tsx:62
 #: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "Port"
 msgstr "Порт"
@@ -1228,7 +1241,7 @@ msgstr "Восстанавление Кошелека Децентрализов
 msgid "Refresh Plots"
 msgstr "Обновить участки"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:306
 msgid "Release Notes"
 msgstr ""
 
@@ -1236,7 +1249,7 @@ msgstr ""
 msgid "Rename"
 msgstr "Переименовать"
 
-#: src/electron-starter.js:324
+#: src/electron-starter.js:325
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1253,11 +1266,11 @@ msgstr "Восстановить Умные Кошельки Из Резервн
 msgid "Save"
 msgstr "Сохранить"
 
-#: src/components/fullNode/FullNode.jsx:342
+#: src/components/fullNode/FullNode.jsx:338
 msgid "Search"
 msgstr "Поиск"
 
-#: src/components/fullNode/FullNode.jsx:330
+#: src/components/fullNode/FullNode.jsx:326
 msgid "Search block by header hash"
 msgstr "Поиск блока по хешу заголовка"
 
@@ -1348,7 +1361,7 @@ msgstr "Войти в систему"
 msgid "Skip"
 msgstr "Пропускать"
 
-#: src/electron-starter.js:407
+#: src/electron-starter.js:408
 msgid "Speech"
 msgstr ""
 
@@ -1380,14 +1393,14 @@ msgstr "Длина интервала расходования (количест
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Лимит расходования (chia за интервал): {0}"
 
-#: src/components/fullNode/FullNode.jsx:113
+#: src/components/fullNode/FullNode.jsx:109
 msgid "State"
 msgstr "Состояние"
 
-#: src/components/fullNode/FullNode.jsx:123
-#: src/components/fullNode/FullNode.jsx:140
-#: src/components/fullNode/FullNode.jsx:148
-#: src/components/fullNode/FullNode.jsx:170
+#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:144
+#: src/components/fullNode/FullNode.jsx:166
 #: src/components/plot/overview/PlotOverviewPlots.tsx:73
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
@@ -1432,7 +1445,7 @@ msgstr "Размер полосы"
 msgid "Submit"
 msgstr "Подтвердить"
 
-#: src/components/fullNode/FullNode.jsx:149
+#: src/components/fullNode/FullNode.jsx:145
 msgid "Synced"
 msgstr "Синхронизован"
 
@@ -1442,7 +1455,7 @@ msgstr "Синхронизован"
 msgid "Syncing"
 msgstr "Синхронизация"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:121
 msgid "Syncing {progress}/{tip}"
 msgstr "Синхронизация {progress}/{tip}"
 
@@ -1482,11 +1495,11 @@ msgstr "Полный узел, к которому подключен ваш ф�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Минимальный требуемый размер участка для основной сети равен k=32"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:139
 msgid "The node is not synced"
 msgstr "Узел не синхронизирован с сетью"
 
-#: src/components/fullNode/FullNode.jsx:131
+#: src/components/fullNode/FullNode.jsx:127
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Узел синхронизируется, что означает, что он загружает блоки с других узлов, чтобы достичь последнего блока в цепи"
 
@@ -1532,7 +1545,7 @@ msgstr "Здесь рассчитан размер ожидаемой сдачи
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Здесь рассчитана сумма входящих и исходящих ожидающих транзакций (еще не включенных в цепь блоков). Награды за фарминг не включены в сумму."
 
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/fullNode/FullNode.jsx:184
 msgid "This is the time of the latest peak sub block."
 msgstr "Это время последнего пикового суб блока."
 
@@ -1548,7 +1561,7 @@ msgstr "Это общее количество монет Чиа в блокче
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Это общий баланс + отложенный баланс: это то, каким будет ваш баланс после подтверждения всех ожидающих транзакций."
 
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:148
 msgid "This node is fully caught up and validating the network"
 msgstr "Этот узел полностью догнал соседние узлы и выполняет валидацию в сети"
 
@@ -1564,7 +1577,7 @@ msgstr "Сделка была создана в это время"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Сделка была включена в блокчейн на указанной высоте блока"
 
-#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:101
 msgid "Time Created"
 msgstr "Время создания"
 
@@ -1590,7 +1603,7 @@ msgstr "Итоговый баланс"
 msgid "Total Chia Farmed"
 msgstr "Всего выращено монет"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:202
 msgid "Total Iterations"
 msgstr "Всего итераций"
 
@@ -1610,7 +1623,7 @@ msgstr "Общий объем участков"
 msgid "Total VDF Iterations"
 msgstr "Общее количество итерации VDF"
 
-#: src/components/fullNode/FullNode.jsx:208
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total iterations since the start of the blockchain"
 msgstr "Общее количество итераций с момента запуска блокчейна"
 
@@ -1654,7 +1667,7 @@ msgstr "Хэш фильтра транзакций"
 msgid "Type"
 msgstr "Тип"
 
-#: src/components/fullNode/FullNode.jsx:111
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Unfinished"
 msgstr "Незаконченный"
 
@@ -1667,11 +1680,11 @@ msgstr "Уникальный идентификатор"
 msgid "User Pubkey"
 msgstr "Пользовательский публичный ключ"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:196
 msgid "VDF Sub Slot Iterations"
 msgstr "Итерации VDF суб слота"
 
-#: src/electron-starter.js:226
+#: src/electron-starter.js:227
 msgid "View"
 msgstr ""
 
@@ -1764,7 +1777,7 @@ msgstr "Добро пожаловать! Перечисленные слова �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/electron-starter.js:271
+#: src/electron-starter.js:272
 msgid "Window"
 msgstr ""
 
@@ -1773,7 +1786,7 @@ msgid "Without fees"
 msgstr "Без комиссии"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:122
+#: src/electron-starter.js:123
 msgid "Yes"
 msgstr "Да"
 

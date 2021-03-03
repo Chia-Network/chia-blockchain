@@ -30,8 +30,8 @@ msgstr "0 valitsee automaattisesti muistilohkojen määrän"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. Farmari ja harvesteri ovat yhteydessä noodiin, jolta saavat lohkoketjun tilatiedot. Katso alta yhdistetyt harvesteripalvelut"
 
-#: src/electron-starter.js:353
-#: src/electron-starter.js:446
+#: src/electron-starter.js:354
+#: src/electron-starter.js:447
 msgid "About Chia Blockchain"
 msgstr "Chia-lohkoketjusta"
 
@@ -115,7 +115,11 @@ msgstr "Alkumäärä"
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Haluatko tuhota plotin? Plottia ei voi palauttaa."
 
-#: src/electron-starter.js:125
+#: src/components/fullNode/FullNodeCloseConnection.tsx:23
+msgid "Are you sure you want to disconnect?"
+msgstr ""
+
+#: src/electron-starter.js:126
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Haluatko lopettaa? Käyttöliittymäplottaus ja farmi sammutetaan."
 
@@ -162,7 +166,7 @@ msgstr "Lohkon VDF-iteraatiot"
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Lohko korkeudessa {0} Chian lohkoketjussa"
 
-#: src/components/fullNode/FullNode.jsx:335
+#: src/components/fullNode/FullNode.jsx:331
 msgid "Block hash"
 msgstr "Lohkon tiiviste"
 
@@ -170,7 +174,7 @@ msgstr "Lohkon tiiviste"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Lohkoa tunnistetiivisteellä {headerHash} ei ole."
 
-#: src/components/fullNode/FullNode.jsx:304
+#: src/components/fullNode/FullNode.jsx:300
 msgid "Blocks"
 msgstr "Lohkot"
 
@@ -202,7 +206,8 @@ msgstr "Värilompakko"
 msgid "Can be backed up to mnemonic seed"
 msgstr "Varmuuskopioitavissa muistisanoiksi"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:48
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
+#: src/components/fullNode/FullNodeAddConnection.tsx:67
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
@@ -225,15 +230,15 @@ msgstr "Haaste"
 msgid "Challenge Hash"
 msgstr "Haastetiiviste"
 
-#: src/electron-starter.js:332
+#: src/electron-starter.js:333
 msgid "Chat on KeyBase"
 msgstr "Keskustele KeyBasessa"
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:351
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:290
 msgid "Chia Blockchain Wiki"
 msgstr "Chia-lohkoketjun Wiki"
 
@@ -287,9 +292,13 @@ msgstr "Väritetty Kolikko"
 msgid "Coloured Coin Options"
 msgstr "Värikolikon Valinnat"
 
-#: src/electron-starter.js:123
+#: src/electron-starter.js:124
 msgid "Confirm"
 msgstr "Vahvista"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Confirm Disconnect"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -299,17 +308,17 @@ msgstr "Vahvistettu lohkossa:"
 msgid "Confirmed at height {0}"
 msgstr "Vahvistettu lohkokorkeudessa {0}"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:65
+#: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
 msgstr "Yhdistä"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:49
+#: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
 msgstr "Yhdistä muihin verkkonoodeihin"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/FullNode.jsx:158
 msgid "Connected"
 msgstr "Yhdistetty"
 
@@ -317,7 +326,7 @@ msgstr "Yhdistetty"
 msgid "Connecting to wallet"
 msgstr "Yhdistetään lompakkoon"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connection Status"
 msgstr "Yhteyden Tila"
 
@@ -334,7 +343,7 @@ msgstr "Yhteystyyppi"
 msgid "Connections"
 msgstr "Yhteydet"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:314
 msgid "Contribute on GitHub"
 msgstr "Anna panoksesi GitHubissa"
 
@@ -493,18 +502,22 @@ msgstr "Avainten poisto poistaa ne tietokoneeltasi. Varmista että sinulla on va
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Avaimen poisto poistaa sen tietokoneeltasi. Varmista että sinulla on varmuuskopio. Haluatko jatkaa?"
 
-#: src/electron-starter.js:235
+#: src/electron-starter.js:236
 msgid "Developer"
 msgstr "Kehittäjälle"
 
-#: src/electron-starter.js:238
+#: src/electron-starter.js:239
 msgid "Developer Tools"
 msgstr "Kehitystyökalut"
 
 #: src/components/block/Block.jsx:202
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:189
 msgid "Difficulty"
 msgstr "Vaikeusaste"
+
+#: src/components/fullNode/FullNodeCloseConnection.tsx:22
+msgid "Disconnect"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -532,7 +545,7 @@ msgstr "Raahaa ja pudota tarjoustiedosto"
 msgid "Drag and drop your backup file"
 msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 
-#: src/electron-starter.js:194
+#: src/electron-starter.js:195
 msgid "Edit"
 msgstr "Muokkaa"
 
@@ -554,11 +567,11 @@ msgstr "Virhe"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Virhe: Chioja ei voi lähettää värikolikko-osoitteeseen. Anna Chialompakon osoite."
 
-#: src/components/fullNode/FullNode.jsx:212
+#: src/components/fullNode/FullNode.jsx:208
 msgid "Estimated network space"
 msgstr "Estimoitu verkkoavaruus"
 
-#: src/components/fullNode/FullNode.jsx:215
+#: src/components/fullNode/FullNode.jsx:211
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Kaikkien farmien sisältämien plot-tiedostojen arvoitu yhteiskoko"
 
@@ -632,8 +645,8 @@ msgstr "Palkkiosumma"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:186
-#: src/electron-starter.js:393
+#: src/electron-starter.js:187
+#: src/electron-starter.js:394
 msgid "File"
 msgstr "Tiedosto"
 
@@ -647,29 +660,29 @@ msgstr "Tiedoston nimi"
 msgid "Final folder location"
 msgstr "Lopullinen hakemisto"
 
-#: src/components/fullNode/FullNode.jsx:55
-#: src/components/fullNode/FullNode.jsx:111
+#: src/components/fullNode/FullNode.jsx:51
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Finished"
 msgstr "Valmis"
 
-#: src/electron-starter.js:338
+#: src/electron-starter.js:339
 msgid "Follow on Twitter"
 msgstr "Seuraa Twitterissä"
 
-#: src/electron-starter.js:297
+#: src/electron-starter.js:298
 msgid "Frequently Asked Questions"
 msgstr "Usein Kysytyt Kysymykset"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:351
+#: src/components/fullNode/FullNode.jsx:347
 msgid "Full Node"
 msgstr "Verkkonoodi"
 
-#: src/components/fullNode/FullNode.jsx:265
+#: src/components/fullNode/FullNode.jsx:261
 msgid "Full Node Status"
 msgstr "Verkkonoodin Tila"
 
-#: src/electron-starter.js:263
+#: src/electron-starter.js:264
 msgid "Full Screen"
 msgstr "Kokoruutu"
 
@@ -681,7 +694,7 @@ msgstr "Luo lompakko väritetyille kolikoille"
 msgid "Harvester ID"
 msgstr "Harvesterin tunnus"
 
-#: src/components/fullNode/FullNode.jsx:73
+#: src/components/fullNode/FullNode.jsx:69
 msgid "Header Hash"
 msgstr "Lohkotunniste"
 
@@ -690,16 +703,16 @@ msgid "Header hash"
 msgstr "Lohkotunniste"
 
 #: src/components/block/Block.jsx:180
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:88
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Lohkokorkeus"
 
-#: src/electron-starter.js:285
+#: src/electron-starter.js:286
 msgid "Help"
 msgstr "Helppiä"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:49
 msgid "Help translate"
 msgstr "Auta kääntämisessä"
 
@@ -720,7 +733,7 @@ msgstr "Palvelimen nimi"
 msgid "IP address"
 msgstr "IP-osoite"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:56
+#: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
 msgstr "IP-osoite / nimi"
 
@@ -736,7 +749,7 @@ msgstr "Tuo Lompakko Muistisanoista"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Tuo Muistisanoista (24)"
 
-#: src/components/fullNode/FullNode.jsx:57
+#: src/components/fullNode/FullNode.jsx:53
 msgid "In Progress"
 msgstr "Käynnissä"
 
@@ -883,7 +896,7 @@ msgid "Nickname"
 msgstr "Alias"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:122
+#: src/electron-starter.js:123
 msgid "No"
 msgstr "Ei"
 
@@ -916,7 +929,7 @@ msgstr "Yksikään ploteistasi ei ole vielä päässyt suodatuksesta läpi."
 msgid "Not Available"
 msgstr "Ei Saatavilla"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:137
 msgid "Not Synced"
 msgstr "Ei Synkronoitu"
 
@@ -929,8 +942,8 @@ msgid "Not confirmed yet"
 msgstr "Vahvistamatta vielä"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:164
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Not connected"
 msgstr "Ei yhteyttä"
 
@@ -946,7 +959,7 @@ msgstr "Muistilohkojen määrä"
 msgid "Number of threads"
 msgstr "Säikeiden määrä"
 
-#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:49
+#: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
 msgstr "OK"
 
@@ -962,7 +975,7 @@ msgstr "Tehdyt Tarjoukset"
 msgid "Outgoing"
 msgstr "Lähtevä"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:175
 msgid "Peak Height"
 msgstr "Lakikorkeus"
 
@@ -970,7 +983,7 @@ msgstr "Lakikorkeus"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:180
 msgid "Peak Time"
 msgstr "Lakiajankohta"
 
@@ -1137,7 +1150,7 @@ msgstr "Poolin Palkkiosumma"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
-#: src/components/fullNode/FullNodeAddConnection.tsx:59
+#: src/components/fullNode/FullNodeAddConnection.tsx:62
 #: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "Port"
 msgstr "Portti"
@@ -1228,7 +1241,7 @@ msgstr "Palauta hajautetettu lompakko"
 msgid "Refresh Plots"
 msgstr "Päivitä Plot-tiedostot"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:306
 msgid "Release Notes"
 msgstr "Version Muutokset"
 
@@ -1236,7 +1249,7 @@ msgstr "Version Muutokset"
 msgid "Rename"
 msgstr "Nimeä Uudelleen"
 
-#: src/electron-starter.js:324
+#: src/electron-starter.js:325
 msgid "Report an Issue..."
 msgstr "Raportoi Ongelma..."
 
@@ -1253,11 +1266,11 @@ msgstr "Palauta Älylompakko Varmuuskopiosta"
 msgid "Save"
 msgstr "Tallenna"
 
-#: src/components/fullNode/FullNode.jsx:342
+#: src/components/fullNode/FullNode.jsx:338
 msgid "Search"
 msgstr "Hae"
 
-#: src/components/fullNode/FullNode.jsx:330
+#: src/components/fullNode/FullNode.jsx:326
 msgid "Search block by header hash"
 msgstr "Hae lohkotunnisteen tiivisteellä"
 
@@ -1348,7 +1361,7 @@ msgstr "Kirjaudu"
 msgid "Skip"
 msgstr "Ohita"
 
-#: src/electron-starter.js:407
+#: src/electron-starter.js:408
 msgid "Speech"
 msgstr "Puhe"
 
@@ -1380,14 +1393,14 @@ msgstr "Käyttöajanjakson pituus (lohkojen määrä)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Käyttöraja (Chiaa/ajanjakso):{0}"
 
-#: src/components/fullNode/FullNode.jsx:113
+#: src/components/fullNode/FullNode.jsx:109
 msgid "State"
 msgstr "Tila"
 
-#: src/components/fullNode/FullNode.jsx:123
-#: src/components/fullNode/FullNode.jsx:140
-#: src/components/fullNode/FullNode.jsx:148
-#: src/components/fullNode/FullNode.jsx:170
+#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:144
+#: src/components/fullNode/FullNode.jsx:166
 #: src/components/plot/overview/PlotOverviewPlots.tsx:73
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
@@ -1432,7 +1445,7 @@ msgstr "Prosessorisiivun Koko"
 msgid "Submit"
 msgstr "Lähetä"
 
-#: src/components/fullNode/FullNode.jsx:149
+#: src/components/fullNode/FullNode.jsx:145
 msgid "Synced"
 msgstr "Synkrononissa"
 
@@ -1442,7 +1455,7 @@ msgstr "Synkrononissa"
 msgid "Syncing"
 msgstr "Synkronoi...."
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:121
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkronoi {progress}/{tip}"
 
@@ -1482,11 +1495,11 @@ msgstr "Alla noodi, johon farmarisi on yhteydessä. <0>Katso lisää</0>"
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Lohkoketjun hyväksymä minimiarvo on k=32"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:139
 msgid "The node is not synced"
 msgstr "Noodi ei ole synkronoitu"
 
-#: src/components/fullNode/FullNode.jsx:131
+#: src/components/fullNode/FullNode.jsx:127
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Noodi synkronoi. Se lataa lohkoketjua muilta solmuilta"
 
@@ -1532,7 +1545,7 @@ msgstr "Avoimet siirrot ovat kolikoita, jotka olet siirtänyt, mutta joiden siir
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Lähtevien ja saapuvien avointen transaktioiden summa (ei vielä lohkoketjussa). Ei sisällä farmarin palkkioita."
 
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/fullNode/FullNode.jsx:184
 msgid "This is the time of the latest peak sub block."
 msgstr "Viimeisimmän lohkon aikaleima."
 
@@ -1548,7 +1561,7 @@ msgstr "Yksityisten avaimiesi hallinoimien Chiojen kokonaissumma lohkoketjussa. 
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Nykyinen saldo + avoin saldo, eli tuleva saldo avointen transaktioiden jälkeen."
 
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:148
 msgid "This node is fully caught up and validating the network"
 msgstr "Noodi on ajan tasalla ja todentaa lohkoketjuverkkoa"
 
@@ -1564,7 +1577,7 @@ msgstr "Kaupan luotihetki"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Kauppa on sisällytetty lohkoketjuun tässä lohkokorkeudessa"
 
-#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:101
 msgid "Time Created"
 msgstr "Luontiaika"
 
@@ -1590,7 +1603,7 @@ msgstr "Kokonaissaldo"
 msgid "Total Chia Farmed"
 msgstr "Tuotettuja Chioja"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:202
 msgid "Total Iterations"
 msgstr "Iteraatioita"
 
@@ -1610,7 +1623,7 @@ msgstr "Plottien Yhteiskoko"
 msgid "Total VDF Iterations"
 msgstr "VDF-iteraatioiden Määrä"
 
-#: src/components/fullNode/FullNode.jsx:208
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total iterations since the start of the blockchain"
 msgstr "Iteraatioiden määrä lohkoketjun alusta asti"
 
@@ -1654,7 +1667,7 @@ msgstr "Transaktion Filtteritiiviste"
 msgid "Type"
 msgstr "Tyyppi"
 
-#: src/components/fullNode/FullNode.jsx:111
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Unfinished"
 msgstr "Kesken"
 
@@ -1667,11 +1680,11 @@ msgstr "Yksilöllinen tunniste"
 msgid "User Pubkey"
 msgstr "Käyttäjän julkinen avain"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:196
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF -alaiteraatioita"
 
-#: src/electron-starter.js:226
+#: src/electron-starter.js:227
 msgid "View"
 msgstr "Näkymä"
 
@@ -1764,7 +1777,7 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
-#: src/electron-starter.js:271
+#: src/electron-starter.js:272
 msgid "Window"
 msgstr "Ikkuna"
 
@@ -1773,7 +1786,7 @@ msgid "Without fees"
 msgstr "Ilman veloituksia"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:122
+#: src/electron-starter.js:123
 msgid "Yes"
 msgstr "Kyllä"
 
