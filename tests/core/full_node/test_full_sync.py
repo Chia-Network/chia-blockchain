@@ -88,7 +88,7 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one
         await time_out_assert(
-            60, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
+            90, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
         )
 
         for block in blocks[
