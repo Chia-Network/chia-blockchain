@@ -33,7 +33,7 @@ async def empty_blockchain():
     db_path.unlink()
 
 
-block_format_version = "rc4_nofixtureyet"
+block_format_version = "rc4"
 
 
 @pytest.fixture(scope="session")
