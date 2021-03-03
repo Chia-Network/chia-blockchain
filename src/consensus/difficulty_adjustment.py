@@ -38,6 +38,7 @@ def _get_blocks_at_height(
             block_list: List[BlockRecord] = []
             for h in range(target_height, target_height + max_num_blocks):
                 assert blocks.contains_height(uint32(h))
+                print(f"H, {h}")
                 block_list.append(blocks.height_to_block_record(uint32(h)))
             return block_list
 
