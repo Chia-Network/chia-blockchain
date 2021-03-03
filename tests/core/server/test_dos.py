@@ -72,6 +72,7 @@ class TestDos:
         await ws.close()
 
         # Now test that the ban is active
+        await asyncio.sleep(2)
         assert ws.closed
         try:
             await session.ws_connect(
