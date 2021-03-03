@@ -29,7 +29,7 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
-    _map_summaries,
+    _map_sub_epoch_summaries,
     _validate_summaries_weight,
     _validate_segment_slots,
 )
@@ -142,7 +142,7 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
     wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
     assert wp is not None
     # sub epoch summaries validate hashes
-    summaries, sub_epoch_data_weight = _map_summaries(
+    summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
         test_constants.SUB_EPOCH_BLOCKS,
         test_constants.GENESIS_CHALLENGE,
         wp.sub_epochs,
@@ -168,7 +168,7 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
-        summaries, sub_epoch_data_weight = _map_summaries(
+        summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
             wpf.constants.SUB_EPOCH_BLOCKS,
             wpf.constants.GENESIS_CHALLENGE,
             wp.sub_epochs,

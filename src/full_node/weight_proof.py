@@ -105,7 +105,7 @@ class WeightProofHandler:
         if recent_chain is None:
             return None
 
-        weight_to_check = self._get_weights_for_sampling(random.Random(tip), tip_rec.weight, recent_chain)
+        weight_to_check = _get_weights_for_sampling(random.Random(tip), tip_rec.weight, recent_chain)
 
         prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
         if prev_ses_block is None:
@@ -131,7 +131,7 @@ class WeightProofHandler:
                 continue
 
             # sample sub epoch
-            if self._sample_sub_epoch(prev_ses_block, ses_block, weight_to_check):  # type: ignore
+            if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.height)
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(idx))
@@ -145,22 +145,6 @@ class WeightProofHandler:
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
-
-    def _sample_sub_epoch(
-        self, start_of_epoch: BlockRecord, end_of_epoch: BlockRecord, weight_to_check: List[uint128]
-    ) -> bool:
-        if weight_to_check is None:
-            return True
-        choose = False
-        for weight in weight_to_check:
-            if start_of_epoch.weight < weight < end_of_epoch.weight:
-                log.debug(f"start weight: {start_of_epoch.weight}")
-                log.debug(f"weight to check {weight}")
-                log.debug(f"end weight: {end_of_epoch.weight}")
-                choose = True
-                break
-
-        return choose
 
     async def _get_recent_chain(
         self, tip_height: uint32, wp: Optional[WeightProof] = None
@@ -460,7 +444,7 @@ class WeightProofHandler:
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
-        summaries = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
         if summaries is None:
             log.warning("weight proof failed sub epoch data validation")
             return False, uint32(0)
@@ -482,9 +466,13 @@ class WeightProofHandler:
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
 
-        summaries = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
         if summaries is None:
-            log.warning("weight proof failed sub epoch data validation")
+            log.error("weight proof failed sub epoch data validation")
+            return False, uint32(0)
+
+        if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
+            log.error("weight proof failed sub epoch data validation")
             return False, uint32(0)
 
         executor = ProcessPoolExecutor(1)
@@ -503,6 +491,24 @@ class WeightProofHandler:
             return False, uint32(0)
 
         return True, self.get_fork_point(summaries)
+
+    async def validate_sub_epoch_sampling(self, sub_epoch_weight_list, weight_proof):
+        tip = weight_proof.recent_chain_data[-1]
+        weight_to_check = _get_weights_for_sampling(random.Random(tip), tip.weight, weight_proof.recent_chain_data)
+        sampled_sub_epochs: dict[int, bool] = {}
+        for idx in range(1, len(weight_to_check) - 1):
+            if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
+                sampled_sub_epochs[idx - 1] = True
+                if len(sampled_sub_epochs) == WeightProofHandler.MAX_SAMPLES:
+                    break
+        curr_sub_epoch_n = -1
+        for sub_epoch_segment in weight_proof.sub_epochs:
+            if curr_sub_epoch_n < sub_epoch_segment.sub_epoch_n:
+                del sampled_sub_epochs[sub_epoch_segment.sub_epoch_n]
+            curr_sub_epoch_n = sub_epoch_segment.sub_epoch_n
+        if len(sampled_sub_epochs) > 0:
+            return False
+        return True
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
@@ -524,23 +530,43 @@ class WeightProofHandler:
 
         return height
 
-    def _get_weights_for_sampling(
-        self, rng: random.Random, total_weight: uint128, recent_chain: List[HeaderBlock]
-    ) -> Optional[List[uint128]]:
-        weight_to_check = []
-        last_l_weight = recent_chain[-1].reward_chain_block.weight - recent_chain[0].reward_chain_block.weight
-        delta = last_l_weight / total_weight
-        prob_of_adv_succeeding = 1 - math.log(self.C, delta)
-        if prob_of_adv_succeeding <= 0:
-            return None
-        queries = -self.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
-        for i in range(int(queries) + 1):
-            u = rng.random()
-            q = 1 - delta ** u
-            # todo check division and type conversions
-            weight = q * float(total_weight)
-            weight_to_check.append(uint128(weight))
-        return weight_to_check
+
+def _get_weights_for_sampling(
+    rng: random.Random, total_weight: uint128, recent_chain: List[HeaderBlock]
+) -> Optional[List[uint128]]:
+    weight_to_check = []
+    last_l_weight = recent_chain[-1].reward_chain_block.weight - recent_chain[0].reward_chain_block.weight
+    delta = last_l_weight / total_weight
+    prob_of_adv_succeeding = 1 - math.log(WeightProofHandler.C, delta)
+    if prob_of_adv_succeeding <= 0:
+        return None
+    queries = -WeightProofHandler.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
+    for i in range(int(queries) + 1):
+        u = rng.random()
+        q = 1 - delta ** u
+        # todo check division and type conversions
+        weight = q * float(total_weight)
+        weight_to_check.append(uint128(weight))
+    return weight_to_check
+
+
+def _sample_sub_epoch(
+    start_of_epoch_weight: uint128,
+    end_of_epoch_weight: uint128,
+    weight_to_check: List[uint128],
+) -> bool:
+    if weight_to_check is None:
+        return True
+    choose = False
+    for weight in weight_to_check:
+        if start_of_epoch_weight < weight < end_of_epoch_weight:
+            log.info(f"start weight: {start_of_epoch_weight}")
+            log.debug(f"weight to check {weight}")
+            log.info(f"end weight: {end_of_epoch_weight}")
+            choose = True
+            break
+
+    return choose
 
 
 # wp creation methods
@@ -626,14 +652,14 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, icc_end_of_slot_info)
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
     weight_proof: WeightProof,
-) -> Optional[List[SubEpochSummary]]:
+) -> Tuple[Optional[List[SubEpochSummary]], Optional[List[uint128]]]:
 
     last_ses_hash, last_ses_sub_height = _get_last_ses_hash(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
-        return None
+        return None, None
 
-    summaries, sub_epoch_data_weight = _map_summaries(
+    summaries, total, sub_epoch_weight_list = _map_sub_epoch_summaries(
         constants.SUB_EPOCH_BLOCKS,
         constants.GENESIS_CHALLENGE,
         weight_proof.sub_epochs,
@@ -643,28 +669,29 @@ def _validate_sub_epoch_summaries(
     log.info(f"validating {len(summaries)} summaries")
 
     # validate weight
-    if not _validate_summaries_weight(constants, sub_epoch_data_weight, summaries, weight_proof):
+    if not _validate_summaries_weight(constants, total, summaries, weight_proof):
         log.error("failed validating weight")
-        return None
+        return None, None
 
     last_ses = summaries[-1]
     log.debug(f"last ses sub height {last_ses_sub_height}")
     # validate last ses_hash
     if last_ses.get_hash() != last_ses_hash:
         log.error(f"failed to validate ses hashes block height {last_ses_sub_height}")
-        return None
-    return summaries
+        return None, None
+
+    return summaries, sub_epoch_weight_list
 
 
-def _map_summaries(
+def _map_sub_epoch_summaries(
     sub_blocks_for_se: uint32,
     ses_hash: bytes32,
     sub_epoch_data: List[SubEpochData],
     curr_difficulty: uint64,
-) -> Tuple[List[SubEpochSummary], uint128]:
-    sub_epoch_data_weight: uint128 = uint128(0)
+) -> Tuple[List[SubEpochSummary], uint128, List[uint128]]:
+    total_weight: uint128 = uint128(0)
     summaries: List[SubEpochSummary] = []
-
+    sub_epoch_weight_list: List[uint128] = []
     for idx, data in enumerate(sub_epoch_data):
         ses = SubEpochSummary(
             ses_hash,
@@ -678,9 +705,12 @@ def _map_summaries(
             delta = 0
             if idx > 0:
                 delta = sub_epoch_data[idx].num_blocks_overflow
-            sub_epoch_data_weight = sub_epoch_data_weight + uint128(  # type: ignore
+            log.info(f"sub epoch {idx} start weight is {total_weight+curr_difficulty} ")
+            sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
+            total_weight = total_weight + uint128(  # type: ignore
                 curr_difficulty * (sub_blocks_for_se + sub_epoch_data[idx + 1].num_blocks_overflow - delta)
             )
+
         # if new epoch update diff and iters
         if data.new_difficulty is not None:
             curr_difficulty = data.new_difficulty
@@ -688,7 +718,7 @@ def _map_summaries(
         # add to dict
         summaries.append(ses)
         ses_hash = std_hash(ses)
-    return summaries, sub_epoch_data_weight
+    return summaries, total_weight, sub_epoch_weight_list
 
 
 def _validate_summaries_weight(constants: ConsensusConstants, sub_epoch_data_weight, summaries, weight_proof) -> bool:
@@ -717,10 +747,12 @@ def _validate_segments(
     curr_sub_epoch_n = -1
     prev_ses: Optional[SubEpochSummary] = None
     first_sub_epoch_segment = True
+    sampled_sub_epochs = 0
     for idx, segment in enumerate(weight_proof.sub_epoch_segments):
         curr_difficulty, curr_ssi = _get_curr_diff_ssi(constants, segment.sub_epoch_n, summaries)
         if curr_sub_epoch_n < segment.sub_epoch_n:
             log.info(f"validate sub epoch {segment.sub_epoch_n}")
+            sampled_sub_epochs += 1
             first_sub_epoch_segment = True
             # recreate RewardChainSubSlot for next ses rc_hash
             if segment.sub_epoch_n > 0:
@@ -749,7 +781,6 @@ def _validate_segments(
     if avg_slot_iters / avg_ip_iters < float(constants.WEIGHT_PROOF_THRESHOLD):
         log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
         return False
-
     return True
 
 
