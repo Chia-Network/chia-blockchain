@@ -116,7 +116,7 @@ export default function Block() {
   if (error) {
     return (
       <LayoutMain
-        title={<Trans>Block</Trans>}
+        title={<Trans>Block Test</Trans>}
       >
         <Card
           title={(
