@@ -39,7 +39,7 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(1000, node_height_at_least, True, node2, 7)
+        await time_out_assert(1500, node_height_at_least, True, node2, 7)
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
