@@ -10,7 +10,7 @@ import pytest
 from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -200,12 +200,6 @@ class TestWeightProof:
     async def test_weight_proof1000(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-        header = header_cache[height_to_hash[18]]
-        prev_sb = blockchain.block_record(header.prev_header_hash)
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(test_constants, header, prev_sb, blockchain)
-        validate_finished_header_block(test_constants, blockchain, header, False, difficulty, sub_slot_iters, False)
-
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
