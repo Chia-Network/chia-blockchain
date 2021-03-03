@@ -23,7 +23,7 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
                 config["full_node"]["introducer_peer"]["host"] = host
                 config["full_node"]["introducer_peer"]["port"] = int(port)
                 config["introducer"]["port"] = int(port)
-                print("Node introducer updated.")
+                print("Node introducer updated")
                 change_made = True
         except ValueError:
             print("Node introducer address must be in format [IP:Port]")
@@ -35,7 +35,7 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
         config["wallet"]["full_node_peer"]["port"] = int(set_fullnode_port)
         config["wallet"]["introducer_peer"]["port"] = int(set_fullnode_port)
         config["introducer"]["port"] = int(set_fullnode_port)
-        print("Default full node port updated.")
+        print("Default full node port updated")
         change_made = True
     if set_log_level:
         levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
@@ -48,31 +48,31 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
     if enable_upnp is not None:
         config["full_node"]["enable_upnp"] = str2bool(enable_upnp)
         if str2bool(enable_upnp):
-            print("uPnP enabled.")
+            print("uPnP enabled")
         else:
-            print("uPnP disabled.")
+            print("uPnP disabled")
         change_made = True
     if change_made:
-        print("Restart any running chia services for changes to take effect.")
+        print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
     return 0
 
 
-@click.command("configure", short_help="modify configuration")
-@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port.", type=str)
+@click.command("configure", short_help="Modify configuration")
+@click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option(
     "--set-fullnode-port",
-    help="Set the port to use for the fullnode, useful for beta testing.",
+    help="Set the port to use for the fullnode, useful for testing",
     type=str,
 )
 @click.option(
     "--set-log-level",
     "--log-level",
     "-log-level",
-    help="Set the instance log level.",
+    help="Set the instance log level",
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]),
 )
-@click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP.", type=click.Choice(["true", "false"]))
+@click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "false"]))
 @click.pass_context
 def configure_cmd(ctx, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
     configure(ctx.obj["root_path"], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)

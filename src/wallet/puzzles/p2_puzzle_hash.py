@@ -6,6 +6,7 @@ hash along with its solution.
 """
 
 from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 
 from .load_clvm import load_clvm
 
@@ -13,12 +14,14 @@ from .load_clvm import load_clvm
 MOD = load_clvm("p2_puzzle_hash.clvm")
 
 
-def puzzle_for_puzzle_hash(inner_puzzle_hash) -> Program:
+def puzzle_for_inner_puzzle_hash(inner_puzzle_hash: bytes32) -> Program:
     program = MOD.curry(inner_puzzle_hash)
     return program
 
 
-def solution_for_puzzle_and_solution(inner_puzzle, inner_puzzle_solution) -> Program:
-    inner_puzzle_hash = Program.to(inner_puzzle).tree_hash()
-    puzzle_reveal = puzzle_for_puzzle_hash(inner_puzzle_hash)
-    return Program.to([puzzle_reveal, inner_puzzle_solution])
+def puzzle_for_inner_puzzle(inner_puzzle: Program) -> Program:
+    return puzzle_for_inner_puzzle_hash(inner_puzzle.get_tree_hash())
+
+
+def solution_for_inner_puzzle_and_inner_solution(inner_puzzle: Program, inner_puzzle_solution: Program) -> Program:
+    return Program.to([inner_puzzle, inner_puzzle_solution])

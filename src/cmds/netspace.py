@@ -77,7 +77,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
     await client.await_closed()
 
 
-@click.command("netspace", short_help="estimate space on the network")
+@click.command("netspace", short_help="Estimate total farmed space on the network")
 @click.option(
     "-p",
     "--rpc-port",

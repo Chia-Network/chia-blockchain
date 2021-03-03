@@ -10,7 +10,7 @@ from src.util.service_groups import all_groups, services_for_groups
 async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
     daemon = await connect_to_daemon_and_validate(root_path)
     if daemon is None:
-        print("couldn't connect to chia daemon")
+        print("Couldn't connect to chia daemon")
         return 1
 
     if stop_daemon:
@@ -24,18 +24,18 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
     for service in services_for_groups(group):
         print(f"{service}: ", end="", flush=True)
         if not await daemon.is_running(service_name=service):
-            print("not running")
+            print("Not running")
         elif await daemon.stop_service(service_name=service):
-            print("stopped")
+            print("Stopped")
         else:
-            print("stop failed")
+            print("Stop failed")
             return_val = 1
 
     await daemon.close()
     return return_val
 
 
-@click.command("stop", short_help="stop service groups")
+@click.command("stop", short_help="Stop services")
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
 @click.pass_context
