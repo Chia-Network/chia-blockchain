@@ -1,5 +1,4 @@
 import { walletMessage, async_api } from './message';
-import { closeProgress } from './progress';
 
 export const cancel_trade = (trade_id) => {
   const action = walletMessage();
@@ -33,19 +32,19 @@ export const get_all_trades = () => {
 
 export function cancel_trade_action(trade_id) {
   return (dispatch) => {
-    return async_api(dispatch, cancel_trade(trade_id)).then((response) => {
-      dispatch(get_all_trades());
-      dispatch(closeProgress());
-    });
+    return async_api(dispatch, cancel_trade(trade_id), true).then(
+      (response) => {
+        dispatch(get_all_trades());
+      },
+    );
   };
 }
 
 export function cancel_trade_with_spend_action(trade_id) {
   return (dispatch) => {
-    return async_api(dispatch, cancel_trade_with_spend(trade_id)).then(
+    return async_api(dispatch, cancel_trade_with_spend(trade_id), true).then(
       (response) => {
         dispatch(get_all_trades());
-        dispatch(closeProgress());
       },
     );
   };
@@ -79,11 +78,10 @@ export const accept_trade_offer = (filepath) => {
 
 export function create_trade_action(trades, filepath, history) {
   return (dispatch) => {
-    return async_api(dispatch, create_trade_offer(trades, filepath)).then(
+    return async_api(dispatch, create_trade_offer(trades, filepath), true).then(
       (response) => {
         dispatch(get_all_trades());
         history.push('/dashboard/trade');
-        dispatch(closeProgress());
       },
     );
   };
@@ -91,19 +89,19 @@ export function create_trade_action(trades, filepath, history) {
 
 export function parse_trade_action(filepath) {
   return (dispatch) => {
-    return async_api(dispatch, parse_trade_offer(filepath)).then((response) => {
-      dispatch(get_all_trades());
-      dispatch(closeProgress());
-    });
+    return async_api(dispatch, parse_trade_offer(filepath), true).then(
+      (response) => {
+        dispatch(get_all_trades());
+      },
+    );
   };
 }
 
 export function accept_trade_action(filepath) {
   return (dispatch) => {
-    return async_api(dispatch, accept_trade_offer(filepath)).then(
+    return async_api(dispatch, accept_trade_offer(filepath), true).then(
       (response) => {
         dispatch(get_all_trades());
-        dispatch(closeProgress());
       },
     );
   };

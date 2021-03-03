@@ -1,5 +1,6 @@
 import { service_full_node } from '../util/service_names';
 import { async_api } from './message';
+import { i18n } from '@lingui/core';
 
 export const fullNodeMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
@@ -133,10 +134,22 @@ export const getFullNodeConnections = () => {
 };
 
 export const openConnection = (host, port) => {
-  const action = fullNodeMessage();
-  action.message.command = 'open_connection';
-  action.message.data = { host, port };
-  return action;
+  return async (dispatch) => {
+    const { data } = await async_api(
+      dispatch,
+      fullNodeMessage({
+        command: 'open_connection',
+        data: {
+          host,
+          port,
+        },
+      }),
+      true,
+      true,
+    );
+
+    return data;
+  };
 };
 
 export const closeConnection = (node_id) => {

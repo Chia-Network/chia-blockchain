@@ -1,6 +1,8 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Button, ButtonProps, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@material-ui/core';
+import { ButtonProps, Dialog, DialogTitle, DialogContent, DialogContentText } from '@material-ui/core';
+import DialogActions from '../DialogActions';
+import Button from '../Button';
 
 type Props = {
   title?: ReactNode,
@@ -9,7 +11,7 @@ type Props = {
   onClose: (value: boolean) => void,
   confirmTitle: ReactNode,
   cancelTitle: ReactNode,
-  confirmColor?: ButtonProps['color'],
+  confirmColor?: ButtonProps['color'] | 'danger',
 };
 
 export default function ConfirmDialog(props: Props) {
@@ -45,10 +47,10 @@ export default function ConfirmDialog(props: Props) {
       )}
 
       <DialogActions>
-        <Button onClick={handleCancel} color="secondary" autoFocus>
+        <Button onClick={handleCancel} color="secondary" variant="contained" autoFocus>
           {cancelTitle}
         </Button>
-        <Button onClick={handleConfirm} color={confirmColor}>
+        <Button onClick={handleConfirm} color={confirmColor} variant="contained">
           {confirmTitle}
         </Button>
       </DialogActions>

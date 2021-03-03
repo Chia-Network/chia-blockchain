@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { Alert } from '@material-ui/lab';
-import { useDispatch, useSelector } from 'react-redux';
-import { Form, TextField } from '@chia/core';
+import { useDispatch } from 'react-redux';
+import { DialogActions, Flex, Form, TextField } from '@chia/core';
 import { useForm } from 'react-hook-form';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Grid } from '@material-ui/core';
-import { RootState } from '../../modules/rootReducer';
+import { Button, Dialog, DialogTitle, DialogContent } from '@material-ui/core';
 import { openConnection } from '../../modules/fullnodeMessages';
 
 type Props = {
@@ -29,9 +28,7 @@ export default function FullNodeAddConnection(props: Props) {
     },
   });
 
-  const connectionError = useSelector(
-    (state: RootState) => state.full_node_state.open_connection_error,
-  );
+  const [error, setError] = useState<Error | null>(null);
 
   function handleClose() {
     if (onClose) {
@@ -41,8 +38,14 @@ export default function FullNodeAddConnection(props: Props) {
 
   async function handleSubmit(values: FormData) {
     const { host, port } = values;
-    await dispatch(openConnection(host, port));
-    handleClose();
+    setError(null);
+
+    try {
+      await dispatch(openConnection(host, port));
+      handleClose();
+    } catch (error) {
+      setError(error);
+    }
   }
 
   function handleHide() {
@@ -57,6 +60,8 @@ export default function FullNodeAddConnection(props: Props) {
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
       open={open}
+      maxWidth="xs"
+      fullWidth
     >
       <Form
         methods={methods}
@@ -65,29 +70,33 @@ export default function FullNodeAddConnection(props: Props) {
         <DialogTitle id="alert-dialog-title">
           <Trans>Connect to other peers</Trans>
         </DialogTitle>
-        <DialogContent>
-          {connectionError && (
-            <Alert severity="error">{connectionError}</Alert>
-          )}
-          
-          <Grid spacing={2} container>
-            <Grid xs={12} sm={10} md={8} lg={6} item>
-              <TextField
-                label={
-                  <Trans>IP address / host</Trans>
-                }
-                name="host"
-              />
-            </Grid>
-            <Grid xs={12} sm={10} md={8} lg={6} item>
-              <TextField
-                label={<Trans>Port</Trans>}
-                name="port"
-              />
-            </Grid>
-          </Grid>
+        <DialogContent>          
+          <Flex gap={2} flexDirection="column">
+            {error && (
+              <Alert severity="error">{error.message}</Alert>
+            )}
+
+            <TextField
+              label={<Trans>IP address / host</Trans>}
+              name="host"
+              variant="filled"
+            />
+            <TextField
+              label={<Trans>Port</Trans>}
+              name="port"
+              type="number"
+              variant="filled"
+            />
+          </Flex>
         </DialogContent>
         <DialogActions>
+          <Button
+            onClick={handleHide}
+            variant="contained"
+            color="secondary"
+          >
+            <Trans>Cancel</Trans>
+          </Button>
           <Button
             variant="contained"
             color="primary"

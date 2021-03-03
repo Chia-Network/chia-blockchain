@@ -182,7 +182,7 @@ export function refreshAllState() {
   };
 }
 
-export const handle_message = async (store, payload) => {
+export const handle_message = async (store, payload, errorProcessed) => {
   const { dispatch } = store;
   const { command } = payload;
   const stateBefore = store.getState();
@@ -410,7 +410,9 @@ export const handle_message = async (store, payload) => {
     ) {
       return;
     }
-    if (payload.data.error) {
+
+    // DEPRECATED we will throw Error instead
+    if (payload.data.error && !errorProcessed) {
       store.dispatch(openErrorDialog(payload.data.error));
     }
   }

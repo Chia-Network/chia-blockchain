@@ -1,3 +1,5 @@
+import isElectron from 'is-electron';
+import { i18n } from '@lingui/core';
 import * as actions from '../modules/websocket';
 import {
   registerService,
@@ -13,7 +15,6 @@ import {
   service_farmer,
   service_harvester,
 } from '../util/service_names';
-import isElectron from 'is-electron';
 
 const crypto = require('crypto');
 const config = require('../config/config');
@@ -64,13 +65,20 @@ const socketMiddleware = () => {
   const onMessage = (store) => (event) => {
     const payload = JSON.parse(event.data);
     const { request_id } = payload;
-    if (callback_map[request_id] != null) {
-      const callback_action = callback_map[request_id];
-      const callback = callback_action.resolve_callback;
-      callback(payload);
-      callback_map[request_id] = null;
+    const action = callback_map[request_id];
+    if (action) {
+      delete callback_map[request_id];
+      const { resolve, reject } = action;
+      const error = payload?.data?.error;
+      const successFalse = payload?.data?.success === false;
+      if (error || successFalse) {
+        const errorMessage = error ?? i18n._('Unknown error');
+        reject(new Error(errorMessage));
+      } else {
+        resolve(payload);
+      }
     }
-    handle_message(store, payload);
+    handle_message(store, payload, action?.usePromiseReject);
   };
 
   return (store) => (next) => (action) => {
@@ -122,7 +130,7 @@ const socketMiddleware = () => {
             action.message.data,
             action.message.destination,
           );
-          if (action.resolve_callback != null) {
+          if (action.resolve) {
             callback_map[message.request_id] = action;
           }
           socket.send(JSON.stringify(message));

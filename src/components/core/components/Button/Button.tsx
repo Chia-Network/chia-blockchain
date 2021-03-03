@@ -14,7 +14,7 @@ const DangerButton = styled(BaseButton)`
 `;
 
 type Props = Omit<ButtonProps, 'color'> & {
-  color?: 'primary' | 'danger' | 'secondary';
+  color?: ButtonProps['color'] | 'danger';
 };
 
 export default function Button(props: Props) {

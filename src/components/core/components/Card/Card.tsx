@@ -1,7 +1,12 @@
 import React, { ReactNode, ReactElement } from 'react';
-import { Box, Card as CardMaterial, CardContent, CardHeader, Grid } from '@material-ui/core';
+import styled from 'styled-components';
+import { Box, Card as CardMaterial, CardContent, Grid, Typography } from '@material-ui/core';
 import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
+
+const StyledCardTitle = styled(Box)`
+  padding: ${({ theme }) => `${theme.spacing(2)}px ${theme.spacing(2)}px`};
+`;
 
 type Props = {
   children?: ReactNode;
@@ -30,7 +35,20 @@ export default function Card(props: Props) {
   return (
     <CardMaterial>
       {title && (
-        <CardHeader title={headerTitle} action={action} />
+        <StyledCardTitle>
+          <Flex gap={2} alignItems="center">
+            <Box flexGrow={1}>
+              <Typography variant="h5">
+                {headerTitle}
+              </Typography>
+            </Box>
+            {action && (
+              <Box>
+                {action}
+              </Box>
+            )}
+          </Flex>
+        </StyledCardTitle>
       )}
       <CardContent>
         <Flex flexDirection="column" gap={3}>

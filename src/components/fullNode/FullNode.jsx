@@ -11,7 +11,7 @@ import {
 } from '@chia/core';
 import { Status } from '@chia/icons';
 import { useRouteMatch, useHistory } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
   Box,
   Button,
@@ -23,10 +23,6 @@ import {
 import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
-import {
-  closeConnection,
-  openConnection,
-} from '../../modules/fullnodeMessages';
 import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */

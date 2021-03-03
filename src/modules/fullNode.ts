@@ -132,11 +132,6 @@ export default function fullnodeReducer(
         }
       } else if (command === 'get_connections') {
         return { ...state, connections: data.connections };
-      } else if (command === 'open_connection') {
-        if (data.success) {
-          return { ...state, open_connection_error: '' };
-        }
-        return { ...state, open_connection_error: data.error };
       }
       return state;
     default:

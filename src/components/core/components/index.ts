@@ -9,6 +9,7 @@ export { default as CardHero } from './CardHero';
 export { default as CardStep } from './CardStep';
 export { default as CopyToClipboard } from './CopyToClipboard';
 export { default as Checkbox } from './Checkbox';
+export { default as DialogActions } from './DialogActions';
 export { default as Dropzone } from './Dropzone';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
