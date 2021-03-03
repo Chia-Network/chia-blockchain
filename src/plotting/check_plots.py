@@ -10,6 +10,9 @@ from src.plotting.plot_tools import load_plots, get_plot_filenames, find_duplica
 from src.util.hash import std_hash
 from src.wallet.derive_keys import master_sk_to_farmer_sk
 
+from src.plotting.plot_tools import parse_plot_info
+from src.wallet.derive_keys import master_sk_to_local_sk
+
 log = logging.getLogger(__name__)
 
 
@@ -83,8 +86,16 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         pr = plot_info.prover
         log.info(f"Testing plot {plot_path} k={pr.get_size()}")
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
-        log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
-        log.info(f"\tLocal sk: {plot_info.local_sk}")
+
+        # Look up local_sk from plot to save locked memory
+        (
+            pool_public_key_or_puzzle_hash,
+            farmer_public_key,
+            local_master_sk,
+        ) = parse_plot_info(pr.get_memo())
+        local_sk = master_sk_to_local_sk(local_master_sk)
+        log.info(f"\tFarmer public key: {farmer_public_key}")
+        log.info(f"\tLocal sk: {local_sk}")
         total_proofs = 0
         caught_exception: bool = False
         for i in range(num_start, num_end):
