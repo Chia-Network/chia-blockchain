@@ -338,7 +338,7 @@ class TestWeightProof:
     @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/Downloads/blockchain_v28_4b227777d4dd1fc6.sqlite")
+        connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
         blocks, peak = await block_store.get_block_records()
         peak_height = blocks[peak].height
@@ -362,18 +362,6 @@ class TestWeightProof:
             curr = blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
         block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-        # print(f"ses {blocks[sub_height_to_hash[400]].sub_epoch_summary_included}")
-        # header = await block_store.get_full_blocks_at([400])
-        # blockchain = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-        # required_iters, error = validate_finished_header_block(
-        #     DEFAULT_CONSTANTS,
-        #     blockchain,
-        #     header[0].get_block_header(),
-        #     False,
-        #     DEFAULT_CONSTANTS.DIFFICULTY_STARTING,
-        #     DEFAULT_CONSTANTS.SUB_SLOT_ITERS_STARTING,
-        # )
-
         wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 50])
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
