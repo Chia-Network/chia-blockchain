@@ -138,7 +138,7 @@ msgstr "El archivo de respaldo se usa para restaurar carteras inteligentes."
 msgid "Balance"
 msgstr "Balance"
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:301
 msgid "Base Farmer Reward Amount"
 msgstr "Monto Base de Recompensa del Agricultor"
 
@@ -151,26 +151,31 @@ msgstr "A continuación se muestran los desafíos de bloques actuales. Puede que
 msgid "Best estimate over last 5 hours"
 msgstr "Mejor estimado de las últimas 5 horas"
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:107
+#: src/components/block/Block.jsx:119
 #: src/components/block/Block.jsx:141
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:317
 msgid "Block"
 msgstr "Bloque"
 
-#: src/components/block/Block.jsx:216
+#: src/components/block/Block.jsx:225
 msgid "Block VDF Iterations"
 msgstr "Iteraciones de Bloque VDF"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:322
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Bloque a la altura {0} en la cadena de bloques de Chia"
 
 #: src/components/fullNode/FullNode.jsx:331
-msgid "Block hash"
-msgstr "Bloque hash"
+#~ msgid "Block hash"
+#~ msgstr "Bloque hash"
 
-#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:124
+msgid "Block with hash {headerHash}"
+msgstr ""
+
+#: src/components/block/Block.jsx:153
 msgid "Block with hash {headerHash} does not exists."
 msgstr "No existe bloque con hash {headerHash}."
 
@@ -318,7 +323,7 @@ msgid "Connect to other peers"
 msgstr "Conectar a otros pares"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:157
 msgid "Connected"
 msgstr "Conectado"
 
@@ -326,7 +331,7 @@ msgstr "Conectado"
 msgid "Connecting to wallet"
 msgstr "Conectar al Monedero"
 
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:155
 msgid "Connection Status"
 msgstr "Estado de Conexión"
 
@@ -510,8 +515,8 @@ msgstr "Desarrollador"
 msgid "Developer Tools"
 msgstr "Herramientas de Desarrollador"
 
-#: src/components/block/Block.jsx:202
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/block/Block.jsx:211
+#: src/components/fullNode/FullNode.jsx:188
 msgid "Difficulty"
 msgstr "Dificultad"
 
@@ -567,11 +572,11 @@ msgstr "Error"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Error: No se puede enviar chia a la dirección de color. Por favor introduzca una dirección chia."
 
-#: src/components/fullNode/FullNode.jsx:208
+#: src/components/fullNode/FullNode.jsx:207
 msgid "Estimated network space"
 msgstr "Espacio estimado de red"
 
-#: src/components/fullNode/FullNode.jsx:211
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Suma estimada de todo el espacio en disco trazado de todos los agricultores de la red"
 
@@ -590,7 +595,7 @@ msgstr "Error al abrir (parcelas inválidas)"
 msgid "Farm"
 msgstr "Granja"
 
-#: src/components/block/Block.jsx:238
+#: src/components/block/Block.jsx:247
 msgid "Farmer Puzzle Hash"
 msgstr "Enigma Hash de Agricultor"
 
@@ -637,7 +642,7 @@ msgstr "Tarifa"
 msgid "Fee (TXCH)"
 msgstr "Tarifa (TXCH)"
 
-#: src/components/block/Block.jsx:296
+#: src/components/block/Block.jsx:305
 msgid "Fees Amount"
 msgstr "Monto de tarifas"
 
@@ -660,8 +665,8 @@ msgstr "Nombre del Archivo"
 msgid "Final folder location"
 msgstr "Ubicación de la Carpeta Final"
 
-#: src/components/fullNode/FullNode.jsx:51
-#: src/components/fullNode/FullNode.jsx:107
+#: src/components/fullNode/FullNode.jsx:50
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Finished"
 msgstr "Finalizado"
 
@@ -674,11 +679,11 @@ msgid "Frequently Asked Questions"
 msgstr "Preguntas Frecuentes"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:347
+#: src/components/fullNode/FullNode.jsx:316
 msgid "Full Node"
 msgstr "Nodo Completo"
 
-#: src/components/fullNode/FullNode.jsx:261
+#: src/components/fullNode/FullNode.jsx:260
 msgid "Full Node Status"
 msgstr "Estado de Nodo Completo"
 
@@ -694,16 +699,16 @@ msgstr "Generar Nuevo Color"
 msgid "Harvester ID"
 msgstr "ID de Cosechador"
 
-#: src/components/fullNode/FullNode.jsx:69
+#: src/components/fullNode/FullNode.jsx:68
 msgid "Header Hash"
 msgstr "Encabezado de Hash"
 
-#: src/components/block/Block.jsx:166
+#: src/components/block/Block.jsx:175
 msgid "Header hash"
 msgstr "Encabezado de hash"
 
-#: src/components/block/Block.jsx:180
-#: src/components/fullNode/FullNode.jsx:88
+#: src/components/block/Block.jsx:189
+#: src/components/fullNode/FullNode.jsx:87
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Altura"
@@ -749,7 +754,7 @@ msgstr "Importar Cartera desde Mnemotécnica"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importar desde Mnemotécnica (24 palabras)"
 
-#: src/components/fullNode/FullNode.jsx:53
+#: src/components/fullNode/FullNode.jsx:52
 msgid "In Progress"
 msgstr "En Progreso"
 
@@ -885,7 +890,7 @@ msgstr "Nueva dirección"
 msgid "New Wallet"
 msgstr "Nuevo Monedero"
 
-#: src/components/block/Block.jsx:332
+#: src/components/block/Block.jsx:336
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
@@ -929,7 +934,7 @@ msgstr "Ninguna de sus parcelas a pasado un filtro de parcela aún."
 msgid "Not Available"
 msgstr "No Disponible"
 
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:136
 msgid "Not Synced"
 msgstr "No sincronizado"
 
@@ -942,8 +947,8 @@ msgid "Not confirmed yet"
 msgstr "No confirmado todavía"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:160
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:159
+#: src/components/fullNode/FullNode.jsx:166
 msgid "Not connected"
 msgstr "No conectado"
 
@@ -975,7 +980,7 @@ msgstr "Oferta creada"
 msgid "Outgoing"
 msgstr "Enviado"
 
-#: src/components/fullNode/FullNode.jsx:175
+#: src/components/fullNode/FullNode.jsx:174
 msgid "Peak Height"
 msgstr "Altura del Pico"
 
@@ -983,7 +988,7 @@ msgstr "Altura del Pico"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:180
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Time"
 msgstr "Hora del Pico"
 
@@ -1084,7 +1089,7 @@ msgstr "Parcela"
 msgid "Plot Count"
 msgstr "Cantidad de Parcelas"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:263
 msgid "Plot Id"
 msgstr "Id de Parcela"
 
@@ -1096,7 +1101,7 @@ msgstr "Llave de Parcela"
 msgid "Plot Name"
 msgstr "Nombre de Parcela"
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:239
 msgid "Plot Public Key"
 msgstr "Llave Pública de Parcela"
 
@@ -1136,15 +1141,15 @@ msgstr "Sembrar en paralelo puede ahorrar tiempo. De lo contrario, agregue la(s)
 msgid "Pool Key"
 msgstr "Llave de Conjunto"
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:243
 msgid "Pool Public Key"
 msgstr "Llave Pública de Conjunto"
 
-#: src/components/block/Block.jsx:246
+#: src/components/block/Block.jsx:255
 msgid "Pool Puzzle Hash"
 msgstr "Enigma Hash de Conjunto"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:297
 msgid "Pool Reward Amount"
 msgstr "Monto de Recompensa de Conjunto"
 
@@ -1155,11 +1160,11 @@ msgstr "Monto de Recompensa de Conjunto"
 msgid "Port"
 msgstr "Puerto"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:331
 msgid "Previous"
 msgstr "Anterior"
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:203
 msgid "Previous Block Hash"
 msgstr "Bloque Hash Anterior"
 
@@ -1179,7 +1184,7 @@ msgstr "Llave privada {0}"
 msgid "Private key:"
 msgstr "Llave privada:"
 
-#: src/components/block/Block.jsx:226
+#: src/components/block/Block.jsx:235
 msgid "Proof of Space Size"
 msgstr "Prueba de Tamaño de Espacio"
 
@@ -1267,12 +1272,12 @@ msgid "Save"
 msgstr "Guardar"
 
 #: src/components/fullNode/FullNode.jsx:338
-msgid "Search"
-msgstr "Buscar"
+#~ msgid "Search"
+#~ msgstr "Buscar"
 
 #: src/components/fullNode/FullNode.jsx:326
-msgid "Search block by header hash"
-msgstr "Buscar bloque por encabezado hash"
+#~ msgid "Search block by header hash"
+#~ msgstr "Buscar bloque por encabezado hash"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1393,14 +1398,14 @@ msgstr "Duración del Intervalo de Gasto (cantidad de bloques)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite de gasto (chia por intervalo): {0}"
 
-#: src/components/fullNode/FullNode.jsx:109
+#: src/components/fullNode/FullNode.jsx:108
 msgid "State"
 msgstr "Estado"
 
-#: src/components/fullNode/FullNode.jsx:119
-#: src/components/fullNode/FullNode.jsx:136
-#: src/components/fullNode/FullNode.jsx:144
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:118
+#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:165
 #: src/components/plot/overview/PlotOverviewPlots.tsx:73
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
@@ -1445,7 +1450,7 @@ msgstr "Tamaño de tira"
 msgid "Submit"
 msgstr "Enviar"
 
-#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Synced"
 msgstr "Sincronizado"
 
@@ -1455,7 +1460,7 @@ msgstr "Sincronizado"
 msgid "Syncing"
 msgstr "Sincronizando"
 
-#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:120
 msgid "Syncing {progress}/{tip}"
 msgstr "Sincronizando {progress}/{tip}"
 
@@ -1495,27 +1500,27 @@ msgstr "El nodo completo al que está conectado su agricultor se encuentra a con
 msgid "The minimum required size for mainnet is k=32"
 msgstr "El tamaño mínimo requerido para mainnet es k=32"
 
-#: src/components/fullNode/FullNode.jsx:139
+#: src/components/fullNode/FullNode.jsx:138
 msgid "The node is not synced"
 msgstr "El nodo no está sincronizado"
 
-#: src/components/fullNode/FullNode.jsx:127
+#: src/components/fullNode/FullNode.jsx:126
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "El nodo se está sincronizando, lo que significa que está descargando bloques de otros nodos, para alcanzar el último bloque de la cadena"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:266
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "La semilla utilizada para crear la parcela. Esto depende del conjunto pk y parcela pk."
 
-#: src/components/block/Block.jsx:209
+#: src/components/block/Block.jsx:218
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Número total de VDF (funcione de retardo verificable) o iteraciones de prueba de tiempo en la cadena completa hasta este sub-bloque."
 
-#: src/components/block/Block.jsx:219
+#: src/components/block/Block.jsx:228
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Número total de VDF (funcione de retardo verificable) o iteraciones de prueba de tiempo en este bloque."
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:308
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Las tarifas totales de transacciones en este bloque. Recompensado al agricultor."
 
@@ -1545,11 +1550,11 @@ msgstr "Esto es un cambio pendiente, los cuales son cambios de monedas que usted
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Esta es la suma de las transacciones pendientes entrantes y salientes (aún no incluidas en la cadena de bloques). Esto no incluye las recompensas de cultivo."
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:183
 msgid "This is the time of the latest peak sub block."
 msgstr "Este es la hora del último sub-bloque pico."
 
-#: src/components/block/Block.jsx:173
+#: src/components/block/Block.jsx:182
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Este es el momento en que el agricultor creó el bloque, que es antes de que se finalice con una prueba de tiempo"
 
@@ -1561,7 +1566,7 @@ msgstr "Esta es la cantidad total de chía en la cadena de bloques en el sub-blo
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Este es el saldo total + saldo pendiente: es lo que será su saldo después de que se confirmen todas las transacciones pendientes."
 
-#: src/components/fullNode/FullNode.jsx:148
+#: src/components/fullNode/FullNode.jsx:147
 msgid "This node is fully caught up and validating the network"
 msgstr "Este nodo esta al día y validando la red"
 
@@ -1577,7 +1582,7 @@ msgstr "Esta operación fue creada a esta hora"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Esta operación fue incluida en la cadena de bloques a esta altura de bloque"
 
-#: src/components/fullNode/FullNode.jsx:101
+#: src/components/fullNode/FullNode.jsx:100
 msgid "Time Created"
 msgstr "Hora de Creación"
 
@@ -1585,7 +1590,7 @@ msgstr "Hora de Creación"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:170
+#: src/components/block/Block.jsx:179
 msgid "Timestamp"
 msgstr "Marca de tiempo"
 
@@ -1603,7 +1608,7 @@ msgstr "Saldo Total"
 msgid "Total Chia Farmed"
 msgstr "Chìa Total Cultivada"
 
-#: src/components/fullNode/FullNode.jsx:202
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Total Iterations"
 msgstr "Total de iteraciones"
 
@@ -1619,11 +1624,11 @@ msgstr "Tamaño Total de Parcela:"
 msgid "Total Size of Plots"
 msgstr "Tamaño Total de Parcelas"
 
-#: src/components/block/Block.jsx:206
+#: src/components/block/Block.jsx:215
 msgid "Total VDF Iterations"
 msgstr "Total de iteraciones VDF"
 
-#: src/components/fullNode/FullNode.jsx:204
+#: src/components/fullNode/FullNode.jsx:203
 msgid "Total iterations since the start of the blockchain"
 msgstr "Total de iteraciones desde el principio de la cadena de bloques"
 
@@ -1659,7 +1664,7 @@ msgstr "Comercio"
 msgid "Trading History"
 msgstr "Historial Comercial"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:274
 msgid "Transactions Filter Hash"
 msgstr "Filtro de Transacciones Hash"
 
@@ -1667,7 +1672,7 @@ msgstr "Filtro de Transacciones Hash"
 msgid "Type"
 msgstr "Tipo"
 
-#: src/components/fullNode/FullNode.jsx:107
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Unfinished"
 msgstr "Inconcluso"
 
@@ -1680,7 +1685,7 @@ msgstr "Identificador Único"
 msgid "User Pubkey"
 msgstr "Llave Pública de Usuario"
 
-#: src/components/fullNode/FullNode.jsx:196
+#: src/components/fullNode/FullNode.jsx:195
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteraciones VDF Sub Slot"
 
@@ -1757,11 +1762,11 @@ msgstr "¿Quieres ganar más Chia? Añade más parcelas a tu granja."
 msgid "Want to have a delay before the next plot starts?"
 msgstr "¿Quiere tener un retraso antes de que comience la próxima parcela?"
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:193
 msgid "Weight"
 msgstr "Peso"
 
-#: src/components/block/Block.jsx:187
+#: src/components/block/Block.jsx:196
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "El peso es la dificultad agregada total de todos los sub-bloques hasta este, incluyendo este"
 

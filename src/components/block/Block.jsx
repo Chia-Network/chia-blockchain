@@ -2,11 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Button, Paper, TableRow, Table, TableBody, TableCell, TableContainer } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
-import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Card, Link, Loading, TooltipIcon, Flex } from '@chia/core';
-import styled from 'styled-components';
 import {
   unix_to_short_date,
   hex_to_array,
@@ -21,13 +19,9 @@ import { chia_formatter, mojo_to_chia } from '../../util/chia';
 import { calculatePoolReward, calculateBaseFarmerReward } from '../../util/blockRewards';
 import LayoutMain from '../layout/LayoutMain';
 import toBech32m from '../../util/toBech32m';
+import BlockTitle from './BlockTitle';
 
 /* global BigInt */
-
-const BackIcon = styled(ArrowBackIosIcon)`
-  font-size: 1.25rem;
-  cursor: pointer;
-`;
 
 async function computeNewPlotId(block) {
   const { pool_public_key, plot_public_key } = block.reward_chain_block.proof_of_space;
@@ -107,10 +101,6 @@ export default function Block() {
     }
   }
 
-  function handleGoBack() {
-    history.push('/dashboard');
-  }
-
   if (loading) {
     return (
       <LayoutMain
@@ -128,9 +118,19 @@ export default function Block() {
       <LayoutMain
         title={<Trans>Block</Trans>}
       >
-        <Alert severity="error">
-          {error.message}
-        </Alert>
+        <Card
+          title={(
+            <BlockTitle>
+              <Trans>
+                Block with hash {headerHash}
+              </Trans>
+            </BlockTitle>
+          )}
+        >
+          <Alert severity="error">
+            {error.message}
+          </Alert>
+        </Card>
       </LayoutMain>
     );
   }
@@ -140,12 +140,21 @@ export default function Block() {
       <LayoutMain
         title={<Trans>Block</Trans>}
       >
-        <Alert severity="warning">
-          <Trans>
-            Block with hash {headerHash} does not exists.
-          </Trans>
-        </Alert>
-
+        <Card
+          title={(
+            <BlockTitle>
+              <Trans>
+                Block
+              </Trans>
+            </BlockTitle>
+          )}
+        >
+          <Alert severity="warning">
+            <Trans>
+              Block with hash {headerHash} does not exists.
+            </Trans>
+          </Alert>
+        </Card>
       </LayoutMain>
     );
   }
@@ -309,17 +318,12 @@ export default function Block() {
     >
       <Card
         title={(
-          <Flex gap={1} alignItems="baseline">
-            <BackIcon onClick={handleGoBack}>
-              {' '}
-            </BackIcon>
-            <span>
-              <Trans>
-                Block at height {blockRecord.height} in the Chia
-                blockchain
-              </Trans>
-            </span>
-          </Flex>
+          <BlockTitle>
+            <Trans>
+              Block at height {blockRecord.height} in the Chia
+              blockchain
+            </Trans>
+          </BlockTitle>
         )}
         action={(
           <Flex gap={1}>

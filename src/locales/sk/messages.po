@@ -138,7 +138,7 @@ msgstr ""
 msgid "Balance"
 msgstr "Zostatok"
 
-#: src/components/block/Block.jsx:292
+#: src/components/block/Block.jsx:301
 msgid "Base Farmer Reward Amount"
 msgstr ""
 
@@ -151,26 +151,31 @@ msgstr ""
 msgid "Best estimate over last 5 hours"
 msgstr "Najlepší odhad za posledných 5 hodín"
 
-#: src/components/block/Block.jsx:117
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:107
+#: src/components/block/Block.jsx:119
 #: src/components/block/Block.jsx:141
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:317
 msgid "Block"
 msgstr "Blok"
 
-#: src/components/block/Block.jsx:216
+#: src/components/block/Block.jsx:225
 msgid "Block VDF Iterations"
 msgstr "Blok VDF iterácii"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:322
 msgid "Block at height {0} in the Chia blockchain"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:331
-msgid "Block hash"
-msgstr "Hash bloku"
+#~ msgid "Block hash"
+#~ msgstr "Hash bloku"
 
-#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:124
+msgid "Block with hash {headerHash}"
+msgstr ""
+
+#: src/components/block/Block.jsx:153
 msgid "Block with hash {headerHash} does not exists."
 msgstr ""
 
@@ -318,7 +323,7 @@ msgid "Connect to other peers"
 msgstr "Pripojiť k iným uzlom"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:157
 msgid "Connected"
 msgstr "Pripojené"
 
@@ -326,7 +331,7 @@ msgstr "Pripojené"
 msgid "Connecting to wallet"
 msgstr "Pripájanie k peňaženke"
 
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:155
 msgid "Connection Status"
 msgstr "Stav pripojenia"
 
@@ -510,8 +515,8 @@ msgstr ""
 msgid "Developer Tools"
 msgstr ""
 
-#: src/components/block/Block.jsx:202
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/block/Block.jsx:211
+#: src/components/fullNode/FullNode.jsx:188
 msgid "Difficulty"
 msgstr "Zložitosť"
 
@@ -567,11 +572,11 @@ msgstr "Chyba"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chyba: Prosím zadajte platnú adresu."
 
-#: src/components/fullNode/FullNode.jsx:208
+#: src/components/fullNode/FullNode.jsx:207
 msgid "Estimated network space"
 msgstr "Odhadovaná velkosť siete"
 
-#: src/components/fullNode/FullNode.jsx:211
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
@@ -590,7 +595,7 @@ msgstr "Nepodarilo sa otvoriť (neplatné polia)"
 msgid "Farm"
 msgstr "Ťažiť"
 
-#: src/components/block/Block.jsx:238
+#: src/components/block/Block.jsx:247
 msgid "Farmer Puzzle Hash"
 msgstr ""
 
@@ -637,7 +642,7 @@ msgstr "Poplatok"
 msgid "Fee (TXCH)"
 msgstr "Poplatok (TXCH)"
 
-#: src/components/block/Block.jsx:296
+#: src/components/block/Block.jsx:305
 msgid "Fees Amount"
 msgstr "Množstvo odmeny"
 
@@ -660,8 +665,8 @@ msgstr ""
 msgid "Final folder location"
 msgstr "Cieľový adresár"
 
-#: src/components/fullNode/FullNode.jsx:51
-#: src/components/fullNode/FullNode.jsx:107
+#: src/components/fullNode/FullNode.jsx:50
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Finished"
 msgstr "Dokončené"
 
@@ -674,11 +679,11 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:347
+#: src/components/fullNode/FullNode.jsx:316
 msgid "Full Node"
 msgstr "Domov"
 
-#: src/components/fullNode/FullNode.jsx:261
+#: src/components/fullNode/FullNode.jsx:260
 msgid "Full Node Status"
 msgstr "Stav siete"
 
@@ -694,16 +699,16 @@ msgstr ""
 msgid "Harvester ID"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:69
+#: src/components/fullNode/FullNode.jsx:68
 msgid "Header Hash"
 msgstr "Poradie hlavičky"
 
-#: src/components/block/Block.jsx:166
+#: src/components/block/Block.jsx:175
 msgid "Header hash"
 msgstr "Poradie hlavičky"
 
-#: src/components/block/Block.jsx:180
-#: src/components/fullNode/FullNode.jsx:88
+#: src/components/block/Block.jsx:189
+#: src/components/fullNode/FullNode.jsx:87
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Poradie"
@@ -749,7 +754,7 @@ msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Obnoviť z mnemotechniky (24 slov)"
 
-#: src/components/fullNode/FullNode.jsx:53
+#: src/components/fullNode/FullNode.jsx:52
 msgid "In Progress"
 msgstr "Prebieha"
 
@@ -885,7 +890,7 @@ msgstr "Nová adresa"
 msgid "New Wallet"
 msgstr "Pridať peňaženku"
 
-#: src/components/block/Block.jsx:332
+#: src/components/block/Block.jsx:336
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
@@ -929,7 +934,7 @@ msgstr ""
 msgid "Not Available"
 msgstr "Nie je k dispozícií"
 
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:136
 msgid "Not Synced"
 msgstr ""
 
@@ -942,8 +947,8 @@ msgid "Not confirmed yet"
 msgstr "Zatiaľ nepotvrdené"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:160
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:159
+#: src/components/fullNode/FullNode.jsx:166
 msgid "Not connected"
 msgstr "Nepripojené"
 
@@ -975,7 +980,7 @@ msgstr "Vytvorené ponuky"
 msgid "Outgoing"
 msgstr "Odchádzajúce"
 
-#: src/components/fullNode/FullNode.jsx:175
+#: src/components/fullNode/FullNode.jsx:174
 msgid "Peak Height"
 msgstr ""
 
@@ -983,7 +988,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:180
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Time"
 msgstr ""
 
@@ -1084,7 +1089,7 @@ msgstr "Pole"
 msgid "Plot Count"
 msgstr "Počet plotov"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:263
 msgid "Plot Id"
 msgstr "Id poľa"
 
@@ -1096,7 +1101,7 @@ msgstr "Kľúč poľa"
 msgid "Plot Name"
 msgstr "Meno poľa"
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:239
 msgid "Plot Public Key"
 msgstr "Verejný kľúč poľa"
 
@@ -1136,15 +1141,15 @@ msgstr "Paralelné vytváranie polí môže ušetriť čas. V opačnom prípade 
 msgid "Pool Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:234
+#: src/components/block/Block.jsx:243
 msgid "Pool Public Key"
 msgstr "Verejný kľúč poolu"
 
-#: src/components/block/Block.jsx:246
+#: src/components/block/Block.jsx:255
 msgid "Pool Puzzle Hash"
 msgstr ""
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:297
 msgid "Pool Reward Amount"
 msgstr ""
 
@@ -1155,11 +1160,11 @@ msgstr ""
 msgid "Port"
 msgstr "Port"
 
-#: src/components/block/Block.jsx:327
+#: src/components/block/Block.jsx:331
 msgid "Previous"
 msgstr "Predchádzajúci"
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:203
 msgid "Previous Block Hash"
 msgstr "Predchádzajúci hash bloku"
 
@@ -1179,7 +1184,7 @@ msgstr "Privátny kľúč {0}"
 msgid "Private key:"
 msgstr "Privátny kľúč:"
 
-#: src/components/block/Block.jsx:226
+#: src/components/block/Block.jsx:235
 msgid "Proof of Space Size"
 msgstr "Dôkaz o veľkosti priestoru"
 
@@ -1267,12 +1272,12 @@ msgid "Save"
 msgstr "Uložiť"
 
 #: src/components/fullNode/FullNode.jsx:338
-msgid "Search"
-msgstr "Vyhľadať"
+#~ msgid "Search"
+#~ msgstr "Vyhľadať"
 
 #: src/components/fullNode/FullNode.jsx:326
-msgid "Search block by header hash"
-msgstr "Vyhľadať blok podľa hashu"
+#~ msgid "Search block by header hash"
+#~ msgstr "Vyhľadať blok podľa hashu"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1393,14 +1398,14 @@ msgstr "Dĺžka disponibilného intervalu (počet blokov)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:109
+#: src/components/fullNode/FullNode.jsx:108
 msgid "State"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:119
-#: src/components/fullNode/FullNode.jsx:136
-#: src/components/fullNode/FullNode.jsx:144
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:118
+#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:165
 #: src/components/plot/overview/PlotOverviewPlots.tsx:73
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
@@ -1445,7 +1450,7 @@ msgstr "Veľkosť sektora"
 msgid "Submit"
 msgstr "Odoslať"
 
-#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Synced"
 msgstr "Synchronizované"
 
@@ -1455,7 +1460,7 @@ msgstr "Synchronizované"
 msgid "Syncing"
 msgstr "Synchronizácia"
 
-#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:120
 msgid "Syncing {progress}/{tip}"
 msgstr "Synchronizácia {progress}/{tip}"
 
@@ -1495,27 +1500,27 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Minimálna požadovaná veľkosť pre sieť je k = 32"
 
-#: src/components/fullNode/FullNode.jsx:139
+#: src/components/fullNode/FullNode.jsx:138
 msgid "The node is not synced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:127
+#: src/components/fullNode/FullNode.jsx:126
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, aby sa dostal k najnovšiemu bloku v reťazci"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:266
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Seedy použité na vytvorenie poľa. Záleží to na pk poolu a pk poľa."
 
-#: src/components/block/Block.jsx:209
+#: src/components/block/Block.jsx:218
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr ""
 
-#: src/components/block/Block.jsx:219
+#: src/components/block/Block.jsx:228
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v tomto bloku."
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:308
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Celkové poplatky v tomto bloku idú ťažiarovi."
 
@@ -1545,11 +1550,11 @@ msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale za
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nie sú zahrnuté do blockchainu). To nezahŕňa odmeny za ťažbu."
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:183
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
-#: src/components/block/Block.jsx:173
+#: src/components/block/Block.jsx:182
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkazom o čase"
 
@@ -1561,7 +1566,7 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v najnovšom bloku, ktorý
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
-#: src/components/fullNode/FullNode.jsx:148
+#: src/components/fullNode/FullNode.jsx:147
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1577,7 +1582,7 @@ msgstr "Čas, kedy sa tento obchod vytvoril"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Tento obchod bol zahrnutý v blockchaine na tejto pozícii"
 
-#: src/components/fullNode/FullNode.jsx:101
+#: src/components/fullNode/FullNode.jsx:100
 msgid "Time Created"
 msgstr "Čas vytvorenia"
 
@@ -1585,7 +1590,7 @@ msgstr "Čas vytvorenia"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:170
+#: src/components/block/Block.jsx:179
 msgid "Timestamp"
 msgstr "Časová značka"
 
@@ -1603,7 +1608,7 @@ msgstr "Celkový zostatok"
 msgid "Total Chia Farmed"
 msgstr "Celková vyťažená Chia"
 
-#: src/components/fullNode/FullNode.jsx:202
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Total Iterations"
 msgstr ""
 
@@ -1619,11 +1624,11 @@ msgstr "Celková veľkosť poľa:"
 msgid "Total Size of Plots"
 msgstr "Celková veľkosť polí"
 
-#: src/components/block/Block.jsx:206
+#: src/components/block/Block.jsx:215
 msgid "Total VDF Iterations"
 msgstr "Celkový počet iterácií VDF"
 
-#: src/components/fullNode/FullNode.jsx:204
+#: src/components/fullNode/FullNode.jsx:203
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
@@ -1659,7 +1664,7 @@ msgstr "Obchodovanie"
 msgid "Trading History"
 msgstr "História ponúk"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:274
 msgid "Transactions Filter Hash"
 msgstr ""
 
@@ -1667,7 +1672,7 @@ msgstr ""
 msgid "Type"
 msgstr "Typ"
 
-#: src/components/fullNode/FullNode.jsx:107
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Unfinished"
 msgstr "Nedokončené"
 
@@ -1680,7 +1685,7 @@ msgstr "Jedinečný identifikátor"
 msgid "User Pubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:196
+#: src/components/fullNode/FullNode.jsx:195
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
@@ -1757,11 +1762,11 @@ msgstr "Chcete zarobiť viac Chia? Pridajte na svoju farmu ďalšie polia."
 msgid "Want to have a delay before the next plot starts?"
 msgstr "Chcete oneskoriť vytváranie ďalšieho poľa?"
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:193
 msgid "Weight"
 msgstr "Veľkosť"
 
-#: src/components/block/Block.jsx:187
+#: src/components/block/Block.jsx:196
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import { get } from 'lodash';
 import {
@@ -14,9 +14,7 @@ import { useRouteMatch, useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
   Box,
-  Button,
   Grid,
-  TextField,
   Tooltip,
   Typography,
 } from '@material-ui/core';
@@ -24,6 +22,7 @@ import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
 import LayoutMain from '../layout/LayoutMain';
+import FullNodeBlockSearch from './FullNodeBlockSearch';
 
 /* global BigInt */
 
@@ -297,7 +296,10 @@ const BlocksCard = () => {
   }
 
   return (
-    <Card title={<Trans>Blocks</Trans>}>
+    <Card 
+      title={<Trans>Blocks</Trans>}
+      action={<FullNodeBlockSearch />}
+    >
       {rows.length ? (
         <Table cols={cols} rows={rows} onRowClick={handleRowClick} />
       ) : (
@@ -309,39 +311,6 @@ const BlocksCard = () => {
   );
 };
 
-function SearchBlock() {
-  const history = useHistory();
-  const [searchHash, setSearchHash] = useState('');
-
-  function handleChangeSearchHash(event) {
-    setSearchHash(event.target.value);
-  }
-
-  function handleSearch() {
-    history.push(`/dashboard/block/${searchHash}`);
-    setSearchHash('');
-  }
-
-  return (
-    <Card title={<Trans>Search block by header hash</Trans>}>
-      <Flex alignItems="stretch">
-        <Box flexGrow={1}>
-          <TextField
-            fullWidth
-            label={<Trans>Block hash</Trans>}
-            value={searchHash}
-            onChange={handleChangeSearchHash}
-            variant="outlined"
-          />
-        </Box>
-        <Button onClick={handleSearch} variant="contained" disableElevation>
-          <Trans>Search</Trans>
-        </Button>
-      </Flex>
-    </Card>
-  );
-}
-
 export default function FullNode() {
   return (
     <LayoutMain title={<Trans>Full Node</Trans>}>
@@ -349,7 +318,6 @@ export default function FullNode() {
         <FullNodeStatus />
         <BlocksCard />
         <FullNodeConnections />
-        <SearchBlock />
       </Flex>
     </LayoutMain>
   );

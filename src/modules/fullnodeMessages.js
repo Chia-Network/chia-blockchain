@@ -191,6 +191,7 @@ export function getBlock(headerHash) {
         },
       }),
       false,
+      true,
     );
 
     return response?.data?.block;

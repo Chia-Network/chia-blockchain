@@ -36,7 +36,7 @@ export default function Card(props: Props) {
     <CardMaterial>
       {title && (
         <StyledCardTitle>
-          <Flex gap={2} alignItems="center">
+          <Flex gap={2} alignItems="center" flexWrap="wrap">
             <Box flexGrow={1}>
               <Typography variant="h5">
                 {headerTitle}
