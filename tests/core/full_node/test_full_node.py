@@ -2,31 +2,21 @@
 import asyncio
 import dataclasses
 
-import aiohttp
 import pytest
 import random
 import time
 import logging
-from typing import Dict, Tuple
+from typing import Dict
 from secrets import token_bytes
-
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, serialization
 
 from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.outbound_message import NodeType
-from src.server.server import ssl_context_for_client, ChiaServer
-from src.server.ws_connection import WSChiaConnection
-from src.ssl.create_ssl import generate_ca_signed_cert
-from src.types.blockchain_format.program import Program, SerializedProgram
+from src.types.blockchain_format.program import SerializedProgram
 from src.types.full_block import FullBlock
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.block_tools import get_signage_point
@@ -36,6 +26,7 @@ from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.util.wallet_tools import WalletTool
+from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
 from src.util.clvm import int_to_bytes
@@ -45,7 +36,6 @@ from tests.time_out_assert import (
     time_out_assert_custom_interval,
     time_out_messages,
 )
-from src.protocols.shared_protocol import protocol_version
 
 log = logging.getLogger(__name__)
 
@@ -58,59 +48,6 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
-
-
-async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
-    timeout = aiohttp.ClientTimeout(total=10)
-    session = aiohttp.ClientSession(timeout=timeout)
-    incoming_queue: asyncio.Queue = asyncio.Queue()
-    dummy_crt_path = server._private_key_path.parent / "dummy.crt"
-    dummy_key_path = server._private_key_path.parent / "dummy.key"
-    generate_ca_signed_cert(
-        server.chia_ca_crt_path.read_bytes(), server.chia_ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path
-    )
-    ssl_context = ssl_context_for_client(
-        server.chia_ca_crt_path, server.chia_ca_key_path, dummy_crt_path, dummy_key_path
-    )
-    pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
-    der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
-    peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-    url = f"wss://{self_hostname}:{server._port}/ws"
-    ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
-    wsc = WSChiaConnection(
-        NodeType.FULL_NODE,
-        ws,
-        server._port,
-        log,
-        True,
-        False,
-        self_hostname,
-        incoming_queue,
-        lambda x: x,
-        peer_id,
-    )
-    handshake = await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
-    assert handshake is True
-    return incoming_queue, peer_id
-
-
-async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer) -> WSChiaConnection:
-    """
-    Connect server_2 to server_1, and get return the connection in server_1.
-    """
-    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
-
-    async def connected():
-        for node_id_c, _ in server_1.all_connections.items():
-            if node_id_c == server_2.node_id:
-                return True
-        return False
-
-    await time_out_assert(10, connected, True)
-    for node_id, wsc in server_1.all_connections.items():
-        if node_id == server_2.node_id:
-            return wsc
-    assert False
 
 
 @pytest.fixture(scope="session")

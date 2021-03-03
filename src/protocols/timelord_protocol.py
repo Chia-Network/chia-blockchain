@@ -31,6 +31,7 @@ class NewPeakTimelord(Streamable):
     ]  # If NewPeak is the last slot in epoch, the next slot should include this
     previous_reward_challenges: List[Tuple[bytes32, uint128]]
     last_challenge_sb_or_eos_total_iters: uint128
+    passes_ses_height_but_not_yet_included: bool
 
 
 @dataclass(frozen=True)

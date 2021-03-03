@@ -87,21 +87,18 @@ def validate_unfinished_header_block(
     else:
         assert prev_b is not None
         height = uint32(prev_b.height + 1)
-        if prev_b.sub_epoch_summary_included is not None:
-            can_finish_se, can_finish_epoch = False, False
+        if new_sub_slot:
+            can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
+                constants,
+                blocks,
+                prev_b.height,
+                prev_b.prev_hash,
+                prev_b.deficit,
+                prev_b.sub_epoch_summary_included is not None,
+            )
         else:
-            if new_sub_slot:
-                can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-                    constants,
-                    prev_b.height,
-                    prev_b.deficit,
-                    blocks,
-                    prev_b.prev_hash,
-                    False,
-                )
-            else:
-                can_finish_se = False
-                can_finish_epoch = False
+            can_finish_se = False
+            can_finish_epoch = False
 
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: Optional[bytes32] = None

@@ -4,7 +4,7 @@ from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_block
 from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.header_block import HeaderBlock
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -29,22 +29,12 @@ def block_to_block_record(
         block: Union[HeaderBlock, FullBlock] = header_block
     else:
         block = full_block
-    if block.height == 0:
-        prev_b: Optional[BlockRecord] = None
-        sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
-    else:
-        prev_b = blocks.block_record(block.prev_header_hash)
+    prev_b = blocks.try_block_record(block.prev_header_hash)
+    if block.height > 0:
         assert prev_b is not None
-        sub_slot_iters = get_next_sub_slot_iters(
-            constants,
-            blocks,
-            prev_b.prev_hash,
-            prev_b.height,
-            prev_b.sub_slot_iters,
-            prev_b.deficit,
-            len(block.finished_sub_slots) > 0,
-            prev_b.sp_total_iters(constants),
-        )
+    sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
+        constants, len(block.finished_sub_slots) > 0, prev_b, blocks
+    )
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     deficit = calculate_deficit(
         constants,

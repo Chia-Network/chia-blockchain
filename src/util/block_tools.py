@@ -70,18 +70,24 @@ from src.wallet.derive_keys import (
 )
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 
+from src.plotting.plot_tools import parse_plot_info
+from src.wallet.derive_keys import master_sk_to_local_sk
+
+
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
+        "MIN_PLOT_SIZE": 18,
+        "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
         "DIFFICULTY_STARTING": 2 ** 12,
         "DISCRIMINANT_SIZE_BITS": 16,
-        "SUB_EPOCH_BLOCKS": 140,
+        "SUB_EPOCH_BLOCKS": 170,
         "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 350,
+        "WEIGHT_PROOF_RECENT_BLOCKS": 380,
         "DIFFICULTY_CONSTANT_FACTOR": 33554432,
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_BLOCKS": 50,
-        "EPOCH_BLOCKS": 280,
-        "BLOCKS_CACHE_SIZE": 280 + 3 * 50,  # Coordinate with the above values
+        "EPOCH_BLOCKS": 340,
+        "BLOCKS_CACHE_SIZE": 340 + 3 * 50,  # Coordinate with the above values
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
@@ -217,9 +223,16 @@ class BlockTools:
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
         for _, plot_info in self.plots.items():
-            agg_pk = ProofOfSpace.generate_plot_public_key(plot_info.local_sk.get_g1(), plot_info.farmer_public_key)
+            # Look up local_sk from plot to save locked memory
+            (
+                pool_public_key_or_puzzle_hash,
+                farmer_public_key,
+                local_master_sk,
+            ) = parse_plot_info(plot_info.prover.get_memo())
+            local_sk = master_sk_to_local_sk(local_master_sk)
+            agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
             if agg_pk == plot_pk:
-                harv_share = AugSchemeMPL.sign(plot_info.local_sk, m, agg_pk)
+                harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 return AugSchemeMPL.aggregate([harv_share, farm_share])
 
@@ -912,9 +925,17 @@ class BlockTools:
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+
+                        # Look up local_sk from plot to save locked memory
+                        (
+                            pool_public_key_or_puzzle_hash,
+                            farmer_public_key,
+                            local_master_sk,
+                        ) = parse_plot_info(plot_info.prover.get_memo())
+                        local_sk = master_sk_to_local_sk(local_master_sk)
                         plot_pk = ProofOfSpace.generate_plot_public_key(
-                            plot_info.local_sk.get_g1(),
-                            plot_info.farmer_public_key,
+                            local_sk.get_g1(),
+                            farmer_public_key,
                         )
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,
