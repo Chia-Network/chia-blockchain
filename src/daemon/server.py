@@ -13,7 +13,6 @@ import time
 from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
 from concurrent.futures import ThreadPoolExecutor
 
-import aiohttp
 from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
@@ -30,7 +29,7 @@ from src.util.service_groups import validate_service
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import web
+    from aiohttp import web, ClientSession
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
@@ -48,7 +47,7 @@ service_plotter = "chia plots create"
 
 
 async def fetch(url: str):
-    session = aiohttp.ClientSession()
+    session = ClientSession()
     try:
         response = await session.get(url)
         await session.close()
