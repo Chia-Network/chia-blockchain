@@ -144,7 +144,7 @@ class WebSocketServer:
             ssl=self.ssl_context,
         )
         selected = self.net_config["selected_network"]
-        challenge = self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"]
+        challenge = self.net_config["network_overrides"]["constants"][selected]["GENESIS_CHALLENGE"]
 
         if challenge is None:
             self.genesis_initialized = False
@@ -197,7 +197,7 @@ class WebSocketServer:
                         continue
 
                     challenge = data_json["genesis_challenge"]
-                    self.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] = challenge
+                    self.net_config["network_overrides"]["constants"][selected]["GENESIS_CHALLENGE"] = challenge
                     save_config(self.root_path, "config.yaml", self.net_config)
                     self.genesis_initialized = True
                     await self.start_services()
