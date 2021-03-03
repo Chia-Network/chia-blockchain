@@ -51,7 +51,7 @@ async def fetch(url: str):
     try:
         dst_root = get_dst_ca_crt()
         ssl_context = ssl_context_for_root(dst_root.decode())
-        response = await session.get(url, ssl_context=ssl_context)
+        response = await session.get(url, ssl=ssl_context)
         await session.close()
         return await response.text()
     except Exception as e:
