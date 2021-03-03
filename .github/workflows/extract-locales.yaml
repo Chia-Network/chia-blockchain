@@ -24,8 +24,9 @@ jobs:
         run: npm install
 
       - name: Update source code
-        run: lingui extract
-        run: lingui compile
+        run: |
+          lingui extract
+          lingui compile
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v7
