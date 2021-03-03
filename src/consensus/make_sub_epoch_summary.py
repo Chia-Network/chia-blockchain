@@ -111,13 +111,6 @@ def next_sub_epoch_summary(
         constants, len(block.finished_sub_slots) > 0, prev_b, blocks
     )[0]
     overflow = is_overflow_block(constants, signage_point_index)
-    deficit = calculate_deficit(
-        constants,
-        uint32(prev_b.height + 1),
-        prev_b,
-        overflow,
-        len(block.finished_sub_slots),
-    )
     if (
         len(block.finished_sub_slots) > 0
         and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
@@ -125,6 +118,7 @@ def next_sub_epoch_summary(
         return None
 
     if can_finish_soon:
+        deficit: uint8 = uint8(0)  # Assume that our deficit will go to zero soon
         can_finish_se = True
         if height_can_be_first_in_epoch(constants, uint32(prev_b.height + 2)):
             can_finish_epoch = True
@@ -148,6 +142,14 @@ def next_sub_epoch_summary(
         else:
             can_finish_epoch = False
     else:
+        deficit = calculate_deficit(
+            constants,
+            uint32(prev_b.height + 1),
+            prev_b,
+            overflow,
+            len(block.finished_sub_slots),
+        )
+
         can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
             constants,
             blocks,
