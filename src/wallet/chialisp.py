@@ -34,7 +34,7 @@ def args(*path, p=1):
 
 
 def eval(code, env=args()):
-    return sexp(cons(code, env))
+    return sexp("a", code, env)
 
 
 def apply(name, argv):
@@ -68,12 +68,12 @@ def sha256(*argv):
 
 
 SHA256TREE_PROG = """
-((c (q ((c 2 (c 2 (c 3 (q ()))))))
-    (c (q ((c (i (l 5)
+(a (q (a 2 (c 2 (c 3 (q ())))))
+    (c (q (a (i (l 5)
                  (q (sha256 (q 2)
-                            ((c 2 (c 2 (c 9 (q ())))))
-                            ((c 2 (c 2 (c 13 (q ())))))))
-                 (q (sha256 (q 1) 5))) 1))) %s)))
+                            (a 2 (c 2 (c 9 (q ()))))
+                            (a 2 (c 2 (c 13 (q ()))))))
+                 (q (sha256 (q 1) 5))) 1)) %s))
 """
 
 

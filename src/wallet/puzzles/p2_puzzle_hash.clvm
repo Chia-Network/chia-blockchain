@@ -12,7 +12,7 @@
   )
 
   (if (= inner_puzzle_hash (sha256tree1 inner_puzzle))
-    ((c inner_puzzle inner_puzzle_solution))
+    (a inner_puzzle inner_puzzle_solution)
     (x)
   )
 )
