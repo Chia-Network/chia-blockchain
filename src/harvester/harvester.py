@@ -88,9 +88,7 @@ class Harvester:
                     "plot-seed": prover.get_id(),
                     "pool_public_key": plot_info.pool_public_key,
                     "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
-                    "farmer_public_key": plot_info.farmer_public_key,
                     "plot_public_key": plot_info.plot_public_key,
-                    "local_sk": plot_info.local_sk,
                     "file_size": plot_info.file_size,
                     "time_modified": plot_info.time_modified,
                 }

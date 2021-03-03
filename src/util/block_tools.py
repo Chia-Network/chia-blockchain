@@ -70,6 +70,9 @@ from src.wallet.derive_keys import (
 )
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 
+from src.plotting.plot_tools import parse_plot_info
+from src.wallet.derive_keys import master_sk_to_local_sk
+
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 2 ** 12,
@@ -217,9 +220,16 @@ class BlockTools:
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
         for _, plot_info in self.plots.items():
-            agg_pk = ProofOfSpace.generate_plot_public_key(plot_info.local_sk.get_g1(), plot_info.farmer_public_key)
+            # Look up local_sk from plot to save locked memory
+            (
+                pool_public_key_or_puzzle_hash,
+                farmer_public_key,
+                local_master_sk,
+            ) = parse_plot_info(plot_info.prover.get_memo())
+            local_sk = master_sk_to_local_sk(local_master_sk)
+            agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
             if agg_pk == plot_pk:
-                harv_share = AugSchemeMPL.sign(plot_info.local_sk, m, agg_pk)
+                harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 return AugSchemeMPL.aggregate([harv_share, farm_share])
 
@@ -892,9 +902,17 @@ class BlockTools:
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+
+                        # Look up local_sk from plot to save locked memory
+                        (
+                            pool_public_key_or_puzzle_hash,
+                            farmer_public_key,
+                            local_master_sk,
+                        ) = parse_plot_info(plot_info.prover.get_memo())
+                        local_sk = master_sk_to_local_sk(local_master_sk)
                         plot_pk = ProofOfSpace.generate_plot_public_key(
-                            plot_info.local_sk.get_g1(),
-                            plot_info.farmer_public_key,
+                            local_sk.get_g1(),
+                            farmer_public_key,
                         )
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,

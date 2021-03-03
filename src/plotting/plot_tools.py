@@ -22,9 +22,7 @@ class PlotInfo:
     prover: DiskProver
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
-    farmer_public_key: G1Element
     plot_public_key: G1Element
-    local_sk: PrivateKey
     file_size: int
     time_modified: float
 
@@ -238,9 +236,7 @@ def load_plots(
                     prover,
                     pool_public_key,
                     pool_contract_puzzle_hash,
-                    farmer_public_key,
                     plot_public_key,
-                    local_sk,
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )

@@ -21,6 +21,8 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint8, uint64, uint32
 
+from src.plotting.plot_tools import parse_plot_info
+from src.wallet.derive_keys import master_sk_to_local_sk
 
 class HarvesterAPI:
     harvester: Harvester
@@ -116,8 +118,15 @@ class HarvesterAPI:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}")
                                 continue
 
+                            # Look up local_sk from plot to save locked memory
+                            (
+                                pool_public_key_or_puzzle_hash,
+                                farmer_public_key,
+                                local_master_sk,
+                            ) = parse_plot_info(plot_info.prover.get_memo())
+                            local_sk = master_sk_to_local_sk(local_master_sk)
                             plot_public_key = ProofOfSpace.generate_plot_public_key(
-                                plot_info.local_sk.get_g1(), plot_info.farmer_public_key
+                                local_sk.get_g1(), farmer_public_key
                             )
                             responses.append(
                                 (
@@ -213,8 +222,15 @@ class HarvesterAPI:
             self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
             return
 
-        local_sk = plot_info.local_sk
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), plot_info.farmer_public_key)
+        # Look up local_sk from plot to save locked memory
+        (
+            pool_public_key_or_puzzle_hash,
+            farmer_public_key,
+            local_master_sk,
+        ) = parse_plot_info(plot_info.prover.get_memo())
+        local_sk = master_sk_to_local_sk(local_master_sk)
+
+        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
@@ -228,7 +244,7 @@ class HarvesterAPI:
             request.challenge_hash,
             request.sp_hash,
             local_sk.get_g1(),
-            plot_info.farmer_public_key,
+            farmer_public_key,
             message_signatures,
         )
 
