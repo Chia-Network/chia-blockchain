@@ -7,6 +7,8 @@ from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
 from src.util.bech32m import encode_puzzle_hash
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
@@ -67,8 +69,11 @@ def show_all_keys():
     """
     Prints all keys and mnemonics (if available).
     """
-
+    root_path = DEFAULT_ROOT_PATH
+    config = load_config(root_path, "config.yaml")
     private_keys = keychain.get_all_private_keys()
+    selected = config["selected_network"]
+    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     if len(private_keys) == 0:
         print("There are no saved private keys")
         return
@@ -89,7 +94,7 @@ def show_all_keys():
         )
         print(
             "First wallet address:",
-            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())),
+            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)

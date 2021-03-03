@@ -105,8 +105,8 @@ def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True):
     return ret
 
 
-def encode_puzzle_hash(puzzle_hash: bytes32) -> str:
-    encoded = bech32_encode("txch", convertbits(puzzle_hash, 8, 5))
+def encode_puzzle_hash(puzzle_hash: bytes32, prefix: str) -> str:
+    encoded = bech32_encode(prefix, convertbits(puzzle_hash, 8, 5))
     return encoded
 
 

@@ -6,19 +6,24 @@ self_hostname: &self_hostname "localhost"
 daemon_port: 55400
 
 network_overrides: &network_overrides
-  testnet0:
-    MIN_PLOT_SIZE: 18
-    GENESIS_CHALLENGE: "0000000000000000000000000000000000000000000000000000000000000000"
-    NETWORK: 1
-  testnet4:
-    MIN_PLOT_SIZE: 18
-    MIN_BLOCKS_PER_CHALLENGE_BLOCK: 12
-    GENESIS_CHALLENGE: "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a" # std_hash(b"4")
-    NETWORK: 4
-  testnet5:
-    GENESIS_CHALLENGE: "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d" # std_hash(b"5")
-    NETWORK: 5
-
+  constants:
+    mainnet:
+      NETWORK_TYPE: 0
+      GENESIS_CHALLENGE: null
+    testnet0:
+      MIN_PLOT_SIZE: 18
+      GENESIS_CHALLENGE: "0x0000000000000000000000000000000000000000000000000000000000000000"
+      NETWORK_TYPE: 1
+    testnet4:
+      GENESIS_CHALLENGE: "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a" # std_hash(b"4")
+      NETWORK_TYPE: 1
+  config:
+    mainnet:
+      address_prefix: "xch"
+    testnet0:
+      address_prefix: "txch"
+    testnet4:
+      address_prefix: "txch"
 
 selected_network: &selected_network "testnet4"
 

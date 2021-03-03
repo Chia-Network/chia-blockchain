@@ -78,7 +78,7 @@ class TestWalletRpc:
 
         client = await WalletRpcClient.create("localhost", test_rpc_port, bt.root_path, config)
         try:
-            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash())
+            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
             tx_amount = 15600000
             try:
                 await client.send_transaction("1", 100000000000000001, addr)
@@ -99,7 +99,7 @@ class TestWalletRpc:
             assert (await client.get_wallet_balance("1"))["confirmed_wallet_balance"] == initial_funds
 
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2))
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(1)
 
             async def eventual_balance():

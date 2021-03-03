@@ -63,12 +63,6 @@ async def default_20000_blocks():
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
 
 
-@pytest.fixture(scope="session")
-async def default_1000_blocks_compact():
-    return persistent_blocks(1000, f"test_blocks_10000_{block_format_version}.db", normalized_to_identity=True)
-
-
-@pytest.fixture(scope="session")
 async def default_10000_blocks_compact():
     return persistent_blocks(10000, f"test_blocks_10000_compact_{block_format_version}.db", normalized_to_identity=True)
 
