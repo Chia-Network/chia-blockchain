@@ -444,11 +444,12 @@ class Timelord:
                     self.unfinished_blocks.remove(block)
                     self.total_infused += 1
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
-                    if not self.last_state.can_infuse_block():
-                        log.warning("Too many blocks, cannot infuse, discarding")
-                        # Too many blocks
-                        return
+
                     overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
+
+                    if not self.last_state.can_infuse_block(overflow):
+                        log.warning("Too many blocks, or overflow in new epoch, cannot infuse, discarding")
+                        return
 
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
@@ -540,8 +541,15 @@ class Timelord:
 
                     if self.last_state.get_infused_sub_epoch_summary() is not None:
                         new_sub_epoch_summary = None
+                        passed_ses_height_but_not_yet_included = False
                     else:
                         new_sub_epoch_summary = block.sub_epoch_summary
+                        if new_reward_chain_block.height % self.constants.SUB_EPOCH_BLOCKS == 0:
+                            passed_ses_height_but_not_yet_included = True
+                        else:
+                            passed_ses_height_but_not_yet_included = (
+                                self.last_state.get_passed_ses_height_but_not_yet_included()
+                            )
 
                     self.new_peak = timelord_protocol.NewPeakTimelord(
                         new_reward_chain_block,
@@ -551,6 +559,7 @@ class Timelord:
                         new_sub_epoch_summary,
                         self.last_state.reward_challenge_cache,
                         last_csb_or_eos,
+                        passed_ses_height_but_not_yet_included,
                     )
                     if self.total_unfinished > 0:
                         infusion_rate = int(self.total_infused / self.total_unfinished * 100)

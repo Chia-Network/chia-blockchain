@@ -15,8 +15,7 @@ from src.consensus.block_creation import unfinished_block_to_full_block
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
-    get_sub_slot_iters_and_difficulty,
-    can_finish_sub_and_full_epoch,
+    get_next_sub_slot_iters_and_difficulty,
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
@@ -366,6 +365,16 @@ class FullNode:
                 last_csb_or_eos = curr.total_iters
             else:
                 last_csb_or_eos = curr.ip_sub_slot_total_iters(self.constants)
+
+            curr = peak
+            passed_ses_height_but_not_yet_included = True
+            while (curr.height % self.constants.SUB_EPOCH_BLOCKS) != 0:
+                if curr.sub_epoch_summary_included:
+                    passed_ses_height_but_not_yet_included = False
+                curr = self.blockchain.block_record(curr.prev_hash)
+            if curr.sub_epoch_summary_included or curr.height == 0:
+                passed_ses_height_but_not_yet_included = False
+
             timelord_new_peak: timelord_protocol.NewPeakTimelord = timelord_protocol.NewPeakTimelord(
                 peak_block.reward_chain_block,
                 difficulty,
@@ -374,6 +383,7 @@ class FullNode:
                 ses,
                 recent_rc,
                 last_csb_or_eos,
+                passed_ses_height_but_not_yet_included,
             )
 
             msg = make_msg(ProtocolMessageTypes.new_peak_timelord, timelord_new_peak)
@@ -555,17 +565,18 @@ class FullNode:
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
-                await weight_proof_peer.close()
+                await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.height != heaviest_peak_height:
-                await weight_proof_peer.close()
+                await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.weight != heaviest_peak_weight:
-                await weight_proof_peer.close()
+                await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
             validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
             if not validated:
+                await weight_proof_peer.close(600)
                 raise ValueError("Weight proof validation failed")
 
             self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
@@ -987,46 +998,18 @@ class FullNode:
         else:
             prev_b = self.blockchain.block_record(block.prev_header_hash)
 
-        is_overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
-
         # Count the blocks in sub slot, and check if it's a new epoch
-        first_ss_new_epoch = False
         if len(block.finished_sub_slots) > 0:
             num_blocks_in_ss = 1  # Curr
-            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                first_ss_new_epoch = True
         else:
             curr = self.blockchain.try_block_record(block.prev_header_hash)
             num_blocks_in_ss = 2  # Curr and prev
             while (curr is not None) and not curr.first_in_sub_slot:
                 curr = self.blockchain.try_block_record(curr.prev_hash)
                 num_blocks_in_ss += 1
-            if (
-                curr is not None
-                and curr.first_in_sub_slot
-                and curr.sub_epoch_summary_included is not None
-                and curr.sub_epoch_summary_included.new_difficulty is not None
-            ):
-                first_ss_new_epoch = True
-            elif prev_b is not None:
-                # If the prev can finish an epoch, then we are in a new epoch
-                prev_prev = self.blockchain.try_block_record(prev_b.prev_hash)
-                _, can_finish_epoch = can_finish_sub_and_full_epoch(
-                    self.constants,
-                    prev_b.height,
-                    prev_b.deficit,
-                    self.blockchain,
-                    prev_b.header_hash if prev_prev is not None else None,
-                    False,
-                )
-                if can_finish_epoch:
-                    first_ss_new_epoch = True
 
-        if is_overflow and first_ss_new_epoch:
-            # No overflow blocks in new epoch
-            return
         if num_blocks_in_ss > self.constants.MAX_SUB_SLOT_BLOCKS:
-            # TODO: count overflow blocks separately (also in validation)
+            # TODO: potentially allow overflow blocks here, which count for the next slot
             self.log.warning("Too many blocks added, not adding block")
             return
 
@@ -1061,9 +1044,9 @@ class FullNode:
         else:
             self.log.info(f"Added unfinished_block {block_hash}, not farmed")
 
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
-            block,
+            len(block.finished_sub_slots) > 0,
             prev_b,
             self.blockchain,
         )
@@ -1125,8 +1108,8 @@ class FullNode:
         if target_rc_hash == self.constants.GENESIS_CHALLENGE:
             prev_b = None
         else:
-            # Find the prev block, starts looking backwards from the peak
-            # TODO: should we look at end of slots too?
+            # Find the prev block, starts looking backwards from the peak. target_rc_hash must be the hash of a block
+            # and not an end of slot (since we just looked through the slots and backtracked)
             curr: Optional[BlockRecord] = self.blockchain.get_peak()
 
             for _ in range(10):
@@ -1155,9 +1138,9 @@ class FullNode:
             unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
             overflow,
         )
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
-            dataclasses.replace(unfinished_block, finished_sub_slots=finished_sub_slots),
+            len(finished_sub_slots) > 0,
             prev_b,
             self.blockchain,
         )

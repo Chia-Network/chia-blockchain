@@ -9,9 +9,7 @@ from typing import Dict, List, Optional, Tuple, Callable, Any, Set
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
-    get_next_difficulty,
-    get_next_sub_slot_iters,
-    get_sub_slot_iters_and_difficulty,
+    get_next_sub_slot_iters_and_difficulty,
 )
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
@@ -185,7 +183,9 @@ class WalletBlockchain(BlockchainInterface):
             prev_b: Optional[BlockRecord] = None
         else:
             prev_b = self.block_record(block.prev_header_hash)
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(self.constants, block, prev_b, self)
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+            self.constants, len(block.finished_sub_slots) > 0, prev_b, self
+        )
 
         if trusted is False and pre_validation_result is None:
             required_iters, error = validate_finished_header_block(
@@ -322,32 +322,14 @@ class WalletBlockchain(BlockchainInterface):
         curr = self.block_record(header_hash)
         if curr.height <= 2:
             return self.constants.DIFFICULTY_STARTING
-        return get_next_difficulty(
-            self.constants,
-            self,
-            header_hash,
-            curr.height,
-            uint64(curr.weight - self.__block_records[curr.prev_hash].weight),
-            curr.deficit,
-            new_slot,
-            curr.sp_total_iters(self.constants),
-        )
+        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[1]
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_block(header_hash)
         curr = self.block_record(header_hash)
         if curr.height <= 2:
             return self.constants.SUB_SLOT_ITERS_STARTING
-        return get_next_sub_slot_iters(
-            self.constants,
-            self,
-            header_hash,
-            curr.height,
-            curr.sub_slot_iters,
-            curr.deficit,
-            new_slot,
-            curr.sp_total_iters(self.constants),
-        )
+        return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
 
     async def pre_validate_blocks_multiprocessing(
         self,

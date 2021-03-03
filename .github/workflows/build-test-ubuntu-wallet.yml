@@ -14,7 +14,7 @@ jobs:
   build:
     name: Ubuntu Wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -65,7 +65,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.15.0'
+        ref: '0.17.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -102,9 +102,9 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm -s -v --durations 0
+        ./venv/bin/py.test tests/clvm -v --durations 0
 
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet -s -v --durations 0
+        ./venv/bin/py.test tests/wallet -v --durations 0
