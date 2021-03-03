@@ -375,20 +375,25 @@ class WeightProofHandler:
         log.debug(f"slot end vdf start height {start_height}")
         curr = header_blocks[self.blockchain.height_to_hash(start_height)]
         sub_slots_data: List[SubSlotData] = []
+        tmp_sub_slots_data: List[SubSlotData] = []
         while not blocks[curr.header_hash].is_challenge_block(self.constants):
             if curr.first_in_sub_slot:
+                # if not blue boxed
+                if not blue_boxed_end_of_slot(curr.finished_sub_slots[0]):
+                    sub_slots_data.extend(tmp_sub_slots_data)
                 # add collected vdfs
                 for idx, sub_slot in enumerate(curr.finished_sub_slots):
                     prev_rec = blocks[curr.prev_header_hash]
                     eos_vdf_iters = prev_rec.sub_slot_iters
                     if idx == 0:
                         eos_vdf_iters = uint64(prev_rec.sub_slot_iters - prev_rec.ip_iters(self.constants))
-
-                    assert sub_slot.infused_challenge_chain
                     sub_slots_data.append(handle_end_of_slot(sub_slot, eos_vdf_iters))
-            sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
+                tmp_sub_slots_data: List[SubSlotData] = []
+            tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+        if len(tmp_sub_slots_data) > 0:
+            sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
         return sub_slots_data, curr.height
 
@@ -1324,3 +1329,10 @@ def get_sp_total_iters(constants: ConsensusConstants, is_overflow: bool, ssi: ui
     if is_overflow:
         sp_sub_slot_total_iters = uint128(sp_sub_slot_total_iters - ssi)
     return sp_sub_slot_total_iters + sp_iters
+
+
+def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
+    if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+        if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
+            return True
+    return False
