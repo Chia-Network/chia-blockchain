@@ -47,9 +47,9 @@
 ;
 ; TLDR:
 ;  I_k : coins
-;  A_k : amount coin k is contributes
+;  A_k : amount coin k contributes
 ;  O_k : amount coin k spend
-;  D_k : debt coin k incurs (A - O)
+;  D_k : difference/delta that coin k incurs (A - O)
 ;  S_k : subtotal of debts D_1 + D_2 ... + D_k
 ;  Y_k : announcements created by coin k commiting to I_{k-1}, I_k, S_k
 ;
@@ -219,7 +219,7 @@
      ;; calculate the hash of an announcement
      (defun-inline calculate-annoucement-id (this-coin-info this-subtotal next-coin-info)
        ; NOTE: the next line containts a bug, as sha256tree1 ignores `this-subtotal`
-       (sha256 (coin-id-for-coin next-coin-info) (sha256tree1 this-coin-info this-subtotal))
+       (sha256 (coin-id-for-coin next-coin-info) (sha256tree1 (list this-coin-info this-subtotal)))
      )
 
      ;; create the `ASSERT_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
@@ -235,7 +235,7 @@
      ;; here we commit to I_{k-1} and S_k
      (defun-inline create-announcement-condition (prev-coin-info prev-subtotal)
        (list CREATE_ANNOUNCEMENT
-             (sha256tree1 prev-coin-info prev-subtotal)
+             (sha256tree1 (list prev-coin-info prev-subtotal))
        )
       )
 
