@@ -44,6 +44,7 @@ class LastState:
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
         self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
+        self.new_epoch = False
 
     def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
         if isinstance(state, timelord_protocol.NewPeakTimelord):
@@ -68,8 +69,8 @@ class LastState:
                 self.last_block_total_iters = self.total_iters
             self.reward_challenge_cache = state.previous_reward_challenges
             self.last_challenge_sb_or_eos_total_iters = self.peak.last_challenge_sb_or_eos_total_iters
-
-        if isinstance(state, EndOfSubSlotBundle):
+            self.new_epoch = False
+        elif isinstance(state, EndOfSubSlotBundle):
             self.state_type = StateType.END_OF_SUB_SLOT
             if self.peak is not None:
                 self.total_iters = uint128(self.total_iters - self.get_last_ip() + self.sub_slot_iters)
@@ -83,7 +84,12 @@ class LastState:
                 assert state.challenge_chain.new_sub_slot_iters is not None
                 self.difficulty = state.challenge_chain.new_difficulty
                 self.sub_slot_iters = state.challenge_chain.new_sub_slot_iters
+                self.new_epoch = True
+            else:
+                self.new_epoch = False
             self.last_challenge_sb_or_eos_total_iters = self.total_iters
+        else:
+            self.new_epoch = False
 
         self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
         log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
@@ -93,7 +99,10 @@ class LastState:
     def get_sub_slot_iters(self) -> uint64:
         return self.sub_slot_iters
 
-    def can_infuse_block(self) -> bool:
+    def can_infuse_block(self, overflow: bool) -> bool:
+        if overflow and self.new_epoch:
+            # No overflows in new epoch
+            return False
         if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:
             return True
         ss_start_iters = self.get_total_iters() - self.get_last_ip()

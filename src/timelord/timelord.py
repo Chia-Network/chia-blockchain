@@ -444,11 +444,12 @@ class Timelord:
                     self.unfinished_blocks.remove(block)
                     self.total_infused += 1
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
-                    if not self.last_state.can_infuse_block():
-                        log.warning("Too many blocks, cannot infuse, discarding")
-                        # Too many blocks
-                        return
+
                     overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
+
+                    if not self.last_state.can_infuse_block(overflow):
+                        log.warning("Too many blocks, or overflow in new epoch, cannot infuse, discarding")
+                        return
 
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(

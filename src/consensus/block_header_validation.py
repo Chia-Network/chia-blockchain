@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch_finished
+from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from src.consensus.get_block_challenge import (
     get_block_challenge,
     final_eos_is_already_included,
@@ -88,10 +88,13 @@ def validate_unfinished_header_block(
         assert prev_b is not None
         height = uint32(prev_b.height + 1)
         if new_sub_slot:
-            can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch_finished(
+            can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
                 constants,
                 blocks,
-                prev_b,
+                prev_b.height,
+                prev_b.prev_hash,
+                prev_b.deficit,
+                prev_b.sub_epoch_summary_included is not None,
             )
         else:
             can_finish_se = False

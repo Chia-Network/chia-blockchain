@@ -16,7 +16,6 @@ from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
     get_next_sub_slot_iters_and_difficulty,
-    can_finish_sub_and_full_epoch_unfinished,
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
@@ -988,43 +987,16 @@ class FullNode:
         else:
             prev_b = self.blockchain.block_record(block.prev_header_hash)
 
-        is_overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
-
         # Count the blocks in sub slot, and check if it's a new epoch
-        first_ss_new_epoch = False
         if len(block.finished_sub_slots) > 0:
             num_blocks_in_ss = 1  # Curr
-            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                first_ss_new_epoch = True
         else:
             curr = self.blockchain.try_block_record(block.prev_header_hash)
             num_blocks_in_ss = 2  # Curr and prev
             while (curr is not None) and not curr.first_in_sub_slot:
                 curr = self.blockchain.try_block_record(curr.prev_hash)
                 num_blocks_in_ss += 1
-            if (
-                curr is not None
-                and curr.first_in_sub_slot
-                and curr.sub_epoch_summary_included is not None
-                and curr.sub_epoch_summary_included.new_difficulty is not None
-            ):
-                first_ss_new_epoch = True
-            elif prev_b is not None:
-                # If the prev can finish an epoch, then we are in a new epoch
-                prev_prev = self.blockchain.try_block_record(prev_b.prev_hash)
-                _, can_finish_epoch = can_finish_sub_and_full_epoch_unfinished(
-                    self.constants,
-                    self.blockchain,
-                    prev_b.height,
-                    prev_b.deficit,
-                    prev_b.header_hash if prev_prev is not None else None,
-                )
-                if can_finish_epoch:
-                    first_ss_new_epoch = True
 
-        if is_overflow and first_ss_new_epoch:
-            # No overflow blocks in new epoch
-            return
         if num_blocks_in_ss > self.constants.MAX_SUB_SLOT_BLOCKS:
             # TODO: count overflow blocks separately (also in validation)
             self.log.warning("Too many blocks added, not adding block")

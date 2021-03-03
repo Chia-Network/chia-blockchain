@@ -12,8 +12,8 @@ from src.consensus.difficulty_adjustment import (
     get_next_sub_slot_iters_and_difficulty,
     _get_next_difficulty,
     _get_next_sub_slot_iters,
-    can_finish_sub_and_full_epoch_unfinished,
-    can_finish_soon_sub_and_full_epoch,
+    height_can_be_first_in_epoch,
+    can_finish_sub_and_full_epoch,
 )
 from src.consensus.block_record import BlockRecord
 from src.types.full_block import FullBlock
@@ -125,19 +125,36 @@ def next_sub_epoch_summary(
         return None
 
     if can_finish_soon:
-        can_finish_se, can_finish_epoch = can_finish_soon_sub_and_full_epoch(
-            constants,
-            blocks,
-            uint32(prev_b.height + 1),
-            prev_b.header_hash if prev_b is not None else None,
-        )
+        can_finish_se = True
+        if height_can_be_first_in_epoch(constants, uint32(prev_b.height + 2)):
+            can_finish_epoch = True
+            if (prev_b.height + 2) % constants.SUB_EPOCH_BLOCKS > 1:
+                curr: BlockRecord = prev_b
+                while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
+                    if (
+                        curr.sub_epoch_summary_included is not None
+                        and curr.sub_epoch_summary_included.new_difficulty is not None
+                    ):
+                        can_finish_epoch = False
+                    curr = blocks.block_record(curr.prev_hash)
+
+                if (
+                    curr.sub_epoch_summary_included is not None
+                    and curr.sub_epoch_summary_included.new_difficulty is not None
+                ):
+                    can_finish_epoch = False
+        elif height_can_be_first_in_epoch(constants, uint32(prev_b.height + constants.MAX_SUB_SLOT_BLOCKS + 2)):
+            can_finish_epoch = True
+        else:
+            can_finish_epoch = False
     else:
-        can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch_unfinished(
+        can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
             constants,
             blocks,
             uint32(prev_b.height + 1),
-            deficit,
             prev_b.header_hash if prev_b is not None else None,
+            deficit,
+            False,
         )
 
     # can't finish se, no summary
@@ -159,6 +176,7 @@ def next_sub_epoch_summary(
             uint32(prev_b.height + 1),
             uint64(prev_b.weight - blocks.block_record(prev_b.prev_hash).weight),
             deficit,
+            False,  # Already checked above
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             True,
@@ -170,6 +188,7 @@ def next_sub_epoch_summary(
             uint32(prev_b.height + 1),
             sub_slot_iters,
             deficit,
+            False,  # Already checked above
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             True,
