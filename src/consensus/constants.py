@@ -60,7 +60,7 @@ class ConsensusConstants:
     MAX_BLOCK_COUNT_PER_REQUESTS: uint32
     INITIAL_FREEZE_PERIOD: uint32
     BLOCKS_CACHE_SIZE: uint32
-    NETWORK: int
+    NETWORK_TYPE: int
     MAX_GENERATOR_SIZE: uint32
 
     def replace(self, **changes):
