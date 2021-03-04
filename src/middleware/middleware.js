@@ -3,19 +3,10 @@ import { i18n } from '@lingui/core';
 import * as actions from '../modules/websocket';
 import {
   registerService,
-  startService,
-  startServiceTest,
   getGenesisChallengeStatus,
 } from '../modules/daemon_messages';
 import { handle_message } from './middleware_api';
-import {
-  service_wallet,
-  service_full_node,
-  service_simulator,
-  service_plotter,
-  service_farmer,
-  service_harvester,
-} from '../util/service_names';
+import { service_plotter } from '../util/service_names';
 
 const crypto = require('crypto');
 
