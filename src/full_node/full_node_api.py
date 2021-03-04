@@ -649,7 +649,7 @@ class FullNodeAPI:
                     return request.challenge_chain_sp_signature
                 elif to_sign == request.reward_chain_sp:
                     return request.reward_chain_sp_signature
-                return G2Element.infinity()
+                return G2Element()
 
             def get_pool_sig(_1, _2) -> Optional[G2Element]:
                 return request.pool_signature

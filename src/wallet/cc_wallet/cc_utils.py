@@ -20,7 +20,7 @@ from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
 )
 
 
-NULL_SIGNATURE = G2Element.generator() * 0
+NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 

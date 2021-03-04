@@ -69,7 +69,7 @@ def do_test_spend(
     # spend it
     coin_solution = CoinSolution(coin, puzzle_reveal, solution)
 
-    spend_bundle = SpendBundle([coin_solution], G2Element.infinity())
+    spend_bundle = SpendBundle([coin_solution], G2Element())
     coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time)
 
     # ensure all outputs are there
