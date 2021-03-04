@@ -475,9 +475,9 @@ class WeightProofHandler:
             log.error("weight proof failed sub epoch data validation")
             return False, uint32(0)
 
-        if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
-            log.error("weight proof failed sub epoch data validation")
-            return False, uint32(0)
+        # if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
+        #     log.error("weight proof failed sub epoch data validation")
+        #     return False, uint32(0)
 
         executor = ProcessPoolExecutor(1)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
