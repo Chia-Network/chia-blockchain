@@ -77,6 +77,7 @@ kwargs = dict(
         "src.wallet.util",
         "src.wallet.trading",
         "src.ssl",
+        "mozilla-ca",
     ],
     entry_points={
         "console_scripts": [
@@ -94,6 +95,7 @@ kwargs = dict(
     package_data={
         "src.util": ["initial-*.yaml", "english.txt"],
         "src.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
+        "mozilla-ca": ["cacert.pem"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),

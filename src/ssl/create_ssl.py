@@ -17,8 +17,8 @@ def get_chia_ca_crt_key() -> Tuple[Any, Any]:
     return crt, key
 
 
-def get_dst_ca_crt() -> bytes:
-    crt = pkg_resources.resource_string(__name__, "dst_root_ca.pem")
+def get_mozzila_ca_crt() -> str:
+    crt = pkg_resources.resource_filename("mozilla-ca", "cacert.pem")
     return crt
 
 

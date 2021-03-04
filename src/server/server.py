@@ -6,7 +6,6 @@ from ipaddress import ip_address, IPv6Address
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, List, Dict, Callable, Optional, Set, Tuple
-
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
 from aiohttp import web, ClientTimeout, client_exceptions, ClientSession, WSCloseCode
@@ -38,9 +37,9 @@ def ssl_context_for_server(
 
 
 def ssl_context_for_root(
-    ca_cert: str,
+    ca_cert_file: str,
 ) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cadata=ca_cert)
+    ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
 
 
