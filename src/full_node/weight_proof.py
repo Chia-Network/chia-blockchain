@@ -451,7 +451,7 @@ class WeightProofHandler:
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
         if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
-            log.error("weight proof failed sub epoch data validation")
+            log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
         if not _validate_segments(constants, wp_bytes, summary_bytes):
