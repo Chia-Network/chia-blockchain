@@ -410,8 +410,7 @@ class WalletNode:
             header_block = response.header_block
 
             if (curr_peak is None and header_block.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
-                curr_peak is not None
-                and curr_peak.height > header_block.height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS
+                curr_peak is not None and curr_peak.height > header_block.height - 200
             ):
                 top = header_block
                 blocks = [top]
