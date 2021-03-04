@@ -29,10 +29,10 @@ testnet_kwargs = {
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     "GENESIS_CHALLENGE": bytes32([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "bc4fd6c394fe90c6097afbfa6ab5927743e2210ecf689dad477be8eb408745d5"
+        "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "4ad98e66a019f11b60a8279514d13105b65588865e2a8e794b5b73d5646174f6"
+        "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
@@ -54,10 +54,10 @@ testnet_kwargs = {
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     "MAX_BLOCK_COST_CLVM": 23077872,
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "BLOCKS_CACHE_SIZE": (384 * 2) + (128 * 3),  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 3*MAX_SUB_SLOT_BLOCKS"
+    "BLOCKS_CACHE_SIZE": (384 * 2) + (128 * 4),  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 4*MAX_SUB_SLOT_BLOCKS"
     "WEIGHT_PROOF_RECENT_BLOCKS": 800,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
-    "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 10000 blocks
+    "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 5000 blocks
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
 }
