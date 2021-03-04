@@ -12,11 +12,11 @@ import uuid
 import time
 from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
 from concurrent.futures import ThreadPoolExecutor
-
 from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
-from src.server.server import ssl_context_for_server
+from src.server.server import ssl_context_for_server, ssl_context_for_root
+from src.ssl.create_ssl import get_dst_ca_crt
 from src.util.setproctitle import setproctitle
 from src.util.validate_alert import validate_alert
 from src.util.ws_message import format_response, create_payload
@@ -49,7 +49,9 @@ service_plotter = "chia plots create"
 async def fetch(url: str):
     session = ClientSession()
     try:
-        response = await session.get(url)
+        dst_root = get_dst_ca_crt()
+        ssl_context = ssl_context_for_root(dst_root.decode())
+        response = await session.get(url, ssl=ssl_context)
         await session.close()
         return await response.text()
     except Exception as e:

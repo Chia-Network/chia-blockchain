@@ -37,6 +37,13 @@ def ssl_context_for_server(
     return ssl_context
 
 
+def ssl_context_for_root(
+    ca_cert: str,
+) -> Optional[ssl.SSLContext]:
+    ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cadata=ca_cert)
+    return ssl_context
+
+
 def ssl_context_for_client(
     ca_cert: Path,
     ca_key: Path,

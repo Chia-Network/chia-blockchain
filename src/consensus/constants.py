@@ -72,7 +72,7 @@ class ConsensusConstants:
         """
 
         for k, v in changes.items():
-            if isinstance(v, str) and v.startswith("0x"):
+            if isinstance(v, str):
                 changes[k] = hexstr_to_bytes(v)
 
         return dataclasses.replace(self, **changes)
