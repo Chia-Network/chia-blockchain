@@ -24,7 +24,7 @@ class TestDaemonAlerts:
     async def test_alert(self, get_daemon):
         daemon = get_daemon
         selected = daemon.net_config["selected_network"]
-        assert daemon.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] is None
+        assert daemon.net_config["network_overrides"]["constants"][selected]["GENESIS_CHALLENGE"] is None
         alert_file_path = daemon.root_path / "alert.txt"
 
         alert_server = await AlertServer.create_alert_server(alert_file_path, 59000)
@@ -33,7 +33,7 @@ class TestDaemonAlerts:
         expected_genesis = None
 
         def check_genesis(expected):
-            return daemon.net_config["network_overrides"][selected]["GENESIS_CHALLENGE"] == expected
+            return daemon.net_config["network_overrides"]["constants"][selected]["GENESIS_CHALLENGE"] == expected
 
         await asyncio.sleep(10)
         await time_out_assert(15, check_genesis, True, expected_genesis)
