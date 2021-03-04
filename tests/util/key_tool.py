@@ -1,6 +1,6 @@
 from typing import List
 
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 from src.util.condition_tools import (
     conditions_by_opcode,
@@ -9,9 +9,7 @@ from src.util.condition_tools import (
 )
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
-
-
-GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
+from tests.core.make_block_generator import int_to_public_key, GROUP_ORDER
 
 
 class KeyTool(dict):
@@ -21,7 +19,7 @@ class KeyTool(dict):
 
     def add_secret_exponents(self, secret_exponents: List[int]) -> None:
         for _ in secret_exponents:
-            self[bytes(G1Element.generator() * _)] = _ % GROUP_ORDER
+            self[bytes(int_to_public_key(_))] = _ % GROUP_ORDER
 
     def sign(self, public_key: bytes, message_hash: bytes32) -> G2Element:
         secret_exponent = self.get(public_key)
