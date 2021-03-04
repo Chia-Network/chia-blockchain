@@ -49,5 +49,5 @@ def make_block_generator(count: int) -> SerializedProgram:
         coin_solution = CoinSolution(coin, puzzle_reveal, solution)
         coin_solutions.append(coin_solution)
 
-    spend_bundle = SpendBundle(coin_solutions, blspy.G2Element.infinity())
+    spend_bundle = SpendBundle(coin_solutions, blspy.G2Element())
     return best_solution_program(spend_bundle)
