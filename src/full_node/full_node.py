@@ -587,7 +587,12 @@ class FullNode:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
-            validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
+            try:
+                validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
+            except Exception as e:
+                await weight_proof_peer.close(600)
+                raise ValueError(f"Weight proof validation threw an error {e}")
+
             if not validated:
                 await weight_proof_peer.close(600)
                 raise ValueError("Weight proof validation failed")
