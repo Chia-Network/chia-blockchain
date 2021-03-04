@@ -16,7 +16,7 @@ from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketS
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server, ssl_context_for_root
-from src.ssl.create_ssl import get_dst_ca_crt
+from src.ssl.create_ssl import get_mozzila_ca_crt
 from src.util.setproctitle import setproctitle
 from src.util.validate_alert import validate_alert
 from src.util.ws_message import format_response, create_payload
@@ -49,8 +49,8 @@ service_plotter = "chia plots create"
 async def fetch(url: str):
     session = ClientSession()
     try:
-        dst_root = get_dst_ca_crt()
-        ssl_context = ssl_context_for_root(dst_root.decode())
+        mozzila_root = get_mozzila_ca_crt()
+        ssl_context = ssl_context_for_root(mozzila_root)
         response = await session.get(url, ssl=ssl_context)
         await session.close()
         return await response.text()

@@ -7,7 +7,7 @@ from blspy import PublicKeyMPL, SignatureMPL, AugSchemeMPL, PrivateKey
 from cryptography.fernet import Fernet
 
 from src.server.server import ssl_context_for_root
-from src.ssl.create_ssl import get_dst_ca_crt
+from src.ssl.create_ssl import get_mozzila_ca_crt
 from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
 from src.wallet.derive_keys import master_sk_to_backup_sk
@@ -72,8 +72,8 @@ def get_backup_info(file_path, private_key):
 
 
 async def post(session: aiohttp.ClientSession, url: str, data: Any):
-    dst_root = get_dst_ca_crt()
-    ssl_context = ssl_context_for_root(dst_root.decode())
+    mozzila_root = get_mozzila_ca_crt()
+    ssl_context = ssl_context_for_root(mozzila_root)
     response = await session.post(url, json=data, ssl=ssl_context)
     return await response.json()
 
