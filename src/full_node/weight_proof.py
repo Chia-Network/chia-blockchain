@@ -481,17 +481,17 @@ class WeightProofHandler:
 
         executor = ProcessPoolExecutor(1)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
-        segment_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_segments, constants, wp_bytes, summary_bytes
-        )
+        # segment_validation_task = asyncio.get_running_loop().run_in_executor(
+        #     executor, _validate_segments, constants, wp_bytes, summary_bytes
+        # )
 
         recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
             executor, _validate_recent_blocks, constants, wp_bytes, summary_bytes
         )
 
-        valid_segments = await segment_validation_task
+        # valid_segments = await segment_validation_task
         valid_recent_blocks = await recent_blocks_validation_task
-        if not (valid_segments and valid_recent_blocks):
+        if valid_recent_blocks:
             return False, uint32(0)
 
         return True, self.get_fork_point(summaries)
