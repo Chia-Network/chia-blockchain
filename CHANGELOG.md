@@ -21,15 +21,15 @@ for setuptools_scm/PEP 440 reasons.
 
 ## Changed
 
-- Sub slots now require 16 blocks instead of 12.
 - Testnets and mainnet now set their minimum `k` size and enforce it. RC5 testnet will reject plots of size less than k=32.
-- Thanks to @xdustinface of Dash, the BlS Signature library has been updated to 0.9 with clean-ups and some speed-ups. This changed how the G2 infinity element was handled and we now manage it inside of chia-blockchain, etc., instead of in blspy.
+- Sub slots now require 16 blocks instead of 12.
+- Thanks to @xdustinface of Dash, the BlS Signature library has been updated to 0.9 with clean ups and some speed ups. This changed how the G2 infinity element was handled and we now manage it inside of chia-blockchain, etc., instead of in blspy.
 - We have updated the display of peer nodes and moved adding a peer to it's own pop up in the GUI.
 - Block searching in the GUI has been improved.
 - @jespino added i18n support and refactored how locales are loaded in the GUI. Additionally he moved more strings into the translation infrastructure for translators.
-- In chiavdf we change n-Wesolowski proofs to include B instead of y in segments. Proof segments now have the form (iters, B, proof) instead of (iters, y, proof). This reduces proof segment size from 208 to 141 bytes.
+- In chiavdf we changed n-Wesolowski proofs to include B instead of y in segments. Proof segments now have the form (iters, B, proof) instead of (iters, y, proof). This reduces proof segment size from 208 to 141 bytes.
 - The new chiavdf proof format is not compatible with the old one, however zero-Wesolowski proofs are not affected as they have zero proof segments and consist only of (y, proof).
-- We made two HashPrime optimizations in chiavdf. This forces numbers being tested for primality to be odd and avoids an unnecessary update of the sprout vector by stopping after the first non-zero value. This is a breaking change as it changes the prime numbers generated from a given seed.
+- We made two HashPrime optimizations in chiavdf. This forces numbers being tested for primality to be odd and avoids an unnecessary update of the sprout vector by stopping after the first non-zero value. This is a breaking change as it changes the prime numbers generated from a given seed. We believe this is the final breaking change for chiavdf.
 - chiabip158 was set to a gold 1.0 version.
 - Comments to Chialisp and clvm source have been updated for all of the Chialisp changes over the proceeding three weeks.
 - And thanks yet again to @jespino for a host of PRs to add more detailed typing to various components in chia-blockchain.
