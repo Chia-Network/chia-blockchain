@@ -18,6 +18,8 @@ if [ "$(uname -m)" = "armv7l" ]; then
 	echo "Exiting."
 	exit 1
 fi
+# get submodules
+git submodule update --init --recursive
 
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
