@@ -450,6 +450,10 @@ class WeightProofHandler:
             return False, uint32(0)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
+        if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
+            log.error("failed weight proof sub epoch sample validation")
+            return False, uint32(0)
+
         if not _validate_segments(constants, wp_bytes, summary_bytes):
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
@@ -472,7 +476,7 @@ class WeightProofHandler:
             return False, uint32(0)
 
         if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
-            log.error("weight proof failed sub epoch data validation")
+            log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
         executor = ProcessPoolExecutor(1)
@@ -485,26 +489,36 @@ class WeightProofHandler:
             executor, _validate_recent_blocks, constants, wp_bytes, summary_bytes
         )
 
-        valid_segments = await segment_validation_task
-        valid_recent_blocks = await recent_blocks_validation_task
-        if not (valid_segments and valid_recent_blocks):
+        valid_segment_task = segment_validation_task
+        valid_recent_blocks_task = recent_blocks_validation_task
+        valid_recent_blocks = await valid_recent_blocks_task
+        if not valid_recent_blocks:
+            log.error("failed validating weight proof recent blocks")
+            return False, uint32(0)
+
+        valid_segments = await valid_segment_task
+        if not valid_segments:
+            log.error("failed validating weight proof sub epoch segments")
             return False, uint32(0)
 
         return True, self.get_fork_point(summaries)
 
-    async def validate_sub_epoch_sampling(self, sub_epoch_weight_list, weight_proof):
+    def validate_sub_epoch_sampling(self, sub_epoch_weight_list, weight_proof):
         tip = weight_proof.recent_chain_data[-1]
-        weight_to_check = _get_weights_for_sampling(random.Random(tip), tip.weight, weight_proof.recent_chain_data)
+        weight_to_check = _get_weights_for_sampling(
+            random.Random(tip.header_hash), tip.weight, weight_proof.recent_chain_data
+        )
         sampled_sub_epochs: dict[int, bool] = {}
-        for idx in range(1, len(weight_to_check) - 1):
+        for idx in range(1, len(sub_epoch_weight_list)):
             if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
                 sampled_sub_epochs[idx - 1] = True
                 if len(sampled_sub_epochs) == WeightProofHandler.MAX_SAMPLES:
                     break
         curr_sub_epoch_n = -1
-        for sub_epoch_segment in weight_proof.sub_epochs:
+        for sub_epoch_segment in weight_proof.sub_epoch_segments:
             if curr_sub_epoch_n < sub_epoch_segment.sub_epoch_n:
-                del sampled_sub_epochs[sub_epoch_segment.sub_epoch_n]
+                if sub_epoch_segment.sub_epoch_n in sampled_sub_epochs:
+                    del sampled_sub_epochs[sub_epoch_segment.sub_epoch_n]
             curr_sub_epoch_n = sub_epoch_segment.sub_epoch_n
         if len(sampled_sub_epochs) > 0:
             return False
@@ -826,14 +840,12 @@ def _validate_challenge_block_vdfs(
     sub_slot_data = sub_slots[sub_slot_idx]
     if sub_slot_data.cc_signage_point is not None and sub_slot_data.cc_sp_vdf_info:
         assert sub_slot_data.signage_point_index
-        if sub_slot_data.cc_signage_point.normalized_to_identity:
-            sp_input = ClassgroupElement.get_default_element()
-        else:
+        sp_input = ClassgroupElement.get_default_element()
+        if not sub_slot_data.cc_signage_point.normalized_to_identity and sub_slot_idx >= 1:
             is_overflow = is_overflow_block(constants, sub_slot_data.signage_point_index)
             prev_ssd = sub_slots[sub_slot_idx - 1]
-            new_sub_slot = prev_ssd.cc_slot_end is not None
             sp_input = sub_slot_data_vdf_input(
-                constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, new_sub_slot, ssi
+                constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, prev_ssd.is_end_of_slot(), ssi
             )
         if not sub_slot_data.cc_signage_point.is_valid(constants, sp_input, sub_slot_data.cc_sp_vdf_info):
             log.error(f"failed to validate challenge chain signage point 2 {sub_slot_data.cc_sp_vdf_info}")

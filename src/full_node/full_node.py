@@ -587,7 +587,12 @@ class FullNode:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
-            validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
+            try:
+                validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
+            except Exception as e:
+                await weight_proof_peer.close(600)
+                raise ValueError(f"Weight proof validation threw an error {e}")
+
             if not validated:
                 await weight_proof_peer.close(600)
                 raise ValueError("Weight proof validation failed")
@@ -1443,7 +1448,8 @@ class FullNode:
         assert len(full_blocks) > 0
         for block in full_blocks:
             new_block = None
-            block_record = self.blockchain.height_to_block_record(height)
+            block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
+            assert block_record is not None
 
             if field_vdf == CompressibleVDFField.CC_EOS_VDF:
                 for index, sub_slot in enumerate(block.finished_sub_slots):

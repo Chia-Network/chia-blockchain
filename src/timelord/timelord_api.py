@@ -74,4 +74,5 @@ class TimelordAPI:
         async with self.timelord.lock:
             if not self.timelord.sanitizer_mode:
                 return
-            self.timelord.pending_bluebox_info.append(vdf_info)
+            if vdf_info not in self.timelord.pending_bluebox_info:
+                self.timelord.pending_bluebox_info.append(vdf_info)

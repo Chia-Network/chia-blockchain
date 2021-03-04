@@ -53,7 +53,7 @@ async def setup_daemon(port, alert_url, pubkey):
     btools = BlockTools(constants=test_constants)
     root_path = btools.root_path
     config = btools.config
-    config["port"] = port
+    config["daemon_port"] = port
     lockfile = singleton(daemon_launch_lock_path(root_path))
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
