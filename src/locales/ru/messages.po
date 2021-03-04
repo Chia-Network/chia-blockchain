@@ -264,7 +264,7 @@ msgstr "Выберите размер участка"
 msgid "Close"
 msgstr "Закрыть"
 
-#: src/components/app/AppRouter.tsx:18
+#: src/components/app/AppRouter.tsx:19
 msgid "Closing down node and server"
 msgstr "Закрытие узла и сервера"
 
@@ -327,7 +327,7 @@ msgstr "Подключиться к другим узлам"
 msgid "Connected"
 msgstr "Подключен"
 
-#: src/components/app/AppRouter.tsx:23
+#: src/components/app/AppRouter.tsx:29
 msgid "Connecting to wallet"
 msgstr "Подключение к кошельку"
 
@@ -819,7 +819,7 @@ msgstr "Загрузка..."
 msgid "Local Harvester Plots"
 msgstr "Участки для локальных комбайнов"
 
-#: src/components/app/AppRouter.tsx:28
+#: src/components/app/AppRouter.tsx:34
 msgid "Logging in"
 msgstr "Вход в систему"
 
@@ -881,6 +881,10 @@ msgstr "Больше количество памяти немного увели
 msgid "My Pubkey"
 msgstr "Мой публичный ключ"
 
+#: src/components/app/AppRouter.tsx:24
+msgid "Network not launched yet, waiting for genesis challenge!"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
@@ -905,7 +909,7 @@ msgstr "Псевдоним"
 msgid "No"
 msgstr "Нет"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "No 24 word seed, since this key is imported."
 msgstr "Нет 24 слов семя, так как этот ключ импортируется."
 
@@ -1176,11 +1180,11 @@ msgstr "Хэш предыдущего блока"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Приватный ключ с публичным отпечатком {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:241
+#: src/middleware/middleware_api.jsx:257
 msgid "Private key {0}"
 msgstr "Закрытый ключ {0}"
 
-#: src/middleware/middleware_api.jsx:251
+#: src/middleware/middleware_api.jsx:267
 msgid "Private key:"
 msgstr "Закрытый ключ:"
 
@@ -1196,7 +1200,7 @@ msgstr "Доказательств найдено"
 msgid "Pubkey"
 msgstr "Публичный ключ"
 
-#: src/middleware/middleware_api.jsx:259
+#: src/middleware/middleware_api.jsx:275
 msgid "Public key:"
 msgstr "Открытый ключ:"
 
@@ -1287,7 +1291,7 @@ msgstr "Расположение второй временной папки"
 msgid "See private key"
 msgstr "Увидеть закрытый ключ"
 
-#: src/middleware/middleware_api.jsx:269
+#: src/middleware/middleware_api.jsx:285
 msgid "Seed:"
 msgstr "Семя:"
 

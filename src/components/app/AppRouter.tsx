@@ -18,12 +18,22 @@ export default function AppRouter() {
   const walletConnected = useSelector(
     (state: RootState) => state.daemon_state.wallet_connected,
   );
+  const genesis_initialized = useSelector(
+    (state: RootState) => state.daemon_state.genesis_initialized,
+  );
   const exiting = useSelector((state: RootState) => state.daemon_state.exiting);
 
   if (exiting) {
     return (
       <LayoutLoading>
         <Trans>Closing down node and server</Trans>
+      </LayoutLoading>
+    );
+  }
+  if (!genesis_initialized) {
+    return (
+      <LayoutLoading>
+        <Trans>Network not launched yet, waiting for genesis challenge!</Trans>
       </LayoutLoading>
     );
   }

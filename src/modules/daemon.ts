@@ -21,6 +21,7 @@ type DeamonState = {
   harvester_connected: boolean;
   plotter_running: boolean;
   exiting: boolean;
+  genesis_initialized: boolean;
 };
 
 const initialState: DeamonState = {
@@ -36,6 +37,7 @@ const initialState: DeamonState = {
   harvester_connected: false,
   plotter_running: false,
   exiting: false,
+  genesis_initialized: false,
 };
 
 export default function daemonReducer(
@@ -53,6 +55,10 @@ export default function daemonReducer(
       const { message } = action;
       const { data } = message;
       const { command } = message;
+      if (command === 'get_status') {
+        const initalized = data.genesis_initialized;
+        return { ...state, genesis_initialized: initalized };
+      }
       if (command === 'register_service') {
         return { ...state, daemon_running: true, daemon_connected: true };
       }

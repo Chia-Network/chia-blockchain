@@ -5,6 +5,7 @@ import {
   registerService,
   startService,
   startServiceTest,
+  getGenesisChallengeStatus,
 } from '../modules/daemon_messages';
 import { handle_message } from './middleware_api';
 import {
@@ -17,11 +18,10 @@ import {
 } from '../util/service_names';
 
 const crypto = require('crypto');
-const config = require('../config/config');
 
 const callback_map = {};
 if (isElectron()) {
-  var remote = window.require('electron').remote;
+  var { remote } = window.require('electron');
   var fs = remote.require('fs');
   var WS = window.require('ws');
 }
@@ -45,16 +45,7 @@ const socketMiddleware = () => {
     store.dispatch(actions.wsConnected(event.target.url));
     store.dispatch(registerService('wallet_ui'));
     store.dispatch(registerService(service_plotter));
-
-    if (config.local_test) {
-      store.dispatch(startServiceTest(service_wallet));
-      store.dispatch(startService(service_simulator));
-    } else {
-      store.dispatch(startService(service_wallet));
-      store.dispatch(startService(service_full_node));
-      store.dispatch(startService(service_farmer));
-      store.dispatch(startService(service_harvester));
-    }
+    store.dispatch(getGenesisChallengeStatus());
   };
 
   const onClose = (store) => () => {
@@ -84,7 +75,7 @@ const socketMiddleware = () => {
   return (store) => (next) => (action) => {
     switch (action.type) {
       case 'WS_CONNECT':
-        let wsConnectInterval = setInterval(() => {
+        const wsConnectInterval = setInterval(() => {
           if (
             socket !== null &&
             (socket.readyState == 0 || socket.readyState == 1)

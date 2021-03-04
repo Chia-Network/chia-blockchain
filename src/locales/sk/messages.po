@@ -264,7 +264,7 @@ msgstr "Vyberte veľkosť poľa"
 msgid "Close"
 msgstr "Zavrieť"
 
-#: src/components/app/AppRouter.tsx:18
+#: src/components/app/AppRouter.tsx:19
 msgid "Closing down node and server"
 msgstr "Zatvára sa uzol a server"
 
@@ -327,7 +327,7 @@ msgstr "Pripojiť k iným uzlom"
 msgid "Connected"
 msgstr "Pripojené"
 
-#: src/components/app/AppRouter.tsx:23
+#: src/components/app/AppRouter.tsx:29
 msgid "Connecting to wallet"
 msgstr "Pripájanie k peňaženke"
 
@@ -819,7 +819,7 @@ msgstr "Načítava sa..."
 msgid "Local Harvester Plots"
 msgstr "Zoznam polí"
 
-#: src/components/app/AppRouter.tsx:28
+#: src/components/app/AppRouter.tsx:34
 msgid "Logging in"
 msgstr "Prihlasovanie"
 
@@ -881,6 +881,10 @@ msgstr "Viac pamäte mierne zvyšuje rýchlosť"
 msgid "My Pubkey"
 msgstr "Môj verejný kľúč"
 
+#: src/components/app/AppRouter.tsx:24
+msgid "Network not launched yet, waiting for genesis challenge!"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
@@ -905,7 +909,7 @@ msgstr "Prezývka"
 msgid "No"
 msgstr "Nie"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1176,11 +1180,11 @@ msgstr "Predchádzajúci hash bloku"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privátny kľúč s verejným odtlačkom {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:241
+#: src/middleware/middleware_api.jsx:257
 msgid "Private key {0}"
 msgstr "Privátny kľúč {0}"
 
-#: src/middleware/middleware_api.jsx:251
+#: src/middleware/middleware_api.jsx:267
 msgid "Private key:"
 msgstr "Privátny kľúč:"
 
@@ -1196,7 +1200,7 @@ msgstr "Nájdené dôkazy"
 msgid "Pubkey"
 msgstr "Verejný kľúč"
 
-#: src/middleware/middleware_api.jsx:259
+#: src/middleware/middleware_api.jsx:275
 msgid "Public key:"
 msgstr "Verejný kľúč:"
 
@@ -1287,7 +1291,7 @@ msgstr "Druhý dočasný adresár"
 msgid "See private key"
 msgstr "Zobraziť privátny kľúč"
 
-#: src/middleware/middleware_api.jsx:269
+#: src/middleware/middleware_api.jsx:285
 msgid "Seed:"
 msgstr ""
 

@@ -264,7 +264,7 @@ msgstr "Alegeti marimea plotului"
 msgid "Close"
 msgstr "Inchide"
 
-#: src/components/app/AppRouter.tsx:18
+#: src/components/app/AppRouter.tsx:19
 msgid "Closing down node and server"
 msgstr "Inchide nodul si serverul"
 
@@ -327,7 +327,7 @@ msgstr "Conecteaza la alte 'peers'"
 msgid "Connected"
 msgstr "Conectat"
 
-#: src/components/app/AppRouter.tsx:23
+#: src/components/app/AppRouter.tsx:29
 msgid "Connecting to wallet"
 msgstr "Se conecteaza la portofel"
 
@@ -819,7 +819,7 @@ msgstr "Incarcare..."
 msgid "Local Harvester Plots"
 msgstr "Ploturi locale ale 'Harvesterului'"
 
-#: src/components/app/AppRouter.tsx:28
+#: src/components/app/AppRouter.tsx:34
 msgid "Logging in"
 msgstr "Logare"
 
@@ -881,6 +881,10 @@ msgstr "Mai multa memorie creste usor viteza"
 msgid "My Pubkey"
 msgstr "Cheia mea publica"
 
+#: src/components/app/AppRouter.tsx:24
+msgid "Network not launched yet, waiting for genesis challenge!"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:469
 #: src/components/wallet/standard/WalletStandard.tsx:397
 msgid "New Address"
@@ -905,7 +909,7 @@ msgstr "Porecla"
 msgid "No"
 msgstr "Nu"
 
-#: src/middleware/middleware_api.jsx:277
+#: src/middleware/middleware_api.jsx:293
 msgid "No 24 word seed, since this key is imported."
 msgstr "Fara seed de 24 de cuvinte, deoarece aceasta cheie este importata."
 
@@ -1176,11 +1180,11 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:241
+#: src/middleware/middleware_api.jsx:257
 msgid "Private key {0}"
 msgstr "Cheia privata {0}"
 
-#: src/middleware/middleware_api.jsx:251
+#: src/middleware/middleware_api.jsx:267
 msgid "Private key:"
 msgstr "Cheia privata:"
 
@@ -1196,7 +1200,7 @@ msgstr "Dovezi gasite"
 msgid "Pubkey"
 msgstr "Pubkey"
 
-#: src/middleware/middleware_api.jsx:259
+#: src/middleware/middleware_api.jsx:275
 msgid "Public key:"
 msgstr "Cheia publica:"
 
@@ -1287,7 +1291,7 @@ msgstr "Locatia celui de al doilea folder temporar"
 msgid "See private key"
 msgstr "Vezi cheia privata"
 
-#: src/middleware/middleware_api.jsx:269
+#: src/middleware/middleware_api.jsx:285
 msgid "Seed:"
 msgstr "Seed:"
 
