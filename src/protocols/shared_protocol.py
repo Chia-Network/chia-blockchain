@@ -4,7 +4,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint16, uint8
 from src.util.streamable import streamable, Streamable
 
-protocol_version = "0.0.31"
+protocol_version = "0.0.32"
 
 """
 Handshake when establishing a connection between two servers.
