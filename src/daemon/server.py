@@ -152,6 +152,7 @@ class WebSocketServer:
             self.genesis_initialized = False
             self.alert_task = asyncio.create_task(self.check_for_alerts())
         else:
+            self.alert_task = None
             self.genesis_initialized = True
         self.log.info("Waiting Daemon WebSocketServer closure")
 
