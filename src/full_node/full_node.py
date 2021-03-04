@@ -1444,6 +1444,7 @@ class FullNode:
         for block in full_blocks:
             new_block = None
             block_record = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(height))
+            assert block_record is not None
 
             if field_vdf == CompressibleVDFField.CC_EOS_VDF:
                 for index, sub_slot in enumerate(block.finished_sub_slots):
