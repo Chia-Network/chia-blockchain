@@ -450,6 +450,10 @@ class WeightProofHandler:
             return False, uint32(0)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
+        if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
+            log.error("weight proof failed sub epoch data validation")
+            return False, uint32(0)
+
         if not _validate_segments(constants, wp_bytes, summary_bytes):
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
@@ -492,19 +496,22 @@ class WeightProofHandler:
 
         return True, self.get_fork_point(summaries)
 
-    async def validate_sub_epoch_sampling(self, sub_epoch_weight_list, weight_proof):
+    def validate_sub_epoch_sampling(self, sub_epoch_weight_list, weight_proof):
         tip = weight_proof.recent_chain_data[-1]
-        weight_to_check = _get_weights_for_sampling(random.Random(tip), tip.weight, weight_proof.recent_chain_data)
+        weight_to_check = _get_weights_for_sampling(
+            random.Random(tip.header_hash), tip.weight, weight_proof.recent_chain_data
+        )
         sampled_sub_epochs: dict[int, bool] = {}
-        for idx in range(1, len(weight_to_check) - 1):
+        for idx in range(1, len(sub_epoch_weight_list) - 1):
             if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
                 sampled_sub_epochs[idx - 1] = True
                 if len(sampled_sub_epochs) == WeightProofHandler.MAX_SAMPLES:
                     break
         curr_sub_epoch_n = -1
-        for sub_epoch_segment in weight_proof.sub_epochs:
+        for sub_epoch_segment in weight_proof.sub_epoch_segments:
             if curr_sub_epoch_n < sub_epoch_segment.sub_epoch_n:
-                del sampled_sub_epochs[sub_epoch_segment.sub_epoch_n]
+                if sub_epoch_segment.sub_epoch_n in sampled_sub_epochs:
+                    del sampled_sub_epochs[sub_epoch_segment.sub_epoch_n]
             curr_sub_epoch_n = sub_epoch_segment.sub_epoch_n
         if len(sampled_sub_epochs) > 0:
             return False
