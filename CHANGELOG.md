@@ -6,16 +6,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Release Candidate 5 - 2020-??-??
+## 1.0rc5 aka Release Candidate 5 - 2020-03-04
 
 ### Added
 
-- `chia plots check` will list out all the failed plot filenames at the end of the report. PR @eFishCent
+- The RC5 release is a new breaking change/hard fork blockchain. Plots and keys from previous chains will work fine on RC5 but balances of TXCH will not come forward.
+- We now support a "green flag" chain launch process. A new version of the software will poll download.chia.net/notify/ for a signed json file that will be the genesis block of the chain for that version. This will allow unattended start at mainnet.
+- Bluebox Timelords are back. These are Timelords most anyone can run. They search through the historical chain and find large proofs of times and compact them down to their smallest representation. This significantly speeds up syncing for newly started nodes. Currently this is only supported on Linux and MacOS x86_64 but we will expand that. Any desktop or server of any age will be fast enough to be a useful Bluebox Timelord.
+- Thanks to @jespino there is now `chia farm show`. You can now get almost exactly the same farming information on the CLI as the GUI.
+- We have added Romanian to the GUI translations. Thank you to @bicilis on [Crowdin](https://crowdin.com/project/chia-blockchain). We also added a couple of additional target languages. Klingon anyone?
+- `chia wallet` now takes get_address to get a new wallet receive address from the CLI.
+- `chia plots check` will list out all the failed plot filenames at the end of the report. Thanks for the PR go to @eFishCent.
+- Chialisp and the clvm have had the standard puzzle updated and we replaced `((c P A))` with `(a P A)`.
+
+## Changed
+
+- Testnets and mainnet now set their minimum `k` size and enforce it. RC5 testnet will reject plots of size less than k=32.
+- Sub slots now require 16 blocks instead of 12.
+- Thanks to @xdustinface of Dash, the BlS Signature library has been updated to 0.9 with clean ups and some speed ups. This changed how the G2 infinity element was handled and we now manage it inside of chia-blockchain, etc., instead of in blspy.
+- We have updated the display of peer nodes and moved adding a peer to it's own pop up in the GUI.
+- Block searching in the GUI has been improved.
+- @jespino added i18n support and refactored how locales are loaded in the GUI. Additionally he moved more strings into the translation infrastructure for translators.
+- In chiavdf we changed n-Wesolowski proofs to include B instead of y in segments. Proof segments now have the form (iters, B, proof) instead of (iters, y, proof). This reduces proof segment size from 208 to 141 bytes.
+- The new chiavdf proof format is not compatible with the old one, however zero-Wesolowski proofs are not affected as they have zero proof segments and consist only of (y, proof).
+- We made two HashPrime optimizations in chiavdf. This forces numbers being tested for primality to be odd and avoids an unnecessary update of the sprout vector by stopping after the first non-zero value. This is a breaking change as it changes the prime numbers generated from a given seed. We believe this is the final breaking change for chiavdf.
+- chiabip158 was set to a gold 1.0 version.
+- Comments to Chialisp and clvm source have been updated for all of the Chialisp changes over the proceeding three weeks.
+- And thanks yet again to @jespino for a host of PRs to add more detailed typing to various components in chia-blockchain.
+- aiohttp was updated to 3.7.4 to address a low severity [security issue](https://github.com/advisories/GHSA-v6wp-4m6f-gcjg).
+- calccrypto/uint128_t was updated in the Windows chiapos implementation. Chiapos required some changes its build process to support MacOS ARM64.
 
 ### Fixed
-- `chia plots check` shouldn't crash when encountering plots that cause RuntimeError. PR @eFishCent
 
-## Release Candidate 4 - 2020-02-25
+- Harvester would crash if it encountered more than 16,000 plot files or 256 directories.
+- Nodes that were interrupted by a network crash or standby on a laptop were not syncing upon reconnection in RC4.
+- Sync issues could stop syncing from restarting and could lead to a peer host that you could not remove.
+- Adding Click changed the behavior of `chia keys add -m`. The help now makes it clear that the 24 word mnemonic needs to be surrounded by a pair of quotes.
+- Python root CA certificates have issues so we have added the Mozilla certificate store via curl.se and use that to connect to backup.chia.net via https, for example.
+- The difficulty adjustment calculation was simplified.
+- All of the chia sub repositories that were attempting to build MacOS Universal wheels were only generating x86_64 wheels internally. We have moved back to only generating x86_64 MacOS wheels on CI.
+- However, we have updated and test compiled all Chia dependencies on Apple Silicon and will be making available a test .dmg for MacOS ARM64 shortly.
+- Various weight proof edge cases have been fixed.
+- Various typos and style clean ups were made to the Click CLI implementation. `chia -upnp f` was added to disable uPnP.
+- `chia plots check` shouldn't crash when encountering plots that cause RuntimeError. PR again thanks to @eFishCent.
+- Coloured coin announcements had a bug that would allow counterfeiting.
+
+## 1.0rc4 aka Release Candidate 4 - 2020-02-25
 
 ### Fixed
 
