@@ -12,8 +12,17 @@ from src.util.ints import uint64
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 
+GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
+
+
+def int_to_public_key(index: int) -> blspy.G1Element:
+    index = index % GROUP_ORDER
+    private_key_from_int = blspy.PrivateKey.from_bytes(index.to_bytes(32, "big"))
+    return private_key_from_int.get_g1()
+
+
 def puzzle_hash_for_index(index: int, puzzle_hash_db: dict) -> bytes:
-    public_key = bytes(blspy.G1Element.generator() * index)
+    public_key = bytes(int_to_public_key(index))
     puzzle = puzzle_for_pk(public_key)
     puzzle_hash = puzzle.get_tree_hash()
     puzzle_hash_db[puzzle_hash] = puzzle
@@ -49,5 +58,5 @@ def make_block_generator(count: int) -> SerializedProgram:
         coin_solution = CoinSolution(coin, puzzle_reveal, solution)
         coin_solutions.append(coin_solution)
 
-    spend_bundle = SpendBundle(coin_solutions, blspy.G2Element.infinity())
+    spend_bundle = SpendBundle(coin_solutions, blspy.G2Element())
     return best_solution_program(spend_bundle)

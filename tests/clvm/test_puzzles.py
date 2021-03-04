@@ -20,7 +20,7 @@ from src.wallet.puzzles import (
 from tests.util.key_tool import KeyTool
 
 from .coin_store import CoinStore, CoinTimestamp
-
+from ..core.make_block_generator import int_to_public_key
 
 T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)
@@ -36,7 +36,7 @@ def secret_exponent_for_index(index: int) -> int:
 def public_key_for_index(index: int, key_lookup: KeyTool) -> bytes:
     secret_exponent = secret_exponent_for_index(index)
     key_lookup.add_secret_exponents([secret_exponent])
-    return bytes(G1Element.generator() * secret_exponent)
+    return bytes(int_to_public_key(secret_exponent))
 
 
 def throwaway_puzzle_hash(index: int, key_lookup: KeyTool) -> bytes32:
@@ -69,7 +69,7 @@ def do_test_spend(
     # spend it
     coin_solution = CoinSolution(coin, puzzle_reveal, solution)
 
-    spend_bundle = SpendBundle([coin_solution], G2Element.infinity())
+    spend_bundle = SpendBundle([coin_solution], G2Element())
     coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time)
 
     # ensure all outputs are there
@@ -225,10 +225,10 @@ class TestPuzzles(TestCase):
         )
 
         hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
-        assert synthetic_public_key == synthetic_offset * G1Element.generator() + hidden_pub_key_point
+        assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
 
         secret_exponent = key_lookup.get(hidden_public_key)
-        assert G1Element.generator() * secret_exponent == hidden_pub_key_point
+        assert int_to_public_key(secret_exponent) == hidden_pub_key_point
 
         synthetic_secret_exponent = secret_exponent + synthetic_offset
         key_lookup.add_secret_exponents([synthetic_secret_exponent])
