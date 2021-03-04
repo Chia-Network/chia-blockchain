@@ -237,10 +237,10 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof1000_partial_blocks_compact(self, default_1000_blocks_compact):
+    async def test_weight_proof1000_partial_blocks_compact(self, default_10000_blocks_compact):
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             100,
-            block_list_input=default_1000_blocks_compact,
+            block_list_input=default_10000_blocks_compact,
             seed=b"asdfghjkl",
             normalized_to_identity=False,
         )
