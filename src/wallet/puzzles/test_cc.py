@@ -25,7 +25,7 @@ from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import create_genesis_puzz
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 
-NULL_SIGNATURE = G2Element.generator() * 0
+NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
