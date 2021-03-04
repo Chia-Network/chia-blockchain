@@ -450,9 +450,9 @@ class WeightProofHandler:
             return False, uint32(0)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
-        # if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
-        #     log.error("weight proof failed sub epoch data validation")
-        #     return False, uint32(0)
+        if not self.validate_sub_epoch_sampling(sub_epoch_weight_list, weight_proof):
+            log.error("weight proof failed sub epoch data validation")
+            return False, uint32(0)
 
         # if not _validate_segments(constants, wp_bytes, summary_bytes):
         #     return False, uint32(0)
@@ -491,7 +491,7 @@ class WeightProofHandler:
 
         # valid_segments = await segment_validation_task
         valid_recent_blocks = await recent_blocks_validation_task
-        if valid_recent_blocks:
+        if not valid_recent_blocks:
             return False, uint32(0)
 
         return True, self.get_fork_point(summaries)
