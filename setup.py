@@ -5,7 +5,7 @@ dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
     "blspy==0.3.5",  # Signature library
     "chiavdf==0.9",  # timelord and vdf verification
-    "chiabip158==0.19",  # bip158-style wallet filters
+    "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==0.12.45",  # proof of space
     "clvm==0.9.3",
     "clvm_rs==0.1.4",
@@ -91,7 +91,10 @@ kwargs = dict(
             "chia_full_node_simulator = src.simulator.start_simulator:main",
         ]
     },
-    package_data={"src.util": ["initial-*.yaml", "english.txt"], "src.ssl": ["chia_ca.crt", "chia_ca.key"]},
+    package_data={
+        "src.util": ["initial-*.yaml", "english.txt"],
+        "src.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
+    },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

@@ -17,6 +17,11 @@ def get_chia_ca_crt_key() -> Tuple[Any, Any]:
     return crt, key
 
 
+def get_dst_ca_crt() -> bytes:
+    crt = pkg_resources.resource_string(__name__, "dst_root_ca.pem")
+    return crt
+
+
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
     one_day = datetime.timedelta(1, 0, 0)
     root_cert = x509.load_pem_x509_certificate(ca_crt, default_backend())

@@ -72,7 +72,9 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
     help="Set the instance log level",
     type=click.Choice(["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]),
 )
-@click.option("--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "false"]))
+@click.option(
+    "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
+)
 @click.pass_context
 def configure_cmd(ctx, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
     configure(ctx.obj["root_path"], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
