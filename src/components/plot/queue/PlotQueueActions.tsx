@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useDispatch } from 'react-redux';
 import { ConfirmDialog, More } from '@chia/core';
-import { Box, ListItemIcon, MenuItem, Typography } from '@material-ui/core';
+import { Box, Divider, ListItemIcon, MenuItem, Typography } from '@material-ui/core';
 import {
   DeleteForever as DeleteForeverIcon,
   Info as InfoIcon,
@@ -33,6 +33,7 @@ export default function PlotQueueAction(props: Props) {
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
+        confirmColor="danger"
       >
         <Trans>
           Are you sure you want to delete the plot? The plot cannot be
@@ -58,14 +59,18 @@ export default function PlotQueueAction(props: Props) {
       {({ onClose }) => (
         <Box>
           {state === PlotStatus.RUNNING && (
-            <MenuItem onClick={() => { onClose(); handleViewLog(); }}>
-              <ListItemIcon>
-                <InfoIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography variant="inherit" noWrap>
-                <Trans>View Log</Trans>
-              </Typography>
-            </MenuItem>
+            <>
+              <MenuItem onClick={() => { onClose(); handleViewLog(); }}>
+                <ListItemIcon>
+                  <InfoIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="inherit" noWrap>
+                  <Trans>View Log</Trans>
+                </Typography>
+              </MenuItem>
+              <Divider />
+            </>
+
           )}
 
           <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
