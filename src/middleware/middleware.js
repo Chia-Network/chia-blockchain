@@ -51,14 +51,7 @@ const socketMiddleware = () => {
     if (action) {
       delete callback_map[request_id];
       const { resolve, reject } = action;
-      const error = payload?.data?.error;
-      const successFalse = payload?.data?.success === false;
-      if (error || successFalse) {
-        const errorMessage = error ?? i18n._('Unknown error');
-        reject(new Error(errorMessage));
-      } else {
-        resolve(payload);
-      }
+      resolve(payload);
     }
     handle_message(store, payload, action?.usePromiseReject);
   };
