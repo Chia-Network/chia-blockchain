@@ -45,7 +45,7 @@ msgstr "Accepterat klockan:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:76
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "Åtgärd"
 
@@ -657,7 +657,7 @@ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:70
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "Filnamn"
 
@@ -695,9 +695,9 @@ msgstr ""
 msgid "Generate New Colour"
 msgstr "Skapa ny färg"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:50
-msgid "Harvester ID"
-msgstr "Skördar-ID"
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#~ msgid "Harvester ID"
+#~ msgstr "Skördar-ID"
 
 #: src/components/fullNode/FullNode.jsx:68
 msgid "Header Hash"
@@ -791,7 +791,7 @@ msgstr "Initiera spenderbegränsad användarplånbok:"
 msgid "Interval"
 msgstr "Intervall"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:40
+#: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
 msgstr "K-storlek"
 
@@ -815,7 +815,7 @@ msgstr "Senaste blockverifieringar"
 msgid "Loading..."
 msgstr "Läser in …"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "Plottar hos lokal skördare"
 
@@ -1097,19 +1097,19 @@ msgstr "Antal plottar"
 msgid "Plot Id"
 msgstr "Plott-ID"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:60
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "Plottnyckel"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:45
-msgid "Plot Name"
-msgstr "Plottnamn"
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#~ msgid "Plot Name"
+#~ msgstr "Plottnamn"
 
 #: src/components/block/Block.jsx:239
 msgid "Plot Public Key"
 msgstr "Publik nyckel för plott"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Plot Seed"
 msgstr "Minnesfras för plott"
 
@@ -1117,7 +1117,7 @@ msgstr "Minnesfras för plott"
 msgid "Plot Size"
 msgstr "Plottstorlek"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:27
+#: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
 msgstr "Plotten är en dubblett av {0}"
 
@@ -1141,7 +1141,7 @@ msgstr "Plottar"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Parallell plottning kan spara tid. Lägg annars till plottar i kön."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Pool-nyckel"
 
@@ -1410,7 +1410,7 @@ msgstr "Tillstånd"
 #: src/components/fullNode/FullNode.jsx:135
 #: src/components/fullNode/FullNode.jsx:143
 #: src/components/fullNode/FullNode.jsx:165
-#: src/components/plot/overview/PlotOverviewPlots.tsx:73
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
 #: src/components/wallet/WalletStatusCard.tsx:11
@@ -1620,7 +1620,7 @@ msgstr "Totalt antal iterationer"
 msgid "Total Network Space"
 msgstr "Sammanlagt nätverksutrymme"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:99
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "Sammanlagd plottstorlek:"
 
@@ -1758,7 +1758,7 @@ msgstr "Plånböcker"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:92
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Vill du tjäna mer Chia? Lägg till fler plottar till din odling."
 
