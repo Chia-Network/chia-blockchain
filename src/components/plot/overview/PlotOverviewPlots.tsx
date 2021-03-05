@@ -57,18 +57,6 @@ const cols = [
   },
   {
     minWidth: '100px',
-    field: 'local_sk',
-    tooltip: 'local_sk',
-    title: <Trans>Plot Name</Trans>,
-  },
-  {
-    minWidth: '100px',
-    field: 'farmer_public_key',
-    tooltip: 'farmer_public_key',
-    title: <Trans>Harvester ID</Trans>,
-  },
-  {
-    minWidth: '100px',
     field: 'plot-seed',
     tooltip: 'plot-seed',
     title: <Trans>Plot Seed</Trans>,
