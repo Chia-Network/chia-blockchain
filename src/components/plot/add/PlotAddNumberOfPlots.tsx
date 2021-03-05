@@ -195,6 +195,20 @@ export default function PlotAddNumberOfPlots() {
               variant="filled"
               fullWidth
             >
+              <TextField
+                name="queue"
+                type="text"
+                variant="filled"
+                placeholder="default"
+                label={<Trans>Queue Name</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl
+              variant="filled"
+              fullWidth
+            >
               <FormControlLabel
                 control={(
                   <Checkbox

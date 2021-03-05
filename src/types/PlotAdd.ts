@@ -7,6 +7,7 @@ type PlotAdd = {
   numThreads: number;
   numBuckets: number;
   stripeSize: number;
+  queue: string;
   finalLocation: string;
   workspaceLocation: string;
   workspaceLocation2: string;

@@ -32,6 +32,7 @@ export default function PlotAdd() {
       numThreads: 2,
       numBuckets: 128,
       stripeSize: 65536,
+      queue: "default",
       finalLocation: '',
       workspaceLocation: '',
       workspaceLocation2: '',
