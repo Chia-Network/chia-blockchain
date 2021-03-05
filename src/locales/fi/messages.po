@@ -1169,8 +1169,12 @@ msgid "Previous"
 msgstr "Edellinen"
 
 #: src/components/block/Block.jsx:203
-msgid "Previous Block Hash"
-msgstr "Edellinen Lohkotiiviste"
+#~ msgid "Previous Block Hash"
+#~ msgstr "Edellinen Lohkotiiviste"
+
+#: src/components/block/Block.jsx:203
+msgid "Previous Header Hash"
+msgstr ""
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"

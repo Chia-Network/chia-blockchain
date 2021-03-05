@@ -200,7 +200,7 @@ export default function Block() {
       ),
     },
     {
-      name: <Trans>Previous Block Hash</Trans>,
+      name: <Trans>Previous Header Hash</Trans>,
       value: (
         <Link onClick={handleShowPreviousBlock}>
           {blockRecord.prev_hash}

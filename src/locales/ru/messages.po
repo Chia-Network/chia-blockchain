@@ -1169,8 +1169,12 @@ msgid "Previous"
 msgstr "Предыдущий"
 
 #: src/components/block/Block.jsx:203
-msgid "Previous Block Hash"
-msgstr "Хэш предыдущего блока"
+#~ msgid "Previous Block Hash"
+#~ msgstr "Хэш предыдущего блока"
+
+#: src/components/block/Block.jsx:203
+msgid "Previous Header Hash"
+msgstr ""
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
