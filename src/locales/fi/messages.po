@@ -479,7 +479,7 @@ msgstr "Viive"
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/PlotAction.tsx:43
 #: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:57
+#: src/components/plot/queue/PlotQueueActions.tsx:60
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
@@ -1697,7 +1697,7 @@ msgstr "VDF -alaiteraatioita"
 msgid "View"
 msgstr "Näkymä"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:48
+#: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
 msgstr "Katso Loki"
