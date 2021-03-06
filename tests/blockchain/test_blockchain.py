@@ -1347,6 +1347,19 @@ class TestBlockHeaderValidation:
                 block_bad: FullBlock = recursive_replace(
                     blocks[-1],
                     "foliage_transaction_block.timestamp",
+                    blocks[0].foliage_transaction_block.timestamp,
+                )
+                block_bad: FullBlock = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.TIMESTAMP_TOO_FAR_IN_PAST
+
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
                     blocks[0].foliage_transaction_block.timestamp + 10000000,
                 )
                 block_bad: FullBlock = recursive_replace(
