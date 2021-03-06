@@ -127,7 +127,8 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
-            await self.mempool_manager.new_peak(self.blockchain.get_peak())
+            pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
+            assert len(pending_tx) == 0  # no pending transactions when starting up
 
         self.state_changed_callback = None
 
@@ -823,8 +824,21 @@ class FullNode:
             skip_vdf_validation=True,
         )
 
-        # Update the mempool
-        await self.mempool_manager.new_peak(self.blockchain.get_peak())
+        # Update the mempool (returns successful pending transactions added to the mempool)
+        for bundle, result, spend_name in await self.mempool_manager.new_peak(self.blockchain.get_peak()):
+            self.log.debug(f"Added transaction to mempool: {spend_name}")
+            mempool_item = self.mempool_manager.get_mempool_item(spend_name)
+            assert mempool_item is not None
+            fees = mempool_item.fee
+            assert fees >= 0
+            assert result.cost is not None
+            new_tx = full_node_protocol.NewTransaction(
+                spend_name,
+                result.cost,
+                uint64(bundle.fees()),
+            )
+            msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
         if added_eos is not None:

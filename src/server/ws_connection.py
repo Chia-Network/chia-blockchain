@@ -113,8 +113,6 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
             if ProtocolMessageTypes(inbound_handshake_msg.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            if inbound_handshake.protocol_version != protocol_version:
-                raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
@@ -132,8 +130,6 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.handshake:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
-            if inbound_handshake.protocol_version != protocol_version:
-                raise ProtocolError(Err.INCOMPATIBLE_PROTOCOL_VERSION)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
             outbound_handshake = make_msg(

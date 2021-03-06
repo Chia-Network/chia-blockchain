@@ -30,8 +30,10 @@ async def main():
         assert farmer_amounts == farmer_prefarm.amount // 2
         assert pool_amounts == pool_prefarm.amount // 2
 
-        address1 = "txch1k50glwkdffp2mrqq64rsgjtxj4waphuf72stqayz4qqk6mj9hd4qp7lrek"  # Gene wallet (m/12381/8444/2/51):
-        address2 = "txch1430mtj60hvzyuyz4t45dyxwjdjsvphhl2fgreyry362reca4zpkszhjd3e"  # farmer1 key (m/12381/8444/2/51)
+        address1 = "txch15gx26ndmacfaqlq8m0yajeggzceu7cvmaz4df0hahkukes695rss6lej7h"  # Gene wallet (m/12381/8444/2/42):
+        address2 = (
+            "txch1c2cguswhvmdyz9hr3q6hak2h6p9dw4rz82g4707k2xy2sarv705qcce4pn"  # Mariano address (m/12381/8444/2/0)
+        )
 
         ph1 = decode_puzzle_hash(address1)
         ph2 = decode_puzzle_hash(address2)
@@ -50,9 +52,9 @@ async def main():
 
         print(sb_pool, sb_farmer)
         # res = await client.push_tx(sb_farmer)
-        # res = await client.push_tx(sb_pool)
+        res = await client.push_tx(sb_pool)
 
-        # print(res)
+        print(res)
         up = await client.get_coin_records_by_puzzle_hash(farmer_prefarm.puzzle_hash, True)
         uf = await client.get_coin_records_by_puzzle_hash(pool_prefarm.puzzle_hash, True)
         print(up)
