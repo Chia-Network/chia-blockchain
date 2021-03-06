@@ -66,6 +66,7 @@ class FullNodeSimulator(FullNodeAPI):
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
+                current_time=True,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
@@ -98,6 +99,7 @@ class FullNodeSimulator(FullNodeAPI):
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
+                current_time=True,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)

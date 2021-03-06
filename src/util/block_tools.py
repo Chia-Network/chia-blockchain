@@ -268,6 +268,7 @@ class BlockTools:
         skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
         guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
         normalized_to_identity: bool = False,  # CC_EOS, ICC_EOS, CC_SP, CC_IP vdf proofs are normalized to identity.
+        current_time: bool = False,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -438,6 +439,7 @@ class BlockTools:
                             latest_block,
                             seed,
                             normalized_to_identity=normalized_to_identity,
+                            current_time=current_time,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -1254,7 +1256,12 @@ def get_full_block_and_block_record(
     overflow_cc_challenge: bytes32 = None,
     overflow_rc_challenge: bytes32 = None,
     normalized_to_identity: bool = False,
+    current_time: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
+    if current_time is True:
+        timestamp = uint64(int(time.time()))
+    else:
+        timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
     unfinished_block = create_unfinished_block(
@@ -1271,7 +1278,7 @@ def get_full_block_and_block_record(
         get_plot_signature,
         get_pool_signature,
         signage_point,
-        uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block)),
+        timestamp,
         BlockCache(blocks),
         seed,
         transaction_data,
