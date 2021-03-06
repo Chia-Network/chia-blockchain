@@ -9,7 +9,7 @@ from aiohttp import WSMessage, WSMsgType, WSCloseCode
 
 from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.shared_protocol import Handshake
+from src.protocols.shared_protocol import Handshake, Capability
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -103,6 +103,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
+                    [(uint16(Capability.BASE.value), "1")],
                 ),
             )
             assert outbound_handshake is not None
@@ -144,6 +145,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
+                    [(uint16(Capability.BASE.value), "1")],
                 ),
             )
             await self._send_message(outbound_handshake)
