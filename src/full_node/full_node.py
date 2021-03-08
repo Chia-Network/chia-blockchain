@@ -44,6 +44,8 @@ from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.genesis_wait import wait_for_genesis_challenge
+
 from src.util.path import mkdir, path_from_root
 
 
@@ -88,7 +90,7 @@ class FullNode:
             self.log = logging.getLogger(__name__)
 
         db_path_replaced: str = config["database_path"].replace(
-            "CHALLENGE", consensus_constants.GENESIS_CHALLENGE[:8].hex()
+            "CHALLENGE", config["selected_network"]
         )
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
@@ -96,8 +98,7 @@ class FullNode:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    async def _start(self):
-        # create the store (db) and full node instance
+    async def regular_start(self):
         self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.constants)
@@ -137,6 +138,20 @@ class FullNode:
                     self.config["target_uncompact_proofs"],
                 )
             )
+
+    async def delayed_start(self):
+        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants)
+        self.config = config
+        self.constants = constants
+        await self.regular_start()
+
+    async def _start(self):
+        # create the store (db) and full node instance
+        if self.constants.GENESIS_CHALLENGE is not None:
+            await self.regular_start()
+        else:
+            asyncio.create_task(self.delayed_start())
+
 
     def set_server(self, server: ChiaServer):
         self.server = server
