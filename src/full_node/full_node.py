@@ -1419,15 +1419,22 @@ class FullNode:
         """
         is_fully_compactified = await self.block_store.is_fully_compactified(header_hash)
         if is_fully_compactified is None or is_fully_compactified:
+            self.log.info(f"Already compactified block: {header_hash}. Ignoring.")
             return False
         if vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
+            self.log.error(f"Received vdf proof is not compact: {vdf_proof}.")
             return False
         if not vdf_proof.is_valid(self.constants, ClassgroupElement.get_default_element(), vdf_info):
+            self.log.error(f"Received compact vdf proof is not valid: {vdf_proof}.")
             return False
         header_block = await self.blockchain.get_header_block_by_height(height, header_hash)
         if header_block is None:
+            self.log.error(f"Can't find block for given compact vdf. Height: {height} Header hash: {header_hash}")
             return False
-        return await self._needs_compact_proof(vdf_info, header_block, field_vdf)
+        is_new_proof = await self._needs_compact_proof(vdf_info, header_block, field_vdf)
+        if not is_new_proof:
+            self.log.info(f"Duplicate compact proof. Height: {height}. Header hash: {header_hash}.")
+        return is_new_proof
 
     async def _replace_proof(
         self,
@@ -1477,7 +1484,6 @@ class FullNode:
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
-            self.log.error(f"Couldn't add compact proof of time from a bluebox: {request}.")
             return
         async with self.blockchain.lock:
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
@@ -1552,7 +1558,6 @@ class FullNode:
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
-            self.log.error(f"Couldn't add compact proof of time from a full_node peer: {peer}.")
             return
         async with self.blockchain.lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
