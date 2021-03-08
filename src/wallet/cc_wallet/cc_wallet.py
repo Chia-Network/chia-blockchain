@@ -184,6 +184,7 @@ class CCWallet:
 
         self.log = logging.getLogger(__name__)
 
+        self.cost_of_single_tx = None
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
