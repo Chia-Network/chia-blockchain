@@ -364,7 +364,9 @@ class WalletTransactionStore:
             wallet_txs = self.tx_wallet_cache[wallet_id][type]
             txs = []
             for name in wallet_txs:
-                txs.append(self.tx_record_cache[name])
+                tx = await self.get_transaction_record(name)
+                assert tx is not None
+                txs.append(tx)
             return txs
 
         if type is None:
