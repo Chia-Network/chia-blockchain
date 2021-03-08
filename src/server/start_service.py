@@ -5,8 +5,7 @@ import signal
 from sys import platform
 from typing import Any, Callable, List, Optional, Tuple
 
-from src.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from src.types.blockchain_format.sized_bytes import bytes32
+from src.server.ssl_context import private_ssl_ca_paths, chia_ssl_ca_paths
 
 try:
     import uvloop
@@ -34,7 +33,7 @@ class Service:
         node_type: NodeType,
         advertised_port: int,
         service_name: str,
-        network_id=bytes32,
+        network_id: str,
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
@@ -54,7 +53,7 @@ class Service:
         self._node_type = node_type
         self._service_name = service_name
         self._rpc_task = None
-        self._network_id: bytes32 = network_id
+        self._network_id: str = network_id
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
@@ -129,7 +128,7 @@ class Service:
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
         ]
-        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id.hex()}")
+        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
 
         self._rpc_close_task = None
         if self._rpc_info:

@@ -23,7 +23,7 @@ class Capability(IntEnum):
 @dataclass(frozen=True)
 @streamable
 class Handshake(Streamable):
-    network_id: bytes32
+    network_id: str
     protocol_version: str
     software_version: str
     server_port: uint16

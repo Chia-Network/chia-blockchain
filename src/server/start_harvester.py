@@ -29,7 +29,7 @@ def service_kwargs_for_harvester(
 
     harvester = Harvester(root_path, config, updated_constants)
     peer_api = HarvesterAPI(harvester)
-
+    network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=harvester,
@@ -40,7 +40,7 @@ def service_kwargs_for_harvester(
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=True,
-        network_id=updated_constants.GENESIS_CHALLENGE,
+        network_id=network_id,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (HarvesterRpcApi, config["rpc_port"])

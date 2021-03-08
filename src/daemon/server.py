@@ -616,13 +616,6 @@ class WebSocketServer:
 
     async def start_service(self, request: Dict[str, Any]):
         service_command = request["service"]
-        if self.genesis_initialized is False:
-            response = {
-                "success": False,
-                "service": service_command,
-                "error": "Network not launched yet, waiting for genesis challenge",
-            }
-            return response
 
         error = None
         success = False

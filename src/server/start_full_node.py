@@ -34,7 +34,7 @@ def service_kwargs_for_full_node(
     upnp_list = []
     if config["enable_upnp"]:
         upnp_list = [config["port"]]
-
+    network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=api.full_node,
@@ -45,7 +45,7 @@ def service_kwargs_for_full_node(
         upnp_ports=upnp_list,
         server_listen_ports=[config["port"]],
         on_connect_callback=full_node.on_connect,
-        network_id=consensus_constants.GENESIS_CHALLENGE,
+        network_id=network_id,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])

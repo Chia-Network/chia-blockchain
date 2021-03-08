@@ -67,7 +67,7 @@ class ChiaServer:
         api: Any,
         local_type: NodeType,
         ping_interval: int,
-        network_id: bytes32,
+        network_id: str,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         root_path: Path,
