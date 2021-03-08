@@ -206,7 +206,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print(f"Total chia farmed: {wallets_stats['total_chia_farmed']}")
         print(f"User transaction fees: {wallets_stats['user_transaction_fees']}")
         print(f"Block rewards: {wallets_stats['block_rewards']}")
-        print(f"Last height farmerd: {wallets_stats['biggest_reward_height']}")
+        print(f"Last height farmed: {wallets_stats['biggest_reward_height']}")
     else:
         print("Total chia farmed: Unknown")
         print("User transaction fees: Unknown")
@@ -310,7 +310,7 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
 
-@farm_cmd.command("challenges", short_help="Show the lastest challenges")
+@farm_cmd.command("challenges", short_help="Show the latest challenges")
 @click.option(
     "-fp",
     "--farmer-rpc-port",

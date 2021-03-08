@@ -113,6 +113,7 @@ def next_sub_epoch_summary(
         constants, len(block.finished_sub_slots) > 0, prev_b, blocks
     )[0]
     overflow = is_overflow_block(constants, signage_point_index)
+
     if (
         len(block.finished_sub_slots) > 0
         and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
@@ -151,7 +152,6 @@ def next_sub_epoch_summary(
             overflow,
             len(block.finished_sub_slots),
         )
-
         can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
             constants,
             blocks,

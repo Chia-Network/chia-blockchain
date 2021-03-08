@@ -19,7 +19,7 @@ from src.consensus.difficulty_adjustment import (
 )
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
-from src.consensus.pot_iterations import is_overflow_block, calculate_sp_iters
+from src.consensus.pot_iterations import calculate_sp_iters
 from src.consensus.block_record import BlockRecord
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -127,7 +127,8 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
-            await self.mempool_manager.new_peak(self.blockchain.get_peak())
+            pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
+            assert len(pending_tx) == 0  # no pending transactions when starting up
 
         self.state_changed_callback = None
 
@@ -823,8 +824,21 @@ class FullNode:
             skip_vdf_validation=True,
         )
 
-        # Update the mempool
-        await self.mempool_manager.new_peak(self.blockchain.get_peak())
+        # Update the mempool (returns successful pending transactions added to the mempool)
+        for bundle, result, spend_name in await self.mempool_manager.new_peak(self.blockchain.get_peak()):
+            self.log.debug(f"Added transaction to mempool: {spend_name}")
+            mempool_item = self.mempool_manager.get_mempool_item(spend_name)
+            assert mempool_item is not None
+            fees = mempool_item.fee
+            assert fees >= 0
+            assert result.cost is not None
+            new_tx = full_node_protocol.NewTransaction(
+                spend_name,
+                result.cost,
+                uint64(bundle.fees()),
+            )
+            msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
         if added_eos is not None:
@@ -1118,6 +1132,7 @@ class FullNode:
         prev_b: Optional[BlockRecord] = None
 
         target_rc_hash = request.reward_chain_ip_vdf.challenge
+        last_slot_cc_hash = request.challenge_chain_ip_vdf.challenge
 
         # Backtracks through end of slot objects, should work for multiple empty sub slots
         for eos, _, _ in reversed(self.full_node_store.finished_sub_slots):
@@ -1145,17 +1160,12 @@ class FullNode:
                 self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                 return None
 
-        # TODO: finished slots is not correct
-        overflow = is_overflow_block(
-            self.constants,
-            unfinished_block.reward_chain_block.signage_point_index,
-        )
         finished_sub_slots = self.full_node_store.get_finished_sub_slots(
-            prev_b,
             self.blockchain,
-            unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash,
-            overflow,
+            prev_b,
+            last_slot_cc_hash,
         )
+
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
             len(finished_sub_slots) > 0,
@@ -1194,26 +1204,8 @@ class FullNode:
             sp_total_iters,
             difficulty,
         )
-        first_ss_new_epoch = False
         if not self.has_valid_pool_sig(block):
             self.log.warning("Trying to make a pre-farm block but height is not 0")
-            return None
-        if len(block.finished_sub_slots) > 0:
-            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                first_ss_new_epoch = True
-        else:
-            curr = prev_b
-            while (curr is not None) and not curr.first_in_sub_slot:
-                curr = self.blockchain.block_record(curr.prev_hash)
-            if (
-                curr is not None
-                and curr.first_in_sub_slot
-                and curr.sub_epoch_summary_included is not None
-                and curr.sub_epoch_summary_included.new_difficulty is not None
-            ):
-                first_ss_new_epoch = True
-        if first_ss_new_epoch and overflow:
-            # No overflow blocks in the first sub-slot of each epoch
             return None
         try:
             await self.respond_block(full_node_protocol.RespondBlock(block))

@@ -19,6 +19,7 @@ from src.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
     calculate_iterations_quality,
+    calculate_sp_interval_iters,
 )
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.consensus.block_record import BlockRecord
@@ -504,10 +505,9 @@ def validate_unfinished_header_block(
         cc_sp_hash,
     )
 
-    # 7. check signage point index
-    # no need to check negative values as this is uint8. (Assumes types are checked)
-    if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
-        return None, ValidationError(Err.INVALID_SP_INDEX)
+    # 7. check required iters
+    if required_iters >= calculate_sp_interval_iters(constants, expected_sub_slot_iters):
+        return None, ValidationError(Err.INVALID_REQUIRED_ITERS)
 
     # 8a. check signage point index 0 has no cc sp
     if (header_block.reward_chain_block.signage_point_index == 0) != (
