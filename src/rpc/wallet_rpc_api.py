@@ -418,10 +418,7 @@ class WalletRpcApi:
                         "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                     }
             except Exception as e:
-                return {
-                    "success": False,
-                    "reason": e
-                }
+                return {"success": False, "reason": e}
 
     ##########################################################################################
     # Wallet

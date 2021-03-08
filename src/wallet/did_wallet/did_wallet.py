@@ -335,7 +335,7 @@ class DIDWallet:
             backup_ids = []
             for d in details[1].split(","):
                 backup_ids.append(bytes.fromhex(d))
-            num_of_backup_ids_needed = uint64(details[3])
+            num_of_backup_ids_needed = uint64(int(details[3]))
             if num_of_backup_ids_needed > len(backup_ids):
                 raise Exception
             innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
@@ -354,8 +354,11 @@ class DIDWallet:
                 additions = await node.request_additions(request)
                 if additions is not None:
                     break
+                if isinstance(additions, RejectAdditionsRequest):
+                    continue
 
             assert additions is not None
+            assert isinstance(additions, RespondAdditions)
             # All additions in this block here:
 
             all_parents: bytes32 = set()
@@ -780,9 +783,7 @@ class DIDWallet:
 
     async def get_max_send_amount(self, records=None):
         if self.cost_of_single_tx is None:
-            tx = await self.create_spend(
-                self.did_info.current_inner.get_tree_hash()
-            )
+            tx = await self.create_spend(self.did_info.current_inner.get_tree_hash())
             program = best_solution_program(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             cost_result: CostResult = calculate_cost_of_program(

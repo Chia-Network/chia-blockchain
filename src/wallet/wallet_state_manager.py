@@ -1001,7 +1001,8 @@ class WalletStateManager:
         header_hash_of_interest = None
         heighest_block_height = 0
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
-
+        if peak is None:
+            return None, None
         peak_block: Optional[HeaderBlockRecord] = await self.blockchain.block_store.get_header_block_record(
             peak.header_hash
         )
