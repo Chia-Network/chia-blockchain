@@ -43,13 +43,13 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://download.chia.net/simple/ miniupnpc==2.1
+      pip install -i https://pypi.chia.net/simple/ miniupnpc==2.1
     displayName: "Install dependencies"
 
   - script: |
       . ./activate
       clang --version
-      pip wheel --use-pep517 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+      pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ --wheel-dir=wheels .
       pip install --no-index --find-links=./wheels/ chia-blockchain
     displayName: "Build and install wheels"
 
