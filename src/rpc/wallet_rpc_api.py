@@ -15,7 +15,7 @@ from src.util.keychain import (
     bytes_to_mnemonic,
 )
 from src.util.path import path_from_root
-from src.util.ws_message import create_payload
+from src.util.ws_message import create_payload_dict, WsRpcMessage
 
 from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, make_msg
@@ -88,7 +88,7 @@ class WalletRpcApi:
             "/get_network_info": self.get_network_info,
         }
 
-    async def _state_changed(self, *args) -> List[str]:
+    async def _state_changed(self, *args) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
@@ -103,7 +103,7 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload("state_changed", data, "chia_wallet", "wallet_ui", string=False)]
+        return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
 
     async def _stop_wallet(self):
         """

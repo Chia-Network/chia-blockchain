@@ -1,12 +1,14 @@
 import json
-from typing import Dict, Any
+import ssl
+from typing import Dict, Any, Optional
+from pathlib import Path
 
 import asyncio
 import websockets
 
 from src.server.server import ssl_context_for_client
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ws_message import create_payload
+from src.util.ws_message import create_payload_dict, WsRpcMessage
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
 
@@ -19,8 +21,8 @@ class DaemonProxy:
         self.websocket = None
         self.ssl_context = ssl_context
 
-    def format_request(self, command, data=None):
-        request = create_payload(command, data, "client", "daemon", False)
+    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+        request = create_payload_dict(command, data, "client", "daemon")
         return request
 
     async def start(self):
@@ -43,7 +45,7 @@ class DaemonProxy:
         asyncio.create_task(listener())
         await asyncio.sleep(1)
 
-    async def _get(self, request):
+    async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
@@ -66,39 +68,40 @@ class DaemonProxy:
 
         return response
 
-    async def start_service(self, service_name):
+    async def start_service(self, service_name: str) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("start_service", data)
         response = await self._get(request)
         return response
 
-    async def stop_service(self, service_name, delay_before_kill=15):
+    async def stop_service(self, service_name: str, delay_before_kill: int = 15) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("stop_service", data)
         response = await self._get(request)
         return response
 
-    async def is_running(self, service_name):
+    async def is_running(self, service_name: str) -> bool:
         data = {"service": service_name}
         request = self.format_request("is_running", data)
         response = await self._get(request)
-        is_running = response["data"]["is_running"]
-        return is_running
+        if "is_running" in response["data"]:
+            return bool(response["data"]["is_running"])
+        return False
 
-    async def ping(self):
-        request = self.format_request("ping")
+    async def ping(self) -> WsRpcMessage:
+        request = self.format_request("ping", {})
         response = await self._get(request)
         return response
 
     async def close(self):
         await self.websocket.close()
 
-    async def exit(self):
+    async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context):
+async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: Optional[ssl.SSLContext]) -> DaemonProxy:
     """
     Connect to the local daemon.
     """
@@ -108,7 +111,7 @@ async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context):
     return client
 
 
-async def connect_to_daemon_and_validate(root_path):
+async def connect_to_daemon_and_validate(root_path: Path) -> Optional[DaemonProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
@@ -123,8 +126,9 @@ async def connect_to_daemon_and_validate(root_path):
         connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"], ssl_context)
         r = await connection.ping()
 
-        if r["data"]["value"] == "pong":
+        if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
     except Exception:
         print("Daemon not started yet")
         return None
+    return None

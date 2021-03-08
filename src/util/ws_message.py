@@ -3,6 +3,11 @@ from typing import Dict, Any
 
 from src.util.json_util import dict_to_json_str
 
+try:
+    from typings import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
+
 
 # Messages must follow this format
 # Message = { "command" "command_name",
@@ -13,7 +18,16 @@ from src.util.json_util import dict_to_json_str
 #           }
 
 
-def format_response(incoming_msg: Dict[str, Any], response_data: Dict[str, Any]) -> str:
+class WsRpcMessage(TypedDict):
+    command: str
+    ack: bool
+    data: Dict[str, Any]
+    request_id: str
+    destination: str
+    origin: str
+
+
+def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -> str:
     """
     Formats the response into standard format.
     """
@@ -30,23 +44,22 @@ def format_response(incoming_msg: Dict[str, Any], response_data: Dict[str, Any])
     return json_str
 
 
-def create_payload(command: str, data: Dict[str, Any], origin: str, destination: str, string=True):
-    response = {
-        "command": command,
-        "ack": False,
-        "data": data,
-        "request_id": token_bytes().hex(),
-        "destination": destination,
-        "origin": origin,
-    }
-
-    if string:
-        json_str = dict_to_json_str(response)
-        return json_str
-    else:
-        return response
+def create_payload(command: str, data: Dict[str, Any], origin: str, destination: str) -> str:
+    response = create_payload_dict(command, data, origin, destination)
+    return dict_to_json_str(response)
 
 
-def pong():
+def create_payload_dict(command: str, data: Dict[str, Any], origin: str, destination: str) -> WsRpcMessage:
+    return WsRpcMessage(
+        command=command,
+        ack=False,
+        data=data,
+        request_id=token_bytes().hex(),
+        destination=destination,
+        origin=origin,
+    )
+
+
+def pong() -> Dict[str, Any]:
     response = {"success": True}
     return response

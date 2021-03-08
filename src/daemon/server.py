@@ -19,7 +19,7 @@ from src.server.server import ssl_context_for_server, ssl_context_for_root
 from src.ssl.create_ssl import get_mozzila_ca_crt
 from src.util.setproctitle import setproctitle
 from src.util.validate_alert import validate_alert
-from src.util.ws_message import format_response, create_payload
+from src.util.ws_message import format_response, create_payload, WsRpcMessage
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config, save_config
 from src.util.chia_logging import initialize_logging
@@ -214,6 +214,8 @@ class WebSocketServer:
             async for message in websocket:
                 try:
                     decoded = json.loads(message)
+                    if "data" not in decoded:
+                        decoded["data"] = {}
                     response, sockets_to_use = await self.handle_message(websocket, decoded)
                 except Exception as e:
                     tb = traceback.format_exc()
@@ -283,7 +285,7 @@ class WebSocketServer:
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
-        self, websocket: WebSocketServerProtocol, message: Dict[str, Any]
+        self, websocket: WebSocketServerProtocol, message: WsRpcMessage
     ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
@@ -299,10 +301,7 @@ class WebSocketServer:
 
             return None, []
 
-        data = None
-        if "data" in message:
-            data = message["data"]
-
+        data = message["data"]
         commands_with_data = [
             "start_service",
             "start_plotting",
@@ -312,7 +311,7 @@ class WebSocketServer:
             "register_service",
             "get_status",
         ]
-        if not isinstance(data, dict) and command in commands_with_data:
+        if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
         elif command == "ping":
             response = await ping()

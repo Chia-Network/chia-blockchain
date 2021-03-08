@@ -67,9 +67,7 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
                     if await daemon.is_running(service_name=service):
                         print("Network launched! ")
                         break
-                    else:
-                        await asyncio.sleep(2)
-
+                    await asyncio.sleep(2)
             else:
                 print(f"{service} failed to start. Error: {error}")
     await daemon.close()
