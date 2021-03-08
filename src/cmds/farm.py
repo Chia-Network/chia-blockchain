@@ -7,6 +7,7 @@ import click
 
 import aiohttp
 
+from src.consensus.block_record import BlockRecord
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -16,7 +17,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint16
 from src.wallet.util.transaction_type import TransactionType
 
-MINUTES_PER_BLOCK = (24 * 60) / 4608  # 0.3125
+SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
 def compute_wallets_stats(wallets):
@@ -102,6 +103,50 @@ async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
     client.close()
     await client.await_closed()
     return blockchain_state
+
+
+async def get_average_block_time(rpc_port: int) -> float:
+    try:
+        blocks_to_compare = 500
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        self_hostname = config["self_hostname"]
+        if rpc_port is None:
+            rpc_port = config["full_node"]["rpc_port"]
+        client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
+        blockchain_state = await client.get_blockchain_state()
+        curr: Optional[BlockRecord] = blockchain_state["peak"]
+        if curr is None or curr.height < (blocks_to_compare + 100):
+            client.close()
+            await client.await_closed()
+            return SECONDS_PER_BLOCK
+        while curr is not None and curr.height > 0 and not curr.is_transaction_block:
+            curr = await client.get_block_record(curr.prev_hash)
+        if curr is None:
+            client.close()
+            await client.await_closed()
+            return SECONDS_PER_BLOCK
+
+        past_curr = await client.get_block_record_by_height(curr.height - blocks_to_compare)
+        while past_curr is not None and past_curr.height > 0 and not past_curr.is_transaction_block:
+            past_curr = await client.get_block_record(past_curr.prev_hash)
+        if past_curr is None:
+            client.close()
+            await client.await_closed()
+            return SECONDS_PER_BLOCK
+
+        client.close()
+        await client.await_closed()
+        return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
+
+    except Exception as e:
+        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+            print(f"Connection error. Check if full node is running at {rpc_port}")
+        else:
+            print(f"Exception from 'full node' {e}")
+
+    client.close()
+    await client.await_closed()
+    return SECONDS_PER_BLOCK
 
 
 async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
@@ -210,8 +255,8 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     else:
         print("Total chia farmed: Unknown")
         print("User transaction fees: Unknown")
-        print("Block rewards: Unkown")
-        print("Last height farmed: Unkown")
+        print("Block rewards: Unknown")
+        print("Last height farmed: Unknown")
 
     total_plot_size = 0
     if plots is not None:
@@ -222,9 +267,10 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Total size of plots: ", end="")
         plots_space_human_readable = total_plot_size / 1024 ** 3
         if plots_space_human_readable >= 1024 ** 2:
-            plots_space_human_readable = plots_space_human_readable / 1024
+            plots_space_human_readable = plots_space_human_readable / (1024 ** 2)
             print(f"{plots_space_human_readable:.3f} PiB")
         elif plots_space_human_readable >= 1024:
+            plots_space_human_readable = plots_space_human_readable / 1024
             print(f"{plots_space_human_readable:.3f} TiB")
         else:
             print(f"{plots_space_human_readable:.3f} GiB")
@@ -245,7 +291,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
 
     if blockchain_state is not None and plots is not None:
         proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else 0
-        minutes = MINUTES_PER_BLOCK / proportion if proportion else 0
+        minutes = (await get_average_block_time(rpc_port) / 60) / proportion if proportion else 0
 
         print("Expected time to win: ", end="")
         if minutes == 0:
@@ -258,6 +304,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
             print(f"{math.floor(minutes)} minutes")
     else:
         print("Expected time to win: Unknown")
+    print("Note: log into your key using 'chia show' to see rewards for each key")
 
 
 @click.group("farm", short_help="Manage your farm")
