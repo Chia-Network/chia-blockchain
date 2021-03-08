@@ -49,7 +49,6 @@ def serialized_atom_overflow(size):
             ]
         )
     extra_str = "01" * 1000
-    breakpoint()
     return size_blob.hex() + extra_str
 
 
@@ -104,7 +103,7 @@ class TestClvmNativeDeserialization(TestCase):
             assert True
         else:
             assert False
-        b = hexstr_to_bytes(serialized_atom_overflow(0xfffffffffff))
+        b = hexstr_to_bytes(serialized_atom_overflow(0x1ffffffffff))
         try:
             cost, output = DESERIALIZE_MOD.run_with_cost([b])
         except Exception:
