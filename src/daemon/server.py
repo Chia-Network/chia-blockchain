@@ -309,7 +309,6 @@ class WebSocketServer:
             "stop_service",
             "is_running",
             "register_service",
-            "get_status",
         ]
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
