@@ -243,8 +243,8 @@ class Timelord:
                 count_signage += 1
                 if count_signage == 3:
                     break
-        # TODO: handle the special case when infusion point is the end of subslot.
         left_subslot_iters = sub_slot_iters - ip_iters
+        assert left_subslot_iters > 0
 
         if self.last_state.get_deficit() < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
             self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(left_subslot_iters)

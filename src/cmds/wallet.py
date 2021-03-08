@@ -11,7 +11,7 @@ from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.server.start_wallet import SERVICE_NAME
 from src.util.bech32m import encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
-from src.util.config import load_config, load_config_cli
+from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint64, uint16
 from src.wallet.transaction_record import TransactionRecord
@@ -37,7 +37,7 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     transaction_id = hexstr_to_bytes(args["tx_id"])
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     tx: TransactionRecord = await wallet_client.get_transaction(wallet_id, transaction_id=transaction_id)
     print_transaction(tx, verbose=(args["verbose"] > 0), name=name)
@@ -46,13 +46,19 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
         print("There are no transactions to this address")
-    for i in range(0, len(txs), 5):
-        for j in range(0, 5):
+
+    num_per_screen = 5
+    for i in range(0, len(txs), num_per_screen):
+        for j in range(0, num_per_screen):
+            if i + j >= len(txs):
+                break
             print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name)
+        if i + num_per_screen >= len(txs):
+            return
         print("Press q to quit, or c to continue")
         while True:
             entered_key = sys.stdin.read(1)
@@ -214,13 +220,13 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
             return
         wallet_client, fingerprint = wallet_client_f
         await function(extra_params, wallet_client, fingerprint)
-
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
         else:
             print(f"Exception from 'wallet' {e}")
-
     wallet_client.close()
     await wallet_client.await_closed()
 

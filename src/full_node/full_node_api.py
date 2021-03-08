@@ -693,8 +693,9 @@ class FullNodeAPI:
 
             try:
                 finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
-                    prev_b, self.full_node.blockchain, cc_challenge_hash
+                    self.full_node.blockchain, prev_b, cc_challenge_hash
                 )
+
                 if (
                     len(finished_sub_slots) > 0
                     and pos_sub_slot is not None

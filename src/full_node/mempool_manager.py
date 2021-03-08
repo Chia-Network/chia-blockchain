@@ -397,16 +397,16 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash]
         return None
 
-    async def new_peak(self, new_peak: Optional[BlockRecord]):
+    async def new_peak(self, new_peak: Optional[BlockRecord]) -> List[Tuple[SpendBundle, CostResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
         if new_peak is None:
-            return
+            return []
         if self.peak == new_peak:
-            return
+            return []
         if new_peak.height <= self.constants.INITIAL_FREEZE_PERIOD:
-            return
+            return []
 
         self.peak = new_peak
 
@@ -418,11 +418,15 @@ class MempoolManager:
 
         potential_txs_copy = self.potential_txs.copy()
         self.potential_txs = {}
+        txs_added = []
         for tx, cached_result, cached_name in potential_txs_copy.values():
-            await self.add_spendbundle(tx, cached_result, cached_name)
+            cost, status, error = await self.add_spendbundle(tx, cached_result, cached_name)
+            if status == MempoolInclusionStatus.SUCCESS:
+                txs_added.append((tx, cached_result, cached_name))
         log.debug(
             f"Size of mempool: {len(self.mempool.spends)}, minimum fee to get in: {self.mempool.get_min_fee_rate()}"
         )
+        return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158) -> List[MempoolItem]:
         items: List[MempoolItem] = []

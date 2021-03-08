@@ -349,6 +349,7 @@ class WebSocketServer:
 
         return {
             "id": plot_queue_item["id"],
+            "queue": plot_queue_item["queue"],
             "size": plot_queue_item["size"],
             "parallel": plot_queue_item["parallel"],
             "delay": plot_queue_item["delay"],
@@ -459,10 +460,10 @@ class WebSocketServer:
 
         return command_args
 
-    def _is_serial_plotting_running(self):
+    def _is_serial_plotting_running(self, queue: str = "default"):
         response = False
         for item in self.plots_queue:
-            if item["parallel"] is False and item["state"] is PlotState.RUNNING:
+            if item["queue"] == queue and item["parallel"] is False and item["state"] is PlotState.RUNNING:
                 response = True
         return response
 
@@ -470,17 +471,17 @@ class WebSocketServer:
         config = next(item for item in self.plots_queue if item["id"] == id)
         return config
 
-    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop):
+    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         next_plot_id = None
 
         for item in self.plots_queue:
-            if item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
+            if item["queue"] == queue and item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
                 next_plot_id = item["id"]
 
         if next_plot_id is not None:
-            loop.create_task(self._start_plotting(next_plot_id, loop))
+            loop.create_task(self._start_plotting(next_plot_id, loop, queue))
 
-    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop):
+    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
         try:
             log.info(f"Starting plotting with ID {id}")
@@ -532,7 +533,7 @@ class WebSocketServer:
         finally:
             if current_process is not None:
                 self.services[service_name].remove(current_process)
-            self._run_next_serial_plotting(loop)
+            self._run_next_serial_plotting(loop, queue)
 
     async def start_plotting(self, request: Dict[str, Any]):
         service_name = request["service"]
@@ -541,12 +542,14 @@ class WebSocketServer:
         parallel = request.get("parallel", False)
         size = request.get("k")
         count = request.get("n", 1)
+        queue = request.get("queue", "default")
 
         for k in range(count):
             id = str(uuid.uuid1())
             config = {
                 "id": id,
                 "size": size,
+                "queue": queue,
                 "service_name": service_name,
                 "command_args": self._build_plotting_command_args(request, True),
                 "parallel": parallel,
@@ -560,12 +563,12 @@ class WebSocketServer:
             self.plots_queue.append(config)
 
             # only first item can start when user selected serial plotting
-            can_start_serial_plotting = k == 0 and self._is_serial_plotting_running() is False
+            can_start_serial_plotting = k == 0 and self._is_serial_plotting_running(queue) is False
 
             if parallel is True or can_start_serial_plotting:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 loop = asyncio.get_event_loop()
-                loop.create_task(self._start_plotting(id, loop))
+                loop.create_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -590,6 +593,7 @@ class WebSocketServer:
         id = config["id"]
         state = config["state"]
         process = config["process"]
+        queue = config["queue"]
 
         try:
             run_next = False
@@ -600,7 +604,7 @@ class WebSocketServer:
 
             if run_next:
                 loop = asyncio.get_event_loop()
-                self._run_next_serial_plotting(loop)
+                self._run_next_serial_plotting(loop, queue)
 
             self.state_changed(service_plotter, "removed")
             return {"success": True}
