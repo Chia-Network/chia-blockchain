@@ -42,6 +42,10 @@ if [ "$(uname)" = "Linux" ]; then
 		echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
 		sudo apt-get update
 		sudo apt-get install -y python3.8-venv python3-distutils
+	elif type pacman && [ -f "/etc/arch-release" ]; then
+		# Arch Linux
+		echo "Installing on Arch Linux"
+		sudo pacman -S --needed python git
 	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2"
