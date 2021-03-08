@@ -164,26 +164,9 @@ export default function PlotAddNumberOfPlots() {
                 )}
                 helperText={(
                   <Trans>
-                    0 automatically chooses bucket count
+                    128 buckets is recommended
                   </Trans>
                 )}
-                InputProps={{
-                  inputProps: { min: 0 },
-                }}
-              />
-            </FormControl>
-          </Grid>
-          <Grid xs={12} sm={6} item>
-            <FormControl
-              variant="filled"
-              fullWidth
-            >
-              <TextField
-                name="stripeSize"
-                type="number"
-                variant="filled"
-                placeholder="65536"
-                label={<Trans>Stripe Size</Trans>}
                 InputProps={{
                   inputProps: { min: 0 },
                 }}
