@@ -55,6 +55,7 @@ def main():
     config["introducer_peer"]["host"] = "127.0.0.1"
     config["introducer_peer"]["port"] = 58555
     config["selected_network"] = "testnet0"
+    config["simulation"] = True
     kwargs = service_kwargs_for_full_node_simulator(
         DEFAULT_ROOT_PATH,
         config,

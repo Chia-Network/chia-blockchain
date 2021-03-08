@@ -17,6 +17,11 @@ class FullNodeSimulator(FullNodeAPI):
         self.bt = block_tools
         self.full_node = full_node
         self.lock = asyncio.Lock()
+        self.config = full_node.config
+        if "simulation" in self.config and self.config["simulation"] is True:
+            self.use_current_time = True
+        else:
+            self.use_current_time = False
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
@@ -66,6 +71,7 @@ class FullNodeSimulator(FullNodeAPI):
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
+                current_time=self.use_current_time,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
@@ -98,6 +104,7 @@ class FullNodeSimulator(FullNodeAPI):
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
+                current_time=self.use_current_time,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
