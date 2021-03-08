@@ -12,6 +12,7 @@ from src.plotting.check_plots import check_plots
 from src.util.chia_logging import initialize_logging
 
 
+DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
 
@@ -44,7 +45,6 @@ def plots_cmd(ctx: click.Context):
 @click.option("-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=4608, show_default=True)
 @click.option("-r", "--num_threads", help="Number of threads to use", type=int, default=2, show_default=True)
 @click.option("-u", "--buckets", help="Number of buckets", type=int, default=128, show_default=True)
-@click.option("-s", "--stripe_size", help="Stripe size", type=int, default=65536, show_default=True)
 @click.option(
     "-a",
     "--alt_fingerprint",
@@ -112,7 +112,7 @@ def create_cmd(
             self.buffer = buffer
             self.num_threads = num_threads
             self.buckets = buckets
-            self.stripe_size = stripe_size
+            self.stripe_size = DEFAULT_STRIPE_SIZE
             self.alt_fingerprint = alt_fingerprint
             self.pool_contract_address = pool_contract_address
             self.farmer_public_key = farmer_public_key
