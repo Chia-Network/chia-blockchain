@@ -45,7 +45,7 @@ msgstr "Accettato al tempo:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "Action"
 msgstr "Azione"
 
@@ -69,7 +69,7 @@ msgstr "Aggiungi Wallet"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "Aggiungi un Plot"
@@ -384,7 +384,7 @@ msgstr "Crea Wallet DID"
 msgid "Create Offer"
 msgstr "Crea Offerta"
 
-#: src/components/plot/add/PlotAdd.tsx:66
+#: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
 msgstr "Crea Plot"
 
@@ -657,7 +657,7 @@ msgstr "File"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:67
 msgid "Filename"
 msgstr "Nome file"
 
@@ -815,7 +815,7 @@ msgstr "Ultime Sfide Blocchi"
 msgid "Loading..."
 msgstr "Caricando..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
 msgstr "Plot Harvester Locale"
 
@@ -1097,7 +1097,7 @@ msgstr "Conteggio Plot"
 msgid "Plot Id"
 msgstr "Id Plot"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Key"
 msgstr "Chiave Plot"
 
@@ -1109,7 +1109,7 @@ msgstr "Chiave Plot"
 msgid "Plot Public Key"
 msgstr "Chiave Pubblica del Plot"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Seed"
 msgstr "Seed del Plot"
 
@@ -1141,7 +1141,7 @@ msgstr "Plottando"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Plottare in parallelo può far risparmiare tempo. In alternativa, aggiungi plot alla coda."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Pool Key"
 msgstr "Chiave Pool"
 
@@ -1207,6 +1207,14 @@ msgstr "Pubkey"
 #: src/middleware/middleware_api.jsx:275
 msgid "Public key:"
 msgstr "Chiave pubblica:"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:110
+msgid "Queue Name"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:43
+msgid "Queue name"
+msgstr ""
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1414,7 +1422,7 @@ msgstr "Condizione"
 #: src/components/fullNode/FullNode.jsx:135
 #: src/components/fullNode/FullNode.jsx:143
 #: src/components/fullNode/FullNode.jsx:165
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
 #: src/components/wallet/WalletStatusCard.tsx:11
@@ -1624,7 +1632,7 @@ msgstr "Iterazioni in Totale"
 msgid "Total Network Space"
 msgstr "Spazio Totale della Rete"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:91
+#: src/components/plot/overview/PlotOverviewPlots.tsx:97
 msgid "Total Plot Size:"
 msgstr "Dimensione Totale del Plot:"
 
@@ -1762,7 +1770,7 @@ msgstr "I wallet"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/plot/overview/PlotOverviewPlots.tsx:90
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Vuoi guadagnare più Chia? Aggingi più plot alla tua coltivazione."
 
