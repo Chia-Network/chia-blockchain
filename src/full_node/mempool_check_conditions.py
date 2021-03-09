@@ -12,7 +12,10 @@ from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err
 import time
 from src.util.ints import uint64, uint32
-from src.wallet.puzzles.generator_loader import GENERATOR_MOD, GENERATOR_FOR_SINGLE_COIN_MOD
+from src.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
+from src.wallet.puzzles.lowlevel_generator import get_generator
+
+GENERATOR_MOD = get_generator()
 
 
 def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
