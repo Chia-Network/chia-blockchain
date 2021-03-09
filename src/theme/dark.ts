@@ -1,7 +1,7 @@
 import { createMuiTheme } from '@material-ui/core/styles';
 import theme from './default';
 
-export default createMuiTheme({
+export default (locale: object) => createMuiTheme({
   ...theme,
   palette: {
     ...theme.palette,
@@ -10,4 +10,4 @@ export default createMuiTheme({
     },
     type: 'dark',
   },
-});
+}, locale);
