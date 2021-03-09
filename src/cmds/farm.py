@@ -312,7 +312,7 @@ def farm_cmd() -> None:
     pass
 
 
-@farm_cmd.command("summary", short_help="Summary farming information")
+@farm_cmd.command("summary", short_help="Summary of farming information")
 @click.option(
     "-p",
     "--rpc-port",
