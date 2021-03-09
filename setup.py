@@ -16,7 +16,7 @@ dependencies = [
     "colorlog==4.7.2",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.4.6",  # Python cryptography library for TLS - keyring conflict
-    "keyring==22.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==23.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
     #  See https://github.com/frispete/keyrings.cryptfile/issues/15
@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+    "miniupnpc==2.1",  # Allows users to open ports on their router
 ]
 dev_dependencies = [
     "pytest",
