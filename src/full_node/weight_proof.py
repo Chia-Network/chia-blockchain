@@ -749,7 +749,7 @@ def _validate_sub_epoch_summaries(
         constants.DIFFICULTY_STARTING,
     )
 
-    log.info(f"validating {len(summaries)} summaries")
+    log.info(f"validating {len(summaries)} sub epochs")
 
     # validate weight
     if not _validate_summaries_weight(constants, total, summaries, weight_proof):
