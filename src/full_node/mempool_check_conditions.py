@@ -103,11 +103,13 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
 def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
     # TODO: allow generator mod to take something (future)
     # TODO: write more tests
+    block_program_args = SerializedProgram.from_bytes(b"\x80")
+
     try:
         if safe_mode:
-            cost, result = GENERATOR_MOD.run_safe_with_cost(block_program)
+            cost, result = GENERATOR_MOD.run_safe_with_cost(block_program, block_program_args)
         else:
-            cost, result = GENERATOR_MOD.run_with_cost(block_program)
+            cost, result = GENERATOR_MOD.run_with_cost(block_program, block_program_args)
         npc_list = []
         opcodes = set(item.value for item in ConditionOpcode)
         for res in result.as_iter():
