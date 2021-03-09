@@ -1,4 +1,5 @@
 import click
+import sys
 
 from pathlib import Path
 import logging
@@ -92,7 +93,6 @@ def create_cmd(
     buffer: int,
     num_threads: int,
     buckets: int,
-    stripe_size: int,
     alt_fingerprint: int,
     pool_contract_address: str,
     farmer_public_key: str,
@@ -124,6 +124,23 @@ def create_cmd(
             self.memo = memo
             self.nobitfield = nobitfield
             self.exclude_final_dir = exclude_final_dir
+
+    if size < 25:
+        print("k under 25 is not supported, please use 25 for testing, or 32 or more for real plots.")
+        sys.exit(1)
+    elif size == 25:
+        if not click.confirm(
+            (
+                "k=25 is only used for testing purpose, this plot size is not usable for farming.\n"
+                "Do you want to continue?"
+            ),
+        ):
+            print("Cancelled")
+            sys.exit(1)
+            return
+    elif size > 25 and size < 32:
+        print("k between 25 and 32 are not support, please use 25 for testing purposes and 32 or more for farming.")
+        sys.exit(1)
 
     create_plots(Params(), ctx.obj["root_path"])
 
