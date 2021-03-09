@@ -16,6 +16,7 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint64
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ class TestDos:
         await ws.close()
 
         # Now test that the ban is active
-        await asyncio.sleep(2)
+        await asyncio.sleep(5)
         assert ws.closed
         try:
             await session.ws_connect(
@@ -101,7 +102,7 @@ class TestDos:
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
-        server_1.invalid_protocol_ban_seconds = 3
+        server_1.invalid_protocol_ban_seconds = 10
         # Use the server_2 ssl information to connect to server_1, and send a huge message
         timeout = ClientTimeout(total=10)
         session = ClientSession(timeout=timeout)
@@ -122,6 +123,7 @@ class TestDos:
         await ws.close()
 
         # Now test that the ban is active
+        await asyncio.sleep(5)
         assert ws.closed
         try:
             await session.ws_connect(
@@ -130,7 +132,7 @@ class TestDos:
             assert False
         except ServerDisconnectedError:
             pass
-        await asyncio.sleep(4)
+        await asyncio.sleep(6)
 
         # Ban expired
         await session.ws_connect(
@@ -175,6 +177,12 @@ class TestDos:
         for i in range(6000):
             await ws_con._send_message(new_tx_message)
         await asyncio.sleep(1)
+
+        def is_closed():
+            return ws_con.closed
+
+        await time_out_assert(15, is_closed)
+
         assert ws_con.closed
 
         # Banned
@@ -197,13 +205,15 @@ class TestDos:
 
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
 
+        def is_closed():
+            return ws_con.closed
+
         new_message = make_msg(
             ProtocolMessageTypes.request_mempool_transactions,
             full_node_protocol.RequestMempoolTransactions(bytes([])),
         )
         for i in range(2):
             await ws_con._send_message(new_message)
-
         await asyncio.sleep(1)
         assert not ws_con.closed
 
@@ -219,8 +229,7 @@ class TestDos:
 
         for i in range(6):
             await ws_con._send_message(new_message)
-        await asyncio.sleep(1)
-        assert ws_con.closed
+        await time_out_assert(15, is_closed)
 
         # Banned
         assert not (
@@ -242,6 +251,9 @@ class TestDos:
 
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
 
+        def is_closed():
+            return ws_con.closed
+
         new_message = make_msg(
             ProtocolMessageTypes.request_mempool_transactions,
             full_node_protocol.RequestMempoolTransactions(bytes([0] * 5 * 1024 * 1024)),
@@ -256,8 +268,7 @@ class TestDos:
         ws_con.outbound_rate_limiter = FakeRateLimiter()
 
         await ws_con._send_message(new_message)
-        await asyncio.sleep(1)
-        assert ws_con.closed
+        await time_out_assert(15, is_closed)
 
         # Banned
         assert not (
