@@ -1513,8 +1513,8 @@ msgid "TXCH User Transaction Fees"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
-msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Počas procesu vytvárania polí sa vytvárajú dočasné súbory. To presahuje veľkosť konečných súborov polí. Uistite sa, že máte dostatok miesta. <0>Ďalšie informácie</0>"
+#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr "Počas procesu vytvárania polí sa vytvárajú dočasné súbory. To presahuje veľkosť konečných súborov polí. Uistite sa, že máte dostatok miesta. <0>Ďalšie informácie</0>"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
@@ -1822,6 +1822,10 @@ msgstr ""
 #: src/electron-starter.js:122
 msgid "Yes"
 msgstr "Áno"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:18
+msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
