@@ -156,9 +156,9 @@ function UIPart() {
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h5" component="h1" gutterBottom>
             <Trans>
-              Restore Smart Wallets From Backup
+              Restore Metadata for Coloured Coins and other Smart Wallets from Backup
             </Trans>
           </Typography>
 
@@ -184,7 +184,7 @@ function UIPart() {
               color="primary"
               className={classes.submit}
             >
-              <Trans>Skip</Trans>
+              <Trans>Safe To Skip</Trans>
             </Button>
           </Container>
         </Flex>

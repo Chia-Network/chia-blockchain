@@ -23,8 +23,12 @@ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> 
 msgstr "*Vill du utforska Chias block lite mer? Ta en titt på <0>Chia Explorer</0> som har skapats som öppen källkod av en utvecklare."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
-msgid "0 automatically chooses bucket count"
-msgstr "0 väljer automatiskt antal buckets"
+#~ msgid "0 automatically chooses bucket count"
+#~ msgstr "0 väljer automatiskt antal buckets"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
+msgid "128 buckets is recommended"
+msgstr ""
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -1208,7 +1212,7 @@ msgstr "Publik nyckel"
 msgid "Public key:"
 msgstr "Publik nyckel:"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:110
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
 msgstr ""
 
@@ -1275,13 +1279,21 @@ msgid "Report an Issue..."
 msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:107
-msgid "Restore Smart Wallets From Backup"
-msgstr "Återställ smarta plånböcker från säkerhetskopia"
+msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
+msgstr ""
+
+#: src/components/backup/BackupRestore.tsx:107
+#~ msgid "Restore Smart Wallets From Backup"
+#~ msgstr "Återställ smarta plånböcker från säkerhetskopia"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
 #~ msgid "SB Height"
 #~ msgstr "SB Height"
+
+#: src/components/backup/BackupRestore.tsx:122
+msgid "Safe To Skip"
+msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
@@ -1379,8 +1391,8 @@ msgid "Sign In"
 msgstr "Logga in"
 
 #: src/components/backup/BackupRestore.tsx:122
-msgid "Skip"
-msgstr "Hoppa över"
+#~ msgid "Skip"
+#~ msgstr "Hoppa över"
 
 #: src/electron-starter.js:407
 msgid "Speech"
@@ -1451,8 +1463,8 @@ msgstr "Status:"
 #~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
-msgid "Stripe Size"
-msgstr "Stripe-storlek"
+#~ msgid "Stripe Size"
+#~ msgstr "Stripe-storlek"
 
 #: src/components/block/Block.jsx:199
 #~ msgid "Sub Block Height"
