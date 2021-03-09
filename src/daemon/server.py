@@ -205,7 +205,6 @@ class WebSocketServer:
                     self.net_config["network_overrides"]["constants"][selected]["GENESIS_CHALLENGE"] = challenge
                     save_config(self.root_path, "config.yaml", self.net_config)
                     self.genesis_initialized = True
-                    await self.start_services()
                     break
             except Exception as e:
                 log.error(f"Exception in check alerts task: {e}")
@@ -576,11 +575,6 @@ class WebSocketServer:
         }
 
         return response
-
-    async def start_services(self):
-        services = ["chia_full_node", "chia_farmer", "chia_harvester", "chia_wallet"]
-        for service in services:
-            await self.start_service({"service": service})
 
     async def stop_plotting(self, request: Dict[str, Any]):
         id = request["id"]

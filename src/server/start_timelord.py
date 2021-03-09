@@ -31,7 +31,7 @@ def service_kwargs_for_timelord(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 
-    node = Timelord(config, updated_constants)
+    node = Timelord(root_path, config, updated_constants)
     peer_api = TimelordAPI(node)
     network_id = config["selected_network"]
     kwargs = dict(
