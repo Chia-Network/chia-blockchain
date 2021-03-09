@@ -1,10 +1,8 @@
-import asyncio
 import dataclasses
 
 import pytest
 from blspy import PrivateKey
 
-from src.consensus.constants import ConsensusConstants
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.util.block_tools import BlockTools
@@ -12,7 +10,7 @@ from src.util.hash import std_hash
 from src.util.ints import uint16
 from src.util.validate_alert import create_alert_file, create_not_ready_alert_file
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.setup_nodes import setup_daemon, self_hostname, setup_full_node, setup_full_system
+from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.util.alert_server import AlertServer
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval

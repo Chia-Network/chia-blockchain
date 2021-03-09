@@ -1,10 +1,9 @@
 import asyncio
-import dataclasses
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.util.config import load_config, load_config_cli
+from src.util.config import load_config
 
 
 async def wait_for_genesis_challenge(
@@ -18,8 +17,6 @@ async def wait_for_genesis_challenge(
         if challenge is None:
             continue
         else:
-            # dataclasses.replace(constants, GENESIS_CHALLENGE=challenge)
-            # constants.GENESIS_CHALLENGE = challenge
             overrides = config["network_overrides"]["constants"][config["selected_network"]]
             updated_constants = constants.replace_str_to_bytes(**overrides)
             return config, updated_constants
