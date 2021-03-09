@@ -11,6 +11,7 @@ from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Handshake
 from src.server.outbound_message import Message, NodeType, make_msg
+from src.server.rate_limits import RateLimiter
 from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint16, uint8
@@ -90,6 +91,7 @@ class WSChiaConnection:
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         self.request_nonce: uint16 = uint16(0)
+        self.rate_limiter = RateLimiter()
 
     async def perform_handshake(
         self, network_id: bytes32, protocol_version: str, server_port: int, local_type: NodeType
@@ -361,8 +363,16 @@ class WSChiaConnection:
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Message = Message.from_bytes(data)
+            can_process_message = self.rate_limiter.message_received(full_message_loaded)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            if not can_process_message:
+                self.log.error(
+                    f"Peer has been rate limited and will be disconnected: {self.peer_host}, message: {message.type}"
+                )
+                asyncio.create_task(self.close(300))
+                await asyncio.sleep(3)
+                return None
             return full_message_loaded
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
