@@ -417,7 +417,7 @@ class ChiaServer:
         self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
         if ban_time > 0:
             ban_until: float = time.time() + ban_time
-            self.log.warning(f"Banning {connection.peer_host} until {ban_until}")
+            self.log.warning(f"Banning {connection.peer_host} for {ban_time} seconds")
             if connection.peer_host in self.banned_peers:
                 if ban_until > self.banned_peers[connection.peer_host]:
                     self.banned_peers[connection.peer_host] = ban_until

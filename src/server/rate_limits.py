@@ -80,6 +80,7 @@ rate_limits_other = {
     ProtocolMessageTypes.reject_puzzle_solution: RLSettings(100, 100),
     ProtocolMessageTypes.new_peak_wallet: RLSettings(200, 300),
     ProtocolMessageTypes.request_block_header: RLSettings(500, 100),
+    ProtocolMessageTypes.respond_block_header: RLSettings(500, 50 * 1024),
     ProtocolMessageTypes.reject_header_request: RLSettings(500, 100),
     ProtocolMessageTypes.request_removals: RLSettings(500, 50 * 1024, 10 * 1024 * 1024),
     ProtocolMessageTypes.respond_removals: RLSettings(500, 1024 * 1024, 10 * 1024 * 1024),
