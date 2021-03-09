@@ -97,7 +97,7 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install -r requirements-dev.txt
+        venv/bin/python -m pip install pytest pytest-asyncio
 
     - name: Test clvm code with pytest
       run: |
