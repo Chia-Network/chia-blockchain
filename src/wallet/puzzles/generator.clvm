@@ -1,4 +1,4 @@
-(mod block_program
+(mod (block_program block_program_args)
 
   (defmacro and ARGS
       (if ARGS
@@ -38,5 +38,5 @@
   )
 
   ; main
-  (generate_npc_pair_list (a block_program (q . ())) ())
+  (generate_npc_pair_list (a block_program block_program_args) ())
 )
