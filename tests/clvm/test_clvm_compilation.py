@@ -9,7 +9,8 @@ wallet_program_files = set(
     [
         "src/wallet/puzzles/calculate_synthetic_public_key.clvm",
         "src/wallet/puzzles/cc.clvm",
-        "src/wallet/puzzles/generator.clvm",
+        "src/wallet/puzzles/chialisp_deserialisation.clvm",
+        # "src/wallet/puzzles/generator.clvm", - see src/wallet/puzzles/lowlevel_generator.py
         "src/wallet/puzzles/generator_for_single_coin.clvm",
         "src/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
         "src/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
