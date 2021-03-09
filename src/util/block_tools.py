@@ -151,6 +151,8 @@ class BlockTools:
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
+        self._config["inbound_rate_limit_percent"] = 100000
+        self._config["outbound_rate_limit_percent"] = 100000
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
@@ -159,6 +161,13 @@ class BlockTools:
         if const_dict is not None:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
+
+    def change_config(self, new_config):
+        self._config = new_config
+        overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
+        updated_constants = self.constants.replace_str_to_bytes(**overrides)
+        self.constants = updated_constants
+        save_config(self.root_path, "config.yaml", self._config)
 
     def init_plots(self, root_path: Path):
         plot_dir = get_plot_dir()

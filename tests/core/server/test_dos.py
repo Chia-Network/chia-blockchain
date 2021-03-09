@@ -39,7 +39,9 @@ def event_loop():
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
+    async for _ in setup_simulators_and_wallets(
+        2, 0, {}, starting_port=60000, inbound_rate_limit_percent=100, outbound_rate_limit_percent=30
+    ):
         yield _
 
 

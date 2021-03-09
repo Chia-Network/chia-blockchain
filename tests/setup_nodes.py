@@ -14,7 +14,6 @@ from src.full_node.full_node_api import FullNodeAPI
 from src.timelord.timelord_launcher import spawn_process, kill_processes
 from src.util.block_tools import BlockTools, test_constants
 from src.types.peer_info import PeerInfo
-from src.util.config import save_config
 from src.util.hash import std_hash
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
@@ -65,7 +64,7 @@ async def setup_daemon(port, alert_url, pubkey):
     config["CHIA_ALERTS_PUBKEY"] = pubkey
     config["network_overrides"]["constants"]["testnet5"]["GENESIS_CHALLENGE"] = None
     btools._config = config
-    save_config(root_path, "config.yaml", btools._config)
+    btools.change_config(config)
     assert lockfile is not None
     create_server_for_daemon(btools.root_path)
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
@@ -84,11 +83,14 @@ async def setup_full_node(
     introducer_port=None,
     simulator=False,
     send_uncompact_interval=30,
+    inbound_rate_limit_percent=None,
+    outbound_rate_limit_percent=None,
 ):
     db_path = bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
-    config = bt.config["full_node"]
+    config_base = bt.config
+    config = config_base["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
@@ -98,8 +100,13 @@ async def setup_full_node(
         config["introducer_peer"]["port"] = introducer_port
     else:
         config["introducer_peer"] = None
+    if inbound_rate_limit_percent is not None:
+        config_base["inbound_rate_limit_percent"] = inbound_rate_limit_percent
+    if outbound_rate_limit_percent is not None:
+        config_base["outbound_rate_limit_percent"] = outbound_rate_limit_percent
     config["port"] = port
     config["rpc_port"] = port + 1000
+    local_bt.change_config(config_base)
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
@@ -383,7 +390,14 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None, key_seed=None, starting_port=50000
+    simulator_count: int,
+    wallet_count: int,
+    dic: Dict,
+    starting_height=None,
+    key_seed=None,
+    starting_port=50000,
+    inbound_rate_limit_percent=None,
+    outbound_rate_limit_percent=None,
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
@@ -400,6 +414,8 @@ async def setup_simulators_and_wallets(
             port,
             bt_tools,
             simulator=True,
+            inbound_rate_limit_percent=inbound_rate_limit_percent,
+            outbound_rate_limit_percent=outbound_rate_limit_percent,
         )
         simulators.append(await sim.__anext__())
         node_iters.append(sim)

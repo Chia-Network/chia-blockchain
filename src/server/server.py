@@ -65,6 +65,8 @@ class ChiaServer:
         local_type: NodeType,
         ping_interval: int,
         network_id: bytes32,
+        inbound_rate_limit_percent: int,
+        outbound_rate_limit_percent: int,
         root_path: Path,
         config: Dict,
         private_ca_crt_key: Tuple[Path, Path],
@@ -90,6 +92,8 @@ class ChiaServer:
 
         self._ping_interval = ping_interval
         self._network_id = network_id
+        self._inbound_rate_limit_percent = inbound_rate_limit_percent
+        self._outbound_rate_limit_percent = outbound_rate_limit_percent
 
         # Task list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
@@ -231,6 +235,8 @@ class ChiaServer:
                 self.incoming_messages,
                 self.connection_closed,
                 peer_id,
+                self._inbound_rate_limit_percent,
+                self._outbound_rate_limit_percent,
                 close_event,
             )
             handshake = await connection.perform_handshake(
@@ -368,6 +374,8 @@ class ChiaServer:
                     self.incoming_messages,
                     self.connection_closed,
                     peer_id,
+                    self._inbound_rate_limit_percent,
+                    self._outbound_rate_limit_percent,
                     session=session,
                 )
                 handshake = await connection.perform_handshake(

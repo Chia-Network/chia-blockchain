@@ -4,6 +4,8 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 daemon_port: 55400
+inbound_rate_limit_percent: 100
+outbound_rate_limit_percent: 30
 
 network_overrides: &network_overrides
   constants:
