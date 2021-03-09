@@ -156,12 +156,15 @@ msgid "Best estimate over last 5 hours"
 msgstr "Mejor estimado de las últimas 5 horas"
 
 #: src/components/block/Block.jsx:107
-#: src/components/block/Block.jsx:119
 #: src/components/block/Block.jsx:141
 #: src/components/block/Block.jsx:146
 #: src/components/block/Block.jsx:317
 msgid "Block"
 msgstr "Bloque"
+
+#: src/components/block/Block.jsx:119
+msgid "Block Test"
+msgstr ""
 
 #: src/components/block/Block.jsx:225
 msgid "Block VDF Iterations"
