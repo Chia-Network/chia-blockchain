@@ -95,6 +95,18 @@ class WalletNodeAPI:
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
 
+    @peer_required
+    @api_request
+    async def respond_peers(
+        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
+        self.log.debug(f"Received {len(request.peer_list)} peers")
+        if not self.wallet_node.has_full_node():
+            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+        else:
+            await self.wallet_node.wallet_peers.ensure_is_closed()
+        return None
+
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
         if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:

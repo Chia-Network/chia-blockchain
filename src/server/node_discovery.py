@@ -57,6 +57,7 @@ class FullNodeDiscovery:
         self.address_manager = None
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
+        self.lock = asyncio.Lock()
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
@@ -105,7 +106,7 @@ class FullNodeDiscovery:
             peer.is_outbound
             and peer.peer_server_port is not None
             and peer.connection_type is NodeType.FULL_NODE
-            and self.server._local_type is NodeType.FULL_NODE
+            and (self.server._local_type is NodeType.FULL_NODE or self.server._local_type is NodeType.WALLET)
             and self.address_manager is not None
         ):
             msg = make_msg(ProtocolMessageTypes.request_peers, full_node_protocol.RequestPeers())
@@ -388,7 +389,6 @@ class FullNodePeers(FullNodeDiscovery):
             log,
         )
         self.relay_queue = asyncio.Queue()
-        self.lock = asyncio.Lock()
         self.neighbour_known_peers = {}
         self.key = randbits(256)
 
