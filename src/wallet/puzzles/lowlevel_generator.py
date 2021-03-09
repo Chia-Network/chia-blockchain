@@ -1,14 +1,4 @@
-from src.wallet.chialisp import (
-    eval,
-    sexp,
-    args,
-    make_if,
-    quote,
-    make_list,
-    rest,
-    cons,
-    sha256tree
-)
+from src.wallet.chialisp import eval, sexp, args, make_if, quote, make_list, rest, cons, sha256tree
 from src.types.blockchain_format.program import SerializedProgram, Program
 from clvm_tools import binutils
 
