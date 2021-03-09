@@ -25,8 +25,8 @@ jobs:
 
       - name: Update source code
         run: |
-          lingui extract
-          lingui compile
+          npm run locale:extract
+          npm run locale:compile
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v7
