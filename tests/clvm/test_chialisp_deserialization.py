@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from src.wallet.puzzles.load_clvm import load_clvm
 from src.util.byte_types import hexstr_to_bytes
-from clvm import SExp
 from src.types.blockchain_format.program import Program
 
 
@@ -20,13 +19,13 @@ def serialized_atom_overflow(size):
         size_blob = bytes([0xe0 | (size >> 16), (size >> 8) & 0xff, (size >> 0) & 0xFF])
     elif size < 0x8000000:
         size_blob = bytes(
-        [
-            0xF0 | (size >> 24),
-            (size >> 16) & 0xff,
-            (size >> 8) & 0xff,
-            (size >> 0) & 0xff,
-        ]
-    )
+            [
+                0xF0 | (size >> 24),
+                (size >> 16) & 0xff,
+                (size >> 8) & 0xff,
+                (size >> 0) & 0xff,
+            ]
+        )
     elif size < 0x400000000:
         size_blob = bytes(
             [
@@ -66,7 +65,7 @@ class TestClvmNativeDeserialization(TestCase):
         assert prog == Program.from_bytes(b)
 
     def test_deserialization_password_coin(self):
-        # (i (= (sha256 2) (q 0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824)) (c (q 51) (c 5 (c (q 100) (q ())))) (q "wrong password"))
+        # (i (= (sha256 2) (q 0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824)) (c (q 51) (c 5 (c (q 100) (q ())))) (q "wrong password"))  # noqa
         b = hexstr_to_bytes("ff04ffff0affff0bff0280ffff01ffa02cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b98248080ffff05ffff01ff3380ffff05ff05ffff05ffff01ff6480ffff01ff8080808080ffff01ff8e77726f6e672070617373776f72648080")  # noqa
         cost, output = DESERIALIZE_MOD.run_with_cost([b])
         print(cost, output)
@@ -74,7 +73,7 @@ class TestClvmNativeDeserialization(TestCase):
         assert prog == Program.from_bytes(b)
 
     def test_deserialization_large_numbers(self):
-        # '(99999999999999999999999999999999999999999999999999999999999999999 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -99999999999999999999999999999999999999999999999999999999999999999999999999999)'
+        # '(99999999999999999999999999999999999999999999999999999999999999999 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -99999999999999999999999999999999999999999999999999999999999999999999999999999)'  # noqa
         b = hexstr_to_bytes("ff9c00f316271c7fc3908a8bef464e3945ef7a253609ffffffffffffffffffb00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa1ff22ea0179500526edb610f148ec0c614155678491902d6000000000000000000180")  # noqa
         cost, output = DESERIALIZE_MOD.run_with_cost([b])
         print(cost, output)
