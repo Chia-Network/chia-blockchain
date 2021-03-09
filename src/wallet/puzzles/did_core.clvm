@@ -95,7 +95,7 @@
   )
 
   (defmacro create_outputs (puzreveal solution)
-      (qq ((c (unquote puzreveal) (unquote solution))))
+      (qq (a (unquote puzreveal) (unquote solution)))
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
