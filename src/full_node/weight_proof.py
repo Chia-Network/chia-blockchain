@@ -800,6 +800,8 @@ def _map_sub_epoch_summaries(
         # add to dict
         summaries.append(ses)
         ses_hash = std_hash(ses)
+    # add last sub epoch weight
+    sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
     return summaries, total_weight, sub_epoch_weight_list
 
 
