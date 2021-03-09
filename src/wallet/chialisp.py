@@ -68,21 +68,12 @@ def sha256(*argv):
 
 
 SHA256TREE_PROG = """
-<<<<<<< HEAD
-(a (q (a 2 (c 2 (c 3 (q ())))))
-    (c (q (a (i (l 5)
-                 (q (sha256 (q 2)
-                            (a 2 (c 2 (c 9 (q ()))))
-                            (a 2 (c 2 (c 13 (q ()))))))
-                 (q (sha256 (q 1) 5))) 1)) %s))
-=======
 (a (q . (a 2 (c 2 (c 3 0))))
     (c (q . (a (i (l 5)
                  (q . (sha256 (q . 2)
                             (a 2 (c 2 (c 9 0)))
                             (a 2 (c 2 (c 13 0)))))
                  (q . (sha256 (q . 1) 5))) 1)) %s))
->>>>>>> add lower_level generator
 """
 
 
