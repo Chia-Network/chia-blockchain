@@ -25,6 +25,8 @@ from src.util.ints import uint16
 from src.protocols.shared_protocol import protocol_version
 import traceback
 
+from src.util.network import is_localhost
+
 
 def ssl_context_for_server(
     ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
@@ -296,7 +298,7 @@ class ChiaServer:
             self.log.error(f"Invalid connection type for connection {connection}")
 
     def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
-        if (target_node.host == "127.0.0.1" or target_node.host == "localhost") and target_node.port == self._port:
+        if is_localhost(target_node.host) and target_node.port == self._port:
             # Don't connect to self
             self.log.debug(f"Not connecting to {target_node}")
             return True

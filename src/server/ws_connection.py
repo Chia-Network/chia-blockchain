@@ -18,7 +18,7 @@ from src.util.ints import uint16, uint8
 from src.util.errors import Err, ProtocolError
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from src.util.network import class_for_type
+from src.util.network import class_for_type, is_localhost
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
@@ -96,7 +96,6 @@ class WSChiaConnection:
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
-        print(outbound_rate_limit_percent, inbound_rate_limit_percent)
         self.outbound_rate_limiter = RateLimiter(percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(percentage_of_limit=inbound_rate_limit_percent)
 
@@ -327,11 +326,17 @@ class WSChiaConnection:
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         if not self.outbound_rate_limiter.process_msg_and_check(message):
-            self.log.debug(
-                f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
-                f"peer: {self.peer_host}"
-            )
-            return
+            if not is_localhost(self.peer_host):
+                self.log.debug(
+                    f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                    f"peer: {self.peer_host}"
+                )
+                return
+            else:
+                self.log.debug(
+                    f"Not rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                    f"peer: {self.peer_host}"
+                )
 
         await self.ws.send_bytes(encoded)
         self.log.info(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
@@ -379,7 +384,7 @@ class WSChiaConnection:
             self.bytes_read += len(data)
             self.last_message_time = time.time()
             if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):
-                if self.local_type == NodeType.FULL_NODE:
+                if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_host):
                     self.log.error(
                         f"Peer has been rate limited and will be disconnected: {self.peer_host}, "
                         f"message: {message.type}"

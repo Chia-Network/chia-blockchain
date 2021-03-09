@@ -39,9 +39,7 @@ def event_loop():
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(
-        2, 0, {}, starting_port=60000, inbound_rate_limit_percent=100, outbound_rate_limit_percent=30
-    ):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
         yield _
 
 
@@ -155,6 +153,10 @@ class TestDos:
         assert len(server_1.all_connections) == 1
 
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
 
         new_tx_message = make_msg(
             ProtocolMessageTypes.new_transaction,
@@ -188,11 +190,7 @@ class TestDos:
         assert ws_con.closed
 
         # Banned
-        assert not (
-            await server_2.start_client(
-                PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect
-            )
-        )
+        assert "1.2.3.4" in server_2.banned_peers
 
     @pytest.mark.asyncio
     async def test_spam_message_non_tx(self, setup_two_nodes):
@@ -206,6 +204,10 @@ class TestDos:
         assert len(server_1.all_connections) == 1
 
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
 
         def is_closed():
             return ws_con.closed
@@ -234,11 +236,7 @@ class TestDos:
         await time_out_assert(15, is_closed)
 
         # Banned
-        assert not (
-            await server_2.start_client(
-                PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect
-            )
-        )
+        assert "1.2.3.4" in server_2.banned_peers
 
     @pytest.mark.asyncio
     async def test_spam_message_too_large(self, setup_two_nodes):
@@ -252,6 +250,10 @@ class TestDos:
         assert len(server_1.all_connections) == 1
 
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
 
         def is_closed():
             return ws_con.closed
@@ -273,8 +275,4 @@ class TestDos:
         await time_out_assert(15, is_closed)
 
         # Banned
-        assert not (
-            await server_2.start_client(
-                PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect
-            )
-        )
+        assert "1.2.3.4" in server_2.banned_peers

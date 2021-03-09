@@ -151,8 +151,6 @@ class BlockTools:
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
-        self._config["inbound_rate_limit_percent"] = 100000
-        self._config["outbound_rate_limit_percent"] = 100000
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
         save_config(self.root_path, "config.yaml", self._config)
