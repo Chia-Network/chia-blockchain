@@ -668,6 +668,68 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, icc_end_of_slot_info)
     )
 
 
+def handle_end_of_slot(
+    sub_slot: EndOfSubSlotBundle,
+    eos_vdf_iters: uint64,
+):
+    assert sub_slot.infused_challenge_chain
+    assert sub_slot.proofs.infused_challenge_chain_slot_proof
+    if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
+        icc_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+    else:
+        icc_info = VDFInfo(
+            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
+            eos_vdf_iters,
+            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
+        )
+    if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+        cc_info = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
+    else:
+        cc_info = VDFInfo(
+            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+            eos_vdf_iters,
+            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
+        )
+
+    assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+    return SubSlotData(
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        sub_slot.proofs.challenge_chain_slot_proof,
+        sub_slot.proofs.infused_challenge_chain_slot_proof,
+        cc_info,
+        icc_info,
+        None,
+        None,
+        None,
+    )
+
+
+def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
+    compressed_segments = []
+    compressed_segments.append(segments[0])
+    for idx, segment in enumerate(segments[1:]):
+        if idx != full_segment_index:
+            # remove all redundant values
+            segment = compress_segment(segment)
+        compressed_segments.append(segment)
+    return compressed_segments
+
+
+def compress_segment(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
+    # find challenge slot
+    comp_seg = SubEpochChallengeSegment(segment.sub_epoch_n, [], segment.rc_slot_end_info)
+    for slot in segment.sub_slots:
+        comp_seg.sub_slots.append(slot)
+        if slot.is_challenge():
+            break
+    return segment
+
+
 # wp validation methods
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
@@ -1346,47 +1408,6 @@ def _get_ses_idx(recent_reward_chain: List[HeaderBlock]) -> List[int]:
     return idxs
 
 
-def handle_end_of_slot(
-    sub_slot: EndOfSubSlotBundle,
-    eos_vdf_iters: uint64,
-):
-    assert sub_slot.infused_challenge_chain
-    assert sub_slot.proofs.infused_challenge_chain_slot_proof
-    if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
-        icc_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
-    else:
-        icc_info = VDFInfo(
-            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
-            eos_vdf_iters,
-            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
-        )
-    if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
-        cc_info = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
-    else:
-        cc_info = VDFInfo(
-            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-            eos_vdf_iters,
-            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
-        )
-
-    assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-    return SubSlotData(
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        sub_slot.proofs.challenge_chain_slot_proof,
-        sub_slot.proofs.infused_challenge_chain_slot_proof,
-        cc_info,
-        icc_info,
-        None,
-        None,
-        None,
-    )
-
-
 def get_deficit(
     constants: ConsensusConstants,
     curr_deficit: uint8,
@@ -1422,27 +1443,6 @@ def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
         else:
             return True
     return False
-
-
-def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
-    compressed_segments = []
-    compressed_segments.append(segments[0])
-    for idx, segment in enumerate(segments[1:]):
-        if idx != full_segment_index:
-            # remove all redundant values
-            segment = compress_segment(segment)
-        compressed_segments.append(segment)
-    return compressed_segments
-
-
-def compress_segment(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
-    # find challenge slot
-    comp_seg = SubEpochChallengeSegment(segment.sub_epoch_n, [], segment.rc_slot_end_info)
-    for slot in segment.sub_slots:
-        comp_seg.sub_slots.append(slot)
-        if slot.is_challenge():
-            break
-    return segment
 
 
 def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
