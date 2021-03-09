@@ -7,7 +7,14 @@ import logging
 from aiohttp import ClientTimeout, ClientSession, WSMessage, WSMsgType, WSCloseCode, ServerDisconnectedError
 
 from src.full_node.full_node_api import FullNodeAPI
+from src.protocols import full_node_protocol
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.server.outbound_message import make_msg
+from src.server.rate_limits import RateLimiter
 from src.server.server import ssl_context_for_client
+from src.server.ws_connection import WSChiaConnection
+from src.types.peer_info import PeerInfo
+from src.util.ints import uint16, uint64
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 
 log = logging.getLogger(__name__)
@@ -35,9 +42,13 @@ async def setup_two_nodes():
         yield _
 
 
+class FakeRateLimiter:
+    def process_msg_and_check(self, msg):
+        return True
+
+
 class TestDos:
     @pytest.mark.asyncio
-    @pytest.mark.skip("Not working in CI")
     async def test_large_message_disconnect_and_ban(self, setup_two_nodes):
         nodes, _ = setup_two_nodes
         server_1 = nodes[0].full_node.server
@@ -85,7 +96,6 @@ class TestDos:
         await session.close()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip("Not working in CI")
     async def test_bad_handshake_and_ban(self, setup_two_nodes):
         nodes, _ = setup_two_nodes
         server_1 = nodes[0].full_node.server
@@ -128,3 +138,130 @@ class TestDos:
         )
 
         await session.close()
+
+    @pytest.mark.asyncio
+    async def test_spam_tx(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        full_node_1, full_node_2 = nodes
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+
+        assert len(server_1.all_connections) == 1
+
+        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+
+        new_tx_message = make_msg(
+            ProtocolMessageTypes.new_transaction,
+            full_node_protocol.NewTransaction(bytes([9] * 32), uint64(0), uint64(0)),
+        )
+        for i in range(4000):
+            await ws_con._send_message(new_tx_message)
+
+        await asyncio.sleep(1)
+        assert not ws_con.closed
+
+        # Tests outbound rate limiting, we will not send too much data
+        for i in range(2000):
+            await ws_con._send_message(new_tx_message)
+
+        await asyncio.sleep(1)
+        assert not ws_con.closed
+
+        # Remove outbound rate limiter to test inbound limits
+        ws_con.outbound_rate_limiter = RateLimiter(percentage_of_limit=10000)
+
+        for i in range(6000):
+            await ws_con._send_message(new_tx_message)
+        await asyncio.sleep(1)
+        assert ws_con.closed
+
+        # Banned
+        assert not (
+            await server_2.start_client(
+                PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect
+            )
+        )
+
+    @pytest.mark.asyncio
+    async def test_spam_message_non_tx(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        full_node_1, full_node_2 = nodes
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+
+        assert len(server_1.all_connections) == 1
+
+        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+
+        new_message = make_msg(
+            ProtocolMessageTypes.request_mempool_transactions,
+            full_node_protocol.RequestMempoolTransactions(bytes([])),
+        )
+        for i in range(2):
+            await ws_con._send_message(new_message)
+
+        await asyncio.sleep(1)
+        assert not ws_con.closed
+
+        # Tests outbound rate limiting, we will not send too much data
+        for i in range(10):
+            await ws_con._send_message(new_message)
+
+        await asyncio.sleep(1)
+        assert not ws_con.closed
+
+        # Remove outbound rate limiter to test inbound limits
+        ws_con.outbound_rate_limiter = RateLimiter(percentage_of_limit=10000)
+
+        for i in range(6):
+            await ws_con._send_message(new_message)
+        await asyncio.sleep(1)
+        assert ws_con.closed
+
+        # Banned
+        assert not (
+            await server_2.start_client(
+                PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect
+            )
+        )
+
+    @pytest.mark.asyncio
+    async def test_spam_message_too_large(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        full_node_1, full_node_2 = nodes
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+
+        assert len(server_1.all_connections) == 1
+
+        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+
+        new_message = make_msg(
+            ProtocolMessageTypes.request_mempool_transactions,
+            full_node_protocol.RequestMempoolTransactions(bytes([0] * 5 * 1024 * 1024)),
+        )
+        # Tests outbound rate limiting, we will not send big messages
+        await ws_con._send_message(new_message)
+
+        await asyncio.sleep(1)
+        assert not ws_con.closed
+
+        # Remove outbound rate limiter to test inbound limits
+        ws_con.outbound_rate_limiter = FakeRateLimiter()
+
+        await ws_con._send_message(new_message)
+        await asyncio.sleep(1)
+        assert ws_con.closed
+
+        # Banned
+        assert not (
+            await server_2.start_client(
+                PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect
+            )
+        )

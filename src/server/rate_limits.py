@@ -1,7 +1,6 @@
 import dataclasses
 import logging
 import time
-from enum import Enum
 from typing import Optional
 
 from src.protocols.protocol_message_types import ProtocolMessageTypes
@@ -55,8 +54,8 @@ rate_limits_other = {
     ProtocolMessageTypes.new_infusion_point_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_end_of_sub_slot_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_peak: RLSettings(200, 512),
-    ProtocolMessageTypes.request_proof_of_weight: RLSettings(3, 100),
-    ProtocolMessageTypes.respond_proof_of_weight: RLSettings(3, 50 * 1024 * 1024, 100 * 1024 * 1024),
+    ProtocolMessageTypes.request_proof_of_weight: RLSettings(5, 100),
+    ProtocolMessageTypes.respond_proof_of_weight: RLSettings(5, 50 * 1024 * 1024, 100 * 1024 * 1024),
     ProtocolMessageTypes.request_block: RLSettings(200, 100),
     ProtocolMessageTypes.reject_block: RLSettings(200, 100),
     ProtocolMessageTypes.request_blocks: RLSettings(100, 100),
@@ -110,7 +109,7 @@ class RateLimiter:
         self.non_tx_message_counts = 0
         self.non_tx_cumulative_size = 0
 
-    def message_received(self, message: Message) -> bool:
+    def process_msg_and_check(self, message: Message) -> bool:
         """
         Returns True if message can be processed successfully, false if a rate limit is passed.
         """
@@ -130,6 +129,7 @@ class RateLimiter:
 
         self.message_counts[message_type] += 1
         self.message_cumulative_sizes[message_type] += len(message.data)
+        proportion_of_limit = self.percentage_of_limit / 100
 
         limits = DEFAULT_SETTINGS
         if message_type in rate_limits_tx:
@@ -138,17 +138,15 @@ class RateLimiter:
             limits = rate_limits_other[message_type]
             self.non_tx_message_counts += 1
             self.non_tx_cumulative_size += len(message.data)
-            if self.non_tx_message_counts > NON_TX_FREQ:
+            if self.non_tx_message_counts > NON_TX_FREQ * proportion_of_limit:
                 return False
-            if self.non_tx_cumulative_size > NON_TX_MAX_TOTAL_SIZE:
+            if self.non_tx_cumulative_size > NON_TX_MAX_TOTAL_SIZE * proportion_of_limit:
                 return False
         else:
             log.warning(f"Message type {message_type} not found in rate limits")
 
         if limits.max_total_size is None:
             limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
-
-        proportion_of_limit = self.percentage_of_limit / 100
 
         if self.message_counts[message_type] > limits.frequency * proportion_of_limit:
             return False

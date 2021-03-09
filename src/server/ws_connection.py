@@ -91,7 +91,11 @@ class WSChiaConnection:
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         self.request_nonce: uint16 = uint16(0)
-        self.rate_limiter = RateLimiter()
+
+        # This means that even if the other peer's boundaries for each minute are not aligned, we will not
+        # disconnect. Also it allows a little flexibility.
+        self.outbound_rate_limiter = RateLimiter(percentage_of_limit=30)
+        self.inbound_rate_limiter = RateLimiter()
 
     async def perform_handshake(
         self, network_id: bytes32, protocol_version: str, server_port: int, local_type: NodeType
@@ -295,7 +299,6 @@ class WSChiaConnection:
         await event.wait()
 
         self.pending_requests.pop(message.id)
-        self.pending_timeouts.pop(message.id)
         result: Optional[Message] = None
         if message.id in self.request_results:
             result = self.request_results[message.id]
@@ -320,6 +323,13 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
+        if not self.outbound_rate_limiter.process_msg_and_check(message):
+            self.log.debug(
+                f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                f"peer: {self.peer_host}"
+            )
+            return
+
         await self.ws.send_bytes(encoded)
         self.log.info(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
@@ -363,10 +373,9 @@ class WSChiaConnection:
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Message = Message.from_bytes(data)
-            can_process_message = self.rate_limiter.message_received(full_message_loaded)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
-            if not can_process_message:
+            if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):
                 self.log.error(
                     f"Peer has been rate limited and will be disconnected: {self.peer_host}, message: {message.type}"
                 )
