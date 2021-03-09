@@ -51,6 +51,7 @@ rate_limits_other = {
     ProtocolMessageTypes.signed_values: RLSettings(100, 1024),
     ProtocolMessageTypes.new_peak_timelord: RLSettings(100, 20 * 1024),
     ProtocolMessageTypes.new_unfinished_block_timelord: RLSettings(100, 10 * 1024),
+    ProtocolMessageTypes.new_signage_point_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_infusion_point_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_end_of_sub_slot_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_peak: RLSettings(200, 512),
