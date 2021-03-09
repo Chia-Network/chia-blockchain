@@ -41,7 +41,6 @@ function localeToMaterialLocale(locale: string): object {
         default:
             return enUS;
     }
-    return enUS;
 }
 
 export default function App() {
