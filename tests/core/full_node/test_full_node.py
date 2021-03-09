@@ -11,7 +11,7 @@ from secrets import token_bytes
 
 from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import full_node_protocol as fnp
+from src.protocols import full_node_protocol as fnp, timelord_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.full_block import FullBlock
@@ -36,6 +36,9 @@ from tests.time_out_assert import (
     time_out_assert_custom_interval,
     time_out_messages,
 )
+from src.util.vdf_prover import get_vdf_info_and_proof
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.vdf import CompressibleVDFField
 
 log = logging.getLogger(__name__)
 
@@ -918,6 +921,120 @@ class TestFullNodeProtocol:
         result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(valid_block)
 
         assert error is None
+
+    @pytest.mark.asyncio
+    async def test_compact_protocol(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+        blocks = bt.get_consecutive_blocks(num_blocks=1, skip_slots=3)
+        block = blocks[0]
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        timelord_protocol_finished = []
+        cc_eos_count = 0
+        for sub_slot in block.finished_sub_slots:
+            vdf_info, vdf_proof = get_vdf_info_and_proof(
+                test_constants,
+                ClassgroupElement.get_default_element(),
+                sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
+                True,
+            )
+            cc_eos_count += 1
+            timelord_protocol_finished.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    vdf_info,
+                    vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_EOS_VDF,
+                )
+            )
+        blocks_2 = bt.get_consecutive_blocks(num_blocks=2, block_list_input=blocks, skip_slots=3)
+        block = blocks_2[1]
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        icc_eos_count = 0
+        for sub_slot in block.finished_sub_slots:
+            if sub_slot.infused_challenge_chain is not None:
+                icc_eos_count += 1
+                vdf_info, vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
+                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
+                    True,
+                )
+                timelord_protocol_finished.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info,
+                        vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.ICC_EOS_VDF,
+                    )
+                )
+        assert block.reward_chain_block.challenge_chain_sp_vdf is not None
+        vdf_info, vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.challenge_chain_sp_vdf.challenge,
+            block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_finished.append(
+            timelord_protocol.RespondCompactProofOfTime(
+                vdf_info,
+                vdf_proof,
+                block.header_hash,
+                block.height,
+                CompressibleVDFField.CC_SP_VDF,
+            )
+        )
+        vdf_info, vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+            block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_finished.append(
+            timelord_protocol.RespondCompactProofOfTime(
+                vdf_info,
+                vdf_proof,
+                block.header_hash,
+                block.height,
+                CompressibleVDFField.CC_IP_VDF,
+            )
+        )
+
+        assert cc_eos_count == 3 and icc_eos_count == 3
+        for compact_proof in timelord_protocol_finished:
+            await full_node_1.full_node.respond_compact_vdf_timelord(compact_proof)
+        stored_blocks = await full_node_1.get_all_full_blocks()
+        cc_eos_compact_count = 0
+        icc_eos_compact_count = 0
+        has_compact_cc_sp_vdf = False
+        has_compact_cc_ip_vdf = False
+        for block in stored_blocks:
+            for sub_slot in block.finished_sub_slots:
+                if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+                    cc_eos_compact_count += 1
+                if (
+                    sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                    and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                ):
+                    icc_eos_compact_count += 1
+            if block.challenge_chain_sp_proof is not None and block.challenge_chain_sp_proof.normalized_to_identity:
+                has_compact_cc_sp_vdf = True
+            if block.challenge_chain_ip_proof.normalized_to_identity:
+                has_compact_cc_ip_vdf = True
+        assert cc_eos_compact_count == 3
+        assert icc_eos_compact_count == 3
+        assert has_compact_cc_sp_vdf
+        assert has_compact_cc_ip_vdf
+        for height, block in enumerate(stored_blocks):
+            await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
+            assert full_node_2.full_node.blockchain.get_peak().height == height
 
     #
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):

@@ -13,6 +13,10 @@ class WalletNodeAPI:
     def __init__(self, wallet_node):
         self.wallet_node = wallet_node
 
+    @property
+    def log(self):
+        return self.wallet_node.log
+
     @peer_required
     @api_request
     async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
@@ -94,6 +98,17 @@ class WalletNodeAPI:
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
+
+    @peer_required
+    @api_request
+    async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection):
+        if not self.wallet_node.has_full_node():
+            self.log.info(f"Wallet received {len(request.peer_list)} peers.")
+            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+        else:
+            self.log.info(f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
+            await self.wallet_node.wallet_peers.ensure_is_closed()
+        return None
 
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):

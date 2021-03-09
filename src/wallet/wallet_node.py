@@ -318,6 +318,8 @@ class WalletNode:
             if peer.peer_node_id in peer_ids:
                 continue
             await peer.send_message(msg)
+        if not self.has_full_node() and self.wallet_peers is not None:
+            asyncio.create_task(self.wallet_peers.on_connect(peer))
 
     async def _periodically_check_full_node(self):
         tries = 0
