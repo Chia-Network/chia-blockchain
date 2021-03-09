@@ -31,7 +31,7 @@ from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_summaries_weight,
-    _validate_segment_slots,
+    _validate_segment,
 )
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -215,6 +215,14 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
 
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        header = header_cache[height_to_hash[1]]
+        prev_b = blockchain.block_record(header.prev_header_hash)
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+            test_constants, len(header.finished_sub_slots) > 0, prev_b, blockchain
+        )
+        validate_finished_header_block(test_constants, blockchain, header, False, difficulty, sub_slot_iters, False)
+
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
