@@ -28,18 +28,14 @@ new_config = b_tools._config
 new_config["CHIA_ALERTS_PUBKEY"] = pubkey_alert
 new_config["ALERTS_URL"] = alert_url
 new_config["daemon_port"] = 55401
-new_config["network_overrides"]["constants"][new_config["selected_network"]][
-    "GENESIS_CHALLENGE"
-] = None
+new_config["network_overrides"]["constants"][new_config["selected_network"]]["GENESIS_CHALLENGE"] = None
 b_tools.change_config(new_config)
 
 new_config_1 = b_tools_1._config
 new_config_1["CHIA_ALERTS_PUBKEY"] = pubkey_alert
 new_config_1["ALERTS_URL"] = alert_url
 new_config_1["daemon_port"] = 55402
-new_config_1["network_overrides"]["constants"][new_config_1["selected_network"]][
-    "GENESIS_CHALLENGE"
-] = None
+new_config_1["network_overrides"]["constants"][new_config_1["selected_network"]]["GENESIS_CHALLENGE"] = None
 b_tools_1.change_config(new_config_1)
 
 

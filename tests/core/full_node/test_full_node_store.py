@@ -107,8 +107,7 @@ class TestFullNodeStore:
             assert store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())[0] == sub_slots[i]
 
         assert store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
-        with raises(ValueError):
-            store.get_finished_sub_slots(BlockCache({}), None, std_hash(b"not a valid hash"))
+        assert store.get_finished_sub_slots(BlockCache({}), None, std_hash(b"not a valid hash")) is None
 
         assert (
             store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-2].challenge_chain.get_hash())
