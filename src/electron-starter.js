@@ -74,7 +74,7 @@ if (!setupEvents.handleSquirrelEvent()) {
       }
     });
 
-    tray = new Tray('src/assets/img/chia.png')
+    tray = new Tray(path.join(__dirname, "assets/img/chia_circle.png"))
     const contextMenu = Menu.buildFromTemplate([
       { label: i18n._(/*i18n*/{id: "Show app"}), click: () => mainWindow.show()},
       { label: i18n._(/*i18n*/{id: "Quit"}),
