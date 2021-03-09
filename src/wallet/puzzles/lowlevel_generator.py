@@ -32,7 +32,7 @@ def get_generator():
     execute_generate_npc_pair = eval(programs, make_list(programs, coin_solutions, sexp()))
 
     # Bootstrap the execution by passing functions in as parameters before the actual data arguments
-    get_coinsols = eval(1, quote(0))
+    get_coinsols = eval(1, sexp())
     core = eval(quote(execute_generate_npc_pair), make_list(quote(generate_npc_pair_list), get_coinsols))
     # TODO: is there a less hacky way to write this??
     ret = SerializedProgram.from_bytes(bytes(Program.to(binutils.assemble(core))))
