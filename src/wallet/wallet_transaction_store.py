@@ -284,6 +284,25 @@ class WalletTransactionStore:
 
         return records
 
+    async def get_farming_rewards(self):
+        """
+        Returns the list of all farming rewards.
+        """
+        fee_int = TransactionType.FEE_REWARD.value
+        pool_int = TransactionType.COINBASE_REWARD.value
+        cursor = await self.db_connection.execute(
+            "SELECT * from transaction_record WHERE confirmed=? and (type=? or type=?)", (1, fee_int, pool_int)
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
     async def get_all_unconfirmed(self) -> List[TransactionRecord]:
         """
         Returns the list of all transaction that have not yet been confirmed.
