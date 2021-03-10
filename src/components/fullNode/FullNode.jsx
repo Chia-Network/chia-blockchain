@@ -12,12 +12,7 @@ import {
 import { Status } from '@chia/icons';
 import { useRouteMatch, useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import {
-  Box,
-  Grid,
-  Tooltip,
-  Typography,
-} from '@material-ui/core';
+import { Box, Grid, Tooltip, Typography } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
@@ -30,11 +25,7 @@ const cols = [
   {
     minWidth: '250px',
     field(row) {
-      const {
-        isFinished = false,
-        header_hash,
-        foliage,
-      } = row;
+      const { isFinished = false, header_hash, foliage } = row;
 
       const { foliage_transaction_block_hash } = foliage || {};
 
@@ -69,10 +60,7 @@ const cols = [
   },
   {
     field(row) {
-      const {
-        isFinished,
-        foliage,
-      } = row;
+      const { isFinished, foliage } = row;
 
       const { height: foliageHeight } = foliage || {};
 
@@ -88,9 +76,7 @@ const cols = [
   },
   {
     field(row) {
-      const {
-        isFinished,
-      } = row;
+      const { isFinished } = row;
 
       const timestamp = get(row, 'foliage_transaction_block.timestamp');
       const value = timestamp;
@@ -111,7 +97,20 @@ const cols = [
 
 const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const status_items = [];
-  if (state.sync && state.sync.sync_mode) {
+  if (state.genesis_challenge_initialized === false) {
+    const item = {
+      label: <Trans>Status</Trans>,
+      value: <Trans>Waiting for network to launch</Trans>,
+      colour: 'orange',
+      tooltip: (
+        <Trans>
+          Network has not yet been launched, once it launches full node will
+          start automatically.
+        </Trans>
+      ),
+    };
+    status_items.push(item);
+  } else if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
     const tip = state.sync.sync_tip_height;
     const item = {
@@ -183,9 +182,7 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
 
   status_items.push({
     label: <Trans>Peak Time</Trans>,
-    value: latestPeakTimestamp
-      ? unix_to_short_date(latestPeakTimestamp)
-      : '',
+    value: latestPeakTimestamp ? unix_to_short_date(latestPeakTimestamp) : '',
     tooltip: <Trans>This is the time of the latest peak sub block.</Trans>,
   });
 
@@ -287,12 +284,16 @@ const FullNodeStatus = (props) => {
 const BlocksCard = () => {
   const { url } = useRouteMatch();
   const history = useHistory();
-  const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks ?? []);
-  const unfinishedBlockHeaders = useSelector((state) => state.full_node_state.unfinished_block_headers ?? []);
+  const latestBlocks = useSelector(
+    (state) => state.full_node_state.latest_blocks ?? [],
+  );
+  const unfinishedBlockHeaders = useSelector(
+    (state) => state.full_node_state.unfinished_block_headers ?? [],
+  );
 
   const rows = [
     ...unfinishedBlockHeaders,
-    ...latestBlocks.map(row => ({
+    ...latestBlocks.map((row) => ({
       ...row,
       isFinished: true,
     })),
@@ -307,10 +308,7 @@ const BlocksCard = () => {
   }
 
   return (
-    <Card 
-      title={<Trans>Blocks</Trans>}
-      action={<FullNodeBlockSearch />}
-    >
+    <Card title={<Trans>Blocks</Trans>} action={<FullNodeBlockSearch />}>
       {rows.length ? (
         <Table cols={cols} rows={rows} onRowClick={handleRowClick} />
       ) : (

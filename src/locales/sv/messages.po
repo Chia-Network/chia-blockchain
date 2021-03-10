@@ -188,7 +188,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:155
 msgid "Block with hash {headerHash} does not exists."
-msgstr "Block med hash {headerHash} existerar inte."
+msgstr "Block med hash {headerHash} existerar inte.<<<<<<< HEAD"
 
 #: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
@@ -275,7 +275,7 @@ msgstr "Välj plottstorlek"
 msgid "Close"
 msgstr "Stäng"
 
-#: src/components/app/AppRouter.tsx:19
+#: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
 msgstr "Stänger ner nod och server"
 
@@ -334,15 +334,15 @@ msgid "Connect to other peers"
 msgstr "Anslut till andra peer-datorer"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:157
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connected"
 msgstr "Ansluten"
 
-#: src/components/app/AppRouter.tsx:29
+#: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
 msgstr "Ansluter till plånbok"
 
-#: src/components/fullNode/FullNode.jsx:155
+#: src/components/fullNode/FullNode.jsx:154
 msgid "Connection Status"
 msgstr "Anslutningsstatus"
 
@@ -524,10 +524,10 @@ msgstr ""
 
 #: src/electron-starter.js:251
 msgid "Developer Tools"
-msgstr ""
+msgstr "<<<<<<< HEAD"
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Difficulty"
 msgstr "Svårighetsgrad"
 
@@ -581,13 +581,13 @@ msgstr "Fel"
 
 #: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr "Fel: det går inte att skicka chia till färgad adress. Ange en chia-adress."
+msgstr "Fel: det går inte att skicka chia till färgad adress. Ange en chia-adress.<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated network space"
 msgstr "Uppskattat nätverksutrymme"
 
-#: src/components/fullNode/FullNode.jsx:216
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Uppskattad summa av allt plottat diskutrymme hos alla odlare i nätverket"
 
@@ -684,8 +684,8 @@ msgstr "Filnamn"
 msgid "Final folder location"
 msgstr "Sökväg till slutlig mapp"
 
-#: src/components/fullNode/FullNode.jsx:50
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:41
+#: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
 msgstr "Färdig"
 
@@ -698,11 +698,11 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:327
+#: src/components/fullNode/FullNode.jsx:325
 msgid "Full Node"
-msgstr "Fullständig nod"
+msgstr "Fullständig nod<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:271
+#: src/components/fullNode/FullNode.jsx:268
 msgid "Full Node Status"
 msgstr "Status för full nod"
 
@@ -718,16 +718,16 @@ msgstr "Skapa ny färg"
 #~ msgid "Harvester ID"
 #~ msgstr "Skördar-ID"
 
-#: src/components/fullNode/FullNode.jsx:68
+#: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
 msgstr "Huvudhash"
 
 #: src/components/block/Block.jsx:177
 msgid "Header hash"
-msgstr "Huvudhash"
+msgstr "Huvudhash<<<<<<< HEAD"
 
 #: src/components/block/Block.jsx:191
-#: src/components/fullNode/FullNode.jsx:87
+#: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Höjd"
@@ -773,7 +773,7 @@ msgstr "Importera plånbok från minnesfras"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importera från minnesfras (24 ord)"
 
-#: src/components/fullNode/FullNode.jsx:52
+#: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
 msgstr "Pågår"
 
@@ -838,7 +838,7 @@ msgstr "Läser in …"
 msgid "Local Harvester Plots"
 msgstr "Plottar hos lokal skördare"
 
-#: src/components/app/AppRouter.tsx:34
+#: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
 msgstr "Loggar in"
 
@@ -898,15 +898,19 @@ msgstr "Mer minne ökar hastigheten något"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr "Min publika nyckel"
+msgstr "Min publika nyckel<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:174
+#: src/components/fullNode/FullNode.jsx:173
 msgid "Network Name"
 msgstr ""
 
-#: src/components/app/AppRouter.tsx:24
-msgid "Network not launched yet, waiting for genesis challenge!"
+#: src/components/fullNode/FullNode.jsx:106
+msgid "Network has not yet been launched, once it launches full node will start automatically."
 msgstr ""
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
 #: src/components/wallet/standard/WalletStandard.tsx:399
@@ -930,9 +934,9 @@ msgstr "Smeknamn"
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron-starter.js:90
 msgid "No"
-msgstr "Nej"
+msgstr "Nej<<<<<<< HEAD"
 
-#: src/middleware/middleware_api.jsx:298
+#: src/middleware/middleware_api.jsx:283
 msgid "No 24 word seed, since this key is imported."
 msgstr "Ingen 24 ords minnesfras eftersom denna nyckel har importerats."
 
@@ -961,7 +965,7 @@ msgstr "Ingen av dina plottar har passerat plottfiltret ännu."
 msgid "Not Available"
 msgstr "Inte tillgänglig"
 
-#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Not Synced"
 msgstr "Ej synkad"
 
@@ -974,8 +978,8 @@ msgid "Not confirmed yet"
 msgstr "Ej bekräftat ännu"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:159
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:165
 msgid "Not connected"
 msgstr "Inte ansluten"
 
@@ -1005,17 +1009,17 @@ msgstr "Skapade erbjudanden"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr "Utgående"
+msgstr "Utgående<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:180
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
 msgstr "Topphöjd"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
-#~ msgstr "Peak Sub-block Height"
+#~ msgstr "Peak Sub-block Height<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
 msgstr "Topptid"
 
@@ -1205,13 +1209,13 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr "Privat nyckel med publikt fingeravtryck {fingerprint}"
+msgstr "Privat nyckel med publikt fingeravtryck {fingerprint}<<<<<<< HEAD"
 
-#: src/middleware/middleware_api.jsx:262
+#: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
 msgstr "Privat nyckel {0}"
 
-#: src/middleware/middleware_api.jsx:272
+#: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
 msgstr "Privat nyckel:"
 
@@ -1225,9 +1229,9 @@ msgstr "Hittade bevis"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr "Publik nyckel"
+msgstr "Publik nyckel<<<<<<< HEAD"
 
-#: src/middleware/middleware_api.jsx:280
+#: src/middleware/middleware_api.jsx:265
 msgid "Public key:"
 msgstr "Publik nyckel:"
 
@@ -1336,9 +1340,9 @@ msgstr "Andra tillfällig mapp"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr "Visa privat nyckel"
+msgstr "Visa privat nyckel<<<<<<< HEAD"
 
-#: src/middleware/middleware_api.jsx:290
+#: src/middleware/middleware_api.jsx:275
 msgid "Seed:"
 msgstr "Minnesfras:"
 
@@ -1453,19 +1457,20 @@ msgstr "Längd på spenderintervall (antal block)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Spenderbegränsning (chia per intervall): {0}"
 
-#: src/components/fullNode/FullNode.jsx:108
+#: src/components/fullNode/FullNode.jsx:94
 msgid "State"
 msgstr "Tillstånd"
 
-#: src/components/fullNode/FullNode.jsx:118
-#: src/components/fullNode/FullNode.jsx:135
-#: src/components/fullNode/FullNode.jsx:143
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:102
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:164
 #: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/WalletStatusCard.tsx:12
+#: src/components/wallet/Wallets.tsx:94
 msgid "Status"
 msgstr "Status"
 
@@ -1505,7 +1510,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Skicka"
 
-#: src/components/fullNode/FullNode.jsx:144
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Synced"
 msgstr "Synkad"
 
@@ -1515,7 +1520,7 @@ msgstr "Synkad"
 msgid "Syncing"
 msgstr "Synkar"
 
-#: src/components/fullNode/FullNode.jsx:120
+#: src/components/fullNode/FullNode.jsx:119
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkroniserar {progress}/{tip}"
 
@@ -1556,11 +1561,11 @@ msgstr "Den fullständiga nod din odlare är ansluten till är nedan. <0>Läs me
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Den minsta storlek som krävs för mainnet är k=32"
 
-#: src/components/fullNode/FullNode.jsx:138
+#: src/components/fullNode/FullNode.jsx:137
 msgid "The node is not synced"
 msgstr "Noden är inte synkad"
 
-#: src/components/fullNode/FullNode.jsx:126
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Noden synkroniserar, vilket betyder att den laddar ner block från andra noder, för att nå det sista blocket i kedjan"
 
@@ -1604,9 +1609,9 @@ msgstr "Detta är väntande växel, det vill säga de växelmynt du har skickat 
 
 #: src/components/wallet/standard/WalletStandard.tsx:229
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "Detta är summan av inkommande och utgående väntande transaktioner (som ännu inte inkluderats i blockkedjan). Den innefattar inte odlingsbelöningar."
+msgstr "Detta är summan av inkommande och utgående väntande transaktioner (som ännu inte inkluderats i blockkedjan). Den innefattar inte odlingsbelöningar.<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:186
 msgid "This is the time of the latest peak sub block."
 msgstr "Detta är tidpunkten för det senaste topp-underblocket."
 
@@ -1622,7 +1627,7 @@ msgstr "Detta är den sammanlagda mängden chia i blockkedjan vid det aktuella t
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Detta är totalt saldo + väntande saldo: det är vad ditt saldo kommer att vara när alla väntande transaktioner har bekräftats."
 
-#: src/components/fullNode/FullNode.jsx:147
+#: src/components/fullNode/FullNode.jsx:146
 msgid "This node is fully caught up and validating the network"
 msgstr "Denna nod är helt uppdaterad och validerar nätverket"
 
@@ -1638,7 +1643,7 @@ msgstr ""
 msgid "This trade was included on blockchain at this block height"
 msgstr "Denna affärstransaktion lades till i blockkedjan vid denna blockhöjd"
 
-#: src/components/fullNode/FullNode.jsx:100
+#: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Skapad kl"
 
@@ -1662,9 +1667,9 @@ msgstr "Totalt saldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
-msgstr "Totalt antal Chia som odlats"
+msgstr "Totalt antal Chia som odlats<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:207
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
 msgstr "Totalt antal iterationer"
 
@@ -1682,9 +1687,9 @@ msgstr "Sammanlagd storlek hos alla plottar"
 
 #: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
-msgstr "Totalt antal VDF-iterationer"
+msgstr "Totalt antal VDF-iterationer<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:209
+#: src/components/fullNode/FullNode.jsx:206
 msgid "Total iterations since the start of the blockchain"
 msgstr "Totalt antal iterationer sedan blockkedjan startade"
 
@@ -1728,7 +1733,7 @@ msgstr "Transaktionsfilterhash"
 msgid "Type"
 msgstr "Typ"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:92
 msgid "Unfinished"
 msgstr "Ej färdig"
 
@@ -1739,9 +1744,9 @@ msgstr "Unik identifierare"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr "Publik nyckel för användare"
+msgstr "Publik nyckel för användare<<<<<<< HEAD"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:198
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF-underslot-iterationer"
 
@@ -1773,6 +1778,15 @@ msgstr "Visa väntande saldon..."
 msgid "Wait for synchronization"
 msgstr "Väntar på synkronisering"
 
+#: src/components/wallet/Wallets.tsx:104
+msgid "Waiting for launch"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+msgid "Waiting for network to launch"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
 #~ msgstr ""
@@ -1802,7 +1816,7 @@ msgstr "Väntar på synkronisering"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:134
 msgid "Wallets"
 msgstr "Plånböcker"
 
@@ -1872,32 +1886,32 @@ msgstr "Din fullständiga nods anslutning"
 msgid "Your Harvester Network"
 msgstr "Ditt nätverk av skördare"
 
-#: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/Wallets.tsx:122
 msgid "connections:"
 msgstr "anslutningar:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/Wallets.tsx:116
 msgid "height:"
 msgstr "höjd:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:110
 msgid "not synced"
 msgstr "ej synkad"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/WalletStatusCard.tsx:17
+#: src/components/wallet/Wallets.tsx:99
 msgid "status:"
 msgstr "status:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:108
 msgid "synced"
 msgstr "synkad"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:106
 msgid "syncing"
 msgstr "synkar"
 
