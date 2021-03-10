@@ -150,26 +150,31 @@ class WeightProofHandler:
     ) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
 
-        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(
-            tip_height - 1200, tip_height
-        )
-        blocks = await self.blockchain.get_block_records_in_range(tip_height - 1200, tip_height)
-        ses_count = 0
-        curr_height = tip_height
-        while ses_count != 2:
+        curr_height = uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS)
+
+        if wp is not None:
+            idx = 0
+            for block in wp.recent_chain_data:
+                if block.reward_chain_block.height == curr_height:
+                    break
+                idx += 1
+
+            if idx < len(wp.recent_chain_data):
+                for block in wp.recent_chain_data[idx:]:
+                    recent_chain.append(block)
+                    assert curr_height == block.reward_chain_block.height
+                    curr_height = curr_height + uint32(1)  # type: ignore
+                    idx += 1
+
+        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(curr_height, tip_height)
+        while curr_height <= tip_height:
             # add to needed reward chain recent blocks
             header_block = headers[self.blockchain.height_to_hash(curr_height)]
-            block_rec = blocks[header_block.header_hash]
             if header_block is None:
                 log.error("creating recent chain failed")
                 return None
-            recent_chain.insert(0, header_block)
-            if block_rec.sub_epoch_summary_included:
-                ses_count += 1
-            curr_height = curr_height - uint32(1)  # type: ignore
-
-        header_block = headers[self.blockchain.height_to_hash(curr_height)]
-        recent_chain.insert(0, header_block)
+            recent_chain.append(header_block)
+            curr_height = curr_height + uint32(1)  # type: ignore
 
         log.info(
             f"recent chain, "
