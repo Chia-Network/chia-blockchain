@@ -23,6 +23,8 @@ wallet_program_files = set(
         "src/wallet/puzzles/rl_aggregation.clvm",
         "src/wallet/puzzles/rl.clvm",
         "src/wallet/puzzles/sha256tree_module.clvm",
+        "src/wallet/puzzles/did_core.clvm",
+        "src/wallet/puzzles/did_innerpuz.clvm",
     ]
 )
 

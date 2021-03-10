@@ -11,7 +11,6 @@ from src.types.condition_opcodes import ConditionOpcode
 
 DID_CORE_MOD = load_clvm("did_core.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
-DID_GROUP_MOD = load_clvm("did_groups.clvm")
 
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64) -> Program:
