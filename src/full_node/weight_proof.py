@@ -165,7 +165,6 @@ class WeightProofHandler:
                 return None
             recent_chain.insert(0, header_block)
             if block_rec.sub_epoch_summary_included:
-                log.info(f"ses at height {curr_height}")
                 ses_count += 1
             curr_height = curr_height - uint32(1)  # type: ignore
 
