@@ -18,7 +18,6 @@ from src.timelord.timelord_launcher import kill_processes, spawn_process
 from src.types.peer_info import PeerInfo
 from src.util.bech32m import encode_puzzle_hash
 from src.util.block_tools import BlockTools, test_constants
-from src.util.config import save_config
 from src.util.hash import std_hash
 from src.util.ints import uint16, uint32
 from src.util.keychain import Keychain, bytes_to_mnemonic

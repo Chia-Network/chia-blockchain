@@ -35,11 +35,6 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.protocols import wallet_protocol
-from src.consensus.constants import ConsensusConstants
-from src.server.server import ChiaServer
-from src.server.outbound_message import make_msg, NodeType, Message
-from src.server.node_discovery import WalletPeers
 from src.util.errors import ValidationError, Err
 from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint32, uint128
