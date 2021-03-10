@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from pathlib import Path
 from typing import Dict, List, Optional, Callable, Tuple, Any
 
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
@@ -8,6 +9,7 @@ from blspy import G1Element
 
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.ws_connection import WSChiaConnection
+from src.util.config import load_config
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
@@ -31,11 +33,13 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 class Farmer:
     def __init__(
         self,
+        root_path: Path,
         farmer_config: Dict,
         pool_config: Dict,
         keychain: Keychain,
         consensus_constants: ConsensusConstants,
     ):
+        self._root_path = root_path
         self.config = farmer_config
         # Keep track of all sps, keyed on challenge chain signage point hash
         self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
@@ -123,6 +127,19 @@ class Farmer:
 
     def get_private_keys(self):
         return self._private_keys
+
+    def get_reward_targets(self) -> Dict:
+        return {
+            "farmer_target": self.wallet_target,
+            "pool_target": self.pool_target,
+        }
+
+    def set_reward_targets(self, farmer_target: Optional[bytes32], pool_target: Optional[bytes32]):
+        config = load_config(self._root_path)
+        if farmer_target is not None:
+            config["farmer"]["farmer_target"] = farmer_target
+        if pool_target is not None:
+            config["farmer"]["pool_target"] = pool_target
 
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
