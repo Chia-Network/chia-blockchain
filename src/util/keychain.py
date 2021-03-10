@@ -24,7 +24,7 @@ elif platform == "darwin":
     keyring.set_keyring(keyring.backends.OS_X.Keyring())
 elif platform == "linux":
     keyring = CryptFileKeyring()
-    keyring.keyring_key = "your keyring password"
+    keyring.keyring_key = "your keyring password"  # type: ignore
 else:
     keyring = keyring_main
 

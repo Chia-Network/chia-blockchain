@@ -21,6 +21,10 @@ network_overrides: &network_overrides
       NETWORK_TYPE: 1
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
+    testnet6:
+      NETWORK_TYPE: 1
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
   config:
     mainnet:
       address_prefix: "xch"
@@ -29,6 +33,8 @@ network_overrides: &network_overrides
     testnet4:
       address_prefix: "txch"
     testnet5:
+      address_prefix: "txch"
+    testnet6:
       address_prefix: "txch"
 
 selected_network: &selected_network "testnet5"
