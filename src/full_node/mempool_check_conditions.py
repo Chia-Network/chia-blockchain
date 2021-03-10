@@ -1,6 +1,6 @@
 import traceback
 from typing import Optional, List, Dict
-
+from src.util.hash import std_hash
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
@@ -114,9 +114,15 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
         opcodes = set(item.value for item in ConditionOpcode)
         for res in result.as_iter():
             conditions_list = []
-            name = res.first().as_atom()
-            puzzle_hash = bytes32(res.rest().first().as_atom())
-            for cond in res.rest().rest().first().as_iter():
+            name = std_hash(
+                bytes(
+                    res.first().first().as_atom()
+                    + res.first().rest().first().as_atom()
+                    + res.first().rest().rest().first().as_atom()
+                )
+            )
+            puzzle_hash = bytes32(res.first().rest().first().as_atom())
+            for cond in res.rest().first().as_iter():
                 if cond.first().as_atom() in opcodes:
                     opcode = ConditionOpcode(cond.first().as_atom())
                 elif not safe_mode:
