@@ -6,7 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element
 
-from src.util.config import load_config
+from src.consensus.coinbase import create_puzzlehash_for_pk
+from src.util.config import load_config, save_config
 
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from src.consensus.constants import ConsensusConstants
@@ -17,9 +18,9 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 from src.util.keychain import Keychain
-from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +128,26 @@ class Farmer:
     def get_private_keys(self):
         return self._private_keys
 
-    def get_reward_targets(self) -> Dict:
+    def get_reward_targets(self, search_for_private_key: bool) -> Dict:
+        if search_for_private_key:
+            all_sks = self.keychain.get_all_private_keys()
+            stop_searching_for_farmer, stop_searching_for_pool = False, False
+            for i in range(500):
+                if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
+                    break
+                for sk, _ in all_sks:
+                    ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
+
+                    if ph == self.wallet_target:
+                        stop_searching_for_farmer = True
+                    if ph == self.pool_target:
+                        stop_searching_for_pool = True
+            return {
+                "farmer_target": self.wallet_target,
+                "pool_target": self.pool_target,
+                "have_farmer_sk": stop_searching_for_farmer,
+                "have_pool_sk": stop_searching_for_pool,
+            }
         return {
             "farmer_target": self.wallet_target,
             "pool_target": self.pool_target,
@@ -139,6 +159,7 @@ class Farmer:
             config["farmer"]["farmer_target"] = farmer_target
         if pool_target is not None:
             config["farmer"]["pool_target"] = pool_target
+        save_config(self._root_path, "config.yaml", config)
 
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)

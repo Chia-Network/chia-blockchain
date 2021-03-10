@@ -37,7 +37,7 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
             False,
             self_hostname,
             incoming_queue,
-            lambda x: x,
+            lambda x, y: x,
             None,
             100,
             30,

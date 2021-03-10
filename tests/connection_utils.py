@@ -47,7 +47,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
         False,
         self_hostname,
         incoming_queue,
-        lambda x: x,
+        lambda x, y: x,
         peer_id,
         100,
         30,

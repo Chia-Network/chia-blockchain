@@ -90,10 +90,8 @@ class TestDos:
             ws = await session.ws_connect(
                 url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
-            log.warning(f"WS closed? {ws.closed}")
             response: WSMessage = await ws.receive()
-            log.warning(f"Receive: {response}")
-
+            assert response.type == WSMsgType.CLOSE
         except ServerDisconnectedError:
             pass
         await session.close()
@@ -128,10 +126,11 @@ class TestDos:
         await asyncio.sleep(5)
         assert ws.closed
         try:
-            await session.ws_connect(
+            ws = await session.ws_connect(
                 url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
-            assert False
+            response: WSMessage = await ws.receive()
+            assert response.type == WSMsgType.CLOSE
         except ServerDisconnectedError:
             pass
         await asyncio.sleep(6)
