@@ -81,6 +81,7 @@ class WalletRpcApi:
             "/get_transaction_count": self.get_transaction_count,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
             "/get_network_info": self.get_network_info,
+            "/get_farmed_amount": self.get_farmed_amount,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -681,3 +682,11 @@ class WalletRpcApi:
         request["puzzle_hash"] = puzzle_hash
         await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}
+
+    async def get_farmed_amount(self, request):
+        tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
+        amount = 0
+        for record in tx_records:
+            amount += record.amount
+
+        return {"farmed_amount": amount}
