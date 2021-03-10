@@ -313,7 +313,7 @@ class WeightProofHandler:
         blocks: Dict[bytes32, BlockRecord],
         first_in_sub_epoch: bool,
     ) -> Tuple[Optional[List[SubSlotData]], Optional[VDFInfo]]:
-        # combine cc vdfs of all reward blocks from the start of the sub slot to end
+        # append cc vdfs of all reward blocks from the start of the sub slot to end
         header_block_sub_rec = blocks[header_block.header_hash]
         # find slot start
         curr_sub_rec = header_block_sub_rec
@@ -409,8 +409,6 @@ class WeightProofHandler:
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
-        if len(tmp_sub_slots_data) > 0:
-            sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
         return sub_slots_data, curr.height
 
@@ -920,8 +918,9 @@ def _validate_segment(
             sub_slots_since_prev = 0
         else:
             sub_slots_since_prev += 1
-        slot_iters = slot_iters + curr_ssi  # type: ignore
-        slots = slots + uint64(1)  # type: ignore
+            slot_iters = slot_iters + curr_ssi  # type: ignore
+            slots = slots + uint64(1)  # type: ignore
+    log.info(f"slot iters {slot_iters} slots {slots}")
     return True, ip_iters, slot_iters, slots
 
 
@@ -984,7 +983,6 @@ def _validate_sub_slot_data(
             if not sub_slot_data.icc_slot_end.is_valid(constants, input, sub_slot_data.icc_slot_end_info, None):
                 log.error(f"failed icc slot end validation  {sub_slot_data.icc_slot_end_info} ")
                 return False
-        assert sub_slot_data.cc_slot_end_info is not None
         assert sub_slot_data.cc_slot_end_info
         assert sub_slot_data.cc_slot_end
         input = ClassgroupElement.get_default_element()
