@@ -20,6 +20,10 @@ type IncomingState = {
   show_create_backup: boolean;
   server_started?: boolean;
   farmed_amount: number;
+  network_info?: {
+    network_name: string;
+    network_prefix: string;
+  };
 };
 
 const initialState: IncomingState = {
@@ -217,6 +221,16 @@ export default function incomingReducer(
             height: data.height,
           },
         };
+      } else if (command === 'get_network_info') {
+        if (data.success) {
+          return {
+            ...state,
+            network_info: {
+              network_name: data.network_name,
+              network_prefix: data.network_prefix,
+            },
+          };
+        }
       } else if (command === 'get_sync_status') {
         if (data.success) {
           return {

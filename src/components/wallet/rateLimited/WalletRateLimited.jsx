@@ -13,7 +13,7 @@ import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { Tooltip } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
-import { AlertDialog, Card, Flex, } from '@chia/core';
+import { AlertDialog, Card, Flex } from '@chia/core';
 import {
   send_transaction,
   rl_set_user_info_action,
@@ -22,6 +22,7 @@ import { mojo_to_chia_string, chia_to_mojo } from '../../../util/chia';
 import { get_transaction_result } from '../../../util/transaction_result';
 import { openDialog } from '../../../modules/dialog';
 import WalletHistory from '../WalletHistory';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
 
 const drawerWidth = 240;
 
@@ -512,6 +513,8 @@ const RLDetailsCard = (props) => {
 };
 
 const BalanceCardSubSection = (props) => {
+  const currencyCode = useCurrencyCode();
+
   return (
     <Grid item xs={12}>
       <Box display="flex">
@@ -529,7 +532,7 @@ const BalanceCardSubSection = (props) => {
         </Box>
         <Box>
           <Typography variant="subtitle1">
-            {mojo_to_chia_string(props.balance)} TXCH
+            {mojo_to_chia_string(props.balance)} {currencyCode}
           </Typography>
         </Box>
       </Box>

@@ -29,6 +29,7 @@ import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
 import type { RootState } from '../../../modules/rootReducer';
 import WalletHistory from '../WalletHistory';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
 
 const drawerWidth = 240;
 
@@ -195,6 +196,8 @@ type BalanceCardSubSectionProps = {
 };
 
 function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
+  const currencyCode = useCurrencyCode();
+
   return (
     <Grid item xs={12}>
       <Box display="flex">
@@ -210,7 +213,7 @@ function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
         </Box>
         <Box>
           <Typography variant="subtitle1">
-            {mojo_to_chia_string(props.balance)} TXCH
+            {mojo_to_chia_string(props.balance)} {currencyCode}
           </Typography>
         </Box>
       </Box>

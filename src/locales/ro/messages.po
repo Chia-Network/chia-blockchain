@@ -86,14 +86,14 @@ msgstr ""
 msgid "Add plot directory"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:403
-#: src/components/wallet/coloured/WalletColoured.tsx:455
-#: src/components/wallet/standard/WalletStandard.tsx:383
+#: src/components/wallet/coloured/WalletColoured.tsx:405
+#: src/components/wallet/coloured/WalletColoured.tsx:457
+#: src/components/wallet/standard/WalletStandard.tsx:385
 msgid "Address"
 msgstr "Adresa"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
-#: src/components/wallet/standard/WalletStandard.tsx:333
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
+#: src/components/wallet/standard/WalletStandard.tsx:335
 msgid "Address / Puzzle hash"
 msgstr "Adresa / hash puzzle"
 
@@ -101,12 +101,12 @@ msgstr "Adresa / hash puzzle"
 #: src/components/trading/TradesTable.tsx:16
 #: src/components/wallet/WalletHistory.tsx:48
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
-#: src/components/wallet/standard/WalletStandard.tsx:343
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
+#: src/components/wallet/standard/WalletStandard.tsx:345
 msgid "Amount"
 msgstr "Suma"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:413
+#: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
 msgstr "Suma ({cc_unit})"
 
@@ -140,13 +140,13 @@ msgstr "Inapoi"
 msgid "Backup file is used to restore smart wallets."
 msgstr "Fisierul backup este utilizat pentru restaurarea portofelelor inteligente."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:285
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
-#: src/components/wallet/standard/WalletStandard.tsx:192
+#: src/components/wallet/coloured/WalletColoured.tsx:286
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Balance"
 msgstr "Sold"
 
-#: src/components/block/Block.jsx:301
+#: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
 msgstr "Recompensa de baza pentru Farmer"
 
@@ -159,22 +159,22 @@ msgstr "Mai jos sunt provocările pentru blocul actual. Este posibil să aveți 
 msgid "Best estimate over last 5 hours"
 msgstr "Cea mai buna estimare pentru ultimele 5 ore"
 
-#: src/components/block/Block.jsx:107
-#: src/components/block/Block.jsx:141
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:109
+#: src/components/block/Block.jsx:143
+#: src/components/block/Block.jsx:148
+#: src/components/block/Block.jsx:303
 msgid "Block"
 msgstr "Bloc"
 
-#: src/components/block/Block.jsx:119
+#: src/components/block/Block.jsx:121
 msgid "Block Test"
 msgstr ""
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
 msgstr "Iteratiile VDF pentru bloc"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:308
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Blocul la inaltimea {0} in blockchainul Chia"
 
@@ -182,15 +182,15 @@ msgstr "Blocul la inaltimea {0} in blockchainul Chia"
 #~ msgid "Block hash"
 #~ msgstr "Bloc hash"
 
-#: src/components/block/Block.jsx:124
+#: src/components/block/Block.jsx:126
 msgid "Block with hash {headerHash}"
 msgstr ""
 
-#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:155
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Blocul cu hashul {headerHash} nu exista."
 
-#: src/components/fullNode/FullNode.jsx:300
+#: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
 msgstr "Blocuri"
 
@@ -288,7 +288,7 @@ msgstr "Monede:"
 msgid "Colour"
 msgstr "Culoare"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:180
+#: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
 msgstr "Informatii despre culoare"
 
@@ -296,7 +296,7 @@ msgstr "Informatii despre culoare"
 msgid "Colour String"
 msgstr "Stringul culorii"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:185
+#: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
 msgstr "Culoare:"
 
@@ -367,11 +367,11 @@ msgstr ""
 msgid "Copied"
 msgstr "Copiat"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:459
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:441
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
-#: src/components/wallet/standard/WalletStandard.tsx:387
+#: src/components/wallet/coloured/WalletColoured.tsx:461
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
+#: src/components/wallet/standard/WalletStandard.tsx:389
 msgid "Copy"
 msgstr "Copiaza"
 
@@ -415,9 +415,9 @@ msgstr "Creați un portofel de utilizator cu tarif limitat"
 msgid "Create Trade Offer"
 msgstr "Creați ofertă comercială"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:394
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
-#: src/components/wallet/standard/WalletStandard.tsx:324
+#: src/components/wallet/coloured/WalletColoured.tsx:396
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
+#: src/components/wallet/standard/WalletStandard.tsx:326
 msgid "Create Transaction"
 msgstr "Creati tranzactie"
 
@@ -526,8 +526,8 @@ msgstr ""
 msgid "Developer Tools"
 msgstr ""
 
-#: src/components/block/Block.jsx:211
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/block/Block.jsx:213
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Difficulty"
 msgstr "Dificultate"
 
@@ -579,15 +579,15 @@ msgstr "Introduceti cele 24 de cuvinte din mnemmonic seed pe care le-ati salvat 
 msgid "Error"
 msgstr "Eroare"
 
-#: src/components/wallet/standard/WalletStandard.tsx:304
+#: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Eroare: Nu se poate trimite chia la adresa colorată. Vă rugăm să introduceți o adresă chia."
 
-#: src/components/fullNode/FullNode.jsx:207
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated network space"
 msgstr "Spațiu estimat în rețea"
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:216
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Suma estimată a întregului spațiu pe disc reprezentat de toți fermierii din rețea"
 
@@ -601,12 +601,12 @@ msgid "Failed to open (invalid plots)"
 msgstr "Deschiderea nu a reușit (ploturi nevalide)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
-#: src/components/wallet/coloured/WalletColoured.tsx:428
-#: src/components/wallet/standard/WalletStandard.tsx:356
+#: src/components/wallet/coloured/WalletColoured.tsx:430
+#: src/components/wallet/standard/WalletStandard.tsx:358
 msgid "Farm"
 msgstr "Ferma"
 
-#: src/components/block/Block.jsx:247
+#: src/components/block/Block.jsx:249
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
@@ -644,16 +644,24 @@ msgstr "Status farmare"
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:780
-#: src/components/wallet/standard/WalletStandard.tsx:348
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
+#: src/components/wallet/standard/WalletStandard.tsx:350
 msgid "Fee"
 msgstr "Taxe"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
-msgid "Fee (TXCH)"
-msgstr "Taxe (TXCH)"
+#~ msgid "Fee (TXCH)"
+#~ msgstr "Taxe (TXCH)"
 
-#: src/components/block/Block.jsx:305
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:422
+msgid "Fee ({currencyCode})"
+msgstr ""
+
+#: src/components/block/Block.jsx:291
 msgid "Fees Amount"
 msgstr "Suma taxe"
 
@@ -690,11 +698,11 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:316
+#: src/components/fullNode/FullNode.jsx:327
 msgid "Full Node"
 msgstr "Nod complet"
 
-#: src/components/fullNode/FullNode.jsx:260
+#: src/components/fullNode/FullNode.jsx:271
 msgid "Full Node Status"
 msgstr "Stare nod complet"
 
@@ -714,11 +722,11 @@ msgstr "Genereaza culoare noua"
 msgid "Header Hash"
 msgstr "Hashul Headerului"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:177
 msgid "Header hash"
 msgstr "hashul Headerului"
 
-#: src/components/block/Block.jsx:189
+#: src/components/block/Block.jsx:191
 #: src/components/fullNode/FullNode.jsx:87
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
@@ -785,8 +793,8 @@ msgstr "Indica daca această oferta a fost creata de noi"
 msgid "Indicated what time this offer was accepted"
 msgstr "Indica cand a fost acceptata oferta"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:341
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:490
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
 msgstr "Pachet info"
 
@@ -888,16 +896,20 @@ msgstr "Minute"
 msgid "More memory slightly increases speed"
 msgstr "Mai multa memorie creste usor viteza"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
 msgstr "Cheia mea publica"
+
+#: src/components/fullNode/FullNode.jsx:174
+msgid "Network Name"
+msgstr ""
 
 #: src/components/app/AppRouter.tsx:24
 msgid "Network not launched yet, waiting for genesis challenge!"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:469
-#: src/components/wallet/standard/WalletStandard.tsx:397
+#: src/components/wallet/coloured/WalletColoured.tsx:471
+#: src/components/wallet/standard/WalletStandard.tsx:399
 msgid "New Address"
 msgstr "Adresa noua"
 
@@ -905,13 +917,13 @@ msgstr "Adresa noua"
 msgid "New Wallet"
 msgstr "Portofel nou"
 
-#: src/components/block/Block.jsx:336
+#: src/components/block/Block.jsx:322
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
 msgstr "Urmatorul"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:199
+#: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
 msgstr "Porecla"
 
@@ -920,7 +932,7 @@ msgstr "Porecla"
 msgid "No"
 msgstr "Nu"
 
-#: src/middleware/middleware_api.jsx:296
+#: src/middleware/middleware_api.jsx:298
 msgid "No 24 word seed, since this key is imported."
 msgstr "Fara seed de 24 de cuvinte, deoarece aceasta cheie este importata."
 
@@ -995,7 +1007,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:174
+#: src/components/fullNode/FullNode.jsx:180
 msgid "Peak Height"
 msgstr ""
 
@@ -1003,7 +1015,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:185
 msgid "Peak Time"
 msgstr ""
 
@@ -1011,18 +1023,18 @@ msgstr ""
 msgid "Pending"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:601
-#: src/components/wallet/standard/WalletStandard.tsx:225
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
+#: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "Pending Balance"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
-#: src/components/wallet/standard/WalletStandard.tsx:232
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
+#: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "Pending Change"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:592
-#: src/components/wallet/standard/WalletStandard.tsx:218
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
+#: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "Pending Total Balance"
 msgstr ""
 
@@ -1030,7 +1042,7 @@ msgstr ""
 msgid "Please add a trade pair"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
 msgstr ""
 
@@ -1039,16 +1051,16 @@ msgid "Please enter a valid initial coin amount"
 msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
-#: src/components/wallet/standard/WalletStandard.tsx:286
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
+#: src/components/wallet/standard/WalletStandard.tsx:288
 msgid "Please enter a valid numeric amount"
 msgstr ""
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:688
-#: src/components/wallet/standard/WalletStandard.tsx:294
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
+#: src/components/wallet/standard/WalletStandard.tsx:296
 msgid "Please enter a valid numeric fee"
 msgstr ""
 
@@ -1064,8 +1076,8 @@ msgstr ""
 msgid "Please enter a valid pubkey"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
-#: src/components/wallet/standard/WalletStandard.tsx:274
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
+#: src/components/wallet/standard/WalletStandard.tsx:276
 msgid "Please finish syncing before making a transaction"
 msgstr ""
 
@@ -1104,7 +1116,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr ""
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:265
 msgid "Plot Id"
 msgstr ""
 
@@ -1116,7 +1128,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:239
+#: src/components/block/Block.jsx:241
 msgid "Plot Public Key"
 msgstr ""
 
@@ -1156,15 +1168,15 @@ msgstr ""
 msgid "Pool Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:243
+#: src/components/block/Block.jsx:245
 msgid "Pool Public Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:255
+#: src/components/block/Block.jsx:257
 msgid "Pool Puzzle Hash"
 msgstr ""
 
-#: src/components/block/Block.jsx:297
+#: src/components/block/Block.jsx:283
 msgid "Pool Reward Amount"
 msgstr ""
 
@@ -1175,7 +1187,7 @@ msgstr ""
 msgid "Port"
 msgstr ""
 
-#: src/components/block/Block.jsx:331
+#: src/components/block/Block.jsx:317
 msgid "Previous"
 msgstr ""
 
@@ -1183,7 +1195,7 @@ msgstr ""
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:203
+#: src/components/block/Block.jsx:205
 msgid "Previous Header Hash"
 msgstr ""
 
@@ -1195,15 +1207,15 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:260
+#: src/middleware/middleware_api.jsx:262
 msgid "Private key {0}"
 msgstr "Cheia privata {0}"
 
-#: src/middleware/middleware_api.jsx:270
+#: src/middleware/middleware_api.jsx:272
 msgid "Private key:"
 msgstr "Cheia privata:"
 
-#: src/components/block/Block.jsx:235
+#: src/components/block/Block.jsx:237
 msgid "Proof of Space Size"
 msgstr "Marimea 'Proof of Space'"
 
@@ -1215,7 +1227,7 @@ msgstr "Dovezi gasite"
 msgid "Pubkey"
 msgstr "Pubkey"
 
-#: src/middleware/middleware_api.jsx:278
+#: src/middleware/middleware_api.jsx:280
 msgid "Public key:"
 msgstr "Cheia publica:"
 
@@ -1251,8 +1263,8 @@ msgstr "Portofel RL"
 msgid "Rate Limited"
 msgstr "Tarif limitat"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
 msgstr "Info tarif limitat"
 
@@ -1260,12 +1272,12 @@ msgstr "Info tarif limitat"
 msgid "Rate Limited Options"
 msgstr "Optiuni tarif limitat"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
 msgstr "Setare portofel limitat pentru utilizatori"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:451
-#: src/components/wallet/standard/WalletStandard.tsx:379
+#: src/components/wallet/coloured/WalletColoured.tsx:453
+#: src/components/wallet/standard/WalletStandard.tsx:381
 msgid "Receive Address"
 msgstr "Adresa de primire"
 
@@ -1281,7 +1293,7 @@ msgstr "Improspateaza ploturile"
 msgid "Release Notes"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:205
+#: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Redenumeste"
 
@@ -1326,7 +1338,7 @@ msgstr "Locatia celui de al doilea folder temporar"
 msgid "See private key"
 msgstr "Vezi cheia privata"
 
-#: src/middleware/middleware_api.jsx:288
+#: src/middleware/middleware_api.jsx:290
 msgid "Seed:"
 msgstr "Seed:"
 
@@ -1374,17 +1386,17 @@ msgstr "Selectat"
 msgid "Sell"
 msgstr "Vinde"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:433
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:795
-#: src/components/wallet/standard/WalletStandard.tsx:361
+#: src/components/wallet/coloured/WalletColoured.tsx:435
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
+#: src/components/wallet/standard/WalletStandard.tsx:363
 msgid "Send"
 msgstr "Trimite"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:477
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 msgstr "Trimiteti acest pachet de informatii utilizatorului dvs. Rate Limited Wallet, care trebuie sa il utilizeze pentru a finaliza configurarea portofelului:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:284
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
 msgstr "Trimite-ti pubkey-ul tau la administratorul de portofel Rate Limited:"
 
@@ -1421,14 +1433,14 @@ msgstr "Suma care poate fi cheltuita"
 msgid "Spendable Amount Per Interval"
 msgstr "Suma care poate fi cheltuita per Interval"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:287
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
-#: src/components/wallet/standard/WalletStandard.tsx:199
+#: src/components/wallet/coloured/WalletColoured.tsx:288
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
 msgstr "Balanta care poate fi cheltuita"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:407
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:458
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
 msgstr "Interval de cheltuieli (numar de blocuri): {interval}"
 
@@ -1436,8 +1448,8 @@ msgstr "Interval de cheltuieli (numar de blocuri): {interval}"
 msgid "Spending Interval Length (number of blocks)"
 msgstr "Lungimea intervalului pentru cheltuieli (numar de blocuri)"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:414
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:465
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limita de cheltuieli (chia per interval): {0}"
 
@@ -1489,7 +1501,7 @@ msgstr "Status:"
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
 msgstr "Trimite"
 
@@ -1508,8 +1520,8 @@ msgid "Syncing {progress}/{tip}"
 msgstr "Sincronizare {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
-msgid "TXCH Block Rewards"
-msgstr "Recompense bloc TXCH"
+#~ msgid "TXCH Block Rewards"
+#~ msgstr "Recompense bloc TXCH"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 #~ msgid "TXCH Farming Rewards"
@@ -1524,8 +1536,8 @@ msgstr "Recompense bloc TXCH"
 #~ msgstr "TXCH User Fees"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:15
-msgid "TXCH User Transaction Fees"
-msgstr "Taxe Tranzactie user TXCH"
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr "Taxe Tranzactie user TXCH"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1552,19 +1564,19 @@ msgstr "Nodul nu este sincronizat"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Nodul se sincronizează, ceea ce înseamnă că descarcă blocuri din alte noduri, pentru a ajunge la cel mai recent bloc din lanț"
 
-#: src/components/block/Block.jsx:266
+#: src/components/block/Block.jsx:268
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Seedul folosit pentru a creea un plot. Acesta depinde de pk-ul poolului si pk-ul plotului."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:220
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Numărul total de VDF (funcție de întârziere verificabilă) sau dovezi ale iterațiilor de timp pe întregul lanț până la acest bloc secundar."
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:230
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Numărul total de VDF (funcție de întârziere verificabilă) sau dovezi ale iterațiilor de timp pe acest bloc."
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:294
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Taxele totale pentru tranzacții din acest bloc. Recompensat fermierului."
 
@@ -1582,31 +1594,31 @@ msgstr ""
 msgid "This feature is available only from the GUI."
 msgstr "Aceasta facilitate este disponibila doar din GUI."
 
-#: src/components/wallet/standard/WalletStandard.tsx:199
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "Aceasta este suma de Chia pe care o puteți utiliza în prezent pentru a efectua tranzacții. Nu include recompense în așteptare, tranzacții în așteptare și Chia pe care tocmai le-ați cheltuit, dar care nu se află încă în blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:236
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "Aceasta este schimbarea în așteptare, care sunt monede de schimb pe care vi le-ați trimis catre dvs, dar care nu au fost încă confirmate."
 
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:229
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Aceasta este suma tranzacțiilor în așteptare primite și ieșite (neincluse încă în blockchain). Aceasta nu include recompensele."
 
-#: src/components/fullNode/FullNode.jsx:183
+#: src/components/fullNode/FullNode.jsx:189
 msgid "This is the time of the latest peak sub block."
 msgstr "Acesta este momentul celui mai recent subbloc peak."
 
-#: src/components/block/Block.jsx:182
+#: src/components/block/Block.jsx:184
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Acesta este momentul în care blocul a fost creat de farmer, care este înainte de a fi finalizat cu o 'proof of time'"
 
-#: src/components/wallet/standard/WalletStandard.tsx:193
+#: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "Aceasta este cantitatea totală de chia din blockchain la subblocul peak curent care este controlat de cheile dvs. private. Include recompense înghețate, dar nu tranzacții în așteptare de intrare și de ieșire."
 
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:222
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Acesta este soldul total + soldul în așteptare: acesta va fi soldul dvs. după confirmarea tuturor tranzacțiilor în așteptare."
 
@@ -1634,7 +1646,7 @@ msgstr "Creata in timp"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:181
 msgid "Timestamp"
 msgstr "Timestamp-ul"
 
@@ -1642,9 +1654,9 @@ msgstr "Timestamp-ul"
 msgid "To"
 msgstr "Catre"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:286
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
-#: src/components/wallet/standard/WalletStandard.tsx:193
+#: src/components/wallet/coloured/WalletColoured.tsx:287
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
+#: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
 msgstr "Balanta totala"
 
@@ -1652,7 +1664,7 @@ msgstr "Balanta totala"
 msgid "Total Chia Farmed"
 msgstr "Total Chia farmati"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:207
 msgid "Total Iterations"
 msgstr "Iteratii totale"
 
@@ -1668,11 +1680,11 @@ msgstr "Marimea totala a ploturilor:"
 msgid "Total Size of Plots"
 msgstr "Dimensiunea totală a ploturilor"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
 msgstr "Totalul iteratiilor VDF"
 
-#: src/components/fullNode/FullNode.jsx:203
+#: src/components/fullNode/FullNode.jsx:209
 msgid "Total iterations since the start of the blockchain"
 msgstr "Totalul iteratiilor de la inceputul blockchain-ului"
 
@@ -1708,7 +1720,7 @@ msgstr "Tranzactionare"
 msgid "Trading History"
 msgstr "Istoria tranzactiilor"
 
-#: src/components/block/Block.jsx:274
+#: src/components/block/Block.jsx:276
 msgid "Transactions Filter Hash"
 msgstr "Filtru Hash Tranzacții"
 
@@ -1725,11 +1737,11 @@ msgid "Unique identifier"
 msgstr "Identificator unic"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:299
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
 msgstr "Pubkey Utilizator"
 
-#: src/components/fullNode/FullNode.jsx:195
+#: src/components/fullNode/FullNode.jsx:201
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteratii sub slot VDF"
 
@@ -1746,12 +1758,12 @@ msgstr "Vezualizeaza loguri"
 msgid "View Offer"
 msgstr "Vizualizeaza oferta"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
-#: src/components/wallet/standard/WalletStandard.tsx:211
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
 msgstr "Vizualizeaza balanta in asteptare"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:295
+#: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
 msgstr "Vizualizeaza balanta in asteptare..."
 
@@ -1806,11 +1818,11 @@ msgstr "Vrei sa castigi mai multi Chia? Adauga mai multe ploturi la ferma ta."
 msgid "Want to have a delay before the next plot starts?"
 msgstr "Doriti să aveți o intarziere inainte de inceperea urmatorului plot?"
 
-#: src/components/block/Block.jsx:193
+#: src/components/block/Block.jsx:195
 msgid "Weight"
 msgstr "Greutate"
 
-#: src/components/block/Block.jsx:196
+#: src/components/block/Block.jsx:198
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Greutatea este dificultatea totala adaugata a tuturor subblocurilor până la acesta inclusiv"
 
@@ -1822,7 +1834,7 @@ msgstr "Bine ati venit la Chia. Va rugam logati-va cu o cheie existenta, sau cre
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portofelului. Fara ele, veti pierde accesul la portofel, pastrati-le în siguranța! Notati fiecare cuvant impreuna cu numarul de ordine de langa ele. (Ordinea este importanta)"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cand primiti pachetul de informatii despre configurare de la administratorul dvs., introduceti-l mai jos pentru a finaliza configurarea portofelului dvs. limitat:"
 
@@ -1830,7 +1842,7 @@ msgstr "Cand primiti pachetul de informatii despre configurare de la administrat
 msgid "Window"
 msgstr ""
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#: src/components/farm/card/FarmCardBlockRewards.tsx:17
 msgid "Without fees"
 msgstr "Fara taxe"
 
@@ -1888,3 +1900,19 @@ msgstr "sincronizat"
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "se sincronizeaza"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:17
+msgid "{currencyCode} Block Rewards"
+msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:17
+msgid "{currencyCode} User Transaction Fees"
+msgstr ""

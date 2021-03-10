@@ -29,6 +29,7 @@ import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
 import type { RootState } from '../../../modules/rootReducer';
 import WalletHistory from '../WalletHistory';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
 
 const drawerWidth = 240;
 
@@ -428,6 +429,7 @@ function SendCard(props: SendCardProps) {
     name = '';
   }
   const cc_unit = get_cc_unit(name);
+  const currencyCode = useCurrencyCode();
 
   const sending_transaction = useSelector(
     (state: RootState) => state.wallet_state.wallets[id].sending_transaction,
@@ -602,7 +604,7 @@ function SendCard(props: SendCardProps) {
               inputRef={(input) => {
                 fee_input = input;
               }}
-              label={<Trans>Fee (TXCH)</Trans>}
+              label={<Trans>Fee ({currencyCode})</Trans>}
             />
           </Box>
         </Box>

@@ -5,8 +5,10 @@ import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
 import computeStatistics from '../../../util/computeStatistics';
 import { mojo_to_chia } from '../../../util/chia';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
 
 export default function FarmCardBlockRewards() {
+  const currencyCode = useCurrencyCode();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const value = computeStatistics(wallets);
   const loading = !wallets;
@@ -18,7 +20,7 @@ export default function FarmCardBlockRewards() {
 
   return (
     <FarmCard
-      title={<Trans>TXCH Block Rewards</Trans>}
+      title={<Trans>{currencyCode} Block Rewards</Trans>}
       description={<Trans>Without fees</Trans>}
       value={blockRewards}
       loading={loading}

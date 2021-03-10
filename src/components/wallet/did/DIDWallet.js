@@ -15,8 +15,7 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import { AlertDialog, Card, Flex, } from '@chia/core';
-import { Dropzone } from '@chia/core';
+import { AlertDialog, Card, Dropzone, Flex } from '@chia/core';
 
 import {
   did_generate_backup_file,
@@ -35,6 +34,7 @@ import HelpIcon from '@material-ui/icons/Help';
 import { mojo_to_chia_string } from '../../../util/chia';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { openDialog } from '../../../modules/dialog';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
 import WalletHistory from '../WalletHistory';
 
 const drawerWidth = 240;
@@ -450,6 +450,7 @@ const MyDIDCard = (props) => {
 };
 
 const BalanceCardSubSection = (props) => {
+  const currencyCode = useCurrencyCode();
   const classes = useStyles();
   return (
     <Grid item xs={12}>
@@ -471,7 +472,7 @@ const BalanceCardSubSection = (props) => {
           </Box>
           <Box>
             <Typography variant="subtitle1">
-              {mojo_to_chia_string(props.balance)} TXCH
+              {mojo_to_chia_string(props.balance)} {currencyCode}
             </Typography>
           </Box>
         </Box>

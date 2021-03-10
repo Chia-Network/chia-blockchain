@@ -86,14 +86,14 @@ msgstr "Plottaa tiedosto"
 msgid "Add plot directory"
 msgstr "Lisää plottihakemisto"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:403
-#: src/components/wallet/coloured/WalletColoured.tsx:455
-#: src/components/wallet/standard/WalletStandard.tsx:383
+#: src/components/wallet/coloured/WalletColoured.tsx:405
+#: src/components/wallet/coloured/WalletColoured.tsx:457
+#: src/components/wallet/standard/WalletStandard.tsx:385
 msgid "Address"
 msgstr "Osoite"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:745
-#: src/components/wallet/standard/WalletStandard.tsx:333
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
+#: src/components/wallet/standard/WalletStandard.tsx:335
 msgid "Address / Puzzle hash"
 msgstr "Osoite / Puzzle-tiiviste"
 
@@ -101,12 +101,12 @@ msgstr "Osoite / Puzzle-tiiviste"
 #: src/components/trading/TradesTable.tsx:16
 #: src/components/wallet/WalletHistory.tsx:48
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:767
-#: src/components/wallet/standard/WalletStandard.tsx:343
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
+#: src/components/wallet/standard/WalletStandard.tsx:345
 msgid "Amount"
 msgstr "Määrä"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:413
+#: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
 msgstr "Määrä ({cc_unit})"
 
@@ -140,13 +140,13 @@ msgstr "Palaa"
 msgid "Backup file is used to restore smart wallets."
 msgstr "Varmuuskopiotiedostoa käytetään lompakkojen palauttamiseen."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:285
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:559
-#: src/components/wallet/standard/WalletStandard.tsx:192
+#: src/components/wallet/coloured/WalletColoured.tsx:286
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
+#: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Balance"
 msgstr "Saldo"
 
-#: src/components/block/Block.jsx:301
+#: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
 msgstr "Farmarin Peruspalkkio"
 
@@ -159,22 +159,22 @@ msgstr "Alla tämänhetkiset lohkohaasteet, joiden tilatodisteet voivat löytyä
 msgid "Best estimate over last 5 hours"
 msgstr "Viiden viimeisen tunnin estimaatti"
 
-#: src/components/block/Block.jsx:107
-#: src/components/block/Block.jsx:141
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:109
+#: src/components/block/Block.jsx:143
+#: src/components/block/Block.jsx:148
+#: src/components/block/Block.jsx:303
 msgid "Block"
 msgstr "Lohko"
 
-#: src/components/block/Block.jsx:119
+#: src/components/block/Block.jsx:121
 msgid "Block Test"
 msgstr ""
 
-#: src/components/block/Block.jsx:225
+#: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
 msgstr "Lohkon VDF-iteraatiot"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:308
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Lohko korkeudessa {0} Chian lohkoketjussa"
 
@@ -182,15 +182,15 @@ msgstr "Lohko korkeudessa {0} Chian lohkoketjussa"
 #~ msgid "Block hash"
 #~ msgstr "Lohkon tiiviste"
 
-#: src/components/block/Block.jsx:124
+#: src/components/block/Block.jsx:126
 msgid "Block with hash {headerHash}"
 msgstr ""
 
-#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:155
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Lohkoa tunnistetiivisteellä {headerHash} ei ole."
 
-#: src/components/fullNode/FullNode.jsx:300
+#: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
 msgstr "Lohkot"
 
@@ -288,7 +288,7 @@ msgstr "Kolikot:"
 msgid "Colour"
 msgstr "Väri"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:180
+#: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
 msgstr "Värin Tiedot"
 
@@ -296,7 +296,7 @@ msgstr "Värin Tiedot"
 msgid "Colour String"
 msgstr "Värin Teksti"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:185
+#: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
 msgstr "Väri:"
 
@@ -367,11 +367,11 @@ msgstr "Anna panoksesi GitHubissa"
 msgid "Copied"
 msgstr "Kopioitu"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:459
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:441
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:504
-#: src/components/wallet/standard/WalletStandard.tsx:387
+#: src/components/wallet/coloured/WalletColoured.tsx:461
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
+#: src/components/wallet/standard/WalletStandard.tsx:389
 msgid "Copy"
 msgstr "Kopioi"
 
@@ -415,9 +415,9 @@ msgstr "Luo Siirtorajoitettu Käyttäjälompakko"
 msgid "Create Trade Offer"
 msgstr "Tarjoa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:394
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
-#: src/components/wallet/standard/WalletStandard.tsx:324
+#: src/components/wallet/coloured/WalletColoured.tsx:396
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
+#: src/components/wallet/standard/WalletStandard.tsx:326
 msgid "Create Transaction"
 msgstr "Luo Transaktio"
 
@@ -526,8 +526,8 @@ msgstr "Kehittäjälle"
 msgid "Developer Tools"
 msgstr "Kehitystyökalut"
 
-#: src/components/block/Block.jsx:211
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/block/Block.jsx:213
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Difficulty"
 msgstr "Vaikeusaste"
 
@@ -579,15 +579,15 @@ msgstr "Anna tallentamasi 24 muistisanaa palauttaaksesi Chia-lompakon."
 msgid "Error"
 msgstr "Virhe"
 
-#: src/components/wallet/standard/WalletStandard.tsx:304
+#: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Virhe: Chioja ei voi lähettää värikolikko-osoitteeseen. Anna Chialompakon osoite."
 
-#: src/components/fullNode/FullNode.jsx:207
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated network space"
 msgstr "Estimoitu verkkoavaruus"
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:216
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Kaikkien farmien sisältämien plot-tiedostojen arvoitu yhteiskoko"
 
@@ -601,12 +601,12 @@ msgid "Failed to open (invalid plots)"
 msgstr "Ei voi avata (epäkelpo plotti)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
-#: src/components/wallet/coloured/WalletColoured.tsx:428
-#: src/components/wallet/standard/WalletStandard.tsx:356
+#: src/components/wallet/coloured/WalletColoured.tsx:430
+#: src/components/wallet/standard/WalletStandard.tsx:358
 msgid "Farm"
 msgstr "Farmi"
 
-#: src/components/block/Block.jsx:247
+#: src/components/block/Block.jsx:249
 msgid "Farmer Puzzle Hash"
 msgstr "Farmarin Osoitetiiviste"
 
@@ -644,16 +644,24 @@ msgstr "Farmituotannon Tila"
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:780
-#: src/components/wallet/standard/WalletStandard.tsx:348
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
+#: src/components/wallet/standard/WalletStandard.tsx:350
 msgid "Fee"
 msgstr "Veloitus"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
-msgid "Fee (TXCH)"
-msgstr "Veloitus (XCH)"
+#~ msgid "Fee (TXCH)"
+#~ msgstr "Veloitus (XCH)"
 
-#: src/components/block/Block.jsx:305
+#: src/components/wallet/coloured/WalletColoured.tsx:420
+#~ msgid "Fee ({0})"
+#~ msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:422
+msgid "Fee ({currencyCode})"
+msgstr ""
+
+#: src/components/block/Block.jsx:291
 msgid "Fees Amount"
 msgstr "Palkkiosumma"
 
@@ -690,11 +698,11 @@ msgid "Frequently Asked Questions"
 msgstr "Usein Kysytyt Kysymykset"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:316
+#: src/components/fullNode/FullNode.jsx:327
 msgid "Full Node"
 msgstr "Verkkonoodi"
 
-#: src/components/fullNode/FullNode.jsx:260
+#: src/components/fullNode/FullNode.jsx:271
 msgid "Full Node Status"
 msgstr "Verkkonoodin Tila"
 
@@ -714,11 +722,11 @@ msgstr "Luo lompakko väritetyille kolikoille"
 msgid "Header Hash"
 msgstr "Lohkotunniste"
 
-#: src/components/block/Block.jsx:175
+#: src/components/block/Block.jsx:177
 msgid "Header hash"
 msgstr "Lohkotunniste"
 
-#: src/components/block/Block.jsx:189
+#: src/components/block/Block.jsx:191
 #: src/components/fullNode/FullNode.jsx:87
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
@@ -785,8 +793,8 @@ msgstr "Näyttää, jos tarjous oli itse luomamme"
 msgid "Indicated what time this offer was accepted"
 msgstr "Tarjouksen hyväksyntäaika"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:341
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:490
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
 msgstr "Infopaketti"
 
@@ -888,16 +896,20 @@ msgstr "Minuuttia"
 msgid "More memory slightly increases speed"
 msgstr "Lisää muistia nopeuttaa hieman"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:428
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
 msgstr "Julkinen Avaimeni"
+
+#: src/components/fullNode/FullNode.jsx:174
+msgid "Network Name"
+msgstr ""
 
 #: src/components/app/AppRouter.tsx:24
 msgid "Network not launched yet, waiting for genesis challenge!"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:469
-#: src/components/wallet/standard/WalletStandard.tsx:397
+#: src/components/wallet/coloured/WalletColoured.tsx:471
+#: src/components/wallet/standard/WalletStandard.tsx:399
 msgid "New Address"
 msgstr "Uusi Osoite"
 
@@ -905,13 +917,13 @@ msgstr "Uusi Osoite"
 msgid "New Wallet"
 msgstr "Uusi Lompakko"
 
-#: src/components/block/Block.jsx:336
+#: src/components/block/Block.jsx:322
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
 msgstr "Seuraava"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:199
+#: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
 msgstr "Alias"
 
@@ -920,7 +932,7 @@ msgstr "Alias"
 msgid "No"
 msgstr "Ei"
 
-#: src/middleware/middleware_api.jsx:296
+#: src/middleware/middleware_api.jsx:298
 msgid "No 24 word seed, since this key is imported."
 msgstr "Tuotu avain, ei 24 muistisanaa."
 
@@ -995,7 +1007,7 @@ msgstr "Tehdyt Tarjoukset"
 msgid "Outgoing"
 msgstr "Lähtevä"
 
-#: src/components/fullNode/FullNode.jsx:174
+#: src/components/fullNode/FullNode.jsx:180
 msgid "Peak Height"
 msgstr "Lakikorkeus"
 
@@ -1003,7 +1015,7 @@ msgstr "Lakikorkeus"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:185
 msgid "Peak Time"
 msgstr "Lakiajankohta"
 
@@ -1011,18 +1023,18 @@ msgstr "Lakiajankohta"
 msgid "Pending"
 msgstr "Odottaa"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:601
-#: src/components/wallet/standard/WalletStandard.tsx:225
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
+#: src/components/wallet/standard/WalletStandard.tsx:227
 msgid "Pending Balance"
 msgstr "Avoin Saldo"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
-#: src/components/wallet/standard/WalletStandard.tsx:232
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
+#: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "Pending Change"
 msgstr "Avoimet Siirrot"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:592
-#: src/components/wallet/standard/WalletStandard.tsx:218
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
+#: src/components/wallet/standard/WalletStandard.tsx:220
 msgid "Pending Total Balance"
 msgstr "Avoin Kokonaissumma"
 
@@ -1030,7 +1042,7 @@ msgstr "Avoin Kokonaissumma"
 msgid "Please add a trade pair"
 msgstr "Anna kaupankäyntipari"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:709
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
 msgstr "Anna nollaveloitus. Positiivisia veloituksia ei vielä tueta."
 
@@ -1039,16 +1051,16 @@ msgid "Please enter a valid initial coin amount"
 msgstr "Anna käypä kolikoiden määrä"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:676
-#: src/components/wallet/standard/WalletStandard.tsx:286
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
+#: src/components/wallet/standard/WalletStandard.tsx:288
 msgid "Please enter a valid numeric amount"
 msgstr "Anna käypä numeerinen arvo"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:688
-#: src/components/wallet/standard/WalletStandard.tsx:294
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
+#: src/components/wallet/standard/WalletStandard.tsx:296
 msgid "Please enter a valid numeric fee"
 msgstr "Anna käypä numeerinen veloitus"
 
@@ -1064,8 +1076,8 @@ msgstr "Anna käypä käytettävä määrä"
 msgid "Please enter a valid pubkey"
 msgstr "Anna käypä julkinen avain"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
-#: src/components/wallet/standard/WalletStandard.tsx:274
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
+#: src/components/wallet/standard/WalletStandard.tsx:276
 msgid "Please finish syncing before making a transaction"
 msgstr "Synkronoi loppuun ennen transaktion tekemistä"
 
@@ -1104,7 +1116,7 @@ msgstr "Plotti"
 msgid "Plot Count"
 msgstr "Plottien Määrä"
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:265
 msgid "Plot Id"
 msgstr "Plotin Tunnus"
 
@@ -1116,7 +1128,7 @@ msgstr "Plotin Avain"
 #~ msgid "Plot Name"
 #~ msgstr "Plotin Nimi"
 
-#: src/components/block/Block.jsx:239
+#: src/components/block/Block.jsx:241
 msgid "Plot Public Key"
 msgstr "Plotin Julkinen Avain"
 
@@ -1156,15 +1168,15 @@ msgstr "Rinnakkaisplottaus voi säästää aikaa. Muutoin lisää plottaus jonoo
 msgid "Pool Key"
 msgstr "Poolin Avain"
 
-#: src/components/block/Block.jsx:243
+#: src/components/block/Block.jsx:245
 msgid "Pool Public Key"
 msgstr "Poolin Julkinen Avain"
 
-#: src/components/block/Block.jsx:255
+#: src/components/block/Block.jsx:257
 msgid "Pool Puzzle Hash"
 msgstr "Poolin Osoitetiiviste"
 
-#: src/components/block/Block.jsx:297
+#: src/components/block/Block.jsx:283
 msgid "Pool Reward Amount"
 msgstr "Poolin Palkkiosumma"
 
@@ -1175,7 +1187,7 @@ msgstr "Poolin Palkkiosumma"
 msgid "Port"
 msgstr "Portti"
 
-#: src/components/block/Block.jsx:331
+#: src/components/block/Block.jsx:317
 msgid "Previous"
 msgstr "Edellinen"
 
@@ -1183,7 +1195,7 @@ msgstr "Edellinen"
 #~ msgid "Previous Block Hash"
 #~ msgstr "Edellinen Lohkotiiviste"
 
-#: src/components/block/Block.jsx:203
+#: src/components/block/Block.jsx:205
 msgid "Previous Header Hash"
 msgstr ""
 
@@ -1195,15 +1207,15 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Yksityinen avain julkisella sormenjäljellä {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:260
+#: src/middleware/middleware_api.jsx:262
 msgid "Private key {0}"
 msgstr "Yksityinen avain {0}"
 
-#: src/middleware/middleware_api.jsx:270
+#: src/middleware/middleware_api.jsx:272
 msgid "Private key:"
 msgstr "Yksityinen avain:"
 
-#: src/components/block/Block.jsx:235
+#: src/components/block/Block.jsx:237
 msgid "Proof of Space Size"
 msgstr "Tilatodisteavaruuden Koko"
 
@@ -1215,7 +1227,7 @@ msgstr "Todisteita Löytynyt"
 msgid "Pubkey"
 msgstr "Julkinen avain"
 
-#: src/middleware/middleware_api.jsx:278
+#: src/middleware/middleware_api.jsx:280
 msgid "Public key:"
 msgstr "Julkinen avain:"
 
@@ -1251,8 +1263,8 @@ msgstr "Rajoitettu Lompakko"
 msgid "Rate Limited"
 msgstr "Siirtorajoitettu"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:401
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:452
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
 msgstr "Siirtorajoitetetun Tiedot"
 
@@ -1260,12 +1272,12 @@ msgstr "Siirtorajoitetetun Tiedot"
 msgid "Rate Limited Options"
 msgstr "Siirtorajoitetun Valinnat"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:274
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
 msgstr "Siirtorajoitetun Lompakon Asennus"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:451
-#: src/components/wallet/standard/WalletStandard.tsx:379
+#: src/components/wallet/coloured/WalletColoured.tsx:453
+#: src/components/wallet/standard/WalletStandard.tsx:381
 msgid "Receive Address"
 msgstr "Vastaanottajan Osoite"
 
@@ -1281,7 +1293,7 @@ msgstr "Päivitä Plot-tiedostot"
 msgid "Release Notes"
 msgstr "Version Muutokset"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:205
+#: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Nimeä Uudelleen"
 
@@ -1326,7 +1338,7 @@ msgstr "Toinen väliaikaishakemistosijainti"
 msgid "See private key"
 msgstr "Katso yksityinen avain"
 
-#: src/middleware/middleware_api.jsx:288
+#: src/middleware/middleware_api.jsx:290
 msgid "Seed:"
 msgstr "Siemenarvo:"
 
@@ -1374,17 +1386,17 @@ msgstr "Valittu"
 msgid "Sell"
 msgstr "Myy"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:433
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:795
-#: src/components/wallet/standard/WalletStandard.tsx:361
+#: src/components/wallet/coloured/WalletColoured.tsx:435
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
+#: src/components/wallet/standard/WalletStandard.tsx:363
 msgid "Send"
 msgstr "Lähetä"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:477
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 msgstr "Lähetä tämä infopaketti Siirtorajoitetun Lompakon käyttäjälle, joka voi käyttää sitä oman lompakkonsa perustamiseen:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:284
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
 msgstr "Lähetä julkinen avaimesi Siirtorajoitetun Lompakon pääkäyttäjälle:"
 
@@ -1421,14 +1433,14 @@ msgstr "Käytettävissä"
 msgid "Spendable Amount Per Interval"
 msgstr "Käytettävissä Ajanjaksoa Kohti"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:287
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:568
-#: src/components/wallet/standard/WalletStandard.tsx:199
+#: src/components/wallet/coloured/WalletColoured.tsx:288
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
 msgstr "Saldo Käytettävissä"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:407
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:458
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
 msgstr "Käyttöajanjakso (lohkojen lukum.): {interval}"
 
@@ -1436,8 +1448,8 @@ msgstr "Käyttöajanjakso (lohkojen lukum.): {interval}"
 msgid "Spending Interval Length (number of blocks)"
 msgstr "Käyttöajanjakson pituus (lohkojen määrä)"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:414
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:465
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Käyttöraja (Chiaa/ajanjakso):{0}"
 
@@ -1489,7 +1501,7 @@ msgstr "Tila:"
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
 msgstr "Lähetä"
 
@@ -1508,8 +1520,8 @@ msgid "Syncing {progress}/{tip}"
 msgstr "Synkronoi {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
-msgid "TXCH Block Rewards"
-msgstr "TXCH Lohkopalkkiot"
+#~ msgid "TXCH Block Rewards"
+#~ msgstr "TXCH Lohkopalkkiot"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 #~ msgid "TXCH Farming Rewards"
@@ -1524,8 +1536,8 @@ msgstr "TXCH Lohkopalkkiot"
 #~ msgstr "TXCH User Fees"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:15
-msgid "TXCH User Transaction Fees"
-msgstr "TXCH Transaktioveloitukset Käyttäjälle"
+#~ msgid "TXCH User Transaction Fees"
+#~ msgstr "TXCH Transaktioveloitukset Käyttäjälle"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1552,19 +1564,19 @@ msgstr "Noodi ei ole synkronoitu"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Noodi synkronoi. Se lataa lohkoketjua muilta solmuilta"
 
-#: src/components/block/Block.jsx:266
+#: src/components/block/Block.jsx:268
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Siemenarvo plot-tiedostojen luontia varten. Riippuu poolin ja plotin julkisista avaimista."
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:220
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Tähän lohkoon asti iteroitujen VDF-aikatodisteiden lukumäärä."
 
-#: src/components/block/Block.jsx:228
+#: src/components/block/Block.jsx:230
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Tähän lohkoon asti iteroitujen VDF-aikatodisteiden lukumäärä."
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:294
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Kokonaistransaktioveloitukset tässä lohkossa. Suoritetaan farmarille."
 
@@ -1582,31 +1594,31 @@ msgstr "Lisää plottitiedostoja sisältävä kansio. Jos sinulla ei ole vielä 
 msgid "This feature is available only from the GUI."
 msgstr "Tämä ominaisuus käytettävissä ainoastaan graafisessa käyttöliittymässä."
 
-#: src/components/wallet/standard/WalletStandard.tsx:199
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "Transaktioihin käytettävissä oleva Chiojen määrä. Ei sisällä avoimia farmarin palkkioita, avoimia saapuvia transaktioita eikä lähetettyjä, mutta vahvistamattomia transaktioita."
 
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:236
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "Avoimet siirrot ovat kolikoita, jotka olet siirtänyt, mutta joiden siirtoa ei ole vielä vahvistettu loppuun."
 
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:229
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Lähtevien ja saapuvien avointen transaktioiden summa (ei vielä lohkoketjussa). Ei sisällä farmarin palkkioita."
 
-#: src/components/fullNode/FullNode.jsx:183
+#: src/components/fullNode/FullNode.jsx:189
 msgid "This is the time of the latest peak sub block."
 msgstr "Viimeisimmän lohkon aikaleima."
 
-#: src/components/block/Block.jsx:182
+#: src/components/block/Block.jsx:184
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Ajankohta jolloin farmari on luonut lohkon. Aikatodiste viimeistelee lohkon tämän ajankohdan jälkeen"
 
-#: src/components/wallet/standard/WalletStandard.tsx:193
+#: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "Yksityisten avaimiesi hallinoimien Chiojen kokonaissumma lohkoketjussa. Sisälytää jäädytetyt palkkiot, mutta ei tulevia tai lähteviä transaktioita."
 
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:222
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Nykyinen saldo + avoin saldo, eli tuleva saldo avointen transaktioiden jälkeen."
 
@@ -1634,7 +1646,7 @@ msgstr "Luontiaika"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:181
 msgid "Timestamp"
 msgstr "Aikaleima"
 
@@ -1642,9 +1654,9 @@ msgstr "Aikaleima"
 msgid "To"
 msgstr "Osoitteeseen"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:286
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
-#: src/components/wallet/standard/WalletStandard.tsx:193
+#: src/components/wallet/coloured/WalletColoured.tsx:287
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
+#: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
 msgstr "Kokonaissaldo"
 
@@ -1652,7 +1664,7 @@ msgstr "Kokonaissaldo"
 msgid "Total Chia Farmed"
 msgstr "Tuotettuja Chioja"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:207
 msgid "Total Iterations"
 msgstr "Iteraatioita"
 
@@ -1668,11 +1680,11 @@ msgstr "Plottien Yhteiskoko:"
 msgid "Total Size of Plots"
 msgstr "Plottien Yhteiskoko"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
 msgstr "VDF-iteraatioiden Määrä"
 
-#: src/components/fullNode/FullNode.jsx:203
+#: src/components/fullNode/FullNode.jsx:209
 msgid "Total iterations since the start of the blockchain"
 msgstr "Iteraatioiden määrä lohkoketjun alusta asti"
 
@@ -1708,7 +1720,7 @@ msgstr "Kaupankäynti"
 msgid "Trading History"
 msgstr "Kaupankäyntihistoria"
 
-#: src/components/block/Block.jsx:274
+#: src/components/block/Block.jsx:276
 msgid "Transactions Filter Hash"
 msgstr "Transaktion Filtteritiiviste"
 
@@ -1725,11 +1737,11 @@ msgid "Unique identifier"
 msgstr "Yksilöllinen tunniste"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:299
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
 msgstr "Käyttäjän julkinen avain"
 
-#: src/components/fullNode/FullNode.jsx:195
+#: src/components/fullNode/FullNode.jsx:201
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF -alaiteraatioita"
 
@@ -1746,12 +1758,12 @@ msgstr "Katso Loki"
 msgid "View Offer"
 msgstr "Näytä Tarjous"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:583
-#: src/components/wallet/standard/WalletStandard.tsx:211
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
 msgstr "Näytä avoimet saldot"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:295
+#: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
 msgstr "Näytä avoimet saldot..."
 
@@ -1806,11 +1818,11 @@ msgstr "Haluatko ansaita Chioja? Lisää plot-tiedostoja farmiisi."
 msgid "Want to have a delay before the next plot starts?"
 msgstr "Haluatko asettaa tauon ennen seuraavaa plottausta?"
 
-#: src/components/block/Block.jsx:193
+#: src/components/block/Block.jsx:195
 msgid "Weight"
 msgstr "Paino"
 
-#: src/components/block/Block.jsx:196
+#: src/components/block/Block.jsx:198
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Paino on kaikkien tähänastisten lohkojen vaikeuskerroin"
 
@@ -1822,7 +1834,7 @@ msgstr "Tervetuloa Chiaan. Kirjaudu sisään avaimella tai luo uusi avain."
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopiointiin. Ilman niitä sinulla ei ole pääsyä lompakkoosi. Pidä ne tallessa! Kirjoita ylös sanat ja niiden järjestysnumerot. (Oikea järjestys on tärkeää)"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:323
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
@@ -1830,7 +1842,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 msgid "Window"
 msgstr "Ikkuna"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:15
+#: src/components/farm/card/FarmCardBlockRewards.tsx:17
 msgid "Without fees"
 msgstr "Ilman veloituksia"
 
@@ -1888,3 +1900,19 @@ msgstr "synkronoitu"
 #: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "synkronoi"
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:16
+#~ msgid "{0} Block Rewards"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:16
+#~ msgid "{0} User Transaction Fees"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardBlockRewards.tsx:17
+msgid "{currencyCode} Block Rewards"
+msgstr ""
+
+#: src/components/farm/card/FarmCardUserFees.tsx:17
+msgid "{currencyCode} User Transaction Fees"
+msgstr ""

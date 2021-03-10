@@ -397,6 +397,13 @@ export const get_height_info = () => {
   return action;
 };
 
+export const getNetworkInfo = () => {
+  const action = walletMessage();
+  action.message.command = 'get_network_info';
+  action.message.data = {};
+  return action;
+};
+
 export const get_sync_status = () => {
   const action = walletMessage();
   action.message.command = 'get_sync_status';

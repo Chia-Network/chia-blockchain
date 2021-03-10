@@ -109,7 +109,7 @@ const cols = [
   },
 ];
 
-const getStatusItems = (state, connected, latestPeakTimestamp) => {
+const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const status_items = [];
   if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
@@ -168,6 +168,12 @@ const getStatusItems = (state, connected, latestPeakTimestamp) => {
     };
     status_items.push(item);
   }
+
+  const networkName = networkInfo?.network_name;
+  status_items.push({
+    label: <Trans>Network Name</Trans>,
+    value: networkName,
+  });
 
   const peakHeight = state.peak?.height ?? 0;
   status_items.push({
@@ -254,7 +260,12 @@ const FullNodeStatus = (props) => {
   const latestPeakTimestamp = useSelector(
     (state) => state.full_node_state.latest_peak_timestamp,
   );
-  const statusItems = blockchainState && getStatusItems(blockchainState, connected, latestPeakTimestamp);
+
+  const networkInfo = useSelector(
+    (state) => state.wallet_state.network_info,
+  );
+
+  const statusItems = blockchainState && getStatusItems(blockchainState, connected, latestPeakTimestamp, networkInfo);
 
   return (
     <Card title={<Trans>Full Node Status</Trans>}>

@@ -18,6 +18,7 @@ import {
   did_get_did,
   pingWallet,
   get_farmed_amount,
+  getNetworkInfo,
 } from '../modules/message';
 
 import { offerParsed, resetTrades } from '../modules/trade';
@@ -173,6 +174,7 @@ export function refreshAllState() {
       dispatch(startService(service_harvester));
     }
 
+    dispatch(getNetworkInfo());
     dispatch(get_height_info());
     dispatch(get_sync_status());
     dispatch(get_connection_info());

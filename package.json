@@ -13,7 +13,6 @@
     "eject": "react-scripts eject",
     "electron": "electron .",
     "dev": "cross-env NODE_ENV=development BROWSER=none nf start",
-    "dev:testnet": "cross-env TESTNET=true NODE_ENV=development BROWSER=none nf start -p 3000",
     "styleguide": "styleguidist server",
     "styleguide:build": "styleguidist build",
     "locale:extract": "lingui extract",
