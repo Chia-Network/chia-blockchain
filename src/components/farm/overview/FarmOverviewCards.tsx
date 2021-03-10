@@ -21,12 +21,6 @@ export default function FarmOverviewCards() {
           <FarmCardTotalChiaFarmed />
         </Grid>
         <Grid xs={12} sm={6} md={4} item>
-          <FarmCardBlockRewards />
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FarmCardUserFees />
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
           <FarmCardLastHeightFarmed />
         </Grid>
         <Grid xs={12} sm={6} md={4} item>

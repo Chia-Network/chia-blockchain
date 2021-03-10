@@ -7,22 +7,20 @@ import computeStatistics from '../../../util/computeStatistics';
 import { mojo_to_chia } from '../../../util/chia';
 
 export default function FarmCardTotalChiaFarmed() {
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const value = computeStatistics(wallets);
-  const loading = !wallets;
+  const farmed_amount = useSelector(
+    (state: RootState) => state.wallet_state.farmed_amount,
+  );
 
   const totalChiaFarmed = useMemo(() => {
-    const val = BigInt(value.totalChiaFarmed.round().toString());
+    const val = BigInt(farmed_amount.toString());
     return mojo_to_chia(val);
-  }, [value.totalChiaFarmed]);
+  }, [farmed_amount]);
 
   return (
     <FarmCard
-      title={
-        <Trans>Total Chia Farmed</Trans>
-      }
+      title={<Trans>Total Chia Farmed</Trans>}
       value={totalChiaFarmed}
-      loading={loading}
+      loading={false}
     />
   );
 }

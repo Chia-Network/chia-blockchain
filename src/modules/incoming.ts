@@ -19,6 +19,7 @@ type IncomingState = {
   send_transaction_result?: string | null;
   show_create_backup: boolean;
   server_started?: boolean;
+  farmed_amount: number;
 };
 
 const initialState: IncomingState = {
@@ -35,6 +36,7 @@ const initialState: IncomingState = {
     synced: false,
   },
   show_create_backup: false,
+  farmed_amount: 0,
 };
 
 export default function incomingReducer(
@@ -290,6 +292,10 @@ export default function incomingReducer(
         wallet.sending_transaction = false;
         wallet.send_transaction_result = message.data.additional_data;
         return { ...state };
+      }
+      if (command === 'get_farmed_amount') {
+        const { farmed_amount } = data;
+        return { ...state, farmed_amount };
       }
       return state;
     default:

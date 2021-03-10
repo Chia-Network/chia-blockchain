@@ -17,6 +17,7 @@ import {
   did_get_recovery_list,
   did_get_did,
   pingWallet,
+  get_farmed_amount,
 } from '../modules/message';
 
 import { offerParsed, resetTrades } from '../modules/trade';
@@ -149,8 +150,10 @@ async function get_wallet_balance(store, id) {
   ) {
     can_call_get_wallet_balance[id] = false;
     store.dispatch(get_balance_for_wallet(id));
+    store.dispatch(get_farmed_amount());
     timeout_balance = setTimeout(() => {
       store.dispatch(get_balance_for_wallet(id));
+      store.dispatch(get_farmed_amount());
       can_call_get_wallet_balance[id] = true;
     }, 10000);
   }
@@ -407,8 +410,7 @@ export const handle_message = async (store, payload, errorProcessed) => {
         ping_farmer(store);
       } else if (service === service_harvester) {
         ping_harvester(store);
-      } else if (service === service_plotter) {
-      }
+      } else if (service === service_plotter) {}
     }
   } else if (payload.command === 'stop_service') {
     if (payload.data.success) {

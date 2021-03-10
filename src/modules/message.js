@@ -100,6 +100,13 @@ export const get_balance_for_wallet = (id) => {
   return action;
 };
 
+export const get_farmed_amount = () => {
+  const action = walletMessage();
+  action.message.command = 'get_farmed_amount';
+  action.message.data = {};
+  return action;
+};
+
 export const send_transaction = (wallet_id, amount, fee, address) => {
   const action = walletMessage();
   action.message.command = 'send_transaction';
@@ -130,13 +137,9 @@ export const add_key = (mnemonic, type, file_path) => {
   return action;
 };
 
-export const add_new_key_action = (mnemonic) => {
-  return (dispatch) => {
-    return async_api(
-      dispatch,
-      add_key(mnemonic, 'new_wallet', null),
-      true,
-    ).then((response) => {
+export const add_new_key_action = (mnemonic) => (dispatch) =>
+  async_api(dispatch, add_key(mnemonic, 'new_wallet', null), true).then(
+    (response) => {
       if (response.data.success) {
         // Go to wallet
         dispatch(resetMnemonic());
@@ -153,48 +156,18 @@ export const add_new_key_action = (mnemonic) => {
         const { error } = response.data;
         dispatch(openErrorDialog(error));
       }
-    });
-  };
-};
+    },
+  );
 
-export const add_and_skip_backup = (mnemonic) => {
-  return (dispatch) => {
-    return async_api(dispatch, add_key(mnemonic, 'skip', null), true).then(
-      (response) => {
-        if (response.data.success) {
-          // Go to wallet
-          dispatch(resetMnemonic());
-          dispatch(format_message('get_public_keys', {}));
-          dispatch(refreshAllState());
-          dispatch(push('/dashboard'));
-        } else {
-          if (response.data.word) {
-            dispatch(setIncorrectWord(response.data.word));
-            dispatch(push('/wallet/import'));
-          } else if (
-            response.data.error === 'Invalid order of mnemonic words'
-          ) {
-            dispatch(push('/wallet/import'));
-          }
-          const { error } = response.data;
-          dispatch(openErrorDialog(error));
-        }
-      },
-    );
-  };
-};
-
-export const add_and_restore_from_backup = (mnemonic, file_path) => {
-  return (dispatch) => {
-    return async_api(
-      dispatch,
-      add_key(mnemonic, 'restore_backup', file_path),
-      true,
-    ).then((response) => {
+export const add_and_skip_backup = (mnemonic) => (dispatch) =>
+  async_api(dispatch, add_key(mnemonic, 'skip', null), true).then(
+    (response) => {
       if (response.data.success) {
         // Go to wallet
         dispatch(resetMnemonic());
+        dispatch(format_message('get_public_keys', {}));
         dispatch(refreshAllState());
+        dispatch(push('/dashboard'));
       } else {
         if (response.data.word) {
           dispatch(setIncorrectWord(response.data.word));
@@ -205,9 +178,32 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
         const { error } = response.data;
         dispatch(openErrorDialog(error));
       }
-    });
-  };
-};
+    },
+  );
+
+export const add_and_restore_from_backup = (mnemonic, file_path) => (
+  dispatch,
+) =>
+  async_api(
+    dispatch,
+    add_key(mnemonic, 'restore_backup', file_path),
+    true,
+  ).then((response) => {
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(resetMnemonic());
+      dispatch(refreshAllState());
+    } else {
+      if (response.data.word) {
+        dispatch(setIncorrectWord(response.data.word));
+        dispatch(push('/wallet/import'));
+      } else if (response.data.error === 'Invalid order of mnemonic words') {
+        dispatch(push('/wallet/import'));
+      }
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 
 export const delete_key = (fingerprint) => {
   const action = walletMessage();
@@ -257,14 +253,35 @@ export const log_in_and_import_backup = (fingerprint, file_path) => {
   return action;
 };
 
-export const log_in_and_import_backup_action = (fingerprint, file_path) => {
-  return (dispatch) => {
-    dispatch(selectFingerprint(fingerprint));
-    return async_api(
-      dispatch,
-      log_in_and_import_backup(fingerprint, file_path),
-      true,
-    ).then((response) => {
+export const log_in_and_import_backup_action = (fingerprint, file_path) => (
+  dispatch,
+) => {
+  dispatch(selectFingerprint(fingerprint));
+  return async_api(
+    dispatch,
+    log_in_and_import_backup(fingerprint, file_path),
+    true,
+  ).then((response) => {
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(refreshAllState());
+      dispatch(push('/dashboard'));
+    } else {
+      const { error } = response.data;
+      if (error === 'not_initialized') {
+        dispatch(push('/wallet/restore'));
+        // Go to restore from backup screen
+      } else {
+        dispatch(openErrorDialog(error));
+      }
+    }
+  });
+};
+
+export const login_and_skip_action = (fingerprint) => (dispatch) => {
+  dispatch(selectFingerprint(fingerprint));
+  return async_api(dispatch, log_in_and_skip_import(fingerprint), true).then(
+    (response) => {
       if (response.data.success) {
         // Go to wallet
         dispatch(refreshAllState());
@@ -278,59 +295,34 @@ export const log_in_and_import_backup_action = (fingerprint, file_path) => {
           dispatch(openErrorDialog(error));
         }
       }
-    });
-  };
+    },
+  );
 };
 
-export const login_and_skip_action = (fingerprint) => {
-  return (dispatch) => {
-    dispatch(selectFingerprint(fingerprint));
-    return async_api(dispatch, log_in_and_skip_import(fingerprint), true).then(
-      (response) => {
-        if (response.data.success) {
-          // Go to wallet
-          dispatch(refreshAllState());
-          dispatch(push('/dashboard'));
-        } else {
-          const { error } = response.data;
-          if (error === 'not_initialized') {
-            dispatch(push('/wallet/restore'));
-            // Go to restore from backup screen
-          } else {
-            dispatch(openErrorDialog(error));
-          }
+export const login_action = (fingerprint) => (dispatch) => {
+  dispatch(selectFingerprint(fingerprint));
+  return async_api(dispatch, log_in(fingerprint), true).then((response) => {
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(refreshAllState());
+      dispatch(push('/dashboard'));
+    } else {
+      const { error } = response.data;
+      if (error === 'not_initialized') {
+        const { backup_info } = response.data;
+        const { backup_path } = response.data;
+        dispatch(push('/wallet/restore'));
+        if (backup_info && backup_path) {
+          dispatch(setBackupInfo(backup_info));
+          dispatch(selectFilePath(backup_path));
+          dispatch(changeBackupView(presentBackupInfo));
         }
-      },
-    );
-  };
-};
-
-export const login_action = (fingerprint) => {
-  return (dispatch) => {
-    dispatch(selectFingerprint(fingerprint));
-    return async_api(dispatch, log_in(fingerprint), true).then((response) => {
-      if (response.data.success) {
-        // Go to wallet
-        dispatch(refreshAllState());
-        dispatch(push('/dashboard'));
+        // Go to restore from backup screen
       } else {
-        const { error } = response.data;
-        if (error === 'not_initialized') {
-          const { backup_info } = response.data;
-          const { backup_path } = response.data;
-          dispatch(push('/wallet/restore'));
-          if (backup_info && backup_path) {
-            dispatch(setBackupInfo(backup_info));
-            dispatch(selectFilePath(backup_path));
-            dispatch(changeBackupView(presentBackupInfo));
-          }
-          // Go to restore from backup screen
-        } else {
-          dispatch(openErrorDialog(error));
-        }
+        dispatch(openErrorDialog(error));
       }
-    });
-  };
+    }
+  });
 };
 
 export const get_backup_info = (file_path, fingerprint, words) => {
@@ -350,24 +342,24 @@ export const get_backup_info = (file_path, fingerprint, words) => {
   return action;
 };
 
-export const get_backup_info_action = (file_path, fingerprint, words) => {
-  return (dispatch) => {
-    dispatch(selectFilePath(file_path));
-    return async_api(
-      dispatch,
-      get_backup_info(file_path, fingerprint, words),
-      true,
-    ).then((response) => {
-      if (response.data.success) {
-        response.data.backup_info.downloaded = false;
-        dispatch(setBackupInfo(response.data.backup_info));
-        dispatch(changeBackupView(presentBackupInfo));
-      } else {
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
-      }
-    });
-  };
+export const get_backup_info_action = (file_path, fingerprint, words) => (
+  dispatch,
+) => {
+  dispatch(selectFilePath(file_path));
+  return async_api(
+    dispatch,
+    get_backup_info(file_path, fingerprint, words),
+    true,
+  ).then((response) => {
+    if (response.data.success) {
+      response.data.backup_info.downloaded = false;
+      dispatch(setBackupInfo(response.data.backup_info));
+      dispatch(changeBackupView(presentBackupInfo));
+    } else {
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 };
 
 export const get_private_key = (fingerprint) => {
@@ -454,59 +446,48 @@ export const create_backup = (file_path) => {
   return action;
 };
 
-export const create_backup_action = (file_path) => {
-  return (dispatch) => {
-    return async_api(dispatch, create_backup(file_path), true).then(
-      (response) => {
-        if (response.data.success) {
-          dispatch(showCreateBackup(false));
-        } else {
-          const { error } = response.data;
-          dispatch(openErrorDialog(error));
-        }
-      },
-    );
-  };
-};
+export const create_backup_action = (file_path) => (dispatch) =>
+  async_api(dispatch, create_backup(file_path), true).then((response) => {
+    if (response.data.success) {
+      dispatch(showCreateBackup(false));
+    } else {
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 
-export const create_cc_action = (amount, fee) => {
-  return (dispatch) => {
-    return async_api(dispatch, create_coloured_coin(amount, fee), true).then(
-      (response) => {
+export const create_cc_action = (amount, fee) => (dispatch) =>
+  async_api(dispatch, create_coloured_coin(amount, fee), true).then(
+    (response) => {
+      dispatch(createState(true, false));
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message('get_wallets', {}));
+        dispatch(showCreateBackup(true));
         dispatch(createState(true, false));
-        if (response.data.success) {
-          // Go to wallet
-          dispatch(format_message('get_wallets', {}));
-          dispatch(showCreateBackup(true));
-          dispatch(createState(true, false));
-          dispatch(changeCreateWallet(ALL_OPTIONS));
-        } else {
-          const { error } = response.data;
-          dispatch(openErrorDialog(error));
-        }
-      },
-    );
-  };
-};
+        dispatch(changeCreateWallet(ALL_OPTIONS));
+      } else {
+        const { error } = response.data;
+        dispatch(openErrorDialog(error));
+      }
+    },
+  );
 
-export const create_cc_for_colour_action = (colour, fee) => {
-  return (dispatch) => {
-    return async_api(dispatch, create_cc_for_colour(colour, fee), true).then(
-      (response) => {
-        dispatch(createState(true, false));
-        if (response.data.success) {
-          // Go to wallet
-          dispatch(showCreateBackup(true));
-          dispatch(format_message('get_wallets', {}));
-          dispatch(changeCreateWallet(ALL_OPTIONS));
-        } else {
-          const { error } = response.data;
-          dispatch(openErrorDialog(error));
-        }
-      },
-    );
-  };
-};
+export const create_cc_for_colour_action = (colour, fee) => (dispatch) =>
+  async_api(dispatch, create_cc_for_colour(colour, fee), true).then(
+    (response) => {
+      dispatch(createState(true, false));
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(showCreateBackup(true));
+        dispatch(format_message('get_wallets', {}));
+        dispatch(changeCreateWallet(ALL_OPTIONS));
+      } else {
+        const { error } = response.data;
+        dispatch(openErrorDialog(error));
+      }
+    },
+  );
 
 export const get_colour_info = (wallet_id) => {
   const action = walletMessage();
@@ -563,27 +544,26 @@ export const create_rl_admin = (interval, limit, pubkey, amount) => {
   return action;
 };
 
-export const create_rl_admin_action = (interval, limit, pubkey, amount) => {
-  return (dispatch) => {
-    return async_api(
-      dispatch,
-      create_rl_admin(interval, limit, pubkey, amount),
-      true,
-    ).then((response) => {
+export const create_rl_admin_action = (interval, limit, pubkey, amount) => (
+  dispatch,
+) =>
+  async_api(
+    dispatch,
+    create_rl_admin(interval, limit, pubkey, amount),
+    true,
+  ).then((response) => {
+    dispatch(createState(true, false));
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(format_message('get_wallets', {}));
+      dispatch(showCreateBackup(true));
       dispatch(createState(true, false));
-      if (response.data.success) {
-        // Go to wallet
-        dispatch(format_message('get_wallets', {}));
-        dispatch(showCreateBackup(true));
-        dispatch(createState(true, false));
-        dispatch(changeCreateWallet(ALL_OPTIONS));
-      } else {
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
-      }
-    });
-  };
-};
+      dispatch(changeCreateWallet(ALL_OPTIONS));
+    } else {
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 
 export const create_rl_user = () => {
   const action = walletMessage();
@@ -596,54 +576,43 @@ export const create_rl_user = () => {
   return action;
 };
 
-export const create_rl_user_action = () => {
-  return (dispatch) => {
-    return async_api(dispatch, create_rl_user(), true).then((response) => {
+export const create_rl_user_action = () => (dispatch) =>
+  async_api(dispatch, create_rl_user(), true).then((response) => {
+    dispatch(createState(true, false));
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(format_message('get_wallets', {}));
       dispatch(createState(true, false));
-      if (response.data.success) {
-        // Go to wallet
-        dispatch(format_message('get_wallets', {}));
-        dispatch(createState(true, false));
-        dispatch(changeCreateWallet(ALL_OPTIONS));
-      } else {
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
-      }
-    });
-  };
-};
-
-export const add_plot_directory_and_refresh = (dir) => {
-  return (dispatch) => {
-    return async_api(dispatch, addPlotDirectory(dir), true).then((response) => {
-      if (response.data.success) {
-        dispatch(getPlotDirectories());
-        return async_api(dispatch, refreshPlots(), true).then((response) => {
-          dispatch(getPlots());
-        });
-      }
+      dispatch(changeCreateWallet(ALL_OPTIONS));
+    } else {
       const { error } = response.data;
       dispatch(openErrorDialog(error));
-    });
-  };
-};
+    }
+  });
 
-export const remove_plot_directory_and_refresh = (dir) => {
-  return (dispatch) => {
-    return async_api(dispatch, removePlotDirectory(dir), true).then(
-      (response) => {
-        if (response.data.success) {
-          dispatch(getPlotDirectories());
-          return async_api(dispatch, refreshPlots(), true).then((response) => {
-            dispatch(getPlots());
-          });
-        }
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
-      },
-    );
-  };
-};
+export const add_plot_directory_and_refresh = (dir) => (dispatch) =>
+  async_api(dispatch, addPlotDirectory(dir), true).then((response) => {
+    if (response.data.success) {
+      dispatch(getPlotDirectories());
+      return async_api(dispatch, refreshPlots(), true).then((response) => {
+        dispatch(getPlots());
+      });
+    }
+    const { error } = response.data;
+    dispatch(openErrorDialog(error));
+  });
+
+export const remove_plot_directory_and_refresh = (dir) => (dispatch) =>
+  async_api(dispatch, removePlotDirectory(dir), true).then((response) => {
+    if (response.data.success) {
+      dispatch(getPlotDirectories());
+      return async_api(dispatch, refreshPlots(), true).then((response) => {
+        dispatch(getPlots());
+      });
+    }
+    const { error } = response.data;
+    dispatch(openErrorDialog(error));
+  });
 
 export const rl_set_user_info = (
   wallet_id,
@@ -670,53 +639,47 @@ export const rl_set_user_info_action = (
   limit,
   origin,
   admin_pubkey,
-) => {
-  return (dispatch) => {
-    return async_api(
-      dispatch,
-      rl_set_user_info(wallet_id, interval, limit, origin, admin_pubkey),
-      true,
-    ).then((response) => {
+) => (dispatch) =>
+  async_api(
+    dispatch,
+    rl_set_user_info(wallet_id, interval, limit, origin, admin_pubkey),
+    true,
+  ).then((response) => {
+    dispatch(createState(true, false));
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(format_message('get_wallets', {}));
+      dispatch(showCreateBackup(true));
       dispatch(createState(true, false));
-      if (response.data.success) {
-        // Go to wallet
-        dispatch(format_message('get_wallets', {}));
-        dispatch(showCreateBackup(true));
-        dispatch(createState(true, false));
-      } else {
-        const { error } = response.data;
-        dispatch(openErrorDialog(error));
-      }
-    });
-  };
-};
+    } else {
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 
 export const clawback_rl_coin = (wallet_id) => {
   // THIS IS A PLACEHOLDER FOR RL CLAWBACK FUNCTIONALITY
 };
 
-export const exit_and_close = (event) => {
-  return (dispatch) => {
-    return async_api(dispatch, exitDaemon(), false).then((response) => {
-      dispatch(wsDisconnect());
-      event.sender.send('daemon-exited');
-    });
-  };
-};
+export const exit_and_close = (event) => (dispatch) =>
+  async_api(dispatch, exitDaemon(), false).then((response) => {
+    dispatch(wsDisconnect());
+    event.sender.send('daemon-exited');
+  });
 
 export const create_did_wallet = (
   amount,
   backup_dids,
   num_of_backup_ids_needed,
 ) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'create_new_wallet';
   action.message.data = {
     wallet_type: 'did_wallet',
     did_type: 'new',
-    amount: amount,
-    backup_dids: backup_dids,
-    num_of_backup_ids_needed: num_of_backup_ids_needed,
+    amount,
+    backup_dids,
+    num_of_backup_ids_needed,
     host: backup_host,
   };
   return action;
@@ -726,71 +689,63 @@ export const create_did_action = (
   amount,
   backup_dids,
   num_of_backup_ids_needed,
-) => {
-  return (dispatch) => {
-    return async_api(
-      dispatch,
-      create_did_wallet(amount, backup_dids, num_of_backup_ids_needed),
-      true,
-    ).then((response) => {
+) => (dispatch) =>
+  async_api(
+    dispatch,
+    create_did_wallet(amount, backup_dids, num_of_backup_ids_needed),
+    true,
+  ).then((response) => {
+    dispatch(createState(true, false));
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(format_message('get_wallets', {}));
+      dispatch(showCreateBackup(true));
       dispatch(createState(true, false));
-      if (response.data.success) {
-        // Go to wallet
-        dispatch(format_message('get_wallets', {}));
-        dispatch(showCreateBackup(true));
-        dispatch(createState(true, false));
-        dispatch(changeCreateWallet(ALL_OPTIONS));
-      } else {
-        const error = response.data.error;
-        dispatch(openErrorDialog(error));
-      }
-    });
-  };
-};
+      dispatch(changeCreateWallet(ALL_OPTIONS));
+    } else {
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 
 export const recover_did_wallet = (filename) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'create_new_wallet';
   action.message.data = {
     wallet_type: 'did_wallet',
     did_type: 'recovery',
-    filename: filename,
+    filename,
     host: backup_host,
   };
   return action;
 };
 
-export const recover_did_action = (filename) => {
-  return (dispatch) => {
-    return async_api(dispatch, recover_did_wallet(filename), true).then(
-      (response) => {
-        dispatch(createState(true, false));
-        if (response.data.success) {
-          // Go to wallet
-          dispatch(format_message('get_wallets', {}));
-          dispatch(showCreateBackup(false));
-          dispatch(createState(true, false));
-          dispatch(changeCreateWallet(ALL_OPTIONS));
-        } else {
-          const error = response.data.error;
-          dispatch(openErrorDialog(error));
-        }
-      },
-    );
-  };
-};
+export const recover_did_action = (filename) => (dispatch) =>
+  async_api(dispatch, recover_did_wallet(filename), true).then((response) => {
+    dispatch(createState(true, false));
+    if (response.data.success) {
+      // Go to wallet
+      dispatch(format_message('get_wallets', {}));
+      dispatch(showCreateBackup(false));
+      dispatch(createState(true, false));
+      dispatch(changeCreateWallet(ALL_OPTIONS));
+    } else {
+      const { error } = response.data;
+      dispatch(openErrorDialog(error));
+    }
+  });
 
 export const did_update_recovery_ids = (
   wallet_id,
   new_list,
   num_verifications_required,
 ) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_update_recovery_ids';
   action.message.data = {
-    wallet_id: wallet_id,
-    new_list: new_list,
-    num_verifications_required: num_verifications_required,
+    wallet_id,
+    new_list,
+    num_verifications_required,
   };
   return action;
 };
@@ -799,37 +754,34 @@ export const did_update_recovery_ids_action = (
   wallet_id,
   new_list,
   num_verifications_required,
-) => {
-  return (dispatch) => {
-    return async_api(
-      dispatch,
-      did_update_recovery_ids(wallet_id, new_list, num_verifications_required),
-      true,
-    ).then((response) => {
-      dispatch(format_message('get_wallets', {}));
-      dispatch(createState(true, false));
-    });
-  };
-};
+) => (dispatch) =>
+  async_api(
+    dispatch,
+    did_update_recovery_ids(wallet_id, new_list, num_verifications_required),
+    true,
+  ).then((response) => {
+    dispatch(format_message('get_wallets', {}));
+    dispatch(createState(true, false));
+  });
 
 export const did_spend = (wallet_id, puzzlehash) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_spend';
-  action.message.data = { wallet_id: wallet_id, puzzlehash: puzzlehash };
+  action.message.data = { wallet_id, puzzlehash };
   return action;
 };
 
 export const did_get_did = (wallet_id) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_get_did';
-  action.message.data = { wallet_id: wallet_id };
+  action.message.data = { wallet_id };
   return action;
 };
 
 export const did_get_recovery_list = (wallet_id) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_get_recovery_list';
-  action.message.data = { wallet_id: wallet_id };
+  action.message.data = { wallet_id };
   return action;
 };
 
@@ -840,36 +792,36 @@ export const did_recovery_spend = (
   coin_name,
   puzhash,
 ) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_recovery_spend';
   action.message.data = {
-    wallet_id: wallet_id,
-    spend_bundles: spend_bundles,
-    info_dict: info_dict,
-    coin_name: coin_name,
-    puzhash: puzhash,
+    wallet_id,
+    spend_bundles,
+    info_dict,
+    coin_name,
+    puzhash,
   };
   return action;
 };
 
 export const did_create_attest = (wallet_id, coin_name, pubkey, puzhash) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_create_attest';
   action.message.data = {
-    wallet_id: wallet_id,
-    coin_name: coin_name,
-    pubkey: pubkey,
-    puzhash: puzhash,
+    wallet_id,
+    coin_name,
+    pubkey,
+    puzhash,
   };
   return action;
 };
 
 export const did_generate_backup_file = (wallet_id, filename) => {
-  var action = walletMessage();
+  const action = walletMessage();
   action.message.command = 'did_create_backup_file';
   action.message.data = {
-    wallet_id: wallet_id,
-    filename: filename,
+    wallet_id,
+    filename,
   };
   return action;
 };

@@ -916,7 +916,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:293
+#: src/middleware/middleware_api.jsx:296
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1191,11 +1191,11 @@ msgstr "Previous Header Hash"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:260
 msgid "Private key {0}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:267
+#: src/middleware/middleware_api.jsx:270
 msgid "Private key:"
 msgstr ""
 
@@ -1211,7 +1211,7 @@ msgstr ""
 msgid "Pubkey"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:278
 msgid "Public key:"
 msgstr ""
 
@@ -1322,7 +1322,7 @@ msgstr ""
 msgid "See private key"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:285
+#: src/middleware/middleware_api.jsx:288
 msgid "Seed:"
 msgstr ""
 
@@ -1643,7 +1643,7 @@ msgstr ""
 msgid "Total Balance"
 msgstr ""
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
 msgstr ""
 
