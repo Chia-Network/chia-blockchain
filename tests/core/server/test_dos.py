@@ -88,10 +88,13 @@ class TestDos:
         await asyncio.sleep(5)
         assert ws.closed
         try:
-            await session.ws_connect(
+            ws = await session.ws_connect(
                 url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
             )
-            assert False
+            log.warning(f"WS closed? {ws.closed}")
+            response: WSMessage = await ws.receive()
+            log.warning(f"Receive: {response}")
+
         except ServerDisconnectedError:
             pass
         await session.close()
@@ -189,8 +192,10 @@ class TestDos:
 
         assert ws_con.closed
 
-        # Banned
-        assert "1.2.3.4" in server_2.banned_peers
+        def is_banned():
+            return "1.2.3.4" in server_2.banned_peers
+
+        await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
     async def test_spam_message_non_tx(self, setup_two_nodes):
@@ -236,7 +241,10 @@ class TestDos:
         await time_out_assert(15, is_closed)
 
         # Banned
-        assert "1.2.3.4" in server_2.banned_peers
+        def is_banned():
+            return "1.2.3.4" in server_2.banned_peers
+
+        await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
     async def test_spam_message_too_large(self, setup_two_nodes):
@@ -275,4 +283,7 @@ class TestDos:
         await time_out_assert(15, is_closed)
 
         # Banned
-        assert "1.2.3.4" in server_2.banned_peers
+        def is_banned():
+            return "1.2.3.4" in server_2.banned_peers
+
+        await time_out_assert(15, is_banned)

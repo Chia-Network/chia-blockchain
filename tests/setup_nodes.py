@@ -389,8 +389,6 @@ async def setup_simulators_and_wallets(
     starting_height=None,
     key_seed=None,
     starting_port=50000,
-    inbound_rate_limit_percent=None,
-    outbound_rate_limit_percent=None,
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
