@@ -158,7 +158,6 @@ class WeightProofHandler:
         curr_height = tip_height
         while ses_count != 2:
             # add to needed reward chain recent blocks
-            log.info(f"get block {curr_height}")
             header_block = headers[self.blockchain.height_to_hash(curr_height)]
             block_rec = blocks[header_block.header_hash]
             if header_block is None:
