@@ -398,7 +398,7 @@ class TestFullNodeStore:
             sb = blockchain.block_record(blocks[-1].header_hash)
             if sb.first_in_sub_slot:
                 break
-        assert len(blocks) >= 3
+        assert len(blocks) >= 2
         dependant_sub_slots = blocks[-1].finished_sub_slots
         for block in blocks[:-2]:
             sb = blockchain.block_record(block.header_hash)

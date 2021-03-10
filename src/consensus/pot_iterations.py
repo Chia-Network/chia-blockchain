@@ -1,7 +1,7 @@
-from src.consensus.constants import ConsensusConstants
-from src.consensus.pos_quality import quality_str_to_quality
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
+from src.consensus.pos_quality import _expected_plot_size
+from src.consensus.constants import ConsensusConstants
 from src.util.ints import uint8, uint64, uint128
 
 
@@ -51,12 +51,15 @@ def calculate_iterations_quality(
     cc_sp_output_hash: bytes32,
 ) -> uint64:
     """
-    Calculates the number of iterations from the quality. The quality is converted to a number
-    between 0 and 1, then divided by expected plot size, and finally multiplied by the
-    difficulty.
+    Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor
+    times a random number between 0 and 1 (based on quality string), divided by plot size.
     """
     sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
+
     iters = uint64(
-        uint128(int(difficulty) * int(difficulty_constant_factor)) // quality_str_to_quality(sp_quality_string, size)
+        int(difficulty)
+        * int(difficulty_constant_factor)
+        * int.from_bytes(sp_quality_string, "big", signed=False)
+        // (int(pow(2, 256)) * int(_expected_plot_size(size)))
     )
     return max(iters, uint64(1))

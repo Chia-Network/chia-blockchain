@@ -8,7 +8,7 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.shared_protocol import Handshake
+from src.protocols.shared_protocol import Handshake, Capability
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.rate_limits import RateLimiter
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -110,6 +110,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
+                    [(uint16(Capability.BASE.value), "1")],
                 ),
             )
             assert outbound_handshake is not None
@@ -147,6 +148,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
+                    [(uint16(Capability.BASE.value), "1")],
                 ),
             )
             await self._send_message(outbound_handshake)
@@ -244,7 +246,7 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), args[0], None)
+            msg = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
             result = await self.create_request(msg, timeout)
             self.log.debug(
@@ -279,7 +281,7 @@ class WSChiaConnection:
         request_id = self.request_nonce
         self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(0)
 
-        message = Message(message_no_id.type, message_no_id.data, request_id)
+        message = Message(message_no_id.type, request_id, message_no_id.data)
 
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)

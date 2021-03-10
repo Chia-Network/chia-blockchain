@@ -733,6 +733,16 @@ class FullNodeAPI:
                 required_iters,
             )
 
+            # The block's timestamp must be greater than the previous transaction block's timestamp
+            timestamp = uint64(int(time.time()))
+            curr: Optional[BlockRecord] = prev_b
+            while curr is not None and not curr.is_transaction_block and curr.height != 0:
+                curr = self.full_node.blockchain.try_block_record(curr.prev_hash)
+            if curr is not None:
+                assert curr.timestamp is not None
+                if timestamp <= curr.timestamp:
+                    timestamp = uint64(int(curr.timestamp + 1))
+
             self.log.info("Starting to make the unfinished block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
@@ -748,7 +758,7 @@ class FullNodeAPI:
                 get_plot_sig,
                 get_pool_sig,
                 sp_vdfs,
-                uint64(int(time.time())),
+                timestamp,
                 self.full_node.blockchain,
                 b"",
                 spend_bundle,

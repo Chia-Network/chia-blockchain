@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 import time
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from blspy import AugSchemeMPL
 
@@ -811,26 +811,16 @@ def validate_unfinished_header_block(
             if header_block.foliage_transaction_block.filter_hash != std_hash(header_block.transactions_filter):
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
-        # 26. The timestamp in Foliage Block must comply with the timestamp rules
-        if prev_b is not None:
-            last_timestamps: List[uint64] = []
-            curr_b = blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
-            assert curr_b.timestamp is not None
-            while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
-                last_timestamps.append(curr_b.timestamp)
-                fetched: Optional[BlockRecord] = blocks.try_block_record(curr_b.prev_transaction_block_hash)
-                if not fetched:
-                    break
-                curr_b = fetched
-            if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
-                # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr_b.height == 0
-            prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
-            if header_block.foliage_transaction_block.timestamp <= prev_time:
-                return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
-            if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
-                return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
+        # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
+            return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
+        if prev_b is not None:
+            # 26b. The timestamp must be greater than the previous transaction block timestamp
+            prev_transaction_b = blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
+            assert prev_transaction_b.timestamp is not None
+            if header_block.foliage_transaction_block.timestamp <= prev_transaction_b.timestamp:
+                return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
     return required_iters, None  # Valid unfinished header block
 
 

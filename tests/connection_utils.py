@@ -21,6 +21,13 @@ from tests.time_out_assert import time_out_assert
 log = logging.getLogger(__name__)
 
 
+async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer) -> bool:
+    cons = list(server.all_connections.values())[:]
+    for con in cons:
+        await con.close()
+    return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
+
+
 async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)

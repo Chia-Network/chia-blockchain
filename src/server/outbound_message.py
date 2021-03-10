@@ -35,11 +35,11 @@ class Delivery(IntEnum):
 @streamable
 class Message(Streamable):
     type: uint8  # one of ProtocolMessageTypes
-    # Message data for that type
-    data: bytes
     # message id
     id: Optional[uint16]
+    # Message data for that type
+    data: bytes
 
 
 def make_msg(msg_type: ProtocolMessageTypes, data: Any) -> Message:
-    return Message(uint8(msg_type.value), bytes(data), None)
+    return Message(uint8(msg_type.value), None, bytes(data))

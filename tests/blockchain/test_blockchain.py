@@ -10,18 +10,21 @@ import pytest
 from blspy import AugSchemeMPL, G2Element
 
 from src.consensus.blockchain import ReceiveBlockResult
+from src.consensus.pot_iterations import is_overflow_block
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.unfinished_block import UnfinishedBlock
-from src.util.block_tools import get_vdf_info_and_proof
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.util.block_tools import get_vdf_info_and_proof, BlockTools
 from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint64
 from src.util.recursive_replace import recursive_replace
+from tests.core.fixtures import empty_blockchain, create_blockchain  # noqa: F401
+from tests.core.fixtures import default_1000_blocks  # noqa: F401
 from src.util.wallet_tools import WalletTool
 from tests.core.fixtures import default_400_blocks  # noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
@@ -443,8 +446,12 @@ class TestBlockHeaderValidation:
         assert err == Err.SHOULD_NOT_HAVE_ICC
 
     @pytest.mark.asyncio
-    async def test_invalid_icc_sub_slot_vdf(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(10)
+    async def test_invalid_icc_sub_slot_vdf(self):
+        bt_high_iters = BlockTools(
+            constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14))
+        )
+        bc1, connection, db_path = await create_blockchain(bt_high_iters.constants)
+        blocks = bt_high_iters.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
                 # Bad iters
@@ -463,7 +470,7 @@ class TestBlockHeaderValidation:
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
-                result, err, _ = await empty_blockchain.receive_block(block_bad)
+                result, err, _ = await bc1.receive_block(block_bad)
                 assert err == Err.INVALID_ICC_EOS_VDF
 
                 # Bad output
@@ -479,10 +486,11 @@ class TestBlockHeaderValidation:
                         )
                     ),
                 )
+                log.warning(f"Proof: {block.finished_sub_slots[-1].proofs}")
                 block_bad_2 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
                 )
-                result, err, _ = await empty_blockchain.receive_block(block_bad_2)
+                result, err, _ = await bc1.receive_block(block_bad_2)
                 assert err == Err.INVALID_ICC_EOS_VDF
 
                 # Bad challenge hash
@@ -501,7 +509,7 @@ class TestBlockHeaderValidation:
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
                 )
-                result, err, _ = await empty_blockchain.receive_block(block_bad_3)
+                result, err, _ = await bc1.receive_block(block_bad_3)
                 assert err == Err.INVALID_ICC_EOS_VDF
 
                 # Bad proof
@@ -513,12 +521,16 @@ class TestBlockHeaderValidation:
                 block_bad_5 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_5]
                 )
-                result, err, _ = await empty_blockchain.receive_block(block_bad_5)
+                result, err, _ = await bc1.receive_block(block_bad_5)
                 assert err == Err.INVALID_ICC_EOS_VDF
 
-            result, err, _ = await empty_blockchain.receive_block(block)
+            result, err, _ = await bc1.receive_block(block)
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
+
+        await connection.close()
+        bc1.shut_down()
+        db_path.unlink()
 
     @pytest.mark.asyncio
     async def test_invalid_icc_into_cc(self, empty_blockchain):
@@ -668,6 +680,7 @@ class TestBlockHeaderValidation:
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain):
         # 2q
         blocks = bt.get_consecutive_blocks(10)
+
         for block in blocks:
             if len(block.finished_sub_slots):
                 # Bad iters
@@ -1003,7 +1016,7 @@ class TestBlockHeaderValidation:
                 case_1 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(1))
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_SP_INDEX
-            else:
+            elif not is_overflow_block(test_constants, blocks[-1].reward_chain_block.signage_point_index):
                 case_2 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_block.signage_point_index", uint8(0))
                 error_code = (await empty_blockchain.receive_block(block_bad))[1]
@@ -1071,6 +1084,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_cc_sp_vdf(self, empty_blockchain):
         # 13. Note: does not validate fully due to proof of space being validated first
+
         blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1335,6 +1349,19 @@ class TestBlockHeaderValidation:
                     blocks[-1],
                     "foliage_transaction_block.timestamp",
                     blocks[0].foliage_transaction_block.timestamp - 10,
+                )
+                block_bad: FullBlock = recursive_replace(
+                    block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()
+                )
+                new_m = block_bad.foliage.foliage_transaction_block_hash
+                new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+                block_bad = recursive_replace(block_bad, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.TIMESTAMP_TOO_FAR_IN_PAST
+
+                block_bad: FullBlock = recursive_replace(
+                    blocks[-1],
+                    "foliage_transaction_block.timestamp",
+                    blocks[0].foliage_transaction_block.timestamp,
                 )
                 block_bad: FullBlock = recursive_replace(
                     block_bad, "foliage.foliage_transaction_block_hash", block_bad.foliage_transaction_block.get_hash()

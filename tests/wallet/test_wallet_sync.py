@@ -9,6 +9,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from src.wallet.wallet_state_manager import WalletStateManager
+from tests.connection_utils import disconnect_all_and_reconnect
 from tests.core.fixtures import default_400_blocks, default_1000_blocks
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
@@ -63,6 +64,8 @@ class TestWalletSync:
         for i in range(1, len(blocks_reorg)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
+        await disconnect_all_and_reconnect(wallet_server, full_node_server)
+
         await time_out_assert(
             100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
@@ -81,11 +84,15 @@ class TestWalletSync:
         # same tip at height num_blocks - 1.
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
+        await disconnect_all_and_reconnect(wallet_server, full_node_server)
+
         # Tests a long reorg
         for block in default_1000_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
+
+        await disconnect_all_and_reconnect(wallet_server, full_node_server)
 
         # Tests a short reorg
         num_blocks = 30
@@ -179,6 +186,8 @@ class TestWalletSync:
 
         for block in blocks_reorg_2[-41:]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await disconnect_all_and_reconnect(server_2, fn_server)
 
         # Confirm we have the funds
         funds = calculate_pool_reward(uint32(len(blocks_reorg_1))) + calculate_base_farmer_reward(

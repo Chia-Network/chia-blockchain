@@ -512,7 +512,7 @@ class ChiaServer:
                     )
 
                     if response is not None:
-                        response_message = Message(response.type, response.data, full_message.id)
+                        response_message = Message(response.type, full_message.id, response.data)
                         await connection.reply_to_request(response_message)
                 except Exception as e:
                     if self.connection_close_task is None:

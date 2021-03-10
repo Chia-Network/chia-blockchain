@@ -1,10 +1,12 @@
 import pickle
 from os import path
-from pathlib import Path
-from typing import List
 
 import aiosqlite
 import pytest
+from typing import List
+from pathlib import Path
+
+from src.consensus.constants import ConsensusConstants
 
 from src.consensus.blockchain import Blockchain
 from src.full_node.block_store import BlockStore
@@ -14,20 +16,24 @@ from src.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
 
 
-@pytest.fixture(scope="function")
-async def empty_blockchain():
-    """
-    Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
-    """
+async def create_blockchain(constants: ConsensusConstants):
     db_path = Path("blockchain_test.db")
     if db_path.exists():
         db_path.unlink()
     connection = await aiosqlite.connect(db_path)
     coin_store = await CoinStore.create(connection)
     store = await BlockStore.create(connection)
-    bc1 = await Blockchain.create(coin_store, store, test_constants)
+    bc1 = await Blockchain.create(coin_store, store, constants)
     assert bc1.get_peak() is None
+    return bc1, connection, db_path
 
+
+@pytest.fixture(scope="function")
+async def empty_blockchain():
+    """
+    Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
+    """
+    bc1, connection, db_path = await create_blockchain(test_constants)
     yield bc1
 
     await connection.close()

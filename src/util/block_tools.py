@@ -141,6 +141,7 @@ class BlockTools:
 
         _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
+        self.local_sk_cache: Dict[bytes32, PrivateKey] = {}
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
@@ -223,15 +224,16 @@ class BlockTools:
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
         for _, plot_info in self.plots.items():
-            # Look up local_sk from plot to save locked memory
-            (
-                pool_public_key_or_puzzle_hash,
-                farmer_public_key,
-                local_master_sk,
-            ) = parse_plot_info(plot_info.prover.get_memo())
-            local_sk = master_sk_to_local_sk(local_master_sk)
-            agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
-            if agg_pk == plot_pk:
+            if plot_pk == plot_info.plot_public_key:
+                # Look up local_sk from plot to save locked memory
+                if plot_info.prover.get_id() in self.local_sk_cache:
+                    local_master_sk = self.local_sk_cache[plot_info.prover.get_id()]
+                else:
+                    _, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
+                    self.local_sk_cache[plot_info.prover.get_id()] = local_master_sk
+                local_sk = master_sk_to_local_sk(local_master_sk)
+                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1())
+                assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 return AugSchemeMPL.aggregate([harv_share, farm_share])

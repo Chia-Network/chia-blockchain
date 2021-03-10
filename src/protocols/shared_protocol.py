@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from typing import Tuple, List
 
 from src.types.blockchain_format.sized_bytes import bytes32
+from enum import IntEnum
 from src.util.ints import uint8, uint16
 from src.util.streamable import Streamable, streamable
 
@@ -12,6 +14,12 @@ Note: When changing this file, also change protocol_message_types.py
 """
 
 
+# Capabilities can be added here when new features are added to the protocol
+# These are passed in as uint16 into the Handshake
+class Capability(IntEnum):
+    BASE = 1  # Base capability just means it supports the chia protocol at mainnet
+
+
 @dataclass(frozen=True)
 @streamable
 class Handshake(Streamable):
@@ -20,6 +28,7 @@ class Handshake(Streamable):
     software_version: str
     server_port: uint16
     node_type: uint8
+    capabilities: List[Tuple[uint16, str]]
 
 
 @dataclass(frozen=True)
