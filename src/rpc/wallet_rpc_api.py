@@ -2,35 +2,30 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-
-from typing import List, Optional, Tuple, Dict, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey
 
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.util.byte_types import hexstr_to_bytes
-from src.util.bech32m import encode_puzzle_hash, decode_puzzle_hash
-from src.util.keychain import (
-    generate_mnemonic,
-    bytes_to_mnemonic,
-)
-from src.util.path import path_from_root
-from src.util.ws_message import create_payload_dict, WsRpcMessage
-
 from src.cmds.init import check_keys
+from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.util.ints import uint64, uint32
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from src.util.byte_types import hexstr_to_bytes
+from src.util.ints import uint32, uint64
+from src.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from src.util.path import path_from_root
+from src.util.ws_message import WsRpcMessage, create_payload_dict
+from src.wallet.cc_wallet.cc_wallet import CCWallet
+from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.trade_record import TradeRecord
-from src.wallet.util.backup_utils import get_backup_info, download_backup, upload_backup
+from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
-from src.wallet.rl_wallet.rl_wallet import RLWallet
-from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
-from src.wallet.transaction_record import TransactionRecord
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30

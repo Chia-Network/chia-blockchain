@@ -1,44 +1,41 @@
 # flake8: noqa: F811, F401
 import asyncio
 import dataclasses
-
-import pytest
+import logging
 import random
 import time
-import logging
-from typing import Dict
 from secrets import token_bytes
+from typing import Dict
+
+import pytest
 
 from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import full_node_protocol as fnp, timelord_protocol
+from src.protocols import full_node_protocol as fnp
+from src.protocols import timelord_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.full_block import FullBlock
-from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.vdf import CompressibleVDFField
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
+from src.types.full_block import FullBlock
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.block_tools import get_signage_point
+from src.util.clvm import int_to_bytes
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint16, uint32, uint64, uint8
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.condition_opcodes import ConditionOpcode
+from src.util.ints import uint8, uint16, uint32, uint64
+from src.util.vdf_prover import get_vdf_info_and_proof
 from src.util.wallet_tools import WalletTool
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
-from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
-from src.util.clvm import int_to_bytes
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.time_out_assert import (
-    time_out_assert,
-    time_out_assert_custom_interval,
-    time_out_messages,
-)
-from src.util.vdf_prover import get_vdf_info_and_proof
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.vdf import CompressibleVDFField
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
 

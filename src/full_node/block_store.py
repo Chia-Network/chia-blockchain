@@ -1,14 +1,15 @@
 import logging
-import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
+import aiosqlite
+
+from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.weight_proof import SubEpochSegments, SubEpochChallengeSegment
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from src.util.ints import uint32
-from src.consensus.block_record import BlockRecord
 from src.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)

@@ -1,8 +1,8 @@
+from src.consensus.constants import ConsensusConstants
+from src.consensus.pos_quality import quality_str_to_quality
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
-from src.util.ints import uint64, uint128, uint8
-from src.consensus.pos_quality import quality_str_to_quality
-from src.consensus.constants import ConsensusConstants
+from src.util.ints import uint8, uint64, uint128
 
 
 def is_overflow_block(constants: ConsensusConstants, signage_point_index: uint8) -> bool:

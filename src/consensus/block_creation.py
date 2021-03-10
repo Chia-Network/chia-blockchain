@@ -1,44 +1,33 @@
 import random
 from dataclasses import replace
-from typing import Optional, Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import blspy
-from blspy import G2Element, G1Element
+from blspy import G1Element, G2Element
 from chiabip158 import PyBIP158
 
-from src.consensus.block_rewards import (
-    calculate_pool_reward,
-    calculate_base_farmer_reward,
-)
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.coinbase import create_pool_coin, create_farmer_coin
-from src.consensus.constants import ConsensusConstants
-from src.full_node.bundle_tools import best_solution_program
-from src.consensus.cost_calculator import calculate_cost_of_program, CostResult
-from src.full_node.signage_point import SignagePoint
 from src.consensus.block_record import BlockRecord
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from src.consensus.blockchain_interface import BlockchainInterface
+from src.consensus.coinbase import create_farmer_coin, create_pool_coin
+from src.consensus.constants import ConsensusConstants
+from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
+from src.full_node.bundle_tools import best_solution_program
+from src.full_node.signage_point import SignagePoint
 from src.types.blockchain_format.coin import Coin, hash_coin_list
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.blockchain_format.foliage import (
-    Foliage,
-    FoliageTransactionBlock,
-    TransactionsInfo,
-    FoliageBlockData,
-)
-from src.types.full_block import FullBlock
+from src.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.reward_chain_block import (
-    RewardChainBlockUnfinished,
-    RewardChainBlock,
-)
+from src.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.util.hash import std_hash
-from src.util.ints import uint128, uint64, uint32, uint8
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.prev_transaction_block import get_prev_transaction_block
 from src.util.recursive_replace import recursive_replace

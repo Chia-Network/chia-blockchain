@@ -1,7 +1,7 @@
 from secrets import token_bytes
-from src.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
 
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.types.blockchain_format.proof_of_space import ProofOfSpace  # pylint: disable=E0401
 
 
 class TestProofOfSpace:

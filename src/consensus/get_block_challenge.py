@@ -1,16 +1,14 @@
+import logging
 from typing import List, Union
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
-from src.consensus.block_record import BlockRecord
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
-
-import logging
-
 from src.util.ints import uint64
 
 log = logging.getLogger(__name__)

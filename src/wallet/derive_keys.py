@@ -1,4 +1,5 @@
 from typing import List
+
 from blspy import AugSchemeMPL, PrivateKey
 
 from src.util.ints import uint32

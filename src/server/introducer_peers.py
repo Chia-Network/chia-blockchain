@@ -1,9 +1,10 @@
-import time
 import random
+import time
+from typing import Dict, List, Optional
+
 from src.types.blockchain_format.sized_bytes import bytes32
-from typing import List, Dict, Optional
-from src.util.ints import uint64
 from src.types.peer_info import PeerInfo
+from src.util.ints import uint64
 
 
 class IntroducerPeers:

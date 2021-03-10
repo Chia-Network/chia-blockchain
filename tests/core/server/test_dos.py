@@ -1,10 +1,9 @@
 # flake8: noqa: F811, F401
 import asyncio
-
-import pytest
 import logging
 
-from aiohttp import ClientTimeout, ClientSession, WSMessage, WSMsgType, WSCloseCode, ServerDisconnectedError
+import pytest
+from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
 
 from src.full_node.full_node_api import FullNodeAPI
 from src.server.server import ssl_context_for_client

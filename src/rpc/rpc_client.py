@@ -1,14 +1,13 @@
+import asyncio
 from ssl import SSLContext
+from typing import Dict, List, Optional
 
 import aiohttp
-import asyncio
-
-from typing import Dict, Optional, List
 
 from src.server.server import ssl_context_for_client
 from src.server.ssl_context import private_ssl_ca_paths
-from src.util.byte_types import hexstr_to_bytes
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint16
 
 

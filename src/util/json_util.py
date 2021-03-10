@@ -1,6 +1,7 @@
 import dataclasses
 import json
 from typing import Any
+
 from aiohttp import web
 
 from src.wallet.util.wallet_types import WalletType

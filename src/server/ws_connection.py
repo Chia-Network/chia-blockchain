@@ -1,20 +1,19 @@
+import asyncio
 import logging
 import time
-import asyncio
 import traceback
+from typing import Any, Callable, Dict, List, Optional
 
-from typing import Any, Callable, Optional, List, Dict
-
-from aiohttp import WSMessage, WSMsgType, WSCloseCode
+from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Handshake
 from src.server.outbound_message import Message, NodeType, make_msg
-from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint16, uint8
+from src.types.peer_info import PeerInfo
 from src.util.errors import Err, ProtocolError
+from src.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from src.util.network import class_for_type

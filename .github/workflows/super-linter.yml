@@ -54,7 +54,6 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
           LINTER_RULES_PATH: .github/linters
-          PYTHON_BLACK_CONFIG_FILE: .python-black
           VALIDATE_BASH: true
           VALIDATE_CSS: true
           VALIDATE_DOCKER: true
@@ -68,6 +67,7 @@ jobs:
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_FLAKE8: true
           VALIDATE_PYTHON_BLACK: true
+#          VALIDATE_PYTHON_ISORT: true
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_YAML: true
