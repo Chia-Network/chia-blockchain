@@ -1,38 +1,35 @@
 import dataclasses
 import logging
 import time
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
 from blspy import AugSchemeMPL
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from src.consensus.get_block_challenge import (
-    get_block_challenge,
-    final_eos_is_already_included,
-)
+from src.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
-    is_overflow_block,
     calculate_ip_iters,
-    calculate_sp_iters,
     calculate_iterations_quality,
     calculate_sp_interval_iters,
+    calculate_sp_iters,
+    is_overflow_block,
 )
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
-from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.header_block import HeaderBlock
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
-from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.header_block import HeaderBlock
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from hashlib import sha256
-from typing import Dict, List, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 from src.types.blockchain_format.sized_bytes import bytes32
 

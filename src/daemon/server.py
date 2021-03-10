@@ -5,31 +5,33 @@ import os
 import signal
 import subprocess
 import sys
-import traceback
-from pathlib import Path
-from enum import Enum
-import uuid
 import time
-from typing import Dict, Any, List, Tuple, Optional, TextIO, cast
+import traceback
+import uuid
 from concurrent.futures import ThreadPoolExecutor
-from websockets import serve, ConnectionClosedOK, WebSocketException, WebSocketServerProtocol
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+
+from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
+
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
-from src.server.server import ssl_context_for_server, ssl_context_for_root
+from src.server.server import ssl_context_for_root, ssl_context_for_server
 from src.ssl.create_ssl import get_mozzila_ca_crt
-from src.util.setproctitle import setproctitle
-from src.util.validate_alert import validate_alert
-from src.util.ws_message import format_response, create_payload
-from src.util.json_util import dict_to_json_str
-from src.util.config import load_config, save_config
 from src.util.chia_logging import initialize_logging
+from src.util.config import load_config, save_config
+from src.util.json_util import dict_to_json_str
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
+from src.util.setproctitle import setproctitle
+from src.util.validate_alert import validate_alert
+from src.util.ws_message import WsRpcMessage, create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import web, ClientSession
+    from aiohttp import ClientSession, web
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
@@ -214,6 +216,8 @@ class WebSocketServer:
             async for message in websocket:
                 try:
                     decoded = json.loads(message)
+                    if "data" not in decoded:
+                        decoded["data"] = {}
                     response, sockets_to_use = await self.handle_message(websocket, decoded)
                 except Exception as e:
                     tb = traceback.format_exc()
@@ -283,7 +287,7 @@ class WebSocketServer:
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
-        self, websocket: WebSocketServerProtocol, message: Dict[str, Any]
+        self, websocket: WebSocketServerProtocol, message: WsRpcMessage
     ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
@@ -299,10 +303,7 @@ class WebSocketServer:
 
             return None, []
 
-        data = None
-        if "data" in message:
-            data = message["data"]
-
+        data = message["data"]
         commands_with_data = [
             "start_service",
             "start_plotting",
@@ -310,9 +311,8 @@ class WebSocketServer:
             "stop_service",
             "is_running",
             "register_service",
-            "get_status",
         ]
-        if not isinstance(data, dict) and command in commands_with_data:
+        if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
         elif command == "ping":
             response = await ping()
@@ -436,7 +436,6 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
-        s = request["s"]
         a = request["a"]
         e = request["e"]
 
@@ -450,7 +449,6 @@ class WebSocketServer:
         command_args.append(f"-b{b}")
         command_args.append(f"-u{u}")
         command_args.append(f"-r{r}")
-        command_args.append(f"-s{s}")
 
         if a is not None:
             command_args.append(f"-a{a}")

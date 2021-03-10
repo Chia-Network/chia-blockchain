@@ -1,14 +1,10 @@
-import unittest
 import json
+import unittest
 from secrets import token_bytes
-from blspy import PrivateKey, AugSchemeMPL
-from src.util.keychain import (
-    Keychain,
-    generate_mnemonic,
-    bytes_from_mnemonic,
-    bytes_to_mnemonic,
-    mnemonic_to_seed,
-)
+
+from blspy import AugSchemeMPL, PrivateKey
+
+from src.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 
 
 class TesKeychain(unittest.TestCase):

@@ -4,14 +4,14 @@ from typing import Optional
 
 import pytest
 
-from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.block_record import BlockRecord
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 

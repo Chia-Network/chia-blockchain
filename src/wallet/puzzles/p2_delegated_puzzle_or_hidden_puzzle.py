@@ -14,11 +14,9 @@ which proves that it was hidden there in the first place.
 This roughly corresponds to bitcoin's taproot.
 """
 import hashlib
-
 from typing import Union
 
 from blspy import G1Element, PrivateKey
-
 from clvm.casts import int_from_bytes
 
 from src.types.blockchain_format.program import Program
@@ -26,7 +24,6 @@ from src.types.blockchain_format.sized_bytes import bytes32
 
 from .load_clvm import load_clvm
 from .p2_conditions import puzzle_for_conditions
-
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 

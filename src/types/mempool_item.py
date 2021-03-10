@@ -3,8 +3,8 @@ from typing import List
 
 from src.consensus.cost_calculator import CostResult
 from src.types.blockchain_format.coin import Coin
-from src.types.spend_bundle import SpendBundle
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint64
 from src.util.streamable import Streamable, streamable
 

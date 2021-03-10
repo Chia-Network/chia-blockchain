@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+
 from blspy import G1Element
 
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.streamable import Streamable, streamable
 from src.util.ints import uint32
+from src.util.streamable import Streamable, streamable
 from src.wallet.util.wallet_types import WalletType
 
 

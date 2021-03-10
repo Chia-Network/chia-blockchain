@@ -1,16 +1,17 @@
 import unittest
 from dataclasses import dataclass
 from typing import List, Optional
+
 from pytest import raises
 
-from src.types.weight_proof import SubEpochChallengeSegment
-from src.util.ints import uint32, uint8
+from src.protocols.wallet_protocol import RespondRemovals
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.full_block import FullBlock
+from src.types.weight_proof import SubEpochChallengeSegment
+from src.util.ints import uint8, uint32
 from src.util.streamable import Streamable, streamable
-from src.protocols.wallet_protocol import RespondRemovals
-from tests.setup_nodes import test_constants, bt
+from tests.setup_nodes import bt, test_constants
 
 
 class TestStreamable(unittest.TestCase):

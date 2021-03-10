@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import List
-from src.util.streamable import streamable, Streamable
-from src.util.ints import uint32, uint8
+
+from src.util.ints import uint8, uint32
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

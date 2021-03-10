@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
-from src.types.spend_bundle import SpendBundle
-from src.types.header_block import HeaderBlock
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint32, uint128, uint8
+from src.types.header_block import HeaderBlock
+from src.types.spend_bundle import SpendBundle
+from src.util.ints import uint8, uint32, uint128
 from src.util.streamable import Streamable, streamable
 
 """

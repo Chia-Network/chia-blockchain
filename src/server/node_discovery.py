@@ -1,28 +1,28 @@
 import asyncio
-import time
 import math
+import time
+import traceback
 from pathlib import Path
+from random import Random
+from secrets import randbits
+from typing import Dict, Optional
 
 import aiosqlite
-import traceback
-from random import Random
-import src.server.ws_connection as ws
-from src.protocols.protocol_message_types import ProtocolMessageTypes
 
+import src.server.ws_connection as ws
+from src.protocols import full_node_protocol, introducer_protocol
+from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.server.address_manager import AddressManager, ExtendedPeerInfo
+from src.server.address_manager_store import AddressManagerStore
+from src.server.outbound_message import NodeType, make_msg
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.util.path import path_from_root, mkdir
-from src.server.outbound_message import NodeType, make_msg
-from src.server.address_manager import ExtendedPeerInfo, AddressManager
-from src.server.address_manager_store import AddressManagerStore
-from src.protocols import (
-    introducer_protocol,
-    full_node_protocol,
-)
-from secrets import randbits
 from src.util.hash import std_hash
-from typing import Dict, Optional
 from src.util.ints import uint64
+from src.util.path import mkdir, path_from_root
+
+MAX_PEERS_RECEIVED_PER_REQUEST = 1000
+MAX_TOTAL_PEERS_RECEIVED = 3000
 
 
 class FullNodeDiscovery:
@@ -53,6 +53,8 @@ class FullNodeDiscovery:
         self.relay_queue = None
         self.address_manager = None
         self.connection_time_pretest: Dict = {}
+        self.received_count_from_peers: Dict = {}
+        self.lock = asyncio.Lock()
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
@@ -101,7 +103,7 @@ class FullNodeDiscovery:
             peer.is_outbound
             and peer.peer_server_port is not None
             and peer.connection_type is NodeType.FULL_NODE
-            and self.server._local_type is NodeType.FULL_NODE
+            and (self.server._local_type is NodeType.FULL_NODE or self.server._local_type is NodeType.WALLET)
             and self.address_manager is not None
         ):
             msg = make_msg(ProtocolMessageTypes.request_peers, full_node_protocol.RequestPeers())
@@ -324,6 +326,20 @@ class FullNodeDiscovery:
     async def _respond_peers_common(self, request, peer_src, is_full_node):
         # Check if we got the peers from a full node or from the introducer.
         peers_adjusted_timestamp = []
+        is_misbehaving = False
+        if len(request.peer_list) > MAX_PEERS_RECEIVED_PER_REQUEST:
+            is_misbehaving = True
+        if is_full_node:
+            if peer_src is None:
+                return
+            async with self.lock:
+                if peer_src.host not in self.received_count_from_peers:
+                    self.received_count_from_peers[peer_src.host] = 0
+                self.received_count_from_peers[peer_src.host] += len(request.peer_list)
+                if self.received_count_from_peers[peer_src.host] > MAX_TOTAL_PEERS_RECEIVED:
+                    is_misbehaving = True
+        if is_misbehaving:
+            return
         for peer in request.peer_list:
             if peer.timestamp < 100000000 or peer.timestamp > time.time() + 10 * 60:
                 # Invalid timestamp, predefine a bad one.
@@ -370,13 +386,12 @@ class FullNodePeers(FullNodeDiscovery):
             log,
         )
         self.relay_queue = asyncio.Queue()
-        self.lock = asyncio.Lock()
         self.neighbour_known_peers = {}
         self.key = randbits(256)
 
     async def start(self):
         await self.initialize_address_manager()
-        self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise())
+        self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
 
@@ -385,7 +400,7 @@ class FullNodePeers(FullNodeDiscovery):
         self.self_advertise_task.cancel()
         self.address_relay_task.cancel()
 
-    async def _periodically_self_advertise(self):
+    async def _periodically_self_advertise_and_clean_data(self):
         while not self.is_closed:
             try:
                 try:
@@ -413,6 +428,9 @@ class FullNodePeers(FullNodeDiscovery):
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
+                async with self.lock:
+                    for host in list(self.received_count_from_peers.keys()):
+                        self.received_count_from_peers[host] = 0
             except Exception as e:
                 self.log.error(f"Exception in self advertise: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -450,13 +468,16 @@ class FullNodePeers(FullNodeDiscovery):
             self.log.error(f"Request peers exception: {e}")
 
     async def respond_peers(self, request, peer_src, is_full_node):
-        await self._respond_peers_common(request, peer_src, is_full_node)
-        if is_full_node:
-            await self.add_peers_neighbour(request.peer_list, peer_src)
-            if len(request.peer_list) == 1 and self.relay_queue is not None:
-                peer = request.peer_list[0]
-                if peer.timestamp > time.time() - 60 * 10:
-                    self.relay_queue.put_nowait((peer, 2))
+        try:
+            await self._respond_peers_common(request, peer_src, is_full_node)
+            if is_full_node:
+                await self.add_peers_neighbour(request.peer_list, peer_src)
+                if len(request.peer_list) == 1 and self.relay_queue is not None:
+                    peer = request.peer_list[0]
+                    if peer.timestamp > time.time() - 60 * 10:
+                        self.relay_queue.put_nowait((peer, 2))
+        except Exception as e:
+            self.log.error(f"Respond peers exception: {e}. Traceback: {traceback.format_exc()}")
 
     async def _address_relay(self):
         while not self.is_closed:

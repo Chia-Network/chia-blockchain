@@ -1,17 +1,15 @@
+import logging
+import sys
+from pathlib import Path
+
 import click
 
-from pathlib import Path
-import logging
-from src.plotting.plot_tools import (
-    add_plot_directory,
-    remove_plot_directory,
-    get_plot_directories,
-)
-from src.plotting.create_plots import create_plots
 from src.plotting.check_plots import check_plots
+from src.plotting.create_plots import create_plots
+from src.plotting.plot_tools import add_plot_directory, get_plot_directories, remove_plot_directory
 from src.util.chia_logging import initialize_logging
 
-
+DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
 
@@ -40,11 +38,11 @@ def plots_cmd(ctx: click.Context):
 
 @plots_cmd.command("create", short_help="Create plots")
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
+@click.option("--override-k", help="Force size smaller than 32", default=False, show_default=True, is_flag=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
 @click.option("-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=4608, show_default=True)
 @click.option("-r", "--num_threads", help="Number of threads to use", type=int, default=2, show_default=True)
 @click.option("-u", "--buckets", help="Number of buckets", type=int, default=128, show_default=True)
-@click.option("-s", "--stripe_size", help="Stripe size", type=int, default=65536, show_default=True)
 @click.option(
     "-a",
     "--alt_fingerprint",
@@ -88,11 +86,11 @@ def plots_cmd(ctx: click.Context):
 def create_cmd(
     ctx: click.Context,
     size: int,
+    override_k: bool,
     num: int,
     buffer: int,
     num_threads: int,
     buckets: int,
-    stripe_size: int,
     alt_fingerprint: int,
     pool_contract_address: str,
     farmer_public_key: str,
@@ -112,7 +110,7 @@ def create_cmd(
             self.buffer = buffer
             self.num_threads = num_threads
             self.buckets = buckets
-            self.stripe_size = stripe_size
+            self.stripe_size = DEFAULT_STRIPE_SIZE
             self.alt_fingerprint = alt_fingerprint
             self.pool_contract_address = pool_contract_address
             self.farmer_public_key = farmer_public_key
@@ -124,6 +122,14 @@ def create_cmd(
             self.memo = memo
             self.nobitfield = nobitfield
             self.exclude_final_dir = exclude_final_dir
+
+    if size < 32 and not override_k:
+        print("k=32 is the minimun size for farming.")
+        print("If you are testing and you want to use smaller size please add the --override-k flag.")
+        sys.exit(1)
+    elif size < 25 and override_k:
+        print("Error: The minimun k size allowed from the cli is k=25.")
+        sys.exit(1)
 
     create_plots(Params(), ctx.obj["root_path"])
 

@@ -1,12 +1,13 @@
 import argparse
-import pkg_resources
-import sys
-import yaml
-import shutil
 import os
-
+import shutil
+import sys
 from pathlib import Path
-from typing import Dict, Any, Callable, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
+
+import pkg_resources
+import yaml
+
 from src.util.path import mkdir
 
 

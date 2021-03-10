@@ -1,25 +1,28 @@
 # RLWallet is subclass of Wallet
-from dataclasses import dataclass
-import time
-from secrets import token_bytes
-from typing import Optional, List, Tuple, Any
-
 import json
-from blspy import PrivateKey, AugSchemeMPL, G1Element
+import time
+from dataclasses import dataclass
+from secrets import token_bytes
+from typing import Any, List, Optional, Tuple
+
+from blspy import AugSchemeMPL, G1Element, PrivateKey
+
 from src.types.blockchain_format.coin import Coin
-from src.types.coin_solution import CoinSolution
 from src.types.blockchain_format.program import Program
-from src.types.spend_bundle import SpendBundle
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_solution import CoinSolution
+from src.types.spend_bundle import SpendBundle
 from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint8, uint64, uint32, uint128
-from src.util.streamable import streamable, Streamable
+from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.streamable import Streamable, streamable
+from src.wallet.derivation_record import DerivationRecord
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
-    rl_puzzle_for_pk,
+    make_clawback_solution,
     rl_make_aggregation_puzzle,
     rl_make_aggregation_solution,
     rl_make_solution_mode_2,
-    make_clawback_solution,
+    rl_puzzle_for_pk,
     solution_for_rl,
 )
 from src.wallet.transaction_record import TransactionRecord
@@ -28,8 +31,6 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
-from src.wallet.derivation_record import DerivationRecord
-from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 @dataclass(frozen=True)

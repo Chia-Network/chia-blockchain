@@ -1,11 +1,12 @@
-import click
 import asyncio
 import os
 import subprocess
 from pathlib import Path
 from typing import Optional
 
-from src.daemon.client import connect_to_daemon_and_validate, DaemonProxy
+import click
+
+from src.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from src.daemon.server import not_launched_error_message
 from src.util.service_groups import all_groups, services_for_groups
 
@@ -67,9 +68,7 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
                     if await daemon.is_running(service_name=service):
                         print("Network launched! ")
                         break
-                    else:
-                        await asyncio.sleep(2)
-
+                    await asyncio.sleep(2)
             else:
                 print(f"{service} failed to start. Error: {error}")
     await daemon.close()
