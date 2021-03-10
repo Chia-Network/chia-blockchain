@@ -53,10 +53,10 @@ async def setup_daemon(port, alert_url, pubkey):
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     # TODO: make overrides configurable
-    config["selected_network"] = "testnet5"
+    config["selected_network"] = "testnet6"
     config["ALERTS_URL"] = alert_url
     config["CHIA_ALERTS_PUBKEY"] = pubkey
-    config["network_overrides"]["constants"]["testnet5"]["GENESIS_CHALLENGE"] = None
+    config["network_overrides"]["constants"]["testnet6"]["GENESIS_CHALLENGE"] = None
     btools._config = config
     save_config(root_path, "config.yaml", btools._config)
     assert lockfile is not None

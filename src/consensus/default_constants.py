@@ -55,8 +55,8 @@ testnet_kwargs = {
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     "MAX_BLOCK_COST_CLVM": 23077872,
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "BLOCKS_CACHE_SIZE": (384 * 2) + (128 * 4),  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 4*MAX_SUB_SLOT_BLOCKS"
-    "WEIGHT_PROOF_RECENT_BLOCKS": 800,
+    "BLOCKS_CACHE_SIZE": 32256 + (128 * 4),
+    "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 5000 blocks
     "NETWORK_TYPE": 0,
