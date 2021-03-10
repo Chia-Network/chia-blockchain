@@ -920,7 +920,7 @@ def _validate_segment(
             sub_slots_since_prev += 1
             slot_iters = slot_iters + curr_ssi  # type: ignore
             slots = slots + uint64(1)  # type: ignore
-    log.info(f"slot iters {slot_iters} slots {slots}")
+    log.debug(f"slot iters {slot_iters} slots {slots}")
     return True, ip_iters, slot_iters, slots
 
 
