@@ -25,12 +25,12 @@ export const startPlotting = (
   b,
   u,
   r,
-  s,
   queue,
   a,
   parallel,
   delay,
   e,
+  overrideK,
 ) => {
   const action = daemonMessage();
   action.message.command = 'start_plotting';
@@ -45,11 +45,11 @@ export const startPlotting = (
     b,
     u,
     r,
-    s,
     queue,
     parallel,
     delay,
     e,
+    overrideK,
   };
 
   if (a) {

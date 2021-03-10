@@ -31,7 +31,6 @@ export default function PlotAdd() {
       maxRam: defaultPlotSize.defaultRam,
       numThreads: 2,
       numBuckets: 128,
-      stripeSize: 65536,
       queue: "default",
       finalLocation: '',
       workspaceLocation: '',

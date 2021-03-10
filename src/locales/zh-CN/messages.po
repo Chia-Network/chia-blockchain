@@ -68,7 +68,7 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:55
+#: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr ""
@@ -120,6 +120,10 @@ msgstr ""
 
 #: src/electron-starter.js:93
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+msgid "Are you sure you want to use k={plotSize}"
 msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:39
@@ -257,7 +261,7 @@ msgstr ""
 msgid "Choose Number of Plots"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:16
+#: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
 msgstr ""
 
@@ -386,7 +390,7 @@ msgstr ""
 msgid "Create Offer"
 msgstr ""
 
-#: src/components/plot/add/PlotAdd.tsx:67
+#: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr ""
 
@@ -1115,7 +1119,7 @@ msgstr ""
 msgid "Plot Seed"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:28
+#: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
 msgstr ""
 
@@ -1530,7 +1534,8 @@ msgstr ""
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:36
+#: src/components/plot/add/PlotAddChooseSize.tsx:30
+#: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
 msgstr ""
 
@@ -1824,12 +1829,13 @@ msgstr ""
 msgid "Without fees"
 msgstr ""
 
+#: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron-starter.js:90
 msgid "Yes"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 msgstr ""
 

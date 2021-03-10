@@ -73,7 +73,7 @@ msgstr "Pridať peňaženku"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:55
+#: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "Pridať pole"
@@ -125,6 +125,10 @@ msgstr ""
 
 #: src/electron-starter.js:93
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+msgid "Are you sure you want to use k={plotSize}"
 msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:39
@@ -262,7 +266,7 @@ msgstr "Chia peňaženka"
 msgid "Choose Number of Plots"
 msgstr "Vyberte počet polí"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:16
+#: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
 msgstr "Vyberte veľkosť poľa"
 
@@ -391,7 +395,7 @@ msgstr ""
 msgid "Create Offer"
 msgstr ""
 
-#: src/components/plot/add/PlotAdd.tsx:67
+#: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr "Vytvoriť pole"
 
@@ -1120,7 +1124,7 @@ msgstr "Verejný kľúč poľa"
 msgid "Plot Seed"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:28
+#: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
 msgstr "Veľkosť plotu"
 
@@ -1535,7 +1539,8 @@ msgstr "Dočasný adresár"
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr ""
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:36
+#: src/components/plot/add/PlotAddChooseSize.tsx:30
+#: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Minimálna požadovaná veľkosť pre sieť je k = 32"
 
@@ -1829,12 +1834,13 @@ msgstr ""
 msgid "Without fees"
 msgstr ""
 
+#: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron-starter.js:90
 msgid "Yes"
 msgstr "Áno"
 
-#: src/components/plot/add/PlotAddChooseSize.tsx:18
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 msgstr ""
 

@@ -21,12 +21,12 @@ export function plotQueueAdd(
       maxRam,
       numBuckets,
       numThreads,
-      stripeSize,
       queue,
       fingerprint,
       parallel,
       delay,
       disableBitfieldPlotting,
+      overrideK,
     } = config;
 
     return dispatch(
@@ -39,12 +39,12 @@ export function plotQueueAdd(
         maxRam,
         numBuckets,
         numThreads,
-        stripeSize,
         queue,
         fingerprint,
         parallel,
         delay,
         disableBitfieldPlotting,
+        overrideK,
       ),
     );
   };

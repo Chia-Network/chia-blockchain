@@ -6,7 +6,6 @@ type PlotAdd = {
   maxRam: number;
   numThreads: number;
   numBuckets: number;
-  stripeSize: number;
   queue: string;
   finalLocation: string;
   workspaceLocation: string;
@@ -15,6 +14,7 @@ type PlotAdd = {
   delay: number;
   fingerprint?: Fingerprint;
   disableBitfieldPlotting?: boolean;
+  overrideK?: boolean;
 };
 
 export default PlotAdd;

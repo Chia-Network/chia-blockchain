@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useFormContext } from 'react-hook-form';
-import { CardStep, Link, Select, StateColor } from '@chia/core';
+import { CardStep, ConfirmDialog, Link, Select, StateColor } from '@chia/core';
 import { Grid, FormControl, Typography, InputLabel, MenuItem, FormHelperText } from '@material-ui/core';
 import { plotSizeOptions } from '../../../constants/plotSizes';
+import useOpenDialog from '../../../hooks/useOpenDialog';
 
 const MIN_MAINNET_K_SIZE = 32;
 
@@ -13,10 +14,43 @@ const StyledFormHelperText = styled(FormHelperText)`
 `;
 
 export default function PlotAddChooseSize() {
-  const { watch } = useFormContext();
+  const { watch, setValue } = useFormContext();
+  const openDialog = useOpenDialog();
 
   const plotSize = watch('plotSize');
+  const overrideK = watch('overrideK');
   const isKLow = plotSize < MIN_MAINNET_K_SIZE;
+
+  async function getConfirmation() {
+    const canUse = await openDialog((
+      <ConfirmDialog
+        title={<Trans>The minimum required size for mainnet is k=32</Trans>}
+        confirmTitle={<Trans>Yes</Trans>}
+        confirmColor="danger"
+      >
+        <Trans>
+          Are you sure you want to use k={plotSize}
+        </Trans>
+      </ConfirmDialog>
+    ));
+
+    // @ts-ignore
+    if (canUse) {
+      setValue('overrideK', true);
+    } else {
+      setValue('plotSize', 32);
+    }
+  }
+
+  useEffect(() => {
+    if (plotSize === 25) {
+      if (!overrideK) {
+        getConfirmation();
+      }
+    } else {
+      setValue('overrideK', false);
+    }
+  }, [plotSize, overrideK]); // eslint-disable-line
 
   return (
     <CardStep
