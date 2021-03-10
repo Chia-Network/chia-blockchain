@@ -4,6 +4,7 @@ import pytest
 from blspy import AugSchemeMPL
 from chiapos import DiskPlotter
 
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.plotting.plot_tools import stream_plot_info_ph, stream_plot_info_pk
 from src.protocols import farmer_protocol
 from src.rpc.farmer_rpc_api import FarmerRpcApi
@@ -11,9 +12,11 @@ from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.block_tools import get_plot_dir
 from src.util.hash import std_hash
-from src.util.ints import uint8, uint16, uint64
+from src.util.ints import uint8, uint16, uint64, uint32
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert
 
@@ -172,6 +175,35 @@ class TestRpc:
 
             await client_2.remove_plot_directory(str(plot_dir))
             assert len(await client_2.get_plot_directories()) == 2
+
+            targets_1 = await client.get_reward_targets(False)
+            assert "have_pool_sk" not in targets_1
+            assert "have_farmer_sk" not in targets_1
+            targets_2 = await client.get_reward_targets(True)
+            assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
+
+            new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(10)).get_g1())
+            new_ph_2: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(bt.pool_master_sk, uint32(472)).get_g1()
+            )
+
+            await client.set_reward_targets(new_ph, new_ph_2)
+            targets_3 = await client.get_reward_targets(True)
+            assert targets_3["farmer_target"] == new_ph
+            assert targets_3["pool_target"] == new_ph_2
+            assert targets_3["have_pool_sk"] and targets_3["have_farmer_sk"]
+
+            new_ph_3: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(bt.pool_master_sk, uint32(1888)).get_g1()
+            )
+            await client.set_reward_targets(None, new_ph_3)
+            targets_4 = await client.get_reward_targets(True)
+            assert targets_4["farmer_target"] == new_ph
+            assert targets_4["pool_target"] == new_ph_3
+            assert not targets_4["have_pool_sk"] and targets_3["have_farmer_sk"]
+
+            with pytest.raises(ValueError):
+                await client.set_reward_targets(None, bytes([1, 2, 3]))
 
         finally:
             # Checks that the RPC manages to stop the node

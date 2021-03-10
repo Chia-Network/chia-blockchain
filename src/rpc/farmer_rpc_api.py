@@ -14,6 +14,8 @@ class FarmerRpcApi:
         return {
             "/get_signage_point": self.get_signage_point,
             "/get_signage_points": self.get_signage_points,
+            "/get_reward_targets": self.get_reward_targets,
+            "/set_reward_targets": self.set_reward_targets,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
@@ -77,3 +79,21 @@ class FarmerRpcApi:
                     }
                 )
         return {"signage_points": result}
+
+    async def get_reward_targets(self, request: Dict) -> Dict:
+        search_for_private_key = request["search_for_private_key"]
+        return self.service.get_reward_targets(search_for_private_key)
+
+    async def set_reward_targets(self, request: Dict) -> Dict:
+        farmer_target, pool_target = None, None
+        if "farmer_target" in request:
+            farmer_target = hexstr_to_bytes(request["farmer_target"])
+            if len(farmer_target) != 32:
+                raise ValueError("Invalid farmer target length, must be 32")
+        if "pool_target" in request:
+            pool_target = hexstr_to_bytes(request["pool_target"])
+            if len(pool_target) != 32:
+                raise ValueError("Invalid pool target length, must be 32")
+
+        self.service.set_reward_targets(farmer_target, pool_target)
+        return {}
