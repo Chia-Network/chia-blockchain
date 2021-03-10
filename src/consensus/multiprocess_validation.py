@@ -117,7 +117,7 @@ async def pre_validate_blocks_multiprocessing(
         curr = block_records.block_record(blocks[0].prev_header_hash)
 
         # TODO: potentially change these numbers to optimize
-        num_sub_slots_to_look_for = 4 if curr.overflow else 3
+        num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
             curr.sub_epoch_summary_included is None or num_sub_slots_found < num_sub_slots_to_look_for
         ) and curr.height > 0:
