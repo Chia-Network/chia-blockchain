@@ -64,14 +64,6 @@ class WeightProofHandler:
             return None
 
         async with self.lock:
-            if self.proof is not None:
-                if tip == self.tip:
-                    return self.proof
-                new_wp = await self._create_proof_of_weight(tip, self.proof)
-                self.proof = new_wp
-                self.tip = tip
-                return new_wp
-
             wp = await self._create_proof_of_weight(tip)
             if wp is None:
                 return None
@@ -79,7 +71,7 @@ class WeightProofHandler:
             self.tip = tip
             return wp
 
-    async def _create_proof_of_weight(self, tip: bytes32, wp: Optional[WeightProof] = None) -> Optional[WeightProof]:
+    async def _create_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
         """
         Creates a weight proof object
         """
@@ -91,7 +83,7 @@ class WeightProofHandler:
             log.error("failed not tip in cache")
             return None
         log.info(f"create weight proof peak {tip} {tip_rec.height}")
-        recent_chain = await self._get_recent_chain(tip_rec.height, wp)
+        recent_chain = await self._get_recent_chain(tip_rec.height)
         if recent_chain is None:
             return None
 
