@@ -285,7 +285,7 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
-        new_wp = await wpf_synced._create_proof_of_weight(blocks[-1].header_hash)
+        new_wp = await wpf_synced._create_proof_of_weight(blocks[-1].header_hash, wp)
         valid, fork_point = await wpf_not_synced.validate_weight_proof(new_wp)
         assert valid
         assert fork_point == 0
@@ -308,7 +308,7 @@ class TestWeightProof:
         # extend proof with 100 blocks
         summaries[last_ses_height] = last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
+        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash, wp)
         valid, fork_point = await wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
@@ -333,7 +333,7 @@ class TestWeightProof:
         summaries[last_ses_height] = last_ses
         summaries[before_last_ses_height] = before_last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
+        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash, wp)
         valid, fork_point = await wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0

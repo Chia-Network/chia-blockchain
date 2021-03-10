@@ -137,7 +137,7 @@ class WeightProofHandler:
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
     async def _get_recent_chain(
-            self, tip_height: uint32, wp: Optional[WeightProof] = None
+        self, tip_height: uint32, wp: Optional[WeightProof] = None
     ) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
 
@@ -173,7 +173,6 @@ class WeightProofHandler:
             f"end:  {recent_chain[-1].reward_chain_block.height} "
         )
         return recent_chain
-
 
     async def create_prev_sub_epoch_segments(self):
         log.debug("create prev sub_epoch_segments")
