@@ -18,7 +18,7 @@ from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
-from src.util.block_tools import get_vdf_info_and_proof
+from src.util.block_tools import get_vdf_info_and_proof, BlockTools
 from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint64
