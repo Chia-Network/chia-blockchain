@@ -1,10 +1,9 @@
 from setuptools import setup
 
-
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
     "blspy==0.9",  # Signature library
-    "chiavdf==0.9",  # timelord and vdf verification
+    "chiavdf==1.0",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==0.9",  # proof of space
     "clvm==0.9.4",
@@ -15,10 +14,11 @@ dependencies = [
     "bitstring==3.1.7",  # Binary data management library
     "colorlog==4.7.2",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
-    #  "cryptography==3.4.1",  # Python cryptography library for TLS - keyring conflict
-    "cryptography==3.3.2",  # Python cryptography library for TLS
-    "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "cryptography==3.4.6",  # Python cryptography library for TLS - keyring conflict
+    "keyring==23.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
+    #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
+    #  See https://github.com/frispete/keyrings.cryptfile/issues/15
     "PyYAML==5.4.1",  # Used for config file format
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+    "miniupnpc==2.1",  # Allows users to open ports on their router
 ]
 dev_dependencies = [
     "pytest",

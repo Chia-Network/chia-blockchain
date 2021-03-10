@@ -3,7 +3,6 @@ import logging
 from typing import Tuple
 
 import aiohttp
-
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -20,6 +19,13 @@ from tests.setup_nodes import self_hostname
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
+
+
+async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer) -> bool:
+    cons = list(server.all_connections.values())[:]
+    for con in cons:
+        await con.close()
+    return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
 
 
 async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
@@ -48,8 +54,10 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
         False,
         self_hostname,
         incoming_queue,
-        lambda x: x,
+        lambda x, y: x,
         peer_id,
+        100,
+        30,
     )
     handshake = await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
     assert handshake is True

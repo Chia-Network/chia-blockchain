@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -13,7 +14,7 @@ from src.util.errors import Err
 from src.util.ints import uint16, uint32
 from src.wallet.transaction_record import TransactionRecord
 from tests.core.full_node.test_full_node import add_dummy_connection
-from tests.setup_nodes import setup_simulators_and_wallets, self_hostname, bt
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 

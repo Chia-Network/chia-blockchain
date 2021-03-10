@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from src.types.condition_var_pair import ConditionVarPair
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.condition_var_pair import ConditionVarPair
 from src.util.condition_tools import ConditionOpcode
-from src.util.streamable import streamable, Streamable
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

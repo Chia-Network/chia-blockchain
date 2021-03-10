@@ -1,12 +1,14 @@
 import asyncio
-import pytest
-import time
 import math
-import aiosqlite
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.server.address_manager import ExtendedPeerInfo, AddressManager
-from src.server.address_manager_store import AddressManagerStore
+import time
 from pathlib import Path
+
+import aiosqlite
+import pytest
+
+from src.server.address_manager import AddressManager, ExtendedPeerInfo
+from src.server.address_manager_store import AddressManagerStore
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 
 
 @pytest.fixture(scope="module")

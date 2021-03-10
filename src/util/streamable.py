@@ -1,27 +1,21 @@
 # flake8: noqa
 from __future__ import annotations
 
-import sys
 import dataclasses
 import io
 import pprint
+import sys
 from enum import Enum
-from typing import Any, BinaryIO, List, Type, get_type_hints, Dict, Tuple
-from src.util.byte_types import hexstr_to_bytes
+from typing import Any, BinaryIO, Dict, List, Tuple, Type, get_type_hints
+
+from blspy import G1Element, G2Element, PrivateKey
+
 from src.types.blockchain_format.program import Program, SerializedProgram
-from src.util.hash import std_hash
-
-from blspy import PrivateKey, G1Element, G2Element
-
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint32, uint64, int64, uint128, int512
-from src.util.type_checking import (
-    is_type_List,
-    is_type_Tuple,
-    is_type_SpecificOptional,
-    strictdataclass,
-)
-
+from src.util.byte_types import hexstr_to_bytes
+from src.util.hash import std_hash
+from src.util.ints import int64, int512, uint32, uint64, uint128
+from src.util.type_checking import is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
 
 if sys.version_info < (3, 8):
 

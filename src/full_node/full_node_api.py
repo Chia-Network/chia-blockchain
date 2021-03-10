@@ -1,51 +1,37 @@
 import asyncio
 import dataclasses
 import time
+from typing import Callable, Dict, List, Optional, Tuple
+
+from blspy import AugSchemeMPL, G2Element
+from chiabip158 import PyBIP158
 
 import src.server.ws_connection as ws
-from typing import List, Optional, Tuple, Callable, Dict
-from chiabip158 import PyBIP158
-from blspy import G2Element, AugSchemeMPL
-
 from src.consensus.block_creation import create_unfinished_block
-from src.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_sp_iters,
-    calculate_iterations_quality,
-)
+from src.consensus.block_record import BlockRecord
+from src.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from src.full_node.full_node import FullNode
 from src.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from src.full_node.signage_point import SignagePoint
-from src.consensus.block_record import BlockRecord
-
-
-from src.protocols import (
-    farmer_protocol,
-    full_node_protocol,
-    timelord_protocol,
-    wallet_protocol,
-    introducer_protocol,
-)
-from src.protocols.full_node_protocol import RejectBlocks, RejectBlock
+from src.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
+from src.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse, RejectHeaderBlocks
+from src.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.types.blockchain_format.coin import Coin, hash_coin_list
-
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.types.mempool_item import MempoolItem
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.types.mempool_item import MempoolItem
+from src.types.peer_info import PeerInfo
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
-from src.util.ints import uint64, uint128, uint8, uint32
-from src.types.peer_info import PeerInfo
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 
 
@@ -747,6 +733,16 @@ class FullNodeAPI:
                 required_iters,
             )
 
+            # The block's timestamp must be greater than the previous transaction block's timestamp
+            timestamp = uint64(int(time.time()))
+            curr: Optional[BlockRecord] = prev_b
+            while curr is not None and not curr.is_transaction_block and curr.height != 0:
+                curr = self.full_node.blockchain.try_block_record(curr.prev_hash)
+            if curr is not None:
+                assert curr.timestamp is not None
+                if timestamp <= curr.timestamp:
+                    timestamp = uint64(int(curr.timestamp + 1))
+
             self.log.info("Starting to make the unfinished block")
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
@@ -762,7 +758,7 @@ class FullNodeAPI:
                 get_plot_sig,
                 get_pool_sig,
                 sp_vdfs,
-                uint64(int(time.time())),
+                timestamp,
                 self.full_node.blockchain,
                 b"",
                 spend_bundle,

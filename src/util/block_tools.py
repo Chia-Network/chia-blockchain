@@ -9,70 +9,63 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
-from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.deficit import calculate_deficit
-
-from src.cmds.init import create_default_chia_config, create_all_ssl
+from src.cmds.init import create_all_ssl, create_default_chia_config
 from src.cmds.plots import create_plots
+from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from src.consensus.block_record import BlockRecord
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.deficit import calculate_deficit
+from src.consensus.full_block_to_block_record import block_to_block_record
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
-    calculate_sp_iters,
     calculate_sp_interval_iters,
+    calculate_sp_iters,
     is_overflow_block,
 )
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from src.full_node.signage_point import SignagePoint
-from src.consensus.block_record import BlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
-from src.plotting.plot_tools import load_plots, PlotInfo
+from src.full_node.signage_point import SignagePoint
+from src.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.coin import Coin
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.slots import (
-    InfusedChallengeChainSubSlot,
     ChallengeChainSubSlot,
+    InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from src.types.spend_bundle import SpendBundle
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.unfinished_block import UnfinishedBlock
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
-from src.consensus.block_creation import (
-    create_unfinished_block,
-    unfinished_block_to_full_block,
-)
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
+from src.types.spend_bundle import SpendBundle
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.bech32m import encode_puzzle_hash
 from src.util.block_cache import BlockCache
 from src.util.config import load_config, save_config
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.util.path import mkdir
 from src.util.vdf_prover import get_vdf_info_and_proof
 from src.util.wallet_tools import WalletTool
 from src.wallet.derive_keys import (
     master_sk_to_farmer_sk,
+    master_sk_to_local_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from src.consensus.default_constants import DEFAULT_CONSTANTS
-
-from src.plotting.plot_tools import parse_plot_info
-from src.wallet.derive_keys import master_sk_to_local_sk
-
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -148,6 +141,7 @@ class BlockTools:
 
         _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
+        self.local_sk_cache: Dict[bytes32, PrivateKey] = {}
         self._config = load_config(self.root_path, "config.yaml")
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
@@ -159,6 +153,13 @@ class BlockTools:
         if const_dict is not None:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
+
+    def change_config(self, new_config):
+        self._config = new_config
+        overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
+        updated_constants = self.constants.replace_str_to_bytes(**overrides)
+        self.constants = updated_constants
+        save_config(self.root_path, "config.yaml", self._config)
 
     def init_plots(self, root_path: Path):
         plot_dir = get_plot_dir()
@@ -223,15 +224,16 @@ class BlockTools:
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
         for _, plot_info in self.plots.items():
-            # Look up local_sk from plot to save locked memory
-            (
-                pool_public_key_or_puzzle_hash,
-                farmer_public_key,
-                local_master_sk,
-            ) = parse_plot_info(plot_info.prover.get_memo())
-            local_sk = master_sk_to_local_sk(local_master_sk)
-            agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
-            if agg_pk == plot_pk:
+            if plot_pk == plot_info.plot_public_key:
+                # Look up local_sk from plot to save locked memory
+                if plot_info.prover.get_id() in self.local_sk_cache:
+                    local_master_sk = self.local_sk_cache[plot_info.prover.get_id()]
+                else:
+                    _, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
+                    self.local_sk_cache[plot_info.prover.get_id()] = local_master_sk
+                local_sk = master_sk_to_local_sk(local_master_sk)
+                agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_sk.get_g1())
+                assert agg_pk == plot_pk
                 harv_share = AugSchemeMPL.sign(local_sk, m, agg_pk)
                 farm_share = AugSchemeMPL.sign(farmer_sk, m, agg_pk)
                 return AugSchemeMPL.aggregate([harv_share, farm_share])

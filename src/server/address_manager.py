@@ -1,14 +1,14 @@
-from src.util.hash import std_hash
+import logging
+import math
+import time
+from asyncio import Lock
+from random import choice, randrange
 from secrets import randbits
-from random import randrange, choice
+from typing import Dict, List, Optional, Set, Tuple
 
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
+from src.util.hash import std_hash
 from src.util.ints import uint16, uint64
-from typing import Dict, List, Optional, Tuple, Set
-from asyncio import Lock
-import logging
-import time
-import math
 
 TRIED_BUCKETS_PER_GROUP = 8
 NEW_BUCKETS_PER_SOURCE_GROUP = 64

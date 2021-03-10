@@ -1,13 +1,15 @@
 import logging
+from typing import Dict, List, Tuple
+
 import aiosqlite
+
 from src.server.address_manager import (
+    BUCKET_SIZE,
+    NEW_BUCKET_COUNT,
+    NEW_BUCKETS_PER_ADDRESS,
     AddressManager,
     ExtendedPeerInfo,
-    NEW_BUCKET_COUNT,
-    BUCKET_SIZE,
-    NEW_BUCKETS_PER_ADDRESS,
 )
-from typing import Dict, List, Tuple
 
 log = logging.getLogger(__name__)
 

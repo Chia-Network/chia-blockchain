@@ -14,7 +14,6 @@ from src.types.blockchain_format.program import Program
 
 from .load_clvm import load_clvm
 
-
 MOD = load_clvm("p2_conditions.clvm")
 
 

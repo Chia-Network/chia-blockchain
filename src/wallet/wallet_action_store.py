@@ -1,6 +1,7 @@
-from typing import Optional, List
+from typing import List, Optional
 
 import aiosqlite
+
 from src.util.ints import uint32
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_action import WalletAction

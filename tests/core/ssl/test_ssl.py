@@ -1,6 +1,8 @@
 import asyncio
+
 import aiohttp
 import pytest
+
 from src.protocols.shared_protocol import protocol_version
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer, ssl_context_for_client
@@ -10,11 +12,11 @@ from src.types.peer_info import PeerInfo
 from src.util.block_tools import test_constants
 from src.util.ints import uint16
 from tests.setup_nodes import (
-    setup_simulators_and_wallets,
+    bt,
     self_hostname,
     setup_farmer_harvester,
     setup_introducer,
-    bt,
+    setup_simulators_and_wallets,
     setup_timelord,
 )
 
@@ -35,8 +37,10 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
             False,
             self_hostname,
             incoming_queue,
-            lambda x: x,
+            lambda x, y: x,
             None,
+            100,
+            30,
         )
         handshake = await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
         await session.close()

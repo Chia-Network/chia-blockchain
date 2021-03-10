@@ -1,19 +1,19 @@
 import dataclasses
 import logging
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Set, Tuple
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.multiprocess_validation import PreValidationResult
 from src.full_node.signage_point import SignagePoint
-from src.consensus.block_record import BlockRecord
 from src.protocols import timelord_protocol
 from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.unfinished_block import UnfinishedBlock
 from src.types.blockchain_format.vdf import VDFInfo
-from src.util.ints import uint32, uint8, uint64, uint128
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.unfinished_block import UnfinishedBlock
+from src.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

@@ -1,41 +1,41 @@
 # flake8: noqa: F811, F401
 import asyncio
 import dataclasses
-
-import pytest
+import logging
 import random
 import time
-import logging
-from typing import Dict
 from secrets import token_bytes
+from typing import Dict
+
+import pytest
 
 from src.consensus.pot_iterations import is_overflow_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
+from src.protocols import timelord_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.full_block import FullBlock
-from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
+from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.vdf import CompressibleVDFField
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
+from src.types.full_block import FullBlock
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.block_tools import get_signage_point
+from src.util.clvm import int_to_bytes
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint16, uint32, uint64, uint8
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.condition_opcodes import ConditionOpcode
+from src.util.ints import uint8, uint16, uint32, uint64
+from src.util.vdf_prover import get_vdf_info_and_proof
 from src.util.wallet_tools import WalletTool
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
-from tests.setup_nodes import test_constants, bt, self_hostname, setup_simulators_and_wallets
-from src.util.clvm import int_to_bytes
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.time_out_assert import (
-    time_out_assert,
-    time_out_assert_custom_interval,
-    time_out_messages,
-)
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
 
@@ -73,8 +73,8 @@ async def wallet_nodes():
 
 
 @pytest.fixture(scope="function")
-async def setup_five_nodes():
-    async for _ in setup_simulators_and_wallets(5, 0, {}):
+async def setup_four_nodes():
+    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=61000):
         yield _
 
 
@@ -102,12 +102,12 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
-    async def test_inbound_connection_limit(self, setup_five_nodes):
-        nodes, _ = setup_five_nodes
+    async def test_inbound_connection_limit(self, setup_four_nodes):
+        nodes, _ = setup_four_nodes
         server_1 = nodes[0].full_node.server
         server_1.config["target_peer_count"] = 2
         server_1.config["target_outbound_peer_count"] = 0
-        for i in range(1, 5):
+        for i in range(1, 4):
             full_node_i = nodes[i]
             server_i = full_node_i.full_node.server
             await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
@@ -918,6 +918,120 @@ class TestFullNodeProtocol:
         result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(valid_block)
 
         assert error is None
+
+    @pytest.mark.asyncio
+    async def test_compact_protocol(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+        blocks = bt.get_consecutive_blocks(num_blocks=1, skip_slots=3)
+        block = blocks[0]
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        timelord_protocol_finished = []
+        cc_eos_count = 0
+        for sub_slot in block.finished_sub_slots:
+            vdf_info, vdf_proof = get_vdf_info_and_proof(
+                test_constants,
+                ClassgroupElement.get_default_element(),
+                sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
+                True,
+            )
+            cc_eos_count += 1
+            timelord_protocol_finished.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    vdf_info,
+                    vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_EOS_VDF,
+                )
+            )
+        blocks_2 = bt.get_consecutive_blocks(num_blocks=2, block_list_input=blocks, skip_slots=3)
+        block = blocks_2[1]
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        icc_eos_count = 0
+        for sub_slot in block.finished_sub_slots:
+            if sub_slot.infused_challenge_chain is not None:
+                icc_eos_count += 1
+                vdf_info, vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
+                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
+                    True,
+                )
+                timelord_protocol_finished.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info,
+                        vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.ICC_EOS_VDF,
+                    )
+                )
+        assert block.reward_chain_block.challenge_chain_sp_vdf is not None
+        vdf_info, vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.challenge_chain_sp_vdf.challenge,
+            block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_finished.append(
+            timelord_protocol.RespondCompactProofOfTime(
+                vdf_info,
+                vdf_proof,
+                block.header_hash,
+                block.height,
+                CompressibleVDFField.CC_SP_VDF,
+            )
+        )
+        vdf_info, vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+            block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_finished.append(
+            timelord_protocol.RespondCompactProofOfTime(
+                vdf_info,
+                vdf_proof,
+                block.header_hash,
+                block.height,
+                CompressibleVDFField.CC_IP_VDF,
+            )
+        )
+
+        assert cc_eos_count == 3 and icc_eos_count == 3
+        for compact_proof in timelord_protocol_finished:
+            await full_node_1.full_node.respond_compact_vdf_timelord(compact_proof)
+        stored_blocks = await full_node_1.get_all_full_blocks()
+        cc_eos_compact_count = 0
+        icc_eos_compact_count = 0
+        has_compact_cc_sp_vdf = False
+        has_compact_cc_ip_vdf = False
+        for block in stored_blocks:
+            for sub_slot in block.finished_sub_slots:
+                if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+                    cc_eos_compact_count += 1
+                if (
+                    sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                    and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                ):
+                    icc_eos_compact_count += 1
+            if block.challenge_chain_sp_proof is not None and block.challenge_chain_sp_proof.normalized_to_identity:
+                has_compact_cc_sp_vdf = True
+            if block.challenge_chain_ip_proof.normalized_to_identity:
+                has_compact_cc_ip_vdf = True
+        assert cc_eos_compact_count == 3
+        assert icc_eos_compact_count == 3
+        assert has_compact_cc_sp_vdf
+        assert has_compact_cc_ip_vdf
+        for height, block in enumerate(stored_blocks):
+            await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
+            assert full_node_2.full_node.blockchain.get_peak().height == height
 
     #
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):

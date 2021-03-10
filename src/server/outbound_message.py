@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Optional
-from src.util.ints import uint8, uint16
-from src.util.streamable import streamable, Streamable
+
 from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.util.ints import uint8, uint16
+from src.util.streamable import Streamable, streamable
 
 
 class NodeType(IntEnum):
@@ -34,11 +35,11 @@ class Delivery(IntEnum):
 @streamable
 class Message(Streamable):
     type: uint8  # one of ProtocolMessageTypes
-    # Message data for that type
-    data: bytes
     # message id
     id: Optional[uint16]
+    # Message data for that type
+    data: bytes
 
 
 def make_msg(msg_type: ProtocolMessageTypes, data: Any) -> Message:
-    return Message(uint8(msg_type.value), bytes(data), None)
+    return Message(uint8(msg_type.value), None, bytes(data))

@@ -1,20 +1,19 @@
-from pathlib import Path
-from typing import Callable, Dict, Any, List, Optional
-
-import aiohttp
-import logging
 import asyncio
 import json
+import logging
 import traceback
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+import aiohttp
 
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_server
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.util.json_util import obj_to_response
-from src.util.ws_message import create_payload, create_payload_dict, format_response, pong
-from src.util.json_util import dict_to_json_str
 from src.util.ints import uint16
+from src.util.json_util import dict_to_json_str, obj_to_response
+from src.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
 

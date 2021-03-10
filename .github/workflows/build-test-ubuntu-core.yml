@@ -65,7 +65,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.20.0'
+        ref: '0.21.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -99,7 +99,7 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio
 
-    - name: Test blockchain code with pytest
+    - name: Test core code with pytest
       run: |
         . ./activate
         ./venv/bin/py.test tests/core -v --durations 0

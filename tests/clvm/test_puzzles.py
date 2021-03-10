@@ -13,14 +13,14 @@ from src.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
     p2_delegated_puzzle,
-    p2_puzzle_hash,
-    p2_m_of_n_delegate_direct,
     p2_delegated_puzzle_or_hidden_puzzle,
+    p2_m_of_n_delegate_direct,
+    p2_puzzle_hash,
 )
 from tests.util.key_tool import KeyTool
 
-from .coin_store import CoinStore, CoinTimestamp
 from ..core.make_block_generator import int_to_public_key
+from .coin_store import CoinStore, CoinTimestamp
 
 T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)

@@ -1,27 +1,17 @@
-import click
-
 from pathlib import Path
 from typing import List
 
+import click
 from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.bech32m import encode_puzzle_hash
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.keychain import (
-    generate_mnemonic,
-    bytes_to_mnemonic,
-    Keychain,
-)
-from src.wallet.derive_keys import (
-    master_sk_to_pool_sk,
-    master_sk_to_farmer_sk,
-    master_sk_to_wallet_sk,
-)
 from src.util.ints import uint32
-from src.consensus.coinbase import create_puzzlehash_for_pk
-
+from src.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 keychain: Keychain = Keychain()
 

@@ -1,8 +1,8 @@
 from typing import Optional
 
-from src.consensus.constants import ConsensusConstants
 from src.consensus.block_record import BlockRecord
-from src.util.ints import uint32, uint8
+from src.consensus.constants import ConsensusConstants
+from src.util.ints import uint8, uint32
 
 
 def calculate_deficit(

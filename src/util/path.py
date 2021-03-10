@@ -1,7 +1,6 @@
 import os
-
-from typing import Union
 from pathlib import Path
+from typing import Union
 
 
 def path_from_root(root: Path, path_str: Union[str, Path]) -> Path:

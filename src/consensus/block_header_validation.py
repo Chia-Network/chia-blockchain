@@ -1,38 +1,35 @@
 import dataclasses
 import logging
 import time
-from typing import Optional, List, Tuple
+from typing import Optional, Tuple
 
 from blspy import AugSchemeMPL
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from src.consensus.get_block_challenge import (
-    get_block_challenge,
-    final_eos_is_already_included,
-)
+from src.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
-    is_overflow_block,
     calculate_ip_iters,
-    calculate_sp_iters,
     calculate_iterations_quality,
     calculate_sp_interval_iters,
+    calculate_sp_iters,
+    is_overflow_block,
 )
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
-from src.consensus.block_record import BlockRecord
 from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.header_block import HeaderBlock
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
-from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.header_block import HeaderBlock
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.errors import Err, ValidationError
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -814,26 +811,16 @@ def validate_unfinished_header_block(
             if header_block.foliage_transaction_block.filter_hash != std_hash(header_block.transactions_filter):
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
-        # 26. The timestamp in Foliage Block must comply with the timestamp rules
-        if prev_b is not None:
-            last_timestamps: List[uint64] = []
-            curr_b = blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
-            assert curr_b.timestamp is not None
-            while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
-                last_timestamps.append(curr_b.timestamp)
-                fetched: Optional[BlockRecord] = blocks.try_block_record(curr_b.prev_transaction_block_hash)
-                if not fetched:
-                    break
-                curr_b = fetched
-            if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
-                # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr_b.height == 0
-            prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
-            if header_block.foliage_transaction_block.timestamp <= prev_time:
-                return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
-            if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
-                return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
+        # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
+            return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
+        if prev_b is not None:
+            # 26b. The timestamp must be greater than the previous transaction block timestamp
+            prev_transaction_b = blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
+            assert prev_transaction_b.timestamp is not None
+            if header_block.foliage_transaction_block.timestamp <= prev_transaction_b.timestamp:
+                return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
     return required_iters, None  # Valid unfinished header block
 
 
