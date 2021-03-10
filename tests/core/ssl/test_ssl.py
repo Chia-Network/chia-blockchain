@@ -37,8 +37,10 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
             False,
             self_hostname,
             incoming_queue,
-            lambda x: x,
+            lambda x, y: x,
             None,
+            100,
+            30,
         )
         handshake = await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
         await session.close()

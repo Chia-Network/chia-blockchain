@@ -10,13 +10,14 @@ from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Handshake
 from src.server.outbound_message import Message, NodeType, make_msg
+from src.server.rate_limits import RateLimiter
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from src.util.network import class_for_type
+from src.util.network import class_for_type, is_localhost
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
@@ -41,6 +42,8 @@ class WSChiaConnection:
         incoming_queue,
         close_callback: Callable,
         peer_id,
+        inbound_rate_limit_percent: int,
+        outbound_rate_limit_percent: int,
         close_event=None,
         session=None,
     ):
@@ -89,6 +92,11 @@ class WSChiaConnection:
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         self.request_nonce: uint16 = uint16(0)
+
+        # This means that even if the other peer's boundaries for each minute are not aligned, we will not
+        # disconnect. Also it allows a little flexibility.
+        self.outbound_rate_limiter = RateLimiter(percentage_of_limit=outbound_rate_limit_percent)
+        self.inbound_rate_limiter = RateLimiter(percentage_of_limit=inbound_rate_limit_percent)
 
     async def perform_handshake(
         self, network_id: bytes32, protocol_version: str, server_port: int, local_type: NodeType
@@ -292,7 +300,6 @@ class WSChiaConnection:
         await event.wait()
 
         self.pending_requests.pop(message.id)
-        self.pending_timeouts.pop(message.id)
         result: Optional[Message] = None
         if message.id in self.request_results:
             result = self.request_results[message.id]
@@ -317,6 +324,19 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
+        if not self.outbound_rate_limiter.process_msg_and_check(message):
+            if not is_localhost(self.peer_host):
+                self.log.debug(
+                    f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                    f"peer: {self.peer_host}"
+                )
+                return
+            else:
+                self.log.debug(
+                    f"Not rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
+                    f"peer: {self.peer_host}"
+                )
+
         await self.ws.send_bytes(encoded)
         self.log.info(f"-> {ProtocolMessageTypes(message.type).name} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
@@ -362,6 +382,21 @@ class WSChiaConnection:
             full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):
+                if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_host):
+                    self.log.error(
+                        f"Peer has been rate limited and will be disconnected: {self.peer_host}, "
+                        f"message: {message.type}"
+                    )
+                    # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
+                    asyncio.create_task(self.close(300))
+                    await asyncio.sleep(3)
+                    return None
+                else:
+                    self.log.warning(
+                        f"Peer surpassed rate limit {self.peer_host}, message: {message.type}, but not disconnecting"
+                    )
+                    return full_message_loaded
             return full_message_loaded
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")

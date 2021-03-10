@@ -69,6 +69,9 @@ class Service:
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
+        inbound_rlp = self.config.get("inbound_rate_limit_percent")
+        outbound_rlp = self.config.get("outbound_rate_limit_percent")
+        assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
             advertised_port,
             node,
@@ -76,6 +79,8 @@ class Service:
             node_type,
             ping_interval,
             network_id,
+            inbound_rlp,
+            outbound_rlp,
             root_path,
             service_config,
             (private_ca_crt, private_ca_key),

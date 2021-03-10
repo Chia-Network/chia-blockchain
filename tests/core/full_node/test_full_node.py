@@ -73,8 +73,8 @@ async def wallet_nodes():
 
 
 @pytest.fixture(scope="function")
-async def setup_five_nodes():
-    async for _ in setup_simulators_and_wallets(5, 0, {}):
+async def setup_four_nodes():
+    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=61000):
         yield _
 
 
@@ -102,12 +102,12 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
-    async def test_inbound_connection_limit(self, setup_five_nodes):
-        nodes, _ = setup_five_nodes
+    async def test_inbound_connection_limit(self, setup_four_nodes):
+        nodes, _ = setup_four_nodes
         server_1 = nodes[0].full_node.server
         server_1.config["target_peer_count"] = 2
         server_1.config["target_outbound_peer_count"] = 0
-        for i in range(1, 5):
+        for i in range(1, 4):
             full_node_i = nodes[i]
             server_i = full_node_i.full_node.server
             await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))

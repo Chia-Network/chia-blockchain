@@ -87,7 +87,7 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio
 
-    - name: Test blockchain code with pytest
+    - name: Test core code with pytest
       run: |
         . ./activate
         ./venv/bin/py.test tests/core -s -v --durations 0

@@ -35,7 +35,7 @@ def service_kwargs_for_farmer(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    farmer = Farmer(config, config_pool, keychain, consensus_constants=updated_constants)
+    farmer = Farmer(root_path, config, config_pool, keychain, consensus_constants=updated_constants)
     peer_api = FarmerAPI(farmer)
 
     kwargs = dict(

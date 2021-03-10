@@ -1,6 +1,10 @@
 from src.server.outbound_message import NodeType
 
 
+def is_localhost(peer_host: str):
+    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
+
+
 def class_for_type(type: NodeType):
     if type is NodeType.FULL_NODE:
         from src.full_node.full_node_api import FullNodeAPI

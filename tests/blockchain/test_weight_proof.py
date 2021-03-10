@@ -6,10 +6,8 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
-from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
 from src.types.blockchain_format.sized_bytes import bytes32

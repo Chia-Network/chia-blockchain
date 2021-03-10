@@ -148,7 +148,7 @@ async def validate_block_body(
     if height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
         return Err.INITIAL_TRANSACTION_FREEZE, None
 
-    if constants.NETWORK_TYPE == NetworkType.MAINNET:
+    if height > constants.INITIAL_FREEZE_PERIOD and constants.NETWORK_TYPE == NetworkType.MAINNET:
         if block.transactions_generator is not None:
             if len(bytes(block.transactions_generator)) > constants.MAX_GENERATOR_SIZE:
                 return Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE, None

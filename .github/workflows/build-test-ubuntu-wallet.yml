@@ -104,7 +104,7 @@ jobs:
         . ./activate
         ./venv/bin/py.test tests/clvm -s -v --durations 0
 
-    - name: Test blockchain code with pytest
+    - name: Test wallet code with pytest
       run: |
         . ./activate
         ./venv/bin/py.test tests/wallet -s -v --durations 0

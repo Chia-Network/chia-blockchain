@@ -376,7 +376,12 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None, key_seed=None, starting_port=50000
+    simulator_count: int,
+    wallet_count: int,
+    dic: Dict,
+    starting_height=None,
+    key_seed=None,
+    starting_port=50000,
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
