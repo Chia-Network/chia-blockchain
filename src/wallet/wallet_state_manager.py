@@ -87,11 +87,11 @@ class WalletStateManager:
     trade_manager: TradeManager
     new_wallet: bool
     user_settings: UserSettings
-    blockchain: WalletBlockchain
+    blockchain: Any
     block_store: WalletBlockStore
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
-    weight_proof_handler: WeightProofHandler
+    weight_proof_handler: Any
 
     @staticmethod
     async def create(

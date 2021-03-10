@@ -220,7 +220,8 @@ class WalletNode:
         if self.constants.GENESIS_CHALLENGE is None:
             await self.regular_start(fingerprint, new_wallet, backup_file, True)
             asyncio.create_task(self.delayed_start())
-            self.wallet_state_manager.state_changed("sync_changed")
+            if self.wallet_state_manager is not None:
+                self.wallet_state_manager.state_changed("sync_changed")
             return True
         else:
             await self.regular_start(fingerprint, new_wallet, backup_file, skip_backup_import)

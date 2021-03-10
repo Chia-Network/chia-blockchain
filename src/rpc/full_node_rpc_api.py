@@ -71,7 +71,7 @@ class FullNodeRpcApi:
         Returns a summary of the node's view of the blockchain.
         """
         if self.service.initialized is False:
-            response: Dict = {
+            res: Dict = {
                 "blockchain_state": {
                     "peak": 0,
                     "genesis_challenge_initialized": self.service.initialized,
@@ -87,7 +87,7 @@ class FullNodeRpcApi:
                     "mempool_size": 0,
                 },
             }
-            return response
+            return res
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
 
         if peak is not None and peak.height > 0:
