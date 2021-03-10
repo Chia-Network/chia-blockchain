@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Any, List
 
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.clvm import int_to_bytes, int_from_bytes
+from src.util.clvm import int_from_bytes, int_to_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint64
-from src.util.streamable import streamable, Streamable
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

@@ -2,28 +2,29 @@ import asyncio
 import logging
 import ssl
 import time
-from ipaddress import ip_address, IPv6Address
+import traceback
+from ipaddress import IPv6Address, ip_address
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, List, Dict, Callable, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
+from aiohttp import ClientSession, ClientTimeout, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
-from aiohttp import web, ClientTimeout, client_exceptions, ClientSession, WSCloseCode
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.protocols.shared_protocol import protocol_version
 from src.server.introducer_peers import IntroducerPeers
-from src.server.outbound_message import NodeType, Message
+from src.server.outbound_message import Message, NodeType
 from src.server.ssl_context import private_ssl_paths, public_ssl_paths
 from src.server.ws_connection import WSChiaConnection
-from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.errors import ProtocolError, Err
+from src.types.peer_info import PeerInfo
+from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
-from src.protocols.shared_protocol import protocol_version
-import traceback
 
 
 def ssl_context_for_server(

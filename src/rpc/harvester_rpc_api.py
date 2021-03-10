@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List
 
 from src.harvester.harvester import Harvester
-from src.util.ws_message import create_payload_dict, WsRpcMessage
+from src.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class HarvesterRpcApi:

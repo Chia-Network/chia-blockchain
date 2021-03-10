@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 from blspy import G2Element
+
+from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.pool_target import PoolTarget
-from src.util.ints import uint32
-from src.util.ints import uint64, uint8
+from src.util.ints import uint8, uint32, uint64
 from src.util.streamable import Streamable, streamable
 
 """

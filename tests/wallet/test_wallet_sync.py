@@ -3,14 +3,14 @@ import asyncio
 
 import pytest
 
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.protocols import full_node_protocol
 from src.util.ints import uint16, uint32
 from src.wallet.wallet_state_manager import WalletStateManager
 from tests.core.fixtures import default_400_blocks, default_1000_blocks
-from tests.setup_nodes import setup_node_and_wallet, test_constants, bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 

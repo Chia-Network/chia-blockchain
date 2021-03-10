@@ -1,14 +1,13 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.reward_chain_block import RewardChainBlock
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.vdf import VDFProof, VDFInfo
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
-from src.util.ints import uint8, uint64, uint32, uint128
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.streamable import Streamable, streamable
 
 

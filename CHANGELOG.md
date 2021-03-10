@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased 1.0rc6 aka Release Candidate 6 - 2020-03-1?
+
+### Added
+
+## Changed
+
+- Remove `chia plots "-s" "--stripe_size"` - we now always use the best default of 64K
+
 ## 1.0rc5 aka Release Candidate 5 - 2020-03-04
 
 ### Added
@@ -21,7 +29,6 @@ for setuptools_scm/PEP 440 reasons.
 
 ## Changed
 
-- Remove `chia plots "-s" "--stripe_size"` - we now always use the best default of 64K
 - Testnets and mainnet now set their minimum `k` size and enforce it. RC5 testnet will reject plots of size less than k=32.
 - Sub slots now require 16 blocks instead of 12.
 - Thanks to @xdustinface of Dash, the BlS Signature library has been updated to 0.9 with clean ups and some speed ups. This changed how the G2 infinity element was handled and we now manage it inside of chia-blockchain, etc., instead of in blspy.

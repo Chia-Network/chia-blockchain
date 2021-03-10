@@ -1,8 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
-
 import sys
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 import pytest
@@ -26,19 +25,18 @@ except ImportError:
 
 
 from src.consensus.pot_iterations import calculate_iterations_quality
-
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_sub_epoch_summaries,
-    _validate_summaries_weight,
     _validate_segment_slots,
+    _validate_summaries_weight,
 )
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.util.ints import uint32, uint64
 from tests.core.fixtures import (
-    default_1000_blocks,
     default_400_blocks,
+    default_1000_blocks,
     default_10000_blocks,
     default_10000_blocks_compact,
     pre_genesis_empty_slots_1000_blocks,

@@ -1,45 +1,45 @@
 import asyncio
 import json
+import logging
+import socket
 import time
 import traceback
 from asyncio import Task
-from typing import Dict, Optional, Tuple, List, Callable, Union, Set
 from pathlib import Path
-import socket
-import logging
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+
 from blspy import PrivateKey
 
-from src.consensus.multiprocess_validation import PreValidationResult
 from src.consensus.block_record import BlockRecord
+from src.consensus.constants import ConsensusConstants
+from src.consensus.multiprocess_validation import PreValidationResult
+from src.protocols import wallet_protocol
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.wallet_protocol import (
-    RespondBlockHeader,
-    RequestAdditions,
-    RespondAdditions,
-    RespondRemovals,
-    RejectRemovalsRequest,
     RejectAdditionsRequest,
+    RejectRemovalsRequest,
+    RequestAdditions,
     RequestHeaderBlocks,
+    RespondAdditions,
+    RespondBlockHeader,
     RespondHeaderBlocks,
+    RespondRemovals,
 )
+from src.server.node_discovery import WalletPeers
+from src.server.outbound_message import Message, NodeType, make_msg
+from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
-from src.types.blockchain_format.coin import hash_coin_list, Coin
+from src.types.blockchain_format.coin import Coin, hash_coin_list
+from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.protocols import wallet_protocol
-from src.consensus.constants import ConsensusConstants
-from src.server.server import ChiaServer
-from src.server.outbound_message import make_msg, NodeType, Message
-from src.server.node_discovery import WalletPeers
-from src.util.errors import ValidationError, Err
+from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint128
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.merkle_set import (
-    confirm_included_already_hashed,
-    confirm_not_included_already_hashed,
-    MerkleSet,
-)
+from src.util.keychain import Keychain
+from src.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from src.util.path import mkdir, path_from_root
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.settings.settings_objects import BackupInitialized
@@ -49,9 +49,6 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_blockchain import ReceiveBlockResult
 from src.wallet.wallet_state_manager import WalletStateManager
-from src.types.header_block import HeaderBlock
-from src.util.path import path_from_root, mkdir
-from src.util.keychain import Keychain
 
 
 class WalletNode:

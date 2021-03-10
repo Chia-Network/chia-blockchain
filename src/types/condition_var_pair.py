@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from src.types.condition_opcodes import ConditionOpcode
-from src.util.streamable import streamable, Streamable
+from src.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

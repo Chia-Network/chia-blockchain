@@ -1,31 +1,27 @@
-import click
-from src import __version__
-from pathlib import Path
 import os
 import shutil
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
-from typing import List, Dict, Any, Tuple
-
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.keychain import Keychain
-
-from src.util.config import unflatten_properties
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.util.ints import uint32
-
-from src.util.config import (
-    create_default_chia_config,
-    load_config,
-    save_config,
-    initial_config_file,
-)
-from src.util.path import mkdir
+import click
 import yaml
 
-from src.ssl.create_ssl import get_chia_ca_crt_key, generate_ca_signed_cert, make_ca_cert
-from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_pool_sk
+from src import __version__
+from src.consensus.coinbase import create_puzzlehash_for_pk
+from src.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
 from src.util.bech32m import encode_puzzle_hash
-
+from src.util.config import (
+    create_default_chia_config,
+    initial_config_file,
+    load_config,
+    save_config,
+    unflatten_properties,
+)
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.ints import uint32
+from src.util.keychain import Keychain
+from src.util.path import mkdir
+from src.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}

@@ -4,8 +4,8 @@ https://stackoverflow.com/questions/35772001/how-to-handle-the-signal-in-python-
 """
 
 import os
-import sys
 import signal
+import sys
 
 if sys.platform != "win32" and sys.platform != "cygwin":
     kill = os.kill

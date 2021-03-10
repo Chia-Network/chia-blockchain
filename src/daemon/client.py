@@ -1,16 +1,16 @@
+import asyncio
 import json
 import ssl
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
 
-import asyncio
 import websockets
 
 from src.server.server import ssl_context_for_client
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ws_message import create_payload_dict, WsRpcMessage
-from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
+from src.util.json_util import dict_to_json_str
+from src.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class DaemonProxy:

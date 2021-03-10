@@ -6,7 +6,6 @@ from src.full_node.full_node_api import FullNodeAPI
 from src.protocols.full_node_protocol import RespondBlock
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.full_block import FullBlock
-
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
 

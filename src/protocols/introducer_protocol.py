@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from src.types.peer_info import TimestampedPeerInfo
-from src.util.streamable import streamable, Streamable
+from src.util.streamable import Streamable, streamable
 
 """
 Protocol to introducer

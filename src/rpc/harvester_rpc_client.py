@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from src.rpc.rpc_client import RpcClient
 
 

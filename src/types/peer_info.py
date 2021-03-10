@@ -1,9 +1,8 @@
+import ipaddress
 from dataclasses import dataclass
 
 from src.util.ints import uint16, uint64
 from src.util.streamable import Streamable, streamable
-
-import ipaddress
 
 
 @dataclass(frozen=True)

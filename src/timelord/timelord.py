@@ -2,18 +2,15 @@ import asyncio
 import dataclasses
 import io
 import logging
+import random
 import time
 import traceback
-import random
-from typing import Dict, List, Optional, Tuple, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
 from chiavdf import create_discriminant
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import (
-    calculate_sp_iters,
-    is_overflow_block,
-)
+from src.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from src.protocols import timelord_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
@@ -22,7 +19,6 @@ from src.timelord.iters_from_block import iters_from_block
 from src.timelord.timelord_state import LastState
 from src.timelord.types import Chain, IterationType, StateType
 from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.blockchain_format.reward_chain_block import RewardChainBlock
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.slots import (
@@ -31,9 +27,10 @@ from src.types.blockchain_format.slots import (
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
-from src.util.ints import uint64, uint8, uint32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.util.ints import uint8, uint32, uint64
 
 log = logging.getLogger(__name__)
 

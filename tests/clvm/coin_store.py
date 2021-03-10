@@ -8,7 +8,7 @@ from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord
 from src.types.spend_bundle import SpendBundle
-from src.util.condition_tools import created_announcements_for_conditions_dict, conditions_dict_for_solution
+from src.util.condition_tools import conditions_dict_for_solution, created_announcements_for_conditions_dict
 from src.util.ints import uint32, uint64
 
 

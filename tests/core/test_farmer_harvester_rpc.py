@@ -1,21 +1,20 @@
-import pytest
-
 from secrets import token_bytes
+
+import pytest
 from blspy import AugSchemeMPL
 from chiapos import DiskPlotter
 
+from src.plotting.plot_tools import stream_plot_info_ph, stream_plot_info_pk
 from src.protocols import farmer_protocol
+from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.farmer_rpc_client import FarmerRpcClient
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
-from src.util.hash import std_hash
-from src.util.ints import uint16, uint64, uint8
-from src.plotting.plot_tools import stream_plot_info_pk, stream_plot_info_ph
-from src.rpc.farmer_rpc_api import FarmerRpcApi
-from src.rpc.harvester_rpc_api import HarvesterRpcApi
-
-from tests.setup_nodes import setup_farmer_harvester, test_constants, bt, self_hostname
 from src.util.block_tools import get_plot_dir
+from src.util.hash import std_hash
+from src.util.ints import uint8, uint16, uint64
+from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert
 
 

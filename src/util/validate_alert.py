@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from blspy import SignatureMPL, PublicKeyMPL, AugSchemeMPL
+from blspy import AugSchemeMPL, PublicKeyMPL, SignatureMPL
 
 from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash

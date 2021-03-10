@@ -1,13 +1,13 @@
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from src.introducer.introducer import Introducer
+from src.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import Message, make_msg
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import TimestampedPeerInfo
 from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint64
-from src.protocols.introducer_protocol import RespondPeersIntroducer, RequestPeersIntroducer
 
 
 class IntroducerAPI:

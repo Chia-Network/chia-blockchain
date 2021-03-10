@@ -1,13 +1,10 @@
-import click
 from pathlib import Path
-
-from src.util.config import (
-    load_config,
-    save_config,
-)
 from typing import Dict
+
+import click
+
+from src.util.config import load_config, save_config, str2bool
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.config import str2bool
 
 
 def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str, set_log_level: str, enable_upnp: str):

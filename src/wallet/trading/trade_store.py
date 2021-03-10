@@ -1,10 +1,12 @@
-from typing import Optional, List
+from typing import List, Optional
+
 import aiosqlite
+
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint32, uint8
-from src.wallet.trade_record import TradeRecord
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
+from src.util.ints import uint8, uint32
+from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
 
 

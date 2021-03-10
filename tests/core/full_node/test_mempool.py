@@ -5,14 +5,14 @@ from typing import Dict, List
 import pytest
 
 from src.protocols import full_node_protocol
+from src.types.announcement import Announcement
 from src.types.blockchain_format.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
-from src.types.announcement import Announcement
-from src.util.condition_tools import conditions_for_solution
 from src.util.clvm import int_to_bytes
+from src.util.condition_tools import conditions_for_solution
 from src.util.ints import uint64
 from tests.core.full_node.test_full_node import connect_and_get_peer, node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
