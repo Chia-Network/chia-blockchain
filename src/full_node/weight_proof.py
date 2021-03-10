@@ -896,7 +896,7 @@ def _validate_segment(
             if not validate_total_iters(segment, idx, curr_ssi, sub_slots_since_prev, prev, prev_ssi, genesis):
                 log.error(f"failed to validate sub slot data {idx} total iterations ")
                 return False, uint64(0), uint64(0), uint64(0)
-        if sub_slot_data.is_challenge():
+        if sub_slot_data.is_challenge() and sampled:
             after_challenge = True
             required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses, first_segment_in_se)
             if required_iters is None:
@@ -905,12 +905,13 @@ def _validate_segment(
             ip_iters = ip_iters + calculate_ip_iters(  # type: ignore
                 constants, curr_ssi, sub_slot_data.signage_point_index, required_iters
             )
-            if sampled and (not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi)):
+            if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate challenge slot {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        elif after_challenge and not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
-            log.error(f"failed to validate sub slot data {idx} vdfs")
-            return False, uint64(0), uint64(0), uint64(0)
+        elif after_challenge and sampled:
+            if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
+                log.error(f"failed to validate sub slot data {idx} vdfs")
+                return False, uint64(0), uint64(0), uint64(0)
         genesis = False
         prev_ssi = curr_ssi
         if not sub_slot_data.is_end_of_slot():
