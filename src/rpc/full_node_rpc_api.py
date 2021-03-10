@@ -70,6 +70,24 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
+        if self.service.initialized is False:
+            res: Dict = {
+                "blockchain_state": {
+                    "peak": 0,
+                    "genesis_challenge_initialized": self.service.initialized,
+                    "sync": {
+                        "sync_mode": False,
+                        "synced": False,
+                        "sync_tip_height": 0,
+                        "sync_progress_height": 0,
+                    },
+                    "difficulty": 0,
+                    "sub_slot_iters": 0,
+                    "space": 0,
+                    "mempool_size": 0,
+                },
+            }
+            return res
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
 
         if peak is not None and peak.height > 0:
@@ -118,6 +136,7 @@ class FullNodeRpcApi:
         response: Dict = {
             "blockchain_state": {
                 "peak": peak,
+                "genesis_challenge_initialized": self.service.initialized,
                 "sync": {
                     "sync_mode": sync_mode,
                     "synced": synced,

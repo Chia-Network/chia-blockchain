@@ -18,7 +18,6 @@ from src.timelord.timelord_launcher import kill_processes, spawn_process
 from src.types.peer_info import PeerInfo
 from src.util.bech32m import encode_puzzle_hash
 from src.util.block_tools import BlockTools, test_constants
-from src.util.config import save_config
 from src.util.hash import std_hash
 from src.util.ints import uint16, uint32
 from src.util.keychain import Keychain, bytes_to_mnemonic
@@ -42,23 +41,14 @@ async def _teardown_nodes(node_aiters: List) -> None:
             pass
 
 
-async def setup_daemon(port, alert_url, pubkey):
-    btools = BlockTools(constants=test_constants)
+async def setup_daemon(btools):
     root_path = btools.root_path
     config = btools.config
-    config["daemon_port"] = port
     lockfile = singleton(daemon_launch_lock_path(root_path))
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
-    # TODO: make overrides configurable
-    config["selected_network"] = "testnet6"
-    config["ALERTS_URL"] = alert_url
-    config["CHIA_ALERTS_PUBKEY"] = pubkey
-    config["network_overrides"]["constants"]["testnet6"]["GENESIS_CHALLENGE"] = None
-    btools._config = config
-    save_config(root_path, "config.yaml", btools._config)
     assert lockfile is not None
     create_server_for_daemon(btools.root_path)
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
@@ -78,10 +68,10 @@ async def setup_full_node(
     simulator=False,
     send_uncompact_interval=30,
 ):
-    db_path = bt.root_path / f"{db_name}"
+    db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
         db_path.unlink()
-    config = bt.config["full_node"]
+    config = local_bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
@@ -439,9 +429,11 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
     await _teardown_nodes(node_iters)
 
 
-async def setup_full_system(consensus_constants: ConsensusConstants):
-    b_tools = BlockTools(constants=test_constants)
-    b_tools_1 = BlockTools(constants=test_constants)
+async def setup_full_system(consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None):
+    if b_tools is None:
+        b_tools = BlockTools(constants=test_constants)
+    if b_tools_1 is None:
+        b_tools_1 = BlockTools(constants=test_constants)
     node_iters = [
         setup_introducer(21233),
         setup_harvester(21234, 21235, consensus_constants, b_tools),
@@ -451,7 +443,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10),
         setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10),
         setup_vdf_client(7999),
-        setup_timelord(21239, 21238, True, consensus_constants, b_tools),
+        setup_timelord(21239, 21238, True, consensus_constants, b_tools_1),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()

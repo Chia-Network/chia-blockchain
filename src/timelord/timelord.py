@@ -27,6 +27,7 @@ from src.types.blockchain_format.slots import (
     RewardChainSubSlot,
     SubSlotProofs,
 )
+from src.util.genesis_wait import wait_for_genesis_challenge
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -36,8 +37,9 @@ log = logging.getLogger(__name__)
 
 
 class Timelord:
-    def __init__(self, config: Dict, constants: ConsensusConstants):
+    def __init__(self, root_path, config: Dict, constants: ConsensusConstants):
         self.config = config
+        self.root_path = root_path
         self.constants = constants
         self._shut_down = False
         self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
@@ -59,7 +61,7 @@ class Timelord:
         # Last end of subslot bundle, None if we built a peak on top of it.
         self.new_subslot_end: Optional[EndOfSubSlotBundle] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
-        self.last_state: LastState = LastState(self.constants)
+        self.last_state: Optional[LastState] = None
         # Unfinished block info, iters adjusted to the last peak.
         self.unfinished_blocks: List[timelord_protocol.NewUnfinishedBlock] = []
         # Signage points iters, adjusted to the last peak.
@@ -86,18 +88,31 @@ class Timelord:
         self.sanitizer_mode = self.config["sanitizer_mode"]
         self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
 
-    async def _start(self):
-        self.lock: asyncio.Lock = asyncio.Lock()
+    async def delayed_start(self):
+        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants, "timelord")
+        self.config = config
+        self.constants = constants
+        await self.regular_start()
+
+    async def regular_start(self):
+        self.last_state: LastState = LastState(self.constants)
         if not self.sanitizer_mode:
             self.main_loop = asyncio.create_task(self._manage_chains())
         else:
             self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
+        log.info("Started timelord.")
+
+    async def _start(self):
+        self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
             self.config["vdf_server"]["host"],
             self.config["vdf_server"]["port"],
         )
-        log.info("Started timelord.")
+        if self.constants.GENESIS_CHALLENGE is None:
+            asyncio.create_task(self.delayed_start())
+        else:
+            await self.regular_start()
 
     def _close(self):
         self._shut_down = True
@@ -148,6 +163,7 @@ class Timelord:
             log.error(f"{e}")
 
     def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlock) -> Optional[uint64]:
+        assert self.last_state is not None
         sub_slot_iters = self.last_state.get_sub_slot_iters()
         difficulty = self.last_state.get_difficulty()
         ip_iters = self.last_state.get_last_ip()

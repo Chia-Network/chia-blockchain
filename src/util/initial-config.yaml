@@ -22,6 +22,7 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
     testnet6:
+      GENESIS_CHALLENGE: null
       NETWORK_TYPE: 1
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
@@ -30,15 +31,13 @@ network_overrides: &network_overrides
       address_prefix: "xch"
     testnet0:
       address_prefix: "txch"
-    testnet4:
-      address_prefix: "txch"
     testnet5:
       address_prefix: "txch"
     testnet6:
       address_prefix: "txch"
 
 selected_network: &selected_network "testnet5"
-ALERTS_URL: https://download.chia.net/notify/testnet_5_alert.txt
+ALERTS_URL: https://download.chia.net/notify/testnet_6_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
 # public ssl ca is included in source code
