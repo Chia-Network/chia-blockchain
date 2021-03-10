@@ -111,26 +111,23 @@ async def pre_validate_blocks_multiprocessing(
     recent_blocks: Dict[bytes32, BlockRecord] = {}
     recent_blocks_compressed: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
-    num_blocks_seen = 0
     if blocks[0].height > 0:
         if not block_records.contains_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None)]
         curr = block_records.block_record(blocks[0].prev_header_hash)
-        num_sub_slots_to_look_for = 3 if curr.overflow else 2
+
+        # TODO: potentially change these numbers to optimize
+        num_sub_slots_to_look_for = 4 if curr.overflow else 3
         while (
-            curr.sub_epoch_summary_included is None
-            or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
-            or num_sub_slots_found < num_sub_slots_to_look_for
+            curr.sub_epoch_summary_included is None or num_sub_slots_found < num_sub_slots_to_look_for
         ) and curr.height > 0:
-            if num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS or num_sub_slots_found < num_sub_slots_to_look_for:
+            if num_sub_slots_found < num_sub_slots_to_look_for:
                 recent_blocks_compressed[curr.header_hash] = curr
 
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
             recent_blocks[curr.header_hash] = curr
-            if curr.is_transaction_block:
-                num_blocks_seen += 1
             curr = block_records.block_record(curr.prev_hash)
         recent_blocks[curr.header_hash] = curr
         recent_blocks_compressed[curr.header_hash] = curr
