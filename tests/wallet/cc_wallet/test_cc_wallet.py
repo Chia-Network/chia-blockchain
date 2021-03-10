@@ -3,19 +3,19 @@ from typing import List
 
 import pytest
 
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.full_node.mempool_manager import MempoolManager
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.blockchain_format.coin import Coin
-from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
 from src.wallet.cc_wallet.cc_utils import cc_puzzle_hash_for_inner_puzzle_hash
+from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.puzzles.cc_loader import CC_MOD
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.setup_nodes import setup_simulators_and_wallets
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from src.wallet.cc_wallet.cc_wallet import CCWallet
 from tests.time_out_assert import time_out_assert
 
 

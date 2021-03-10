@@ -5,7 +5,6 @@ from src.types.blockchain_format.program import Program
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.wallet.puzzles.load_clvm import load_clvm
 
-
 MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm", package_or_requirement=__name__)
 
 

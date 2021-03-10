@@ -13,7 +13,6 @@ from src.util.path import mkdir, path_from_root
 
 from .full_node_simulator import FullNodeSimulator
 
-
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
 
@@ -55,6 +54,7 @@ def main():
     config["introducer_peer"]["host"] = "127.0.0.1"
     config["introducer_peer"]["port"] = 58555
     config["selected_network"] = "testnet0"
+    config["simulation"] = True
     kwargs = service_kwargs_for_full_node_simulator(
         DEFAULT_ROOT_PATH,
         config,

@@ -43,10 +43,10 @@ jobs:
       env:
         SECRET: "${{ secrets.test_pypi_password }}"
 
-    - name: Install developer requirements
+    - name: Install lint requirements
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
+        python -m pip install pytest flake8 mypy
 
     - name: Lint source with flake8
       run: |

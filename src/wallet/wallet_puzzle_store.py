@@ -1,12 +1,14 @@
 import asyncio
-from blspy import G1Element
-from typing import Set, Tuple, Optional, List
-import aiosqlite
 import logging
+from typing import List, Optional, Set, Tuple
+
+import aiosqlite
+from blspy import G1Element
+
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32
-from src.wallet.util.wallet_types import WalletType
 from src.wallet.derivation_record import DerivationRecord
+from src.wallet.util.wallet_types import WalletType
 
 log = logging.getLogger(__name__)
 

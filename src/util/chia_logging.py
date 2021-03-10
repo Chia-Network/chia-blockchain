@@ -1,11 +1,11 @@
 import logging
-import colorlog
-
 from pathlib import Path
 from typing import Dict
 
-from src.util.path import mkdir, path_from_root
+import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
+
+from src.util.path import mkdir, path_from_root
 
 
 def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):

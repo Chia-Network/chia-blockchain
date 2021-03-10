@@ -1,9 +1,11 @@
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
+
 import aiosqlite
-from src.types.full_block import FullBlock
+
 from src.types.blockchain_format.coin import Coin
-from src.types.coin_record import CoinRecord
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_record import CoinRecord
+from src.types.full_block import FullBlock
 from src.util.ints import uint32, uint64
 
 

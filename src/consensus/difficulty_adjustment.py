@@ -1,15 +1,11 @@
 from typing import List, Optional, Tuple
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
-
 from src.consensus.constants import ConsensusConstants
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.consensus.block_record import BlockRecord
-from src.util.ints import uint32, uint64, uint128, uint8
-from src.util.significant_bits import (
-    count_significant_bits,
-    truncate_to_significant_bits,
-)
+from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.significant_bits import count_significant_bits, truncate_to_significant_bits
 
 
 def _get_blocks_at_height(

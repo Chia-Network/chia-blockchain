@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Optional
-from src.util.ints import uint8, uint16
-from src.util.streamable import streamable, Streamable
+
 from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.util.ints import uint8, uint16
+from src.util.streamable import Streamable, streamable
 
 
 class NodeType(IntEnum):

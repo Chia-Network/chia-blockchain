@@ -1,18 +1,18 @@
+import time
 import traceback
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.spend_bundle import SpendBundle
-from src.types.coin_record import CoinRecord
-from src.types.name_puzzle_condition import NPC
 from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.coin_record import CoinRecord
+from src.types.condition_var_pair import ConditionVarPair
+from src.types.name_puzzle_condition import NPC
+from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err
-import time
-from src.util.ints import uint64, uint32
-from src.wallet.puzzles.generator_loader import GENERATOR_MOD, GENERATOR_FOR_SINGLE_COIN_MOD
+from src.util.ints import uint32, uint64
+from src.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD, GENERATOR_MOD
 
 
 def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:

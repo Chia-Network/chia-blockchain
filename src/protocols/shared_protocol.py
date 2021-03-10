@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Tuple, List
 
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint16, uint8
-from src.util.streamable import streamable, Streamable
 from enum import IntEnum
+from src.util.ints import uint8, uint16
+from src.util.streamable import Streamable, streamable
 
 protocol_version = "0.0.32"
 

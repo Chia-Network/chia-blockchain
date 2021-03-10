@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.block_record import BlockRecord
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.util.ints import uint128
 
 

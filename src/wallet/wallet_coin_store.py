@@ -1,6 +1,8 @@
 import asyncio
-from typing import Dict, Optional, List, Set
+from typing import Dict, List, Optional, Set
+
 import aiosqlite
+
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint32, uint64

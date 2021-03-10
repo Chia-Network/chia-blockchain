@@ -1,18 +1,18 @@
-from typing import List, Dict, Optional, Tuple, Set, Union
-from pathlib import Path
-from blspy import PrivateKey, G1Element
-from chiapos import DiskProver
-from dataclasses import dataclass
-import time
 import logging
+import time
 import traceback
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple, Union
 
-from src.consensus.pos_quality import _expected_plot_size, UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from blspy import G1Element, PrivateKey
+from chiapos import DiskProver
+
+from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
-
 
 log = logging.getLogger(__name__)
 

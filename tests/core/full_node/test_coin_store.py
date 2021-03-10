@@ -1,21 +1,21 @@
 import asyncio
 from pathlib import Path
-from typing import Optional, List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import aiosqlite
 import pytest
 
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
-from src.consensus.coinbase import create_pool_coin, create_farmer_coin
-from src.full_node.coin_store import CoinStore
+from src.consensus.coinbase import create_farmer_coin, create_pool_coin
 from src.full_node.block_store import BlockStore
+from src.full_node.coin_store import CoinStore
 from src.types.blockchain_format.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.full_block import FullBlock
 from src.util.ints import uint64
-from tests.setup_nodes import test_constants, bt
 from src.util.wallet_tools import WalletTool
+from tests.setup_nodes import bt, test_constants
 
 WALLET_A = WalletTool()
 

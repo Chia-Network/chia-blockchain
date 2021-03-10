@@ -1,17 +1,19 @@
 import pickle
+from os import path
+
 import aiosqlite
 import pytest
 from typing import List
 from pathlib import Path
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.block_store import BlockStore
+
 from src.consensus.blockchain import Blockchain
+from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.types.full_block import FullBlock
 from src.util.path import mkdir
-from tests.setup_nodes import test_constants, bt
-from os import path
+from tests.setup_nodes import bt, test_constants
 
 
 async def create_blockchain(constants: ConsensusConstants):

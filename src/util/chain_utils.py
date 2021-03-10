@@ -1,13 +1,13 @@
 from typing import List
 
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.program import Program
 from src.types.announcement import Announcement
+from src.types.blockchain_format.coin import Coin
+from src.types.blockchain_format.program import Program
+from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.condition_tools import (
-    created_outputs_for_conditions_dict,
     conditions_dict_for_solution,
     created_announcements_for_conditions_dict,
+    created_outputs_for_conditions_dict,
 )
 
 

@@ -6,8 +6,8 @@ from blspy import PrivateKey
 from src.util.hash import std_hash
 from src.util.validate_alert import create_alert_file, create_not_ready_alert_file
 from tests.setup_nodes import setup_daemon
-from tests.util.alert_server import AlertServer
 from tests.time_out_assert import time_out_assert
+from tests.util.alert_server import AlertServer
 
 master_int = 5399117110774477986698372024995405256382522670366369834617409486544348441851
 master_sk: PrivateKey = PrivateKey.from_bytes(master_int.to_bytes(32, "big"))

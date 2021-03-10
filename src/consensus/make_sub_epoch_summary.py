@@ -1,27 +1,22 @@
+import logging
 from typing import Optional, Union
 
+from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import (
-    calculate_ip_iters,
-    calculate_sp_iters,
-    is_overflow_block,
-)
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import (
-    get_next_sub_slot_iters_and_difficulty,
     _get_next_difficulty,
     _get_next_sub_slot_iters,
-    height_can_be_first_in_epoch,
     can_finish_sub_and_full_epoch,
+    get_next_sub_slot_iters_and_difficulty,
+    height_can_be_first_in_epoch,
 )
-from src.consensus.block_record import BlockRecord
-from src.types.full_block import FullBlock
+from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_block
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from src.types.full_block import FullBlock
 from src.types.unfinished_block import UnfinishedBlock
-from src.util.ints import uint32, uint64, uint8, uint128
-
-import logging
+from src.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

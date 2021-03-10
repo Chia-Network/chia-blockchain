@@ -1,18 +1,16 @@
-from typing import List, Dict
-from pathlib import Path
 import logging
-from chiapos import Verifier
 from collections import Counter
+from pathlib import Path
+from typing import Dict, List
+
 from blspy import G1Element
-from src.util.keychain import Keychain
+from chiapos import Verifier
+
+from src.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots, parse_plot_info
 from src.util.config import load_config
-from src.plotting.plot_tools import load_plots, get_plot_filenames, find_duplicate_plot_IDs
 from src.util.hash import std_hash
-from src.wallet.derive_keys import master_sk_to_farmer_sk
-
-from src.plotting.plot_tools import parse_plot_info
-from src.wallet.derive_keys import master_sk_to_local_sk
-
+from src.util.keychain import Keychain
+from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 

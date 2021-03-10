@@ -1,12 +1,12 @@
-from typing import Optional, Dict, List, Set
+from typing import Dict, List, Optional, Set
 
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.coin_record import CoinRecord
 from src.types.announcement import Announcement
+from src.types.coin_record import CoinRecord
+from src.types.condition_var_pair import ConditionVarPair
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode
 from src.util.errors import Err
-from src.util.ints import uint64, uint32
+from src.util.ints import uint32, uint64
 
 
 def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:

@@ -2,28 +2,31 @@ import asyncio
 import logging
 import ssl
 import time
-from ipaddress import ip_address, IPv6Address
+import traceback
+from ipaddress import IPv6Address, ip_address
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, List, Dict, Callable, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
+from aiohttp import ClientSession, ClientTimeout, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
-from aiohttp import web, ClientTimeout, client_exceptions, ClientSession, WSCloseCode
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from src.protocols.protocol_message_types import ProtocolMessageTypes
+from src.protocols.shared_protocol import protocol_version
 from src.server.introducer_peers import IntroducerPeers
-from src.server.outbound_message import NodeType, Message
+from src.server.outbound_message import Message, NodeType
 from src.server.ssl_context import private_ssl_paths, public_ssl_paths
 from src.server.ws_connection import WSChiaConnection
-from src.types.peer_info import PeerInfo
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.errors import ProtocolError, Err
+from src.types.peer_info import PeerInfo
+from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
-from src.protocols.shared_protocol import protocol_version
-import traceback
+
+from src.util.network import is_localhost
 
 
 def ssl_context_for_server(
@@ -65,6 +68,8 @@ class ChiaServer:
         local_type: NodeType,
         ping_interval: int,
         network_id: bytes32,
+        inbound_rate_limit_percent: int,
+        outbound_rate_limit_percent: int,
         root_path: Path,
         config: Dict,
         private_ca_crt_key: Tuple[Path, Path],
@@ -90,6 +95,8 @@ class ChiaServer:
 
         self._ping_interval = ping_interval
         self._network_id = network_id
+        self._inbound_rate_limit_percent = inbound_rate_limit_percent
+        self._outbound_rate_limit_percent = outbound_rate_limit_percent
 
         # Task list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
@@ -231,6 +238,8 @@ class ChiaServer:
                 self.incoming_messages,
                 self.connection_closed,
                 peer_id,
+                self._inbound_rate_limit_percent,
+                self._outbound_rate_limit_percent,
                 close_event,
             )
             handshake = await connection.perform_handshake(
@@ -290,7 +299,7 @@ class ChiaServer:
             self.log.error(f"Invalid connection type for connection {connection}")
 
     def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
-        if (target_node.host == "127.0.0.1" or target_node.host == "localhost") and target_node.port == self._port:
+        if is_localhost(target_node.host) and target_node.port == self._port:
             # Don't connect to self
             self.log.debug(f"Not connecting to {target_node}")
             return True
@@ -368,6 +377,8 @@ class ChiaServer:
                     self.incoming_messages,
                     self.connection_closed,
                     peer_id,
+                    self._inbound_rate_limit_percent,
+                    self._outbound_rate_limit_percent,
                     session=session,
                 )
                 handshake = await connection.perform_handshake(
@@ -417,7 +428,7 @@ class ChiaServer:
         self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
         if ban_time > 0:
             ban_until: float = time.time() + ban_time
-            self.log.warning(f"Banning {connection.peer_host} until {ban_until}")
+            self.log.warning(f"Banning {connection.peer_host} for {ban_time} seconds")
             if connection.peer_host in self.banned_peers:
                 if ban_until > self.banned_peers[connection.peer_host]:
                     self.banned_peers[connection.peer_host] = ban_until
