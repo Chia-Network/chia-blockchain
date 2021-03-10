@@ -134,7 +134,7 @@ class Farmer:
         }
 
     def set_reward_targets(self, farmer_target: Optional[bytes32], pool_target: Optional[bytes32]):
-        config = load_config(self._root_path)
+        config = load_config(self._root_path, "config.yaml")
         if farmer_target is not None:
             config["farmer"]["farmer_target"] = farmer_target
         if pool_target is not None:
