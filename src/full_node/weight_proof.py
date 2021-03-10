@@ -160,31 +160,28 @@ class WeightProofHandler:
     ) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
 
-        curr_height = uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS)
-
-        if wp is not None:
-            idx = 0
-            for block in wp.recent_chain_data:
-                if block.reward_chain_block.height == curr_height:
-                    break
-                idx += 1
-
-            if idx < len(wp.recent_chain_data):
-                for block in wp.recent_chain_data[idx:]:
-                    recent_chain.append(block)
-                    assert curr_height == block.reward_chain_block.height
-                    curr_height = curr_height + uint32(1)  # type: ignore
-                    idx += 1
-
-        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(curr_height, tip_height)
-        while curr_height <= tip_height:
+        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(
+            tip_height - 1200, tip_height
+        )
+        blocks = await self.blockchain.get_block_records_in_range(tip_height - 1200, tip_height)
+        ses_count = 0
+        curr_height = tip_height
+        while ses_count != 2:
             # add to needed reward chain recent blocks
+            log.info(f"get block {curr_height}")
             header_block = headers[self.blockchain.height_to_hash(curr_height)]
+            block_rec = blocks[header_block.header_hash]
             if header_block is None:
                 log.error("creating recent chain failed")
                 return None
-            recent_chain.append(header_block)
-            curr_height = curr_height + uint32(1)  # type: ignore
+            recent_chain.insert(0, header_block)
+            if block_rec.sub_epoch_summary_included:
+                log.info(f"ses at height {curr_height}")
+                ses_count += 1
+            curr_height = curr_height - uint32(1)  # type: ignore
+
+        header_block = headers[self.blockchain.height_to_hash(curr_height)]
+        recent_chain.insert(0, header_block)
 
         log.info(
             f"recent chain, "
@@ -812,6 +809,7 @@ def _validate_summaries_weight(constants: ConsensusConstants, sub_epoch_data_wei
         if block.reward_chain_block.height == ses_end_height:
             curr = block
     if curr is None:
+        log.info(f"could not find block {ses_end_height}")
         return False
 
     return curr.reward_chain_block.weight == sub_epoch_data_weight
@@ -888,14 +886,8 @@ def _validate_segment(
 ) -> Tuple[bool, int, int, int]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
-    prev = None
     sub_slots_since_prev = 0
-    genesis = (segment.sub_epoch_n == 0) and first_segment_in_se
     for idx, sub_slot_data in enumerate(segment.sub_slots):
-        if not sub_slot_data.is_end_of_slot() and after_challenge:
-            if not validate_total_iters(segment, idx, curr_ssi, sub_slots_since_prev, prev, prev_ssi, genesis):
-                log.error(f"failed to validate sub slot data {idx} total iterations ")
-                return False, uint64(0), uint64(0), uint64(0)
         if sub_slot_data.is_challenge() and sampled:
             after_challenge = True
             required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses, first_segment_in_se)
@@ -912,10 +904,7 @@ def _validate_segment(
             if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        genesis = False
-        prev_ssi = curr_ssi
         if not sub_slot_data.is_end_of_slot():
-            prev = sub_slot_data
             sub_slots_since_prev = 0
         else:
             sub_slots_since_prev += 1
@@ -1478,14 +1467,18 @@ def validate_total_iters(
     if genesis:
         total_iters: uint128 = uint128(expected_sub_slot_iters * finished_sub_slots_since_prev)
     elif segment.sub_slots[sub_slot_data_idx - 1].is_end_of_slot():
+        assert prev_b.total_iters
         total_iters = prev_b.total_iters
         # Add the rest of the slot of prev_b
+        assert prev_b.cc_ip_vdf_info
         total_iters = uint128(total_iters + prev_sub_slot_data_iters - prev_b.cc_ip_vdf_info.number_of_iterations)
         # Add other empty slots
         total_iters = uint128(total_iters + (expected_sub_slot_iters * (finished_sub_slots_since_prev - 1)))
     else:
         # Slot iters is guaranteed to be the same for header_block and prev_b
         # This takes the beginning of the slot, and adds ip_iters
+        assert prev_b.total_iters
+        assert prev_b.cc_ip_vdf_info
         total_iters = uint128(prev_b.total_iters - prev_b.cc_ip_vdf_info.number_of_iterations)
     total_iters = uint128(total_iters + sub_slot_data.cc_ip_vdf_info.number_of_iterations)
     return total_iters == sub_slot_data.total_iters
