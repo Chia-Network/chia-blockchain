@@ -17,7 +17,7 @@ from src.server.outbound_message import NodeType, make_msg
 from src.server.ws_connection import WSChiaConnection
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.bech32m import decode_puzzle_hash
+from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.ints import uint64, uint32
 from src.util.keychain import Keychain
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
@@ -74,7 +74,7 @@ class Farmer:
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
-        self.wallet_target = decode_puzzle_hash(self.config["xch_target_address"])
+        self.farmer_target = decode_puzzle_hash(self.config["xch_target_address"])
         self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
@@ -83,7 +83,7 @@ class Farmer:
         for key in self.get_private_keys():
             self.pool_sks_map[bytes(key.get_g1())] = key
 
-        assert len(self.wallet_target) == 32
+        assert len(self.farmer_target) == 32
         assert len(self.pool_target) == 32
         if len(self.pool_sks_map) == 0:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
@@ -138,27 +138,31 @@ class Farmer:
                 for sk, _ in all_sks:
                     ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
 
-                    if ph == self.wallet_target:
+                    if ph == self.farmer_target:
                         stop_searching_for_farmer = True
                     if ph == self.pool_target:
                         stop_searching_for_pool = True
             return {
-                "farmer_target": self.wallet_target,
+                "farmer_target": self.farmer_target,
                 "pool_target": self.pool_target,
                 "have_farmer_sk": stop_searching_for_farmer,
                 "have_pool_sk": stop_searching_for_pool,
             }
         return {
-            "farmer_target": self.wallet_target,
+            "farmer_target": self.farmer_target,
             "pool_target": self.pool_target,
         }
 
     def set_reward_targets(self, farmer_target: Optional[bytes32], pool_target: Optional[bytes32]):
         config = load_config(self._root_path, "config.yaml")
+        selected = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
         if farmer_target is not None:
-            config["farmer"]["farmer_target"] = farmer_target
+            self.farmer_target = farmer_target
+            config["farmer"]["farmer_target"] = encode_puzzle_hash(farmer_target, prefix)
         if pool_target is not None:
-            config["farmer"]["pool_target"] = pool_target
+            self.pool_target = pool_target
+            config["farmer"]["pool_target"] = encode_puzzle_hash(pool_target, prefix)
         save_config(self._root_path, "config.yaml", config)
 
     async def _periodically_clear_cache_task(self):

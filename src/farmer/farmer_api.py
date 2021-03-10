@@ -187,7 +187,7 @@ class FarmerAPI:
                         pospace,
                         agg_sig_cc_sp,
                         agg_sig_rc_sp,
-                        self.farmer.wallet_target,
+                        self.farmer.farmer_target,
                         pool_target,
                         pool_target_signature,
                     )
