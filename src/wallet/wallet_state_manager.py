@@ -95,7 +95,7 @@ class WalletStateManager:
     sync_store: WalletSyncStore
     weight_proof_handler: Any
     server: ChiaServer
-    
+
     @staticmethod
     async def create(
         private_key: PrivateKey,
