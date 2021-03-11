@@ -219,8 +219,7 @@ class WalletNode:
                 self.wallet_state_manager.state_changed("sync_changed")
             return True
         else:
-            await self.regular_start(fingerprint, new_wallet, backup_file, skip_backup_import)
-            return True
+            return await self.regular_start(fingerprint, new_wallet, backup_file, skip_backup_import)
 
     def _close(self):
         self.log.info("self._close")
