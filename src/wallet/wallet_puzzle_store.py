@@ -80,14 +80,14 @@ class WalletPuzzleStore:
         """
         sql_records = []
         for record in records:
-            last: Optional[DerivationRecord] = await self.get_last_active_derivation_record_for_wallet(record.wallet_id)
+            last: Optional[DerivationRecord] = await self.get_current_derivation_record_for_wallet(record.wallet_id)
             if last is None:
-                active = 1
+                current = 1
             elif record.index >= last.index:
-                active = 1
-                await self.set_inactive_up_to(last.index, last.wallet_id)
+                current = 1
+                await self.update_not_current(last.index, last.wallet_id)
             else:
-                active = 0
+                current = 0
             self.all_puzzle_hashes.add(record.puzzle_hash)
             sql_records.append(
                 (
@@ -97,12 +97,12 @@ class WalletPuzzleStore:
                     record.wallet_type,
                     record.wallet_id,
                     0,
-                    active,
+                    current,
                 ),
             )
 
         cursor = await self.db_connection.executemany(
-            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?, ?)",
             sql_records,
         )
 
@@ -167,12 +167,12 @@ class WalletPuzzleStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def set_inactive_up_to(self, index: uint32, wallet_id: uint32) -> None:
+    async def update_not_current(self, index: uint32, wallet_id: uint32) -> None:
         """
         Sets a derivation path to used so we don't use it again.
         """
         cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET active=0 WHERE derivation_index<=? and wallet_id=?",
+            "UPDATE derivation_paths SET current=0 WHERE derivation_index<=? and wallet_id=?",
             (index, wallet_id),
         )
         await cursor.close()
@@ -319,29 +319,13 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_last_active_derivation_path_for_wallet(self, wallet_id: int) -> Optional[uint32]:
+    async def get_current_derivation_record_for_wallet(self, wallet_id: int) -> Optional[DerivationRecord]:
         """
-        Returns the last active derivation path by derivation_index.
-        """
-
-        cursor = await self.db_connection.execute(
-            f"SELECT MAX(derivation_index) FROM derivation_paths WHERE wallet_id={wallet_id} and active=1;"
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
-
-        if row is not None and row[0] is not None:
-            return uint32(row[0])
-
-        return None
-
-    async def get_last_active_derivation_record_for_wallet(self, wallet_id: int) -> Optional[DerivationRecord]:
-        """
-        Returns the last active derivation record by derivation_index.
+        Returns the current derivation record by derivation_index.
         """
 
         cursor = await self.db_connection.execute(
-            f"SELECT MAX(derivation_index) FROM derivation_paths WHERE wallet_id={wallet_id} and active=1;"
+            f"SELECT * FROM derivation_paths WHERE wallet_id={wallet_id} and current=1;"
         )
         row = await cursor.fetchone()
         await cursor.close()

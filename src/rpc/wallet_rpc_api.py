@@ -455,7 +455,7 @@ class WalletRpcApi:
         Returns a new address
         """
         assert self.service.wallet_state_manager is not None
-        breakpoint()
+
         if request["new_address"] is True:
             create_new = True
         else:

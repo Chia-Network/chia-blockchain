@@ -173,9 +173,9 @@ class Wallet:
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[DerivationRecord] = self.wallet_state_manager.get_current_derivation_record_for_wallet(
-                self.id()
-            )
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
