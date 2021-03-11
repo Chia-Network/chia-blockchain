@@ -98,17 +98,16 @@ class RpcServer:
     async def get_connections(self, request: Dict) -> Dict:
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        if (
-            self.rpc_api.service.server._local_type is NodeType.FULL_NODE
-            and self.rpc_api.service.sync_store is not None
-        ):
+        if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
             # TODO add peaks for peers
             connections = self.rpc_api.service.server.get_connections()
             con_info = []
-            peak_store = self.rpc_api.service.sync_store.peer_to_peak
+            if self.rpc_api.service.sync_store is not None:
+                peak_store = self.rpc_api.service.sync_store.peer_to_peak
+            else:
+                peak_store = None
             for con in connections:
-
-                if con.peer_node_id in peak_store:
+                if peak_store is not None and con.peer_node_id in peak_store:
                     peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
                 else:
                     peak_height = None
