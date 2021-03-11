@@ -13,6 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 ## Changed
 
 - Remove `chia plots "-s" "--stripe_size"` - we now always use the best default of 64K
+- `chia keys add` takes secret words from stdin instead of command line arguments for security
 
 ## 1.0rc5 aka Release Candidate 5 - 2020-03-04
 
