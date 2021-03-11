@@ -26,7 +26,7 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_sub_epoch_summaries,
-    _validate_segment_slots,
+    _validate_sub_epoch_segments,
     _validate_summaries_weight,
 )
 from src.types.full_block import FullBlock
