@@ -10,7 +10,11 @@ on:
 jobs:
   run:
     name: locales
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -33,5 +37,5 @@ jobs:
         with:
           author_name: Locale bot
           author_email: bot@chia.net
-          message: 'Compiled locales'
+          message: 'Compiled locales ${{ matrix.os }}'
           add: './src/locales'
