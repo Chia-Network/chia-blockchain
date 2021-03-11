@@ -810,7 +810,6 @@ def _validate_sub_epoch_segments(
         log.debug(f"validate sub epoch {sub_epoch_n}")
         # recreate RewardChainSubSlot for next ses rc_hash
         sampled_seg_index = rng.choice(range(len(segments)))
-        log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments sampled segment {sampled_seg_index}")
         if sub_epoch_n > 0:
             rc_sub_slot = __get_rc_sub_slot(constants, segments[0], summaries, curr_ssi)
             prev_ses = summaries[sub_epoch_n - 1]
