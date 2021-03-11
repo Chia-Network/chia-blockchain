@@ -5,13 +5,17 @@ from typing import Dict, List, Optional, Set, Tuple
 from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
+from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
 from src.full_node.signage_point import SignagePoint
 from src.protocols import timelord_protocol
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint8, uint32, uint64, uint128
 
@@ -163,12 +167,14 @@ class FullNodeStore:
         eos: EndOfSubSlotBundle,
         blocks: BlockchainInterface,
         peak: Optional[BlockRecord],
+        peak_full_block: Optional[FullBlock],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
         on this sub slot
         """
         assert len(self.finished_sub_slots) >= 1
+        assert (peak is None) == (peak_full_block is None)
 
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
 
@@ -230,6 +236,27 @@ class FullNodeStore:
                     icc_challenge = curr.finished_infused_challenge_slot_hashes[-1]
                     icc_iters = sub_slot_iters
                 assert icc_challenge is not None
+
+            if can_finish_sub_and_full_epoch(
+                self.constants,
+                blocks,
+                peak.height,
+                peak.prev_hash,
+                peak.deficit,
+                peak.sub_epoch_summary_included is not None,
+            )[0]:
+                assert peak_full_block is not None
+                ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+                    self.constants, blocks, peak.required_iters, peak_full_block, True
+                )
+                if ses is not None:
+                    if eos.challenge_chain.subepoch_summary_hash != ses.get_hash():
+                        log.warning(f"SES not correct {ses.get_hash(), eos.challenge_chain}")
+                        return None
+                else:
+                    if eos.challenge_chain.subepoch_summary_hash is not None:
+                        log.warning("SES not correct, should be None")
+                        return None
         else:
             # This is on an empty slot
             cc_start_element = ClassgroupElement.get_default_element()
@@ -531,6 +558,7 @@ class FullNodeStore:
     def new_peak(
         self,
         peak: BlockRecord,
+        peak_full_block: FullBlock,
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
@@ -577,7 +605,7 @@ class FullNodeStore:
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
 
         for eos in self.future_eos_cache.get(peak.reward_infusion_new_challenge, []):
-            if self.new_finished_sub_slot(eos, blocks, peak) is not None:
+            if self.new_finished_sub_slot(eos, blocks, peak, peak_full_block) is not None:
                 new_eos = eos
                 break
 
