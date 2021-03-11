@@ -53,7 +53,8 @@ testnet_kwargs = {
     # 1 vByte = 108 clvm cost units
     "CLVM_COST_RATIO_CONSTANT": 108,
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
-    "MAX_BLOCK_COST_CLVM": 23077872,
+    # Overriding to 40M as specified by arvid
+    "MAX_BLOCK_COST_CLVM": 40000000,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "BLOCKS_CACHE_SIZE": (384 * 2) + (128 * 4),
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,

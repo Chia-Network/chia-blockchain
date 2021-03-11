@@ -818,6 +818,7 @@ class FullNode:
 
         added_eos, new_sps, new_ips = self.full_node_store.new_peak(
             record,
+            block,
             sub_slots[0],
             sub_slots[1],
             fork_height != block.height - 1 and block.height != 0,
@@ -1272,7 +1273,8 @@ class FullNode:
             new_infusions = self.full_node_store.new_finished_sub_slot(
                 request.end_of_slot_bundle,
                 self.blockchain,
-                self.blockchain.get_peak(),
+                peak,
+                await self.blockchain.get_full_peak(),
             )
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:
