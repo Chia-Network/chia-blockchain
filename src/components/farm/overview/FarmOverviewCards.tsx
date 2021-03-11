@@ -7,8 +7,6 @@ import FarmCardTotalSizeOfPlots from '../card/FarmCardTotalSizeOfPlots';
 import FarmCardTotalNetworkSpace from '../card/FarmCardTotalNetworkSpace';
 import FarmCardPlotCount from '../card/FarmCardPlotCount';
 import FarmCardExpectedTimeToWin from '../card/FarmCardExpectedTimeToWin';
-import FarmCardBlockRewards from '../card/FarmCardBlockRewards';
-import FarmCardUserFees from '../card/FarmCardUserFees';
 
 export default function FarmOverviewCards() {
   return (
