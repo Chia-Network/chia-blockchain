@@ -82,6 +82,7 @@ vdf_bench
 
 # Compiled CLVM
 main.sym
+*.recompiled
 
 # Dev config react
 # chia-blockchain-gui/src/dev_config.js
