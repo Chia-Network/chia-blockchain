@@ -44,7 +44,7 @@ def add_private_key_seed():
     """
 
     try:
-        mnemonic = input('Enter the mnemonic you want to use: ')
+        mnemonic = input("Enter the mnemonic you want to use: ")
         passphrase = ""
         sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
