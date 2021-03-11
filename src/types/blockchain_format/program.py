@@ -209,3 +209,7 @@ class SerializedProgram:
         )
         # TODO this could be parsed lazily
         return cost, sexp_from_stream(io.BytesIO(ret), SExp.to)
+
+
+NilSerializedProgram = SerializedProgram.from_bytes(b"\x80")
+NilProgram = Program.from_bytes(b"\x80")

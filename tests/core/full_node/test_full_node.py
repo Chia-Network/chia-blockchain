@@ -245,6 +245,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            block.transactions_generator_ref_list,
         )
         # Can't add because no sub slots
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
@@ -275,6 +276,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            block.transactions_generator_ref_list,
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
@@ -299,6 +301,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            block.transactions_generator_ref_list,
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
@@ -343,6 +346,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            block.transactions_generator_ref_list,
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
         await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
@@ -355,7 +359,7 @@ class TestFullNodeProtocol:
         assert block.transactions_generator is not None
         block_no_transactions = dataclasses.replace(block, transactions_generator=None)
         assert block_no_transactions.transactions_generator is None
-
+        # xxx todo transactions_generator
         await full_node_1.full_node.respond_block(fnp.RespondBlock(block_no_transactions))
         assert full_node_1.full_node.blockchain.contains_block(block.header_hash)
 
@@ -643,7 +647,7 @@ class TestFullNodeProtocol:
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, False))
         assert res.type != ProtocolMessageTypes.reject_block.value
         assert fnp.RespondBlock.from_bytes(res.data).block.transactions_generator is None
-
+        # xxx todo transactions_generator_ref_list
         # Ask with transactions
         res = await full_node_1.request_block(fnp.RequestBlock(blocks[-1].height, True))
         assert res.type != ProtocolMessageTypes.reject_block.value
@@ -733,6 +737,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            block.transactions_generator_ref_list,
         )
 
         # Don't have
@@ -763,6 +768,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            block.transactions_generator_ref_list,
         )
 
         # Don't have
@@ -901,7 +907,7 @@ class TestFullNodeProtocol:
         invalid_block: FullBlock = blocks_new[-1]
         invalid_program = SerializedProgram.from_bytes(large_puzzle_reveal)
         invalid_block = dataclasses.replace(invalid_block, transactions_generator=invalid_program)
-
+        # invalid_generator_ref_list = xxx todo transactions_generator
         result, error, fork_h = await full_node_1.full_node.blockchain.receive_block(invalid_block)
         assert error is not None
         assert error == Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE
@@ -1496,9 +1502,10 @@ class TestFullNodeProtocol:
 #             )
 #         height_with_transactions = len(blocks_new) + 1
 #         agg = SpendBundle.aggregate(spend_bundles)
+#         program, gen_ref_list = best_solution_program(agg)
 #         dic_h = {
 #             height_with_transactions: (
-#                 best_solution_program(agg),
+#                 program,
 #                 agg.aggregated_signature,
 #             )
 #         }

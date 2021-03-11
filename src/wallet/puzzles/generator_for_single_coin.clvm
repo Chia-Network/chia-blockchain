@@ -1,4 +1,9 @@
-(mod (block_program coinname)
+; This code is use in get_puzzle_and_solution_for_coin locally
+
+; Note that it needs the generator refs, because it is running the block program,
+; which may reference previous generators
+
+(mod (block_program generator_list coinname)
 
   (defun check_for_coinname (coin_solutions coinname)
     (if coin_solutions
@@ -11,5 +16,5 @@
   )
 
   ; main
-  (check_for_coinname (a block_program (q . ())) coinname)
+  (check_for_coinname (a block_program generator_list) coinname)
 )

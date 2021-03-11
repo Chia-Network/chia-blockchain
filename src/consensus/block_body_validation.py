@@ -148,12 +148,16 @@ async def validate_block_body(
     if height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
         return Err.INITIAL_TRANSACTION_FREEZE, None
 
+    # transactions_generator_ref_list may be None, even if transactions_generator is not None
     if height > constants.INITIAL_FREEZE_PERIOD and constants.NETWORK_TYPE == NetworkType.MAINNET:
         if block.transactions_generator is not None:
             if len(bytes(block.transactions_generator)) > constants.MAX_GENERATOR_SIZE:
                 return Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE, None
-            else:
-                return None, None
+            elif block.transactions_generator_ref_list is not None:
+                if len(bytes(block.transactions_generator_ref_list)) > constants.MAX_GENERATOR_REF_LIST_SIZE:
+                    return Err.PRE_SOFT_FORK_MAX_GENERATOR_REF_LIST_SIZE, None
+                else:
+                    return None, None
         return None, None
     else:
         # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
@@ -169,7 +173,12 @@ async def validate_block_body(
             if cached_cost_result is not None:
                 result: Optional[CostResult] = cached_cost_result
             else:
-                result = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
+                result = calculate_cost_of_program(
+                    block.transactions_generator,
+                    block.transactions_generator,
+                    constants.CLVM_COST_RATIO_CONSTANT,
+                    False,
+                )  # Note: strict_mode == False
             assert result is not None
             cost = result.cost
             npc_list = result.npc_list

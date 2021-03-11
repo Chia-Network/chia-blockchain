@@ -21,6 +21,9 @@ class UnfinishedBlock(Streamable):
     foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
+    transactions_generator_ref_list: Optional[
+        SerializedProgram
+    ]  # A List of block heights of the generators referenced in this block, or nil
 
     @property
     def prev_header_hash(self):

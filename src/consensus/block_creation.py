@@ -48,7 +48,13 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     seed: bytes32 = b"",
-) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
+) -> Tuple[
+    Foliage,
+    Optional[FoliageTransactionBlock],
+    Optional[TransactionsInfo],
+    Optional[SerializedProgram],
+    Optional[SerializedProgram],
+]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -115,17 +121,21 @@ def create_foliage(
         prev_block_hash = prev_block.header_hash
 
     solution_program: Optional[SerializedProgram] = None
+    generator_refs: Optional[SerializedProgram] = None
+
     if is_transaction_block:
         aggregate_sig: G2Element = G2Element()
         cost = uint64(0)
 
         if spend_bundle is not None:
-            solution_program = best_solution_program(spend_bundle)
+            solution_program, generator_refs = best_solution_program(spend_bundle)
             aggregate_sig = spend_bundle.aggregated_signature
 
         # Calculate the cost of transactions
         if solution_program is not None:
-            result: CostResult = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
+            result: CostResult = calculate_cost_of_program(
+                solution_program, generator_refs, constants.CLVM_COST_RATIO_CONSTANT, False
+            )  # Note: strict_mode == False
             cost = result.cost
             removal_amount = 0
             addition_amount = 0
@@ -213,11 +223,13 @@ def create_foliage(
         removals_root = removal_merkle_set.get_root()
 
         generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
+        generator_refs_hash = generator_refs.get_tree_hash() if generator_refs is not None else bytes32([0] * 32)
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
             bytes([0] * 32),
             generator_hash,
+            generator_refs_hash,
             aggregate_sig,
             uint64(spend_bundle_fees),
             cost,
@@ -260,7 +272,7 @@ def create_foliage(
         foliage_transaction_block_signature,
     )
 
-    return foliage, foliage_transaction_block, transactions_info, solution_program
+    return foliage, foliage_transaction_block, transactions_info, solution_program, generator_refs
 
 
 def create_unfinished_block(
@@ -371,7 +383,7 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info, solution_program,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info, solution_program, gen_refs,) = create_foliage(
         constants,
         rc_block,
         spend_bundle,
@@ -397,6 +409,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         solution_program,
+        gen_refs,
     )
 
 
@@ -442,6 +455,7 @@ def unfinished_block_to_full_block(
         new_foliage_transaction_block = unfinished_block.foliage_transaction_block
         new_tx_info = unfinished_block.transactions_info
         new_generator = unfinished_block.transactions_generator
+        new_generator_refs = unfinished_block.transactions_generator_ref_list
     else:
         is_transaction_block, _ = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
         new_weight = uint128(prev_block.weight + difficulty)
@@ -452,12 +466,14 @@ def unfinished_block_to_full_block(
             new_foliage_transaction_block = unfinished_block.foliage_transaction_block
             new_tx_info = unfinished_block.transactions_info
             new_generator = unfinished_block.transactions_generator
+            new_generator_refs = unfinished_block.transactions_generator_ref_list
         else:
             new_fbh = None
             new_fbs = None
             new_foliage_transaction_block = None
             new_tx_info = None
             new_generator = None
+            new_generator_refs = None
         assert (new_fbh is None) == (new_fbs is None)
         new_foliage = replace(
             unfinished_block.foliage,
@@ -492,6 +508,7 @@ def unfinished_block_to_full_block(
         new_foliage_transaction_block,
         new_tx_info,
         new_generator,
+        new_generator_refs,
     )
     return recursive_replace(
         ret,

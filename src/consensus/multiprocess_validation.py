@@ -15,7 +15,7 @@ from src.consensus.full_block_to_block_record import block_to_block_record
 from src.consensus.get_block_challenge import get_block_challenge
 from src.consensus.network_type import NetworkType
 from src.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
-from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.program import NilSerializedProgram, SerializedProgram
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -40,12 +40,14 @@ def batch_pre_validate_blocks(
     blocks_pickled: Dict[bytes, bytes],
     header_blocks_pickled: List[bytes],
     transaction_generators: List[Optional[bytes]],
+    transaction_generator_lists: List[Optional[bytes]],
     check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_transactions: bool,
 ) -> List[bytes]:
     assert len(header_blocks_pickled) == len(transaction_generators)
+    assert len(transaction_generators) == len(transaction_generator_lists)
     blocks = {}
     for k, v in blocks_pickled.items():
         blocks[k] = BlockRecord.from_bytes(v)
@@ -55,6 +57,7 @@ def batch_pre_validate_blocks(
         try:
             header_block: HeaderBlock = HeaderBlock.from_bytes(header_blocks_pickled[i])
             generator: Optional[bytes] = transaction_generators[i]
+            generator_ref_list: Optional[bytes] = transaction_generator_lists[i]
             required_iters, error = validate_finished_header_block(
                 constants,
                 BlockCache(blocks),
@@ -71,8 +74,14 @@ def batch_pre_validate_blocks(
                 cost_result = None
             else:
                 if not error and generator is not None and validate_transactions:
+                    gen_refs = NilSerializedProgram
+                    if generator_ref_list is not None and len(generator_ref_list) > 0:
+                        gen_refs = SerializedProgram.from_bytes(generator_ref_list)
                     cost_result = calculate_cost_of_program(
-                        SerializedProgram.from_bytes(generator), constants.CLVM_COST_RATIO_CONSTANT
+                        SerializedProgram.from_bytes(generator),
+                        gen_refs,
+                        constants.CLVM_COST_RATIO_CONSTANT,
+                        False,  # strict_mode=False
                     )
             results.append(PreValidationResult(error_int, required_iters, cost_result))
         except Exception:
@@ -201,15 +210,22 @@ async def pre_validate_blocks_multiprocessing(
             final_pickled = recent_sb_compressed_pickled
         hb_pickled: List[bytes] = []
         generators: List[Optional[bytes]] = []
+        generator_ref_lists: List[Optional[bytes]] = []
         for block in blocks_to_validate:
             if isinstance(block, FullBlock):
                 hb_pickled.append(bytes(block.get_block_header()))
                 generators.append(
                     bytes(block.transactions_generator) if block.transactions_generator is not None else None
                 )
+                generator_ref_lists.append(
+                    bytes(block.transactions_generator_ref_list)
+                    if block.transactions_generator_ref_list is not None
+                    else None
+                )
             else:
                 hb_pickled.append(bytes(block))
                 generators.append(None)
+                generator_ref_lists.append(None)
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -219,6 +235,7 @@ async def pre_validate_blocks_multiprocessing(
                 final_pickled,
                 hb_pickled,
                 generators,
+                generator_ref_lists,
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],

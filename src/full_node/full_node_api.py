@@ -189,7 +189,7 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
-                block = dataclasses.replace(block, transactions_generator=None)
+                block = dataclasses.replace(block, transactions_generator=None, transactions_generator_refs=None)
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
         reject = RejectBlock(request.height)
         msg = make_msg(ProtocolMessageTypes.reject_block, reject)
@@ -218,7 +218,7 @@ class FullNodeAPI:
                 msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                 return msg
             if not request.include_transaction_block:
-                block = dataclasses.replace(block, transactions_generator=None)
+                block = dataclasses.replace(block, transactions_generator=None, transactions_generator_refs=None)
             blocks.append(block)
 
         msg = make_msg(
@@ -1041,7 +1041,9 @@ class FullNodeAPI:
         if block is None or block.transactions_generator is None:
             return reject_msg
 
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block.transactions_generator, coin_name)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(
+            block.transactions_generator, block.transactions_generator_ref_list, coin_name
+        )
 
         if error is not None:
             return reject_msg

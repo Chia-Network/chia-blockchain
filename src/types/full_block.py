@@ -33,6 +33,9 @@ class FullBlock(Streamable):
     foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
+    transactions_generator_ref_list: Optional[
+        SerializedProgram
+    ]  # List of block heights of previous generators referenced in this block
 
     @property
     def prev_header_hash(self):
@@ -102,7 +105,9 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator, False)
+            err, npc_list, cost = get_name_puzzle_conditions(
+                self.transactions_generator, self.transactions_generator_ref_list, False
+            )
             # created coins
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
@@ -122,7 +127,9 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator, False)
+            err, npc_list, cost = get_name_puzzle_conditions(
+                self.transactions_generator, self.transactions_generator_ref_list, False
+            )
             # build removals list
             if npc_list is None:
                 return [], []

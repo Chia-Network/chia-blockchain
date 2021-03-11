@@ -2,7 +2,7 @@ import time
 import traceback
 from typing import Dict, List, Optional
 
-from src.types.blockchain_format.program import SerializedProgram
+from src.types.blockchain_format.program import NilSerializedProgram, SerializedProgram
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord
 from src.types.condition_var_pair import ConditionVarPair
@@ -13,9 +13,11 @@ from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err
 from src.util.ints import uint32, uint64
 from src.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
+from src.wallet.puzzles.load_clvm import load_clvm
 from src.wallet.puzzles.lowlevel_generator import get_generator
 
 GENERATOR_MOD = get_generator()
+CLVM_DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="src.wallet.puzzles")
 
 
 def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
@@ -100,10 +102,41 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
     return None
 
 
-def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
-    # TODO: allow generator mod to take something (future)
-    # TODO: write more tests
-    block_program_args = SerializedProgram.from_bytes(b"\x80")
+def build_block_program_args(
+    clvm_deserializer: SerializedProgram, generator_refs: SerializedProgram
+) -> SerializedProgram:
+    """
+    The argument to the block program is a list. The first argument is the clvm
+    deserializer program, and the generators are from e.g FullBlock.generator_ref_list
+    (clvm_deserializer generator1 generator2 ...)
+    """
+
+    nil = NilSerializedProgram
+    if clvm_deserializer == nil or generator_refs == nil:
+        return nil
+
+    # TODO: Should the Generator block height ref list be in the form
+    # * A list of block heights: (int int int) or
+    # * A list of pairs of block heights, and generator byte string offsets: ((int . int) (int . int))
+    # `clvm_deserializer` is a clvm program, and generator_refs is a list as above
+    block_program_args = b"\xff" + bytes(clvm_deserializer) + bytes(generator_refs)
+
+    # TODO: Open the database, and read in the generators, inserting them in a new list,
+    # in the order requested in the reference list
+
+    # Note that if we fail to find a transaction block at the given height, we
+    # return a nil in that slot, so the program using these args is not given a list of
+    # a different length than expected.
+    # Or should we fail the entire thing?
+
+    return SerializedProgram.from_bytes(block_program_args)
+
+
+def get_name_puzzle_conditions(block_program: SerializedProgram, generator_refs: Optional[SerializedProgram], safe_mode: bool):
+
+    block_program_args = NilSerializedProgram
+    if generator_refs is not None:
+        block_program_args = build_block_program_args(CLVM_DESERIALIZE_MOD, generator_refs)
 
     try:
         if safe_mode:
@@ -141,9 +174,12 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
         return tb, None, None
 
 
-def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):
+def get_puzzle_and_solution_for_coin(
+    block_program: SerializedProgram, generator_list: Optional[SerializedProgram], coin_name: bytes
+):
+    gen_refs = NilSerializedProgram if generator_list is None else generator_list
     try:
-        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, coin_name)
+        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, gen_refs, coin_name)
         puzzle = result.first()
         solution = result.rest().first()
         return None, puzzle, solution

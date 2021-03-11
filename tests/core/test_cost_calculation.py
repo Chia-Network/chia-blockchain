@@ -1,22 +1,22 @@
 import asyncio
 import logging
 import pathlib
+import pytest
 import time
 
-import pytest
 from clvm_tools import binutils
 
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
-from src.types.blockchain_format.program import Program, SerializedProgram
+from src.types.blockchain_format.program import NilSerializedProgram, Program, SerializedProgram
 from src.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import bt, test_constants
 
-from .make_block_generator import make_block_generator
+from .make_block_generator import make_block_generator_and_gen_ref_list
 
 BURN_PUZZLE_HASH = b"0" * 32
-SMALL_BLOCK_GENERATOR = make_block_generator(1)
+SMALL_BLOCK_GENERATOR, small_block_gen_ref_list = make_block_generator_and_gen_ref_list(1)
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def large_block_generator(size):
             hex_str = f.read()
             return bytes.fromhex(hex_str)
     except FileNotFoundError:
-        generator = make_block_generator(size)
+        generator, gen_ref_list = make_block_generator_and_gen_ref_list(size)
         blob = bytes(generator)
         #  TODO: Re-enable large-block*.hex but cache in ~/.chia/subdir
         #  with open(hex_path, "w") as f:
@@ -71,20 +71,21 @@ class TestCostCalculation:
             coinbase,
         )
         assert spend_bundle is not None
-        program = best_solution_program(spend_bundle)
+        program, generator_refs = best_solution_program(spend_bundle)
 
         ratio = test_constants.CLVM_COST_RATIO_CONSTANT
 
-        result: CostResult = calculate_cost_of_program(program, ratio)
+        result: CostResult = calculate_cost_of_program(program, generator_refs, ratio, False)
         clvm_cost = result.cost
 
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(program, generator_refs, False)
         assert error is None
         coin_name = npc_list[0].coin_name
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, generator_refs, coin_name)
         assert error is None
 
         # Create condition + agg_sig_condition + length + cpu_cost
+        # xxx cost for gen_ref_list
         assert clvm_cost == 200 * ratio + 20 * ratio + len(bytes(program)) * ratio + cost
 
     @pytest.mark.asyncio
@@ -121,13 +122,14 @@ class TestCostCalculation:
                 f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
             ).as_bin()
         )
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+        generator_refs_list = NilSerializedProgram
+        error, npc_list, cost = get_name_puzzle_conditions(program, generator_refs_list, True)
         assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(program, generator_refs_list, False)
         assert error is None
 
         coin_name = npc_list[0].coin_name
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, generator_refs_list, coin_name)
         assert error is None
 
     @pytest.mark.asyncio
@@ -139,9 +141,10 @@ class TestCostCalculation:
         # ("0xfe"). In strict mode, this should fail, but in non-strict
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+        generator_refs_list = NilSerializedProgram
+        error, npc_list, cost = get_name_puzzle_conditions(program, generator_refs_list, True)
         assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(program, generator_refs_list, False)
         assert error is None
 
     @pytest.mark.asyncio
@@ -149,9 +152,10 @@ class TestCostCalculation:
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator)
+        generator_refs_list = NilSerializedProgram
 
         start_time = time.time()
-        err, npc, cost = get_name_puzzle_conditions(program, False)
+        err, npc, cost = get_name_puzzle_conditions(program, generator_refs_list, False)
         end_time = time.time()
         duration = end_time - start_time
         assert err is None

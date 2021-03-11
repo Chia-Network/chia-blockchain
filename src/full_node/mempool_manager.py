@@ -40,9 +40,9 @@ def validate_transaction_multiprocess(
 ) -> bytes:
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     # Calculate the cost and fees
-    program = best_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
+    program, generator_list = best_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(calculate_cost_of_program(program, constants.CLVM_COST_RATIO_CONSTANT, True))
+    return bytes(calculate_cost_of_program(program, generator_list, constants.CLVM_COST_RATIO_CONSTANT, True))
 
 
 class MempoolManager:
