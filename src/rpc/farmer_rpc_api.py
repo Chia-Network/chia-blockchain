@@ -87,13 +87,9 @@ class FarmerRpcApi:
     async def set_reward_targets(self, request: Dict) -> Dict:
         farmer_target, pool_target = None, None
         if "farmer_target" in request:
-            farmer_target = hexstr_to_bytes(request["farmer_target"])
-            if len(farmer_target) != 32:
-                raise ValueError("Invalid farmer target length, must be 32")
+            farmer_target = request["farmer_target"]
         if "pool_target" in request:
-            pool_target = hexstr_to_bytes(request["pool_target"])
-            if len(pool_target) != 32:
-                raise ValueError("Invalid pool target length, must be 32")
+            pool_target = request["pool_target"]
 
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
