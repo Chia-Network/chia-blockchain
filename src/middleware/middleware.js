@@ -3,18 +3,10 @@ import { i18n } from '@lingui/core';
 import * as actions from '../modules/websocket';
 import {
   registerService,
-  startService,
-  startServiceTest,
+  getGenesisChallengeStatus,
 } from '../modules/daemon_messages';
 import { handle_message } from './middleware_api';
-import {
-  service_plotter,
-  service_wallet,
-  service_full_node,
-  service_simulator,
-  service_farmer,
-  service_harvester,
-} from '../util/service_names';
+import { service_plotter } from '../util/service_names';
 
 const crypto = require('crypto');
 
@@ -24,8 +16,6 @@ if (isElectron()) {
   var fs = remote.require('fs');
   var WS = window.require('ws');
 }
-
-const config = require('../config/config');
 
 const outgoing_message = (command, data, destination) => ({
   command,
@@ -46,15 +36,7 @@ const socketMiddleware = () => {
     store.dispatch(actions.wsConnected(event.target.url));
     store.dispatch(registerService('wallet_ui'));
     store.dispatch(registerService(service_plotter));
-    if (config.local_test) {
-      store.dispatch(startServiceTest(service_wallet));
-      store.dispatch(startService(service_simulator));
-    } else {
-      store.dispatch(startService(service_wallet));
-      store.dispatch(startService(service_full_node));
-      store.dispatch(startService(service_farmer));
-      store.dispatch(startService(service_harvester));
-    }
+    store.dispatch(getGenesisChallengeStatus());
   };
 
   const onClose = (store) => () => {

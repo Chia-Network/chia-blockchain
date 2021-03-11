@@ -188,7 +188,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:155
 msgid "Block with hash {headerHash} does not exists."
-msgstr "Блок с хешем {headerHash} не существует.<<<<<<< HEAD"
+msgstr "Блок с хешем {headerHash} не существует."
 
 #: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
@@ -275,7 +275,7 @@ msgstr "Выберите размер участка"
 msgid "Close"
 msgstr "Закрыть"
 
-#: src/components/app/AppRouter.tsx:18
+#: src/components/app/AppRouter.tsx:19
 msgid "Closing down node and server"
 msgstr "Закрытие узла и сервера"
 
@@ -334,15 +334,15 @@ msgid "Connect to other peers"
 msgstr "Подключиться к другим узлам"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:157
 msgid "Connected"
 msgstr "Подключен"
 
-#: src/components/app/AppRouter.tsx:23
+#: src/components/app/AppRouter.tsx:29
 msgid "Connecting to wallet"
 msgstr "Подключение к кошельку"
 
-#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/FullNode.jsx:155
 msgid "Connection Status"
 msgstr "Состояние соединения"
 
@@ -524,10 +524,10 @@ msgstr ""
 
 #: src/electron-starter.js:251
 msgid "Developer Tools"
-msgstr "<<<<<<< HEAD"
+msgstr ""
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Difficulty"
 msgstr "Сложность"
 
@@ -581,13 +581,13 @@ msgstr "Ошибка"
 
 #: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr "Ошибка: не удается отправить чиа на цветной адрес. Пожалуйста, введите адрес chia.<<<<<<< HEAD"
+msgstr "Ошибка: не удается отправить чиа на цветной адрес. Пожалуйста, введите адрес chia."
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated network space"
 msgstr "Расчетное пространство сети"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:216
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Оценка размера всего дискового пространства, занимаемого участками суммарно всех фермеров в сети"
 
@@ -684,8 +684,8 @@ msgstr "Имя файла"
 msgid "Final folder location"
 msgstr "Путь к папке для окончательного хранения"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:50
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Finished"
 msgstr "Завершен"
 
@@ -698,11 +698,11 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:325
+#: src/components/fullNode/FullNode.jsx:327
 msgid "Full Node"
-msgstr "Полный узел<<<<<<< HEAD"
+msgstr "Полный узел"
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:271
 msgid "Full Node Status"
 msgstr "Статус полного узла"
 
@@ -718,16 +718,16 @@ msgstr "Сгенерировать новый цвет"
 #~ msgid "Harvester ID"
 #~ msgstr "Идентификатор комбайна"
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:68
 msgid "Header Hash"
 msgstr "Хэш заголовка"
 
 #: src/components/block/Block.jsx:177
 msgid "Header hash"
-msgstr "Хэш заголовка<<<<<<< HEAD"
+msgstr "Хэш заголовка"
 
 #: src/components/block/Block.jsx:191
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:87
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Высота"
@@ -773,7 +773,7 @@ msgstr "Импортировать кошелек из мнемоники"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Импорт мнемоники (24 слова)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:52
 msgid "In Progress"
 msgstr "В процессе"
 
@@ -838,7 +838,7 @@ msgstr "Загрузка..."
 msgid "Local Harvester Plots"
 msgstr "Участки для локальных комбайнов"
 
-#: src/components/app/AppRouter.tsx:28
+#: src/components/app/AppRouter.tsx:34
 msgid "Logging in"
 msgstr "Вход в систему"
 
@@ -898,19 +898,15 @@ msgstr "Больше количество памяти немного увели
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr "Мой публичный ключ<<<<<<< HEAD"
+msgstr "Мой публичный ключ"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "Network Name"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:106
-msgid "Network has not yet been launched, once it launches full node will start automatically."
-msgstr ""
-
 #: src/components/app/AppRouter.tsx:24
-#~ msgid "Network not launched yet, waiting for genesis challenge!"
-#~ msgstr ""
+msgid "Network not launched yet, waiting for genesis challenge!"
+msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
 #: src/components/wallet/standard/WalletStandard.tsx:399
@@ -934,9 +930,9 @@ msgstr "Псевдоним"
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron-starter.js:90
 msgid "No"
-msgstr "Нет<<<<<<< HEAD"
+msgstr "Нет"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:298
 msgid "No 24 word seed, since this key is imported."
 msgstr "Нет 24 слов семя, так как этот ключ импортируется."
 
@@ -965,7 +961,7 @@ msgstr "Ни один из ваших участков пока не проше�
 msgid "Not Available"
 msgstr "Не определено"
 
-#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:136
 msgid "Not Synced"
 msgstr "Не синхронизирован"
 
@@ -978,8 +974,8 @@ msgid "Not confirmed yet"
 msgstr "Еще не подтверждено"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:158
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:159
+#: src/components/fullNode/FullNode.jsx:166
 msgid "Not connected"
 msgstr "Нет подключения"
 
@@ -1009,17 +1005,17 @@ msgstr "Предложение создано"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr "Исходящие<<<<<<< HEAD"
+msgstr "Исходящие"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:180
 msgid "Peak Height"
 msgstr "Пиковая высота"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
-#~ msgstr "Peak Sub-block Height<<<<<<< HEAD"
+#~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:185
 msgid "Peak Time"
 msgstr "Пиковое время"
 
@@ -1209,13 +1205,13 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr "Приватный ключ с публичным отпечатком {fingerprint}<<<<<<< HEAD"
+msgstr "Приватный ключ с публичным отпечатком {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:262
 msgid "Private key {0}"
 msgstr "Закрытый ключ {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:272
 msgid "Private key:"
 msgstr "Закрытый ключ:"
 
@@ -1229,9 +1225,9 @@ msgstr "Доказательств найдено"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr "Публичный ключ<<<<<<< HEAD"
+msgstr "Публичный ключ"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:280
 msgid "Public key:"
 msgstr "Открытый ключ:"
 
@@ -1340,9 +1336,9 @@ msgstr "Расположение второй временной папки"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr "Увидеть закрытый ключ<<<<<<< HEAD"
+msgstr "Увидеть закрытый ключ"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:290
 msgid "Seed:"
 msgstr "Семя:"
 
@@ -1457,20 +1453,19 @@ msgstr "Длина интервала расходования (количест
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Лимит расходования (chia за интервал): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:108
 msgid "State"
 msgstr "Состояние"
 
-#: src/components/fullNode/FullNode.jsx:102
-#: src/components/fullNode/FullNode.jsx:117
-#: src/components/fullNode/FullNode.jsx:134
-#: src/components/fullNode/FullNode.jsx:142
-#: src/components/fullNode/FullNode.jsx:164
+#: src/components/fullNode/FullNode.jsx:118
+#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:165
 #: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:12
-#: src/components/wallet/Wallets.tsx:94
+#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/Wallets.tsx:93
 msgid "Status"
 msgstr "Статус"
 
@@ -1510,7 +1505,7 @@ msgstr "Статус:"
 msgid "Submit"
 msgstr "Подтвердить"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Synced"
 msgstr "Синхронизован"
 
@@ -1520,7 +1515,7 @@ msgstr "Синхронизован"
 msgid "Syncing"
 msgstr "Синхронизация"
 
-#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:120
 msgid "Syncing {progress}/{tip}"
 msgstr "Синхронизация {progress}/{tip}"
 
@@ -1561,11 +1556,11 @@ msgstr "Полный узел, к которому подключен ваш ф�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Минимальный требуемый размер участка для основной сети равен k=32"
 
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:138
 msgid "The node is not synced"
 msgstr "Узел не синхронизирован с сетью"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:126
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Узел синхронизируется, что означает, что он загружает блоки с других узлов, чтобы достичь последнего блока в цепи"
 
@@ -1609,9 +1604,9 @@ msgstr "Здесь рассчитан размер ожидаемой сдачи
 
 #: src/components/wallet/standard/WalletStandard.tsx:229
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "Здесь рассчитана сумма входящих и исходящих ожидающих транзакций (еще не включенных в цепь блоков). Награды за фарминг не включены в сумму.<<<<<<< HEAD"
+msgstr "Здесь рассчитана сумма входящих и исходящих ожидающих транзакций (еще не включенных в цепь блоков). Награды за фарминг не включены в сумму."
 
-#: src/components/fullNode/FullNode.jsx:186
+#: src/components/fullNode/FullNode.jsx:189
 msgid "This is the time of the latest peak sub block."
 msgstr "Это время последнего пикового суб блока."
 
@@ -1627,7 +1622,7 @@ msgstr "Это общее количество монет Чиа в блокче
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Это общий баланс + отложенный баланс: это то, каким будет ваш баланс после подтверждения всех ожидающих транзакций."
 
-#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:147
 msgid "This node is fully caught up and validating the network"
 msgstr "Этот узел полностью догнал соседние узлы и выполняет валидацию в сети"
 
@@ -1643,7 +1638,7 @@ msgstr "Сделка была создана в это время"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Сделка была включена в блокчейн на указанной высоте блока"
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:100
 msgid "Time Created"
 msgstr "Время создания"
 
@@ -1667,9 +1662,9 @@ msgstr "Итоговый баланс"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:12
 msgid "Total Chia Farmed"
-msgstr "Всего выращено монет<<<<<<< HEAD"
+msgstr "Всего выращено монет"
 
-#: src/components/fullNode/FullNode.jsx:204
+#: src/components/fullNode/FullNode.jsx:207
 msgid "Total Iterations"
 msgstr "Всего итераций"
 
@@ -1687,9 +1682,9 @@ msgstr "Общий объем участков"
 
 #: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
-msgstr "Общее количество итерации VDF<<<<<<< HEAD"
+msgstr "Общее количество итерации VDF"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:209
 msgid "Total iterations since the start of the blockchain"
 msgstr "Общее количество итераций с момента запуска блокчейна"
 
@@ -1733,7 +1728,7 @@ msgstr "Хэш фильтра транзакций"
 msgid "Type"
 msgstr "Тип"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Unfinished"
 msgstr "Незаконченный"
 
@@ -1744,9 +1739,9 @@ msgstr "Уникальный идентификатор"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr "Пользовательский публичный ключ<<<<<<< HEAD"
+msgstr "Пользовательский публичный ключ"
 
-#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:201
 msgid "VDF Sub Slot Iterations"
 msgstr "Итерации VDF суб слота"
 
@@ -1778,15 +1773,6 @@ msgstr "Просмотр ожидаемого баланса..."
 msgid "Wait for synchronization"
 msgstr "Дождитесь синхронизации"
 
-#: src/components/wallet/Wallets.tsx:104
-msgid "Waiting for launch"
-msgstr ""
-
-#: src/components/fullNode/FullNode.jsx:103
-#: src/components/wallet/WalletStatusCard.tsx:20
-msgid "Waiting for network to launch"
-msgstr ""
-
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
 #~ msgstr ""
@@ -1816,7 +1802,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
 msgstr "Кошельки"
 
@@ -1886,32 +1872,32 @@ msgstr "Ваше подключение к полному узлу"
 msgid "Your Harvester Network"
 msgstr "Ваша сеть комбайнов"
 
-#: src/components/wallet/WalletStatusCard.tsx:31
-#: src/components/wallet/Wallets.tsx:122
+#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "подключения:"
 
-#: src/components/wallet/WalletStatusCard.tsx:25
-#: src/components/wallet/Wallets.tsx:116
+#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "высота:"
 
-#: src/components/wallet/Wallets.tsx:110
+#: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
 msgstr "не синхронизированный"
 
-#: src/components/wallet/WalletStatusCard.tsx:17
-#: src/components/wallet/Wallets.tsx:99
+#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/Wallets.tsx:98
 msgid "status:"
 msgstr "статус:"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:108
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:105
 msgid "synced"
 msgstr "синхр."
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:106
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "синх-ция"
 
