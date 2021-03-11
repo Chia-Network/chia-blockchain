@@ -721,7 +721,7 @@ class WalletRpcApi:
             amount += record.amount
 
         return {
-            "total_amount": amount,
+            "farmed_amount": amount,
             "pool_reward_amount": pool_reward_amount,
             "farmer_reward_amount": farmer_reward_amount,
             "fee_amount": fee_amount,
