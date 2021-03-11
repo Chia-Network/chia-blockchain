@@ -852,7 +852,7 @@ def _validate_segment(
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
     for idx, sub_slot_data in enumerate(segment.sub_slots):
-        if sub_slot_data.is_challenge():
+        if sampled and sub_slot_data.is_challenge():
             after_challenge = True
             required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses, first_segment_in_se)
             if required_iters is None:
