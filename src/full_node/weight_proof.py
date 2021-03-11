@@ -128,10 +128,9 @@ class WeightProofHandler:
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
-    async def _get_recent_chain(self, tip_height: uint32
-        ) -> Optional[List[HeaderBlock]]:
+    async def _get_recent_chain(self, tip_height: uint32) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
-        min_height = max(0, tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS*2)
+        min_height = max(0, tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS * 2)
         headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0
