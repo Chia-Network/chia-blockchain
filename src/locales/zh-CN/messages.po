@@ -83,12 +83,12 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:385
+#: src/components/wallet/standard/WalletStandard.tsx:371
 msgid "Address"
 msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:335
+#: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
 msgstr ""
 
@@ -97,7 +97,7 @@ msgstr ""
 #: src/components/wallet/WalletHistory.tsx:48
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:345
+#: src/components/wallet/standard/WalletStandard.tsx:331
 msgid "Amount"
 msgstr ""
 
@@ -366,7 +366,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:389
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Copy"
 msgstr ""
 
@@ -412,7 +412,7 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
-#: src/components/wallet/standard/WalletStandard.tsx:326
+#: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
 msgstr ""
 
@@ -574,7 +574,7 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.tsx:306
+#: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
@@ -597,7 +597,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:358
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
 msgstr ""
 
@@ -640,7 +640,7 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:350
+#: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
 msgstr ""
 
@@ -908,7 +908,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:399
+#: src/components/wallet/standard/WalletStandard.tsx:385
 msgid "New Address"
 msgstr ""
 
@@ -1023,17 +1023,17 @@ msgid "Pending"
 msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
 msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
 msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
 msgstr ""
 
@@ -1051,7 +1051,7 @@ msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
-#: src/components/wallet/standard/WalletStandard.tsx:288
+#: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
 msgstr ""
 
@@ -1059,7 +1059,7 @@ msgstr ""
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
-#: src/components/wallet/standard/WalletStandard.tsx:296
+#: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
 msgstr ""
 
@@ -1076,7 +1076,7 @@ msgid "Please enter a valid pubkey"
 msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
-#: src/components/wallet/standard/WalletStandard.tsx:276
+#: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
 msgstr ""
 
@@ -1276,7 +1276,7 @@ msgid "Rate Limited User Wallet Setup"
 msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:381
+#: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
 msgstr ""
 
@@ -1387,7 +1387,7 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:363
+#: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Send"
 msgstr ""
 
@@ -1598,11 +1598,11 @@ msgstr ""
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.tsx:236
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.tsx:229
+#: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr ""
 
@@ -1618,7 +1618,7 @@ msgstr ""
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.tsx:222
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr ""
 

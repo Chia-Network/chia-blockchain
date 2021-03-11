@@ -88,12 +88,12 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:385
+#: src/components/wallet/standard/WalletStandard.tsx:371
 msgid "Address"
 msgstr "Adress"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:335
+#: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
 msgstr "Adress/pusselhash"
 
@@ -102,7 +102,7 @@ msgstr "Adress/pusselhash"
 #: src/components/wallet/WalletHistory.tsx:48
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:345
+#: src/components/wallet/standard/WalletStandard.tsx:331
 msgid "Amount"
 msgstr "Belopp"
 
@@ -371,7 +371,7 @@ msgstr "Kopierad"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:389
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Copy"
 msgstr "Kopiera"
 
@@ -417,7 +417,7 @@ msgstr "Skapa handelserbjudande"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
-#: src/components/wallet/standard/WalletStandard.tsx:326
+#: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
 msgstr "Skapa transaktion"
 
@@ -579,7 +579,7 @@ msgstr "Skriv in din sparade minnesfras på 24 ord för att återställa din Chi
 msgid "Error"
 msgstr "Fel"
 
-#: src/components/wallet/standard/WalletStandard.tsx:306
+#: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Fel: det går inte att skicka chia till färgad adress. Ange en chia-adress."
 
@@ -602,7 +602,7 @@ msgstr "Det gick inte att öppna (ogiltiga plottar)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:358
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
 msgstr "Odling"
 
@@ -645,7 +645,7 @@ msgstr "Odlingsstatus"
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:350
+#: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
 msgstr "Avgift"
 
@@ -913,7 +913,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:399
+#: src/components/wallet/standard/WalletStandard.tsx:385
 msgid "New Address"
 msgstr "Ny adress"
 
@@ -1028,17 +1028,17 @@ msgid "Pending"
 msgstr "Väntande"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
 msgstr "Väntande saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
 msgstr "Väntande växel"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
 msgstr "Väntande totalt saldo"
 
@@ -1056,7 +1056,7 @@ msgstr "Ange ett giltigt belopp för ursprungligt mynt"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
-#: src/components/wallet/standard/WalletStandard.tsx:288
+#: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
 msgstr "Ange ett giltigt numeriskt belopp"
 
@@ -1064,7 +1064,7 @@ msgstr "Ange ett giltigt numeriskt belopp"
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
-#: src/components/wallet/standard/WalletStandard.tsx:296
+#: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
 msgstr "Ange en giltig numeriskt avgift"
 
@@ -1081,7 +1081,7 @@ msgid "Please enter a valid pubkey"
 msgstr "Ange en giltig publik nyckel"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
-#: src/components/wallet/standard/WalletStandard.tsx:276
+#: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
 msgstr "Vänta på synkronisering innan du gör en transaktion"
 
@@ -1281,7 +1281,7 @@ msgid "Rate Limited User Wallet Setup"
 msgstr "Konfiguration av spenderbegränsad användarplånbok"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:381
+#: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
 msgstr "Mottagaradress"
 
@@ -1392,7 +1392,7 @@ msgstr "Sälj"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:363
+#: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Send"
 msgstr "Skicka"
 
@@ -1603,11 +1603,11 @@ msgstr "Denna funktion kan bara användas från GUI."
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "Detta är den mängd Chia du för tillfället kan använda för transaktioner. Det innefattar inte väntande odlingsbelöningar, väntande inkommande transaktioner eller Chia som du just spenderat men som ännu inte finns i blockkedjan."
 
-#: src/components/wallet/standard/WalletStandard.tsx:236
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "Detta är väntande växel, det vill säga de växelmynt du har skickat till dig själv men som ännu inte har bekräftats."
 
-#: src/components/wallet/standard/WalletStandard.tsx:229
+#: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Detta är summan av inkommande och utgående väntande transaktioner (som ännu inte inkluderats i blockkedjan). Den innefattar inte odlingsbelöningar."
 
@@ -1623,7 +1623,7 @@ msgstr "Detta är den tidpunkt då blocket skapades av odlaren, vilket är innan
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "Detta är den sammanlagda mängden chia i blockkedjan vid det aktuella topp-underblocket som kontrolleras av dina privata nycklar. Det innefattar frusna odlingsbelöningar, men inte väntande inkommande och utgående transaktioner."
 
-#: src/components/wallet/standard/WalletStandard.tsx:222
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Detta är totalt saldo + väntande saldo: det är vad ditt saldo kommer att vara när alla väntande transaktioner har bekräftats."
 

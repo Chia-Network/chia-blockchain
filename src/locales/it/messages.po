@@ -88,12 +88,12 @@ msgstr "Aggiungi cartella plot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:385
+#: src/components/wallet/standard/WalletStandard.tsx:371
 msgid "Address"
 msgstr "Indirizzo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:335
+#: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
 msgstr "Indirizzo / Puzzle hash"
 
@@ -102,7 +102,7 @@ msgstr "Indirizzo / Puzzle hash"
 #: src/components/wallet/WalletHistory.tsx:48
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:345
+#: src/components/wallet/standard/WalletStandard.tsx:331
 msgid "Amount"
 msgstr "Totale"
 
@@ -371,7 +371,7 @@ msgstr "Copiato"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:389
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Copy"
 msgstr "Copia"
 
@@ -417,7 +417,7 @@ msgstr "Crea Offerta Commerciale"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
-#: src/components/wallet/standard/WalletStandard.tsx:326
+#: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
 msgstr "Crea Transazione"
 
@@ -579,7 +579,7 @@ msgstr "Inserisci le 24 parole mnemoniche che hai salvato per poter ripristinare
 msgid "Error"
 msgstr "Errore"
 
-#: src/components/wallet/standard/WalletStandard.tsx:306
+#: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Errore: impossibile inviare chia ad un indirizzo colorato. Perfavore inserisci un indirizzo chia."
 
@@ -602,7 +602,7 @@ msgstr "Impossibile aprire (plot non validi)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:358
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
 msgstr "Coltiva"
 
@@ -645,7 +645,7 @@ msgstr "Stato della Coltivazione"
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:350
+#: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
 msgstr "Fee"
 
@@ -913,7 +913,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:399
+#: src/components/wallet/standard/WalletStandard.tsx:385
 msgid "New Address"
 msgstr "Nuovo Indirizzo"
 
@@ -1028,17 +1028,17 @@ msgid "Pending"
 msgstr "In attesa"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
-#: src/components/wallet/standard/WalletStandard.tsx:227
+#: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
 msgstr "Bilancio in attesa"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
 msgstr "Cambiamento in attesa"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
-#: src/components/wallet/standard/WalletStandard.tsx:220
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
 msgstr "Bilancio Totale in attesa"
 
@@ -1056,7 +1056,7 @@ msgstr "Per favore inserisci un ammontare di moneta iniziale valido"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
-#: src/components/wallet/standard/WalletStandard.tsx:288
+#: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
 msgstr "Per favore inserisci una ammontare numerico valido"
 
@@ -1064,7 +1064,7 @@ msgstr "Per favore inserisci una ammontare numerico valido"
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
 #: src/components/wallet/create/createRLAdmin.jsx:158
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
-#: src/components/wallet/standard/WalletStandard.tsx:296
+#: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
 msgstr "Per favore inserisci un valore numerico valido per la tassa"
 
@@ -1081,7 +1081,7 @@ msgid "Please enter a valid pubkey"
 msgstr "Per favore inserisci una pubkey valida"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
-#: src/components/wallet/standard/WalletStandard.tsx:276
+#: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
 msgstr "Per favore completa la sincronizzazione prima di fare una transazione"
 
@@ -1281,7 +1281,7 @@ msgid "Rate Limited User Wallet Setup"
 msgstr "Setup Utente Wallet a Velocità Limitata"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:381
+#: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
 msgstr "Indirizzo per Ricevere"
 
@@ -1392,7 +1392,7 @@ msgstr "Vendi"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:363
+#: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Send"
 msgstr "Invia"
 
@@ -1603,11 +1603,11 @@ msgstr "Questa funzione è disponibile solo sulla GUI."
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 msgstr "Questo è l'ammontare di Chia che puoi utilizzare attualmente per fare transazioni. Non include le ricompense coltivate in sospeso, transazioni in entrata in sospeso, e Chia che tua hai appena speso ma non sono ancora nella blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:236
+#: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 msgstr "Questa è la modifica in sospeso, ovvero le monete di cambio che hai inviato a te stesso, ma che non sono state ancora confermate."
 
-#: src/components/wallet/standard/WalletStandard.tsx:229
+#: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (non ancora incluse nella blockchain). Questo non include le ricompense coltivate."
 
@@ -1623,7 +1623,7 @@ msgstr "Questo è il tempo in cui il blocco è stato creato dal coltivatore, che
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 msgstr "Questo è l'ammontare totale di chia nella blockchain nell'attuale sottoblocco di picco che è controllato dalle tue chiavi private. Questo include le ricompense da farming congelate, ma non le transazioni in entrata e uscita che sono in attesa."
 
-#: src/components/wallet/standard/WalletStandard.tsx:222
+#: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Questo è il bilancio totale + il bilancio in attesa: questo è il bilancio che apparirà dopo che tutte le transazioni in attesa saranno confermate."
 
