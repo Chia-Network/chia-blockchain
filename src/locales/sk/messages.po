@@ -275,7 +275,7 @@ msgstr "Vyberte veľkosť poľa"
 msgid "Close"
 msgstr "Zavrieť"
 
-#: src/components/app/AppRouter.tsx:19
+#: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
 msgstr "Zatvára sa uzol a server"
 
@@ -334,15 +334,15 @@ msgid "Connect to other peers"
 msgstr "Pripojiť k iným uzlom"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:157
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connected"
 msgstr "Pripojené"
 
-#: src/components/app/AppRouter.tsx:29
+#: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
 msgstr "Pripájanie k peňaženke"
 
-#: src/components/fullNode/FullNode.jsx:155
+#: src/components/fullNode/FullNode.jsx:154
 msgid "Connection Status"
 msgstr "Stav pripojenia"
 
@@ -527,7 +527,7 @@ msgid "Developer Tools"
 msgstr ""
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Difficulty"
 msgstr "Zložitosť"
 
@@ -583,11 +583,11 @@ msgstr "Chyba"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chyba: Prosím zadajte platnú adresu."
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated network space"
 msgstr "Odhadovaná velkosť siete"
 
-#: src/components/fullNode/FullNode.jsx:216
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
@@ -684,8 +684,8 @@ msgstr ""
 msgid "Final folder location"
 msgstr "Cieľový adresár"
 
-#: src/components/fullNode/FullNode.jsx:50
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:41
+#: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
 msgstr "Dokončené"
 
@@ -698,11 +698,11 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:327
+#: src/components/fullNode/FullNode.jsx:325
 msgid "Full Node"
 msgstr "Domov"
 
-#: src/components/fullNode/FullNode.jsx:271
+#: src/components/fullNode/FullNode.jsx:268
 msgid "Full Node Status"
 msgstr "Stav siete"
 
@@ -718,7 +718,7 @@ msgstr ""
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:68
+#: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
 msgstr "Poradie hlavičky"
 
@@ -727,7 +727,7 @@ msgid "Header hash"
 msgstr "Poradie hlavičky"
 
 #: src/components/block/Block.jsx:191
-#: src/components/fullNode/FullNode.jsx:87
+#: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Poradie"
@@ -773,7 +773,7 @@ msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Obnoviť z mnemotechniky (24 slov)"
 
-#: src/components/fullNode/FullNode.jsx:52
+#: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
 msgstr "Prebieha"
 
@@ -838,7 +838,7 @@ msgstr "Načítava sa..."
 msgid "Local Harvester Plots"
 msgstr "Zoznam polí"
 
-#: src/components/app/AppRouter.tsx:34
+#: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
 msgstr "Prihlasovanie"
 
@@ -900,13 +900,17 @@ msgstr "Viac pamäte mierne zvyšuje rýchlosť"
 msgid "My Pubkey"
 msgstr "Môj verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:174
+#: src/components/fullNode/FullNode.jsx:173
 msgid "Network Name"
 msgstr ""
 
-#: src/components/app/AppRouter.tsx:24
-msgid "Network not launched yet, waiting for genesis challenge!"
+#: src/components/fullNode/FullNode.jsx:106
+msgid "Network has not yet been launched, once it launches full node will start automatically."
 msgstr ""
+
+#: src/components/app/AppRouter.tsx:24
+#~ msgid "Network not launched yet, waiting for genesis challenge!"
+#~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
 #: src/components/wallet/standard/WalletStandard.tsx:399
@@ -932,7 +936,7 @@ msgstr "Prezývka"
 msgid "No"
 msgstr "Nie"
 
-#: src/middleware/middleware_api.jsx:298
+#: src/middleware/middleware_api.jsx:283
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -961,7 +965,7 @@ msgstr ""
 msgid "Not Available"
 msgstr "Nie je k dispozícií"
 
-#: src/components/fullNode/FullNode.jsx:136
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Not Synced"
 msgstr ""
 
@@ -974,8 +978,8 @@ msgid "Not confirmed yet"
 msgstr "Zatiaľ nepotvrdené"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:159
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:165
 msgid "Not connected"
 msgstr "Nepripojené"
 
@@ -1007,7 +1011,7 @@ msgstr "Vytvorené ponuky"
 msgid "Outgoing"
 msgstr "Odchádzajúce"
 
-#: src/components/fullNode/FullNode.jsx:180
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
 msgstr ""
 
@@ -1015,7 +1019,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
 msgstr ""
 
@@ -1207,11 +1211,11 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privátny kľúč s verejným odtlačkom {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:262
+#: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
 msgstr "Privátny kľúč {0}"
 
-#: src/middleware/middleware_api.jsx:272
+#: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
 msgstr "Privátny kľúč:"
 
@@ -1227,7 +1231,7 @@ msgstr "Nájdené dôkazy"
 msgid "Pubkey"
 msgstr "Verejný kľúč"
 
-#: src/middleware/middleware_api.jsx:280
+#: src/middleware/middleware_api.jsx:265
 msgid "Public key:"
 msgstr "Verejný kľúč:"
 
@@ -1338,7 +1342,7 @@ msgstr "Druhý dočasný adresár"
 msgid "See private key"
 msgstr "Zobraziť privátny kľúč"
 
-#: src/middleware/middleware_api.jsx:290
+#: src/middleware/middleware_api.jsx:275
 msgid "Seed:"
 msgstr ""
 
@@ -1453,19 +1457,20 @@ msgstr "Dĺžka disponibilného intervalu (počet blokov)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:108
+#: src/components/fullNode/FullNode.jsx:94
 msgid "State"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:118
-#: src/components/fullNode/FullNode.jsx:135
-#: src/components/fullNode/FullNode.jsx:143
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:102
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:164
 #: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/WalletStatusCard.tsx:12
+#: src/components/wallet/Wallets.tsx:94
 msgid "Status"
 msgstr "Stav"
 
@@ -1505,7 +1510,7 @@ msgstr "Stav:"
 msgid "Submit"
 msgstr "Odoslať"
 
-#: src/components/fullNode/FullNode.jsx:144
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Synced"
 msgstr "Synchronizované"
 
@@ -1515,7 +1520,7 @@ msgstr "Synchronizované"
 msgid "Syncing"
 msgstr "Synchronizácia"
 
-#: src/components/fullNode/FullNode.jsx:120
+#: src/components/fullNode/FullNode.jsx:119
 msgid "Syncing {progress}/{tip}"
 msgstr "Synchronizácia {progress}/{tip}"
 
@@ -1556,11 +1561,11 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Minimálna požadovaná veľkosť pre sieť je k = 32"
 
-#: src/components/fullNode/FullNode.jsx:138
+#: src/components/fullNode/FullNode.jsx:137
 msgid "The node is not synced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:126
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, aby sa dostal k najnovšiemu bloku v reťazci"
 
@@ -1606,7 +1611,7 @@ msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale za
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nie sú zahrnuté do blockchainu). To nezahŕňa odmeny za ťažbu."
 
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:186
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1622,7 +1627,7 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v najnovšom bloku, ktorý
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
-#: src/components/fullNode/FullNode.jsx:147
+#: src/components/fullNode/FullNode.jsx:146
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1638,7 +1643,7 @@ msgstr "Čas, kedy sa tento obchod vytvoril"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Tento obchod bol zahrnutý v blockchaine na tejto pozícii"
 
-#: src/components/fullNode/FullNode.jsx:100
+#: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Čas vytvorenia"
 
@@ -1664,7 +1669,7 @@ msgstr "Celkový zostatok"
 msgid "Total Chia Farmed"
 msgstr "Celková vyťažená Chia"
 
-#: src/components/fullNode/FullNode.jsx:207
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
 msgstr ""
 
@@ -1684,7 +1689,7 @@ msgstr "Celková veľkosť polí"
 msgid "Total VDF Iterations"
 msgstr "Celkový počet iterácií VDF"
 
-#: src/components/fullNode/FullNode.jsx:209
+#: src/components/fullNode/FullNode.jsx:206
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
@@ -1728,7 +1733,7 @@ msgstr ""
 msgid "Type"
 msgstr "Typ"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:92
 msgid "Unfinished"
 msgstr "Nedokončené"
 
@@ -1741,7 +1746,7 @@ msgstr "Jedinečný identifikátor"
 msgid "User Pubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:198
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
@@ -1773,6 +1778,15 @@ msgstr "Zobraziť nespracované zostatky..."
 msgid "Wait for synchronization"
 msgstr ""
 
+#: src/components/wallet/Wallets.tsx:104
+msgid "Waiting for launch"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+msgid "Waiting for network to launch"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
 #~ msgstr ""
@@ -1802,7 +1816,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:134
 msgid "Wallets"
 msgstr "Peňaženky"
 
@@ -1872,32 +1886,32 @@ msgstr "Vaše pripojenie k sieti"
 msgid "Your Harvester Network"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/Wallets.tsx:122
 msgid "connections:"
 msgstr "pripojenia:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/Wallets.tsx:116
 msgid "height:"
 msgstr "pozícia:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:110
 msgid "not synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/WalletStatusCard.tsx:17
+#: src/components/wallet/Wallets.tsx:99
 msgid "status:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:108
 msgid "synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:106
 msgid "syncing"
 msgstr ""
 
