@@ -525,7 +525,7 @@ class WeightProofHandler:
 
 
 def _get_weights_for_sampling(
-        rng: random.Random, total_weight: uint128, recent_chain: List[HeaderBlock]
+    rng: random.Random, total_weight: uint128, recent_chain: List[HeaderBlock]
 ) -> Optional[List[uint128]]:
     weight_to_check = []
     last_l_weight = recent_chain[-1].reward_chain_block.weight - recent_chain[0].reward_chain_block.weight
@@ -544,9 +544,9 @@ def _get_weights_for_sampling(
 
 
 def _sample_sub_epoch(
-        start_of_epoch_weight: uint128,
-        end_of_epoch_weight: uint128,
-        weight_to_check: List[uint128],
+    start_of_epoch_weight: uint128,
+    end_of_epoch_weight: uint128,
+    weight_to_check: List[uint128],
 ) -> bool:
     if weight_to_check is None:
         return True
@@ -564,7 +564,7 @@ def _sample_sub_epoch(
 
 # wp creation methods
 def _create_sub_epoch_data(
-        sub_epoch_summary: SubEpochSummary,
+    sub_epoch_summary: SubEpochSummary,
 ) -> SubEpochData:
     reward_chain_hash: bytes32 = sub_epoch_summary.reward_chain_hash
     #  Number of subblocks overflow in previous slot
@@ -576,10 +576,10 @@ def _create_sub_epoch_data(
 
 
 async def _challenge_block_vdfs(
-        constants: ConsensusConstants,
-        header_block: HeaderBlock,
-        block_rec: BlockRecord,
-        sub_blocks: Dict[bytes32, BlockRecord],
+    constants: ConsensusConstants,
+    header_block: HeaderBlock,
+    block_rec: BlockRecord,
+    sub_blocks: Dict[bytes32, BlockRecord],
 ):
     (_, _, _, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
         constants,
@@ -642,8 +642,8 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle, icc_end_of_slot_info)
 
 
 def handle_end_of_slot(
-        sub_slot: EndOfSubSlotBundle,
-        eos_vdf_iters: uint64,
+    sub_slot: EndOfSubSlotBundle,
+    eos_vdf_iters: uint64,
 ):
     assert sub_slot.infused_challenge_chain
     assert sub_slot.proofs.infused_challenge_chain_slot_proof
@@ -705,8 +705,8 @@ def compress_segment(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegm
 
 # wp validation methods
 def _validate_sub_epoch_summaries(
-        constants: ConsensusConstants,
-        weight_proof: WeightProof,
+    constants: ConsensusConstants,
+    weight_proof: WeightProof,
 ) -> Tuple[Optional[List[SubEpochSummary]], Optional[List[uint128]]]:
 
     last_ses_hash, last_ses_sub_height = _get_last_ses_hash(constants, weight_proof.recent_chain_data)
@@ -739,10 +739,10 @@ def _validate_sub_epoch_summaries(
 
 
 def _map_sub_epoch_summaries(
-        sub_blocks_for_se: uint32,
-        ses_hash: bytes32,
-        sub_epoch_data: List[SubEpochData],
-        curr_difficulty: uint64,
+    sub_blocks_for_se: uint32,
+    ses_hash: bytes32,
+    sub_epoch_data: List[SubEpochData],
+    curr_difficulty: uint64,
 ) -> Tuple[List[SubEpochSummary], uint128, List[uint128]]:
     total_weight: uint128 = uint128(0)
     summaries: List[SubEpochSummary] = []
@@ -792,10 +792,10 @@ def _validate_summaries_weight(constants: ConsensusConstants, sub_epoch_data_wei
 
 
 def _validate_sub_epoch_segments(
-        constants_dict: Dict,
-        rng: random.Random,
-        weight_proof_bytes: bytes,
-        summaries_bytes: List[bytes],
+    constants_dict: Dict,
+    rng: random.Random,
+    weight_proof_bytes: bytes,
+    summaries_bytes: List[bytes],
 ):
     constants, summaries, weight_proof = bytes_to_vars(constants_dict, summaries_bytes, weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -839,16 +839,15 @@ def _validate_sub_epoch_segments(
     return True
 
 
-
 def _validate_segment(
-        constants: ConsensusConstants,
-        segment: SubEpochChallengeSegment,
-        curr_ssi: uint64,
-        prev_ssi: uint64,
-        curr_difficulty: uint64,
-        ses: Optional[SubEpochSummary],
-        first_segment_in_se: bool,
-        sampled: bool,
+    constants: ConsensusConstants,
+    segment: SubEpochChallengeSegment,
+    curr_ssi: uint64,
+    prev_ssi: uint64,
+    curr_difficulty: uint64,
+    ses: Optional[SubEpochSummary],
+    first_segment_in_se: bool,
+    sampled: bool,
 ) -> Tuple[bool, int, int, int]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
@@ -875,10 +874,10 @@ def _validate_segment(
 
 
 def _validate_challenge_block_vdfs(
-        constants: ConsensusConstants,
-        sub_slot_idx: int,
-        sub_slots: List[SubSlotData],
-        ssi: uint64,
+    constants: ConsensusConstants,
+    sub_slot_idx: int,
+    sub_slots: List[SubSlotData],
+    ssi: uint64,
 ) -> bool:
     sub_slot_data = sub_slots[sub_slot_idx]
     if sub_slot_data.cc_signage_point is not None and sub_slot_data.cc_sp_vdf_info:
@@ -1357,47 +1356,6 @@ def _get_ses_idx(recent_reward_chain: List[HeaderBlock]) -> List[int]:
     return idxs
 
 
-def handle_end_of_slot(
-    sub_slot: EndOfSubSlotBundle,
-    eos_vdf_iters: uint64,
-):
-    assert sub_slot.infused_challenge_chain
-    assert sub_slot.proofs.infused_challenge_chain_slot_proof
-    if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
-        icc_info = sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
-    else:
-        icc_info = VDFInfo(
-            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
-            eos_vdf_iters,
-            sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
-        )
-    if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
-        cc_info = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf
-    else:
-        cc_info = VDFInfo(
-            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-            eos_vdf_iters,
-            sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
-        )
-
-    assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-    return SubSlotData(
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        sub_slot.proofs.challenge_chain_slot_proof,
-        sub_slot.proofs.infused_challenge_chain_slot_proof,
-        cc_info,
-        icc_info,
-        None,
-        None,
-        None,
-    )
-
-
 def get_deficit(
     constants: ConsensusConstants,
     curr_deficit: uint8,
@@ -1454,6 +1412,7 @@ def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
         return False
     return True
 
+
 def map_segments_by_sub_epoch(sub_epoch_segments) -> Dict[int, List[SubEpochChallengeSegment]]:
     segments: Dict[int, List[SubEpochChallengeSegment]] = {}
     curr_sub_epoch_n = -1
@@ -1466,18 +1425,20 @@ def map_segments_by_sub_epoch(sub_epoch_segments) -> Dict[int, List[SubEpochChal
 
 
 def validate_total_iters(
-        segment: SubEpochChallengeSegment,
-        sub_slot_data_idx,
-        expected_sub_slot_iters: uint64,
-        finished_sub_slots_since_prev: int,
-        prev_b: SubSlotData,
-        prev_sub_slot_data_iters,
-        genesis,
+    segment: SubEpochChallengeSegment,
+    sub_slot_data_idx,
+    expected_sub_slot_iters: uint64,
+    finished_sub_slots_since_prev: int,
+    prev_b: SubSlotData,
+    prev_sub_slot_data_iters,
+    genesis,
 ) -> bool:
     sub_slot_data = segment.sub_slots[sub_slot_data_idx]
     if genesis:
         total_iters: uint128 = uint128(expected_sub_slot_iters * finished_sub_slots_since_prev)
     elif segment.sub_slots[sub_slot_data_idx - 1].is_end_of_slot():
+        assert prev_b.total_iters
+        assert prev_b.cc_ip_vdf_info
         total_iters = prev_b.total_iters
         # Add the rest of the slot of prev_b
         total_iters = uint128(total_iters + prev_sub_slot_data_iters - prev_b.cc_ip_vdf_info.number_of_iterations)
@@ -1486,6 +1447,8 @@ def validate_total_iters(
     else:
         # Slot iters is guaranteed to be the same for header_block and prev_b
         # This takes the beginning of the slot, and adds ip_iters
+        assert prev_b.cc_ip_vdf_info
+        assert prev_b.total_iters
         total_iters = uint128(prev_b.total_iters - prev_b.cc_ip_vdf_info.number_of_iterations)
     total_iters = uint128(total_iters + sub_slot_data.cc_ip_vdf_info.number_of_iterations)
     return total_iters == sub_slot_data.total_iters
