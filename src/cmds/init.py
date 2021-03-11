@@ -364,6 +364,8 @@ def chia_init(root_path: Path):
         "timelord.selected_network",
         "farmer.xch_target_address",
         "pool.xch_target_address",
+        "ALERTS_URL",
+        "CHIA_ALERTS_PUBKEY",
     ]
 
     # These are the files that will be migrated
