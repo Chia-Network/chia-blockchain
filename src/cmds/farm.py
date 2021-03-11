@@ -1,6 +1,5 @@
 import asyncio
 import math
-from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -15,52 +14,8 @@ from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint16
-from src.wallet.util.transaction_type import TransactionType
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
-
-
-def compute_wallets_stats(wallets):
-    biggest_height = 0
-    biggest_reward_height = 0
-    pool_coins = 0
-    farmer_coins = 0
-
-    pool_coins = Decimal(0)
-    for wallet in wallets:
-        if "transactions" not in wallet:
-            continue
-
-        for tx in wallet["transactions"] or []:
-            if len(tx.additions) == 0:
-                continue
-
-            if tx.type == TransactionType.COINBASE_REWARD:
-                pool_coins += tx.amount
-            if tx.type == TransactionType.FEE_REWARD:
-                farmer_coins += tx.amount
-
-            is_from_reward = tx.type in [TransactionType.COINBASE_REWARD, TransactionType.FEE_REWARD]
-            biggest_height = max(tx.confirmed_at_height, biggest_height)
-
-            if is_from_reward:
-                biggest_reward_height = max(tx.confirmed_at_height, biggest_reward_height)
-
-    total_chia_farmed = pool_coins + farmer_coins
-    total_block_rewards = (pool_coins * 8) / 7
-    user_transaction_fees = (farmer_coins - total_block_rewards) / 8
-    block_rewards = pool_coins + farmer_coins - user_transaction_fees
-
-    return {
-        "total_chia_farmed": total_chia_farmed,
-        "biggest_height": biggest_height,
-        "biggest_reward_height": biggest_reward_height,
-        "pool_coins": pool_coins,
-        "farmer_coins": farmer_coins,
-        "total_block_rewards": total_block_rewards,
-        "user_transaction_fees": user_transaction_fees,
-        "block_rewards": block_rewards,
-    }
 
 
 async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
@@ -247,7 +202,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Farming")
 
     if amounts is not None:
-        print(f"Total chia farmed: {amounts['total_amount'] / units['chia']}")
+        print(f"Total chia farmed: {amounts['farmed_amount'] / units['chia']}")
         print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
         print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
         print(f"Last height farmed: {amounts['last_height_farmed']}")
