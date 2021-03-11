@@ -141,7 +141,9 @@ class WeightProofHandler:
         ses_count = 0
         curr_height = tip_height
         blocks_n = 0
-        while blocks_n <= self.constants.WEIGHT_PROOF_RECENT_BLOCKS or ses_count <= 2 and curr_height > 0:
+        while ses_count < 2:
+            if curr_height == 0:
+                break
             # add to needed reward chain recent blocks
             header_block = headers[self.blockchain.height_to_hash(curr_height)]
             block_rec = blocks[header_block.header_hash]
@@ -1037,7 +1039,7 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
     sub_blocks = BlockCache({})
     first_ses_idx = _get_ses_idx(weight_proof.recent_chain_data)
     ses_idx = len(summaries) - len(first_ses_idx)
-    ssi: Optional[uint64] = constants.SUB_SLOT_ITERS_STARTING
+    ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
     diff: Optional[uint64] = constants.DIFFICULTY_STARTING
     last_blocks_to_validate = 100  # todo remove cap after benchmarks
     for summary in summaries[:ses_idx]:
@@ -1047,14 +1049,15 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
             diff = summary.new_difficulty
 
     ses_blocks, sub_slots, transaction_blocks = 0, 0, 0
-    challenge, prev_challenge, deficit = None, None, None
-    height = None
+    challenge, prev_challenge = None, None
     tip_height = weight_proof.recent_chain_data[-1].height
     prev_block_record = None
     for idx, block in enumerate(weight_proof.recent_chain_data):
+        required_iters = uint64(0)
+        overflow = False
+        deficit = uint8(0)
         ses = False
-        if block.height is not None:
-            height = block.height
+        height = block.height
         for sub_slot in block.finished_sub_slots:
             prev_challenge = challenge
             challenge = sub_slot.challenge_chain.get_hash()
@@ -1068,24 +1071,23 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
-        if challenge is None or prev_challenge is None:
-            log.debug(f"skip block {block.height}")
-            continue
-
-        overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
-        log.debug(f"wp, validate block {block.height}")
-        if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
-            required_iters, error = validate_finished_header_block(
-                constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
-            )
-            if error is not None:
-                log.error(f"block {block.header_hash} failed validation {error}")
-                return False
-        else:
-            required_iters = _validate_pospace_recent_chain(constants, block, challenge, diff, overflow, prev_challenge)
-            if required_iters is None:
-                return False
+        if (challenge is not None) and (prev_challenge is not None):
+            overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+            deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
+            log.debug(f"wp, validate block {block.height}")
+            if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
+                required_iters, error = validate_finished_header_block(
+                    constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
+                )
+                if error is not None:
+                    log.error(f"block {block.header_hash} failed validation {error}")
+                    return False
+            else:
+                required_iters = _validate_pospace_recent_chain(
+                    constants, block, challenge, diff, overflow, prev_challenge
+                )
+                if required_iters is None:
+                    return False
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
         block_record = header_block_to_sub_block_record(
