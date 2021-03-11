@@ -831,11 +831,6 @@ def _validate_sub_epoch_segments(
             total_slot_iters += slot_iters
             total_slots += slots
             total_ip_iters += ip_iters
-    avg_ip_iters = total_ip_iters / total_blocks
-    avg_slot_iters = total_slot_iters / total_slots
-    # if avg_slot_iters / avg_ip_iters < float(constants.WEIGHT_PROOF_THRESHOLD):
-    #     log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
-    #     return False
     return True
 
 
