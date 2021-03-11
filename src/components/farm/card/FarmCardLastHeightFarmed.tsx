@@ -3,23 +3,24 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
-import computeStatistics from '../../../util/computeStatistics';
 
 export default function FarmCardLastHeightFarmed() {
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const value = computeStatistics(wallets);
-  const loading = !wallets;
+  const loading = useSelector(
+    (state: RootState) => !state.wallet_state.farmed_amount,
+  );
 
-  const biggestRewardHeight = value?.biggestRewardHeight;
+  const lastHeightFarmed = useSelector(
+    (state: RootState) => state.wallet_state.farmed_amount?.last_height_farmed,
+  );
 
   return (
     <FarmCard
       title={
         <Trans>Last Height Farmed</Trans>
       }
-      value={biggestRewardHeight}
+      value={lastHeightFarmed}
       description={
-        !biggestRewardHeight && (
+        !lastHeightFarmed && (
           <Trans>
             No blocks farmed yet
           </Trans>

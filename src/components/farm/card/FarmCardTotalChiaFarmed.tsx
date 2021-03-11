@@ -6,20 +6,26 @@ import FarmCard from './FarmCard';
 import { mojo_to_chia } from '../../../util/chia';
 
 export default function FarmCardTotalChiaFarmed() {
-  const farmed_amount = useSelector(
-    (state: RootState) => state.wallet_state.farmed_amount,
+  const loading = useSelector(
+    (state: RootState) => !state.wallet_state.farmed_amount,
+  );
+
+  const farmedAmount = useSelector(
+    (state: RootState) => state.wallet_state.farmed_amount?.farmed_amount,
   );
 
   const totalChiaFarmed = useMemo(() => {
-    const val = BigInt(farmed_amount.toString());
-    return mojo_to_chia(val);
-  }, [farmed_amount]);
+    if (farmedAmount !== undefined) {
+      const val = BigInt(farmedAmount.toString());
+      return mojo_to_chia(val);
+    }
+  }, [farmedAmount]);
 
   return (
     <FarmCard
       title={<Trans>Total Chia Farmed</Trans>}
       value={totalChiaFarmed}
-      loading={false}
+      loading={loading}
     />
   );
 }

@@ -20,10 +20,16 @@ type IncomingState = {
   send_transaction_result?: string | null;
   show_create_backup: boolean;
   server_started?: boolean;
-  farmed_amount: number;
   network_info?: {
     network_name: string;
     network_prefix: string;
+  };
+  farmed_amount?: {
+    farmed_amount: number;
+    pool_reward_amount: number;
+    farmer_reward_amount: number;
+    fee_amount: number;
+    last_height_farmed: number;
   };
 };
 
@@ -42,7 +48,6 @@ const initialState: IncomingState = {
     genesis_initialized: false,
   },
   show_create_backup: false,
-  farmed_amount: 0,
 };
 
 export default function incomingReducer(
