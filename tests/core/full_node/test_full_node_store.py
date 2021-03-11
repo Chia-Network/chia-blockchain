@@ -400,7 +400,8 @@ class TestFullNodeStore:
                 break
         assert len(blocks) >= 2
         dependant_sub_slots = blocks[-1].finished_sub_slots
-        peak_full_block = None
+        peak = blockchain.get_peak()
+        peak_full_block = await blockchain.get_full_peak()
         for block in blocks[:-2]:
             sb = blockchain.block_record(block.header_hash)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)

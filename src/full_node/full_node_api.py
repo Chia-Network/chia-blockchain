@@ -884,7 +884,7 @@ class FullNodeAPI:
                 f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}. "
                 f"Re-sending new-peak to timelord"
             )
-            await self.full_node.send_peak_to_timelords()
+            await self.full_node.send_peak_to_timelords(peer=peer)
             return None
         else:
             return msg
