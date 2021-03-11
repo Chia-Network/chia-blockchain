@@ -559,7 +559,7 @@ class Timelord:
                     else:
                         last_csb_or_eos = self.last_state.last_challenge_sb_or_eos_total_iters
 
-                    if self.last_state.get_infused_sub_epoch_summary() is not None:
+                    if self.last_state.just_infused_sub_epoch_summary():
                         new_sub_epoch_summary = None
                         passed_ses_height_but_not_yet_included = False
                     else:
