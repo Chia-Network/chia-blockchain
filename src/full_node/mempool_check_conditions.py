@@ -132,7 +132,9 @@ def build_block_program_args(
     return SerializedProgram.from_bytes(block_program_args)
 
 
-def get_name_puzzle_conditions(block_program: SerializedProgram, generator_refs: Optional[SerializedProgram], safe_mode: bool):
+def get_name_puzzle_conditions(
+    block_program: SerializedProgram, generator_refs: Optional[SerializedProgram], safe_mode: bool
+):
 
     block_program_args = NilSerializedProgram
     if generator_refs is not None:

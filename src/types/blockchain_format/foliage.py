@@ -14,7 +14,6 @@ from src.util.streamable import Streamable, streamable
 @streamable
 class TransactionsInfo(Streamable):
     # Information that goes along with each transaction block
-    previous_generators_root: bytes32  # This needs to be a tree hash
     generator_root: bytes32  # This needs to be a tree hash
     generator_refs_root: bytes32  # This needs to be a tree hash
     aggregated_signature: G2Element

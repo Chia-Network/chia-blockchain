@@ -175,7 +175,7 @@ async def validate_block_body(
             else:
                 result = calculate_cost_of_program(
                     block.transactions_generator,
-                    block.transactions_generator,
+                    block.transactions_generator_ref_list,
                     constants.CLVM_COST_RATIO_CONSTANT,
                     False,
                 )  # Note: strict_mode == False

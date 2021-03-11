@@ -227,7 +227,6 @@ def create_foliage(
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
-            bytes([0] * 32),
             generator_hash,
             generator_refs_hash,
             aggregate_sig,
