@@ -13,6 +13,7 @@ from src.rpc.harvester_rpc_api import HarvesterRpcApi
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.block_tools import get_plot_dir
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint16, uint64, uint32
@@ -187,23 +188,29 @@ class TestRpc:
                 master_sk_to_wallet_sk(bt.pool_master_sk, uint32(472)).get_g1()
             )
 
-            await client.set_reward_targets(new_ph, new_ph_2)
+            await client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
             targets_3 = await client.get_reward_targets(True)
-            assert targets_3["farmer_target"] == new_ph
-            assert targets_3["pool_target"] == new_ph_2
+            assert decode_puzzle_hash(targets_3["farmer_target"]) == new_ph
+            assert decode_puzzle_hash(targets_3["pool_target"]) == new_ph_2
             assert targets_3["have_pool_sk"] and targets_3["have_farmer_sk"]
 
             new_ph_3: bytes32 = create_puzzlehash_for_pk(
                 master_sk_to_wallet_sk(bt.pool_master_sk, uint32(1888)).get_g1()
             )
-            await client.set_reward_targets(None, new_ph_3)
+            await client.set_reward_targets(None, encode_puzzle_hash(new_ph_3, "xch"))
             targets_4 = await client.get_reward_targets(True)
-            assert targets_4["farmer_target"] == new_ph
-            assert targets_4["pool_target"] == new_ph_3
+            assert decode_puzzle_hash(targets_4["farmer_target"]) == new_ph
+            assert decode_puzzle_hash(targets_4["pool_target"]) == new_ph_3
             assert not targets_4["have_pool_sk"] and targets_3["have_farmer_sk"]
 
+            new_ph_3_encoded = encode_puzzle_hash(new_ph_3, "xch")
+            added_char = new_ph_3_encoded + "a"
             with pytest.raises(ValueError):
-                await client.set_reward_targets(None, bytes([1, 2, 3]))
+                await client.set_reward_targets(None, added_char)
+
+            replaced_char = new_ph_3_encoded[0:-1] + "a"
+            with pytest.raises(ValueError):
+                await client.set_reward_targets(None, replaced_char)
 
         finally:
             # Checks that the RPC manages to stop the node
