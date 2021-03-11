@@ -39,7 +39,7 @@ class WeightProofHandler:
 
     LAMBDA_L = 100
     C = 0.5
-    MAX_SAMPLES = 20  # todo change after bluebox integration
+    MAX_SAMPLES = 50
 
     def __init__(
         self,
