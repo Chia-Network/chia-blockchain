@@ -19,7 +19,7 @@ import {
   standardWallet,
   CCWallet,
   RLWallet,
-  DIDWallet
+  DIDWallet,
 } from '../../modules/walletMenu';
 import { CreateWalletView } from './create/WalletCreate';
 import ColouredWallet from './coloured/WalletColoured';
@@ -104,9 +104,7 @@ const CreateWallet = () => {
     <div>
       <Divider />
       <ListItem button onClick={presentCreateWallet}>
-        <ListItemText
-          primary={<Trans>Add Wallet</Trans>}
-        />
+        <ListItemText primary={<Trans>Add Wallet</Trans>} />
       </ListItem>
       <Divider />
     </div>
@@ -127,7 +125,9 @@ export function StatusCard() {
   const connectionCount = useSelector(
     (state: RootState) => state.wallet_state.status.connection_count,
   );
-
+  const genesis_initialized = useSelector(
+    (state: RootState) => state.wallet_state.status.genesis_initialized,
+  );
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">
@@ -139,16 +139,13 @@ export function StatusCard() {
             <Trans>status:</Trans>
           </Box>
           <Box>
-          {
-            (() => {
-              if (syncing)
-                 return <Trans>syncing</Trans>
-              if (synced)
-                 return <Trans>synced</Trans>
-              if (!synced)
-                return <Trans>not synced</Trans>
-          })()
-            }
+            {(() => {
+              if (!genesis_initialized)
+                return <Trans>Waiting for launch</Trans>;
+              if (syncing) return <Trans>syncing</Trans>;
+              if (synced) return <Trans>synced</Trans>;
+              if (!synced) return <Trans>not synced</Trans>;
+            })()}
           </Box>
         </Box>
         <Box display="flex">
@@ -177,7 +174,7 @@ export default function Wallets() {
   return (
     <LayoutSidebar
       title={<Trans>Wallets</Trans>}
-      sidebar={(
+      sidebar={
         <Flex flexDirection="column" height="100%" overflow="hidden">
           <Divider />
           <StatusCard />
@@ -194,32 +191,32 @@ export default function Wallets() {
           </Flex>
           <CreateWallet />
         </Flex>
-      )}
+      }
     >
       <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Switch>
-              <Route path={path} exact>
-                {!!wallet && wallet.type === WalletType.STANDARD_WALLET && (
-                  <StandardWallet wallet_id={id} />
-                )}
-                {!!wallet && wallet.type === WalletType.COLOURED_COIN && (
-                  <ColouredWallet wallet_id={id} />
-                )}
-                {!!wallet && wallet.type === WalletType.RATE_LIMITED && (
-                  <RateLimitedWallet wallet_id={id} />
-                )}
-                {!!wallet && wallet.type === WalletType.DISTRIBUTED_ID && (
-                  // @ts-ignore
-                  <DistributedWallet wallet_id={id} />
-                )}
-              </Route>
-              <Route path={`${path}/create`} exact>
-                <CreateWalletView />
-              </Route>
-            </Switch>
-          </Grid>
+        <Grid item xs={12}>
+          <Switch>
+            <Route path={path} exact>
+              {!!wallet && wallet.type === WalletType.STANDARD_WALLET && (
+                <StandardWallet wallet_id={id} />
+              )}
+              {!!wallet && wallet.type === WalletType.COLOURED_COIN && (
+                <ColouredWallet wallet_id={id} />
+              )}
+              {!!wallet && wallet.type === WalletType.RATE_LIMITED && (
+                <RateLimitedWallet wallet_id={id} />
+              )}
+              {!!wallet && wallet.type === WalletType.DISTRIBUTED_ID && (
+                // @ts-ignore
+                <DistributedWallet wallet_id={id} />
+              )}
+            </Route>
+            <Route path={`${path}/create`} exact>
+              <CreateWalletView />
+            </Route>
+          </Switch>
         </Grid>
+      </Grid>
     </LayoutSidebar>
   );
 }

@@ -15,6 +15,7 @@ type IncomingState = {
     syncing: boolean;
     synced: boolean;
     height?: number;
+    genesis_initialized: boolean;
   };
   send_transaction_result?: string | null;
   show_create_backup: boolean;
@@ -38,6 +39,7 @@ const initialState: IncomingState = {
     connection_count: 0,
     syncing: false,
     synced: false,
+    genesis_initialized: false,
   },
   show_create_backup: false,
   farmed_amount: 0,
@@ -239,6 +241,7 @@ export default function incomingReducer(
               ...state.status,
               syncing: data.syncing,
               synced: data.synced,
+              genesis_initialized: data.genesis_initialized,
             },
           };
         }

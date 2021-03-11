@@ -8,13 +8,15 @@ export default function WalletStatusCard() {
   const syncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
+  const genesis_initialized = useSelector(
+    (state: RootState) => state.wallet_state.status.genesis_initialized,
+  );
   const height = useSelector(
     (state: RootState) => state.wallet_state.status.height,
   );
   const connectionCount = useSelector(
     (state: RootState) => state.wallet_state.status.connection_count,
   );
-
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">
@@ -26,10 +28,14 @@ export default function WalletStatusCard() {
             <Trans>status:</Trans>
           </Box>
           <Box>
-            {syncing ? (
-              <Trans>syncing</Trans>
+            {genesis_initialized ? (
+              syncing ? (
+                <Trans>syncing</Trans>
+              ) : (
+                <Trans>synced</Trans>
+              )
             ) : (
-              <Trans>synced</Trans>
+              <Trans>Waiting for network to launch</Trans>
             )}
           </Box>
         </Box>
