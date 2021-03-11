@@ -4,7 +4,6 @@ from enum import Enum
 class ProtocolMessageTypes(Enum):
     # Shared protocol (all services)
     handshake = 1
-    handshake_ack = 2
 
     # Harvester protocol (harvester <-> farmer)
     harvester_handshake = 3

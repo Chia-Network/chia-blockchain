@@ -16,12 +16,12 @@ testnet_kwargs = {
     "DIFFICULTY_CHANGE_MAX_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
     "SUB_EPOCH_BLOCKS": 384,  # The number of blocks per sub-epoch, mainnet 384
-    "EPOCH_BLOCKS": 384 * 2,  # The number of blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
+    "EPOCH_BLOCKS": 384 * 4,  # The number of blocks per epoch, mainnet 4608. Must be multiple of SUB_EPOCH_SB
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
     "MIN_PLOT_SIZE": 32,  # 32 for mainnet
-    "MAX_PLOT_SIZE": 59,
+    "MAX_PLOT_SIZE": 50,
     "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 5 * 60,  # The next block can have a timestamp of at most these many seconds in the future
@@ -53,10 +53,11 @@ testnet_kwargs = {
     # 1 vByte = 108 clvm cost units
     "CLVM_COST_RATIO_CONSTANT": 108,
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
-    "MAX_BLOCK_COST_CLVM": 23077872,
+    # "MAX_BLOCK_COST_CLVM": 23077872,
+    "MAX_BLOCK_COST_CLVM": 40000000,  # Based on arvid analysis
     "WEIGHT_PROOF_THRESHOLD": 2,
-    "BLOCKS_CACHE_SIZE": (384 * 2) + (128 * 4),  # todo almog BLOCKS_CACHE_SIZE = EPOCH_BLOCKS + 4*MAX_SUB_SLOT_BLOCKS"
-    "WEIGHT_PROOF_RECENT_BLOCKS": 800,
+    "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
+    "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 5000 blocks
     "NETWORK_TYPE": 0,

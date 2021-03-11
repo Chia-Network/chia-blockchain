@@ -98,9 +98,7 @@ class WSChiaConnection:
         self.outbound_rate_limiter = RateLimiter(percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(percentage_of_limit=inbound_rate_limit_percent)
 
-    async def perform_handshake(
-        self, network_id: bytes32, protocol_version: str, server_port: int, local_type: NodeType
-    ):
+    async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,

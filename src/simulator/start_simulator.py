@@ -31,7 +31,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
     )
 
     peer_api = FullNodeSimulator(node, bt)
-
+    network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=node,
@@ -42,7 +42,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
-        network_id=constants.GENESIS_CHALLENGE,
+        network_id=network_id,
     )
     return kwargs
 
