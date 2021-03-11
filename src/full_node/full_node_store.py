@@ -6,7 +6,7 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary, next_sub_epoch_summary
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
 from src.full_node.signage_point import SignagePoint
 from src.protocols import timelord_protocol
@@ -244,16 +244,18 @@ class FullNodeStore:
                 peak.prev_hash,
                 peak.deficit,
                 peak.sub_epoch_summary_included is not None,
-            ):
+            )[0]:
                 assert peak_full_block is not None
                 ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                     self.constants, blocks, peak.required_iters, peak_full_block, True
                 )
                 if ses is not None:
                     if eos.challenge_chain.subepoch_summary_hash != ses.get_hash():
+                        log.warning(f"SES not correct {ses.get_hash(), eos.challenge_chain}")
                         return None
                 else:
                     if eos.challenge_chain.subepoch_summary_hash is not None:
+                        log.warning("SES not correct, should be None")
                         return None
         else:
             # This is on an empty slot

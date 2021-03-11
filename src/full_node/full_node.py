@@ -361,7 +361,9 @@ class FullNode:
             # point being in the past), or we are very far behind. Performs a long sync.
             self._sync_task = asyncio.create_task(self._sync())
 
-    async def send_peak_to_timelords(self, peak_block: Optional[FullBlock] = None):
+    async def send_peak_to_timelords(
+        self, peak_block: Optional[FullBlock] = None, peer: Optional[ws.WSChiaConnection] = None
+    ):
         """
         Sends current peak to timelords
         """
@@ -409,7 +411,10 @@ class FullNode:
             )
 
             msg = make_msg(ProtocolMessageTypes.new_peak_timelord, timelord_new_peak)
-            await self.server.send_to_all([msg], NodeType.TIMELORD)
+            if peer is None:
+                await self.server.send_to_all([msg], NodeType.TIMELORD)
+            else:
+                await peer.new_peak_timelord(timelord_new_peak)
 
     async def synced(self) -> bool:
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1134,7 +1139,9 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
         self._state_changed("unfinished_block")
 
-    async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> Optional[Message]:
+    async def new_infusion_point_vdf(
+        self, request: timelord_protocol.NewInfusionPointVDF, timelord_peer: Optional[ws.WSChiaConnection] = None
+    ) -> Optional[Message]:
         # Lookup unfinished blocks
         unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(
             request.unfinished_reward_hash
@@ -1228,8 +1235,11 @@ class FullNode:
             return None
         try:
             await self.respond_block(full_node_protocol.RespondBlock(block))
-        except ConsensusError as e:
+        except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
+            if timelord_peer is not None:
+                # Only sends to the timelord who sent us this VDF, to reset them to the correct peak
+                await self.send_peak_to_timelords(peer=timelord_peer)
         return None
 
     async def respond_end_of_sub_slot(

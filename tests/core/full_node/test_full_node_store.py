@@ -18,13 +18,13 @@ from src.util.block_cache import BlockCache
 from src.util.block_tools import get_signage_point
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint32, uint64, uint128
-from tests.core.fixtures import empty_blockchain  # noqa: F401
+from tests.core.fixtures import empty_blockchain, default_1000_blocks  # noqa: F401
 from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
@@ -405,7 +405,7 @@ class TestFullNodeStore:
             sb = blockchain.block_record(block.header_hash)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             peak = sb
-            peak_full_block = peak_full_block
+            peak_full_block = block
             res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, False, blockchain)
             assert res[0] is None
 
@@ -465,3 +465,20 @@ class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_basic_store_compact_blockchain(self, empty_blockchain):
         await self.test_basic_store(empty_blockchain, True)
+
+    @pytest.mark.asyncio
+    async def test_long_chain_slots(self, empty_blockchain, default_1000_blocks):
+        blockchain = empty_blockchain
+        store = await FullNodeStore.create(test_constants)
+        blocks = default_1000_blocks
+        peak = None
+        peak_full_block = None
+        for block in blocks:
+            for sub_slot in block.finished_sub_slots:
+                assert store.new_finished_sub_slot(sub_slot, blockchain, peak, peak_full_block) is not None
+            res, _, _ = await blockchain.receive_block(block)
+            assert res == ReceiveBlockResult.NEW_PEAK
+            peak = blockchain.get_peak()
+            peak_full_block = await blockchain.get_full_peak()
+            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            store.new_peak(peak, peak_full_block, sp_sub_slot, ip_sub_slot, False, blockchain)

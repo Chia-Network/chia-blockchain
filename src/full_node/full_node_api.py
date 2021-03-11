@@ -835,13 +835,16 @@ class FullNodeAPI:
         return None
 
     # TIMELORD PROTOCOL
+    @peer_required
     @api_request
-    async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> Optional[Message]:
+    async def new_infusion_point_vdf(
+        self, request: timelord_protocol.NewInfusionPointVDF, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
         # Lookup unfinished blocks
         async with self.full_node.timelord_lock:
-            return await self.full_node.new_infusion_point_vdf(request)
+            return await self.full_node.new_infusion_point_vdf(request, peer)
 
     @peer_required
     @api_request
