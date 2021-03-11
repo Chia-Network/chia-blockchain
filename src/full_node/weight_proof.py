@@ -141,7 +141,7 @@ class WeightProofHandler:
         ses_count = 0
         curr_height = tip_height
         blocks_n = 0
-        while (blocks_n <= self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (ses_count <= 2):
+        while (blocks_n <= self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (ses_count < 2):
             if curr_height == 0:
                 break
             # add to needed reward chain recent blocks
