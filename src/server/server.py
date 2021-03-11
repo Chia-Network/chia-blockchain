@@ -8,7 +8,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from aiohttp import ClientSession, ClientTimeout, WSCloseCode, client_exceptions, web
+from aiohttp import ClientSession, ClientTimeout, WSCloseCode, client_exceptions, web, ServerDisconnectedError
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
 from cryptography import x509
@@ -353,6 +353,10 @@ class ChiaServer:
                 ws = await session.ws_connect(
                     url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
+            except ServerDisconnectedError:
+                self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
+                await session.close()
+                return False
             except asyncio.TimeoutError:
                 self.log.debug(f"Timeout error connecting to {url}")
                 await session.close()
