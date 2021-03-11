@@ -28,9 +28,3 @@ class Handshake(Streamable):
     server_port: uint16
     node_type: uint8
     capabilities: List[Tuple[uint16, str]]
-
-
-@dataclass(frozen=True)
-@streamable
-class HandshakeAck(Streamable):
-    pass
