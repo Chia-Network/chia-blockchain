@@ -38,13 +38,17 @@ def generate_and_add():
     add_private_key_seed(mnemonic)
 
 
-def add_private_key_seed():
+def query_and_add_private_key_seed():
+    mnemonic = input("Enter the mnemonic you want to use: ")
+    add_private_key_seed(mnemonic)
+
+
+def add_private_key_seed(mnemonic: str):
     """
     Add a private key seed to the keyring, with the given mnemonic.
     """
 
     try:
-        mnemonic = input("Enter the mnemonic you want to use: ")
         passphrase = ""
         sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
@@ -147,7 +151,7 @@ def show_cmd():
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
 @click.pass_context
 def add_cmd(ctx: click.Context):
-    add_private_key_seed()
+    query_and_add_private_key_seed()
     check_keys(ctx.obj["root_path"])
 
 
