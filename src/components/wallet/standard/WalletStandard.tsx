@@ -244,25 +244,21 @@ function BalanceCard(props: BalanceCardProps) {
   const classes = useStyles();
 
   return (
-    <Card
-      title={<Trans>Balance</Trans>}
-    >
+    <Card title={<Trans>Balance</Trans>}>
       <BalanceCardSubSection
         title={<Trans>Total Balance</Trans>}
         balance={balance}
         tooltip={
           <Trans>
             This is the total amount of chia in the blockchain at the current
-            peak sub block that is controlled by your private keys.
-            It includes frozen farming rewards,
-            but not pending incoming and outgoing transactions.
+            peak sub block that is controlled by your private keys. It includes
+            frozen farming rewards, but not pending incoming and outgoing
+            transactions.
           </Trans>
         }
       />
       <BalanceCardSubSection
-        title={
-          <Trans>Spendable Balance</Trans>
-        }
+        title={<Trans>Spendable Balance</Trans>}
         balance={balance_spendable}
         tooltip={
           <Trans>
@@ -283,34 +279,24 @@ function BalanceCard(props: BalanceCardProps) {
                 id="panel1a-header"
               >
                 <Typography className={classes.heading}>
-                  <Trans>
-                    View pending balances
-                  </Trans>
+                  <Trans>View pending balances</Trans>
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Grid container spacing={0}>
                   <BalanceCardSubSection
-                    title={
-                      <Trans>
-                        Pending Total Balance
-                      </Trans>
-                    }
+                    title={<Trans>Pending Total Balance</Trans>}
                     balance={balance_ptotal}
                     tooltip={
                       <Trans>
-                        This is the total balance + pending balance: it is
-                        what your balance will be after all pending
-                        transactions are confirmed.
+                        This is the total balance + pending balance: it is what
+                        your balance will be after all pending transactions are
+                        confirmed.
                       </Trans>
                     }
                   />
                   <BalanceCardSubSection
-                    title={
-                      <Trans>
-                        Pending Balance
-                      </Trans>
-                    }
+                    title={<Trans>Pending Balance</Trans>}
                     balance={balance_pending}
                     tooltip={
                       <Trans>
@@ -321,17 +307,13 @@ function BalanceCard(props: BalanceCardProps) {
                     }
                   />
                   <BalanceCardSubSection
-                    title={
-                      <Trans>
-                        Pending Change
-                      </Trans>
-                    }
+                    title={<Trans>Pending Change</Trans>}
                     balance={balance_change}
                     tooltip={
                       <Trans>
-                        This is the pending change, which are change coins
-                        which you have sent to yourself, but have not been
-                        confirmed yet.
+                        This is the pending change, which are change coins which
+                        you have sent to yourself, but have not been confirmed
+                        yet.
                       </Trans>
                     }
                   />
@@ -390,10 +372,8 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans>
-              Please finish syncing before making a transaction
-            </Trans>
-          </AlertDialog>
+            <Trans>Please finish syncing before making a transaction</Trans>
+          </AlertDialog>,
         ),
       );
       return;
@@ -409,10 +389,8 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans>
-              Please enter a valid numeric amount
-            </Trans>
-          </AlertDialog>
+            <Trans>Please enter a valid numeric amount</Trans>
+          </AlertDialog>,
         ),
       );
       return;
@@ -421,10 +399,8 @@ function SendCard(props: SendCardProps) {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans>
-              Please enter a valid numeric fee
-            </Trans>
-          </AlertDialog>
+            <Trans>Please enter a valid numeric fee</Trans>
+          </AlertDialog>,
         ),
       );
       return;
@@ -440,7 +416,7 @@ function SendCard(props: SendCardProps) {
               Error: Cannot send chia to coloured address. Please enter a chia
               address.
             </Trans>
-          </AlertDialog>
+          </AlertDialog>,
         ),
       );
       return;
@@ -462,9 +438,7 @@ function SendCard(props: SendCardProps) {
   }
 
   return (
-    <Card
-      title={<Trans>Create Transaction</Trans>}
-    >
+    <Card title={<Trans>Create Transaction</Trans>}>
       {result_message && (
         <Grid item xs={12}>
           <p className={result_class}>{result_message}</p>
@@ -482,9 +456,7 @@ function SendCard(props: SendCardProps) {
               inputRef={(input) => {
                 address_input = input;
               }}
-              label={
-                <Trans>Address / Puzzle hash</Trans>
-              }
+              label={<Trans>Address / Puzzle hash</Trans>}
             />
           </Box>
           <Box />
@@ -566,7 +538,7 @@ function AddressCard(props: AddressCardProps) {
   const dispatch = useDispatch();
 
   function newAddress() {
-    dispatch(get_address(id));
+    dispatch(get_address(id, true));
   }
 
   function copy() {
@@ -574,9 +546,7 @@ function AddressCard(props: AddressCardProps) {
   }
 
   return (
-    <Card
-      title={<Trans>Receive Address</Trans>}
-    >
+    <Card title={<Trans>Receive Address</Trans>}>
       <Grid item xs={12}>
         <Box display="flex">
           <Box flexGrow={1}>

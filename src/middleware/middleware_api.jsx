@@ -309,7 +309,7 @@ export const handle_message = async (store, payload, errorProcessed) => {
         }
         get_wallet_transactions(store, wallet.id);
         if (wallet.type === COLOURED_COIN || wallet.type === STANDARD_WALLET) {
-          store.dispatch(get_address(wallet.id));
+          store.dispatch(get_address(wallet.id, false));
         }
         if (wallet.type === COLOURED_COIN) {
           store.dispatch(get_colour_name(wallet.id));
@@ -397,8 +397,7 @@ export const handle_message = async (store, payload, errorProcessed) => {
         ping_farmer(store);
       } else if (service === service_harvester) {
         ping_harvester(store);
-      } else if (service === service_plotter) {
-      }
+      } else if (service === service_plotter) {}
     }
   } else if (payload.command === 'stop_service') {
     if (payload.data.success) {

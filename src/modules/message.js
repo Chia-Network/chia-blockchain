@@ -376,10 +376,10 @@ export const get_transactions = (wallet_id) => {
   return action;
 };
 
-export const get_address = (wallet_id) => {
+export const get_address = (wallet_id, new_address) => {
   const action = walletMessage();
   action.message.command = 'get_next_address';
-  action.message.data = { wallet_id };
+  action.message.data = { wallet_id, new_address };
   return action;
 };
 
