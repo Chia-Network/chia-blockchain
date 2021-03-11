@@ -1057,8 +1057,7 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
         overflow = False
         deficit = uint8(0)
         ses = False
-        if block.height is not None:
-            height = block.height
+        height = block.height
         for sub_slot in block.finished_sub_slots:
             prev_challenge = challenge
             challenge = sub_slot.challenge_chain.get_hash()
