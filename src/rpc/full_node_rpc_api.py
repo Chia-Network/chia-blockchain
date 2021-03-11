@@ -73,7 +73,7 @@ class FullNodeRpcApi:
         if self.service.initialized is False:
             res: Dict = {
                 "blockchain_state": {
-                    "peak": 0,
+                    "peak": None,
                     "genesis_challenge_initialized": self.service.initialized,
                     "sync": {
                         "sync_mode": False,
