@@ -152,7 +152,7 @@ class WeightProofHandler:
             recent_chain.insert(0, header_block)
             if block_rec.sub_epoch_summary_included:
                 ses_count += 1
-            curr_height = curr_height - uint32(1)  # type: ignore
+            curr_height = uint32(curr_height - 1)  # type: ignore
             blocks_n += 1
 
         header_block = headers[self.blockchain.height_to_hash(curr_height)]
