@@ -64,14 +64,6 @@ class WeightProofHandler:
             return None
 
         async with self.lock:
-            if self.proof is not None:
-                if tip == self.tip:
-                    return self.proof
-                new_wp = await self._create_proof_of_weight(tip, self.proof)
-                self.proof = new_wp
-                self.tip = tip
-                return new_wp
-
             wp = await self._create_proof_of_weight(tip)
             if wp is None:
                 return None
@@ -79,7 +71,7 @@ class WeightProofHandler:
             self.tip = tip
             return wp
 
-    async def _create_proof_of_weight(self, tip: bytes32, wp: Optional[WeightProof] = None) -> Optional[WeightProof]:
+    async def _create_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
         """
         Creates a weight proof object
         """
@@ -91,7 +83,7 @@ class WeightProofHandler:
             log.error("failed not tip in cache")
             return None
         log.info(f"create weight proof peak {tip} {tip_rec.height}")
-        recent_chain = await self._get_recent_chain(tip_rec.height, wp)
+        recent_chain = await self._get_recent_chain(tip_rec.height)
         if recent_chain is None:
             return None
 
@@ -136,36 +128,30 @@ class WeightProofHandler:
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
-    async def _get_recent_chain(
-        self, tip_height: uint32, wp: Optional[WeightProof] = None
-    ) -> Optional[List[HeaderBlock]]:
+    async def _get_recent_chain(self, tip_height: uint32
+        ) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
-
-        curr_height = uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS)
-
-        if wp is not None:
-            idx = 0
-            for block in wp.recent_chain_data:
-                if block.reward_chain_block.height == curr_height:
-                    break
-                idx += 1
-
-            if idx < len(wp.recent_chain_data):
-                for block in wp.recent_chain_data[idx:]:
-                    recent_chain.append(block)
-                    assert curr_height == block.reward_chain_block.height
-                    curr_height = curr_height + uint32(1)  # type: ignore
-                    idx += 1
-
-        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(curr_height, tip_height)
-        while curr_height <= tip_height:
+        min_height = max(0, tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS*2)
+        headers: Dict[bytes32, HeaderBlock] = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
+        blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
+        ses_count = 0
+        curr_height = tip_height
+        blocks_n = 0
+        while blocks_n <= self.constants.WEIGHT_PROOF_RECENT_BLOCKS or ses_count <= 2 and curr_height > 0:
             # add to needed reward chain recent blocks
             header_block = headers[self.blockchain.height_to_hash(curr_height)]
+            block_rec = blocks[header_block.header_hash]
             if header_block is None:
                 log.error("creating recent chain failed")
                 return None
-            recent_chain.append(header_block)
-            curr_height = curr_height + uint32(1)  # type: ignore
+            recent_chain.insert(0, header_block)
+            if block_rec.sub_epoch_summary_included:
+                ses_count += 1
+            curr_height = curr_height - uint32(1)  # type: ignore
+            blocks_n += 1
+
+        header_block = headers[self.blockchain.height_to_hash(curr_height)]
+        recent_chain.insert(0, header_block)
 
         log.info(
             f"recent chain, "
