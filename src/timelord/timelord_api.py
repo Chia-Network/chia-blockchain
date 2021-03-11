@@ -20,6 +20,8 @@ class TimelordAPI:
 
     @api_request
     async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord):
+        if self.timelord.last_state is None:
+            return
         async with self.timelord.lock:
             if self.timelord.sanitizer_mode:
                 return
@@ -43,6 +45,8 @@ class TimelordAPI:
 
     @api_request
     async def new_unfinished_block(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlock):
+        if self.timelord.last_state is None:
+            return
         async with self.timelord.lock:
             if self.timelord.sanitizer_mode:
                 return

@@ -67,7 +67,7 @@ class ChiaServer:
         api: Any,
         local_type: NodeType,
         ping_interval: int,
-        network_id: bytes32,
+        network_id: str,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         root_path: Path,
@@ -425,6 +425,9 @@ class ChiaServer:
         return False
 
     def connection_closed(self, connection: WSChiaConnection, ban_time: int):
+        if is_localhost(connection.peer_host) and ban_time != 0:
+            self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
+            ban_time = 0
         self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
         if ban_time > 0:
             ban_until: float = time.time() + ban_time

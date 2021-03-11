@@ -602,7 +602,7 @@ class FullNodeStore:
         block_records: BlockchainInterface,
         prev_b: Optional[BlockRecord],
         last_challenge_to_add: bytes32,
-    ) -> List[EndOfSubSlotBundle]:
+    ) -> Optional[List[EndOfSubSlotBundle]]:
         """
         Retrieves the EndOfSubSlotBundles that are in the store either:
         1. From the starting challenge if prev_b is None
@@ -610,6 +610,7 @@ class FullNodeStore:
 
         Stops at last_challenge
         """
+
         if prev_b is None:
             # The first sub slot must be None
             assert self.finished_sub_slots[0][0] is None
@@ -638,5 +639,6 @@ class FullNodeStore:
                 found_last_challenge = True
                 break
         if not found_last_challenge:
-            raise ValueError(f"Did not find hash {last_challenge_to_add} connected to " f"{challenge_in_chain}")
+            log.warning(f"Did not find hash {last_challenge_to_add} connected to " f"{challenge_in_chain}")
+            return None
         return collected_sub_slots

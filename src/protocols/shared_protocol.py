@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Tuple, List
 
-from src.types.blockchain_format.sized_bytes import bytes32
 from enum import IntEnum
 from src.util.ints import uint8, uint16
 from src.util.streamable import Streamable, streamable
@@ -23,7 +22,7 @@ class Capability(IntEnum):
 @dataclass(frozen=True)
 @streamable
 class Handshake(Streamable):
-    network_id: bytes32
+    network_id: str
     protocol_version: str
     software_version: str
     server_port: uint16

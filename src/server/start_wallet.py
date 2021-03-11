@@ -45,7 +45,7 @@ def service_kwargs_for_wallet(
     else:
         connect_peers = []
         node.full_node_peer = None
-
+    network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=node,
@@ -55,7 +55,7 @@ def service_kwargs_for_wallet(
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        network_id=updated_constants.GENESIS_CHALLENGE,
+        network_id=network_id,
     )
     port = config.get("port")
     if port is not None:

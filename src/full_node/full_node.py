@@ -33,6 +33,7 @@ from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.server import ChiaServer
 from src.types.blockchain_format.classgroup import ClassgroupElement
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -44,6 +45,8 @@ from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint8, uint32, uint64, uint128
+from src.util.genesis_wait import wait_for_genesis_challenge
+
 from src.util.path import mkdir, path_from_root
 
 
@@ -51,7 +54,7 @@ class FullNode:
     block_store: BlockStore
     full_node_store: FullNodeStore
     full_node_peers: Optional[FullNodePeers]
-    sync_store: SyncStore
+    sync_store: Any
     coin_store: CoinStore
     mempool_manager: MempoolManager
     connection: aiosqlite.Connection
@@ -65,6 +68,7 @@ class FullNode:
     root_path: Path
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
+    initialized: bool
 
     def __init__(
         self,
@@ -73,6 +77,7 @@ class FullNode:
         consensus_constants: ConsensusConstants,
         name: str = None,
     ):
+        self.initialized = False
         self.root_path = root_path
         self.config = config
         self.server = None
@@ -81,29 +86,27 @@ class FullNode:
         self.pow_creation: Dict[uint32, asyncio.Event] = {}
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers = None
+        self.sync_store = None
 
         if name:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
 
-        db_path_replaced: str = config["database_path"].replace(
-            "CHALLENGE", consensus_constants.GENESIS_CHALLENGE[:8].hex()
-        )
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    async def _start(self):
-        # create the store (db) and full node instance
+    async def regular_start(self):
+        self.log.info("regular_start")
         self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.constants)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
-        self.timelord_lock = asyncio.Lock()
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
@@ -122,8 +125,6 @@ class FullNode:
             pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
-        self.state_changed_callback = None
-
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         self.uncompact_task = None
         if peak is not None:
@@ -137,6 +138,23 @@ class FullNode:
                     self.config["target_uncompact_proofs"],
                 )
             )
+        self.initialized = True
+
+    async def delayed_start(self):
+        self.log.info("delayed_start")
+        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants, "full_node")
+
+        self.config = config
+        self.constants = constants
+        await self.regular_start()
+
+    async def _start(self):
+        self.timelord_lock = asyncio.Lock()
+        # create the store (db) and full node instance
+        if self.constants.GENESIS_CHALLENGE is not None:
+            await self.regular_start()
+        else:
+            asyncio.create_task(self.delayed_start())
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -423,6 +441,9 @@ class FullNode:
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
+        if self.initialized is False:
+            return
+
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
             synced = await self.synced()
@@ -462,9 +483,10 @@ class FullNode:
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
-        self.sync_store.peer_disconnected(connection.peer_node_id)
         self._state_changed("close_connection")
         self._state_changed("sync_mode")
+        if self.sync_store is not None:
+            self.sync_store.peer_disconnected(connection.peer_node_id)
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
@@ -474,8 +496,10 @@ class FullNode:
 
     def _close(self):
         self._shut_down = True
-        self.blockchain.shut_down()
-        self.mempool_manager.shut_down()
+        if self.blockchain is not None:
+            self.blockchain.shut_down()
+        if self.mempool_manager is not None:
+            self.mempool_manager.shut_down()
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
@@ -1152,11 +1176,13 @@ class FullNode:
                 self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                 return None
 
-        finished_sub_slots = self.full_node_store.get_finished_sub_slots(
+        finished_sub_slots: Optional[List[EndOfSubSlotBundle]] = self.full_node_store.get_finished_sub_slots(
             self.blockchain,
             prev_b,
             last_slot_cc_hash,
         )
+        if finished_sub_slots is None:
+            return None
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,
