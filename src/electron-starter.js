@@ -9,8 +9,7 @@ if (!setupEvents.handleSquirrelEvent()) {
     shell,
     ipcMain,
     BrowserWindow,
-    Menu,
-    Tray
+    Menu
   } = require("electron");
   const openAboutWindow = require("about-window").default;
   const path = require("path");
@@ -74,42 +73,6 @@ if (!setupEvents.handleSquirrelEvent()) {
       }
     });
 
-    const tray = new Tray(path.join(__dirname, "assets/img/chia_circle.png"))
-    const contextMenu = Menu.buildFromTemplate([
-      { label: i18n._(/*i18n*/{id: "Show app"}), click: () => mainWindow.show()},
-      { label: i18n._(/*i18n*/{id: "Quit"}),
-        click: () => {
-          // if the daemon isn't local we aren't going to try to start/stop it
-          if (decidedToClose || !chiaConfig.manageDaemonLifetime()) {
-            return;
-          }
-          if (!isClosing) {
-            isClosing = true
-            var choice = dialog.showMessageBoxSync({
-              type: "question",
-              buttons: [i18n._(/*i18n*/{id: "No"}), i18n._(/*i18n*/{id: "Yes"})],
-              title: i18n._(/*i18n*/{id: "Confirm"}),
-              message:
-                i18n._(/*i18n*/{id: "Are you sure you want to quit? GUI Plotting and farming will stop."})
-            });
-            if (choice == 0) {
-              isClosing = false
-              return;
-            }
-            isClosing = false
-            decidedToClose = true;
-            mainWindow.webContents.send("exit-daemon");
-            mainWindow.setBounds({ height: 500, width: 500 });
-            ipcMain.on("daemon-exited", (event, args) => {
-              mainWindow.close();
-            });
-          }
-        }
-      }
-    ])
-    tray.setToolTip(app.getName())
-    tray.setContextMenu(contextMenu)
-
     if (dev_config.redux_tool) {
       BrowserWindow.addDevToolsExtension(
         path.join(os.homedir(), dev_config.redux_tool)
@@ -147,8 +110,32 @@ if (!setupEvents.handleSquirrelEvent()) {
     //   mainWindow.webContents.openDevTools();
     // }
     mainWindow.on("close", e => {
+      // if the daemon isn't local we aren't going to try to start/stop it
+      if (decidedToClose || !chiaConfig.manageDaemonLifetime()) {
+        return;
+      }
       e.preventDefault();
-      mainWindow.hide()
+      if (!isClosing) {
+          isClosing = true
+          var choice = dialog.showMessageBoxSync({
+            type: "question",
+            buttons: [i18n._(/*i18n*/{id: "No"}), i18n._(/*i18n*/{id: "Yes"})],
+            title: i18n._(/*i18n*/{id: "Confirm"}),
+            message:
+              i18n._(/*i18n*/{id: "Are you sure you want to quit? GUI Plotting and farming will stop."})
+          });
+          if (choice == 0) {
+            isClosing = false
+            return;
+          }
+          isClosing = false
+          decidedToClose = true;
+          mainWindow.webContents.send("exit-daemon");
+          mainWindow.setBounds({ height: 500, width: 500 });
+          ipcMain.on("daemon-exited", (event, args) => {
+            mainWindow.close();
+          });
+      }
     });
   };
 
