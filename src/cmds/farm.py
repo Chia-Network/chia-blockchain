@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import aiohttp
 import click
 
+from src.cmds.units import units
 from src.consensus.block_record import BlockRecord
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -149,15 +150,14 @@ async def get_average_block_time(rpc_port: int) -> float:
 
 
 async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
-    stats = None
+    amounts = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
         if wallet_rpc_port is None:
             wallet_rpc_port = config["wallet"]["rpc_port"]
         wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
-        wallets = await wallet_client.get_wallets()
-        stats = compute_wallets_stats(wallets)
+        amounts = await wallet_client.get_farmed_amount()
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
@@ -166,7 +166,7 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
 
     wallet_client.close()
     await wallet_client.await_closed()
-    return stats
+    return amounts
 
 
 async def is_farmer_running(farmer_rpc_port: int) -> bool:
@@ -229,7 +229,7 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
 
 
 async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
-    wallets_stats = await get_wallets_stats(wallet_rpc_port)
+    amounts = await get_wallets_stats(wallet_rpc_port)
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = await is_farmer_running(farmer_rpc_port)
@@ -240,17 +240,17 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     elif blockchain_state["sync"]["sync_mode"]:
         print("Syncing")
     elif not blockchain_state["sync"]["synced"]:
-        print("Not available")
+        print("Not synced or not connected to peers")
     elif not farmer_running:
         print("Not running")
     else:
         print("Farming")
 
-    if wallets_stats is not None:
-        print(f"Total chia farmed: {wallets_stats['total_chia_farmed']}")
-        print(f"User transaction fees: {wallets_stats['user_transaction_fees']}")
-        print(f"Block rewards: {wallets_stats['block_rewards']}")
-        print(f"Last height farmed: {wallets_stats['biggest_reward_height']}")
+    if amounts is not None:
+        print(f"Total chia farmed: {amounts['total_amount'] / units['chia']}")
+        print(f"User transaction fees: {amounts['fee_amount'] / units['chia']}")
+        print(f"Block rewards: {(amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']}")
+        print(f"Last height farmed: {amounts['last_height_farmed']}")
     else:
         print("Total chia farmed: Unknown")
         print("User transaction fees: Unknown")
@@ -303,7 +303,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
             print(f"{math.floor(minutes)} minutes")
     else:
         print("Expected time to win: Unknown")
-    print("Note: log into your key using 'chia show' to see rewards for each key")
+    print("Note: log into your key using 'chia wallet show' to see rewards for each key")
 
 
 @click.group("farm", short_help="Manage your farm")

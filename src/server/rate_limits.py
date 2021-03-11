@@ -38,7 +38,6 @@ rate_limits_tx = {
 
 rate_limits_other = {
     ProtocolMessageTypes.handshake: RLSettings(5, 10 * 1024, 5 * 10 * 1024),
-    ProtocolMessageTypes.handshake_ack: RLSettings(5, 1024),
     ProtocolMessageTypes.harvester_handshake: RLSettings(5, 1024 * 1024),
     ProtocolMessageTypes.new_signage_point_harvester: RLSettings(100, 1024),
     ProtocolMessageTypes.new_proof_of_space: RLSettings(100, 2048),

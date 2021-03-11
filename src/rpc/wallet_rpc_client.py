@@ -126,5 +126,8 @@ class WalletRpcClient(RpcClient):
     async def create_backup(self, file_path: Path) -> None:
         return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
 
+    async def get_farmed_amount(self) -> Dict:
+        return await self.fetch("get_farmed_amount", {})
+
 
 # TODO: add APIs for coloured coins and RL wallet

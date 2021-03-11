@@ -7,6 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from blspy import PrivateKey
 
 from src.cmds.init import check_keys
+from src.consensus.block_rewards import calculate_base_farmer_reward
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -23,6 +24,7 @@ from src.wallet.trade_record import TradeRecord
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict
+from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
@@ -53,6 +55,8 @@ class WalletRpcApi:
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/farm_block": self.farm_block,  # Only when node simulator is running
+            "/get_initial_freeze_period": self.get_initial_freeze_period,
+            "/get_network_info": self.get_network_info,
             # Wallet management
             "/get_wallets": self.get_wallets,
             "/create_new_wallet": self.create_new_wallet,
@@ -63,6 +67,8 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/create_backup": self.create_backup,
+            "/get_transaction_count": self.get_transaction_count,
+            "/get_farmed_amount": self.get_farmed_amount,
             # Coloured coins and trading
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
@@ -78,10 +84,6 @@ class WalletRpcApi:
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
-            "/get_transaction_count": self.get_transaction_count,
-            "/get_initial_freeze_period": self.get_initial_freeze_period,
-            "/get_network_info": self.get_network_info,
-            "/get_farmed_amount": self.get_farmed_amount,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -703,7 +705,25 @@ class WalletRpcApi:
     async def get_farmed_amount(self, request):
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
         amount = 0
+        pool_reward_amount = 0
+        farmer_reward_amount = 0
+        fee_amount = 0
+        last_height_farmed = 0
         for record in tx_records:
+            height = record.height_farmed()
+            if height > last_height_farmed:
+                last_height_farmed = height
+            if record.type == TransactionType.COINBASE_REWARD:
+                pool_reward_amount += record.amount
+            if record.type == TransactionType.FEE_REWARD:
+                fee_amount += record.amount - calculate_base_farmer_reward(height)
+                farmer_reward_amount += record.amount - fee_amount
             amount += record.amount
 
-        return {"farmed_amount": amount}
+        return {
+            "total_amount": amount,
+            "pool_reward_amount": pool_reward_amount,
+            "farmer_reward_amount": farmer_reward_amount,
+            "fee_amount": fee_amount,
+            "last_height_farmed": last_height_farmed,
+        }

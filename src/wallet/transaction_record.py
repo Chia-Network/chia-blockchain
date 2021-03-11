@@ -5,8 +5,10 @@ from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
+from src.util.hash import std_hash
 from src.util.ints import uint8, uint32, uint64
 from src.util.streamable import Streamable, streamable
+from src.wallet.util.transaction_type import TransactionType
 
 
 @dataclass(frozen=True)
@@ -42,3 +44,18 @@ class TransactionRecord(Streamable):
                 return True
         # Note, transactions pending inclusion (pending) return false
         return False
+
+    def height_farmed(self) -> Optional[uint32]:
+        if not self.confirmed:
+            return None
+        if self.type == TransactionType.FEE_REWARD or self.type == TransactionType.COINBASE_REWARD:
+            for block_index in range(self.confirmed_at_height, self.confirmed_at_height - 100, -1):
+                if block_index < 0:
+                    return None
+                block_index_as_hash = bytes32(block_index.to_bytes(32, "big"))
+                block_index_as_hash_2 = std_hash(std_hash(block_index.to_bytes(4, "big")))
+                if block_index_as_hash == self.additions[0].parent_coin_info:
+                    return uint32(block_index)
+                if block_index_as_hash_2 == self.additions[0].parent_coin_info:
+                    return uint32(block_index)
+        return None
