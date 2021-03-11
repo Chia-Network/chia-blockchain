@@ -141,7 +141,7 @@ class WeightProofHandler:
         ses_count = 0
         curr_height = tip_height
         blocks_n = 0
-        while (blocks_n <= self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (ses_count < 2):
+        while ses_count < 2:
             if curr_height == 0:
                 break
             # add to needed reward chain recent blocks
@@ -1054,6 +1054,9 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
     tip_height = weight_proof.recent_chain_data[-1].height
     prev_block_record = None
     for idx, block in enumerate(weight_proof.recent_chain_data):
+        required_iters = 0
+        overflow = False
+        deficit = 0
         ses = False
         if block.height is not None:
             height = block.height
@@ -1070,24 +1073,21 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
 
-        if challenge is None or prev_challenge is None:
-            log.debug(f"skip block {block.height}")
-            continue
-
-        overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
-        log.debug(f"wp, validate block {block.height}")
-        if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
-            required_iters, error = validate_finished_header_block(
-                constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
-            )
-            if error is not None:
-                log.error(f"block {block.header_hash} failed validation {error}")
-                return False
-        else:
-            required_iters = _validate_pospace_recent_chain(constants, block, challenge, diff, overflow, prev_challenge)
-            if required_iters is None:
-                return False
+        if (challenge is not None) and  (prev_challenge is not None):
+            overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
+            deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
+            log.debug(f"wp, validate block {block.height}")
+            if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
+                required_iters, error = validate_finished_header_block(
+                    constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
+                )
+                if error is not None:
+                    log.error(f"block {block.header_hash} failed validation {error}")
+                    return False
+            else:
+                required_iters = _validate_pospace_recent_chain(constants, block, challenge, diff, overflow, prev_challenge)
+                if required_iters is None:
+                    return False
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
         block_record = header_block_to_sub_block_record(
