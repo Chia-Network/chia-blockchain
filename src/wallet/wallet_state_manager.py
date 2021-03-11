@@ -337,6 +337,14 @@ class WalletStateManager:
             await self.create_more_puzzle_hashes()
             return record
 
+    async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
+        async with self.puzzle_store.lock:
+            # If we have no unused public keys, we will create new ones
+            current: Optional[DerivationRecord] = await self.puzzle_store.get_last_active_derivation_record_for_wallet(
+                wallet_id
+            )
+            return current
+
     def set_callback(self, callback: Callable):
         """
         Callback to be called when the state of the wallet changes.
