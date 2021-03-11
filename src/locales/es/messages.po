@@ -1666,8 +1666,8 @@ msgid "Total Balance"
 msgstr "Saldo Total"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
-msgid "Total Chia Farmed"
-msgstr "Chìa Total Cultivada"
+#~ msgid "Total Chia Farmed"
+#~ msgstr "Chìa Total Cultivada"
 
 #: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
@@ -1925,6 +1925,10 @@ msgstr "sincronizando"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
+msgstr ""
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
+msgid "{currencyCode} Total Chia Farmed"
 msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17

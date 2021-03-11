@@ -316,8 +316,7 @@ export default function incomingReducer(
         return { ...state };
       }
       if (command === 'get_farmed_amount') {
-        const { farmed_amount } = data;
-        return { ...state, farmed_amount };
+        return { ...state, farmed_amount: data };
       }
       return state;
     default:

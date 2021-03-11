@@ -4,8 +4,11 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
 import { mojo_to_chia } from '../../../util/chia';
+import useCurrencyCode from '../../../hooks/useCurrencyCode';
 
 export default function FarmCardTotalChiaFarmed() {
+  const currencyCode = useCurrencyCode();
+
   const loading = useSelector(
     (state: RootState) => !state.wallet_state.farmed_amount,
   );
@@ -23,7 +26,7 @@ export default function FarmCardTotalChiaFarmed() {
 
   return (
     <FarmCard
-      title={<Trans>Total Chia Farmed</Trans>}
+      title={<Trans>{currencyCode} Total Chia Farmed</Trans>}
       value={totalChiaFarmed}
       loading={loading}
     />

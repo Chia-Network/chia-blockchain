@@ -1666,8 +1666,8 @@ msgid "Total Balance"
 msgstr "Celkový zostatok"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
-msgid "Total Chia Farmed"
-msgstr "Celková vyťažená Chia"
+#~ msgid "Total Chia Farmed"
+#~ msgstr "Celková vyťažená Chia"
 
 #: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
@@ -1925,6 +1925,10 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
+msgstr ""
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
+msgid "{currencyCode} Total Chia Farmed"
 msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17

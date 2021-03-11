@@ -2,6 +2,7 @@ import React, { ReactNode, ReactElement } from 'react';
 import styled from 'styled-components';
 import { Flex, TooltipIcon } from '@chia/core';
 import {
+  Box,
   Card,
   CardContent,
   Typography,
@@ -35,7 +36,9 @@ export default function FarmCard(props: Props) {
           {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
         </Flex>
         {loading ? (
-          <CircularProgress color="primary" size={25} />
+          <Box>
+            <CircularProgress color="primary" size={25} />
+          </Box>
         ) : (
           <Typography variant="h5" color={valueColor}>
             {value}
