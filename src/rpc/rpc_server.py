@@ -98,7 +98,10 @@ class RpcServer:
     async def get_connections(self, request: Dict) -> Dict:
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
+        if (
+            self.rpc_api.service.server._local_type is NodeType.FULL_NODE
+            and self.rpc_api.service.sync_store is not None
+        ):
             # TODO add peaks for peers
             connections = self.rpc_api.service.server.get_connections()
             con_info = []

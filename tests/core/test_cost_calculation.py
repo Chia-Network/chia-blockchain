@@ -86,7 +86,7 @@ class TestCostCalculation:
 
         # Create condition + agg_sig_condition + length + cpu_cost
         # xxx cost for gen_ref_list
-        assert clvm_cost == 200 * ratio + 20 * ratio + len(bytes(program)) * ratio + cost
+        assert clvm_cost == 200 * ratio + 92 * ratio + len(bytes(program)) * ratio + cost
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):

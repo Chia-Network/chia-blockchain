@@ -45,6 +45,7 @@ class LastState:
         self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
         self.new_epoch = False
         self.passed_ses_height_but_not_yet_included = False
+        self.infused_ses = False
 
     def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
         if isinstance(state, timelord_protocol.NewPeakTimelord):
@@ -92,8 +93,10 @@ class LastState:
             else:
                 self.new_epoch = False
             if state.challenge_chain.subepoch_summary_hash is not None:
+                self.infused_ses = True
                 self.passed_ses_height_but_not_yet_included = False
             else:
+                self.infused_ses = False
                 self.passed_ses_height_but_not_yet_included = self.passed_ses_height_but_not_yet_included
             self.last_challenge_sb_or_eos_total_iters = self.total_iters
         else:
@@ -144,11 +147,11 @@ class LastState:
     def get_deficit(self) -> uint8:
         return self.deficit
 
-    def get_infused_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
-        if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.PEAK:
-            # Only sub slots can infuse SES
-            return None
-        return self.sub_epoch_summary
+    def just_infused_sub_epoch_summary(self) -> bool:
+        """
+        Returns true if state is an end of sub-slot, and that end of sub-slot infused a sub epoch summary
+        """
+        return self.state_type == StateType.END_OF_SUB_SLOT and self.infused_ses
 
     def get_next_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
         if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:

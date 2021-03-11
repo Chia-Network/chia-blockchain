@@ -37,7 +37,7 @@ def service_kwargs_for_farmer(
 
     farmer = Farmer(root_path, config, config_pool, keychain, consensus_constants=updated_constants)
     peer_api = FarmerAPI(farmer)
-
+    network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=farmer,
@@ -49,7 +49,7 @@ def service_kwargs_for_farmer(
         connect_peers=connect_peers,
         auth_connect_peers=False,
         on_connect_callback=farmer.on_connect,
-        network_id=updated_constants.GENESIS_CHALLENGE,
+        network_id=network_id,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])
