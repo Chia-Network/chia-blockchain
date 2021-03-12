@@ -821,7 +821,7 @@ def _validate_sub_epoch_segments(
             return False
         for idx, segment in enumerate(segments):
             valid_segment, ip_iters, slot_iters, slots = _validate_segment(
-                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
+                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, True
             )
             if not valid_segment:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
@@ -859,7 +859,7 @@ def _validate_segment(
             if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate challenge slot {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        if sampled and after_challenge:
+        elif sampled and after_challenge:
             if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
