@@ -50,7 +50,7 @@ class TestDIDWallet:
 
     @pytest.mark.asyncio
     async def test_creation_from_backup_file(self, two_wallet_nodes):
-        num_blocks = 5
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -157,7 +157,7 @@ class TestDIDWallet:
 
     @pytest.mark.asyncio
     async def test_did_recovery_with_multiple_backup_dids(self, two_wallet_nodes):
-        num_blocks = 5
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
         server_1 = full_node_1.server
@@ -251,7 +251,7 @@ class TestDIDWallet:
 
     @pytest.mark.asyncio
     async def test_did_recovery_with_empty_set(self, two_wallet_nodes):
-        num_blocks = 5
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
         server_1 = full_node_1.server
@@ -297,7 +297,7 @@ class TestDIDWallet:
 
     @pytest.mark.asyncio
     async def test_did_attest_after_recovery(self, two_wallet_nodes):
-        num_blocks = 5
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
         server_1 = full_node_1.server
@@ -404,7 +404,7 @@ class TestDIDWallet:
 
     @pytest.mark.asyncio
     async def test_make_double_output(self, two_wallet_nodes):
-        num_blocks = 5
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
         server_1 = full_node_1.server
@@ -490,7 +490,7 @@ class TestDIDWallet:
 
     @pytest.mark.asyncio
     async def test_make_fake_coin(self, two_wallet_nodes):
-        num_blocks = 5
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
         server_1 = full_node_1.server
@@ -603,7 +603,7 @@ class TestDIDWallet:
 
         await time_out_assert(15, wallet.get_confirmed_balance, 21999999999900)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 21999999999900)
-        ph2 = Program.to(binutils.assemble("(q ())")).get_tree_hash()
+        ph2 = Program.to(binutils.assemble("()")).get_tree_hash()
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         # It ends in 900 so it's not gone through
