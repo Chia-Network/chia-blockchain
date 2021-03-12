@@ -821,7 +821,7 @@ def _validate_sub_epoch_segments(
             return False
         for idx, segment in enumerate(segments):
             valid_segment, ip_iters, slot_iters, slots = _validate_segment(
-                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, True
+                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
             )
             if not valid_segment:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
