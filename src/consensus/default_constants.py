@@ -62,6 +62,7 @@ testnet_kwargs = {
     "INITIAL_FREEZE_PERIOD": 5000,  # Transaction are disabled first 5000 blocks
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
+    "MAX_GENERATOR_REF_LIST_SIZE": 10000,  # Number of references allowed in the block generator ref list
 }
 
 

@@ -6,6 +6,7 @@ from src.types.blockchain_format.program import SerializedProgram
 from src.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from src.types.blockchain_format.vdf import VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.util.ints import uint32
 from src.util.streamable import Streamable, streamable
 
 
@@ -21,6 +22,9 @@ class UnfinishedBlock(Streamable):
     foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
+    transactions_generator_ref_list: List[
+        uint32
+    ]  # List of block heights of previous generators referenced in this block
 
     @property
     def prev_header_hash(self):

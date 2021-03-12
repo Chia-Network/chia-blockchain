@@ -62,6 +62,7 @@ class ConsensusConstants:
     BLOCKS_CACHE_SIZE: uint32
     NETWORK_TYPE: int
     MAX_GENERATOR_SIZE: uint32
+    MAX_GENERATOR_REF_LIST_SIZE: uint32
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)

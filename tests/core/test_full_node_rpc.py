@@ -80,6 +80,7 @@ class TestRpc:
                     block.foliage_transaction_block,
                     block.transactions_info,
                     block.transactions_generator,
+                    [],
                 )
                 await full_node_api_1.full_node.respond_unfinished_block(
                     full_node_protocol.RespondUnfinishedBlock(unf), None

@@ -198,6 +198,7 @@ class TestBlockHeaderValidation:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            [],
         )
         validate_res = await blockchain.validate_unfinished_block(unf, False)
         err = validate_res.error
@@ -214,6 +215,7 @@ class TestBlockHeaderValidation:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
+            [],
         )
         validate_res = await blockchain.validate_unfinished_block(unf, False)
         assert validate_res.error is None
@@ -296,6 +298,7 @@ class TestBlockHeaderValidation:
                     block.foliage_transaction_block,
                     block.transactions_info,
                     block.transactions_generator,
+                    [],
                 )
                 validate_res = await blockchain.validate_unfinished_block(unf, skip_overflow_ss_validation=True)
                 assert validate_res.error is None

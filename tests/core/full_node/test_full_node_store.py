@@ -50,6 +50,7 @@ class TestFullNodeStore:
                     block.foliage_transaction_block,
                     block.transactions_info,
                     block.transactions_generator,
+                    [],
                 )
             )
 
