@@ -859,7 +859,7 @@ def _validate_segment(
             if not _validate_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate challenge slot {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
-        if sampled and after_challenge:
+        elif sampled and after_challenge:
             if not _validate_sub_slot_data(constants, idx, segment.sub_slots, curr_ssi):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0)
