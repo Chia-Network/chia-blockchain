@@ -15,6 +15,7 @@ from src.util.streamable import Streamable, streamable
 class TransactionsInfo(Streamable):
     # Information that goes along with each transaction block
     generator_root: bytes32  # This needs to be a tree hash
+    generator_refs_root: bytes32  # sha256 of the concatenation of the generator ref list entries
     aggregated_signature: G2Element
     fees: uint64  # This only includes user fees, not block rewards
     cost: uint64
