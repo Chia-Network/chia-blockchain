@@ -1,8 +1,14 @@
-(mod (block_program coinname)
+(mod (block_program block_ref coinname)
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+          (sha256 1 TREE)))
 
   (defun check_for_coinname (coin_solutions coinname)
     (if coin_solutions
-      (if (= (f (f coin_solutions)) coinname)
+      (if (= (sha256 (f (f (f coin_solutions))) (sha256tree1 (f (f (r (f coin_solutions))))) (f (r (f (f coin_solutions))))) coinname)
         (list (f (f (r (f coin_solutions)))) (f (r (f (r (f coin_solutions))))))
         (check_for_coinname (r coin_solutions) coinname)
       )
@@ -11,5 +17,5 @@
   )
 
   ; main
-  (check_for_coinname (a block_program (q . ())) coinname)
+  (check_for_coinname (a block_program block_ref) coinname)
 )

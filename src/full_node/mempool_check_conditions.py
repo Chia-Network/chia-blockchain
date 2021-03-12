@@ -11,6 +11,7 @@ from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err
+from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from src.wallet.puzzles.lowlevel_generator import get_generator
@@ -114,9 +115,15 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
         opcodes = set(item.value for item in ConditionOpcode)
         for res in result.as_iter():
             conditions_list = []
-            name = res.first().as_atom()
-            puzzle_hash = bytes32(res.rest().first().as_atom())
-            for cond in res.rest().rest().first().as_iter():
+            name = std_hash(
+                bytes(
+                    res.first().first().as_atom()
+                    + res.first().rest().first().as_atom()
+                    + res.first().rest().rest().first().as_atom()
+                )
+            )
+            puzzle_hash = bytes32(res.first().rest().first().as_atom())
+            for cond in res.rest().first().as_iter():
                 if cond.first().as_atom() in opcodes:
                     opcode = ConditionOpcode(cond.first().as_atom())
                 elif not safe_mode:
@@ -143,7 +150,8 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
 
 def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):
     try:
-        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, coin_name)
+        block_program_args = SerializedProgram.from_bytes(b"\x80")
+        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, block_program_args, coin_name)
         puzzle = result.first()
         solution = result.rest().first()
         return None, puzzle, solution
