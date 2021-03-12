@@ -104,10 +104,6 @@ jobs:
       run: |
         . ./activate
         cd ./chia-blockchain-gui
-        npm install
-        npm audit fix
-        npm run locale:extract
-        npm run locale:compile
         git status
         cd ../build_scripts
         sh build_macos.sh

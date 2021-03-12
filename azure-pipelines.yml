@@ -58,16 +58,6 @@ steps:
       versionSpec: '12.x'
     displayName: "Setup Node 12.x"
 
-  - script: |
-      . ./activate
-      git submodule update --init --recursive
-      cd ./chia-blockchain-gui
-      npm install
-      npm audit fix
-      npm run locale:extract
-      npm run locale:compile
-    displayName: "Build Electron/React UI"
-
   - bash: |
       . ./activate
       APPLE_NOTARIZE_USERNAME="$(APPLE_NOTARIZE_USERNAME)"
@@ -75,6 +65,7 @@ steps:
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
       if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
+      git submodule update --init --recursive
       cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
