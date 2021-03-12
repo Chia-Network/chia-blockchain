@@ -1,0 +1,52 @@
+(mod (
+       source_pubkey ;;curried into puzzle, sender's pubkey (can claim after specified time)
+       target_pubkey ;;curried into puzzle, sendee's pubkey (can claim immediately)
+       claim_time    ;;curried into puzzle, the block height at which the sender can claim the funds
+       preimage_hash ;;curried into puzzle, the hash to check the preimage against
+       preimage      ;;the preimage for the target to claim the funds
+       claim_option  ;;0 means that this is the source claiming it back, 1 means the target will supply a preimage
+       delegated_puzzle ;;used to generate the conditions for the spend
+       delegated_solution ;;solution for the delegated puzzle
+    )
+
+    (defconstant AGG_SIG_ME 50)
+    (defconstant ASSERT_HEIGHT_NOW_EXCEEDS 58)
+
+    (defun sha256tree1
+           (TREE)
+           (if (l TREE)
+               (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+               (sha256 1 TREE)
+           )
+    )
+
+    (defmacro assert items
+        (if (r items)
+            (list if (f items) (c assert (r items)) (q . (x)))
+            (f items)
+        )
+    )
+
+    (defun prepend_timelock (claim_time conditions)
+      (c (list ASSERT_HEIGHT_NOW_EXCEEDS claim_time) conditions)
+    )
+
+    (defun prepend_sig_condition (sig_pubkey delegated_puzzle conditions)
+      (c (list AGG_SIG_ME sig_pubkey (sha256tree1 delegated_puzzle)) conditions)
+    )
+
+    (defun spend_as_target (target_pubkey preimage preimage_hash delegated_puzzle conditions)
+      (assert (= (sha256 preimage) preimage_hash)
+        (prepend_sig_condition target_pubkey delegated_puzzle conditions)
+      )
+    )
+
+    (defun spend_as_source (claim_time source_pubkey delegated_puzzle conditions)
+      (prepend_timelock claim_time (prepend_sig_condition source_pubkey delegated_puzzle conditions))
+    )
+
+    (if claim_option
+      (spend_as_target target_pubkey preimage preimage_hash delegated_puzzle (a delegated_puzzle delegated_solution))
+      (spend_as_source claim_time source_pubkey delegated_puzzle (a delegated_puzzle delegated_solution))
+    )
+)

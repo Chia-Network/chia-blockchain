@@ -66,14 +66,14 @@ def get_standard_puzzle_with_safe(
 ) -> Program:
     return puzzle_for_public_key_and_hidden_puzzle_hash(
         (source_pubkey + target_pubkey),
-        get_safe_transaction_puzzle_hash(source_pubkey, target_pubkey, claim_height, preimage_hash)
+        get_safe_transaction_puzzle_hash(source_pubkey, target_pubkey, claim_height, preimage_hash),
     )
 
 
 def get_standard_puzzle_hash_with_safe(
     source_pubkey: G1Element, target_pubkey: G1Element, claim_height: int, preimage_hash: bytes32
 ) -> Program:
-    return get_standard_puzzle_with_safe(source_pubkey,target_pubkey,claim_height,preimage_hash).get_tree_hash()
+    return get_standard_puzzle_with_safe(source_pubkey, target_pubkey, claim_height, preimage_hash).get_tree_hash()
 
 
 # target == 0 will act as though this is the source attempting to claim it back,
