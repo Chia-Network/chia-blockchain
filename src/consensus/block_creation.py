@@ -213,10 +213,12 @@ def create_foliage(
         removals_root = removal_merkle_set.get_root()
 
         generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
+        generator_refs_hash = bytes32([0] * 32)
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
             generator_hash,
+            generator_refs_hash,
             aggregate_sig,
             uint64(spend_bundle_fees),
             cost,
