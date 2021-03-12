@@ -6,7 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased 1.0rc6 aka Release Candidate 6 - 2020-03-11
+## 1.0rc7 aka Release Candidate 7 - 2020-03-12
+
+### Changed
+
+- Our green flag test blockchain launch worked but it uncovered a flaw in our installer versions. This release is a bug fix release to address that flaw. You should read the RC6 changes below if this is your first time installing since RC5.
+- `chia netspace` now defaults to 1000 blocks to mirror the GUI.
+- The installer build process was spruced up some.
+
+### Fixed
+
+- Installers were not correctly placing root TLS certificates into the bundle.
+- Weight proofs had a logic typo.
+
+## 1.0rc6 aka Release Candidate 6 - 2020-03-11
 
 ### Added
 
