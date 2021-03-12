@@ -456,15 +456,19 @@ class WalletRpcApi:
         """
         assert self.service.wallet_state_manager is not None
 
+        if request["new_address"] is True:
+            create_new = True
+        else:
+            create_new = False
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
         if wallet.type() == WalletType.STANDARD_WALLET:
-            raw_puzzle_hash = await wallet.get_new_puzzlehash()
+            raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         elif wallet.type() == WalletType.COLOURED_COIN:
-            raw_puzzle_hash = await wallet.get_new_inner_hash()
+            raw_puzzle_hash = await wallet.get_puzzle_hash(create_new)
             address = encode_puzzle_hash(raw_puzzle_hash, prefix)
         else:
             raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")

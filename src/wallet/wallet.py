@@ -12,6 +12,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint8, uint32, uint64, uint128
+from src.wallet.derivation_record import DerivationRecord
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -167,6 +168,17 @@ class Wallet:
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         return puzzle_for_pk(bytes(dr.pubkey))
+
+    async def get_puzzle_hash(self, new: bool):
+        if new:
+            return await self.get_new_puzzlehash()
+        else:
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            if record is None:
+                return await self.get_new_puzzlehash()
+            return record.puzzle_hash
 
     async def get_new_puzzlehash(self) -> bytes32:
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash

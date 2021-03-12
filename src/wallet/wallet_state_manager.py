@@ -172,7 +172,7 @@ class WalletStateManager:
 
         async with self.puzzle_store.lock:
             index = await self.puzzle_store.get_last_derivation_path()
-            if index is None or index < self.config["initial_num_public_keys"]:
+            if index is None or index < self.config["initial_num_public_keys"] - 1:
                 await self.create_more_puzzle_hashes(from_zero=True)
 
         return self
@@ -336,6 +336,14 @@ class WalletStateManager:
             # Create more puzzle hashes / keys
             await self.create_more_puzzle_hashes()
             return record
+
+    async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
+        async with self.puzzle_store.lock:
+            # If we have no unused public keys, we will create new ones
+            current: Optional[DerivationRecord] = await self.puzzle_store.get_current_derivation_record_for_wallet(
+                wallet_id
+            )
+            return current
 
     def set_callback(self, callback: Callable):
         """

@@ -194,9 +194,9 @@ full_node:
   port: 58444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v29_CHALLENGE.sqlite
+  database_path: db/blockchain_v30_CHALLENGE.sqlite
   peer_db_path: db/peer_table_node.sqlite
-  simulator_database_path: sim_db/simulator_blockchain_v29_CHALLENGE.sqlite
+  simulator_database_path: sim_db/simulator_blockchain_v30_CHALLENGE.sqlite
   simulator_peer_db_path: sim_db/peer_table_node.sqlite
 
   # If True, starts an RPC server at the following port
@@ -306,7 +306,7 @@ wallet:
     port: 58444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v29_CHALLENGE_KEY.sqlite
+  database_path: wallet/db/blockchain_wallet_v30_CHALLENGE_KEY.sqlite
   wallet_peers_path: wallet/db/wallet_peers.sqlite
 
   logging: *logging
