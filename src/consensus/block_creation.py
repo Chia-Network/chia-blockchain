@@ -216,7 +216,6 @@ def create_foliage(
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
-            bytes([0] * 32),
             generator_hash,
             aggregate_sig,
             uint64(spend_bundle_fees),
@@ -397,6 +396,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         solution_program,
+        [],
     )
 
 
@@ -492,6 +492,7 @@ def unfinished_block_to_full_block(
         new_foliage_transaction_block,
         new_tx_info,
         new_generator,
+        [],
     )
     return recursive_replace(
         ret,

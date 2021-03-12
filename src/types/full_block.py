@@ -15,6 +15,7 @@ from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
 from src.types.name_puzzle_condition import NPC
 from src.util.condition_tools import created_announcements_for_conditions_dict, created_outputs_for_conditions_dict
+from src.util.ints import uint32
 from src.util.streamable import Streamable, streamable
 
 
@@ -33,6 +34,9 @@ class FullBlock(Streamable):
     foliage_transaction_block: Optional[FoliageTransactionBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[SerializedProgram]  # Program that generates transactions
+    transactions_generator_ref_list: List[
+        uint32
+    ]  # List of block heights of previous generators referenced in this block
 
     @property
     def prev_header_hash(self):
