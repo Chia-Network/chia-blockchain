@@ -63,7 +63,7 @@ subcommand_modules.extend(entry_points)
 daemon = Analysis([f"{root}/src/daemon/server.py"],
              pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
              binaries = [],
-             datas=[version_data, (f"../mozilla-ca/cacert.pem", f"./mozilla-ca/"), (f"../src/util/initial-config.yaml", f"./src/util/"), ] +
+             datas=[version_data, (f"../src/util/initial-config.yaml", f"./src/util/"), ] +
              hex_puzzles,
              hiddenimports=subcommand_modules,
              hookspath=[],
