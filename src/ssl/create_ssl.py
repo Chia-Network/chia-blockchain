@@ -1,4 +1,5 @@
 import datetime
+import pathlib
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -18,8 +19,8 @@ def get_chia_ca_crt_key() -> Tuple[Any, Any]:
 
 
 def get_mozzila_ca_crt() -> str:
-    crt = pkg_resources.resource_filename("mozilla-ca", "cacert.pem")
-    return crt
+    mozilla_path = pathlib.Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
+    return str(mozilla_path)
 
 
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
