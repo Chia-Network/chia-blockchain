@@ -30,6 +30,7 @@ cd chia-blockchain-gui || exit
 
 echo "npm build"
 npm install
+npm audit fix
 npm run locale:extract
 npm run locale:compile
 npm run build
