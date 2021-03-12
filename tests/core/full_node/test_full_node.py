@@ -276,7 +276,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
-            []
+            [],
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
@@ -301,7 +301,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
-            []
+            [],
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
 
@@ -346,7 +346,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
-            []
+            [],
         )
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
         await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), None)
@@ -737,7 +737,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
-            []
+            [],
         )
 
         # Don't have
@@ -768,7 +768,7 @@ class TestFullNodeProtocol:
             block.foliage_transaction_block,
             block.transactions_info,
             block.transactions_generator,
-            []
+            [],
         )
 
         # Don't have
