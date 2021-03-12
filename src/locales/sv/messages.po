@@ -194,6 +194,10 @@ msgstr "Block med hash {headerHash} existerar inte."
 msgid "Blocks"
 msgstr "Block"
 
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
+#~ msgstr ""
+
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
@@ -223,6 +227,7 @@ msgid "Can be backed up to mnemonic seed"
 msgstr "Kan säkerhetskopieras till minnesfras"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
+#: src/components/farm/FarmManageFarmingRewards.tsx:102
 #: src/components/fullNode/FullNodeAddConnection.tsx:67
 #: src/components/trading/CreateOffer.jsx:153
 #: src/components/trading/TradingOverview.jsx:410
@@ -610,6 +615,10 @@ msgstr "Odling"
 msgid "Farmer Puzzle Hash"
 msgstr "Odlare-pusselhash"
 
+#: src/components/farm/FarmManageFarmingRewards.tsx:95
+msgid "Farmer Reward Address"
+msgstr ""
+
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
@@ -882,6 +891,14 @@ msgstr "Loggar in"
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
+#: src/components/farm/overview/FarmOverview.tsx:34
+msgid "Manage Farming Rewards"
+msgstr ""
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:82
+msgid "Manage Your Farming Rewards Target Addresses"
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
@@ -947,6 +964,10 @@ msgstr "Inga block har odlats ännu"
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "No previous transactions"
 msgstr "Inga tidigare transaktioner"
+
+#: src/components/farm/FarmManageFarmingRewards.tsx:91
+msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1180,6 +1201,10 @@ msgstr "Publik nyckel för pool"
 msgid "Pool Puzzle Hash"
 msgstr "Pool-pusselhash"
 
+#: src/components/farm/FarmManageFarmingRewards.tsx:96
+msgid "Pool Reward Address"
+msgstr ""
+
 #: src/components/block/Block.jsx:283
 msgid "Pool Reward Amount"
 msgstr "Belopp för pool-belöning"
@@ -1322,6 +1347,7 @@ msgstr ""
 msgid "Safe To Skip"
 msgstr ""
 
+#: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
 msgstr "Spara"
@@ -1874,7 +1900,7 @@ msgstr ""
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Du har {0}% av utrymmet på nätverket, så det tar i genomsnitt {expectedTimeToWin} att odla ett block."
 
-#: src/components/farm/overview/FarmOverview.tsx:13
+#: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
 msgstr "Översikt över din odling"
 

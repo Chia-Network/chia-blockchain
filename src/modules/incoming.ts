@@ -31,6 +31,10 @@ type IncomingState = {
     fee_amount: number;
     last_height_farmed: number;
   };
+  reward_targets?: {
+    farmer_target?: string;
+    pool_target?: string;
+  };
 };
 
 const initialState: IncomingState = {
@@ -317,6 +321,9 @@ export default function incomingReducer(
       }
       if (command === 'get_farmed_amount') {
         return { ...state, farmed_amount: data };
+      }
+      if (command === 'get_reward_targets') {
+        return { ...state, reward_targets: data };
       }
       return state;
     default:

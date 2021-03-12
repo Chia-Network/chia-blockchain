@@ -34,10 +34,11 @@ export const clearSend = () => {
   return action;
 };
 
-export const walletMessage = () => ({
+export const walletMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
   message: {
     destination: service_wallet,
+    ...message,
   },
 });
 

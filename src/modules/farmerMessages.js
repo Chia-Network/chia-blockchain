@@ -1,11 +1,48 @@
 import { service_farmer } from '../util/service_names';
+import { async_api } from './message';
 
-export const farmerMessage = () => ({
+export const farmerMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
   message: {
     destination: service_farmer,
+    ...message,
   },
 });
+
+export const getRewardTargets = (searchForPrivateKey) => {
+  return async (dispatch) => {
+    const { data } = await async_api(
+      dispatch,
+      farmerMessage({
+        command: 'get_reward_targets',
+        data: {
+          search_for_private_key: searchForPrivateKey,
+        },
+      }),
+      false,
+    );
+
+    return data;
+  };
+};
+
+export const setRewardTargets = (farmerTarget, poolTarget) => {
+  return async (dispatch) => {
+    const response = await async_api(
+      dispatch,
+      farmerMessage({
+        command: 'set_reward_targets',
+        data: {
+          farmer_target: farmerTarget,
+          pool_target: poolTarget,
+        },
+      }),
+      false,
+    );
+
+    return response;
+  };
+};
 
 export const pingFarmer = () => {
   const action = farmerMessage();
