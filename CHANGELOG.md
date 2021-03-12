@@ -10,12 +10,13 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- This is a hard fork/breaking change from RC5. TXCH Coins will not be moved forward but your plots and keys and parts of your configuration do. We will be testing the final mainnet release strategy with the launch of RC6. For the test, those who are comfortable running the dev branch will update and start up their farms. All harvesters and plots will load and until the green flag drops, peers will be gossiped so your farm can establish good network connectivity. When the flag drops, each node will pull down the signed genesis challenge and start farming. Block 1 will be broadcast to anyone who hasn't seen the flag drop yet. The only difference for mainnet is that there will be 1.0 installers and a main branch release more than 24 hours before the real green flag.
+- This is a hard fork/breaking change from RC5. TXCH Coins will **not** be moved forward but your plots and keys and parts of your configuration do. We will be testing the final mainnet release strategy with the launch of RC6. For the test, those who are comfortable running the dev branch will update and start up their farms. All harvesters and plots will load and until the green flag drops, peers will be gossiped so your farm can establish good network connectivity. When the flag drops, each node will pull down the signed genesis challenge and start farming. Block 1 will be broadcast to anyone who hasn't seen the flag drop yet. The only difference for mainnet is that there will be 1.0 installers and a main branch release more than 24 hours before the real green flag.
 - There is now basic plot queueing functionality in the GUI. By default, plotting works as it has in the past. However you can now name a queue in Step 2 Advanced Options. Chose something like `first`. Everything you add to the `first` queue will start up like it has in the past but now you can go through the steps again and create a queue named `second` and it will immediately start plotting as if it is unaware of and parallel with `first`. A great use case is that you would set `first` to plot 5 plots sequentially and then you'd set `second` to plot 5 sequentially and that would give you two parallel queues of 5 plot's each. We will be returning to plotting speed and UI soon. Thanks @jespino for this clever work around for now.
 - There is now an option on the Farm page to manage your farming rewards receive addresses. This makes it easy to send your farming rewards to an offline wallet. This also checks your existing rewards addresses and warns if you do not have the matching private key. That is expected if you are using an offline wallet of course.
 - Functionally has been added to the farmer rpc including checking and changing your farming rewards target addresses.
 - Added the ability to translate material-ui components like `Row 1 of 10`. Thanks @jespino.
 - Arch linux support has been added to `sh install.sh`. Thanks @jespino.
+- Update FullBlock to Allow Generator References - a list of block heights of generators to be made available to the block program of the current block at generator runtime. This sets the stage for smart coins calling existing "libraries" already on the chain to lower fees and increase the scale of complex smart coins.
 
 ## Changed
 
@@ -35,6 +36,7 @@ for setuptools_scm/PEP 440 reasons.
 - A List[Tuple[uint16, str]] is added to the peer network handshake. These are the capabilities that the node supports, to add new features to the protocol in an easy - soft fork - manner. The message_id is now before the data in each message.
 - Peer gossip limits were set.
 - Generators have been re-worked in CLVM. We added a chialisp deserialization puzzle and improved the low-level generator. We reduce the accepted atom size to 1MB during ChiaLisp native deserialization.
+- When processing mempool transactions, Coin IDs are now calculated from parent coin ID and amount
 - We implemented rate limiting for full node. This can and will lead to short term bans of certain peers that didn't behave in expected ways. This is ok and normal, but strong defense against many DDOS attacks.
 - `requirements-dev.txt` has been removed in favor of the CI actions and test scripts.
 - We have moved to a new and much higher scalability download.chia.net to support the mainnet launch flag and additional download demand.
@@ -71,7 +73,6 @@ for setuptools_scm/PEP 440 reasons.
 
 ## Changed
 
-- When processing mempool transactions, Coin IDs are now calculated from parent coin ID and amount
 - Testnets and mainnet now set their minimum `k` size and enforce it. RC5 testnet will reject plots of size less than k=32.
 - Sub slots now require 16 blocks instead of 12.
 - Thanks to @xdustinface of Dash, the BlS Signature library has been updated to 0.9 with clean ups and some speed ups. This changed how the G2 infinity element was handled and we now manage it inside of chia-blockchain, etc., instead of in blspy.
