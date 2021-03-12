@@ -107,7 +107,7 @@ class TestWalletRpc:
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
 
-            address = await client.get_next_address("1")
+            address = await client.get_next_address("1", True)
             assert len(address) > 10
 
             transactions = await client.get_transactions("1")
