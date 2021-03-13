@@ -706,6 +706,8 @@ class Timelord:
             self.overflow_blocks = []
             self.new_subslot_end = eos_bundle
 
+            await self._handle_subslot_end()
+
     async def _handle_failures(self):
         while len(self.vdf_failures) > 0:
             log.error(f"Vdf clients failed {self.vdf_failures_count} times.")
