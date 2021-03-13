@@ -24,6 +24,21 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
                 change_made = True
         except ValueError:
             print("Node introducer address must be in format [IP:Port]")
+    if set_farmer_peer:
+        try:
+            if set_node_introducer.index(":"):
+                host, port = (
+                    ":".join(set_node_introducer.split(":")[:-1]),
+                    set_node_introducer.split(":")[-1],
+                )
+                config["full_node"]["farmer_peer"]["host"] = host
+                config["full_node"]["farmer_peer"]["port"] = int(port)
+                config["harvester"]["farmer_peer"]["host"] = host
+                config["harvester"]["farmer_peer"]["port"] = int(port)
+                print("Farmer peer updated, make sure your harvester has the proper cert installed")
+                change_made = True
+        except ValueError:
+            print("Farmer address must be in format [IP:Port]")
     if set_fullnode_port:
         config["full_node"]["port"] = int(set_fullnode_port)
         config["full_node"]["introducer_peer"]["port"] = int(set_fullnode_port)
@@ -57,6 +72,7 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
 
 @click.command("configure", short_help="Modify configuration")
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
+@click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for testing",
