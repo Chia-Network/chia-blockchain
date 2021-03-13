@@ -24,6 +24,10 @@ for setuptools_scm/PEP 440 reasons.
 - There was a typo in `chia netspace`. Thanks @altendky.
 - There was a typo in `chia plots`. Thanks @adamfiddler.
 
+### Known Issues
+
+- Some users can't plot in the GUI in MacOS Big Sur - especially on M1. See issue [1189](https://github.com/Chia-Network/chia-blockchain/issues/1189)
+
 ## 1.0rc6 aka Release Candidate 6 - 2020-03-11
 
 ### Added

@@ -379,7 +379,8 @@ def chia_init(root_path: Path):
 
     # Starting with RC2 is the first version that used the bech32m addresses
     # range current version and 0=version 1
-    for version_number in range(chia_minor_release_number() - 1, 2, -1):
+    # for version_number in range(chia_minor_release_number() - 1, 2, -1):
+    for version_number in range(5, 2, -1):
         old_path = Path(os.path.expanduser("~/.chia/1.0rc%s" % version_number))
         print(f"Checking {old_path}")
         # This is reached if the user has updated the application, and therefore a new configuration
