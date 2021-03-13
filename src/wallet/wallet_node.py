@@ -414,6 +414,7 @@ class WalletNode:
                     if not self.wallet_state_manager.sync_mode:
                         self.wallet_state_manager.blockchain.clean_block_records()
                     self.wallet_state_manager.state_changed("new_block")
+                    self.wallet_state_manager.state_changed("sync_changed")
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
                     self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
                     await peer.close()
