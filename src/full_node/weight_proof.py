@@ -127,8 +127,9 @@ class WeightProofHandler:
                         )
                         return None
                     await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.height, segments)
+                sampled_seg_index = rng.choice(range(len(segments)))
                 log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
-                sub_epoch_segments.extend(segments)
+                sub_epoch_segments.extend(compress_segments(sampled_seg_index, segments))
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
@@ -689,19 +690,32 @@ def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegmen
     for idx, segment in enumerate(segments[1:]):
         if idx != full_segment_index:
             # remove all redundant values
-            segment = compress_segment(segment)
+            segment = remove_proofs(segment)
         compressed_segments.append(segment)
     return compressed_segments
 
 
-def compress_segment(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
+def remove_proofs(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
     # find challenge slot
     comp_seg = SubEpochChallengeSegment(segment.sub_epoch_n, [], segment.rc_slot_end_info)
-    for slot in segment.sub_slots:
-        comp_seg.sub_slots.append(slot)
-        if slot.is_challenge():
-            break
-    return segment
+    for sub_slot in segment.sub_slots:
+        comp_slot = SubSlotData(
+            None,
+            None,
+            None,
+            None,
+            sub_slot.cc_sp_vdf_info,
+            sub_slot.signage_point_index,
+            None,
+            None,
+            sub_slot.cc_slot_end_info,
+            sub_slot.icc_slot_end_info,
+            sub_slot.cc_ip_vdf_info,
+            sub_slot.icc_ip_vdf_info,
+            sub_slot.total_iters,
+        )
+        comp_seg.sub_slots.append(comp_slot)
+    return comp_seg
 
 
 # wp validation methods
