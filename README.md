@@ -22,9 +22,9 @@ TCP port 8444 access to your peer.
 These methods tend to be router make/model specific.
 
 Most should only install harvesters, farmers, plotter, full nodes, and wallets.
-Building timelords and VDFs is for sophisticated users in most environments.
+Building Timelords and VDFs is for sophisticated users in most environments.
 Chia Network and additional volunteers are running sufficient Timelords
-for testnet consensus.
+for consensus.
 
 ## Installing
 Install instructions are available in the
