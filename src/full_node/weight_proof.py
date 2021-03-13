@@ -684,19 +684,19 @@ def handle_end_of_slot(
     )
 
 
-def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
+def remove_fields_unsampled_segments(
+    full_segment_index, segments: List[SubEpochChallengeSegment]
+) -> List[SubEpochChallengeSegment]:
     compressed_segments = []
     compressed_segments.append(segments[0])
     for idx, segment in enumerate(segments[1:]):
         if idx != full_segment_index:
-            # remove all redundant values
-            segment = remove_proofs(segment)
+            segment = remove_fields_unsampled_segment(segment)
         compressed_segments.append(segment)
     return compressed_segments
 
 
-def remove_proofs(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
-    # find challenge slot
+def remove_fields_unsampled_segment(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
     comp_seg = SubEpochChallengeSegment(segment.sub_epoch_n, [], segment.rc_slot_end_info)
     for sub_slot in segment.sub_slots:
         comp_slot = SubSlotData(
