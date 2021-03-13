@@ -22,17 +22,18 @@ keyring_datas = copy_metadata('keyring')[0]
 version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
 SUBCOMMANDS = [
+    "configure",
+    "farm",
     "init",
     "keys",
+    "netspace",
     "plots",
+    "run_daemon",
     "show",
     "start",
     "stop",
     "version",
-    "netspace",
-    "run_daemon",
     "wallet",
-    "configure",
 ]
 block_cipher = None
 subcommand_modules = [f"../src.cmds.%s" % _ for _ in SUBCOMMANDS]

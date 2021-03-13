@@ -16,9 +16,13 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
+- Setting difficulty way too low on the testnet_6 launch revealed a Timelord edge case. The full node was hardcoding the default difficulty if block height is < EPOCH_BLOCKS. However there were many overlapping blocks, so none of the blocks reached the height, and therefore the timelord infused the wrong difficulty.
+- Fixed a race condition in the Timelord, where it took time to update the state, so it ignored the new_peak_timelord form the full_node, which should have reset the timelord to a good state.
+- Wallet notoriously showed "not synced" when it was in sync.
 - Installers were not correctly placing root TLS certificates into the bundle.
 - Weight proofs had a logic typo.
-- There was a typo in `chia plots`. Thanks to @adamfiddler.
+- There was a typo in `chia netspace`. Thanks @altendky.
+- There was a typo in `chia plots`. Thanks @adamfiddler.
 
 ## 1.0rc6 aka Release Candidate 6 - 2020-03-11
 
