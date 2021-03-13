@@ -33,20 +33,19 @@ from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.server import ChiaServer
 from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.blockchain_format.pool_target import PoolTarget
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import ConsensusError, Err
-from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.genesis_wait import wait_for_genesis_challenge
-
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.path import mkdir, path_from_root
 
 

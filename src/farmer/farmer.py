@@ -6,10 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element
 
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.util.config import load_config, save_config
-
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.protocols import farmer_protocol, harvester_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
@@ -18,7 +16,8 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash
-from src.util.ints import uint64, uint32
+from src.util.config import load_config, save_config
+from src.util.ints import uint32, uint64
 from src.util.keychain import Keychain
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 

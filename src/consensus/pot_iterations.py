@@ -1,7 +1,7 @@
+from src.consensus.constants import ConsensusConstants
+from src.consensus.pos_quality import _expected_plot_size
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
-from src.consensus.pos_quality import _expected_plot_size
-from src.consensus.constants import ConsensusConstants
 from src.util.ints import uint8, uint64, uint128
 
 

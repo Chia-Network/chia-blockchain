@@ -1,5 +1,4 @@
 import datetime
-import pathlib
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -19,7 +18,7 @@ def get_chia_ca_crt_key() -> Tuple[Any, Any]:
 
 
 def get_mozzila_ca_crt() -> str:
-    mozilla_path = pathlib.Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
+    mozilla_path = Path(__file__).parent.parent.parent.absolute() / "mozilla-ca/cacert.pem"
     return str(mozilla_path)
 
 
