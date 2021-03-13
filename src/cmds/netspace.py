@@ -12,7 +12,7 @@ from src.util.ints import uint16
 
 async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) -> None:
     """
-    Calculates the estimated space on the network given two block header hases
+    Calculates the estimated space on the network given two block header hashes.
     """
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -111,6 +111,6 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
 )
 def netspace_cmd(rpc_port: int, delta_block_height: str, start: str) -> None:
     """
-    Calculates the estimated space on the network given two block header hases.
+    Calculates the estimated space on the network given two block header hashes.
     """
     asyncio.run(netstorge_async(rpc_port, delta_block_height, start))
