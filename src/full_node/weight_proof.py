@@ -129,7 +129,7 @@ class WeightProofHandler:
                     await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.height, segments)
                 sampled_seg_index = rng.choice(range(len(segments)))
                 log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
-                sub_epoch_segments.extend(compress_segments(sampled_seg_index, segments))
+                sub_epoch_segments.extend(remove_fields_unsampled_segments(sampled_seg_index, segments))
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
