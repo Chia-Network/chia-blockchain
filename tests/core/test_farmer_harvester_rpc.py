@@ -16,7 +16,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.block_tools import get_plot_dir
 from src.util.hash import std_hash
-from src.util.ints import uint8, uint16, uint64, uint32
+from src.util.ints import uint8, uint16, uint32, uint64
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert

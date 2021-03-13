@@ -18,7 +18,7 @@ from src.util.block_cache import BlockCache
 from src.util.block_tools import get_signage_point
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint32, uint64, uint128
-from tests.core.fixtures import empty_blockchain, default_1000_blocks  # noqa: F401
+from tests.core.fixtures import default_1000_blocks, empty_blockchain  # noqa: F401
 from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)

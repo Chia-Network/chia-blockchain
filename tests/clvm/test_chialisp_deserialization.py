@@ -1,9 +1,8 @@
 from unittest import TestCase
 
-from src.wallet.puzzles.load_clvm import load_clvm
-from src.util.byte_types import hexstr_to_bytes
 from src.types.blockchain_format.program import Program
-
+from src.util.byte_types import hexstr_to_bytes
+from src.wallet.puzzles.load_clvm import load_clvm
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="src.wallet.puzzles")
 
