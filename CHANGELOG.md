@@ -18,7 +18,7 @@ for setuptools_scm/PEP 440 reasons.
 
 - Installers were not correctly placing root TLS certificates into the bundle.
 - Weight proofs had a logic typo.
-- There was a typo in `chia plots`. Thanks to
+- There was a typo in `chia plots`. Thanks to @adamfiddler.
 
 ## 1.0rc6 aka Release Candidate 6 - 2020-03-11
 
