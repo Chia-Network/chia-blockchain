@@ -93,5 +93,5 @@ def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_intro
     "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
 )
 @click.pass_context
-def configure_cmd(ctx, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
-    configure(ctx.obj["root_path"], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
+def configure_cmd(ctx, docker, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
+    configure(ctx.obj["root_path"], docker, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
