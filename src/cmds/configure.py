@@ -26,10 +26,10 @@ def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_intro
             print("Node introducer address must be in format [IP:Port]")
     if set_farmer_peer:
         try:
-            if set_node_introducer.index(":"):
+            if set_farmer_peer.index(":"):
                 host, port = (
-                    ":".join(set_node_introducer.split(":")[:-1]),
-                    set_node_introducer.split(":")[-1],
+                    ":".join(set_farmer_peer.split(":")[:-1]),
+                    set_farmer_peer.split(":")[-1],
                 )
                 config["full_node"]["farmer_peer"]["host"] = host
                 config["full_node"]["farmer_peer"]["port"] = int(port)
