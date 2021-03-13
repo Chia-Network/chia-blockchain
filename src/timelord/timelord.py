@@ -27,10 +27,10 @@ from src.types.blockchain_format.slots import (
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from src.util.genesis_wait import wait_for_genesis_challenge
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint8, uint32, uint64
 
 log = logging.getLogger(__name__)

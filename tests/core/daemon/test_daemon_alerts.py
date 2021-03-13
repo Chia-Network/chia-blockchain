@@ -10,10 +10,10 @@ from src.util.hash import std_hash
 from src.util.ints import uint16
 from src.util.validate_alert import create_alert_file, create_not_ready_alert_file
 from tests.core.full_node.test_full_sync import node_height_at_least
-from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
+from tests.setup_nodes import self_hostname, setup_daemon, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.alert_server import AlertServer
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.util.alert_server import AlertServer
 
 no_genesis = dataclasses.replace(test_constants_modified, GENESIS_CHALLENGE=None)
 b_tools = BlockTools(constants=no_genesis)

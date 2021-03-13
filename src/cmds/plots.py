@@ -128,7 +128,7 @@ def create_cmd(
         print("If you are testing and you want to use smaller size please add the --override-k flag.")
         sys.exit(1)
     elif size < 25 and override_k:
-        print("Error: The minimun k size allowed from the cli is k=25.")
+        print("Error: The minimum k size allowed from the cli is k=25.")
         sys.exit(1)
 
     create_plots(Params(), ctx.obj["root_path"])

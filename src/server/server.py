@@ -8,7 +8,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from aiohttp import ClientSession, ClientTimeout, WSCloseCode, client_exceptions, web, ServerDisconnectedError
+from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
 from cryptography import x509
@@ -25,7 +25,6 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.peer_info import PeerInfo
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
-
 from src.util.network import is_localhost
 
 
@@ -527,7 +526,6 @@ class ChiaServer:
                         connection.log.error(f"Exception: {e}, closing connection {connection.get_peer_info()}. {tb}")
                     else:
                         connection.log.debug(f"Exception: {e} while closing connection")
-                        pass
                     # TODO: actually throw one of the errors from errors.py and pass this to close
                     await connection.close(self.api_exception_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
                 finally:

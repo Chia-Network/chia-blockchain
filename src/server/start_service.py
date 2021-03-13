@@ -5,7 +5,7 @@ import signal
 from sys import platform
 from typing import Any, Callable, List, Optional, Tuple
 
-from src.server.ssl_context import private_ssl_ca_paths, chia_ssl_ca_paths
+from src.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 
 try:
     import uvloop

@@ -35,7 +35,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.util.errors import ValidationError, Err
+from src.util.errors import Err, ValidationError
 from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint32, uint128
 from src.util.keychain import Keychain

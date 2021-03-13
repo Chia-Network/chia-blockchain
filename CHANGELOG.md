@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.0rc7 aka Release Candidate 7 - 2020-03-12
+## 1.0rc7 aka Release Candidate 7 - 2020-03-13
 
 ### Changed
 
@@ -16,8 +16,13 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
+- Setting difficulty way too low on the testnet_6 launch revealed a Timelord edge case. The full node was hardcoding the default difficulty if block height is < EPOCH_BLOCKS. However there were many overlapping blocks, so none of the blocks reached the height, and therefore the timelord infused the wrong difficulty.
+- Fixed a race condition in the Timelord, where it took time to update the state, so it ignored the new_peak_timelord form the full_node, which should have reset the timelord to a good state.
+- Wallet notoriously showed "not synced" when it was in sync.
 - Installers were not correctly placing root TLS certificates into the bundle.
 - Weight proofs had a logic typo.
+- There was a typo in `chia netspace`. Thanks @altendky.
+- There was a typo in `chia plots`. Thanks @adamfiddler.
 
 ## 1.0rc6 aka Release Candidate 6 - 2020-03-11
 
@@ -78,7 +83,7 @@ for setuptools_scm/PEP 440 reasons.
 - The RC5 release is a new breaking change/hard fork blockchain. Plots and keys from previous chains will work fine on RC5 but balances of TXCH will not come forward.
 - We now support a "green flag" chain launch process. A new version of the software will poll download.chia.net/notify/ for a signed json file that will be the genesis block of the chain for that version. This will allow unattended start at mainnet.
 - Bluebox Timelords are back. These are Timelords most anyone can run. They search through the historical chain and find large proofs of times and compact them down to their smallest representation. This significantly speeds up syncing for newly started nodes. Currently this is only supported on Linux and MacOS x86_64 but we will expand that. Any desktop or server of any age will be fast enough to be a useful Bluebox Timelord.
-- Thanks to @jespino there is now `chia farm show`. You can now get almost exactly the same farming information on the CLI as the GUI.
+- Thanks to @jespino there is now `chia farm summary`. You can now get almost exactly the same farming information on the CLI as the GUI.
 - We have added Romanian to the GUI translations. Thank you to @bicilis on [Crowdin](https://crowdin.com/project/chia-blockchain). We also added a couple of additional target languages. Klingon anyone?
 - `chia wallet` now takes get_address to get a new wallet receive address from the CLI.
 - `chia plots check` will list out all the failed plot filenames at the end of the report. Thanks for the PR go to @eFishCent.

@@ -14,23 +14,22 @@ from src.consensus.pot_iterations import is_overflow_block
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
+from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
-from src.util.block_tools import get_vdf_info_and_proof, BlockTools
+from src.util.block_tools import BlockTools, get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint64
 from src.util.recursive_replace import recursive_replace
-from tests.core.fixtures import empty_blockchain, create_blockchain  # noqa: F401
-from tests.core.fixtures import default_1000_blocks  # noqa: F401
 from src.util.wallet_tools import WalletTool
-from tests.core.fixtures import default_400_blocks  # noqa: F401
+from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
 from tests.core.fixtures import default_10000_blocks  # noqa: F401
 from tests.core.fixtures import default_10000_blocks_compact  # noqa: F401
 from tests.core.fixtures import empty_blockchain  # noqa: F401
+from tests.core.fixtures import create_blockchain
 from tests.setup_nodes import bt, test_constants
 
 log = logging.getLogger(__name__)
