@@ -11,6 +11,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - Our green flag test blockchain launch worked but it uncovered a flaw in our installer versions. This release is a bug fix release to address that flaw. You should read the RC6 changes below if this is your first time installing since RC5.
+- Thanks to @dkackman for implementing an early exit of the GUI if you run `npm run build` without being in the `venv`.
 - `chia netspace` now defaults to 1000 blocks to mirror the GUI.
 - The installer build process was spruced up some.
 
