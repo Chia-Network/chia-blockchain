@@ -19,13 +19,13 @@ const guessPackaged = () => {
   let packed;
   if (process.platform === 'win32') {
     const fullPath = path.join(__dirname, PY_WIN_DIST_FOLDER);
-    packed = require('fs').existsSync(fullPath);
+    packed = fs.existsSync(fullPath);
     console.log(fullPath);
     console.log(packed);
     return packed;
   }
   const fullPath = path.join(__dirname, PY_MAC_DIST_FOLDER);
-  packed = require('fs').existsSync(fullPath);
+  packed = fs.existsSync(fullPath);
   console.log(fullPath);
   console.log(packed);
   return packed;
@@ -140,4 +140,5 @@ const startChiaDaemon = () => {
 module.exports = {
   startChiaDaemon,
   getChiaVersion,
+  guessPackaged,
 };

@@ -39,7 +39,16 @@ if (!setupEvents.handleSquirrelEvent()) {
     }
   };
 
+  const ensureCorrectEnvironment = () => {
+    // check that the app is either packaged or running in the python venv
+    if (!chiaEnvironment.guessPackaged() && !('VIRTUAL_ENV' in process.env)) {
+      console.log("App must be installed or in venv");
+      app.quit();
+    }    
+  };
+
   ensureSingleInstance();
+  ensureCorrectEnvironment();
 
   // this needs to happen early in startup so all processes share the same global config
   chiaConfig.loadConfig(chiaEnvironment.getChiaVersion());
