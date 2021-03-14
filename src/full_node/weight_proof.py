@@ -998,19 +998,17 @@ def sub_slot_data_vdf_input(
     if new_sub_slot and not is_overflow:
         return ClassgroupElement.get_default_element()
     elif is_overflow and new_sub_slot:
-        cc_input = ClassgroupElement.get_default_element()
-        if sub_slot_idx >= 2:
-            if not sub_slots[sub_slot_idx - 2].is_end_of_slot():
-                for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
-                    ssd = sub_slots[ssd_idx]
-                    if ssd.cc_slot_end is not None:
-                        ssd = sub_slots[ssd_idx + 1]
-                        break
-                    if not (ssd.total_iters > sp_total_iters):
-                        break
-                if ssd and ssd.cc_ip_vdf_info is not None:
-                    if ssd.total_iters < sp_total_iters:
-                        cc_input = ssd.cc_ip_vdf_info.output
+        if sub_slot_idx >= 2 and (not sub_slots[sub_slot_idx - 2].is_end_of_slot()):
+            for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
+                ssd = sub_slots[ssd_idx]
+                if ssd.is_end_of_slot():
+                    ssd = sub_slots[ssd_idx + 1]
+                    break
+                if not (ssd.total_iters > sp_total_iters):
+                    break
+            if ssd and ssd.cc_ip_vdf_info is not None:
+                if ssd.total_iters < sp_total_iters:
+                    cc_input = ssd.cc_ip_vdf_info.output
         return cc_input
     elif not new_sub_slot and not is_overflow:
         cc_input = ClassgroupElement.get_default_element()
