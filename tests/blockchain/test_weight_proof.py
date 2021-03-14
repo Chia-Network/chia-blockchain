@@ -260,6 +260,10 @@ class TestWeightProof:
         )
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
             1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
         )
 

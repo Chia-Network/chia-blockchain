@@ -991,7 +991,7 @@ def sub_slot_data_vdf_input(
     is_overflow: bool,
     new_sub_slot: bool,
     ssi: uint64,
-):
+) -> ClassgroupElement:
     cc_input = ClassgroupElement.get_default_element()
     sp_total_iters = get_sp_total_iters(constants, is_overflow, ssi, sub_slot_data)
     ssd: Optional[SubSlotData] = None
@@ -1030,11 +1030,11 @@ def sub_slot_data_vdf_input(
         slots_seen = 0
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
-            if ssd.cc_slot_end is not None:
+            if ssd.is_end_of_slot():
                 slots_seen += 1
                 if slots_seen == 2:
-                    return ClassgroupElement.get_default_element(), False
-            if ssd.cc_slot_end is None and not (ssd.total_iters > sp_total_iters):
+                    return ClassgroupElement.get_default_element()
+            if not ssd.is_end_of_slot() and not (ssd.total_iters > sp_total_iters):
                 break
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
