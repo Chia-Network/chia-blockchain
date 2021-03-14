@@ -291,13 +291,19 @@ class WeightProofHandler:
         # find slot start
         curr_sub_rec = header_block_sub_rec
         first_rc_end_of_slot_vdf = None
+        sub_slots_num = 1
+        if header_block_sub_rec.overflow and not header_block_sub_rec.first_in_sub_slot:
+            sub_slots_num += 1
         if first_in_sub_epoch and curr_sub_rec.height > 0:
             while not curr_sub_rec.sub_epoch_summary_included:
                 curr_sub_rec = blocks[curr_sub_rec.prev_hash]
             first_rc_end_of_slot_vdf = self.first_rc_end_of_slot_vdf(header_block, blocks, header_blocks)
         else:
-            while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
+            while sub_slots_num > 0 and curr_sub_rec.height > 0:
                 curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+                if curr_sub_rec.first_in_sub_slot:
+                    assert curr_sub_rec.finished_challenge_slot_hashes
+                    sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
 
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
@@ -382,8 +388,6 @@ class WeightProofHandler:
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
 
             curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
-        if len(tmp_sub_slots_data) > 0:
-            sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
         return sub_slots_data, curr.height
 
@@ -433,7 +437,7 @@ class WeightProofHandler:
             curr.total_iters,
         )
 
-    def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
+    def validate_weight_proof_single_proc(self, weight_proof: WeightProof, validate_all=False) -> Tuple[bool, uint32]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
@@ -453,7 +457,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
-        if not _validate_sub_epoch_segments(constants, rng, wp_bytes, summary_bytes):
+        if not _validate_sub_epoch_segments(constants, rng, wp_bytes, summary_bytes, validate_all):
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
         if not _validate_recent_blocks(constants, wp_bytes, summary_bytes):
@@ -797,6 +801,7 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
+    validate_all=False,
 ):
     constants, summaries, weight_proof = bytes_to_vars(constants_dict, summaries_bytes, weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -820,8 +825,9 @@ def _validate_sub_epoch_segments(
             log.error(f"failed reward_chain_hash validation sub_epoch {sub_epoch_n}")
             return False
         for idx, segment in enumerate(segments):
+            sampled = (sampled_seg_index == idx) or validate_all
             valid_segment, ip_iters, slot_iters, slots = _validate_segment(
-                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
+                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled
             )
             if not valid_segment:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
@@ -885,7 +891,7 @@ def _validate_challenge_block_vdfs(
                 constants, sub_slot_data, sub_slot_idx, sub_slots, is_overflow, prev_ssd.is_end_of_slot(), ssi
             )
         if not sub_slot_data.cc_signage_point.is_valid(constants, sp_input, sub_slot_data.cc_sp_vdf_info):
-            log.error(f"failed to validate challenge chain signage point 2 {sub_slot_data.cc_sp_vdf_info}")
+            log.error(f"failed to validate challenge chain signage point  {sub_slot_data.cc_sp_vdf_info}")
             return False
     assert sub_slot_data.cc_infusion_point
     assert sub_slot_data.cc_ip_vdf_info
@@ -986,24 +992,28 @@ def sub_slot_data_vdf_input(
     new_sub_slot: bool,
     ssi: uint64,
 ):
-    input = ClassgroupElement.get_default_element()
+    cc_input = ClassgroupElement.get_default_element()
     sp_total_iters = get_sp_total_iters(constants, is_overflow, ssi, sub_slot_data)
     ssd: Optional[SubSlotData] = None
-    if is_overflow and new_sub_slot:
-        if sub_slots[sub_slot_idx - 2].cc_slot_end is None:
-            for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
-                ssd = sub_slots[ssd_idx]
-                if ssd.cc_slot_end is not None:
-                    ssd = sub_slots[ssd_idx + 1]
-                    break
-                if not (ssd.total_iters > sp_total_iters):
-                    break
-            if ssd and ssd.cc_ip_vdf_info is not None:
-                if ssd.total_iters < sp_total_iters:
-                    input = ssd.cc_ip_vdf_info.output
-        return input
-
-    elif not is_overflow and not new_sub_slot:
+    if new_sub_slot and not is_overflow:
+        return ClassgroupElement.get_default_element()
+    elif is_overflow and new_sub_slot:
+        cc_input = ClassgroupElement.get_default_element()
+        if sub_slot_idx >= 2:
+            if not sub_slots[sub_slot_idx - 2].is_end_of_slot():
+                for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
+                    ssd = sub_slots[ssd_idx]
+                    if ssd.cc_slot_end is not None:
+                        ssd = sub_slots[ssd_idx + 1]
+                        break
+                    if not (ssd.total_iters > sp_total_iters):
+                        break
+                if ssd and ssd.cc_ip_vdf_info is not None:
+                    if ssd.total_iters < sp_total_iters:
+                        cc_input = ssd.cc_ip_vdf_info.output
+        return cc_input
+    elif not new_sub_slot and not is_overflow:
+        cc_input = ClassgroupElement.get_default_element()
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
             if ssd.cc_slot_end is not None:
@@ -1014,9 +1024,8 @@ def sub_slot_data_vdf_input(
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
             if ssd.total_iters < sp_total_iters:
-                input = ssd.cc_ip_vdf_info.output
-        return input
-
+                cc_input = ssd.cc_ip_vdf_info.output
+        return cc_input
     elif not new_sub_slot and is_overflow:
         slots_seen = 0
         for ssd_idx in reversed(range(0, sub_slot_idx)):
@@ -1030,8 +1039,8 @@ def sub_slot_data_vdf_input(
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
             if ssd.total_iters < sp_total_iters:
-                input = ssd.cc_ip_vdf_info.output
-    return input
+                cc_input = ssd.cc_ip_vdf_info.output
+    return cc_input
 
 
 def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, summaries_bytes: List[bytes]) -> bool:

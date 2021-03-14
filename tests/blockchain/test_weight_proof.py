@@ -10,10 +10,13 @@ from src.consensus.block_record import BlockRecord
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
+from src.server.start_full_node import SERVICE_NAME
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.block_cache import BlockCache
 from src.util.block_tools import test_constants
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from tests.setup_nodes import bt
 
 try:
@@ -206,6 +209,85 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
+    async def test_weight_proof_edge_cases(self, default_400_blocks):
+        blocks: List[FullBlock] = default_400_blocks
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=1
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            300,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=False,
+        )
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
     async def test_weight_proof1000_pre_genesis_empty_slots(self, pre_genesis_empty_slots_1000_blocks):
         blocks = pre_genesis_empty_slots_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
@@ -214,7 +296,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
 
         assert valid
         assert fork_point == 0
@@ -227,7 +309,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
 
         assert valid
         assert fork_point == 0
@@ -245,7 +327,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
 
         assert valid
         assert fork_point == 0
@@ -259,7 +341,7 @@ class TestWeightProof:
 
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
 
         assert valid
         assert fork_point == 0
@@ -331,10 +413,10 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
+    # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("path to db")
+        connection = await aiosqlite.connect("/Users/almog/Downloads/2blockchain_v30_testnet6.sqlite")
         block_store: BlockStore = await BlockStore.create(connection)
         blocks, peak = await block_store.get_block_records()
         peak_height = blocks[peak].height
@@ -358,9 +440,14 @@ class TestWeightProof:
             curr = blocks[curr.prev_hash]
         assert len(sub_height_to_hash) == peak_height + 1
         block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-        wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
-        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 50])
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        overrides = config["network_overrides"]["constants"]["testnet6"]
+        updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+
+        wpf = WeightProofHandler(updated_constants, block_cache)
+        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height])
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
 
         await connection.close()
         assert valid
