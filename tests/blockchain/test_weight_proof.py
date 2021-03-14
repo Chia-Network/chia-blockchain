@@ -413,10 +413,10 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/Downloads/2blockchain_v30_testnet6.sqlite")
+        connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
         blocks, peak = await block_store.get_block_records()
         peak_height = blocks[peak].height
