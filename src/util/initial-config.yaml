@@ -36,8 +36,8 @@ network_overrides: &network_overrides
     testnet6:
       address_prefix: "txch"
 
-selected_network: &selected_network "testnet6"
-ALERTS_URL: https://download.chia.net/notify/testnet_6_alert.txt
+selected_network: &selected_network "mainnet"
+ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
 # public ssl ca is included in source code
@@ -107,7 +107,7 @@ farmer:
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 58444
+    port: 8444
   harvester_peer:
     host: *self_hostname
     port: 8448
@@ -156,7 +156,7 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 58444
+      port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -191,12 +191,12 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 58444
+  port: 8444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v30_CHALLENGE.sqlite
+  database_path: db/blockchain_v1_CHALLENGE.sqlite
   peer_db_path: db/peer_table_node.sqlite
-  simulator_database_path: sim_db/simulator_blockchain_v30_CHALLENGE.sqlite
+  simulator_database_path: sim_db/simulator_blockchain_v1_CHALLENGE.sqlite
   simulator_peer_db_path: sim_db/peer_table_node.sqlite
 
   # If True, starts an RPC server at the following port
@@ -238,8 +238,8 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
-      port: 58444
+      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
+      port: 8444
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -303,10 +303,10 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 58444
+    port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v30_CHALLENGE_KEY.sqlite
+  database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
   wallet_peers_path: wallet/db/wallet_peers.sqlite
 
   logging: *logging
@@ -320,8 +320,8 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer1.beta.chia.net # Chia AWS introducer IPv4/IPv6
-    port: 58444
+    host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 8444
 
   ssl:
     private_crt:  "config/ssl/wallet/private_wallet.crt"

@@ -366,6 +366,12 @@ def chia_init(root_path: Path):
         "pool.xch_target_address",
         "ALERTS_URL",
         "CHIA_ALERTS_PUBKEY",
+        "pool.xch_target_address",
+        "full_node.xch_target_address",
+        "farmer.farmer_target",  # These were buggy values in rc7
+        "farmer.pool_target",  # These were buggy values in rc7
+        "pool.pool_target",  # These were buggy values in rc7
+        "farmer.farmer_target",  # These were buggy values in rc7
     ]
 
     # These are the files that will be migrated
@@ -377,9 +383,12 @@ def chia_init(root_path: Path):
 
     manifest = MANIFEST
 
-    # Starting with RC2 is the first version that used the bech32m addresses
-    # range current version and 0=version 1
-    # for version_number in range(chia_minor_release_number() - 1, 2, -1):
+    print(f"Checking {os.path.expanduser(Path('~/.chia/testnet'))}")
+    if migrate_from(Path(os.path.expanduser("~/.chia/testnet")), root_path, manifest, DO_NOT_MIGRATE_SETTINGS):
+        check_keys(root_path)
+        return 0
+
+    # Migrate only from rc2 and up. Target addresses are not migrated.
     for version_number in range(5, 2, -1):
         old_path = Path(os.path.expanduser("~/.chia/1.0rc%s" % version_number))
         print(f"Checking {old_path}")
