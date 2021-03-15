@@ -435,7 +435,7 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
-        a = request["a"]
+        a = request.get["a"]
         e = request["e"]
         override_k = request["overrideK"]
 
