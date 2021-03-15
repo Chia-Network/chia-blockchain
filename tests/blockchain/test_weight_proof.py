@@ -286,7 +286,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -300,7 +300,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -313,7 +313,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -331,7 +331,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -345,7 +345,7 @@ class TestWeightProof:
 
         assert wp is not None
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -451,7 +451,7 @@ class TestWeightProof:
 
         wpf = WeightProofHandler(updated_constants, block_cache)
         wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height])
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp, True)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         await connection.close()
         assert valid

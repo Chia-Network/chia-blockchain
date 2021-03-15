@@ -439,7 +439,7 @@ class WeightProofHandler:
             curr.total_iters,
         )
 
-    def validate_weight_proof_single_proc(self, weight_proof: WeightProof, validate_all=False) -> Tuple[bool, uint32]:
+    def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
@@ -459,7 +459,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
-        if not _validate_sub_epoch_segments(constants, rng, wp_bytes, summary_bytes, validate_all):
+        if not _validate_sub_epoch_segments(constants, rng, wp_bytes, summary_bytes):
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
         if not _validate_recent_blocks(constants, wp_bytes, summary_bytes):
@@ -803,7 +803,6 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
-    validate_all=False,
 ):
     constants, summaries, weight_proof = bytes_to_vars(constants_dict, summaries_bytes, weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -827,9 +826,8 @@ def _validate_sub_epoch_segments(
             log.error(f"failed reward_chain_hash validation sub_epoch {sub_epoch_n}")
             return False
         for idx, segment in enumerate(segments):
-            sampled = (sampled_seg_index == idx) or validate_all
             valid_segment, ip_iters, slot_iters, slots = _validate_segment(
-                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled
+                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
             )
             if not valid_segment:
                 log.error(f"failed to validate sub_epoch {segment.sub_epoch_n} segment {idx} slots")
