@@ -15,6 +15,7 @@ from src.rpc.rpc_server import start_rpc_server
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.block_tools import get_plot_dir
+from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.ints import uint8, uint16, uint32, uint64
 from src.wallet.derive_keys import master_sk_to_wallet_sk
@@ -202,6 +203,11 @@ class TestRpc:
             assert decode_puzzle_hash(targets_4["farmer_target"]) == new_ph
             assert decode_puzzle_hash(targets_4["pool_target"]) == new_ph_3
             assert not targets_4["have_pool_sk"] and targets_3["have_farmer_sk"]
+
+            root_path = farmer_api.farmer._root_path
+            config = load_config(root_path, "config.yaml")
+            assert config["farmer"]["xch_target_address"] == encode_puzzle_hash(new_ph, "xch")
+            assert config["pool"]["xch_target_address"] == encode_puzzle_hash(new_ph_3, "xch")
 
             new_ph_3_encoded = encode_puzzle_hash(new_ph_3, "xch")
             added_char = new_ph_3_encoded + "a"
