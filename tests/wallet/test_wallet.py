@@ -424,7 +424,7 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(25, wallet.get_confirmed_balance, funds)
+        await time_out_assert(90, wallet.get_confirmed_balance, funds)
         max_sent_amount = await wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
