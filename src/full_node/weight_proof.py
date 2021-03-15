@@ -1054,10 +1054,10 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
     challenge, prev_challenge = None, None
     tip_height = weight_proof.recent_chain_data[-1].height
     prev_block_record = None
+    deficit = uint8(0)
     for idx, block in enumerate(weight_proof.recent_chain_data):
         required_iters = uint64(0)
         overflow = False
-        deficit = uint8(0)
         ses = False
         height = block.height
         for sub_slot in block.finished_sub_slots:
