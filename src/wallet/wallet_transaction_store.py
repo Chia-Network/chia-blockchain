@@ -381,15 +381,6 @@ class WalletTransactionStore:
         """
         Returns all stored transactions.
         """
-        if wallet_id in self.tx_wallet_cache and type in self.tx_wallet_cache[wallet_id]:
-            wallet_txs = self.tx_wallet_cache[wallet_id][type]
-            txs = []
-            for name in wallet_txs:
-                tx = await self.get_transaction_record(name)
-                assert tx is not None
-                txs.append(tx)
-            return txs
-
         if type is None:
             cursor = await self.db_connection.execute(
                 "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
