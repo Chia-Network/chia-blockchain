@@ -386,8 +386,8 @@ class WeightProofHandler:
                     sub_slots_data.append(handle_end_of_slot(sub_slot, eos_vdf_iters))
                 tmp_sub_slots_data = []
             tmp_sub_slots_data.append(self.handle_block_vdfs(curr, blocks))
-            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
 
+            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
         if len(tmp_sub_slots_data) > 0:
             sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} slots {len(sub_slots_data)} ")
