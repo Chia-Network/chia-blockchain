@@ -985,7 +985,7 @@ def sub_slot_data_vdf_input(
     is_overflow: bool,
     new_sub_slot: bool,
     ssi: uint64,
-    ) -> ClassgroupElement:
+) -> ClassgroupElement:
     cc_input = ClassgroupElement.get_default_element()
     sp_total_iters = get_sp_total_iters(constants, is_overflow, ssi, sub_slot_data)
     ssd: Optional[SubSlotData] = None
@@ -1033,7 +1033,6 @@ def sub_slot_data_vdf_input(
             if ssd.total_iters < sp_total_iters:
                 cc_input = ssd.cc_ip_vdf_info.output
     return cc_input
-
 
 
 def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, summaries_bytes: List[bytes]) -> bool:

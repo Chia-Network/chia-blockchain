@@ -192,7 +192,6 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
 
-
     @pytest.mark.asyncio
     async def test_weight_proof_edge_cases(self, default_400_blocks):
         blocks: List[FullBlock] = default_400_blocks
