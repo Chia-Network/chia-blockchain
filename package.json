@@ -8,15 +8,16 @@
   "main": "src/electron-starter.js",
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
+    "build": "npm run locale && craco build",
     "test": "craco test --env=jsdom",
     "eject": "react-scripts eject",
     "electron": "electron .",
-    "dev": "cross-env NODE_ENV=development BROWSER=none nf start",
+    "dev": "npm run locale && cross-env NODE_ENV=development BROWSER=none nf start",
     "styleguide": "styleguidist server",
     "styleguide:build": "styleguidist build",
     "locale:extract": "lingui extract",
     "locale:compile": "lingui compile",
+    "locale": "lingui extract && lingui compile",
     "eslint": "eslint src/**/*.[t]s{,x}",
     "format": "prettier --write src/**/*.[jt]s{,x} && eslint --fix src/**/*.[jt]s{,x}",
     "lint": "tsc --noEmit && npm run eslint"
