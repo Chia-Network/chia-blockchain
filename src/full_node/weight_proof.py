@@ -296,8 +296,16 @@ class WeightProofHandler:
                 curr_sub_rec = blocks[curr_sub_rec.prev_hash]
             first_rc_end_of_slot_vdf = self.first_rc_end_of_slot_vdf(header_block, blocks, header_blocks)
         else:
-            while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
-                curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+            if header_block_sub_rec.overflow and header_block_sub_rec.first_in_sub_slot:
+                sub_slots_num = 2
+                while sub_slots_num > 0 and curr_sub_rec.height > 0:
+                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+                if curr_sub_rec.first_in_sub_slot:
+                    assert curr_sub_rec.finished_challenge_slot_hashes is not None
+                    sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
+            else:
+                while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
+                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
 
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
@@ -1393,7 +1401,7 @@ def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
     tip = weight_proof.recent_chain_data[-1]
     weight_to_check = _get_weights_for_sampling(rng, tip.weight, weight_proof.recent_chain_data)
     sampled_sub_epochs: dict[int, bool] = {}
-    for idx in range(1, len(sub_epoch_weight_list)):
+    for idx in reversed(range(1, len(sub_epoch_weight_list))):
         if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
             sampled_sub_epochs[idx - 1] = True
             if len(sampled_sub_epochs) == WeightProofHandler.MAX_SAMPLES:
