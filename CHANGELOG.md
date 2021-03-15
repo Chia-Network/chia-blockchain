@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.0rc8 aka Release Candidate 8 - 2020-03-15
+
+### Added
+
+- The GUI now has a tooltip that directs users to the explanation of the plot filter.
+- The GUI now has a tooltip to explain the "Disable bitfield plotting" option. Thanks @shaneo257 for the idea.
+- The GUI now has a tooltip to explain Hierarchical Deterministic keys next to Receive Address on the Wallet page.
+
+### Changed
+
+- We now use Python 3.9 to build MacOS installers.
+- Harvester now catches another error class and continues to harvest. Thanks to @xorinox for this PR.
+- We now use a smaller weight proof sample size to ease the load on smaller machines when syncing.
+- Starting the GUI from Linux will now also error out if `npm run build` is run outside the venv. Huge thanks to @dkackman for that PR.
+- `chia farm summary` will now display TXCH or XCH as appropriate.
+- We added more time to our API timeouts and improved logging around times outs.
+
+### Fixed
+
+- We no longer use the transaction cache to look up transactions for new transactions as that was causing a wallet sync bug.
+- Sometimes the GUI would not pick up the fingerprint for the plotting key.
+- `chia farm summary` displayed some incorrect amounts.
+- Weight proofs were timing out.
+- Changes to farming rewards target addresses from the GUI were not being saved for restart correctly.
+- Signage points, recent deficit blocks, and slots for overflow challenge blocks had minor issues.
+
+
 ## 1.0rc7 aka Release Candidate 7 - 2020-03-13
 
 ### Changed
