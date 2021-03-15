@@ -39,7 +39,7 @@ class WeightProofHandler:
 
     LAMBDA_L = 100
     C = 0.5
-    MAX_SAMPLES = 50
+    MAX_SAMPLES = 20
 
     def __init__(
         self,
