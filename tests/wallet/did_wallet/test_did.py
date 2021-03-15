@@ -608,5 +608,6 @@ class TestDIDWallet:
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         # It ends in 900 so it's not gone through
         # Assert coin ID is failing
+        time.sleep(20)
         await time_out_assert(15, wallet.get_confirmed_balance, 21999999999900)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 21999999999900)
