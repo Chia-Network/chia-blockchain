@@ -721,9 +721,10 @@ class WalletRpcApi:
                 pool_reward_amount += record.amount
             if record.type == TransactionType.FEE_REWARD:
                 fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += record.amount - fee_amount
+                farmer_reward_amount += calculate_base_farmer_reward(height)
             amount += record.amount
 
+        assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
             "pool_reward_amount": pool_reward_amount,
