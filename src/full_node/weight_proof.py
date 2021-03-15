@@ -1012,7 +1012,7 @@ def sub_slot_data_vdf_input(
                 if ssd.total_iters < sp_total_iters:
                     cc_input = ssd.cc_ip_vdf_info.output
         return cc_input
-    elif not new_sub_slot and not is_overflow:
+    elif (not new_sub_slot) and (not is_overflow):
         cc_input = ClassgroupElement.get_default_element()
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
@@ -1026,7 +1026,7 @@ def sub_slot_data_vdf_input(
             if ssd.total_iters < sp_total_iters:
                 cc_input = ssd.cc_ip_vdf_info.output
         return cc_input
-    elif not new_sub_slot and is_overflow:
+    elif (not new_sub_slot) and is_overflow:
         slots_seen = 0
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
@@ -1083,7 +1083,7 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
         if (challenge is not None) and (prev_challenge is not None):
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
-            log.debug(f"wp, validate block {block.height}")
+            log.info(f"wp, validate block {block.height} deficit {deficit}")
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 required_iters, error = validate_finished_header_block(
                     constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
