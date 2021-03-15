@@ -16,7 +16,7 @@ pool:
 strategy:
   matrix:
     Mojave DMG:
-      python.version: "3.8"
+      python.version: "3.9"
 
 variables:
   - group: Apple-Notarize-Variables
