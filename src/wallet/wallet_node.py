@@ -465,7 +465,9 @@ class WalletNode:
                 if self.wallet_state_manager.sync_mode:
                     return
                 weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
-                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request)
+                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
+                    weight_request, timeout=180
+                )
                 if weight_proof_response is None:
                     return
                 weight_proof = weight_proof_response.wp
