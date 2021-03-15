@@ -989,13 +989,11 @@ def sub_slot_data_vdf_input(
     cc_input = ClassgroupElement.get_default_element()
     sp_total_iters = get_sp_total_iters(constants, is_overflow, ssi, sub_slot_data)
     ssd: Optional[SubSlotData] = None
-    if new_sub_slot and not is_overflow:
-        return ClassgroupElement.get_default_element()
-    elif is_overflow and new_sub_slot:
-        if sub_slot_idx >= 2 and (not sub_slots[sub_slot_idx - 2].is_end_of_slot()):
+    if is_overflow and new_sub_slot:
+        if sub_slots[sub_slot_idx - 2].cc_slot_end is None:
             for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
                 ssd = sub_slots[ssd_idx]
-                if ssd.is_end_of_slot():
+                if ssd.cc_slot_end is not None:
                     ssd = sub_slots[ssd_idx + 1]
                     break
                 if not (ssd.total_iters > sp_total_iters):
@@ -1004,8 +1002,8 @@ def sub_slot_data_vdf_input(
                 if ssd.total_iters < sp_total_iters:
                     cc_input = ssd.cc_ip_vdf_info.output
         return cc_input
-    elif (not is_overflow) and (not new_sub_slot):
-        cc_input = ClassgroupElement.get_default_element()
+
+    elif not is_overflow and not new_sub_slot:
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
             if ssd.cc_slot_end is not None:
@@ -1018,15 +1016,16 @@ def sub_slot_data_vdf_input(
             if ssd.total_iters < sp_total_iters:
                 cc_input = ssd.cc_ip_vdf_info.output
         return cc_input
-    elif (not new_sub_slot) and is_overflow:
+
+    elif not new_sub_slot and is_overflow:
         slots_seen = 0
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
-            if ssd.is_end_of_slot():
+            if ssd.cc_slot_end is not None:
                 slots_seen += 1
                 if slots_seen == 2:
                     return ClassgroupElement.get_default_element()
-            if (not ssd.is_end_of_slot()) and (not (ssd.total_iters > sp_total_iters)):
+            if ssd.cc_slot_end is None and not (ssd.total_iters > sp_total_iters):
                 break
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
