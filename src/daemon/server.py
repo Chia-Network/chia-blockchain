@@ -55,6 +55,9 @@ async def fetch(url: str):
         ssl_context = ssl_context_for_root(mozzila_root)
         response = await session.get(url, ssl=ssl_context)
         await session.close()
+        if not response.ok:
+            log.warning("Response not OK.")
+            return None
         return await response.text()
     except Exception as e:
         await session.close()
@@ -182,7 +185,9 @@ class WebSocketServer:
 
                 selected = self.net_config["selected_network"]
                 alert_url = self.net_config["ALERTS_URL"]
+                log.debug("Fetching alerts")
                 response = await fetch(alert_url)
+                log.debug(f"Fetched alert: {response}")
                 if response is None:
                     continue
 
