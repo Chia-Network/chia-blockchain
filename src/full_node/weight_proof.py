@@ -1034,7 +1034,7 @@ def sub_slot_data_vdf_input(
                 slots_seen += 1
                 if slots_seen == 2:
                     return ClassgroupElement.get_default_element()
-            if not ssd.is_end_of_slot() and not (ssd.total_iters > sp_total_iters):
+            if (not ssd.is_end_of_slot()) and (not (ssd.total_iters > sp_total_iters)):
                 break
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
