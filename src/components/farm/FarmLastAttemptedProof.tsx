@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { Table, Card, FormatBytes } from '@chia/core';
+import { Link, Table, Card, FormatBytes } from '@chia/core';
 import { Typography } from '@material-ui/core';
 import moment from 'moment';
 import type { Row } from '../core/components/Table/Table';
@@ -49,9 +49,11 @@ export default function FarmLastAttemptedProof() {
       )}
       tooltip={(
         <Trans>
-          This table shows you the last time your farm attempted to win a block challenge.
+          This table shows you the last time your farm attempted to win a block challenge.{' '}
+          <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/FAQ#what-is-the-plot-filter-and-why-didnt-my-plot-pass-it">Learn more</Link>
         </Trans>
       )}
+      interactive
     >
       <Table
         cols={cols}

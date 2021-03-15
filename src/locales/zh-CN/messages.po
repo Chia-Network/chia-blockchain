@@ -62,6 +62,10 @@ msgstr ""
 msgid "Add Plot Directory"
 msgstr ""
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
+msgid "Add Plot to Queue"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
 msgstr ""
@@ -83,7 +87,7 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:371
+#: src/components/wallet/standard/WalletStandard.tsx:373
 msgid "Address"
 msgstr ""
 
@@ -123,7 +127,11 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
-msgid "Are you sure you want to use k={plotSize}"
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
+msgid "Are you sure you want to use k={plotSize}?"
 msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:39
@@ -199,7 +207,7 @@ msgstr ""
 msgid "Browse"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:49
+#: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
 msgstr ""
 
@@ -371,7 +379,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:375
+#: src/components/wallet/standard/WalletStandard.tsx:377
 msgid "Copy"
 msgstr ""
 
@@ -529,6 +537,14 @@ msgstr ""
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Difficulty"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
+msgid "Disable bitfield plotting"
 msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
@@ -716,6 +732,10 @@ msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.tsx:367
+msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
@@ -925,7 +945,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:385
+#: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "New Address"
 msgstr ""
 
@@ -969,7 +989,7 @@ msgstr ""
 msgid "Node ID"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:43
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
 msgstr ""
 
@@ -1157,6 +1177,10 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
+msgid "Plot in Parallel"
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
@@ -1652,7 +1676,11 @@ msgid "This node is fully caught up and validating the network"
 msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
-msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
+#~ msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:39
+msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:192
@@ -1886,7 +1914,11 @@ msgid "Yes"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
-msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:56
+msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
