@@ -146,9 +146,9 @@
       )
       ;if we're out of identites to check for, return our output
       (if (> num_verifications num_verifications_required)
-        output
+        (c (list AGG_SIG pubkey new_puz) output)
         (if (= num_verifications num_verifications_required)
-          output
+          (c (list AGG_SIG pubkey new_puz) output)
           (x "not enough verifications")
         )
       )

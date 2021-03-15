@@ -631,13 +631,13 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
-        sigs = []
 
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
             raise ValueError("Unknown pubkey.")
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         message = bytes(puzhash)
+        sigs = [AugSchemeMPL.sign(private, message)]
         for c in spend_bundle.coin_solutions:
             sigs.append(AugSchemeMPL.sign(private, message))
         aggsig = AugSchemeMPL.aggregate(sigs)
