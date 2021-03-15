@@ -123,7 +123,11 @@ export default function incomingReducer(
       }
       if (command === 'add_key') {
         success = data.success;
-        return { ...state, logged_in: success };
+        return {
+          ...state,
+          logged_in: success,
+          selected_fingerprint: data.fingerprint,
+        };
       }
       if (command === 'log_in') {
         success = data.success;
