@@ -25,7 +25,9 @@ if (!setupEvents.handleSquirrelEvent()) {
     const gotTheLock = app.requestSingleInstanceLock();
 
     if (!gotTheLock) {
+      console.log("Second instance. Quitting.");
       app.quit();
+      return false;
     } else {
       app.on('second-instance', (event, commandLine, workingDirectory) => {
         // Someone tried to run a second instance, we should focus our window.
@@ -37,6 +39,8 @@ if (!setupEvents.handleSquirrelEvent()) {
         }
       });
     }
+
+    return true;
   };
 
   const ensureCorrectEnvironment = () => {
@@ -44,11 +48,16 @@ if (!setupEvents.handleSquirrelEvent()) {
     if (!chiaEnvironment.guessPackaged() && !('VIRTUAL_ENV' in process.env)) {
       console.log("App must be installed or in venv");
       app.quit();
-    }    
+      return false;
+    }
+
+    return true;
   };
 
-  ensureSingleInstance();
-  ensureCorrectEnvironment();
+  // if any of these checks return false, exit since the app is quitting
+  if (!ensureSingleInstance() || !ensureCorrectEnvironment()) {
+    return;
+  }
 
   // this needs to happen early in startup so all processes share the same global config
   chiaConfig.loadConfig(chiaEnvironment.getChiaVersion());

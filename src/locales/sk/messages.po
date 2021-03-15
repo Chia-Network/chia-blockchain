@@ -36,8 +36,8 @@ msgstr ""
 
 #: src/electron-starter.js:362
 #: src/electron-starter.js:455
-msgid "About Chia Blockchain"
-msgstr ""
+#~ msgid "About Chia Blockchain"
+#~ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -124,8 +124,8 @@ msgid "Are you sure you want to disconnect?"
 msgstr ""
 
 #: src/electron-starter.js:134
-msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}"
@@ -252,16 +252,16 @@ msgid "Challenge Hash"
 msgstr "Hash výzvy"
 
 #: src/electron-starter.js:341
-msgid "Chat on KeyBase"
-msgstr ""
+#~ msgid "Chat on KeyBase"
+#~ msgstr ""
 
 #: src/electron-starter.js:359
-msgid "Chia"
-msgstr ""
+#~ msgid "Chia"
+#~ msgstr ""
 
 #: src/electron-starter.js:298
-msgid "Chia Blockchain Wiki"
-msgstr ""
+#~ msgid "Chia Blockchain Wiki"
+#~ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -314,8 +314,8 @@ msgid "Coloured Coin Options"
 msgstr ""
 
 #: src/electron-starter.js:132
-msgid "Confirm"
-msgstr ""
+#~ msgid "Confirm"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -365,8 +365,8 @@ msgid "Connections"
 msgstr "Pripojenia"
 
 #: src/electron-starter.js:322
-msgid "Contribute on GitHub"
-msgstr ""
+#~ msgid "Contribute on GitHub"
+#~ msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -524,12 +524,12 @@ msgid "Deleting the key will permanently remove the key from your computer, make
 msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
 
 #: src/electron-starter.js:244
-msgid "Developer"
-msgstr ""
+#~ msgid "Developer"
+#~ msgstr ""
 
 #: src/electron-starter.js:247
-msgid "Developer Tools"
-msgstr ""
+#~ msgid "Developer Tools"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:191
@@ -567,8 +567,8 @@ msgid "Drag and drop your backup file"
 msgstr ""
 
 #: src/electron-starter.js:203
-msgid "Edit"
-msgstr ""
+#~ msgid "Edit"
+#~ msgstr ""
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -680,8 +680,8 @@ msgstr "Množstvo odmeny"
 
 #: src/electron-starter.js:195
 #: src/electron-starter.js:402
-msgid "File"
-msgstr ""
+#~ msgid "File"
+#~ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -699,12 +699,12 @@ msgid "Finished"
 msgstr "Dokončené"
 
 #: src/electron-starter.js:347
-msgid "Follow on Twitter"
-msgstr ""
+#~ msgid "Follow on Twitter"
+#~ msgstr ""
 
 #: src/electron-starter.js:306
-msgid "Frequently Asked Questions"
-msgstr ""
+#~ msgid "Frequently Asked Questions"
+#~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:325
@@ -716,8 +716,8 @@ msgid "Full Node Status"
 msgstr "Stav siete"
 
 #: src/electron-starter.js:272
-msgid "Full Screen"
-msgstr ""
+#~ msgid "Full Screen"
+#~ msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -742,8 +742,8 @@ msgid "Height"
 msgstr "Poradie"
 
 #: src/electron-starter.js:294
-msgid "Help"
-msgstr ""
+#~ msgid "Help"
+#~ msgstr ""
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
 msgid "Help translate"
@@ -949,7 +949,6 @@ msgid "Nickname"
 msgstr "Prezývka"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:131
 msgid "No"
 msgstr "Nie"
 
@@ -1319,16 +1318,16 @@ msgid "Refresh Plots"
 msgstr "Obnoviť polia"
 
 #: src/electron-starter.js:314
-msgid "Release Notes"
-msgstr ""
+#~ msgid "Release Notes"
+#~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Premenovať"
 
 #: src/electron-starter.js:333
-msgid "Report an Issue..."
-msgstr ""
+#~ msgid "Report an Issue..."
+#~ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1452,8 +1451,8 @@ msgstr "Prihlásiť sa"
 #~ msgstr "Preskočiť"
 
 #: src/electron-starter.js:416
-msgid "Speech"
-msgstr ""
+#~ msgid "Speech"
+#~ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1777,8 +1776,8 @@ msgid "VDF Sub Slot Iterations"
 msgstr ""
 
 #: src/electron-starter.js:235
-msgid "View"
-msgstr ""
+#~ msgid "View"
+#~ msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1879,8 +1878,8 @@ msgid "When you receive the setup info packet from your admin, enter it below to
 msgstr ""
 
 #: src/electron-starter.js:280
-msgid "Window"
-msgstr ""
+#~ msgid "Window"
+#~ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
@@ -1888,7 +1887,6 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:131
 msgid "Yes"
 msgstr "Áno"
 
