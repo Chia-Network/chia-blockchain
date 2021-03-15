@@ -459,7 +459,7 @@ class WebSocketServer:
         if override_k is True:
             command_args.append("--override-k")
 
-        self.log.warning(f"command_args are {command_args}")
+        self.log.debug(f"command_args are {command_args}")
 
         return command_args
 
@@ -503,8 +503,8 @@ class WebSocketServer:
 
             service_name = config["service_name"]
             command_args = config["command_args"]
-            self.log.warning(f"command_args before launch_plotter are {command_args}")
-            self.log.warning(f"self.root_path before launch_plotter is {self.root_path}")
+            self.log.debug(f"command_args before launch_plotter are {command_args}")
+            self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process
