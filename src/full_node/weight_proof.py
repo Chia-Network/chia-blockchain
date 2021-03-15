@@ -296,16 +296,8 @@ class WeightProofHandler:
                 curr_sub_rec = blocks[curr_sub_rec.prev_hash]
             first_rc_end_of_slot_vdf = self.first_rc_end_of_slot_vdf(header_block, blocks, header_blocks)
         else:
-            if header_block_sub_rec.overflow and (not header_block_sub_rec.first_in_sub_slot):
-                sub_slots_num = 2
-                while sub_slots_num > 0 and curr_sub_rec.height > 0:
-                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
-                if curr_sub_rec.first_in_sub_slot:
-                    assert curr_sub_rec.finished_challenge_slot_hashes is not None
-                    sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
-            else:
-                while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
-                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+            while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
+                curr_sub_rec = blocks[curr_sub_rec.prev_hash]
 
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
