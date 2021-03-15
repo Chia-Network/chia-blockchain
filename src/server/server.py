@@ -511,7 +511,7 @@ class ChiaServer:
                             connection.log.error(f"Exception: {e}, {connection.get_peer_info()}. {tb}")
                             raise e
 
-                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=300)
+                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=600)
                     connection.log.debug(
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
@@ -523,7 +523,9 @@ class ChiaServer:
                 except Exception as e:
                     if self.connection_close_task is None:
                         tb = traceback.format_exc()
-                        connection.log.error(f"Exception: {e}, closing connection {connection.get_peer_info()}. {tb}")
+                        connection.log.error(
+                            f"Exception: {e} {type(e)}, closing connection {connection.get_peer_info()}. {tb}"
+                        )
                     else:
                         connection.log.debug(f"Exception: {e} while closing connection")
                     # TODO: actually throw one of the errors from errors.py and pass this to close

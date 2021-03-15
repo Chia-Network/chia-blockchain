@@ -203,9 +203,11 @@ class WSChiaConnection:
                     await self._send_message(msg)
         except asyncio.CancelledError:
             pass
+        except ConnectionResetError as e:
+            self.log.warning(f"{e} {self.peer_host}")
         except Exception as e:
             error_stack = traceback.format_exc()
-            self.log.error(f"Exception: {e}")
+            self.log.error(f"Exception: {e} with {self.peer_host}")
             self.log.error(f"Exception Stack: {error_stack}")
 
     async def inbound_handler(self):
