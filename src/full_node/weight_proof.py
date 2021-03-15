@@ -562,14 +562,14 @@ def _sample_sub_epoch(
     """
     if weight_to_check is None:
         return True
-    choose = False
     if weight_to_check[-1] < start_of_epoch_weight:
-        return choose
+        return False
     if weight_to_check[0] > end_of_epoch_weight:
-        return choose
+        return False
+    choose = False
     for weight in weight_to_check:
         if weight > end_of_epoch_weight:
-            return choose
+            return False
         if start_of_epoch_weight < weight < end_of_epoch_weight:
             log.debug(f"start weight: {start_of_epoch_weight}")
             log.debug(f"weight to check {weight}")
