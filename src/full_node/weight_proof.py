@@ -1012,7 +1012,7 @@ def sub_slot_data_vdf_input(
                 if ssd.total_iters < sp_total_iters:
                     cc_input = ssd.cc_ip_vdf_info.output
         return cc_input
-    elif (not new_sub_slot) and (not is_overflow):
+    elif (not is_overflow) and (not new_sub_slot)  :
         cc_input = ClassgroupElement.get_default_element()
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
