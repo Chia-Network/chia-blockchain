@@ -301,7 +301,7 @@ class WeightProofHandler:
                 while sub_slots_num > 0 and curr_sub_rec.height > 0:
                     curr_sub_rec = blocks[curr_sub_rec.prev_hash]
                 if curr_sub_rec.first_in_sub_slot:
-                    assert curr_sub_rec.finished_challenge_slot_hashes
+                    assert curr_sub_rec.finished_challenge_slot_hashes is not None
                     sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
             else:
                 while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
