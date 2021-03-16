@@ -435,6 +435,10 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
 
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(15, did_wallet.get_spendable_balance, 100)
+
         # Lock up with non DID innerpuz so that we can create two outputs
         # Innerpuz will output the innersol, so we just pass in ((51 0xMyPuz 49) (51 0xMyPuz 51))
         innerpuz = Program.to(binutils.assemble("1"))
@@ -463,6 +467,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
         await time_out_assert(15, did_wallet.get_spendable_balance, 100)
+
         # Create spend by hand so that we can use the weird innersol
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
