@@ -22,17 +22,21 @@ def sign_coinbase_coin(coin: Coin, private_key: PrivateKey):
     return signature_for_coinbase(coin, private_key)
 
 
-def virtual_block_height(block_height: uint32, genesis_challenge: bytes32) -> uint32:
+def pool_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32:
     network_offset = int.from_bytes(genesis_challenge[:16], "big") << 128
     virtual_height = (block_height + network_offset) & ((1 << 256) - 1)
-    return uint32(virtual_height)
+    return bytes32(virtual_height.to_bytes(32, "big"))
 
 
-def create_pool_coin(virtual_block_index: uint32, puzzle_hash: bytes32, reward: uint64):
-    virtual_block_index_as_hash = bytes32(virtual_block_index.to_bytes(32, "big"))
-    return Coin(virtual_block_index_as_hash, puzzle_hash, reward)
+def farmer_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32:
+    return bytes32(std_hash(pool_parent_id(block_height, genesis_challenge)))
 
 
-def create_farmer_coin(virtual_block_index: uint32, puzzle_hash: bytes32, reward: uint64):
-    virtual_block_index_as_hash = std_hash(std_hash(virtual_block_index.to_bytes(32, "big")))
-    return Coin(virtual_block_index_as_hash, puzzle_hash, reward)
+def create_pool_coin(block_height: uint32, puzzle_hash: bytes32, reward: uint64, genesis_challenge: bytes32):
+    parent_id = pool_parent_id(block_height, genesis_challenge)
+    return Coin(parent_id, puzzle_hash, reward)
+
+
+def create_farmer_coin(block_height: uint32, puzzle_hash: bytes32, reward: uint64, genesis_challenge: bytes32):
+    parent_id = farmer_parent_id(block_height, genesis_challenge)
+    return Coin(parent_id, puzzle_hash, reward)

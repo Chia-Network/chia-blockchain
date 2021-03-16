@@ -7,7 +7,7 @@ import pytest
 
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
-from src.consensus.coinbase import create_farmer_coin, create_pool_coin, virtual_block_height
+from src.consensus.coinbase import create_farmer_coin, create_pool_coin
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.types.blockchain_format.coin import Coin
@@ -35,16 +35,17 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
     if block.is_transaction_block():
         assert block.transactions_info is not None
         farmer_amount = uint64(farmer_amount + block.transactions_info.fees)
-    virtual_height = virtual_block_height(block.height, constants.GENESIS_CHALLENGE)
     pool_coin: Coin = create_pool_coin(
-        virtual_height,
+        block.height,
         block.foliage.foliage_block_data.pool_target.puzzle_hash,
         pool_amount,
+        constants.GENESIS_CHALLENGE
     )
     farmer_coin: Coin = create_farmer_coin(
-        virtual_height,
+        block.height,
         block.foliage.foliage_block_data.farmer_reward_puzzle_hash,
         farmer_amount,
+        constants.GENESIS_CHALLENGE
     )
     return pool_coin, farmer_coin
 

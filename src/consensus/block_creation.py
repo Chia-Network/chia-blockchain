@@ -9,7 +9,7 @@ from chiabip158 import PyBIP158
 from src.consensus.block_record import BlockRecord
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.coinbase import create_farmer_coin, create_pool_coin, virtual_block_height
+from src.consensus.coinbase import create_farmer_coin, create_pool_coin, pool_parent_id, farmer_parent_id
 from src.consensus.constants import ConsensusConstants
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
@@ -146,19 +146,16 @@ def create_foliage(
             while not curr.is_transaction_block:
                 curr = blocks.block_record(curr.prev_hash)
 
-            virtual_height = virtual_block_height(curr.height, constants.GENESIS_CHALLENGE)
-
             assert curr.fees is not None
             pool_coin = create_pool_coin(
-                virtual_height,
-                curr.pool_puzzle_hash,
-                calculate_pool_reward(curr.height),
+                curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height), constants.GENESIS_CHALLENGE
             )
 
             farmer_coin = create_farmer_coin(
-                virtual_height,
+                curr.height,
                 curr.farmer_puzzle_hash,
                 uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
+                constants.GENESIS_CHALLENGE,
             )
             assert curr.header_hash == prev_transaction_block.header_hash
             reward_claims_incorporated += [pool_coin, farmer_coin]
@@ -167,15 +164,19 @@ def create_foliage(
                 curr = blocks.block_record(curr.prev_hash)
                 # Prev block is not genesis
                 while not curr.is_transaction_block:
+                    pool_parent = pool_parent_id(uint32(curr.height), constants.GENESIS_CHALLENGE)
+                    farmer_parent = farmer_parent_id(uint32(curr.height), constants.GENESIS_CHALLENGE)
                     pool_coin = create_pool_coin(
-                        virtual_height,
+                        pool_parent,
                         curr.pool_puzzle_hash,
                         calculate_pool_reward(curr.height),
+                        constants.GENESIS_CHALLENGE,
                     )
                     farmer_coin = create_farmer_coin(
-                        virtual_height,
+                        farmer_parent,
                         curr.farmer_puzzle_hash,
                         calculate_base_farmer_reward(curr.height),
+                        constants.GENESIS_CHALLENGE,
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
                     curr = blocks.block_record(curr.prev_hash)
