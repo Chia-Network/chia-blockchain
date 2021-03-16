@@ -11,7 +11,6 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
@@ -763,7 +762,7 @@ def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
 
 
 def plotter_log_path(root_path: Path, id: str, err=False):
-    return root_path / "plotter" / f"plotter_log_{id}{token_bytes().hex()[:5]}{'err' if err else ''}.txt"
+    return root_path / "plotter" / f"plotter_log_{id}{'err' if err else ''}.txt"
 
 
 def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str):
@@ -786,7 +785,8 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
             plotter_path.unlink()
     else:
         mkdir(plotter_path.parent)
-    outfile = open(plotter_path.resolve(), "w")
+    plotter_path.touch()
+    outfile = open(plotter_path.resolve(), "a")
     outfile_err = open(plotter_path_err.resolve(), "w")
     log.info(f"Service array: {service_array}")
     process = subprocess.Popen(service_array, shell=True, stdout=outfile, stderr=outfile_err, startupinfo=startupinfo)
