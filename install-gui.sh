@@ -80,7 +80,7 @@ if [ ! "$CI" ]; then
 	fi
 
 	npm install
-	npm audit fix
+	npm audit fix || true
 	npm run locale:extract
 	npm run locale:compile
 	npm run build
