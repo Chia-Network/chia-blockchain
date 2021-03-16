@@ -455,7 +455,6 @@ class WeightProofHandler:
             return False, uint32(0)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
-        log.info(f"use {summaries[-2]} as seed")
         seed = summaries[-2].get_hash()
         rng = random.Random(seed)
         if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
