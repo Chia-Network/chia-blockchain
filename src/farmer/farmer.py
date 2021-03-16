@@ -6,10 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element
 
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.util.config import load_config, save_config
-
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.protocols import farmer_protocol, harvester_protocol
 from src.protocols.protocol_message_types import ProtocolMessageTypes
@@ -18,7 +16,8 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.blockchain_format.proof_of_space import ProofOfSpace
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash
-from src.util.ints import uint64, uint32
+from src.util.config import load_config, save_config
+from src.util.ints import uint32, uint64
 from src.util.keychain import Keychain
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
@@ -161,11 +160,11 @@ class Farmer:
         if farmer_target_encoded is not None:
             self.farmer_target_encoded = farmer_target_encoded
             self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
-            config["farmer"]["farmer_target"] = farmer_target_encoded
+            config["farmer"]["xch_target_address"] = farmer_target_encoded
         if pool_target_encoded is not None:
             self.pool_target_encoded = pool_target_encoded
             self.pool_target = decode_puzzle_hash(pool_target_encoded)
-            config["farmer"]["pool_target"] = pool_target_encoded
+            config["pool"]["xch_target_address"] = pool_target_encoded
         save_config(self._root_path, "config.yaml", config)
 
     async def _periodically_clear_cache_task(self):

@@ -193,6 +193,89 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
+    async def test_weight_proof_edge_cases(self, default_400_blocks):
+        blocks: List[FullBlock] = default_400_blocks
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=1
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            300,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=False,
+        )
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+
+        assert valid
+        assert fork_point == 0
+
+    @pytest.mark.asyncio
     async def test_weight_proof1000(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)

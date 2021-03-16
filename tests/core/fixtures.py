@@ -1,14 +1,13 @@
 import pickle
 from os import path
+from pathlib import Path
+from typing import List
 
 import aiosqlite
 import pytest
-from typing import List
-from pathlib import Path
-
-from src.consensus.constants import ConsensusConstants
 
 from src.consensus.blockchain import Blockchain
+from src.consensus.constants import ConsensusConstants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.types.full_block import FullBlock

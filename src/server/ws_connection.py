@@ -8,7 +8,7 @@ from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
 from src.cmds.init import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.shared_protocol import Handshake, Capability
+from src.protocols.shared_protocol import Capability, Handshake
 from src.server.outbound_message import Message, NodeType, make_msg
 from src.server.rate_limits import RateLimiter
 from src.types.blockchain_format.sized_bytes import bytes32
@@ -203,9 +203,11 @@ class WSChiaConnection:
                     await self._send_message(msg)
         except asyncio.CancelledError:
             pass
+        except ConnectionResetError as e:
+            self.log.warning(f"{e} {self.peer_host}")
         except Exception as e:
             error_stack = traceback.format_exc()
-            self.log.error(f"Exception: {e}")
+            self.log.error(f"Exception: {e} with {self.peer_host}")
             self.log.error(f"Exception Stack: {error_stack}")
 
     async def inbound_handler(self):

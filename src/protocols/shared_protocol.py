@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Tuple, List
-
 from enum import IntEnum
+from typing import List, Tuple
+
 from src.util.ints import uint8, uint16
 from src.util.streamable import Streamable, streamable
 

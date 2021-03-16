@@ -298,7 +298,7 @@ def _get_next_difficulty(
     """
     next_height: uint32 = uint32(height + 1)
 
-    if next_height < constants.EPOCH_BLOCKS:
+    if next_height < (constants.EPOCH_BLOCKS - 3 * constants.MAX_SUB_SLOT_BLOCKS):
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 

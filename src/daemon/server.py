@@ -55,6 +55,9 @@ async def fetch(url: str):
         ssl_context = ssl_context_for_root(mozzila_root)
         response = await session.get(url, ssl=ssl_context)
         await session.close()
+        if not response.ok:
+            log.warning("Response not OK.")
+            return None
         return await response.text()
     except Exception as e:
         await session.close()
@@ -182,7 +185,9 @@ class WebSocketServer:
 
                 selected = self.net_config["selected_network"]
                 alert_url = self.net_config["ALERTS_URL"]
+                log.debug("Fetching alerts")
                 response = await fetch(alert_url)
+                log.debug(f"Fetched alert: {response}")
                 if response is None:
                     continue
 
@@ -435,7 +440,7 @@ class WebSocketServer:
         b = request["b"]
         u = request["u"]
         r = request["r"]
-        a = request["a"]
+        a = request.get("a")
         e = request["e"]
         override_k = request["overrideK"]
 
@@ -458,6 +463,8 @@ class WebSocketServer:
 
         if override_k is True:
             command_args.append("--override-k")
+
+        self.log.debug(f"command_args are {command_args}")
 
         return command_args
 
@@ -501,6 +508,8 @@ class WebSocketServer:
 
             service_name = config["service_name"]
             command_args = config["command_args"]
+            self.log.debug(f"command_args before launch_plotter are {command_args}")
+            self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process

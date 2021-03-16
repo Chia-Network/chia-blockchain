@@ -100,6 +100,8 @@ async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: i
 
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     summaries_response = await wallet_client.get_wallets()
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
     print(f"Wallet height: {await wallet_client.get_height_info()}")
     print(f"Balances, fingerprint: {fingerprint}")
@@ -117,19 +119,19 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print(f"Wallet ID {wallet_id} type {typ}")
             print(
                 f"   -Confirmed: {balances['confirmed_wallet_balance']} mojo "
-                f"({balances['confirmed_wallet_balance']/units['chia']} TXCH)"
+                f"({balances['confirmed_wallet_balance']/units['chia']} {address_prefix})"
             )
             print(
                 f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']} mojo "
-                f"({balances['unconfirmed_wallet_balance']/units['chia']} TXCH)"
+                f"({balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix})"
             )
             print(
                 f"   -Spendable: {balances['spendable_balance']} mojo "
-                f"({balances['spendable_balance']/units['chia']} TXCH)"
+                f"({balances['spendable_balance']/units['chia']} {address_prefix})"
             )
             print(
                 f"   -Pending change: {balances['pending_change']} mojo "
-                f"({balances['pending_change']/units['chia']} TXCH)"
+                f"({balances['pending_change']/units['chia']} {address_prefix})"
             )
 
 

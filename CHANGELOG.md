@@ -6,18 +6,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.0rc7 aka Release Candidate 7 - 2020-03-12
+## 1.0rc8 aka Release Candidate 8 - 2020-03-15
+
+### Added
+
+- This is a hard fork/breaking change from RC6/7. TXCH Coins will **not** be moved forward but your plots and keys and parts of your configuration do. When you install this version before 10AM PDST on 3/16/2021 it will load up, start finding peers, and otherwise wait for the flag drop at that time to start farming. This is likely to be the last dress rehearsal for mainnet launch. Our [3/15/2021 blog post](https://www.chia.net/2021/03/15/mainnet-update.html) has more details on the current mainnet launch plan.
+- The GUI now has a tooltip that directs users to the explanation of the plot filter.
+- The GUI now has a tooltip to explain the "Disable bitfield plotting" option. Thanks @shaneo257 for the idea.
+- The GUI now has a tooltip to explain Hierarchical Deterministic keys next to Receive Address on the Wallet page.
+
+### Changed
+
+- We now use Python 3.9 to build MacOS installers.
+- Harvester now catches another error class and continues to harvest. Thanks to @xorinox for this PR.
+- We now use a smaller weight proof sample size to ease the load on smaller machines when syncing.
+- Starting the GUI from Linux will now also error out if `npm run build` is run outside the venv. Huge thanks to @dkackman for that PR.
+- `chia farm summary` will now display TXCH or XCH as appropriate.
+- We added more time to our API timeouts and improved logging around times outs.
+
+### Fixed
+
+- We no longer use the transaction cache to look up transactions for new transactions as that was causing a wallet sync bug.
+- Sometimes the GUI would not pick up the fingerprint for the plotting key.
+- `chia farm summary` displayed some incorrect amounts.
+- Weight proofs were timing out.
+- Changes to farming rewards target addresses from the GUI were not being saved for restart correctly.
+- Signage points, recent deficit blocks, and slots for overflow challenge blocks had minor issues.
+
+
+## 1.0rc7 aka Release Candidate 7 - 2020-03-13
 
 ### Changed
 
 - Our green flag test blockchain launch worked but it uncovered a flaw in our installer versions. This release is a bug fix release to address that flaw. You should read the RC6 changes below if this is your first time installing since RC5.
+- Thanks to @dkackman for implementing an early exit of the GUI if you run `npm run build` without being in the `venv`.
 - `chia netspace` now defaults to 1000 blocks to mirror the GUI.
 - The installer build process was spruced up some.
 
 ### Fixed
 
+- Setting difficulty way too low on the testnet_6 launch revealed a Timelord edge case. The full node was hardcoding the default difficulty if block height is < EPOCH_BLOCKS. However there were many overlapping blocks, so none of the blocks reached the height, and therefore the timelord infused the wrong difficulty.
+- Fixed a race condition in the Timelord, where it took time to update the state, so it ignored the new_peak_timelord form the full_node, which should have reset the timelord to a good state.
+- Wallet notoriously showed "not synced" when it was in sync.
 - Installers were not correctly placing root TLS certificates into the bundle.
 - Weight proofs had a logic typo.
+- There was a typo in `chia netspace`. Thanks @altendky.
+- There was a typo in `chia plots`. Thanks @adamfiddler.
+
+### Known Issues
+
+- Some users can't plot in the GUI in MacOS Big Sur - especially on M1. See issue [1189](https://github.com/Chia-Network/chia-blockchain/issues/1189)
 
 ## 1.0rc6 aka Release Candidate 6 - 2020-03-11
 
@@ -78,7 +116,7 @@ for setuptools_scm/PEP 440 reasons.
 - The RC5 release is a new breaking change/hard fork blockchain. Plots and keys from previous chains will work fine on RC5 but balances of TXCH will not come forward.
 - We now support a "green flag" chain launch process. A new version of the software will poll download.chia.net/notify/ for a signed json file that will be the genesis block of the chain for that version. This will allow unattended start at mainnet.
 - Bluebox Timelords are back. These are Timelords most anyone can run. They search through the historical chain and find large proofs of times and compact them down to their smallest representation. This significantly speeds up syncing for newly started nodes. Currently this is only supported on Linux and MacOS x86_64 but we will expand that. Any desktop or server of any age will be fast enough to be a useful Bluebox Timelord.
-- Thanks to @jespino there is now `chia farm show`. You can now get almost exactly the same farming information on the CLI as the GUI.
+- Thanks to @jespino there is now `chia farm summary`. You can now get almost exactly the same farming information on the CLI as the GUI.
 - We have added Romanian to the GUI translations. Thank you to @bicilis on [Crowdin](https://crowdin.com/project/chia-blockchain). We also added a couple of additional target languages. Klingon anyone?
 - `chia wallet` now takes get_address to get a new wallet receive address from the CLI.
 - `chia plots check` will list out all the failed plot filenames at the end of the report. Thanks for the PR go to @eFishCent.

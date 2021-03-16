@@ -123,7 +123,7 @@ class WalletRpcApi:
 
         fingerprint = request["fingerprint"]
         if self.service.logged_in_fingerprint == fingerprint:
-            return {}
+            return {"fingerprint": fingerprint}
 
         await self._stop_wallet()
         log_in_type = request["type"]
@@ -141,7 +141,7 @@ class WalletRpcApi:
             started = await self.service._start(fingerprint)
 
         if started is True:
-            return {}
+            return {"fingerprint": fingerprint}
         elif testing is True and self.service.backup_initialized is False:
             response = {"success": False, "error": "not_initialized"}
             return response
@@ -228,7 +228,7 @@ class WalletRpcApi:
             started = await self.service._start(fingerprint=fingerprint, backup_file=file_path)
 
         if started is True:
-            return {}
+            return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
 
     async def delete_key(self, request):
@@ -721,9 +721,10 @@ class WalletRpcApi:
                 pool_reward_amount += record.amount
             if record.type == TransactionType.FEE_REWARD:
                 fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += record.amount - fee_amount
+                farmer_reward_amount += calculate_base_farmer_reward(height)
             amount += record.amount
 
+        assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
             "pool_reward_amount": pool_reward_amount,

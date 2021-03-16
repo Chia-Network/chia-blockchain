@@ -60,7 +60,7 @@ class SubSlotData(Streamable):
         return False
 
     def is_end_of_slot(self):
-        if self.cc_slot_end is not None:
+        if self.cc_slot_end_info is not None:
             return True
         return False
 

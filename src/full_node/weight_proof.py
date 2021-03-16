@@ -39,7 +39,7 @@ class WeightProofHandler:
 
     LAMBDA_L = 100
     C = 0.5
-    MAX_SAMPLES = 50
+    MAX_SAMPLES = 20
 
     def __init__(
         self,
@@ -296,8 +296,16 @@ class WeightProofHandler:
                 curr_sub_rec = blocks[curr_sub_rec.prev_hash]
             first_rc_end_of_slot_vdf = self.first_rc_end_of_slot_vdf(header_block, blocks, header_blocks)
         else:
-            while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
-                curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+            if header_block_sub_rec.overflow and header_block_sub_rec.first_in_sub_slot:
+                sub_slots_num = 2
+                while sub_slots_num > 0 and curr_sub_rec.height > 0:
+                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
+                if curr_sub_rec.first_in_sub_slot:
+                    assert curr_sub_rec.finished_challenge_slot_hashes is not None
+                    sub_slots_num -= len(curr_sub_rec.finished_challenge_slot_hashes)
+            else:
+                while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
+                    curr_sub_rec = blocks[curr_sub_rec.prev_hash]
 
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
@@ -541,7 +549,7 @@ def _get_weights_for_sampling(
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(weight))
-    return weight_to_check
+    return weight_to_check.sort()
 
 
 def _sample_sub_epoch(
@@ -549,10 +557,19 @@ def _sample_sub_epoch(
     end_of_epoch_weight: uint128,
     weight_to_check: List[uint128],
 ) -> bool:
+    """
+    weight_to_check: List[uint128] is expected to be sorted
+    """
     if weight_to_check is None:
         return True
+    if weight_to_check[-1] < start_of_epoch_weight:
+        return False
+    if weight_to_check[0] > end_of_epoch_weight:
+        return False
     choose = False
     for weight in weight_to_check:
+        if weight > end_of_epoch_weight:
+            return False
         if start_of_epoch_weight < weight < end_of_epoch_weight:
             log.debug(f"start weight: {start_of_epoch_weight}")
             log.debug(f"weight to check {weight}")
@@ -985,28 +1002,29 @@ def sub_slot_data_vdf_input(
     is_overflow: bool,
     new_sub_slot: bool,
     ssi: uint64,
-):
-    input = ClassgroupElement.get_default_element()
+) -> ClassgroupElement:
+    cc_input = ClassgroupElement.get_default_element()
     sp_total_iters = get_sp_total_iters(constants, is_overflow, ssi, sub_slot_data)
     ssd: Optional[SubSlotData] = None
     if is_overflow and new_sub_slot:
-        if sub_slots[sub_slot_idx - 2].cc_slot_end is None:
-            for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
-                ssd = sub_slots[ssd_idx]
-                if ssd.cc_slot_end is not None:
-                    ssd = sub_slots[ssd_idx + 1]
-                    break
-                if not (ssd.total_iters > sp_total_iters):
-                    break
-            if ssd and ssd.cc_ip_vdf_info is not None:
-                if ssd.total_iters < sp_total_iters:
-                    input = ssd.cc_ip_vdf_info.output
-        return input
+        if sub_slot_idx >= 2:
+            if sub_slots[sub_slot_idx - 2].cc_slot_end_info is None:
+                for ssd_idx in reversed(range(0, sub_slot_idx - 1)):
+                    ssd = sub_slots[ssd_idx]
+                    if ssd.cc_slot_end_info is not None:
+                        ssd = sub_slots[ssd_idx + 1]
+                        break
+                    if not (ssd.total_iters > sp_total_iters):
+                        break
+                if ssd and ssd.cc_ip_vdf_info is not None:
+                    if ssd.total_iters < sp_total_iters:
+                        cc_input = ssd.cc_ip_vdf_info.output
+        return cc_input
 
     elif not is_overflow and not new_sub_slot:
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
-            if ssd.cc_slot_end is not None:
+            if ssd.cc_slot_end_info is not None:
                 ssd = sub_slots[ssd_idx + 1]
                 break
             if not (ssd.total_iters > sp_total_iters):
@@ -1014,24 +1032,24 @@ def sub_slot_data_vdf_input(
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
             if ssd.total_iters < sp_total_iters:
-                input = ssd.cc_ip_vdf_info.output
-        return input
+                cc_input = ssd.cc_ip_vdf_info.output
+        return cc_input
 
     elif not new_sub_slot and is_overflow:
         slots_seen = 0
         for ssd_idx in reversed(range(0, sub_slot_idx)):
             ssd = sub_slots[ssd_idx]
-            if ssd.cc_slot_end is not None:
+            if ssd.cc_slot_end_info is not None:
                 slots_seen += 1
                 if slots_seen == 2:
-                    return ClassgroupElement.get_default_element(), False
-            if ssd.cc_slot_end is None and not (ssd.total_iters > sp_total_iters):
+                    return ClassgroupElement.get_default_element()
+            if ssd.cc_slot_end_info is None and not (ssd.total_iters > sp_total_iters):
                 break
         assert ssd is not None
         if ssd.cc_ip_vdf_info is not None:
             if ssd.total_iters < sp_total_iters:
-                input = ssd.cc_ip_vdf_info.output
-    return input
+                cc_input = ssd.cc_ip_vdf_info.output
+    return cc_input
 
 
 def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
@@ -1052,10 +1070,10 @@ def _validate_recent_blocks(constants_dict: Dict, weight_proof_bytes: bytes, sum
     challenge, prev_challenge = None, None
     tip_height = weight_proof.recent_chain_data[-1].height
     prev_block_record = None
+    deficit = uint8(0)
     for idx, block in enumerate(weight_proof.recent_chain_data):
         required_iters = uint64(0)
         overflow = False
-        deficit = uint8(0)
         ses = False
         height = block.height
         for sub_slot in block.finished_sub_slots:

@@ -1,11 +1,10 @@
 import dataclasses
 import logging
 import time
+from collections import Counter
 from typing import Optional
 
 from src.protocols.protocol_message_types import ProtocolMessageTypes
-from collections import Counter
-
 from src.server.outbound_message import Message
 
 log = logging.getLogger(__name__)

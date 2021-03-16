@@ -3,7 +3,7 @@
 
 | Current Release/main | Development Branch/dev |
 |         :---:          |          :---:         |
-| ![Build Ubuntu on 3.7 and 3.8](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20on%20Python%203.7%20and%203.8/badge.svg) ![Build MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20MacOS/badge.svg) ![Build Windows](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows/badge.svg)  |  ![Build Ubuntu on 3.7 and 3.8](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20on%20Python%203.7%20and%203.8/badge.svg?branch=dev) ![Build MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20MacOS/badge.svg?branch=dev) ![Build Windows](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows/badge.svg?branch=dev) |
+| [![Ubuntu Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml) [![MacOS Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml) [![Windows Installer on Windows 10 and Python 3.7](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml/badge.svg)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml)  |  [![Ubuntu Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-ubuntu-core.yml) [![MacOS Core Tests](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-test-macos-core.yml) [![Windows Installer on Windows 10 and Python 3.7](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml/badge.svg?branch=dev)](https://github.com/Chia-Network/chia-blockchain/actions/workflows/build-windows-installer.yml) |
 
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
 
@@ -22,9 +22,9 @@ TCP port 8444 access to your peer.
 These methods tend to be router make/model specific.
 
 Most should only install harvesters, farmers, plotter, full nodes, and wallets.
-Building timelords and VDFs is for sophisticated users in most environments.
+Building Timelords and VDFs is for sophisticated users in most environments.
 Chia Network and additional volunteers are running sufficient Timelords
-for testnet consensus.
+for consensus.
 
 ## Installing
 Install instructions are available in the

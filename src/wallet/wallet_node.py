@@ -35,7 +35,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
-from src.util.errors import ValidationError, Err
+from src.util.errors import Err, ValidationError
 from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint32, uint128
 from src.util.keychain import Keychain
@@ -414,6 +414,7 @@ class WalletNode:
                     if not self.wallet_state_manager.sync_mode:
                         self.wallet_state_manager.blockchain.clean_block_records()
                     self.wallet_state_manager.state_changed("new_block")
+                    self.wallet_state_manager.state_changed("sync_changed")
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
                     self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
                     await peer.close()
@@ -464,7 +465,9 @@ class WalletNode:
                 if self.wallet_state_manager.sync_mode:
                     return
                 weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
-                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request)
+                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
+                    weight_request, timeout=180
+                )
                 if weight_proof_response is None:
                     return
                 weight_proof = weight_proof_response.wp
