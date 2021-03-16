@@ -7,7 +7,7 @@ from src.util.config import load_config, save_config, str2bool
 from src.util.default_root import DEFAULT_ROOT_PATH
 
 
-def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_introducer: str, set_fullnode_port: str, set_log_level: str, enable_upnp: str):
+def configure(root_path: Path, set_farmer_peer: str, set_node_introducer: str, set_fullnode_port: str, set_log_level: str, enable_upnp: str):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
     if set_node_introducer:
@@ -64,10 +64,6 @@ def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_intro
         else:
             print("uPnP disabled")
         change_made = True
-    if docker is not None:
-        docker_host = ' 127.0.0.1'
-        config["self_hostname"] = "&self_hostname" . docker_host
-        change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
@@ -75,7 +71,6 @@ def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_intro
 
 
 @click.command("configure", short_help="Modify configuration")
-@click.option("--docker", help="use this command to set the basic docker configurations", type=str)
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
@@ -94,5 +89,5 @@ def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_intro
     "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
 )
 @click.pass_context
-def configure_cmd(ctx, docker, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
-    configure(ctx.obj["root_path"], docker, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
+def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
+    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
