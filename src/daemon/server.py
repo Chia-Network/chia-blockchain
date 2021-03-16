@@ -7,10 +7,10 @@ import subprocess
 import sys
 import time
 import traceback
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
+from secrets import token_bytes
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
@@ -515,7 +515,7 @@ class WebSocketServer:
             if state is not PlotState.SUBMITTED:
                 raise Exception(f"Plot with ID {id} has no state submitted")
 
-            id = config["id"]
+            assert id == config["id"]
             delay = config["delay"]
             await asyncio.sleep(delay)
 
@@ -577,7 +577,7 @@ class WebSocketServer:
         queue = request.get("queue", "default")
 
         for k in range(count):
-            id = str(uuid.uuid4())
+            id = token_bytes(16).hex()
             config = {
                 "id": id,
                 "size": size,
