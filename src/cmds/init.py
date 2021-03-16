@@ -310,7 +310,9 @@ def chia_init(root_path: Path):
             f"Please unset the environment variable and run chia init again\n"
             f"or manually migrate config.yaml"
         )
-        return
+        if root_path.exists():
+            print(f"Not migrating because {root_path} already exists")
+            return
 
     print(f"Chia directory {root_path}")
 
