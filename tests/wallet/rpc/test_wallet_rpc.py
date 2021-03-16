@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 import logging
 from pathlib import Path
@@ -12,6 +13,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16, uint32
+from tests.core.fixtures import worker_number, worker_port
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -20,8 +22,8 @@ log = logging.getLogger(__name__)
 
 class TestWalletRpc:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, worker_port):
             yield _
 
     @pytest.mark.asyncio

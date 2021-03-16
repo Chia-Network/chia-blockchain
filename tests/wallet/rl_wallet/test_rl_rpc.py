@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 
 import pytest
@@ -11,6 +12,7 @@ from src.types.peer_info import PeerInfo
 from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16
 from src.wallet.util.wallet_types import WalletType
+from tests.fixtures import worker_number, worker_port
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -23,8 +25,8 @@ def event_loop():
 
 class TestRLWallet:
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
+    async def three_wallet_nodes(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 3, {}, worker_port):
             yield _
 
     @pytest.mark.asyncio

@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 from typing import List
 
@@ -15,6 +16,7 @@ from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.puzzles.cc_loader import CC_MOD
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.wallet_coin_record import WalletCoinRecord
+from tests.fixtures import worker_number, worker_port
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -34,18 +36,18 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
 
 class TestCCWallet:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_node(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, worker_port):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, worker_port):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
+    async def three_wallet_nodes(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 3, {}, worker_port):
             yield _
 
     @pytest.mark.asyncio

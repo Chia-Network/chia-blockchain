@@ -10,7 +10,7 @@ from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from src.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
-from tests.core.fixtures import default_400_blocks, default_1000_blocks
+from tests.core.fixtures import default_400_blocks, default_1000_blocks, worker_number, worker_port
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
@@ -30,18 +30,18 @@ def event_loop():
 
 class TestWalletSync:
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_node_and_wallet(test_constants):
+    async def wallet_node(self, worker_port):
+        async for _ in setup_node_and_wallet(test_constants, worker_port):
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node_simulator(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_node_simulator(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, worker_port):
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node_starting_height(self):
-        async for _ in setup_node_and_wallet(test_constants, starting_height=100):
+    async def wallet_node_starting_height(self, worker_port):
+        async for _ in setup_node_and_wallet(test_constants, worker_port, starting_height=100):
             yield _
 
     @pytest.mark.asyncio

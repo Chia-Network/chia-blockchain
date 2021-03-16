@@ -16,6 +16,8 @@ from src.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
+# TODO: Remove all calls to load_config in this file
+
 
 @dataclass
 class PlotInfo:
@@ -49,9 +51,14 @@ def _get_filenames(directory: Path) -> List[Path]:
     return all_files
 
 
-def get_plot_filenames(config: Dict) -> Dict[Path, List[Path]]:
+def get_plot_filenames_from_config(config: Dict) -> Dict[Path, List[Path]]:
     # Returns a map from directory to a list of all plots in the directory
     directory_names: List[str] = config["plot_directories"]
+    return get_plot_filenames(directory_names)
+
+
+def get_plot_filenames(directory_names: List[str]) -> Dict[Path, List[Path]]:
+    # Returns a map from directory to a list of all plots in the directory
     all_files: Dict[Path, List[Path]] = {}
     for directory_name in directory_names:
         directory = Path(directory_name).resolve()
@@ -104,16 +111,23 @@ def stream_plot_info_ph(
 
 
 def add_plot_directory(str_path: str, root_path: Path) -> Dict:
+    print(f"add_plot_directory({str_path}, {root_path}")
     config = load_config(root_path, "config.yaml")
+    # print(f"add_plot_directory: {str_path}")
     if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
+        print(f"DID add_plot_directory: {str_path} to {root_path}/config/config.yaml")
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+    else:
+        print(f"DID NOT add_plot_directory: {str_path} to {root_path}/config/config.yaml")
     save_config(root_path, "config.yaml", config)
     return config
 
 
 def get_plot_directories(root_path: Path) -> List[str]:
     config = load_config(root_path, "config.yaml")
-    return [str(Path(str_path).resolve()) for str_path in config["harvester"]["plot_directories"]]
+    plot_dirs = [str(Path(str_path).resolve()) for str_path in config["harvester"]["plot_directories"]]
+    logging.info(f"get_plot_directories({root_path}) -> {plot_dirs}")
+    return plot_dirs
 
 
 def remove_plot_directory(str_path: str, root_path: Path) -> None:
@@ -133,6 +147,7 @@ def remove_plot_directory(str_path: str, root_path: Path) -> None:
 
 
 def load_plots(
+    plot_dirs: List[str],  # TODO str -> Path
     provers: Dict[Path, PlotInfo],
     failed_to_open_filenames: Dict[Path, int],
     farmer_public_keys: Optional[List[G1Element]],
@@ -143,12 +158,12 @@ def load_plots(
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
     start_time = time.time()
-    config_file = load_config(root_path, "config.yaml", "harvester")
+
     changed = False
     no_key_filenames: Set[Path] = set()
-    log.info(f'Searching directories {config_file["plot_directories"]}')
+    log.info(f"Searching directories {plot_dirs} root_path={root_path}")
 
-    plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(config_file)
+    plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(plot_dirs)
     all_filenames: List[Path] = []
     for paths in plot_filenames.values():
         all_filenames += paths

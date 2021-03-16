@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import pytest
 from blspy import AugSchemeMPL
 
@@ -12,14 +13,15 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
 from src.util.ints import uint16
 from src.util.wallet_tools import WalletTool
+from tests.core.fixtures import worker_number, worker_port
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 
 class TestRpc:
     @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_simulators_and_wallets(2, 0, {}):
+    async def two_nodes(self, worker_port):
+        async for _ in setup_simulators_and_wallets(2, 0, {}, worker_port):
             yield _
 
     @pytest.mark.asyncio

@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 import time
 
@@ -6,8 +7,9 @@ import pytest
 from src.protocols import full_node_protocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
+from tests.core.fixtures import two_nodes, worker_number, worker_port
 from tests.core.full_node.test_full_node import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_two_nodes, test_constants
+from tests.setup_nodes import bt, self_hostname
 from tests.time_out_assert import time_out_assert
 
 
@@ -18,11 +20,6 @@ def event_loop():
 
 
 class TestNodeLoad:
-    @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_two_nodes(test_constants):
-            yield _
-
     @pytest.mark.asyncio
     async def test_blocks_load(self, two_nodes):
         num_blocks = 50

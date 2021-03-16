@@ -14,6 +14,7 @@ from src.server.server import ssl_context_for_client
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint64
+from tests.core.fixtures import worker_number, worker_port
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -37,8 +38,8 @@ def event_loop():
 
 
 @pytest.fixture(scope="function")
-async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
+async def setup_two_nodes(worker_port):  # xxx name collision
+    async for _ in setup_simulators_and_wallets(2, 0, {}, worker_port):
         yield _
 
 

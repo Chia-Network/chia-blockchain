@@ -44,6 +44,7 @@ def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
 
 
 def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
+    print(f"create_plots(root_path={root_path}, use_datetime={use_datetime}, {args})")
     config_filename = config_path_for_filename(root_path, "config.yaml")
     config = load_config(root_path, config_filename)
 

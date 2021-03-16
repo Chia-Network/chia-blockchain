@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 
 import pytest
@@ -6,6 +7,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint64
 from src.wallet.rl_wallet.rl_wallet import RLWallet
+from tests.fixtures import worker_number, worker_port
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -18,8 +20,8 @@ def event_loop():
 
 class TestCCWallet:
     @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async def two_wallet_nodes(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 2, {}, worker_port):
             yield _
 
     @pytest.mark.asyncio

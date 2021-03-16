@@ -24,7 +24,6 @@ from src.util.keychain import Keychain, bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
 
 bt = BlockTools(constants=test_constants)
-
 self_hostname = bt.config["self_hostname"]
 
 
@@ -41,7 +40,7 @@ async def _teardown_nodes(node_aiters: List) -> None:
             pass
 
 
-async def setup_daemon(btools):
+async def setup_daemon(btools: BlockTools):
     root_path = btools.root_path
     config = btools.config
     lockfile = singleton(daemon_launch_lock_path(root_path))
@@ -63,8 +62,8 @@ async def setup_full_node(
     consensus_constants: ConsensusConstants,
     db_name,
     port,
-    local_bt,
-    introducer_port=None,
+    local_bt: BlockTools,
+    introducer_port=None,  # xxx port
     simulator=False,
     send_uncompact_interval=30,
 ):
@@ -110,9 +109,9 @@ async def setup_full_node(
 async def setup_wallet_node(
     port,
     consensus_constants: ConsensusConstants,
-    local_bt,
-    full_node_port=None,
-    introducer_port=None,
+    local_bt: BlockTools,
+    full_node_port=None,  # xxx port
+    introducer_port=None,  # xxx port
     key_seed=None,
     starting_height=None,
 ):
@@ -173,7 +172,7 @@ async def setup_wallet_node(
     keychain.delete_all_keys()
 
 
-async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools):
+async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants, b_tools: BlockTools):
     kwargs = service_kwargs_for_harvester(b_tools.root_path, b_tools.config["harvester"], consensus_constants)
     kwargs.update(
         server_listen_ports=[port],
@@ -196,7 +195,7 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 async def setup_farmer(
     port,
     consensus_constants: ConsensusConstants,
-    b_tools,
+    b_tools: BlockTools,
     full_node_port: Optional[uint16] = None,
 ):
     config = bt.config["farmer"]
@@ -279,14 +278,14 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants, b_tools):
+async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants, b_tools: BlockTools):
     config = b_tools.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
     config["sanitizer_mode"] = sanitizer
     config["fast_algorithm"] = False
     if sanitizer:
-        config["vdf_server"]["port"] = 7999
+        config["vdf_server"]["port"] = 7999  # xxx static port
 
     kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
     kwargs.update(
@@ -304,16 +303,20 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     await service.wait_closed()
 
 
-async def setup_two_nodes(consensus_constants: ConsensusConstants):
+async def setup_two_nodes(consensus_constants: ConsensusConstants, port_start: int):
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
     node_iters = [
         setup_full_node(
-            consensus_constants, "blockchain_test.db", 21234, BlockTools(constants=test_constants), simulator=False
+            consensus_constants, "blockchain_test.db", port_start, BlockTools(constants=test_constants), simulator=False
         ),
         setup_full_node(
-            consensus_constants, "blockchain_test_2.db", 21235, BlockTools(constants=test_constants), simulator=False
+            consensus_constants,
+            "blockchain_test_2.db",
+            port_start + 1,
+            BlockTools(constants=test_constants),
+            simulator=False,
         ),
     ]
 
@@ -325,11 +328,10 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     await _teardown_nodes(node_iters)
 
 
-async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
+async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, port_start: int):
     """
-    Setup and teardown of two full nodes, with blockchains and separate DBs.
+    Setup and teardown of N full nodes, with separate blockchains and separate DBs.
     """
-    port_start = 21244
     node_iters = []
     for i in range(n):
         node_iters.append(
@@ -350,11 +352,15 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None, key_seed=None):
+async def setup_node_and_wallet(
+    consensus_constants: ConsensusConstants, port_start: int, starting_height=None, key_seed=None
+):
     btools = BlockTools(constants=test_constants)
     node_iters = [
-        setup_full_node(consensus_constants, "blockchain_test.db", 21234, btools, simulator=False),
-        setup_wallet_node(21235, consensus_constants, btools, None, starting_height=starting_height, key_seed=key_seed),
+        setup_full_node(consensus_constants, "blockchain_test.db", port_start, btools, simulator=False),
+        setup_wallet_node(
+            port_start + 1, consensus_constants, btools, None, starting_height=starting_height, key_seed=key_seed
+        ),
     ]
 
     full_node_api = await node_iters[0].__anext__()
@@ -368,10 +374,11 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
-    dic: Dict,
+    dic: Dict,  # xxx
+    starting_port: int,
     starting_height=None,
-    key_seed=None,
-    starting_port=50000,
+    key_seed=None,  # xxx
+    id="",
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
@@ -381,8 +388,12 @@ async def setup_simulators_and_wallets(
     for index in range(0, simulator_count):
         port = starting_port + index
         db_name = f"blockchain_test_{port}.db"
-        bt_tools = BlockTools(consensus_constants, const_dict=dic)  # block tools modifies constants
-        sim = setup_full_node(
+
+        # xxx root_dir for bt_tools?
+        bt_tools = BlockTools(
+            consensus_constants, const_dict=dic
+        )  # , sk_seed_entropy=id+"sim"+str(index))  # block tools modifies constants
+        sim = setup_full_node(  # xxx root_dir?
             bt_tools.constants,
             db_name,
             port,
@@ -417,6 +428,7 @@ async def setup_simulators_and_wallets(
 
 async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
     node_iters = [
+        # xxx ports
         setup_harvester(21234, 21235, consensus_constants, bt),
         setup_farmer(21235, consensus_constants, bt),
     ]
@@ -435,6 +447,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants, b_tools=Non
     if b_tools_1 is None:
         b_tools_1 = BlockTools(constants=test_constants)
     node_iters = [
+        # xxx ports
         setup_introducer(21233),
         setup_harvester(21234, 21235, consensus_constants, b_tools),
         setup_farmer(21235, consensus_constants, b_tools, uint16(21237)),

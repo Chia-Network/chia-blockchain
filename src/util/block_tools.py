@@ -110,16 +110,31 @@ class BlockTools:
         self._tempdir = None
         if root_path is None:
             self._tempdir = tempfile.TemporaryDirectory()
-            root_path = Path(self._tempdir.name)
+            root_path = Path(self._tempdir.name)  # xxx good.
 
+        # sk_seed_entropy = id
+        # sk_seed_entropy = ""
+        # if self._tempdir:
+        #    sk_seed_entropy = self._tempdir.name
         self.root_path = root_path
-        create_default_chia_config(root_path)
-        self.keychain = Keychain("testing-1.8.0", True)
-        self.keychain.delete_all_keys()
+        create_default_chia_config(root_path)  # xxx
+        # this is causing re-plotting
+        # self.keychain = Keychain("testing-1.8.0" + sk_seed_entropy, True)#xxx
+        self.keychain = Keychain("testing-1.8.0", True)  # xxx
+
+        # self.keychain.delete_all_keys() # hmmmm. not good if running in parallel
+
+        # xxx could get from our object id. want determinism
+        # xxx this is causing re-plotting
+        # self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key" + sk_seed_entropy.encode("utf-8"))
+        # self.pool_master_sk_entropy = std_hash(b"block_tools pool key" + sk_seed_entropy.encode("utf-8"))
         self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
         self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.farmer_master_sk_entropy), "")
-        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")
+        self.farmer_master_sk = self.keychain.add_private_key(
+            bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+        )  # xxx
+
+        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy), "")  # xxx
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
@@ -128,7 +143,12 @@ class BlockTools:
         self.pool_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
         )
+
+        # What is causing re-plotting here? must be root path
+        # XXX Move this somewhere else.
         self.init_plots(root_path)
+        # import shutil, os
+        # shutil.copytree("/home/aqk/.chia/test-plots/", root_path / "test-plots")
 
         create_all_ssl(root_path)
 
@@ -137,12 +157,26 @@ class BlockTools:
 
         farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            raise RuntimeError(f"Keys not generated in {root_path}. Run `chia generate keys`")
 
-        _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
-        self.plots: Dict[Path, PlotInfo] = loaded_plots
+        # plots_path = Path("/home/aqk/.chia/test-plots/")
+        # _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
+        # config_file = load_config(root_path, "config.yaml", "harvester") # xxx this is a bad way to do this
+        # plot_dirs = config["harvester"]["plot_directories"]
+        # get_plot_filenames(config_file)
+
         self.local_sk_cache: Dict[bytes32, PrivateKey] = {}
+
+        # this is bad. come back to this.
         self._config = load_config(self.root_path, "config.yaml")
+        # plot_dir = str(root_path / "test-plots")  # xxx issue here is global vs. local plot dir
+        plot_dir = str(Path("~/.chia/blocks").expanduser())
+        plot_dirs = [plot_dir]
+        self._config["plot_directories"] = plot_dirs
+        _, loaded_plots, _, _ = load_plots(plot_dirs, {}, {}, farmer_pubkeys, self.pool_pubkeys, None, False, root_path)
+        self.plots: Dict[Path, PlotInfo] = loaded_plots
+        # this is bad. come back to this.
+
         self._config["logging"]["log_stdout"] = True
         self._config["selected_network"] = "testnet0"
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
@@ -162,7 +196,8 @@ class BlockTools:
         save_config(self.root_path, "config.yaml", self._config)
 
     def init_plots(self, root_path: Path):
-        plot_dir = get_plot_dir()
+        plot_dir = get_plot_dir()  # xxx
+        logging.info(f"init_plots({root_path}): plot_dir={plot_dir}")
         mkdir(plot_dir)
         temp_dir = plot_dir / "tmp"
         mkdir(temp_dir)
@@ -192,14 +227,17 @@ class BlockTools:
             AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big")))
             for i in range(num_pool_public_key_plots + num_pool_address_plots)
         ]
+
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
+            print("CREATING PLOTS", args, root_path)
             create_plots(
                 args,
                 root_path,
                 use_datetime=False,
                 test_private_keys=test_private_keys[:num_pool_public_key_plots],
             )
+            # TODO: Create some plots with incorrect pool addresses and keys
             # Create more plots, but to a pool address instead of public key
             args.pool_public_key = None
             args.pool_contract_address = encode_puzzle_hash(self.pool_ph, "xch")
@@ -210,6 +248,7 @@ class BlockTools:
                 use_datetime=False,
                 test_private_keys=test_private_keys[num_pool_public_key_plots:],
             )
+
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
             sys.exit(1)
@@ -1128,7 +1167,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir():
+def get_plot_dir():  # xxx
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path

@@ -13,6 +13,7 @@ from src.types.spend_bundle import SpendBundle
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint64
 from src.util.wallet_tools import WalletTool
+from tests.core.fixtures import worker_port
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import bt, setup_two_nodes, test_constants
 
@@ -33,7 +34,7 @@ def event_loop():
 class TestBlockchainTransactions:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        async for _ in setup_two_nodes(test_constants):
+        async for _ in setup_two_nodes(test_constants, worker_port):
             yield _
 
     @pytest.mark.asyncio

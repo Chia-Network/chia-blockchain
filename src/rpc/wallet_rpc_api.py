@@ -231,7 +231,7 @@ class WalletRpcApi:
             return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
 
-    async def delete_key(self, request):
+    async def delete_key(self, request):  # xxx
         await self._stop_wallet()
         fingerprint = request["fingerprint"]
         self.service.keychain.delete_key_by_fingerprint(fingerprint)

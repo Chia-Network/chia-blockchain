@@ -47,7 +47,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):
         await self.lock.acquire()
         try:
-            self.log.info("Farming new block!")
+            self.log.info(f"Farming new block! puzzle_hash={request.puzzle_hash}")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
@@ -82,7 +82,7 @@ class FullNodeSimulator(FullNodeAPI):
     @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol):
         async with self.lock:
-            self.log.info("Farming new block!")
+            self.log.info(f"Farming new block! puzzle_hash={request.puzzle_hash}")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]

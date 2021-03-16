@@ -32,8 +32,10 @@ class Harvester:
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
 
-    def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
+    def __init__(self, root_path: Path, harvester_config: Dict, constants: ConsensusConstants):
+        """`harvester_config` is config["harvester"]["plot_directories"] from the config"""
         self.root_path = root_path
+        self.plot_dirs = harvester_config["plot_directories"]
 
         # From filename to prover
         self.provers = {}
@@ -45,7 +47,7 @@ class Harvester:
         self.pool_public_keys = []
         self.match_str = None
         self.show_memo: bool = False
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=harvester_config["num_threads"])
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
@@ -99,12 +101,16 @@ class Harvester:
         )
 
     async def refresh_plots(self):
+        """
+        Note that self.plot_dirs is not updated from the config in `refresh_plots`
+        """
         locked: bool = self._refresh_lock.locked()
         changed: bool = False
         if not locked:
             async with self._refresh_lock:
                 # Avoid double refreshing of plots
                 (changed, self.provers, self.failed_to_open_filenames, self.no_key_filenames,) = load_plots(
+                    self.plot_dirs,
                     self.provers,
                     self.failed_to_open_filenames,
                     self.farmer_public_keys,
@@ -129,7 +135,8 @@ class Harvester:
         return True
 
     async def add_plot_directory(self, str_path: str) -> bool:
-        add_plot_directory_pt(str_path, self.root_path)
+        new_config = add_plot_directory_pt(str_path, self.root_path)
+        self.plot_dirs = new_config["harvester"]["plot_directories"]
         await self.refresh_plots()
         return True
 

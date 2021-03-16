@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 
 import aiohttp
@@ -11,6 +12,7 @@ from src.ssl.create_ssl import generate_ca_signed_cert
 from src.types.peer_info import PeerInfo
 from src.util.block_tools import test_constants
 from src.util.ints import uint16
+from tests.core.fixtures import worker_number, worker_port
 from tests.setup_nodes import (
     bt,
     self_hostname,
@@ -57,8 +59,8 @@ class TestSSL:
             yield _
 
     @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async def wallet_node(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 1, {}, worker_port):
             yield _
 
     @pytest.fixture(scope="function")

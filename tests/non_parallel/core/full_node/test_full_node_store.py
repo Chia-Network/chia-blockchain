@@ -31,6 +31,11 @@ def event_loop():
 
 
 class TestFullNodeStore:
+    """
+    This test writes to the block database - it cannot be run in parrallel with
+    other tests that write the block database
+    """
+
     @pytest.mark.asyncio
     async def test_basic_store(self, empty_blockchain, normalized_to_identity: bool = False):
         blockchain = empty_blockchain

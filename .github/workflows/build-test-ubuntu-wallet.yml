@@ -90,21 +90,21 @@ jobs:
 
     - name: Install timelord
       run: |
-        . ./activate
+        . ./venv/bin/activate
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
     - name: Install developer requirements
       run: |
-        . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio
+        . ./venv/bin/activate
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
     - name: Test clvm code with pytest
       run: |
-        . ./activate
-        ./venv/bin/py.test tests/clvm -s -v --durations 0
+        . ./venv/bin/activate
+        ./venv/bin/py.test -n auto tests/clvm -s -v --durations 0
 
     - name: Test wallet code with pytest
       run: |
-        . ./activate
-        ./venv/bin/py.test tests/wallet -s -v --durations 0
+        . ./venv/bin/activate
+        ./venv/bin/py.test -n auto tests/wallet -s -v --durations 0

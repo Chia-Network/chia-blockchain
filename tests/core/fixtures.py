@@ -1,10 +1,10 @@
-import pickle
-from os import path
-from pathlib import Path
-from typing import List
-
 import aiosqlite
 import pytest
+import pickle
+
+from os import path
+from pathlib import Path
+from typing import List, Optional
 
 from src.consensus.blockchain import Blockchain
 from src.consensus.constants import ConsensusConstants
@@ -12,7 +12,27 @@ from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.types.full_block import FullBlock
 from src.util.path import mkdir
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import bt, setup_two_nodes, test_constants
+
+
+@pytest.fixture()
+def worker_number(worker_id) -> Optional[int]:
+    if worker_id.startswith("gw"):
+        return int(worker_id[2:])
+    return None
+
+
+@pytest.fixture()
+def worker_port(worker_number) -> int:
+    if worker_number is None:
+        return 30000
+    return 40000 + worker_number * 10
+
+
+@pytest.fixture(scope="function")
+async def two_nodes(worker_port):
+    async for _ in setup_two_nodes(test_constants, worker_port):  # xxx may need spacing for multiple full nodes
+        yield _
 
 
 async def create_blockchain(constants: ConsensusConstants):
@@ -83,7 +103,7 @@ def persistent_blocks(
     normalized_to_identity: bool = False,
 ):
     # try loading from disc, if not create new blocks.db file
-    # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
+    # TODO hash fixtures.py and blocktool.py, full_block.py add to path, delete if the files changed
     block_path_dir = Path("~/.chia/blocks").expanduser()
     file_path = Path(f"~/.chia/blocks/{db_name}").expanduser()
     if not path.exists(block_path_dir):

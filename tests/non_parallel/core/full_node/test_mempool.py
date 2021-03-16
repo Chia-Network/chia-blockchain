@@ -47,7 +47,7 @@ def event_loop():
 class TestMempool:
     @pytest.fixture(scope="module")
     async def two_nodes(self):
-        async_gen = setup_simulators_and_wallets(2, 1, {})
+        async_gen = setup_simulators_and_wallets(2, 1, {}, 50000)
         nodes, _ = await async_gen.__anext__()
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
@@ -746,6 +746,10 @@ class TestMempool:
 
     @pytest.mark.asyncio
     async def test_agg_sig_condition(self, two_nodes):
+        # TODO: This test fails when run on its own! That is, it fails when run as:
+        # `py.test -s -v --durations 0 tests/core/full_node/test_mempool.py::TestMempool::test_agg_sig_condition`
+        # But succeeds when run as:
+        # `py.test -s -v --durations 0 tests/core/full_node/test_mempool.py`
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()

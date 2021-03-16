@@ -209,8 +209,9 @@ class ChiaServer:
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
+        self.log.info(f"Attempting listen on port: {self._port}")  # problem
         await self.site.start()
-        self.log.info(f"Started listening on port: {self._port}")
+        self.log.info(f"Started listening on port: {self._port}")  # problem
 
     async def incoming_connection(self, request):
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:

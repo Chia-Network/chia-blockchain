@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 import time
 from pathlib import Path
@@ -11,6 +12,7 @@ from src.util.ints import uint16, uint64
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.trade_manager import TradeManager
 from src.wallet.trading.trade_status import TradeStatus
+from tests.fixtures import worker_number, worker_port
 from tests.setup_nodes import setup_simulators_and_wallets
 
 
@@ -33,16 +35,18 @@ async def time_out_assert(timeout: int, function, value, arg=None):
     assert False
 
 
-@pytest.fixture(scope="module")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
+# @pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
+async def two_wallet_nodes(worker_port):
+    async for _ in setup_simulators_and_wallets(1, 2, {}, worker_port):
         yield _
 
 
 buffer_blocks = 4
 
 
-@pytest.fixture(scope="module")
+# @pytest.fixture(scope="module") #mismatch two_wallet_nodes
+@pytest.fixture(scope="function")  # mismatch two_wallet_nodes
 async def wallets_prefarm(two_wallet_nodes):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.

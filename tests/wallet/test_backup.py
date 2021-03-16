@@ -11,6 +11,7 @@
 # from tests.setup_nodes import setup_simulators_and_wallets
 # from src.wallet.cc_wallet.cc_wallet import CCWallet
 # from tests.time_out_assert import time_out_assert
+# from tests.fixtures import worker_number, worker_port
 #
 #
 # @pytest.fixture(scope="module")
@@ -21,8 +22,8 @@
 #
 # class TestCCWalletBackup:
 #     @pytest.fixture(scope="function")
-#     async def two_wallet_nodes(self):
-#         async for _ in setup_simulators_and_wallets(1, 1, {}):
+#     async def two_wallet_nodes(self, worker_port):
+#         async for _ in setup_simulators_and_wallets(1, 1, {}, worker_port):
 #             yield _
 #
 #     @pytest.mark.asyncio

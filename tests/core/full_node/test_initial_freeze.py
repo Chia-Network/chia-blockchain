@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 
 import pytest
@@ -14,6 +15,7 @@ from src.util.errors import Err
 from src.util.ints import uint16, uint32
 from src.wallet.transaction_record import TransactionRecord
 from tests.core.full_node.test_full_node import add_dummy_connection
+from tests.core.fixtures import worker_number, worker_port
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -26,8 +28,8 @@ def event_loop():
 
 class TestTransactions:
     @pytest.fixture(scope="function")
-    async def wallet_node_30_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {"INITIAL_FREEZE_PERIOD": 30}):
+    async def wallet_node_30_freeze(self, worker_port):
+        async for _ in setup_simulators_and_wallets(1, 1, {"INITIAL_FREEZE_PERIOD": 30}, worker_port):
             yield _
 
     @pytest.mark.asyncio

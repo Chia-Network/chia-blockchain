@@ -11,8 +11,16 @@ from src.types.full_block import FullBlock
 from src.types.peer_info import PeerInfo
 from src.util.hash import std_hash
 from src.util.ints import uint16
-from tests.core.fixtures import default_400_blocks, default_1000_blocks, default_10000_blocks, empty_blockchain
-from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
+from tests.core.fixtures import (
+    default_400_blocks,
+    default_1000_blocks,
+    default_10000_blocks,
+    empty_blockchain,
+    two_nodes,
+    worker_number,
+    worker_port,
+)
+from tests.setup_nodes import bt, self_hostname, setup_n_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -39,23 +47,18 @@ log = logging.getLogger(__name__)
 
 class TestFullSync:
     @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_two_nodes(test_constants):
+    async def three_nodes(self, worker_port):
+        async for _ in setup_n_nodes(test_constants, 3, worker_port):
             yield _
 
     @pytest.fixture(scope="function")
-    async def three_nodes(self):
-        async for _ in setup_n_nodes(test_constants, 3):
+    async def four_nodes(self, worker_port):
+        async for _ in setup_n_nodes(test_constants, 4, worker_port):
             yield _
 
     @pytest.fixture(scope="function")
-    async def four_nodes(self):
-        async for _ in setup_n_nodes(test_constants, 4):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def five_nodes(self):
-        async for _ in setup_n_nodes(test_constants, 5):
+    async def five_nodes(self, worker_port):
+        async for _ in setup_n_nodes(test_constants, 5, worker_port):
             yield _
 
     @pytest.mark.asyncio

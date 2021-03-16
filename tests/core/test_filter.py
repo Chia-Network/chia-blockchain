@@ -4,6 +4,7 @@
 # import pytest
 # from chiabip158 import PyBIP158
 #
+# from tests.core.fixtures import worker_number, worker_port
 # from tests.setup_nodes import test_constants, setup_simulators_and_wallets, bt
 #
 #
@@ -15,8 +16,8 @@
 #
 # class TestFilter:
 #     @pytest.fixture(scope="function")
-#     async def wallet_and_node(self):
-#         async for _ in setup_simulators_and_wallets(1, 1, {}):
+#     async def wallet_and_node(self, worker_port):
+#         async for _ in setup_simulators_and_wallets(1, 1, {}, worker_port):
 #             yield _
 #
 #     @pytest.mark.asyncio
