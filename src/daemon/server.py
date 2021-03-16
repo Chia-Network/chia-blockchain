@@ -399,37 +399,25 @@ class WebSocketServer:
         asyncio.create_task(self._state_changed(service, state))
 
     async def _watch_file_changes(self, id: str, loop: asyncio.AbstractEventLoop):
-        log.debug("12")
         config = self._get_plots_queue_item(id)
 
-        log.debug("13")
         if config is None:
             raise Exception(f"Plot queue config with ID {id} is not defined")
 
         words = ["Renamed final file"]
-        log.debug("14")
         file_path = config["out_file"]
-        log.debug("15")
         fp = open(file_path, "r")
         log.debug(f"16 file path{file_path}")
         while True:
-            log.debug("17")
             new = await loop.run_in_executor(io_pool_exc, fp.readline)
-            log.debug("18")
 
             config["log"] = new if config["log"] is None else config["log"] + new
-            log.debug("19")
             self.state_changed(service_plotter, "log_changed")
 
-            log.debug("20")
             if new:
-                log.debug("21")
                 for word in words:
-                    log.debug("22")
                     if word in new:
-                        log.debug("23")
                         yield (word, new)
-                        log.debug("24")
             else:
                 time.sleep(0.5)
 
@@ -523,6 +511,7 @@ class WebSocketServer:
             command_args = config["command_args"]
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
+            self.log.debug(f"Config {config}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
             self.log.debug(f"Launched plotter, {process} {pid_path}")
 
@@ -531,7 +520,7 @@ class WebSocketServer:
             self.log.debug(f"config {config}")
             config["state"] = PlotState.RUNNING
             self.log.debug("5")
-            config["out_file"] = plotter_log_path(self.root_path, id).absolute()
+            config["out_file"] = plotter_log_path(self.root_path, id).resolve()
             self.log.debug("6")
             config["process"] = process
             self.log.debug("7")
@@ -785,11 +774,11 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
             plotter_path.unlink()
     else:
         mkdir(plotter_path.parent)
-    plotter_path.touch()
-    outfile = open(plotter_path.resolve(), "a")
+    # plotter_path.touch()
+    outfile = open(plotter_path.resolve(), "w")
     outfile_err = open(plotter_path_err.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(service_array, shell=True, stdout=outfile, stderr=outfile_err, startupinfo=startupinfo)
+    process = subprocess.Popen(service_array, shell=False, stdout=outfile, startupinfo=startupinfo)
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
