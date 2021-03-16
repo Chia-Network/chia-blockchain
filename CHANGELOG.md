@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.0rc9 aka Release Candidate 9 - 2020-03-16
+
+
+### Changed
+- This is a hard fork/breaking change from RC6/7/8. The current plan is to drop the flag at noon pacific time, today 3/16.
+- Using the real prefarm keys for this test
+
+### Fixed
+- Found and fixed another green flag related issue
+- Fixed an issue with weight proofs where all sub-epochs were sampled, and the size of the weight proof kept growing
+- Fixed an issue with install-gui.sh, where npm audit fix was failing. (Thanks @Depado!)
+
+
 ## 1.0rc8 aka Release Candidate 8 - 2020-03-15
 
 ### Added
