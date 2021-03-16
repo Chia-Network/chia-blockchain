@@ -541,8 +541,8 @@ class WebSocketServer:
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, "state")
 
-        except (subprocess.SubprocessError, IOError):
-            log.exception(f"problem starting {service_name}")
+        except Exception as e:
+            log.exception(f"problem starting {service_name} {e}")
             error = Exception("Start plotting failed")
             config["state"] = PlotState.ERROR
             config["error"] = error
