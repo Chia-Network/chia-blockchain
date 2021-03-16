@@ -5,10 +5,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
-"Language: fi\n"
+"Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-02 16:54\n"
+"PO-Revision-Date: 2021-03-16 13:32\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -24,11 +24,11 @@ msgstr "Haluatko tarkastella Chian lohkoketjua? Katso avoimen koodin <0>Chia Exp
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
-#~ msgstr "0 valitsee automaattisesti muistilohkojen määrän"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "128 muistilohkoa on suositusmäärä"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -37,7 +37,7 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. F
 #: src/electron-starter.js:362
 #: src/electron-starter.js:455
 #~ msgid "About Chia Blockchain"
-#~ msgstr "Chia-lohkoketjusta"
+#~ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -69,7 +69,7 @@ msgstr "Lisää Plot-hakemisto"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr ""
+msgstr "Lisää Plottausprosessi Jonoon"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
@@ -125,19 +125,19 @@ msgstr "Haluatko tuhota plotin? Plottia ei voi palauttaa."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr ""
+msgstr "Katkaise yhteys?"
 
 #: src/electron-starter.js:134
 #~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-#~ msgstr "Haluatko lopettaa? Käyttöliittymäplottaus ja farmi sammutetaan."
-
-#: src/components/plot/add/PlotAddChooseSize.tsx:31
-#~ msgid "Are you sure you want to use k={plotSize}"
 #~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
+#~ msgid "Are you sure you want to use k={plotSize}"
+#~ msgstr "Are you sure you want to use k={plotSize}"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr ""
+msgstr "Haluatko käyttää arvoa k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -176,7 +176,7 @@ msgstr "Lohko"
 
 #: src/components/block/Block.jsx:121
 msgid "Block Test"
-msgstr ""
+msgstr "Lohkon Testi"
 
 #: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
@@ -188,15 +188,15 @@ msgstr "Lohko korkeudessa {0} Chian lohkoketjussa"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
-#~ msgstr "Lohkon tiiviste"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:126
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "Lohko tiivisteellä {headerHash}"
 
 #: src/components/block/Block.jsx:155
 msgid "Block with hash {headerHash} does not exists."
-msgstr "Lohkoa tunnistetiivisteellä {headerHash} ei ole."
+msgstr "Lohkoa tunnistetiivisteellä {headerHash} ei ole olemassa."
 
 #: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
@@ -204,7 +204,7 @@ msgstr "Lohkot"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
-#~ msgstr ""
+#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -261,15 +261,15 @@ msgstr "Haastetiiviste"
 
 #: src/electron-starter.js:341
 #~ msgid "Chat on KeyBase"
-#~ msgstr "Keskustele KeyBasessa"
+#~ msgstr ""
 
 #: src/electron-starter.js:359
 #~ msgid "Chia"
-#~ msgstr "Chia"
+#~ msgstr ""
 
 #: src/electron-starter.js:298
 #~ msgid "Chia Blockchain Wiki"
-#~ msgstr "Chia-lohkoketjun Wiki"
+#~ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -323,11 +323,11 @@ msgstr "Värikolikon Valinnat"
 
 #: src/electron-starter.js:132
 #~ msgid "Confirm"
-#~ msgstr "Vahvista"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr ""
+msgstr "Varmista Yhteyden Katkaisu"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -374,7 +374,7 @@ msgstr "Yhteydet"
 
 #: src/electron-starter.js:322
 #~ msgid "Contribute on GitHub"
-#~ msgstr "Anna panoksesi GitHubissa"
+#~ msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -533,11 +533,11 @@ msgstr "Avaimen poisto poistaa sen tietokoneeltasi. Varmista että sinulla on va
 
 #: src/electron-starter.js:244
 #~ msgid "Developer"
-#~ msgstr "Kehittäjälle"
+#~ msgstr ""
 
 #: src/electron-starter.js:247
 #~ msgid "Developer Tools"
-#~ msgstr "Kehitystyökalut"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:191
@@ -546,15 +546,15 @@ msgstr "Vaikeusaste"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr ""
+msgstr "Kytke bitfield-plottaus pois, kun väliaikaishakemisto on nopealla SSD-levyllä tai kun haluat optimoida keskusmuistin kulutusta. Bitfield-plottaus kirjoittaa n. 20% vähemmän levylle ja sopii hitaille kiintolevyille."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr ""
+msgstr "Kytke bitfield-plottaus pois"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr ""
+msgstr "Katkaise Yhteys"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -584,7 +584,7 @@ msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 
 #: src/electron-starter.js:203
 #~ msgid "Edit"
-#~ msgstr "Muokkaa"
+#~ msgstr ""
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -633,7 +633,7 @@ msgstr "Farmarin Osoitetiiviste"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr ""
+msgstr "Farmaripalkkio-osoite"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
@@ -676,15 +676,15 @@ msgstr "Veloitus"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee (TXCH)"
-#~ msgstr "Veloitus (XCH)"
+#~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee ({0})"
-#~ msgstr ""
+#~ msgstr "Fee ({0})"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr ""
+msgstr "Veloitus ({currencyCode})"
 
 #: src/components/block/Block.jsx:291
 msgid "Fees Amount"
@@ -697,7 +697,7 @@ msgstr "Palkkiosumma"
 #: src/electron-starter.js:195
 #: src/electron-starter.js:402
 #~ msgid "File"
-#~ msgstr "Tiedosto"
+#~ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -716,11 +716,11 @@ msgstr "Valmis"
 
 #: src/electron-starter.js:347
 #~ msgid "Follow on Twitter"
-#~ msgstr "Seuraa Twitterissä"
+#~ msgstr ""
 
 #: src/electron-starter.js:306
 #~ msgid "Frequently Asked Questions"
-#~ msgstr "Usein Kysytyt Kysymykset"
+#~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:325
@@ -733,7 +733,7 @@ msgstr "Verkkonoodin Tila"
 
 #: src/electron-starter.js:272
 #~ msgid "Full Screen"
-#~ msgstr "Kokoruutu"
+#~ msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -745,7 +745,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
-#~ msgstr "Harvesterin tunnus"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
@@ -763,7 +763,7 @@ msgstr "Lohkokorkeus"
 
 #: src/electron-starter.js:294
 #~ msgid "Help"
-#~ msgstr "Helppiä"
+#~ msgstr ""
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
 msgid "Help translate"
@@ -913,11 +913,11 @@ msgstr "Kirjaudutaan"
 
 #: src/components/farm/overview/FarmOverview.tsx:34
 msgid "Manage Farming Rewards"
-msgstr ""
+msgstr "Hallitse Farmaripalkkioita"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr ""
+msgstr "Hallitse Farmaripalkkioiden Kohdeosoitteita"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
@@ -939,15 +939,15 @@ msgstr "Julkinen Avaimeni"
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "Network Name"
-msgstr ""
+msgstr "Verkon Nimi"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Network has not yet been launched, once it launches full node will start automatically."
-msgstr ""
+msgstr "Verkkoa ei ole vielä käynnistetty. Noodi käynnistyy automaattisesti kun verkko käynnistetään."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
-#~ msgstr ""
+#~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
 #: src/components/wallet/standard/WalletStandard.tsx:387
@@ -986,7 +986,7 @@ msgstr "Ei aiempia transaktioita"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "Jompaan kumpaan tai kumpaankaan osoitteeseen ei ole yksitysiä avaimia. Turvallista vain, jos lähetät palkkiot toiseen lompakkoon."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1170,7 +1170,7 @@ msgstr "Plotin Avain"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
-#~ msgstr "Plotin Nimi"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:241
 msgid "Plot Public Key"
@@ -1226,7 +1226,7 @@ msgstr "Poolin Osoitetiiviste"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
-msgstr ""
+msgstr "Poolin Palkkio-osoite"
 
 #: src/components/block/Block.jsx:283
 msgid "Pool Reward Amount"
@@ -1245,11 +1245,11 @@ msgstr "Edellinen"
 
 #: src/components/block/Block.jsx:203
 #~ msgid "Previous Block Hash"
-#~ msgstr "Edellinen Lohkotiiviste"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:205
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "Edellinen Tunnistetiiviste"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1285,11 +1285,11 @@ msgstr "Julkinen avain:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr ""
+msgstr "Jonon Nimi"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
-msgstr ""
+msgstr "Jonon Nimi"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1297,7 +1297,7 @@ msgstr "Jonossa"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
-#~ msgstr ""
+#~ msgstr "Quit"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
@@ -1343,7 +1343,7 @@ msgstr "Päivitä Plot-tiedostot"
 
 #: src/electron-starter.js:314
 #~ msgid "Release Notes"
-#~ msgstr "Version Muutokset"
+#~ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1351,15 +1351,15 @@ msgstr "Nimeä Uudelleen"
 
 #: src/electron-starter.js:333
 #~ msgid "Report an Issue..."
-#~ msgstr "Raportoi Ongelma..."
+#~ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "Palauta väritettyjen kolikkojen metatiedot ja muut älylompakot varmuuskopiosta"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
-#~ msgstr "Palauta Älylompakko Varmuuskopiosta"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -1368,7 +1368,7 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr ""
+msgstr "Turvalista Ohittaa"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1377,11 +1377,11 @@ msgstr "Tallenna"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
-#~ msgstr "Hae"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:326
 #~ msgid "Search block by header hash"
-#~ msgstr "Hae lohkotunnisteen tiivisteellä"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1459,7 +1459,7 @@ msgstr "Näytä Lisävalinnat"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
-#~ msgstr ""
+#~ msgstr "Show app"
 
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
@@ -1472,11 +1472,11 @@ msgstr "Kirjaudu"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
-#~ msgstr "Ohita"
+#~ msgstr ""
 
 #: src/electron-starter.js:416
 #~ msgid "Speech"
-#~ msgstr "Puhe"
+#~ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1545,7 +1545,7 @@ msgstr "Tila:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 #~ msgid "Stripe Size"
-#~ msgstr "Prosessorisiivun Koko"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:199
 #~ msgid "Sub Block Height"
@@ -1575,7 +1575,7 @@ msgstr "Synkronoi {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
-#~ msgstr "TXCH Lohkopalkkiot"
+#~ msgstr ""
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
 #~ msgid "TXCH Farming Rewards"
@@ -1591,11 +1591,11 @@ msgstr "Synkronoi {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:15
 #~ msgid "TXCH User Transaction Fees"
-#~ msgstr "TXCH Transaktioveloitukset Käyttäjälle"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-#~ msgstr "Väliaikaistiestot luodaan plottauprosessin aikana. Ne ylittävät lopullisen plot-tiedoston koon. Varmista että levyllä on tarpeeksi tilaa. <0>Katso lisää</0>"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
@@ -1682,7 +1682,7 @@ msgstr "Noodi on ajan tasalla ja todentaa lohkoketjuverkkoa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
-#~ msgstr "Taulukko näyttää viimeisimmän ajankohdan, jolloin farmisi on yrittänyt voittaa lohkohaasteen."
+#~ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
@@ -1720,7 +1720,7 @@ msgstr "Kokonaissaldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
-#~ msgstr "Tuotettuja Chioja"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
@@ -1805,7 +1805,7 @@ msgstr "VDF -alaiteraatioita"
 
 #: src/electron-starter.js:235
 #~ msgid "View"
-#~ msgstr "Näkymä"
+#~ msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1833,12 +1833,12 @@ msgstr "Odota synkroinointia"
 
 #: src/components/wallet/Wallets.tsx:104
 msgid "Waiting for launch"
-msgstr ""
+msgstr "Odotetaan käynnistystä"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
 msgid "Waiting for network to launch"
-msgstr ""
+msgstr "Odotetaan verkon käynnistystä"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1907,7 +1907,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 
 #: src/electron-starter.js:280
 #~ msgid "Window"
-#~ msgstr "Ikkuna"
+#~ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
@@ -1920,7 +1920,7 @@ msgstr "Kyllä"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-#~ msgstr ""
+#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1973,20 +1973,21 @@ msgstr "synkronoi"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
-#~ msgstr ""
+#~ msgstr "{0} Block Rewards"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:16
 #~ msgid "{0} User Transaction Fees"
-#~ msgstr ""
+#~ msgstr "{0} User Transaction Fees"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr ""
+msgstr "{currencyCode} Lohkopalkkiot"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
-msgstr ""
+msgstr "{currencyCode} Chioja Farmaroitu"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr ""
+msgstr "{currencyCode} Transaktioveloitukset Käyttäjälle"
+
