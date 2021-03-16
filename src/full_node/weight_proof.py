@@ -115,7 +115,7 @@ class WeightProofHandler:
             if sample_n >= self.MAX_SAMPLES:
                 log.debug("reached sampled sub epoch cap")
                 continue
-
+            sample_n += 1
             # sample sub epoch
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.height)
@@ -549,7 +549,8 @@ def _get_weights_for_sampling(
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(weight))
-    return weight_to_check.sort()
+    weight_to_check.sort()
+    return weight_to_check
 
 
 def _sample_sub_epoch(
