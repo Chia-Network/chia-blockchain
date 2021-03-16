@@ -104,11 +104,13 @@ async def validate_block_body(
             prev_transaction_block.height,
             prev_transaction_block.pool_puzzle_hash,
             calculate_pool_reward(prev_transaction_block.height),
+            constants.GENESIS_CHALLENGE,
         )
         farmer_coin = create_farmer_coin(
             prev_transaction_block.height,
             prev_transaction_block.farmer_puzzle_hash,
             uint64(calculate_base_farmer_reward(prev_transaction_block.height) + prev_transaction_block.fees),
+            constants.GENESIS_CHALLENGE,
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
@@ -123,6 +125,7 @@ async def validate_block_body(
                         curr_b.height,
                         curr_b.pool_puzzle_hash,
                         calculate_pool_reward(curr_b.height),
+                        constants.GENESIS_CHALLENGE,
                     )
                 )
                 expected_reward_coins.add(
@@ -130,6 +133,7 @@ async def validate_block_body(
                         curr_b.height,
                         curr_b.farmer_puzzle_hash,
                         calculate_base_farmer_reward(curr_b.height),
+                        constants.GENESIS_CHALLENGE,
                     )
                 )
                 curr_b = blocks.block_record(curr_b.prev_hash)

@@ -14,6 +14,7 @@ from cryptography.fernet import Fernet
 
 from src import __version__
 from src.consensus.block_record import BlockRecord
+from src.consensus.coinbase import create_pool_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.full_node.weight_proof import WeightProofHandler
@@ -529,14 +530,14 @@ class WalletStateManager:
 
         if prev is not None:
             # include last block
-            pool_rewards.add(bytes32(prev.height.to_bytes(32, "big")))
-            farmer_rewards.add(std_hash(std_hash(prev.height)))
+            pool_rewards.add(std_hash(bytes32(prev.height.to_bytes(32, "big")) + self.constants.GENESIS_CHALLENGE))
+            farmer_rewards.add(std_hash(std_hash(bytes32(prev.height.to_bytes(32, "big")) + self.constants.GENESIS_CHALLENGE)))
             prev = await self.blockchain.get_block_record_from_db(prev.prev_hash)
 
         while prev is not None:
             # step 2 traverse from previous block to the block before it
-            pool_rewards.add(bytes32(prev.height.to_bytes(32, "big")))
-            farmer_rewards.add(std_hash(std_hash(prev.height)))
+            pool_rewards.add(std_hash(bytes32(prev.height.to_bytes(32, "big")) + self.constants.GENESIS_CHALLENGE))
+            farmer_rewards.add(std_hash(std_hash(bytes32(prev.height.to_bytes(32, "big")) + self.constants.GENESIS_CHALLENGE)))
             if prev.is_transaction_block:
                 break
             prev = await self.blockchain.get_block_record_from_db(prev.prev_hash)

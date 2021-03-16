@@ -39,11 +39,13 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
         block.height,
         block.foliage.foliage_block_data.pool_target.puzzle_hash,
         pool_amount,
+        constants.GENESIS_CHALLENGE,
     )
     farmer_coin: Coin = create_farmer_coin(
         block.height,
         block.foliage.foliage_block_data.farmer_reward_puzzle_hash,
         farmer_amount,
+        constants.GENESIS_CHALLENGE,
     )
     return pool_coin, farmer_coin
 
