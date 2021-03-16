@@ -514,6 +514,7 @@ class WebSocketServer:
             self.log.debug(f"Config {config}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
             self.log.debug(f"Launched plotter, {process} {pid_path}")
+            self.log.debug(f"Args: {process.args}")
 
             current_process = process
 
