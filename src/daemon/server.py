@@ -399,24 +399,37 @@ class WebSocketServer:
         asyncio.create_task(self._state_changed(service, state))
 
     async def _watch_file_changes(self, id: str, loop: asyncio.AbstractEventLoop):
+        log.debug("12")
         config = self._get_plots_queue_item(id)
 
+        log.debug("13")
         if config is None:
             raise Exception(f"Plot queue config with ID {id} is not defined")
 
         words = ["Renamed final file"]
+        log.debug("14")
         file_path = config["out_file"]
+        log.debug("15")
         fp = open(file_path, "r")
+        log.debug(f"16 file path{file_path}")
         while True:
+            log.debug("17")
             new = await loop.run_in_executor(io_pool_exc, fp.readline)
+            log.debug("18")
 
             config["log"] = new if config["log"] is None else config["log"] + new
+            log.debug("19")
             self.state_changed(service_plotter, "log_changed")
 
+            log.debug("20")
             if new:
+                log.debug("21")
                 for word in words:
+                    log.debug("22")
                     if word in new:
+                        log.debug("23")
                         yield (word, new)
+                        log.debug("24")
             else:
                 time.sleep(0.5)
 
