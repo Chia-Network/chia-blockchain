@@ -10,6 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
+- This is a hard fork/breaking change from RC6/7. TXCH Coins will **not** be moved forward but your plots and keys and parts of your configuration do. When you install this version before 10AM PDST on 3/16/2021 it will load up, start finding peers, and otherwise wait for the flag drop at that time to start farming. This is likely to be the last dress rehearsal for mainnet launch. Our [3/15/2021 blog post](https://www.chia.net/2021/03/15/mainnet-update.html) has more details on the current mainnet launch plan.
 - The GUI now has a tooltip that directs users to the explanation of the plot filter.
 - The GUI now has a tooltip to explain the "Disable bitfield plotting" option. Thanks @shaneo257 for the idea.
 - The GUI now has a tooltip to explain Hierarchical Deterministic keys next to Receive Address on the Wallet page.
