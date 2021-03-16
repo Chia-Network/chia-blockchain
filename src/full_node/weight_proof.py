@@ -549,7 +549,7 @@ def _get_weights_for_sampling(
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(weight))
-    return weight_to_check
+    return weight_to_check.sort()
 
 
 def _sample_sub_epoch(
@@ -557,10 +557,19 @@ def _sample_sub_epoch(
     end_of_epoch_weight: uint128,
     weight_to_check: List[uint128],
 ) -> bool:
+    """
+    weight_to_check: List[uint128] is expected to be sorted
+    """
     if weight_to_check is None:
         return True
+    if weight_to_check[-1] < start_of_epoch_weight:
+        return False
+    if weight_to_check[0] > end_of_epoch_weight:
+        return False
     choose = False
     for weight in weight_to_check:
+        if weight > end_of_epoch_weight:
+            return False
         if start_of_epoch_weight < weight < end_of_epoch_weight:
             log.debug(f"start weight: {start_of_epoch_weight}")
             log.debug(f"weight to check {weight}")
