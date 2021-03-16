@@ -243,10 +243,9 @@ class DIDWallet:
                 exclude = []
 
             spendable_amount = await self.get_spendable_balance()
-            time.sleep(20)
             if amount > spendable_amount:
                 self.log.warning(
-                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_amount} for wallet id {self.id()}"
+                    f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}"
                 )
                 return None
 

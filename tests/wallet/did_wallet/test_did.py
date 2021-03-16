@@ -462,7 +462,7 @@ class TestDIDWallet:
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
-
+        await time_out_assert(15, did_wallet.get_spendable_balance, 100)
         # Create spend by hand so that we can use the weird innersol
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
@@ -522,6 +522,8 @@ class TestDIDWallet:
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(15, did_wallet.get_spendable_balance, 100)
+
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
 
@@ -604,10 +606,9 @@ class TestDIDWallet:
         await time_out_assert(15, wallet.get_confirmed_balance, 21999999999900)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 21999999999900)
         ph2 = Program.to(binutils.assemble("()")).get_tree_hash()
-        for i in range(1, num_blocks):
+        for i in range(1, num_blocks + 3):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         # It ends in 900 so it's not gone through
         # Assert coin ID is failing
-        time.sleep(20)
-        await time_out_assert(15, wallet.get_confirmed_balance, 21999999999900)
-        await time_out_assert(15, wallet.get_unconfirmed_balance, 21999999999900)
+        await time_out_assert(15, wallet.get_confirmed_balance, 23999999999900)
+        await time_out_assert(15, wallet.get_unconfirmed_balance, 23999999999900)
