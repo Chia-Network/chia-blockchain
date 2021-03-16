@@ -8,6 +8,7 @@ from blspy import PrivateKey
 
 from src.cmds.init import check_keys
 from src.consensus.block_rewards import calculate_base_farmer_reward
+from src.consensus.network_type import NetworkType
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -480,6 +481,18 @@ class WalletRpcApi:
 
     async def send_transaction(self, request):
         assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before sending transactions")
+
+        if (
+            self.service.wallet_state_manager.blockchain.get_peak_height()
+            < self.service.constants.INITIAL_FREEZE_PERIOD
+        ):
+            raise ValueError(f"No transactions before block height: {self.service.constants.INITIAL_FREEZE_PERIOD}")
+
+        if self.service.constants.NETWORK_TYPE is NetworkType.MAINNET:
+            raise ValueError("Sending transactions not supported, please update your client.")
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
