@@ -77,6 +77,8 @@ jobs:
 
     - name: Install ubuntu dependencies
       run: |
+        REPO="deb https://dl.bintray.com/sbt/debian focal main"
+        sudo add-apt-repository --remove "$REPO"
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
