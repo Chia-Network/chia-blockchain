@@ -459,7 +459,7 @@ class WalletNode:
                     top = prev_head
                 blocks.reverse()
                 await self.complete_blocks(blocks, peer)
-            else:
+            elif header_block.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # Request weight proof
                 # Sync if PoW validates
                 if self.wallet_state_manager.sync_mode:
