@@ -115,9 +115,9 @@ class WeightProofHandler:
             if sample_n >= self.MAX_SAMPLES:
                 log.debug("reached sampled sub epoch cap")
                 continue
-            sample_n += 1
             # sample sub epoch
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
+                sample_n += 1
                 segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.height)
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
@@ -455,6 +455,7 @@ class WeightProofHandler:
             return False, uint32(0)
         constants, summary_bytes, wp_bytes = vars_to_bytes(self.constants, summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
+        log.info(f"use {summaries[-2]} as seed")
         seed = summaries[-2].get_hash()
         rng = random.Random(seed)
         if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
@@ -572,9 +573,9 @@ def _sample_sub_epoch(
         if weight > end_of_epoch_weight:
             return False
         if start_of_epoch_weight < weight < end_of_epoch_weight:
-            log.debug(f"start weight: {start_of_epoch_weight}")
-            log.debug(f"weight to check {weight}")
-            log.debug(f"end weight: {end_of_epoch_weight}")
+            log.info(f"start weight: {start_of_epoch_weight}")
+            log.info(f"weight to check {weight}")
+            log.info(f"end weight: {end_of_epoch_weight}")
             choose = True
             break
 
