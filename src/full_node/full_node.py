@@ -58,7 +58,7 @@ class FullNode:
     mempool_manager: MempoolManager
     connection: aiosqlite.Connection
     _sync_task: Optional[asyncio.Task]
-    blockchain: Blockchain
+    blockchain: Optional[Blockchain]
     config: Dict
     server: Any
     log: logging.Logger
@@ -68,6 +68,8 @@ class FullNode:
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
     initialized: bool
+    mempool_manager: Optional[MempoolManager]
+    uncompact_task: Optional[asyncio.Task]
 
     def __init__(
         self,
@@ -86,6 +88,9 @@ class FullNode:
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers = None
         self.sync_store = None
+        self.blockchain = None
+        self.mempool_manager = None
+        self.uncompact_task = None
 
         if name:
             self.log = logging.getLogger(name)
