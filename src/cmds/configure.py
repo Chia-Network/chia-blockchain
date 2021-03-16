@@ -7,7 +7,8 @@ from src.util.config import load_config, save_config, str2bool
 from src.util.default_root import DEFAULT_ROOT_PATH
 
 
-def configure(root_path: Path, set_farmer_peer: str, set_node_introducer: str, set_fullnode_port: str, set_log_level: str, enable_upnp: str):
+def configure(root_path: Path, set_farmer_peer: str, set_node_introducer: str,
+              set_fullnode_port: str, set_log_level: str, enable_upnp: str):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
     if set_node_introducer:
