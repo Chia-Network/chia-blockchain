@@ -28,6 +28,5 @@ def create_pool_coin(block_index: uint32, puzzle_hash: bytes32, reward: uint64, 
 
 
 def create_farmer_coin(block_index: uint32, puzzle_hash: bytes32, reward: uint64, genesis_challenge: bytes32):
-    block_index_as_hash = std_hash(std_hash(
-        bytes32(block_index.to_bytes(32, "big")) + genesis_challenge))
+    block_index_as_hash = std_hash(std_hash(bytes32(block_index.to_bytes(32, "big")) + genesis_challenge))
     return Coin(block_index_as_hash, puzzle_hash, reward)
