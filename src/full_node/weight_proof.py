@@ -97,7 +97,7 @@ class WeightProofHandler:
         if prev_ses_block is None:
             return None
 
-        sample_n = uint32(0)
+        sample_n = 0
         summary_heights = self.blockchain.get_ses_heights()
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_rec.height:

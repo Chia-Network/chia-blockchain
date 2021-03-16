@@ -348,6 +348,20 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
+    async def test_check_num_of_samples(self, default_10000_blocks):
+        blocks = default_10000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        curr = -1
+        samples = 0
+        for sub_epoch_segment in wp.sub_epoch_segments:
+            if sub_epoch_segment.sub_epoch_n > curr:
+                curr = sub_epoch_segment.sub_epoch_n
+                samples += 1
+        assert samples == wpf.MAX_SAMPLES
+
+    @pytest.mark.asyncio
     async def test_weight_proof_extend_no_ses(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
