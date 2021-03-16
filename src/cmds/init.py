@@ -380,9 +380,9 @@ def chia_init(root_path: Path):
         # This is reached if CHIA_ROOT is set, or if user has run chia init twice
         # before a new update.
         config: Dict = load_config(root_path, "config.yaml")
-        if config["selected_network"] != "testnet8":
+        if config["selected_network"] != "testnet9":
             # Rc6, Rc7 -> Rc8 migration
-            tmp_path = Path(os.path.expanduser(Path("~/.chia/testnet8-tmp")))
+            tmp_path = Path(os.path.expanduser(Path("~/.chia/testnet9-tmp")))
             if tmp_path.exists():
                 shutil.rmtree(tmp_path)
             assert migrate_from(root_path, tmp_path, manifest, DO_NOT_MIGRATE_SETTINGS)
