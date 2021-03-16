@@ -77,7 +77,6 @@ jobs:
 
     - name: Install ubuntu dependencies
       run: |
-        sudo apt-get update
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
