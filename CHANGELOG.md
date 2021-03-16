@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.0rc9 aka Release Candidate 9 - 2020-03-16
+## 1.0rc9 aka Release Candidate 9 - 2021-03-16
 
 
 ### Changed
@@ -20,7 +20,7 @@ for setuptools_scm/PEP 440 reasons.
 - Migration with CHIA_ROOT set does not crash chia init
 
 
-## 1.0rc8 aka Release Candidate 8 - 2020-03-15
+## 1.0rc8 aka Release Candidate 8 - 2021-03-15
 
 ### Added
 
@@ -48,7 +48,7 @@ for setuptools_scm/PEP 440 reasons.
 - Signage points, recent deficit blocks, and slots for overflow challenge blocks had minor issues.
 
 
-## 1.0rc7 aka Release Candidate 7 - 2020-03-13
+## 1.0rc7 aka Release Candidate 7 - 2021-03-13
 
 ### Changed
 
@@ -71,7 +71,7 @@ for setuptools_scm/PEP 440 reasons.
 
 - Some users can't plot in the GUI in MacOS Big Sur - especially on M1. See issue [1189](https://github.com/Chia-Network/chia-blockchain/issues/1189)
 
-## 1.0rc6 aka Release Candidate 6 - 2020-03-11
+## 1.0rc6 aka Release Candidate 6 - 2021-03-11
 
 ### Added
 
@@ -123,7 +123,7 @@ for setuptools_scm/PEP 440 reasons.
 - We believe that the install/migrate process was bringing forward bad farming rewards receive addresses. We have attempted to stop that by only migrating RC3 and newer configurations. You can make sure you are not effected by using the Manage Farming Rewards tool mentioned above or putting a known good wallet receive address in both `xch_target_address` sections of config.yaml.
 - Wallet cached transactions incorrectly in some cases.
 
-## 1.0rc5 aka Release Candidate 5 - 2020-03-04
+## 1.0rc5 aka Release Candidate 5 - 2021-03-04
 
 ### Added
 
@@ -168,7 +168,7 @@ for setuptools_scm/PEP 440 reasons.
 - `chia plots check` shouldn't crash when encountering plots that cause RuntimeError. PR again thanks to @eFishCent.
 - Coloured coin announcements had a bug that would allow counterfeiting.
 
-## 1.0rc4 aka Release Candidate 4 - 2020-02-25
+## 1.0rc4 aka Release Candidate 4 - 2021-02-25
 
 ### Fixed
 
