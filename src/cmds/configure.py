@@ -65,7 +65,8 @@ def configure(root_path: Path, docker: str, set_farmer_peer: str, set_node_intro
             print("uPnP disabled")
         change_made = True
     if docker is not None:
-        config["self_hostname"] = "&self_hostname '127.0.0.1'"
+        docker_host = ' 127.0.0.1'
+        config["self_hostname"] = "&self_hostname" . docker_host
         change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect")
