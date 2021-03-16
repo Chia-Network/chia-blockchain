@@ -33,12 +33,12 @@ fi
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
 	#LINUX=1
-	if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ] && [ ! "$CI" ]; then
+	if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
 		# Debian/Ubuntu
 		echo "Installing on Ubuntu/Debian pre 20.04 LTS"
 		sudo apt-get update
 		sudo apt-get install -y python3.7-venv python3.7-distutils
-	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ]  && [ ! "$CI" ]; then
+	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ]; then
 		echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
 		sudo apt-get update
 		sudo apt-get install -y python3.8-venv python3-distutils
