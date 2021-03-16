@@ -244,9 +244,7 @@ class DIDWallet:
 
             spendable_amount = await self.get_spendable_balance()
             if amount > spendable_amount:
-                self.log.warning(
-                    f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}"
-                )
+                self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
                 return None
 
             self.log.info(f"About to select coins for amount {amount}")
