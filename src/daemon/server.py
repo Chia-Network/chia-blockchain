@@ -49,20 +49,18 @@ service_plotter = "chia plots create"
 
 
 async def fetch(url: str):
-    session = ClientSession()
-    try:
-        mozzila_root = get_mozzila_ca_crt()
-        ssl_context = ssl_context_for_root(mozzila_root)
-        response = await session.get(url, ssl=ssl_context)
-        await session.close()
-        if not response.ok:
-            log.warning("Response not OK.")
+    async with ClientSession() as session:
+        try:
+            mozzila_root = get_mozzila_ca_crt()
+            ssl_context = ssl_context_for_root(mozzila_root)
+            response = await session.get(url, ssl=ssl_context)
+            if not response.ok:
+                log.warning("Response not OK.")
+                return None
+            return await response.text()
+        except Exception as e:
+            log.error(f"Exception while fetching {url}, exception: {e}")
             return None
-        return await response.text()
-    except Exception as e:
-        await session.close()
-        log.error(f"Exception while fetching {url}, exception: {e}")
-        return None
 
 
 class PlotState(str, Enum):
