@@ -80,9 +80,7 @@ if [ ! "$CI" ]; then
 	fi
 
 	npm install
-	npm audit fix
-	npm run locale:extract
-	npm run locale:compile
+	npm audit fix || true
 	npm run build
 else
 	echo "Skipping node.js in install.sh on MacOS ci"
