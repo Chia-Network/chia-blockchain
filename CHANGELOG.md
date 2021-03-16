@@ -17,6 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 - Found and fixed another green flag related issue
 - Fixed an issue with weight proofs where all sub-epochs were sampled, and the size of the weight proof kept growing
 - Fixed an issue with install-gui.sh, where npm audit fix was failing. (Thanks @Depado!)
+- Migration with CHIA_ROOT set does not crash chia init
 
 
 ## 1.0rc8 aka Release Candidate 8 - 2020-03-15
