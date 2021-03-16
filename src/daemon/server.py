@@ -425,7 +425,7 @@ class WebSocketServer:
 
         if config is None:
             raise Exception(f"Plot queue config with ID {id} is not defined")
-
+        self.log.debug("Watching changes")
         async for hit_word, hit_sentence in self._watch_file_changes(id, loop):
             break
 
@@ -511,20 +511,29 @@ class WebSocketServer:
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
             process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            self.log.debug(f"Launched plotter, {process} {pid_path}")
 
             current_process = process
 
+            self.log.debug(f"config {config}")
             config["state"] = PlotState.RUNNING
+            self.log.debug("5")
             config["out_file"] = plotter_log_path(self.root_path, id).absolute()
+            self.log.debug("6")
             config["process"] = process
+            self.log.debug("7")
             self.state_changed(service_plotter, "state")
+            self.log.debug("8")
 
             if service_name not in self.services:
                 self.services[service_name] = []
 
+            self.log.debug("9")
             self.services[service_name].append(process)
 
+            self.log.debug("10")
             await self._track_plotting_progress(id, loop)
+            self.log.debug("11")
 
             # (output, err) = process.communicate()
             # await process.wait()
