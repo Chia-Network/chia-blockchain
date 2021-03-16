@@ -555,7 +555,7 @@ class WebSocketServer:
         queue = request.get("queue", "default")
 
         for k in range(count):
-            id = str(uuid.uuid1())
+            id = str(uuid.uuid4())
             config = {
                 "id": id,
                 "size": size,
