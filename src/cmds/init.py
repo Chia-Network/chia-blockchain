@@ -310,6 +310,7 @@ def chia_init(root_path: Path):
             f"Please unset the environment variable and run chia init again\n"
             f"or manually migrate config.yaml"
         )
+        return
 
     print(f"Chia directory {root_path}")
 
