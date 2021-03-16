@@ -359,7 +359,7 @@ class TestWeightProof:
             if sub_epoch_segment.sub_epoch_n > curr:
                 curr = sub_epoch_segment.sub_epoch_n
                 samples += 1
-        assert samples == wpf.MAX_SAMPLES
+        assert samples <= wpf.MAX_SAMPLES
 
     @pytest.mark.asyncio
     async def test_weight_proof_extend_no_ses(self, default_1000_blocks):
