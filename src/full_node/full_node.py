@@ -18,6 +18,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.multiprocess_validation import PreValidationResult
+from src.consensus.network_type import NetworkType
 from src.consensus.pot_iterations import calculate_sp_iters
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -1338,7 +1339,13 @@ class FullNode:
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
         peak_height = self.blockchain.get_peak_height()
-        if peak_height is None or peak_height <= self.constants.INITIAL_FREEZE_PERIOD:
+
+        # No transactions in mempool in initial client. Remove 6 weeks after launch
+        if (
+            peak_height is None
+            or peak_height <= self.constants.INITIAL_FREEZE_PERIOD
+            or self.constants.NETWORK_TYPE == NetworkType.MAINNET
+        ):
             return MempoolInclusionStatus.FAILED, Err.INITIAL_TRANSACTION_FREEZE
 
         if self.mempool_manager.seen(spend_name):

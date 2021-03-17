@@ -310,11 +310,14 @@ def chia_init(root_path: Path):
             f"Please unset the environment variable and run chia init again\n"
             f"or manually migrate config.yaml"
         )
-        if root_path.exists():
-            print(f"Not migrating because {root_path} already exists")
-            return
 
     print(f"Chia directory {root_path}")
+    if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
+        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
+        # before a new update.
+        check_keys(root_path)
+        print(f"{root_path} already exists, no migration action taken")
+        return -1
 
     # These are the config keys that will not be migrated, and instead the default is used
     DO_NOT_MIGRATE_SETTINGS: List[str] = [
@@ -379,26 +382,10 @@ def chia_init(root_path: Path):
 
     manifest = MANIFEST
 
-    if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():
-        # This is reached if CHIA_ROOT is set, or if user has run chia init twice
-        # before a new update.
-        config: Dict = load_config(root_path, "config.yaml")
-        if config["selected_network"] != "testnet9":
-            # Rc6, Rc7 -> Rc8 migration
-            tmp_path = Path(os.path.expanduser(Path("~/.chia/testnet9-tmp")))
-            if tmp_path.exists():
-                shutil.rmtree(tmp_path)
-            assert migrate_from(root_path, tmp_path, manifest, DO_NOT_MIGRATE_SETTINGS)
-            check_keys(tmp_path)
-            shutil.rmtree(root_path)
-            tmp_path.rename(root_path)
-            return 0
-        else:
-            check_keys(root_path)
-            print(f"{root_path} already exists, no migration action taken")
-            return -1
-
     print(f"Checking {os.path.expanduser(Path('~/.chia/testnet'))}")
+    if migrate_from(Path(os.path.expanduser("~/.chia/testnet")), root_path, manifest, DO_NOT_MIGRATE_SETTINGS):
+        check_keys(root_path)
+        return 0
 
     # Migrate only from rc2 and up. Target addresses are not migrated.
     for version_number in range(5, 2, -1):
