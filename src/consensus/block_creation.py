@@ -164,16 +164,14 @@ def create_foliage(
                 curr = blocks.block_record(curr.prev_hash)
                 # Prev block is not genesis
                 while not curr.is_transaction_block:
-                    pool_parent = pool_parent_id(uint32(curr.height), constants.GENESIS_CHALLENGE)
-                    farmer_parent = farmer_parent_id(uint32(curr.height), constants.GENESIS_CHALLENGE)
                     pool_coin = create_pool_coin(
-                        pool_parent,
+                        curr.height,
                         curr.pool_puzzle_hash,
                         calculate_pool_reward(curr.height),
                         constants.GENESIS_CHALLENGE,
                     )
                     farmer_coin = create_farmer_coin(
-                        farmer_parent,
+                        curr.height,
                         curr.farmer_puzzle_hash,
                         calculate_base_farmer_reward(curr.height),
                         constants.GENESIS_CHALLENGE,
