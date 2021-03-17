@@ -1,4 +1,4 @@
-name: Ubuntu blockchain Test
+name: Ubuntu wallet-rl_wallet Test
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: Ubuntu blockchain Test
+    name: Ubuntu wallet-rl_wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -65,7 +65,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.26.0'
+        ref: '0.24.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -99,7 +99,7 @@ jobs:
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test blockchain code with pytest
+    - name: Test wallet-rl_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/blockchain/test_blockchain_transactions.py tests/blockchain/test_blockchain.py tests/blockchain/test_weight_proof.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_wallet.py tests/wallet/rl_wallet/test_rl_rpc.py -s -v --durations 0 
