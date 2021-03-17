@@ -1,4 +1,3 @@
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
 
 from .constants import ConsensusConstants
@@ -28,12 +27,13 @@ testnet_kwargs = {
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
-    "GENESIS_CHALLENGE": bytes32([0x00] * 32),
+    # Default used for tests is std_hash(b'')
+    "GENESIS_CHALLENGE": bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "bc4fd6c394fe90c6097afbfa6ab5927743e2210ecf689dad477be8eb408745d5"
+        "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
     "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bytes.fromhex(
-        "4ad98e66a019f11b60a8279514d13105b65588865e2a8e794b5b73d5646174f6"
+        "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
