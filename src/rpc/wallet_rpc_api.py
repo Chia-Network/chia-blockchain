@@ -727,7 +727,7 @@ class WalletRpcApi:
         fee_amount = 0
         last_height_farmed = 0
         for record in tx_records:
-            height = record.height_farmed()
+            height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
             if height > last_height_farmed:
                 last_height_farmed = height
             if record.type == TransactionType.COINBASE_REWARD:

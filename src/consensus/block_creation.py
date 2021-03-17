@@ -148,15 +148,14 @@ def create_foliage(
 
             assert curr.fees is not None
             pool_coin = create_pool_coin(
-                curr.height,
-                curr.pool_puzzle_hash,
-                calculate_pool_reward(curr.height),
+                curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height), constants.GENESIS_CHALLENGE
             )
 
             farmer_coin = create_farmer_coin(
                 curr.height,
                 curr.farmer_puzzle_hash,
                 uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
+                constants.GENESIS_CHALLENGE,
             )
             assert curr.header_hash == prev_transaction_block.header_hash
             reward_claims_incorporated += [pool_coin, farmer_coin]
@@ -169,11 +168,13 @@ def create_foliage(
                         curr.height,
                         curr.pool_puzzle_hash,
                         calculate_pool_reward(curr.height),
+                        constants.GENESIS_CHALLENGE,
                     )
                     farmer_coin = create_farmer_coin(
                         curr.height,
                         curr.farmer_puzzle_hash,
                         calculate_base_farmer_reward(curr.height),
+                        constants.GENESIS_CHALLENGE,
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
                     curr = blocks.block_record(curr.prev_hash)
