@@ -83,8 +83,6 @@ npm install --save-dev electron-winstaller
 npm install -g electron-packager
 npm install
 npm audit fix
-npm run locale:extract
-npm run locale:compile
 
 git status
 
