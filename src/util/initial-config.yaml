@@ -20,42 +20,10 @@ network_overrides: &network_overrides
       NETWORK_TYPE: 1
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
-    testnet5:
-      GENESIS_CHALLENGE: f4c0c9d5b3cd59d6f7c76ecd780e646a2c55064367d0ddbb42b2b6462a4674b2
-      NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
-    testnet6:
-      GENESIS_CHALLENGE: null
-      NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
-    testnet8:
-      DIFFICULTY_CONSTANT_FACTOR: 36893488147419103232 # 2^65
-      INITIAL_FREEZE_PERIOD: 3000
-      GENESIS_CHALLENGE: null
-      NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "70ac50c1faf71293113e7572e538234065ead0c193241256a620d6f52e06d86a"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "9e6a07d5cbc019b2fdef559d7c7f8d2a80412546ad6e00c67a19bcdcacd32cab"
-    testnet9:
-      DIFFICULTY_CONSTANT_FACTOR: 36893488147419103232 # 2^65
-      INITIAL_FREEZE_PERIOD: 3000
-      GENESIS_CHALLENGE: null
-      NETWORK_TYPE: 1
-      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
-      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
   config:
     mainnet:
       address_prefix: "xch"
     testnet0:
-      address_prefix: "txch"
-    testnet5:
-      address_prefix: "txch"
-    testnet6:
-      address_prefix: "txch"
-    testnet8:
-      address_prefix: "txch"
-    testnet9:
       address_prefix: "txch"
 
 selected_network: &selected_network "mainnet"
