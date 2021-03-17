@@ -7,7 +7,14 @@ from src.util.config import load_config, save_config, str2bool
 from src.util.default_root import DEFAULT_ROOT_PATH
 
 
-def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str, set_log_level: str, enable_upnp: str):
+def configure(
+    root_path: Path,
+    set_farmer_peer: str,
+    set_node_introducer: str,
+    set_fullnode_port: str,
+    set_log_level: str,
+    enable_upnp: str,
+):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
     if set_node_introducer:
@@ -24,6 +31,21 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
                 change_made = True
         except ValueError:
             print("Node introducer address must be in format [IP:Port]")
+    if set_farmer_peer:
+        try:
+            if set_farmer_peer.index(":"):
+                host, port = (
+                    ":".join(set_farmer_peer.split(":")[:-1]),
+                    set_farmer_peer.split(":")[-1],
+                )
+                config["full_node"]["farmer_peer"]["host"] = host
+                config["full_node"]["farmer_peer"]["port"] = int(port)
+                config["harvester"]["farmer_peer"]["host"] = host
+                config["harvester"]["farmer_peer"]["port"] = int(port)
+                print("Farmer peer updated, make sure your harvester has the proper cert installed")
+                change_made = True
+        except ValueError:
+            print("Farmer address must be in format [IP:Port]")
     if set_fullnode_port:
         config["full_node"]["port"] = int(set_fullnode_port)
         config["full_node"]["introducer_peer"]["port"] = int(set_fullnode_port)
@@ -57,6 +79,7 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
 
 @click.command("configure", short_help="Modify configuration")
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
+@click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
     "--set-fullnode-port",
     help="Set the port to use for the fullnode, useful for testing",
@@ -73,5 +96,5 @@ def configure(root_path: Path, set_node_introducer: str, set_fullnode_port: str,
     "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
 )
 @click.pass_context
-def configure_cmd(ctx, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
-    configure(ctx.obj["root_path"], set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
+def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
+    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
