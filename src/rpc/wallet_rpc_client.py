@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from src.rpc.rpc_client import RpcClient
+from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash
 from src.util.ints import uint32, uint64
@@ -128,6 +129,18 @@ class WalletRpcClient(RpcClient):
 
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
+
+    async def create_signed_transaction(self, amount: uint64, puzzle_hash: bytes32, coins: List[Coin]=None) -> Dict:
+
+        if coins is not None and len(coins) > 0:
+            coins = [c.to_json_dict() for c in coins]
+            return await self.fetch("create_signed_transaction",
+                                    {"amount": amount, "puzzle_hash": puzzle_hash.hex(), "coins": coins})
+        else:
+            return await self.fetch("create_signed_transaction",
+                                    {"amount": amount, "puzzle_hash": puzzle_hash.hex()})
+
+
 
 
 # TODO: add APIs for coloured coins and RL wallet
