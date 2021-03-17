@@ -31,8 +31,6 @@ cd chia-blockchain-gui || exit
 echo "npm build"
 npm install
 npm audit fix
-npm run locale:extract
-npm run locale:compile
 npm run build
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
