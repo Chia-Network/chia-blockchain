@@ -68,10 +68,8 @@ def batch_pre_validate_blocks(
             if error is not None:
                 error_int = uint16(error.code.value)
             if constants_dict["NETWORK_TYPE"] == NetworkType.MAINNET.value:
-                results.append(
-                    PreValidationResult(uint16(Err.INITIAL_TRANSACTION_FREEZE.value), required_iters, cost_result)
-                )
                 cost_result = None
+                results.append(PreValidationResult(uint16(Err.INITIAL_TRANSACTION_FREEZE.value), None, None))
             else:
                 if not error and generator is not None and validate_transactions:
                     cost_result = calculate_cost_of_program(
