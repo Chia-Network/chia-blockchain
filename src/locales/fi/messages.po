@@ -34,10 +34,10 @@ msgstr "128 muistilohkoa on suositusmäärä"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. Farmari ja harvesteri ovat yhteydessä noodiin, jolta saavat lohkoketjun tilatiedot. Katso alta yhdistetyt harvesteripalvelut"
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
-#~ msgid "About Chia Blockchain"
-#~ msgstr ""
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
+msgid "About Chia Blockchain"
+msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -127,9 +127,9 @@ msgstr "Haluatko tuhota plotin? Plottia ei voi palauttaa."
 msgid "Are you sure you want to disconnect?"
 msgstr "Katkaise yhteys?"
 
-#: src/electron-starter.js:134
-#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-#~ msgstr ""
+#: src/electron-starter.js:140
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -259,17 +259,17 @@ msgstr "Haaste"
 msgid "Challenge Hash"
 msgstr "Haastetiiviste"
 
-#: src/electron-starter.js:341
-#~ msgid "Chat on KeyBase"
-#~ msgstr ""
+#: src/electron-starter.js:348
+msgid "Chat on KeyBase"
+msgstr ""
 
-#: src/electron-starter.js:359
-#~ msgid "Chia"
-#~ msgstr ""
+#: src/electron-starter.js:366
+msgid "Chia"
+msgstr ""
 
-#: src/electron-starter.js:298
-#~ msgid "Chia Blockchain Wiki"
-#~ msgstr ""
+#: src/electron-starter.js:305
+msgid "Chia Blockchain Wiki"
+msgstr ""
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -321,9 +321,9 @@ msgstr "Väritetty Kolikko"
 msgid "Coloured Coin Options"
 msgstr "Värikolikon Valinnat"
 
-#: src/electron-starter.js:132
-#~ msgid "Confirm"
-#~ msgstr ""
+#: src/electron-starter.js:138
+msgid "Confirm"
+msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -372,9 +372,9 @@ msgstr "Yhteystyyppi"
 msgid "Connections"
 msgstr "Yhteydet"
 
-#: src/electron-starter.js:322
-#~ msgid "Contribute on GitHub"
-#~ msgstr ""
+#: src/electron-starter.js:329
+msgid "Contribute on GitHub"
+msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -531,13 +531,13 @@ msgstr "Avainten poisto poistaa ne tietokoneeltasi. Varmista että sinulla on va
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Avaimen poisto poistaa sen tietokoneeltasi. Varmista että sinulla on varmuuskopio. Haluatko jatkaa?"
 
-#: src/electron-starter.js:244
-#~ msgid "Developer"
-#~ msgstr ""
+#: src/electron-starter.js:251
+msgid "Developer"
+msgstr ""
 
-#: src/electron-starter.js:247
-#~ msgid "Developer Tools"
-#~ msgstr ""
+#: src/electron-starter.js:254
+msgid "Developer Tools"
+msgstr ""
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:191
@@ -582,9 +582,9 @@ msgstr "Raahaa ja pudota tarjoustiedosto"
 msgid "Drag and drop your backup file"
 msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 
-#: src/electron-starter.js:203
-#~ msgid "Edit"
-#~ msgstr ""
+#: src/electron-starter.js:210
+msgid "Edit"
+msgstr ""
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -694,10 +694,10 @@ msgstr "Palkkiosumma"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
-#~ msgid "File"
-#~ msgstr ""
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
+msgid "File"
+msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -714,13 +714,13 @@ msgstr "Lopullinen hakemisto"
 msgid "Finished"
 msgstr "Valmis"
 
-#: src/electron-starter.js:347
-#~ msgid "Follow on Twitter"
-#~ msgstr ""
+#: src/electron-starter.js:354
+msgid "Follow on Twitter"
+msgstr ""
 
-#: src/electron-starter.js:306
-#~ msgid "Frequently Asked Questions"
-#~ msgstr ""
+#: src/electron-starter.js:313
+msgid "Frequently Asked Questions"
+msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:325
@@ -731,9 +731,9 @@ msgstr "Verkkonoodi"
 msgid "Full Node Status"
 msgstr "Verkkonoodin Tila"
 
-#: src/electron-starter.js:272
-#~ msgid "Full Screen"
-#~ msgstr ""
+#: src/electron-starter.js:279
+msgid "Full Screen"
+msgstr ""
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -761,11 +761,11 @@ msgstr "Lohkotunniste"
 msgid "Height"
 msgstr "Lohkokorkeus"
 
-#: src/electron-starter.js:294
-#~ msgid "Help"
-#~ msgstr ""
+#: src/electron-starter.js:301
+msgid "Help"
+msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
 msgid "Help translate"
 msgstr "Auta kääntämisessä"
 
@@ -969,6 +969,7 @@ msgid "Nickname"
 msgstr "Alias"
 
 #: src/components/trading/TradingOverview.jsx:212
+#: src/electron-starter.js:137
 msgid "No"
 msgstr "Ei"
 
@@ -1341,17 +1342,17 @@ msgstr "Palauta hajautetettu lompakko"
 msgid "Refresh Plots"
 msgstr "Päivitä Plot-tiedostot"
 
-#: src/electron-starter.js:314
-#~ msgid "Release Notes"
-#~ msgstr ""
+#: src/electron-starter.js:321
+msgid "Release Notes"
+msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Nimeä Uudelleen"
 
-#: src/electron-starter.js:333
-#~ msgid "Report an Issue..."
-#~ msgstr ""
+#: src/electron-starter.js:340
+msgid "Report an Issue..."
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1474,9 +1475,9 @@ msgstr "Kirjaudu"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:416
-#~ msgid "Speech"
-#~ msgstr ""
+#: src/electron-starter.js:423
+msgid "Speech"
+msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1803,9 +1804,9 @@ msgstr "Käyttäjän julkinen avain"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF -alaiteraatioita"
 
-#: src/electron-starter.js:235
-#~ msgid "View"
-#~ msgstr ""
+#: src/electron-starter.js:242
+msgid "View"
+msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1905,9 +1906,9 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
-#: src/electron-starter.js:280
-#~ msgid "Window"
-#~ msgstr ""
+#: src/electron-starter.js:287
+msgid "Window"
+msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
@@ -1915,6 +1916,7 @@ msgstr "Ilman veloituksia"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
+#: src/electron-starter.js:137
 msgid "Yes"
 msgstr "Kyllä"
 
@@ -1990,4 +1992,3 @@ msgstr "{currencyCode} Chioja Farmaroitu"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Transaktioveloitukset Käyttäjälle"
-

@@ -34,10 +34,10 @@ msgstr ""
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un harvester è un servizio eseguito sulla macchina in cui i plot sono realmente conservati. Un farmer e un harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
-#~ msgid "About Chia Blockchain"
-#~ msgstr "Sulla Blockchain Chia"
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
+msgid "About Chia Blockchain"
+msgstr "Sulla Blockchain Chia"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -127,9 +127,9 @@ msgstr "Sei sicuro di voler eliminare il plot? Il plot non può essere recuperat
 msgid "Are you sure you want to disconnect?"
 msgstr ""
 
-#: src/electron-starter.js:134
-#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-#~ msgstr "Sei sicuro di voler uscire? Il plotting ed il farming da GUI si interromperanno."
+#: src/electron-starter.js:140
+msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+msgstr "Sei sicuro di voler uscire? Il plotting ed il farming da GUI si interromperanno."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -259,17 +259,17 @@ msgstr "Sfida"
 msgid "Challenge Hash"
 msgstr "Hash Sfida"
 
-#: src/electron-starter.js:341
-#~ msgid "Chat on KeyBase"
-#~ msgstr "Chatta su KeyBase"
+#: src/electron-starter.js:348
+msgid "Chat on KeyBase"
+msgstr "Chatta su KeyBase"
 
-#: src/electron-starter.js:359
-#~ msgid "Chia"
-#~ msgstr "Chia"
+#: src/electron-starter.js:366
+msgid "Chia"
+msgstr "Chia"
 
-#: src/electron-starter.js:298
-#~ msgid "Chia Blockchain Wiki"
-#~ msgstr "Wiki Blockchain Chia"
+#: src/electron-starter.js:305
+msgid "Chia Blockchain Wiki"
+msgstr "Wiki Blockchain Chia"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -321,9 +321,9 @@ msgstr "Monete Colorate"
 msgid "Coloured Coin Options"
 msgstr "Opzioni Monete Colorate"
 
-#: src/electron-starter.js:132
-#~ msgid "Confirm"
-#~ msgstr "Conferma"
+#: src/electron-starter.js:138
+msgid "Confirm"
+msgstr "Conferma"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -372,9 +372,9 @@ msgstr "Tipo di connessione"
 msgid "Connections"
 msgstr "Connessioni"
 
-#: src/electron-starter.js:322
-#~ msgid "Contribute on GitHub"
-#~ msgstr "Contribuisci su GitHub"
+#: src/electron-starter.js:329
+msgid "Contribute on GitHub"
+msgstr "Contribuisci su GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -531,13 +531,13 @@ msgstr "Eliminando tutte le chiavi queste saranno rimosse definitivamente dal tu
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Eliminando la chiave questa sarà rimossa definitivamente dal tuo computer, assicurati di avere un backup. Sei sicuro di voler continuare?"
 
-#: src/electron-starter.js:244
-#~ msgid "Developer"
-#~ msgstr "Sviluppatore"
+#: src/electron-starter.js:251
+msgid "Developer"
+msgstr "Sviluppatore"
 
-#: src/electron-starter.js:247
-#~ msgid "Developer Tools"
-#~ msgstr "Strumenti Sviluppatore"
+#: src/electron-starter.js:254
+msgid "Developer Tools"
+msgstr "Strumenti Sviluppatore"
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:191
@@ -582,9 +582,9 @@ msgstr "Trascina e rilascia il file dell'offerta"
 msgid "Drag and drop your backup file"
 msgstr "Trascina e rilascia il tuo file di backup"
 
-#: src/electron-starter.js:203
-#~ msgid "Edit"
-#~ msgstr "Modifica"
+#: src/electron-starter.js:210
+msgid "Edit"
+msgstr "Modifica"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -694,10 +694,10 @@ msgstr "Ammontare delle Fee"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
-#~ msgid "File"
-#~ msgstr "File"
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
+msgid "File"
+msgstr "File"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -714,13 +714,13 @@ msgstr "Posizione della cartella finale"
 msgid "Finished"
 msgstr "Finito"
 
-#: src/electron-starter.js:347
-#~ msgid "Follow on Twitter"
-#~ msgstr "Segui su Twitter"
+#: src/electron-starter.js:354
+msgid "Follow on Twitter"
+msgstr "Segui su Twitter"
 
-#: src/electron-starter.js:306
-#~ msgid "Frequently Asked Questions"
-#~ msgstr "Domande Frequenti"
+#: src/electron-starter.js:313
+msgid "Frequently Asked Questions"
+msgstr "Domande Frequenti"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:325
@@ -731,9 +731,9 @@ msgstr "Full Node"
 msgid "Full Node Status"
 msgstr "Stato del Full Node"
 
-#: src/electron-starter.js:272
-#~ msgid "Full Screen"
-#~ msgstr "Schermo Intero"
+#: src/electron-starter.js:279
+msgid "Full Screen"
+msgstr "Schermo Intero"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -761,11 +761,11 @@ msgstr "Hash Header"
 msgid "Height"
 msgstr "Altezza"
 
-#: src/electron-starter.js:294
-#~ msgid "Help"
-#~ msgstr "Aiuto"
+#: src/electron-starter.js:301
+msgid "Help"
+msgstr "Aiuto"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:50
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
 msgid "Help translate"
 msgstr "Aiuta a tradurre"
 
@@ -969,6 +969,7 @@ msgid "Nickname"
 msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:212
+#: src/electron-starter.js:137
 msgid "No"
 msgstr "No"
 
@@ -1341,17 +1342,17 @@ msgstr "Recupera wallet DID"
 msgid "Refresh Plots"
 msgstr "Aggiorna Plot"
 
-#: src/electron-starter.js:314
-#~ msgid "Release Notes"
-#~ msgstr "Note di Rilascio"
+#: src/electron-starter.js:321
+msgid "Release Notes"
+msgstr "Note di Rilascio"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Rinomina"
 
-#: src/electron-starter.js:333
-#~ msgid "Report an Issue..."
-#~ msgstr "Segnala un Problema..."
+#: src/electron-starter.js:340
+msgid "Report an Issue..."
+msgstr "Segnala un Problema..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1474,9 +1475,9 @@ msgstr "Registrati"
 #~ msgid "Skip"
 #~ msgstr "Salta"
 
-#: src/electron-starter.js:416
-#~ msgid "Speech"
-#~ msgstr "Speech"
+#: src/electron-starter.js:423
+msgid "Speech"
+msgstr "Speech"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1803,9 +1804,9 @@ msgstr "Pubkey utente"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iterazioni Sottoslot VDF"
 
-#: src/electron-starter.js:235
-#~ msgid "View"
-#~ msgstr "Visualizza"
+#: src/electron-starter.js:242
+msgid "View"
+msgstr "Visualizza"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:20
@@ -1905,9 +1906,9 @@ msgstr "Benvenuto! Le parole seguenti sono utilizzate per il backup del tuo wall
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amministratore, inseriscile sotto per completare il setup del tuo Wallet a Velocità Limitata (RL):"
 
-#: src/electron-starter.js:280
-#~ msgid "Window"
-#~ msgstr "Finestra"
+#: src/electron-starter.js:287
+msgid "Window"
+msgstr "Finestra"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
@@ -1915,6 +1916,7 @@ msgstr "Senza tasse"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
+#: src/electron-starter.js:137
 msgid "Yes"
 msgstr "Sì"
 
