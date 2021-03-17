@@ -1,4 +1,3 @@
-from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.ints import uint64
 
 from .constants import ConsensusConstants
@@ -29,9 +28,7 @@ testnet_kwargs = {
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     # Default used for tests is std_hash(b'')
-    "GENESIS_CHALLENGE": bytes.fromhex(
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    ),
+    "GENESIS_CHALLENGE": bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
