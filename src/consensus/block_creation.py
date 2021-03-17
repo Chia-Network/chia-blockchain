@@ -9,7 +9,7 @@ from chiabip158 import PyBIP158
 from src.consensus.block_record import BlockRecord
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.coinbase import create_farmer_coin, create_pool_coin, pool_parent_id, farmer_parent_id
+from src.consensus.coinbase import create_farmer_coin, create_pool_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
