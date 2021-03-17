@@ -12,6 +12,7 @@ from src.consensus.network_type import NetworkType
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
@@ -70,6 +71,7 @@ class WalletRpcApi:
             "/create_backup": self.create_backup,
             "/get_transaction_count": self.get_transaction_count,
             "/get_farmed_amount": self.get_farmed_amount,
+            "/create_signed_transaction": self.create_signed_transaction,
             # Coloured coins and trading
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
@@ -745,3 +747,25 @@ class WalletRpcApi:
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
         }
+
+    async def create_signed_transaction(self, request):
+        if "amount" not in request:
+            raise ValueError("Specify amount")
+        amount = uint64(request["amount"])
+
+        fee = uint64(0)
+        if "fee" in request:
+            fee = uint64(request["fee"])
+
+        if "puzzle_hash" not in request:
+            raise ValueError("Specify puzzle_hash")
+        puzzle_hash: bytes32 = bytes32(hexstr_to_bytes(request["puzzle_hash"]))
+
+        coins = None
+        if "coins" in request and len(request["coins"]) > 0:
+            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+
+        signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
+            amount, puzzle_hash, fee, coins=coins, ignore_max_send_amount=True
+        )
+        return {"signed_tx": signed_tx}
