@@ -152,15 +152,7 @@ async def validate_block_body(
         return Err.INITIAL_TRANSACTION_FREEZE, None
 
     if height > constants.INITIAL_FREEZE_PERIOD and constants.NETWORK_TYPE == NetworkType.MAINNET:
-        if block.transactions_generator is not None:
-            if len(bytes(block.transactions_generator)) > constants.MAX_GENERATOR_SIZE:
-                return Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE, None
-
-        if block.transactions_generator_ref_list is not None:
-            if len(bytes(block.transactions_generator_ref_list)) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-                return Err.PRE_SOFT_FORK_MAX_GENERATOR_REF_LIST_SIZE, None
-
-        return None, None
+        return Err.INITIAL_TRANSACTION_FREEZE, None
     else:
         # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
         if block.transactions_generator is not None:
