@@ -8,7 +8,7 @@ function removePrefix(value: string, prefix: string): string {
   return value;
 }
 
-export default function encode(value: string, prefix = 'txch'): string {
+export default function encode(value: string, prefix: string): string {
   const pureHash = removePrefix(value, '0x');
   const words = bech32m.toWords(Buffer.from(pureHash, 'hex'));
   return bech32m.encode(prefix, words);
