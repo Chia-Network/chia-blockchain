@@ -9,7 +9,7 @@ from src.util.block_tools import BlockTools
 from src.util.hash import std_hash
 from src.util.ints import uint16
 from src.util.validate_alert import create_alert_file, create_not_ready_alert_file
-from tests.core.full_node.test_full_sync import node_height_at_least
+from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import self_hostname, setup_daemon, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
