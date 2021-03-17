@@ -14,7 +14,9 @@ from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_to_bytes
 from src.util.condition_tools import conditions_for_solution
 from src.util.ints import uint64
-from tests.core.full_node.test_full_node import connect_and_get_peer, node_height_at_least
+
+from tests.connection_utils import connect_and_get_peer
+from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 

@@ -12,20 +12,9 @@ from src.types.peer_info import PeerInfo
 from src.util.hash import std_hash
 from src.util.ints import uint16
 from tests.core.fixtures import default_400_blocks, default_1000_blocks, default_10000_blocks, empty_blockchain
+from tests.core.node_height import node_height_exactly
 from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
-
-
-def node_height_at_least(node, h):
-    if node.full_node.blockchain.get_peak() is not None:
-        return node.full_node.blockchain.get_peak().height >= h
-    return False
-
-
-def node_height_exactly(node, h):
-    if node.full_node.blockchain.get_peak() is not None:
-        return node.full_node.blockchain.get_peak().height == h
-    return False
 
 
 @pytest.fixture(scope="session")
