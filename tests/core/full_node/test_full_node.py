@@ -865,6 +865,7 @@ class TestFullNodeProtocol:
 
         await time_out_assert(20, caught_up_slots)
 
+    @pytest.mark.skip("a timebomb causes mainnet to stop after transactions start, so this test doesn't work yet")
     @pytest.mark.asyncio
     async def test_mainnet_softfork(self, wallet_nodes_mainnet):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes_mainnet
