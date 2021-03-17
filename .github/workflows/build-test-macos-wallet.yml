@@ -1,4 +1,4 @@
-name: MacOS Wallet Tests
+name: MacOS wallet Tests
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: MacOS Wallet Tests
+    name: MacOS wallet Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -85,14 +85,9 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio
-
-    - name: Test clvm code with pytest
-      run: |
-        . ./activate
-        ./venv/bin/py.test tests/clvm -v --durations 0
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
     - name: Test wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet -v --durations 0
+        ./venv/bin/py.test tests/wallet/test_bech32m.py tests/wallet/test_wallet_sync.py tests/wallet/test_puzzle_store.py tests/wallet/test_wallet_store.py tests/wallet/test_taproot.py tests/wallet/test_wallet.py tests/wallet/test_chialisp.py tests/wallet/test_backup.py -s -v --durations 0 

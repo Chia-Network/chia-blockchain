@@ -1,4 +1,4 @@
-name: Ubuntu Simulation Tests
+name: Ubuntu simulation Test
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: Ubuntu Simulation Tests
+    name: Ubuntu simulation Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -97,9 +97,9 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
     - name: Test simulation code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/simulation -s -v --durations 0
+        ./venv/bin/py.test tests/simulation/test_simulation.py -s -v --durations 0 
