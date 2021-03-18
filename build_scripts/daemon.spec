@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-#from src.cmds.chia import SUBCOMMANDS
+import importlib
 import pathlib
 
 from pkg_resources import get_distribution
@@ -8,8 +8,41 @@ from os import listdir
 from os.path import isfile, join
 from PyInstaller.utils.hooks import copy_metadata
 
+
+def dir_for_module(mod_name):
+    """
+    This returns a path to a directory
+    """
+    mod = importlib.import_module(mod_name)
+    return pathlib.Path(mod.__file__).parent
+
+
+def path_for_file(mod_name, filename=None):
+    """
+    This returns a path to a file (__init__.py by default)
+    """
+    mod = importlib.import_module(mod_name)
+
+    # some modules, like `src.ssl` don't set mod.__file__ because there isn't actually
+    # any code in there. We have to look at mod.__path__ instead, which is a list.
+    # for now, we just take the first item, since this function isn't expected to
+    # return a list of paths, just one path.
+    # BRAIN DAMAGE
+
+    if mod.__file__ is None:
+        path = pathlib.Path(mod.__path__._path[0])
+        if filename is None:
+            raise ValueError("no file __init__.py in this module")
+        return path / filename
+
+    path = pathlib.Path(mod.__file__)
+    if filename is not None:
+        path = path.parent / filename
+    return path
+
 # Include all files that end with clvm.hex
-puzzles_path = "../src/wallet/puzzles"
+puzzles_path = dir_for_module("src.wallet.puzzles")
+
 puzzle_dist_path = "./src/wallet/puzzles"
 onlyfiles = [f for f in listdir(puzzles_path) if isfile(join(puzzles_path, f))]
 
@@ -24,23 +57,10 @@ root = build.parent
 
 version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
-SUBCOMMANDS = [
-    "configure",
-    "farm",
-    "init",
-    "keys",
-    "netspace",
-    "plots",
-    "run_daemon",
-    "show",
-    "start",
-    "stop",
-    "version",
-    "wallet",
-]
 block_cipher = None
-subcommand_modules = [f"{root}/src.cmds.%s" % _ for _ in SUBCOMMANDS]
-subcommand_modules.extend([f"src.cmds.%s" % _ for _ in SUBCOMMANDS])
+
+hiddenimports = []
+
 other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
 "aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
 "aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter", "pkg_resources.py2_warn"]
@@ -55,17 +75,15 @@ entry_points = ["src.cmds.chia",
             "src.timelord_launcher",
             "src.simulator.start_simulator"]
 
-subcommand_modules.extend(other)
-subcommand_modules.extend(entry_points)
+hiddenimports.extend(other)
+hiddenimports.extend(entry_points)
 
-
-
-daemon = Analysis([f"{root}/src/daemon/server.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+daemon = Analysis([path_for_file("src.daemon.server")],
+             pathex=[path_for_file("aiter"), f"{root}"],
              binaries = [],
-             datas=[version_data, (f"../src/util/initial-config.yaml", f"./src/util/"), ] +
+             datas=[version_data, (path_for_file("src.util", "initial-config.yaml"), f"./src/util/"), ] +
              hex_puzzles,
-             hiddenimports=subcommand_modules,
+             hiddenimports=hiddenimports,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -74,11 +92,11 @@ daemon = Analysis([f"{root}/src/daemon/server.py"],
              cipher=block_cipher,
              noarchive=False)
 
-full_node = Analysis([f"{root}/src/server/start_full_node.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+full_node = Analysis([path_for_file("src.server.start_full_node")],
+             pathex=[path_for_file("aiter"), f"{root}"],
              binaries = [],
              datas=[version_data],
-             hiddenimports=subcommand_modules,
+             hiddenimports=hiddenimports,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -87,11 +105,17 @@ full_node = Analysis([f"{root}/src/server/start_full_node.py"],
              cipher=block_cipher,
              noarchive=False)
 
-wallet = Analysis([f"{root}/src/server/start_wallet.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+wallet = Analysis([path_for_file("src.server.start_wallet")],
+             pathex=[path_for_file("aiter"), f"{root}"],
              binaries = [],
-             datas=[(f"../mozilla-ca/cacert.pem", f"./mozilla-ca/"), (f"../src/ssl/dst_root_ca.pem", f"./src/ssl/"), (f"../src/ssl/chia_ca.key", f"./src/ssl/"), (f"../src/ssl/chia_ca.crt", f"./src/ssl/"), (f"../src/util/english.txt", f"./src/util/"), version_data ] + hex_puzzles,
-             hiddenimports=subcommand_modules,
+             datas=[
+                (path_for_file("mozilla-ca", "cacert.pem"), f"./mozilla-ca/"),
+                (path_for_file("src.ssl", "dst_root_ca.pem"), f"./src/ssl/"),
+                (path_for_file("src.ssl", "chia_ca.key"), f"./src/ssl/"),
+                (path_for_file("src.ssl", "chia_ca.crt"), f"./src/ssl/"),
+                (path_for_file("src.util", "english.txt"), f"./src/util/"),
+                version_data ] + hex_puzzles,
+             hiddenimports=hiddenimports,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -100,24 +124,11 @@ wallet = Analysis([f"{root}/src/server/start_wallet.py"],
              cipher=block_cipher,
              noarchive=False)
 
-chia = Analysis([f"{root}/src/cmds/chia.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
-             binaries = [],
-             datas=[version_data],
-             hiddenimports=subcommand_modules,
-             hookspath=[],
-             runtime_hooks=[],
-             excludes=[],
-             win_no_prefer_redirects=False,
-             win_private_assemblies=False,
-             cipher=block_cipher,
-             noarchive=False)
-
-farmer = Analysis([f"{root}/src/server/start_farmer.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+chia = Analysis([path_for_file("src.cmds.chia")],
+             pathex=[path_for_file("aiter"), f"{root}"],
              binaries = [],
              datas=[version_data],
-             hiddenimports=subcommand_modules,
+             hiddenimports=hiddenimports,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -126,11 +137,24 @@ farmer = Analysis([f"{root}/src/server/start_farmer.py"],
              cipher=block_cipher,
              noarchive=False)
 
-harvester = Analysis([f"{root}/src/server/start_harvester.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+farmer = Analysis([path_for_file("src.server.start_farmer")],
+             pathex=[path_for_file("aiter"), f"{root}"],
              binaries = [],
              datas=[version_data],
-             hiddenimports=subcommand_modules,
+             hiddenimports=hiddenimports,
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
+
+harvester = Analysis([path_for_file("src.server.start_harvester")],
+             pathex=[path_for_file("aiter"), f"{root}"],
+             binaries = [],
+             datas=[version_data],
+             hiddenimports=hiddenimports,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
