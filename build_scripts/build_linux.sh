@@ -50,8 +50,8 @@ cd ../build_scripts || exit
 
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 mkdir final_installer
-electron-installer-debian dist/chia-linux-x64/chia chia-$CHIA_INSTALLER_VERSION \
---overwrite --out final_installer
+electron-installer-debian --src dist/chia-linux-x64/chia chia-$CHIA_INSTALLER_VERSION \
+--overwrite --dest final_installer
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
