@@ -21,7 +21,7 @@ mkdir dist
 
 echo "Create executeables with pyinstaller"
 pip install pyinstaller==4.2
-sudo pyinstaller --log-level=INFO daemon.spec
+pyinstaller --log-level=INFO daemon.spec
 cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
 cd chia-blockchain-gui || exit
