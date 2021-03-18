@@ -124,6 +124,22 @@ def created_announcements_for_conditions_dict(
     return output_announcements
 
 
+def created_announcement_names_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    input_coin_name: bytes32,
+) -> List[bytes32]:
+    output_announcements = []
+    for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT, []):
+        # TODO: check condition very carefully
+        # (ensure there are the correct number and type of parameters)
+        # maybe write a type-checking framework for conditions
+        # and don't just fail with asserts
+        message = cvp.vars[0]
+        announcement = Announcement(input_coin_name, message)
+        output_announcements.append(announcement.name())
+    return output_announcements
+
+
 def conditions_dict_for_solution(
     puzzle_reveal: Program,
     solution: Program,

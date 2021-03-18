@@ -23,9 +23,9 @@ def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bund
     """
     Check if an announcement is included in the list of announcements
     """
-    announcements = spend_bundle.announcements()
-    announcement_hash = condition.vars[0]
-    if announcement_hash not in [ann.name() for ann in announcements]:
+    announcements = spend_bundle.announcement_names()
+    announcement_hash = bytes32(condition.vars[0])
+    if announcement_hash not in announcements:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     return None
