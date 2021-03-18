@@ -52,9 +52,9 @@ echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 mkdir final_installer
 ls -l dist
 echo "subdir"
-ls -l chia-linux-x64/
+ls -l dist/chia-linux-x64/
 electron-installer-debian --src dist/chia-linux-x64/ --dest final_installer/ \
---arch x64 --options.productName chia --options.version $CHIA_INSTALLER_VERSION --overwrite
+--arch x64 --options.version $CHIA_INSTALLER_VERSION --overwrite
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
