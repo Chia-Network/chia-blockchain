@@ -6,8 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.0rc9 aka Release Candidate 9 - 2021-03-16
+## 1.0.0 First Release of Chia Blockchain 2021-03-17
 
+### Added
+
+- This is the first production release of the Chia Blockchain. This can be installed and will wait for the green flag that will be dropped at approximately 7AM PDST (14:00 UTC) on Friday March 19, 2021. All farming rewards from that point forward will be considered valid and valuable XCH. There is a six week lock on all transactions. During those six weeks farmers will be earning their farming rewards but those rewards can not be spent.
+- Initial difficulty will be set for 100TB. This may mean the initial epoch may be slow. Mainnet difficulty resets are targeted for 24 hours so this difficulty will adjust to the actual space brought online in 24 to 48 hours after launch.
+- Transactions are not enabled in the 1.0.0 version and will be soft forked in during the six week period via a 1.1.0 release.
+- There will also be a 1.0.1 release after the green flag process is complete to simplify install for new users by removing the green flag alert. In the interim there will be new testnet releases using the 1.1bx version scheme.
+- Starting with release 1.0.0 you usually no longer need to upgrade and 1.0.1 will be fully optional. However you will have to upgrade to 1.1 after it is out and before the six week period ends. We plan to give plenty of time between those two events up to and including pushing back the transaction start date by a short period of time.
+- Thank you to @L3Sota for adding a Japanese translation via our [Crowdin project](https://crowdin.com/project/chia-blockchain).
+- The generation of CoinIDs is now unique on mainnet to avoid testnet transaction replays.
+- Validation of transactions will now fail after the expiration of the six week period.
+
+### Changed
+
+- Weight proof request timeout was increased to 180 seconds.
+- Mainnet uses port 8444 and other constants and service names were changed for mainnet.
+- GUI locales are now extracted and compiled in `npm run build`.
+- Daemon now logs to STDERR also.
+
+### Fixed
+
+- GUI plotting on some Macs was not working due to locale issues with Click.
+- Thank you @L3Sota for bringing this log back into 2021.
+- The errant warning on Electron startup has been removed. Thanks @dkackman.
+
+
+## 1.0rc9 aka Release Candidate 9 - 2021-03-16
 
 ### Changed
 - This is a hard fork/breaking change from RC6/7/8. The current plan is to drop the flag at noon pacific time, today 3/16.
@@ -18,7 +44,6 @@ for setuptools_scm/PEP 440 reasons.
 - Fixed an issue with weight proofs where all sub-epochs were sampled, and the size of the weight proof kept growing
 - Fixed an issue with install-gui.sh, where npm audit fix was failing. (Thanks @Depado!)
 - Migration with CHIA_ROOT set does not crash chia init
-
 
 ## 1.0rc8 aka Release Candidate 8 - 2021-03-15
 
@@ -46,7 +71,6 @@ for setuptools_scm/PEP 440 reasons.
 - Weight proofs were timing out.
 - Changes to farming rewards target addresses from the GUI were not being saved for restart correctly.
 - Signage points, recent deficit blocks, and slots for overflow challenge blocks had minor issues.
-
 
 ## 1.0rc7 aka Release Candidate 7 - 2021-03-13
 
