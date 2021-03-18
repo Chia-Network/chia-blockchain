@@ -20,7 +20,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.8]
-        os: [macOS-latest]
+        os: [ubuntu-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
