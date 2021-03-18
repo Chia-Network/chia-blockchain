@@ -1,4 +1,4 @@
-name: Ubuntu clvm Test
+name: Ubuntu TEST_NAME Test
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: Ubuntu clvm Test
+    name: Ubuntu TEST_NAME Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: JOB_TIMEOUT
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -60,7 +60,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-# Omitted checking out blocks and plots repo Chia-Network/test-cache
+CHECKOUT_TEST_BLOCKS_AND_PLOTS
 
     - name: Link home directory
       run: |
@@ -82,14 +82,14 @@ jobs:
       run: |
         sh install.sh
 
-# Omitted installing Timelord
+INSTALL_TIMELORD
 
     - name: Install developer requirements
       run: |
         . ./activate
         venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
-    - name: Test clvm code with pytest
+    - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_puzzles.py tests/clvm/test_serialized_program.py tests/clvm/test_clvm_compilation.py tests/clvm/test_chialisp_deserialization.py -s -v --durations 0 -n auto
+        ./venv/bin/py.test TEST_DIR -s -v --durations 0 PYTEST_PARALLEL_ARGS
