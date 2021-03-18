@@ -45,15 +45,15 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv chia-linux-x64 ../build_scripts/dist/
+mv chia-blockchain-linux-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
 
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 mkdir final_installer
 ls -l dist
 echo "subdir"
-ls -l dist/chia-linux-x64/
-electron-installer-debian --src dist/chia-linux-x64/ --dest final_installer/ \
+ls -l dist/chia-blockchain-linux-x64/
+electron-installer-debian --src dist/chia-blockchain-linux-x64/ --dest final_installer/ \
 --arch x64 --options.version $CHIA_INSTALLER_VERSION --overwrite
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
