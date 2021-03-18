@@ -53,7 +53,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-
+# Omitted checking out blocks and plots repo Chia-Network/test-cache
 
     - name: Link home directory
       run: |
@@ -70,7 +70,7 @@ jobs:
         brew install boost
         sh install.sh
 
-
+# Omitted installing Timelord
 
     - name: Install developer requirements
       run: |
