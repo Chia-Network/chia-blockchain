@@ -21,7 +21,7 @@ echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
-echo "Create executeables with pyinstaller"
+echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
 sudo pyinstaller --log-level=INFO daemon.spec
 cp -r dist/daemon ../chia-blockchain-gui
