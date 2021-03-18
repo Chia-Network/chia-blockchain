@@ -19,7 +19,7 @@ echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
-echo "Create executeables with pyinstaller"
+echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
 pyinstaller --log-level=INFO daemon.spec
 cp -r dist/daemon ../chia-blockchain-gui
@@ -38,7 +38,7 @@ fi
 
 electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION --arch x64
+--appVersion=$CHIA_INSTALLER_VERSION --arch amd64
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-packager failed!"
@@ -54,7 +54,7 @@ ls -l dist
 echo "subdir"
 ls -l dist/chia-blockchain-linux-x64/
 electron-installer-debian --src dist/chia-blockchain-linux-x64/ --dest final_installer/ \
---arch x64 --options.version $CHIA_INSTALLER_VERSION --overwrite
+--arch amd64 --options.version $CHIA_INSTALLER_VERSION --overwrite
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
