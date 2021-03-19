@@ -1,12 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 import importlib
 import pathlib
+import platform
 
 from pkg_resources import get_distribution
 
 from os import listdir
 from os.path import isfile, join
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import collect_submodules, copy_metadata
+
+THIS_IS_WINDOWS = platform.system().lower().startswith("win")
 
 
 def dir_for_module(mod_name):
@@ -56,6 +59,11 @@ for file in onlyfiles:
 build = pathlib.Path().absolute()
 root = build.parent
 
+keyring_imports = collect_submodules("keyring.backends")
+
+# keyring uses entrypoints to read keyring.backends from metadata file entry_points.txt.
+keyring_datas = copy_metadata("keyring")[0]
+
 version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
 block_cipher = None
@@ -80,6 +88,9 @@ other = [
     "pkg_resources.py2_warn",
 ]
 
+if THIS_IS_WINDOWS:
+    other.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
+
 entry_points = [
     "src.cmds.chia",
     "src.server.start_wallet",
@@ -92,14 +103,38 @@ entry_points = [
     "src.simulator.start_simulator",
 ]
 
+if THIS_IS_WINDOWS:
+    # this probably isn't necessary
+    entry_points.extend(["aiohttp", "src.util.bip39"])
+
 hiddenimports.extend(other)
 hiddenimports.extend(entry_points)
+hiddenimports.extend(keyring_imports)
+
+daemon_binaries = []
+if THIS_IS_WINDOWS:
+    daemon_binaries = [
+        (
+            dir_for_module("src").parent / "*.dll",
+            ".",
+        ),
+        (
+            "C:\Windows\System32\\msvcp140.dll",
+            ".",
+        ),
+        (
+            "C:\Windows\System32\\vcruntime140_1.dll",
+            ".",
+        ),
+    ]
+
 
 daemon = Analysis(
     [path_for_file("src.daemon.server")],
     pathex=[path_for_file("aiter"), f"{root}"],
-    binaries=[],
+    binaries=daemon_binaries,
     datas=[
+        keyring_datas,
         version_data,
         (path_for_file("src.util", "initial-config.yaml"), f"./src/util/"),
     ]
