@@ -64,6 +64,7 @@ mv $DIR_NAME ../build_scripts/dist/
 cd ../build_scripts || exit
 
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
+sudo rm -rf final_installer
 mkdir final_installer
 ls -l dist
 echo "subdir ls"
@@ -76,7 +77,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION --overwrite
+--arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION --overwrite \
+--license ../LICENSE
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
