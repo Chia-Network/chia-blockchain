@@ -1,4 +1,16 @@
 #!/bin/bash
+
+if [ ! "$1" ]; then
+  echo "This script requires either amd64 of arm64 as an argument"
+	exit 1
+elif [ "$1" = "amd64" ]; then
+	PLATFORM="$1"
+	DIR_NAME="chia-blockchain-linux-x64"
+else
+	PLATFORM="$1"
+	DIR_NAME="chia-blockchain-linux-arm64"
+fi
+
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
 # If the env variable NOTARIZE and the username and password variables are
@@ -45,16 +57,16 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv chia-blockchain-linux-x64 ../build_scripts/dist/
+mv $DIR_NAME ../build_scripts/dist/
 cd ../build_scripts || exit
 
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 mkdir final_installer
 ls -l dist
-echo "subdir"
-ls -l dist/chia-blockchain-linux-x64/
-electron-installer-debian --src dist/chia-blockchain-linux-x64/ --dest final_installer/ \
---arch amd64 --options.version $CHIA_INSTALLER_VERSION --overwrite
+echo "subdir ls"
+ls -l dist/$DIR_NAME/
+electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
+--arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION --overwrite
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
