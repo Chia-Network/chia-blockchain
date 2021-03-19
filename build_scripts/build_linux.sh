@@ -81,7 +81,7 @@ electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
 --license ../LICENSE
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-debian failed!"
+	echo >&2 "electron-installer-redhat failed!"
 	exit $LAST_EXIT_CODE
 fi
 
