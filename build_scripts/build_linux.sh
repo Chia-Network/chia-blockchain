@@ -10,7 +10,6 @@ elif [ "$1" = "amd64" ]; then
 else
 	PLATFORM="$1"
 	DIR_NAME="chia-blockchain-linux-arm64"
-	REDHAT_PLATFORM="arm64"
 fi
 
 pip install setuptools_scm
@@ -66,24 +65,27 @@ cd ../build_scripts || exit
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 sudo rm -rf final_installer
 mkdir final_installer
-ls -l dist
 echo "subdir ls"
 ls -l dist/$DIR_NAME/
 electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$PLATFORM" --version $CHIA_INSTALLER_VERSION --overwrite
+--arch "$PLATFORM" --option.version "$CHIA_INSTALLER_VERSION"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
 	exit $LAST_EXIT_CODE
 fi
 
-electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION --overwrite \
---license ../LICENSE
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-redhat failed!"
-	exit $LAST_EXIT_CODE
+ls final_installer/
+
+if [ "$REDHAT_VERSION" = "x86_64" ]; then
+  electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
+  --arch "$REDHAT_PLATFORM" --option.version "$CHIA_INSTALLER_VERSION" \
+  --license ../LICENSE
+  LAST_EXIT_CODE=$?
+  if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+	  echo >&2 "electron-installer-redhat failed!"
+	  exit $LAST_EXIT_CODE
+  fi
 fi
 
 ls final_installer/
