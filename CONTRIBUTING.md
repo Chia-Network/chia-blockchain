@@ -1,5 +1,6 @@
 # Introduction
 
+
 Welcome to the chia-blockchain project!
 We are happy that you are taking a look at the code for Chia, a proof of space and time cryptocurrency.
 
@@ -11,13 +12,21 @@ If you want to learn more about this project, read the [wiki](https://github.com
 
 ## Contributions
 
+Please review this [diagram](https://drive.google.com/file/d/1RjCeUwJ0s3huq1iRSXwdy02wD54HKNxA/view?usp=sharing), to better understand the git workflow.
+
 We would be pleased to accept code contributions to this project.
-As we are in the alpha stage, the main priority is getting a robust blockchain up and running, with as many of the mainnet features as possible.
+As we have now released, the main priority is improving the mainnet blockchain.
 You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a sense of what is in the backlog.
 Generally things to the left are in progress or done. Some things go through "Coming up soon" but some will come directly out of other columns.
 Usually the things closer to the top of each column are the ones that will be worked on soonest.
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
 Contact any of the team members on [Keybase](https://keybase.io/team/chia_network.public), which we use as the main communication method and you can comment on any Trello card.
+
+We ask that external contributors create a fork of the `main` branch for any feature work they wish to take on.
+
+Members of the Chia organization may create feature branches from the `main` branch.
+
+In the event an emergency fix is required for the release version of Chia, members of the chia organization will create a feature branch from the current release branch `1.0.0`
 
 ## Run tests and linting
 
@@ -59,9 +68,22 @@ workflow.
 5. Set line length to 120
 6. Install mypy plugin
 
+## Testnets and review environments
+
+With the launch of `1.0.0` we will begin running an official `testnet`.  
+Prior to the release of `1.1.0` there will be two running test nets. `1.0` and `1.1b`. The `1.1b` testnet will be a beta of the pending 1.1 release which will enable transactions on the chia blockchain.
+Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the `main` branch.
+
+Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.
+Most changes that impact the block chain will require a review environment to prove continued blockchain functionality before acceptance into `main`.
+Chia organization members have been granted CI access to deploy `beta testnets`.
+If you are not a Chia organization member, you can enquire about deploying a `beta testnet` in the public dev keybase channel.
+
 ## Submit changes
 
-To submit changes, please make a pull request to the `dev` development branch.
+To propose changes, please make a pull request to the `main` branch.
+
+To propose changes, for production releases of chia please make a pull request to the `1.0.0` branch.
 
 ## Copyright
 
