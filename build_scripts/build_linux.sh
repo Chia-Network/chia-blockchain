@@ -70,12 +70,13 @@ ls -l dist
 echo "subdir ls"
 ls -l dist/$DIR_NAME/
 electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION --overwrite
+--arch "$PLATFORM" --version $CHIA_INSTALLER_VERSION --overwrite
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
 	exit $LAST_EXIT_CODE
 fi
+
 electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
 --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION --overwrite \
 --license ../LICENSE
