@@ -6,14 +6,19 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
+from src.server.start_full_node import SERVICE_NAME
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.block_cache import BlockCache
 from src.util.block_tools import test_constants
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from tests.setup_nodes import bt
 
 try:
@@ -244,7 +249,12 @@ class TestWeightProof:
         )
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
-            10, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+            10,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=4,
+            normalized_to_identity=True,
         )
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
