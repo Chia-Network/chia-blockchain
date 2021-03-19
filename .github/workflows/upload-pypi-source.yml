@@ -13,7 +13,7 @@ on:
 jobs:
   upload_source_dist:
     name: Lint and Upload source distribution
-    runs-on: [ubuntu-latest]
+    runs-on: [macOS-latest]
     timeout-minutes: 30
 
     steps:
@@ -87,3 +87,35 @@ jobs:
         TWINE_NON_INTERACTIVE: 1
         TWINE_PASSWORD: ${{ secrets.pypi_password }}
       run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+
+    - name: Save sdist and remove git repo
+      run: |
+        mv dist build_scripts chia-blockchain-gui ..
+        cd ..
+        # rm -rf chia-blockchain
+        mv chia-blockchain chia-blockchain.repo
+        mkdir chia-blockchain
+        mv dist build_scripts chia-blockchain-gui chia-blockchain
+        cd chia-blockchain
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+
+    - name: Build venv and run pyinstaller
+      run: |
+        python3 -m venv venv
+        source venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install wheel
+        # pip install pywin32
+        pip install pyinstaller==4.2
+        pip install dist/chia-blockchain*tar.gz
+        pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1
+        cd build_scripts
+        sh build_macos.sh
+
+    - name: Upload MacOS artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: sdist-pyinstaller
+        path: ${{ github.workspace }}/dist/
