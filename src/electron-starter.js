@@ -54,6 +54,8 @@ if (!setupEvents.handleSquirrelEvent()) {
     return true;
   };
 
+  let mainWindow = null;  
+
   // if any of these checks return false, don't do any other initialization since the app is quitting
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
     // this needs to happen early in startup so all processes share the same global config
@@ -67,8 +69,6 @@ if (!setupEvents.handleSquirrelEvent()) {
     /*************************************************************
      * window management
      *************************************************************/
-
-    let mainWindow = null;
     let decidedToClose = false;
     let isClosing = false;
 
