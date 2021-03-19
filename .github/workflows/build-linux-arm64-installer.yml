@@ -1,4 +1,4 @@
-name: Linux installer on Python 3.8
+name: Linux ARM64 installer on Python 3.8
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Linux installer on Python 3.8
+    name: Linux ARM64 installer on Python 3.8
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
@@ -20,7 +20,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.8]
-        os: [ubuntu-latest]
+        os: [ARM64]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -88,10 +88,10 @@ jobs:
         cd ./chia-blockchain-gui
         git status
         cd ../build_scripts
-        sh build_linux.sh amd64
+        sh build_linux.sh arm64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Linux-Installers
+        name: Linux-ARM-64-Installers
         path: ${{ github.workspace }}/build_scripts/final_installer/
