@@ -152,7 +152,6 @@ class FullNode:
     async def _start(self):
         self.timelord_lock = asyncio.Lock()
         # create the store (db) and full node instance
-        self.log.info("start node")
         if self.constants.GENESIS_CHALLENGE is not None:
             await self.regular_start()
         else:
