@@ -961,7 +961,7 @@ def _validate_sub_slot_data(
                 # dont validate intermediate vdfs if slot is blue boxed
                 assert curr_slot.cc_slot_end
                 if curr_slot.cc_slot_end.normalized_to_identity is True:
-                    log.info(f"skip intermediate vdfs slot {sub_slot_idx}")
+                    log.debug(f"skip intermediate vdfs slot {sub_slot_idx}")
                     return True
                 else:
                     break
