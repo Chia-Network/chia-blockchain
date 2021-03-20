@@ -38,9 +38,7 @@ class BlockStore:
         )
 
         # todo remove in v1.2
-        await self.db.execute(
-            "DROP TABLE IF EXISTS sub_epoch_segments"
-        )
+        await self.db.execute("DROP TABLE IF EXISTS sub_epoch_segments")
 
         # Sub epoch segments for weight proofs
         await self.db.execute(
