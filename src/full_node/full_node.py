@@ -122,6 +122,7 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
+            await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hashh)
             pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
@@ -151,6 +152,7 @@ class FullNode:
     async def _start(self):
         self.timelord_lock = asyncio.Lock()
         # create the store (db) and full node instance
+        self.log.info("start node")
         if self.constants.GENESIS_CHALLENGE is not None:
             await self.regular_start()
         else:
