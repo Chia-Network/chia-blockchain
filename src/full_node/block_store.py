@@ -130,7 +130,7 @@ class BlockStore:
         return None
 
     async def delete_sub_epoch_challenge_segments(self, fork_height: uint32):
-        cursor = await self.db.execute("delete from sub_epoch_segments_2 WHERE ses_height>?", (fork_height,))
+        cursor = await self.db.execute("delete from sub_epoch_segments_v2 WHERE ses_height>?", (fork_height,))
         await cursor.close()
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
