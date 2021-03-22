@@ -3,9 +3,9 @@ import time
 
 import pytest
 
-from src.protocols import full_node_protocol
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16
+from chia.protocols import full_node_protocol
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16
 from tests.core.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert

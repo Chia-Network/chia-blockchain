@@ -6,18 +6,18 @@ from secrets import token_bytes
 import pytest
 from pytest import raises
 
-from src.consensus.blockchain import ReceiveBlockResult
-from src.consensus.multiprocess_validation import PreValidationResult
-from src.consensus.pot_iterations import is_overflow_block
-from src.full_node.full_node_store import FullNodeStore
-from src.full_node.signage_point import SignagePoint
-from src.protocols.timelord_protocol import NewInfusionPointVDF
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.unfinished_block import UnfinishedBlock
-from src.util.block_cache import BlockCache
-from src.util.block_tools import get_signage_point
-from src.util.hash import std_hash
-from src.util.ints import uint8, uint32, uint64, uint128
+from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.signage_point import SignagePoint
+from chia.protocols.timelord_protocol import NewInfusionPointVDF
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.block_cache import BlockCache
+from chia.util.block_tools import get_signage_point
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.core.fixtures import default_1000_blocks, empty_blockchain  # noqa: F401
 from tests.setup_nodes import bt, test_constants
 

@@ -6,11 +6,11 @@ from typing import List
 
 import pytest
 
-from src.protocols import full_node_protocol
-from src.types.full_block import FullBlock
-from src.types.peer_info import PeerInfo
-from src.util.hash import std_hash
-from src.util.ints import uint16
+from chia.protocols import full_node_protocol
+from chia.types.full_block import FullBlock
+from chia.types.peer_info import PeerInfo
+from chia.util.hash import std_hash
+from chia.util.ints import uint16
 from tests.core.fixtures import default_400_blocks, default_1000_blocks, default_10000_blocks, empty_blockchain
 from tests.setup_nodes import bt, self_hostname, setup_n_nodes, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert

@@ -6,9 +6,9 @@ from pathlib import Path
 import aiosqlite
 import pytest
 
-from src.consensus.blockchain import Blockchain
-from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
+from chia.consensus.blockchain import Blockchain
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
 from tests.setup_nodes import bt, test_constants
 
 

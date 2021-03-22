@@ -5,12 +5,12 @@ from secrets import token_bytes
 
 import pytest
 
-from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint64
-from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.trade_manager import TradeManager
-from src.wallet.trading.trade_status import TradeStatus
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16, uint64
+from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.trade_status import TradeStatus
 from tests.setup_nodes import setup_simulators_and_wallets
 
 
