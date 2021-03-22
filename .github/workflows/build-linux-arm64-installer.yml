@@ -42,7 +42,7 @@ jobs:
           quay.io/pypa/manylinux2014_aarch64 \
           bash -exc '\
             echo $PATH && \
-            sudo yum install -y nodejs fakeroot dpkg && \
+            yum install -y nodejs fakeroot dpkg && \
             rm -rf venv && \
             export PATH=/opt/python/cp38-cp38/bin/:$PATH && \
             /opt/python/cp38-cp38/bin/python -m venv venv && \
