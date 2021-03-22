@@ -7,7 +7,7 @@ from src.util.service_groups import all_groups, services_for_groups
 
 
 async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
-    from src.daemon.client import connect_to_daemon_and_validate
+    from chia.daemon.client import connect_to_daemon_and_validate
 
     daemon = await connect_to_daemon_and_validate(root_path)
     if daemon is None:

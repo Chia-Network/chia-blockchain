@@ -954,7 +954,7 @@ def run_daemon(root_path: Path) -> int:
 
 
 def main():
-    from src.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.default_root import DEFAULT_ROOT_PATH
 
     return run_daemon(DEFAULT_ROOT_PATH)
 

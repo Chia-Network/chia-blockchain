@@ -54,7 +54,7 @@ def version_cmd() -> None:
 @cli.command("run_daemon", short_help="Runs chia daemon")
 @click.pass_context
 def run_daemon_cmd(ctx: click.Context) -> None:
-    from src.daemon.server import async_run_daemon
+    from chia.daemon.server import async_run_daemon
     import asyncio
 
     asyncio.get_event_loop().run_until_complete(async_run_daemon(ctx.obj["root_path"]))

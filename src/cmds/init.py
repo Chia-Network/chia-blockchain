@@ -31,6 +31,6 @@ def init_cmd(ctx: click.Context, create_certs: str):
 
 if __name__ == "__main__":
     from .init_funcs import chia_init
-    from src.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.default_root import DEFAULT_ROOT_PATH
 
     chia_init(DEFAULT_ROOT_PATH)
