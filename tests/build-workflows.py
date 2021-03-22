@@ -3,7 +3,7 @@
 # Run from the current directory.
 
 import argparse
-import config
+import testconfig
 import logging
 import subprocess
 from pathlib import Path
@@ -42,12 +42,12 @@ def workflow_yaml_template_text(os):
     return Path(f"runner-templates/build-test-{os}").read_text()
 
 
-# output file
-def workflow_yaml_file(os, test_name):
-    return Path(f"../.github/workflows/build-test-{os}-{test_name}.yml")
+# output files
+def workflow_yaml_file(dir, os, test_name):
+    return Path(dir / f"build-test-{os}-{test_name}.yml")
 
 
-# test dir to name
+# Function from test dir to test name
 def test_name(dir):
     return str(dir).replace("/", "-")
 
@@ -111,24 +111,39 @@ def update_config(parent, child):
     return conf
 
 
-# main
+def dir_path(string):
+    p = Path(string)
+    if p.is_dir():
+        return p
+    else:
+        raise NotADirectoryError(string)
+
+
+# args
 arg_parser = argparse.ArgumentParser(description="Build github workflows")
+arg_parser.add_argument("--output-dir", "-d", default="../.github/workflows", type=dir_path)
+arg_parser.add_argument("--verbose", "-v", action="store_true")
 args = arg_parser.parse_args()
 
-test_dirs = subdirs(config.root_test_dirs)  # type: ignore
+if args.verbose:
+    logging.basicConfig(format="%(asctime)s:%(message)s", level=logging.DEBUG)
 
-for os in config.oses:  # type: ignore
+# main
+test_dirs = subdirs(testconfig.root_test_dirs)
+
+for os in testconfig.oses:
     template_text = workflow_yaml_template_text(os)
     for dir in test_dirs:
         test_files = test_files_in_dir(dir)
         if len(test_files) == 0:
             logging.info(f"Skipping {dir}: no tests collected")
             continue
-        conf = update_config(module_dict(config), dir_config(dir))
+        conf = update_config(module_dict(testconfig), dir_config(dir))
         replacements = generate_replacements(default_replacements, conf, dir, test_files)
         txt = transform_template(template_text, replacements)
         logging.info(f"Writing {os}-{test_name(dir)}")
-        workflow_yaml_file(os, test_name(dir)).write_text(txt)
+        workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)
 
-out = subprocess.run(["git", "diff", "../.github/workflows"])
-print(out.stdout)
+out = subprocess.run(["git", "diff", args.output_dir])
+if out.stdout:
+    print(out.stdout)
