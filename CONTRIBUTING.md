@@ -32,14 +32,14 @@ In the event an emergency fix is required for the release version of Chia, membe
 
 [Branching Strategy Diagram](https://drive.google.com/file/d/1MpWIyEMGrS9a555mqxn6tye_8xtIWKjR/view?usp=sharing)
 
-All changes go into the main branch.
-Main is stable at all times, all tests pass.
-Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
-The public testnet is running the main branch.
-Hotfixes land in the release branch they fix, and all later versions. (this can be achieved by regularly merging from 1.0.x -> 1.1.x -> main).
-Hotfixes that are temporary hacks for a specific version would ideally still be merged into, and removed from down-stream branches. This allows future merges without issues.
-Whoever develops a hotfix is also responsible for merging it into all later branches.
-A release branch (e.g. 1.1.x) can be cut before we’re ready to release, in order to separate work that should go into the release from work going into the next major release (main branch).
+1. All changes go into the main branch.
+2. Main is stable at all times, all tests pass.
+3. Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
+4. The public testnet is running the main branch.
+5. Hotfixes land in the release branch they fix, and all later versions. (this can be achieved by regularly merging from 1.0.x -> 1.1.x -> main).
+6. Hotfixes that are temporary hacks for a specific version would ideally still be merged into, and removed from down-stream branches. This allows future merges without issues.
+7. Whoever develops a hotfix is also responsible for merging it into all later branches.
+8. A release branch (e.g. 1.1.x) can be cut before we’re ready to release, in order to separate work that should go into the release from work going into the next major release (main branch).
 
 
 ## Run tests and linting
