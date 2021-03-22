@@ -36,11 +36,11 @@ In the event an emergency fix is required for the release version of Chia, membe
 2. Main is stable at all times, all tests pass.
 3. Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
 4. The public testnet is running the main branch.
-5. Hotfixes land in the release branch they fix, and all later versions. (this can be achieved by regularly merging from 1.0.x -> 1.1.x -> main).
-6. Hotfixes that are temporary hacks for a specific version would ideally still be merged into, and removed from down-stream branches. This allows future merges without issues.
+5. Pull Request events may require a `beta testnet` review environment, at the moment this is at the discretion of the reviewer.
+5. Hotfixes land in the release branch they fix, and all later versions. (this will be achieved by regularly merging from 1.0.x -> 1.1.x -> main).
+6. Hotfixes that are emergency fixes for a specific version will be merged into, and removed from down-stream branches. This allows future merges without issues.
 7. Whoever develops a hotfix is also responsible for merging it into all later branches.
-8. A release branch (e.g. 1.1.x) can be cut before we’re ready to release, in order to separate work that should go into the release from work going into the next major release (main branch).
-
+8. A release branch (e.g. 1.1.x) will be cut prior to a release, in order to separate work that should go into the release from work going into the next major release (main branch).
 
 ## Run tests and linting
 
@@ -89,7 +89,7 @@ Prior to the release of `1.1.0` there will be two running test nets. `1.0` and `
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the `main` branch.
 
 Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.
-Most changes that impact the block chain will require a review environment to prove continued blockchain functionality before acceptance into `main`.
+Most changes that impact the block chain will require a review environment to prove continued blockchain functionality before acceptance into `main`. This is at the discretion of the reviewer. 
 Chia organization members have been granted CI access to deploy `beta testnets`.
 If you are not a Chia organization member, you can enquire about deploying a `beta testnet` in the public dev keybase channel.
 
