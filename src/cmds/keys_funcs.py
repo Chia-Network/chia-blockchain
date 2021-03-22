@@ -1,10 +1,7 @@
-from pathlib import Path
 from typing import List
 
-import click
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-from src.cmds.init_funcs import check_keys
 from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.util.bech32m import encode_puzzle_hash
 from src.util.config import load_config

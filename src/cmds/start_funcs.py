@@ -4,8 +4,6 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-import click
-
 from src.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from src.daemon.server import not_launched_error_message
 from src.util.service_groups import services_for_groups

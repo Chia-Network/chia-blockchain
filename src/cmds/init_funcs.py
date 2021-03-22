@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-import click
 import yaml
 
 from src import __version__
@@ -17,7 +16,6 @@ from src.util.config import (
     save_config,
     unflatten_properties,
 )
-from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32
 from src.util.keychain import Keychain
 from src.util.path import mkdir
