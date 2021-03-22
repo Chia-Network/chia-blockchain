@@ -34,7 +34,14 @@ class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_basic_store(self, empty_blockchain, normalized_to_identity: bool = False):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(10, seed=b"1234", normalized_to_identity=normalized_to_identity)
+        blocks = bt.get_consecutive_blocks(
+            10,
+            seed=b"1234",
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
 
         store = await FullNodeStore.create(test_constants)
 
@@ -79,7 +86,14 @@ class TestFullNodeStore:
             store.remove_unfinished_block(unf_block.partial_hash)
             assert store.get_unfinished_block(unf_block.partial_hash) is None
 
-        blocks = bt.get_consecutive_blocks(1, skip_slots=5, normalized_to_identity=normalized_to_identity)
+        blocks = bt.get_consecutive_blocks(
+            1,
+            skip_slots=5,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+        )
         sub_slots = blocks[0].finished_sub_slots
         assert len(sub_slots) == 5
 
@@ -143,8 +157,22 @@ class TestFullNodeStore:
         )
 
         # Test adding non genesis peak directly
-        blocks = bt.get_consecutive_blocks(2, skip_slots=2, normalized_to_identity=normalized_to_identity)
-        blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, normalized_to_identity=normalized_to_identity)
+        blocks = bt.get_consecutive_blocks(
+            2,
+            skip_slots=2,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
         for block in blocks:
             await blockchain.receive_block(block)
             sb = blockchain.block_record(block.header_hash)
@@ -153,7 +181,13 @@ class TestFullNodeStore:
             assert res[0] is None
 
         # Add reorg blocks
-        blocks_reorg = bt.get_consecutive_blocks(20, normalized_to_identity=normalized_to_identity)
+        blocks_reorg = bt.get_consecutive_blocks(
+            20,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
         for block in blocks_reorg:
             res, _, _ = await blockchain.receive_block(block)
             if res == ReceiveBlockResult.NEW_PEAK:
@@ -164,7 +198,13 @@ class TestFullNodeStore:
 
         # Add slots to the end
         blocks_2 = bt.get_consecutive_blocks(
-            1, block_list_input=blocks_reorg, skip_slots=2, normalized_to_identity=normalized_to_identity
+            1,
+            block_list_input=blocks_reorg,
+            skip_slots=2,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for slot in blocks_2[-1].finished_sub_slots:
             store.new_finished_sub_slot(slot, blockchain, blockchain.get_peak(), await blockchain.get_full_peak())
@@ -190,7 +230,12 @@ class TestFullNodeStore:
         blocks = blocks_reorg
         while True:
             blocks = bt.get_consecutive_blocks(
-                1, block_list_input=blocks, normalized_to_identity=normalized_to_identity
+                1,
+                block_list_input=blocks,
+                normalized_to_identity_cc_eos=normalized_to_identity,
+                normalized_to_identity_icc_eos=normalized_to_identity,
+                normalized_to_identity_cc_ip=normalized_to_identity,
+                normalized_to_identity_cc_sp=normalized_to_identity,
             )
             res, _, _ = await blockchain.receive_block(blocks[-1])
             if res == ReceiveBlockResult.NEW_PEAK:
@@ -210,7 +255,13 @@ class TestFullNodeStore:
 
         # Add slots to the end, except for the last one, which we will use to test invalid SP
         blocks_2 = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, skip_slots=3, normalized_to_identity=normalized_to_identity
+            1,
+            block_list_input=blocks,
+            skip_slots=3,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for slot in blocks_2[-1].finished_sub_slots[:-1]:
             store.new_finished_sub_slot(slot, blockchain, blockchain.get_peak(), await blockchain.get_full_peak())
@@ -331,7 +382,14 @@ class TestFullNodeStore:
             )
             assert store.new_signage_point(i, {}, None, peak.sub_slot_iters, sp)
 
-        blocks_3 = bt.get_consecutive_blocks(1, skip_slots=2, normalized_to_identity=normalized_to_identity)
+        blocks_3 = bt.get_consecutive_blocks(
+            1,
+            skip_slots=2,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
         for slot in blocks_3[-1].finished_sub_slots:
             store.new_finished_sub_slot(slot, {}, None, None)
         assert len(store.finished_sub_slots) == 3
@@ -354,9 +412,21 @@ class TestFullNodeStore:
                 assert store.new_signage_point(i, {}, None, peak.sub_slot_iters, sp)
 
         # Test adding signage points after genesis
-        blocks_4 = bt.get_consecutive_blocks(1, normalized_to_identity=normalized_to_identity)
+        blocks_4 = bt.get_consecutive_blocks(
+            1,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
         blocks_5 = bt.get_consecutive_blocks(
-            1, block_list_input=blocks_4, skip_slots=1, normalized_to_identity=normalized_to_identity
+            1,
+            block_list_input=blocks_4,
+            skip_slots=1,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
         )
 
         # If this is not the case, fix test to find a block that is
@@ -389,11 +459,22 @@ class TestFullNodeStore:
 
         # Test future EOS cache
         store.initialize_genesis_sub_slot()
-        blocks = bt.get_consecutive_blocks(1, normalized_to_identity=normalized_to_identity)
+        blocks = bt.get_consecutive_blocks(
+            1,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+        )
         await blockchain.receive_block(blocks[-1])
         while True:
             blocks = bt.get_consecutive_blocks(
-                1, block_list_input=blocks, normalized_to_identity=normalized_to_identity
+                1,
+                block_list_input=blocks,
+                normalized_to_identity_cc_eos=normalized_to_identity,
+                normalized_to_identity_icc_eos=normalized_to_identity,
+                normalized_to_identity_cc_ip=normalized_to_identity,
+                normalized_to_identity_cc_sp=normalized_to_identity,
             )
             await blockchain.receive_block(blocks[-1])
             sb = blockchain.block_record(blocks[-1].header_hash)
@@ -421,7 +502,13 @@ class TestFullNodeStore:
 
         # Test future IP cache
         store.initialize_genesis_sub_slot()
-        blocks = bt.get_consecutive_blocks(60, normalized_to_identity=normalized_to_identity)
+        blocks = bt.get_consecutive_blocks(
+            60,
+            normalized_to_identity_cc_ip=normalized_to_identity,
+            normalized_to_identity_cc_sp=normalized_to_identity,
+            normalized_to_identity_cc_eos=normalized_to_identity,
+            normalized_to_identity_icc_eos=normalized_to_identity,
+        )
 
         for block in blocks[:5]:
             await blockchain.receive_block(block)
