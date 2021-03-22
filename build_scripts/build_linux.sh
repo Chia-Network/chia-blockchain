@@ -78,6 +78,7 @@ fi
 ls final_installer/
 
 if [ "$REDHAT_VERSION" = "x86_64" ]; then
+	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
   --arch "$REDHAT_PLATFORM" --option.version "$CHIA_INSTALLER_VERSION" \
   --license ../LICENSE

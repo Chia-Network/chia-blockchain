@@ -35,33 +35,29 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
+    - name: Build ARM64 Installer
       run: |
-        sh install.sh
-
-    - name: Setup Node 12.x
-      uses: actions/setup-node@v2.1.5
-      with:
-        node-version: '12.x'
-
-    - name: Build ARM64 .deb package
-      env:
-        SETUPTOOLS_SCM_PRETEND_VERSION: "1.0"
-      run: |
-        . ./activate
-        sudo apt-get -y install rpm
-        cd ./chia-blockchain-gui
-        git status
-        cd ../build_scripts
-        sh build_linux.sh arm64
+        podman run --rm=true \
+          -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+          quay.io/pypa/manylinux2014_aarch64 \
+          bash -exc '\
+            echo $PATH && \
+            sudo yum install -y nodejs fakeroot dpkg && \
+            rm -rf venv && \
+            export PATH=/opt/python/cp38-cp38/bin/:$PATH && \
+            /opt/python/cp38-cp38/bin/python -m venv venv && \
+            if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
+            . ./activate && \
+            sh install.sh
+            export SETUPTOOLS_SCM_PRETEND_VERSION="1.0"
+            cd build_scripts
+            sh build_linux.sh arm64
+          '
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Linux-ARM-64-Installers
+        name: Linux-ARM-64-Installer
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Clean up on self hosted runner
