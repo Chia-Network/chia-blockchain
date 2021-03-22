@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from src.cmds.init import chia_init
+from src.cmds.init_funcs import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_root, ssl_context_for_server
 from src.ssl.create_ssl import get_mozzila_ca_crt

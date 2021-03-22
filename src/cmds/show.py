@@ -1,21 +1,4 @@
-import asyncio
-import time
-import traceback
-from time import localtime, struct_time
-from typing import List, Optional
-
-import aiohttp
 import click
-
-from src.consensus.block_record import BlockRecord
-from src.rpc.full_node_rpc_client import FullNodeRpcClient
-from src.server.outbound_message import NodeType
-from src.types.full_block import FullBlock
-from src.util.bech32m import encode_puzzle_hash
-from src.util.byte_types import hexstr_to_bytes
-from src.util.config import load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.ints import uint16
 
 
 async def show_async(
@@ -28,6 +11,21 @@ async def show_async(
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
+    import aiohttp
+    import time
+    import traceback
+
+    from time import localtime, struct_time
+    from typing import List, Optional
+    from src.consensus.block_record import BlockRecord
+    from src.rpc.full_node_rpc_client import FullNodeRpcClient
+    from src.server.outbound_message import NodeType
+    from src.types.full_block import FullBlock
+    from src.util.bech32m import encode_puzzle_hash
+    from src.util.byte_types import hexstr_to_bytes
+    from src.util.config import load_config
+    from src.util.default_root import DEFAULT_ROOT_PATH
+    from src.util.ints import uint16
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -313,6 +311,8 @@ def show_cmd(
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
+    import asyncio
+
     asyncio.run(
         show_async(
             rpc_port,
