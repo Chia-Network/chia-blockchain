@@ -85,6 +85,7 @@ jobs:
       run: |
         . ./activate
         sudo apt-get -y install rpm
+        ldd --version
         cd ./chia-blockchain-gui
         git status
         cd ../build_scripts
