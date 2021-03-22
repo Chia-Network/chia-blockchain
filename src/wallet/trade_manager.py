@@ -32,7 +32,7 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
 
-# from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
+# from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 
 
 class TradeManager:

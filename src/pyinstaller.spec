@@ -26,7 +26,7 @@ def path_for_file(mod_name, filename=None):
     """
     mod = importlib.import_module(mod_name)
 
-    # some modules, like `src.ssl` don't set mod.__file__ because there isn't actually
+    # some modules, like `chia.ssl` don't set mod.__file__ because there isn't actually
     # any code in there. We have to look at mod.__path__ instead, which is a list.
     # for now, we just take the first item, since this function isn't expected to
     # return a list of paths, just one path.
@@ -45,9 +45,9 @@ def path_for_file(mod_name, filename=None):
 
 
 # Include all files that end with clvm.hex
-puzzles_path = dir_for_module("src.wallet.puzzles")
+puzzles_path = dir_for_module("chia.wallet.puzzles")
 
-puzzle_dist_path = "./src/wallet/puzzles"
+puzzle_dist_path = "./chia/wallet/puzzles"
 onlyfiles = [f for f in listdir(puzzles_path) if isfile(join(puzzles_path, f))]
 
 root = pathlib.Path().absolute()
@@ -77,12 +77,12 @@ if THIS_IS_WINDOWS:
 
 # TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter
 
-entry_points = ["src.cmds.chia"] + [f"src.server.start_{s}" for s in SERVERS]
+entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
 
 
 if THIS_IS_WINDOWS:
     # this probably isn't necessary
-    entry_points.extend(["aiohttp", "src.util.bip39"])
+    entry_points.extend(["aiohttp", "chia.util.bip39"])
 
 hiddenimports = []
 hiddenimports.extend(other)
@@ -93,7 +93,7 @@ binaries = []
 if THIS_IS_WINDOWS:
     binaries = [
         (
-            dir_for_module("src").parent / "*.dll",
+            dir_for_module("chia").parent / "*.dll",
             ".",
         ),
         (
@@ -110,10 +110,10 @@ if THIS_IS_WINDOWS:
 datas = [
     (puzzles_path, puzzle_dist_path),
     (path_for_file("mozilla-ca", "cacert.pem"), f"./mozilla-ca/"),
-    (path_for_file("src.ssl", "dst_root_ca.pem"), f"./src/ssl/"),
-    (path_for_file("src.ssl", "chia_ca.key"), f"./src/ssl/"),
-    (path_for_file("src.ssl", "chia_ca.crt"), f"./src/ssl/"),
-    (path_for_file("src.util", "english.txt"), f"./src/util/"),
+    (path_for_file("chia.ssl", "dst_root_ca.pem"), f"./chia/ssl/"),
+    (path_for_file("chia.ssl", "chia_ca.key"), f"./chia/ssl/"),
+    (path_for_file("chia.ssl", "chia_ca.crt"), f"./chia/ssl/"),
+    (path_for_file("chia.util", "english.txt"), f"./chia/util/"),
     version_data,
 ]
 
@@ -121,7 +121,7 @@ datas = [
 pathex = [root]
 
 chia = Analysis(
-    [path_for_file("src.cmds.chia")],
+    [path_for_file("chia.cmds.chia")],
     pathex=pathex,
     binaries=binaries,
     datas=datas,
@@ -158,7 +158,7 @@ COLLECT_ARGS = [
 
 for server in SERVERS:
     analysis = Analysis(
-        [path_for_file(f"src.server.start_{server}")],
+        [path_for_file(f"chia.server.start_{server}")],
         pathex=pathex,
         binaries=binaries,
         datas=datas,

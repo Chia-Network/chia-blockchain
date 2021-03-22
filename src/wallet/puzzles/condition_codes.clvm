@@ -1,4 +1,4 @@
-; See src/types/condition_opcodes.py
+; See chia/types/condition_opcodes.py
 
 (
     (defconstant AGG_SIG 49)
