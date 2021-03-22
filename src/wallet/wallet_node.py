@@ -36,7 +36,6 @@ from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.errors import Err, ValidationError
-from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint32, uint128
 from src.util.keychain import Keychain
 from src.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
@@ -71,7 +70,6 @@ class WalletNode:
     syncing: bool
     full_node_peer: Optional[PeerInfo]
     peer_task: Optional[asyncio.Task]
-    genesis_initialized: bool
 
     def __init__(
         self,
@@ -110,10 +108,6 @@ class WalletNode:
         self.new_peak_lock: Optional[asyncio.Lock] = None
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
-        if self.constants.GENESIS_CHALLENGE is None:
-            self.genesis_initialized = False
-        else:
-            self.genesis_initialized = True
 
     def get_key_for_fingerprint(self, fingerprint: Optional[int]):
         private_keys = self.keychain.get_all_private_keys()
@@ -131,13 +125,13 @@ class WalletNode:
             private_key = private_keys[0][0]
         return private_key
 
-    async def regular_start(
+    async def _start(
         self,
         fingerprint: Optional[int] = None,
         new_wallet: bool = False,
         backup_file: Optional[Path] = None,
         skip_backup_import: bool = False,
-    ):
+    ) -> bool:
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             return False
@@ -195,31 +189,6 @@ class WalletNode:
         self.log.info("self.sync_job")
         self.logged_in_fingerprint = fingerprint
         return True
-
-    async def delayed_start(self):
-        self.log.info("delayed_start")
-        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants, "wallet")
-        self.config = config
-        self.constants = constants
-        self.genesis_initialized = True
-        await self.wallet_state_manager.initialize_constants(self.config, self.constants)
-        self.wallet_state_manager.state_changed("sync_changed")
-
-    async def _start(
-        self,
-        fingerprint: Optional[int] = None,
-        new_wallet: bool = False,
-        backup_file: Optional[Path] = None,
-        skip_backup_import: bool = False,
-    ) -> bool:
-        if self.constants.GENESIS_CHALLENGE is None:
-            await self.regular_start(fingerprint, new_wallet, backup_file, True)
-            asyncio.create_task(self.delayed_start())
-            if self.wallet_state_manager is not None:
-                self.wallet_state_manager.state_changed("sync_changed")
-            return True
-        else:
-            return await self.regular_start(fingerprint, new_wallet, backup_file, skip_backup_import)
 
     def _close(self):
         self.log.info("self._close")
@@ -495,8 +464,6 @@ class WalletNode:
         self.sync_event.set()
 
     async def check_new_peak(self):
-        if self.genesis_initialized is False:
-            return
         current_peak: Optional[BlockRecord] = self.wallet_state_manager.blockchain.get_peak()
         if current_peak is None:
             return
