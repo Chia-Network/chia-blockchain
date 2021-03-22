@@ -45,7 +45,6 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import ConsensusError, Err
-from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.path import mkdir, path_from_root
 
@@ -100,8 +99,9 @@ class FullNode:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    async def regular_start(self):
-        self.log.info("regular_start")
+    async def _start(self):
+        self.timelord_lock = asyncio.Lock()
+        # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.constants)
@@ -139,22 +139,6 @@ class FullNode:
                 )
             )
         self.initialized = True
-
-    async def delayed_start(self):
-        self.log.info("delayed_start")
-        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants, "full_node")
-
-        self.config = config
-        self.constants = constants
-        await self.regular_start()
-
-    async def _start(self):
-        self.timelord_lock = asyncio.Lock()
-        # create the store (db) and full node instance
-        if self.constants.GENESIS_CHALLENGE is not None:
-            await self.regular_start()
-        else:
-            asyncio.create_task(self.delayed_start())
 
     def set_server(self, server: ChiaServer):
         self.server = server

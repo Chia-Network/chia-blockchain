@@ -7,7 +7,6 @@ from typing import Optional
 import click
 
 from src.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from src.daemon.server import not_launched_error_message
 from src.util.service_groups import all_groups, services_for_groups
 
 
@@ -62,15 +61,7 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
             print("started")
         else:
             error = msg["data"]["error"]
-            if error == not_launched_error_message:
-                print("Waiting for genesis challenge, network not launched yet.")
-                while True:
-                    if await daemon.is_running(service_name=service):
-                        print("Network launched! ")
-                        break
-                    await asyncio.sleep(2)
-            else:
-                print(f"{service} failed to start. Error: {error}")
+            print(f"{service} failed to start. Error: {error}")
     await daemon.close()
 
 
