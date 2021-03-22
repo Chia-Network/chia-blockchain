@@ -77,7 +77,7 @@ if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
   electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
   --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
-  --license ../LICENSE --options.revision $CHIA_INSTALLER_VERSION
+  --license ../LICENSE --options.revision 0
   LAST_EXIT_CODE=$?
   if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	  echo >&2 "electron-installer-redhat failed!"
