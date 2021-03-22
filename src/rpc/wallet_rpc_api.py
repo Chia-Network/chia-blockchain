@@ -257,19 +257,10 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def get_sync_status(self, request: Dict):
-        genesis_initialized = self.service.genesis_initialized
-        if self.service.genesis_initialized:
-            assert self.service.wallet_state_manager is not None
-            syncing = self.service.wallet_state_manager.sync_mode
-            synced = await self.service.wallet_state_manager.synced()
-            return {"synced": synced, "syncing": syncing, "genesis_initialized": genesis_initialized}
-        else:
-            return {"synced": False, "syncing": False, "genesis_initialized": genesis_initialized}
+        return {"synced": False, "syncing": False, "genesis_initialized": True}
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-        if self.service.genesis_initialized is False:
-            return {"height": 0}
         peak = self.service.wallet_state_manager.peak
         if peak is None:
             return {"height": 0}
@@ -379,17 +370,6 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if self.service.genesis_initialized is False:
-            wallet_balance = {
-                "wallet_id": wallet_id,
-                "confirmed_wallet_balance": 0,
-                "unconfirmed_wallet_balance": 0,
-                "spendable_balance": 0,
-                "pending_change": 0,
-                "max_send_amount": 0,
-            }
-            return {"wallet_balance": wallet_balance}
-
         unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
         balance = await wallet.get_confirmed_balance(unspent_records)
         pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
