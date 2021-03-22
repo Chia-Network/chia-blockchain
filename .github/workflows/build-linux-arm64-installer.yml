@@ -51,7 +51,7 @@ jobs:
             /opt/python/cp38-cp38/bin/python -m venv venv && \
             if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
             . ./activate && \
-            export SETUPTOOLS_SCM_PRETEND_VERSION="1.0" && \
+            export SETUPTOOLS_SCM_PRETEND_VERSION="1.0.0" && \
             sh install.sh && \
             ldd --version && \
             cd build_scripts && \

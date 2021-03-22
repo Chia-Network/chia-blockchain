@@ -30,7 +30,7 @@ npm install electron-installer-debian -g
 npm install electron-installer-redhat -g
 
 echo "Create dist/"
-sudo rm -rf dist
+rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
@@ -63,7 +63,7 @@ mv $DIR_NAME ../build_scripts/dist/
 cd ../build_scripts || exit
 
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
-sudo rm -rf final_installer
+rm -rf final_installer
 mkdir final_installer
 echo "subdir ls"
 ls -l dist/$DIR_NAME/
