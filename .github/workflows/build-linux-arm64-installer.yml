@@ -42,6 +42,8 @@ jobs:
           quay.io/pypa/manylinux2014_aarch64 \
           bash -exc '\
             echo $PATH && \
+            curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash - && \
+            sudo yum clean all && sudo yum makecache fast && \
             yum install -y nodejs fakeroot dpkg && \
             rm -rf venv && \
             export PATH=/opt/python/cp38-cp38/bin/:$PATH && \
