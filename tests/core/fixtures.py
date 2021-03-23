@@ -72,7 +72,14 @@ async def default_20000_blocks():
 
 @pytest.fixture(scope="session")
 async def default_10000_blocks_compact():
-    return persistent_blocks(10000, f"test_blocks_10000_compact_{block_format_version}.db", normalized_to_identity=True)
+    return persistent_blocks(
+        10000,
+        f"test_blocks_10000_compact_{block_format_version}.db",
+        normalized_to_identity_cc_eos=True,
+        normalized_to_identity_icc_eos=True,
+        normalized_to_identity_cc_ip=True,
+        normalized_to_identity_cc_sp=True,
+    )
 
 
 def persistent_blocks(
@@ -80,7 +87,10 @@ def persistent_blocks(
     db_name: str,
     seed: bytes = b"",
     empty_sub_slots=0,
-    normalized_to_identity: bool = False,
+    normalized_to_identity_cc_eos: bool = False,
+    normalized_to_identity_icc_eos: bool = False,
+    normalized_to_identity_cc_sp: bool = False,
+    normalized_to_identity_cc_ip: bool = False,
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
@@ -103,18 +113,37 @@ def persistent_blocks(
         except EOFError:
             print("\n error reading db file")
 
-    return new_test_db(file_path, num_of_blocks, seed, empty_sub_slots, normalized_to_identity)
+    return new_test_db(
+        file_path,
+        num_of_blocks,
+        seed,
+        empty_sub_slots,
+        normalized_to_identity_cc_eos,
+        normalized_to_identity_icc_eos,
+        normalized_to_identity_cc_sp,
+        normalized_to_identity_cc_ip,
+    )
 
 
 def new_test_db(
-    path: Path, num_of_blocks: int, seed: bytes, empty_sub_slots: int, normalized_to_identity: bool = False
+    path: Path,
+    num_of_blocks: int,
+    seed: bytes,
+    empty_sub_slots: int,
+    normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
+    normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
+    normalized_to_identity_cc_sp: bool = False,  # CC_SP,
+    normalized_to_identity_cc_ip: bool = False,  # CC_IP
 ):
     print(f"create {path} with {num_of_blocks} blocks with ")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(
         num_of_blocks,
         seed=seed,
         skip_slots=empty_sub_slots,
-        normalized_to_identity=normalized_to_identity,
+        normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
+        normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
+        normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
+        normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
     )
     block_bytes_list: List[bytes] = []
     for block in blocks:
