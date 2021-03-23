@@ -12,6 +12,7 @@ const StyledIndicator = styled.div`
 
 const StyledLinearProgress = styled(LinearProgress)`
   height: 10px;
+  width: 75px;
   border-radius: 0;
 `;
 
