@@ -97,20 +97,7 @@ const cols = [
 
 const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const status_items = [];
-  if (state.genesis_challenge_initialized === false) {
-    const item = {
-      label: <Trans>Status</Trans>,
-      value: <Trans>Waiting for network to launch</Trans>,
-      colour: 'orange',
-      tooltip: (
-        <Trans>
-          Network has not yet been launched, once it launches full node will
-          start automatically.
-        </Trans>
-      ),
-    };
-    status_items.push(item);
-  } else if (state.sync && state.sync.sync_mode) {
+  if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
     const tip = state.sync.sync_tip_height;
     const item = {

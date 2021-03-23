@@ -198,7 +198,7 @@ msgstr "Lohko tiivisteellä {headerHash}"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Lohkoa tunnistetiivisteellä {headerHash} ei ole olemassa."
 
-#: src/components/fullNode/FullNode.jsx:311
+#: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
 msgstr "Lohkot"
 
@@ -347,7 +347,7 @@ msgid "Connect to other peers"
 msgstr "Yhdistä muihin verkkonoodeihin"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
 msgstr "Yhdistetty"
 
@@ -355,7 +355,7 @@ msgstr "Yhdistetty"
 msgid "Connecting to wallet"
 msgstr "Yhdistetään lompakkoon"
 
-#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
 msgstr "Yhteyden Tila"
 
@@ -540,7 +540,7 @@ msgid "Developer Tools"
 msgstr ""
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "Vaikeusaste"
 
@@ -604,11 +604,11 @@ msgstr "Virhe"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Virhe: Chioja ei voi lähettää värikolikko-osoitteeseen. Anna Chialompakon osoite."
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Estimoitu verkkoavaruus"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Kaikkien farmien sisältämien plot-tiedostojen arvoitu yhteiskoko"
 
@@ -723,11 +723,11 @@ msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:325
+#: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
 msgstr "Verkkonoodi"
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
 msgstr "Verkkonoodin Tila"
 
@@ -937,13 +937,13 @@ msgstr "Lisää muistia nopeuttaa hieman"
 msgid "My Pubkey"
 msgstr "Julkinen Avaimeni"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
 msgstr "Verkon Nimi"
 
 #: src/components/fullNode/FullNode.jsx:106
-msgid "Network has not yet been launched, once it launches full node will start automatically."
-msgstr "Verkkoa ei ole vielä käynnistetty. Noodi käynnistyy automaattisesti kun verkko käynnistetään."
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Verkkoa ei ole vielä käynnistetty. Noodi käynnistyy automaattisesti kun verkko käynnistetään."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1006,7 +1006,7 @@ msgstr "Yksikään ploteistasi ei ole vielä päässyt suodatuksesta läpi."
 msgid "Not Available"
 msgstr "Ei Saatavilla"
 
-#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
 msgstr "Ei Synkronoitu"
 
@@ -1019,8 +1019,8 @@ msgid "Not confirmed yet"
 msgstr "Vahvistamatta vielä"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:158
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
 msgstr "Ei yhteyttä"
 
@@ -1052,7 +1052,7 @@ msgstr "Tehdyt Tarjoukset"
 msgid "Outgoing"
 msgstr "Lähtevä"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
 msgstr "Lakikorkeus"
 
@@ -1060,7 +1060,7 @@ msgstr "Lakikorkeus"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
 msgstr "Lakiajankohta"
 
@@ -1511,16 +1511,15 @@ msgstr "Käyttöraja (Chiaa/ajanjakso):{0}"
 msgid "State"
 msgstr "Tila"
 
-#: src/components/fullNode/FullNode.jsx:102
-#: src/components/fullNode/FullNode.jsx:117
-#: src/components/fullNode/FullNode.jsx:134
-#: src/components/fullNode/FullNode.jsx:142
-#: src/components/fullNode/FullNode.jsx:164
+#: src/components/fullNode/FullNode.jsx:104
+#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:129
+#: src/components/fullNode/FullNode.jsx:151
 #: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:12
-#: src/components/wallet/Wallets.tsx:94
+#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/Wallets.tsx:93
 msgid "Status"
 msgstr "Tila"
 
@@ -1560,7 +1559,7 @@ msgstr "Tila:"
 msgid "Submit"
 msgstr "Lähetä"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
 msgstr "Synkrononissa"
 
@@ -1570,7 +1569,7 @@ msgstr "Synkrononissa"
 msgid "Syncing"
 msgstr "Synkronoi...."
 
-#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkronoi {progress}/{tip}"
 
@@ -1611,11 +1610,11 @@ msgstr "Alla noodi, johon farmarisi on yhteydessä. <0>Katso lisää</0>"
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Lohkoketjun hyväksymä minimiarvo on k=32"
 
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
 msgstr "Noodi ei ole synkronoitu"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Noodi synkronoi. Se lataa lohkoketjua muilta solmuilta"
 
@@ -1661,7 +1660,7 @@ msgstr "Avoimet siirrot ovat kolikoita, jotka olet siirtänyt, mutta joiden siir
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Lähtevien ja saapuvien avointen transaktioiden summa (ei vielä lohkoketjussa). Ei sisällä farmarin palkkioita."
 
-#: src/components/fullNode/FullNode.jsx:186
+#: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
 msgstr "Viimeisimmän lohkon aikaleima."
 
@@ -1677,7 +1676,7 @@ msgstr "Yksityisten avaimiesi hallinoimien Chiojen kokonaissumma lohkoketjussa. 
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Nykyinen saldo + avoin saldo, eli tuleva saldo avointen transaktioiden jälkeen."
 
-#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
 msgstr "Noodi on ajan tasalla ja todentaa lohkoketjuverkkoa"
 
@@ -1723,7 +1722,7 @@ msgstr "Kokonaissaldo"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:204
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
 msgstr "Iteraatioita"
 
@@ -1743,7 +1742,7 @@ msgstr "Plottien Yhteiskoko"
 msgid "Total VDF Iterations"
 msgstr "VDF-iteraatioiden Määrä"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
 msgstr "Iteraatioiden määrä lohkoketjun alusta asti"
 
@@ -1800,7 +1799,7 @@ msgstr "Yksilöllinen tunniste"
 msgid "User Pubkey"
 msgstr "Käyttäjän julkinen avain"
 
-#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF -alaiteraatioita"
 
@@ -1833,13 +1832,13 @@ msgid "Wait for synchronization"
 msgstr "Odota synkroinointia"
 
 #: src/components/wallet/Wallets.tsx:104
-msgid "Waiting for launch"
-msgstr "Odotetaan käynnistystä"
+#~ msgid "Waiting for launch"
+#~ msgstr "Odotetaan käynnistystä"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
-msgid "Waiting for network to launch"
-msgstr "Odotetaan verkon käynnistystä"
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Odotetaan verkon käynnistystä"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1870,7 +1869,7 @@ msgstr "Odotetaan verkon käynnistystä"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
 msgstr "Lompakot"
 
@@ -1945,31 +1944,31 @@ msgid "Your Harvester Network"
 msgstr "Harvesteriverkkosi"
 
 #: src/components/wallet/WalletStatusCard.tsx:31
-#: src/components/wallet/Wallets.tsx:122
+#: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "yhteydet:"
 
 #: src/components/wallet/WalletStatusCard.tsx:25
-#: src/components/wallet/Wallets.tsx:116
+#: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "korkeus:"
 
-#: src/components/wallet/Wallets.tsx:110
+#: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
 msgstr "ei synkronoitu"
 
-#: src/components/wallet/WalletStatusCard.tsx:17
-#: src/components/wallet/Wallets.tsx:99
+#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/Wallets.tsx:98
 msgid "status:"
 msgstr "tila:"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:108
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:105
 msgid "synced"
 msgstr "synkronoitu"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:106
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "synkronoi"
 

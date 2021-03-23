@@ -40,13 +40,6 @@ export const isServiceRunning = (service_name) => {
   return action;
 };
 
-export const getGenesisChallengeStatus = () => {
-  const action = daemonMessage();
-  action.message.command = 'get_status';
-  action.message.data = {};
-  return action;
-};
-
 export const exitDaemon = () => {
   const action = daemonMessage();
   action.message.command = 'exit';

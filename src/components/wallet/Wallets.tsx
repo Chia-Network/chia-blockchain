@@ -125,9 +125,7 @@ export function StatusCard() {
   const connectionCount = useSelector(
     (state: RootState) => state.wallet_state.status.connection_count,
   );
-  const genesis_initialized = useSelector(
-    (state: RootState) => state.wallet_state.status.genesis_initialized,
-  );
+
   return (
     <div style={{ margin: 16 }}>
       <Typography variant="subtitle1">
@@ -140,8 +138,6 @@ export function StatusCard() {
           </Box>
           <Box>
             {(() => {
-              if (!genesis_initialized)
-                return <Trans>Waiting for launch</Trans>;
               if (syncing) return <Trans>syncing</Trans>;
               if (synced) return <Trans>synced</Trans>;
               if (!synced) return <Trans>not synced</Trans>;
