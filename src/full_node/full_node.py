@@ -122,6 +122,7 @@ class FullNode:
                 f" {self.blockchain.get_peak().height}, "
                 f"time taken: {int(time_taken)}s"
             )
+            await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
             pending_tx = await self.mempool_manager.new_peak(self.blockchain.get_peak())
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
