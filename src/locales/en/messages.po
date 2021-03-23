@@ -5,16 +5,16 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
-"Language: en_PT\n"
+"Language: en_NZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
 "PO-Revision-Date: 2021-03-23 22:08\n"
 "Last-Translator: \n"
-"Language-Team: Pirate English\n"
+"Language-Team: English, New Zealand\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
-"X-Crowdin-Language: en-PT\n"
+"X-Crowdin-Language: en-NZ\n"
 "X-Crowdin-File: /main/src/locales/en/messages.po\n"
 "X-Crowdin-File-ID: 94\n"
 
@@ -41,7 +41,7 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr "Yarr"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
