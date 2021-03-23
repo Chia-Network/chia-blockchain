@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Anna Tiedoston Koko"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
 msgid "Close"
 msgstr "Sulje"
 
@@ -859,7 +859,7 @@ msgstr "Viimeisin Tuotettu Lohkokorkeus"
 msgid "Latest Block Challenges"
 msgstr "Viimeisimmät Lohkohaasteet"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:14
 msgid "Loading..."
 msgstr "Lataa..."
 
@@ -1808,7 +1808,7 @@ msgid "View"
 msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:25
 msgid "View Log"
 msgstr "Katso Loki"
 

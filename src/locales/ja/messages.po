@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "耕地容量を選択"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
 msgid "Close"
 msgstr "閉じる"
 
@@ -859,7 +859,7 @@ msgstr "最後に収穫した高さ"
 msgid "Latest Block Challenges"
 msgstr "最近のブロックチャレンジ"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:14
 msgid "Loading..."
 msgstr "読み込み中…"
 
@@ -1808,7 +1808,7 @@ msgid "View"
 msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:25
 msgid "View Log"
 msgstr "ログを表示"
 

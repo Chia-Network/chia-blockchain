@@ -9,10 +9,10 @@ type Props = {
 };
 
 export default function PlotQueueIndicator(props: Props) {
-  const { queueItem: { state } } = props;
+  const { queueItem: { state, progress } } = props;
 
   return (
-    <Indicator color="#979797">
+    <Indicator color="#979797" progress={progress}>
       {state === PlotStatusEnum.RUNNING && (
         <Trans>
           Plotting

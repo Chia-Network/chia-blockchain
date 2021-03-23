@@ -9,6 +9,7 @@ type PlotQueueItem = {
   state: PlotStatus;
   error?: string;
   log?: string;
+  progress?: number;
 };
 
 export default PlotQueueItem;
