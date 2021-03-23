@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
 
@@ -191,6 +192,8 @@ class BlockStore:
         await cursor.close()
         ret: Dict[bytes32, HeaderBlock] = {}
         for row in rows:
+            # Ugly hack, until full_block.get_block_header is rewritten as part of generator runner change
+            await asyncio.sleep(0.001)
             header_hash = bytes.fromhex(row[0])
             full_block: FullBlock = FullBlock.from_bytes(row[1])
             ret[header_hash] = full_block.get_block_header()
