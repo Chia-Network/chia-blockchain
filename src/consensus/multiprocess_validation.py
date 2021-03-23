@@ -182,10 +182,11 @@ async def pre_validate_blocks_multiprocessing(
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict
-        if block_rec.header_hash not in recent_blocks:
             recent_blocks[block_rec.header_hash] = block_rec
-        if block_rec.header_hash not in recent_blocks_compressed:
             recent_blocks_compressed[block_rec.header_hash] = block_rec
+        else:
+            recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
+            recent_blocks_compressed[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
