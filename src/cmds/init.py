@@ -319,90 +319,11 @@ def chia_init(root_path: Path):
         print(f"{root_path} already exists, no migration action taken")
         return -1
 
-    # These are the config keys that will not be migrated, and instead the default is used
-    DO_NOT_MIGRATE_SETTINGS: List[str] = [
-        "full_node.introducer_peer",
-        "wallet.introducer_peer",
-        "wallet.full_node_peer",
-        "full_node.database_path",
-        "wallet.database_path",
-        "full_node.simulator_database_path",
-        "farmer.full_node_peer.port",
-        "timelord.full_node_peer.port",
-        "full_node.port",
-        "harvester.num_threads",
-        "min_mainnet_k_size",
-        "max_inbound_wallet",
-        "max_inbound_farmer",
-        "max_inbound_timelord",
-        "ssl.crt",
-        "ssl.key",
-        "harvester.ssl",
-        "farmer.ssl",
-        "timelord.ssl",
-        "full_node.ssl",
-        "introducer.ssl",
-        "wallet.ssl",
-        "network_genesis_challenges",
-        "full_node.network_genesis_challenges",
-        "harvester.network_genesis_challenges",
-        "farmer.network_genesis_challenges",
-        "wallet.network_genesis_challenges",
-        "introducer.network_genesis_challenges",
-        "pool.network_genesis_challenges",
-        "ui.network_genesis_challenges",
-        "timelord.network_genesis_challenges",
-        "selected_network",
-        "full_node.selected_network",
-        "harvester.selected_network",
-        "farmer.selected_network",
-        "wallet.selected_network",
-        "introducer.selected_network",
-        "pool.selected_network",
-        "ui.selected_network",
-        "timelord.selected_network",
-        "farmer.xch_target_address",
-        "pool.xch_target_address",
-        "ALERTS_URL",
-        "CHIA_ALERTS_PUBKEY",
-        "pool.xch_target_address",
-        "full_node.xch_target_address",
-        "farmer.farmer_target",  # These were buggy values in rc7
-        "farmer.pool_target",  # These were buggy values in rc7
-        "pool.pool_target",  # These were buggy values in rc7
-        "pool.farmer_target",  # These were buggy values in rc7
-    ]
-
-    # These are the files that will be migrated
-    MANIFEST: List[str] = [
-        "config",
-        # "db/blockchain_v27_2.db",
-        # "wallet",
-    ]
-
-    manifest = MANIFEST
-
-    print(f"Checking {os.path.expanduser(Path('~/.chia/testnet'))}")
-    if migrate_from(Path(os.path.expanduser("~/.chia/testnet")), root_path, manifest, DO_NOT_MIGRATE_SETTINGS):
-        check_keys(root_path)
-        return 0
-
-    # Migrate only from rc2 and up. Target addresses are not migrated.
-    for version_number in range(5, 2, -1):
-        old_path = Path(os.path.expanduser("~/.chia/1.0rc%s" % version_number))
-        print(f"Checking {old_path}")
-        # This is reached if the user has updated the application, and therefore a new configuration
-        # folder must be used. First we migrate the config fies, and then we migrate the private keys.
-        r = migrate_from(old_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)
-        if r:
-            check_keys(root_path)
-            break
-    else:
-        create_default_chia_config(root_path)
-        create_all_ssl(root_path)
-        check_keys(root_path)
-        print("")
-        print("To see your keys, run 'chia keys show'")
+    create_default_chia_config(root_path)
+    create_all_ssl(root_path)
+    check_keys(root_path)
+    print("")
+    print("To see your keys, run 'chia keys show'")
 
     return 0
 
