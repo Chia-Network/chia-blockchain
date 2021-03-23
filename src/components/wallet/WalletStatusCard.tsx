@@ -26,10 +26,9 @@ export default function WalletStatusCard() {
           </Box>
           <Box>
             {syncing ? (
-                <Trans>syncing</Trans>
-              ) : (
-                <Trans>synced</Trans>
-              )
+              <Trans>syncing</Trans>
+            ) : (
+              <Trans>synced</Trans>
             )}
           </Box>
         </Box>
