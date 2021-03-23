@@ -8,15 +8,15 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-16 10:16\n"
+"PO-Revision-Date: 2021-03-23 19:04\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: sk\n"
-"X-Crowdin-File: /dev/src/locales/en/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /main/src/locales/en/messages.po\n"
+"X-Crowdin-File-ID: 94\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -69,7 +69,7 @@ msgstr "Pridať adresár polí"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr ""
+msgstr "Pridať pole do fronty"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
@@ -137,7 +137,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr ""
+msgstr "Naozaj chcete použiť k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -156,7 +156,7 @@ msgstr "Zostatok"
 
 #: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Základná výška odmeny farmára"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -265,7 +265,7 @@ msgstr ""
 
 #: src/electron-starter.js:366
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
@@ -323,7 +323,7 @@ msgstr "Možnosti farebných mincí"
 
 #: src/electron-starter.js:138
 msgid "Confirm"
-msgstr ""
+msgstr "Potvrdiť"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -402,7 +402,7 @@ msgstr "Vytvoriť"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Vytvoriť DID peňaženku"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -484,7 +484,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID peňaženka"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -533,11 +533,11 @@ msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uisti
 
 #: src/electron-starter.js:251
 msgid "Developer"
-msgstr ""
+msgstr "Vývojár"
 
 #: src/electron-starter.js:254
 msgid "Developer Tools"
-msgstr ""
+msgstr "Nástroje pre vývojárov"
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:178
@@ -584,7 +584,7 @@ msgstr ""
 
 #: src/electron-starter.js:210
 msgid "Edit"
-msgstr ""
+msgstr "Upraviť"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -697,7 +697,7 @@ msgstr "Množstvo odmeny"
 #: src/electron-starter.js:202
 #: src/electron-starter.js:409
 msgid "File"
-msgstr ""
+msgstr "Súbor"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -716,11 +716,11 @@ msgstr "Dokončené"
 
 #: src/electron-starter.js:354
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Sledujte na twitteri"
 
 #: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Často kladené otázky (FAQ)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
@@ -765,7 +765,7 @@ msgstr "Poradie"
 msgid "Help"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
 msgid "Help translate"
 msgstr "Pomôcť s prekladom"
 
@@ -943,7 +943,7 @@ msgstr "Názov siete"
 
 #: src/components/fullNode/FullNode.jsx:106
 #~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr ""
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1833,12 +1833,12 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
-#~ msgstr ""
+#~ msgstr "Waiting for launch"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
 #~ msgid "Waiting for network to launch"
-#~ msgstr ""
+#~ msgstr "Waiting for network to launch"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"

@@ -8,15 +8,15 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-16 14:52\n"
+"PO-Revision-Date: 2021-03-23 19:04\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: fi\n"
-"X-Crowdin-File: /dev/src/locales/en/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /main/src/locales/en/messages.po\n"
+"X-Crowdin-File-ID: 94\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -37,7 +37,7 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. F
 #: src/electron-starter.js:369
 #: src/electron-starter.js:462
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Chia Lohkoketjusta"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -129,7 +129,7 @@ msgstr "Katkaise yhteys?"
 
 #: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "Haluatko lopettaa? Käyttöliittymäplottaus ja farmi sammutetaan."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -261,15 +261,15 @@ msgstr "Haastetiiviste"
 
 #: src/electron-starter.js:348
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Keskustele KeyBasessa"
 
 #: src/electron-starter.js:366
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia Wiki"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -323,7 +323,7 @@ msgstr "Värikolikon Valinnat"
 
 #: src/electron-starter.js:138
 msgid "Confirm"
-msgstr ""
+msgstr "Vahvista"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -374,7 +374,7 @@ msgstr "Yhteydet"
 
 #: src/electron-starter.js:329
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Anna panoksesi GitHubissa"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -533,11 +533,11 @@ msgstr "Avaimen poisto poistaa sen tietokoneeltasi. Varmista että sinulla on va
 
 #: src/electron-starter.js:251
 msgid "Developer"
-msgstr ""
+msgstr "Kehittäjä"
 
 #: src/electron-starter.js:254
 msgid "Developer Tools"
-msgstr ""
+msgstr "Kehitystyökalut"
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:178
@@ -584,7 +584,7 @@ msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 
 #: src/electron-starter.js:210
 msgid "Edit"
-msgstr ""
+msgstr "Muokkaa"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -697,7 +697,7 @@ msgstr "Palkkiosumma"
 #: src/electron-starter.js:202
 #: src/electron-starter.js:409
 msgid "File"
-msgstr ""
+msgstr "Tiedosto"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -716,11 +716,11 @@ msgstr "Valmis"
 
 #: src/electron-starter.js:354
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Seuraa Twitterissä"
 
 #: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Usein Kysytyt Kysymykset"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
@@ -733,7 +733,7 @@ msgstr "Verkkonoodin Tila"
 
 #: src/electron-starter.js:279
 msgid "Full Screen"
-msgstr ""
+msgstr "Kokoruutu"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -763,9 +763,9 @@ msgstr "Lohkokorkeus"
 
 #: src/electron-starter.js:301
 msgid "Help"
-msgstr ""
+msgstr "Apuja"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
 msgid "Help translate"
 msgstr "Auta kääntämisessä"
 
@@ -943,7 +943,7 @@ msgstr "Verkon Nimi"
 
 #: src/components/fullNode/FullNode.jsx:106
 #~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr "Verkkoa ei ole vielä käynnistetty. Noodi käynnistyy automaattisesti kun verkko käynnistetään."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1344,7 +1344,7 @@ msgstr "Päivitä Plot-tiedostot"
 
 #: src/electron-starter.js:321
 msgid "Release Notes"
-msgstr ""
+msgstr "Version Muutokset"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1352,7 +1352,7 @@ msgstr "Nimeä Uudelleen"
 
 #: src/electron-starter.js:340
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Raportoi Ongelma..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1477,7 +1477,7 @@ msgstr "Kirjaudu"
 
 #: src/electron-starter.js:423
 msgid "Speech"
-msgstr ""
+msgstr "Puhe"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1805,7 +1805,7 @@ msgstr "VDF -alaiteraatioita"
 
 #: src/electron-starter.js:242
 msgid "View"
-msgstr ""
+msgstr "Näkymä"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:25
@@ -1833,12 +1833,12 @@ msgstr "Odota synkroinointia"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
-#~ msgstr "Odotetaan käynnistystä"
+#~ msgstr "Waiting for launch"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
 #~ msgid "Waiting for network to launch"
-#~ msgstr "Odotetaan verkon käynnistystä"
+#~ msgstr "Waiting for network to launch"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1907,7 +1907,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 
 #: src/electron-starter.js:287
 msgid "Window"
-msgstr ""
+msgstr "Ikkuna"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"

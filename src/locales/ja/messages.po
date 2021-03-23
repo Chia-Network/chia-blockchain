@@ -8,15 +8,15 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-17 03:01\n"
+"PO-Revision-Date: 2021-03-23 19:05\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: ja\n"
-"X-Crowdin-File: /dev/src/locales/en/messages.po\n"
-"X-Crowdin-File-ID: 72\n"
+"X-Crowdin-File: /main/src/locales/en/messages.po\n"
+"X-Crowdin-File-ID: 94\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -37,7 +37,7 @@ msgstr "収穫機は耕地が実際に保存されているデバイス上に走
 #: src/electron-starter.js:369
 #: src/electron-starter.js:462
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "チアブロックチェーンについて"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -129,7 +129,7 @@ msgstr "本当に接続を解除しますか？"
 
 #: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "本当に終了しますか？ GUI 上の耕地作り及び耕作も停止します。"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -261,15 +261,15 @@ msgstr "チャレンジのハッシュ値"
 
 #: src/electron-starter.js:348
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Keybase でチャット"
 
 #: src/electron-starter.js:366
 msgid "Chia"
-msgstr ""
+msgstr "チア"
 
 #: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "チアブロックチェーンの Wiki"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -323,7 +323,7 @@ msgstr "カラードコインのオプション"
 
 #: src/electron-starter.js:138
 msgid "Confirm"
-msgstr ""
+msgstr "了承"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -374,7 +374,7 @@ msgstr "接続数"
 
 #: src/electron-starter.js:329
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "GitHub で開発協力"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -533,11 +533,11 @@ msgstr "鍵を削除すると復元することができませんので、必ず
 
 #: src/electron-starter.js:251
 msgid "Developer"
-msgstr ""
+msgstr "開発者"
 
 #: src/electron-starter.js:254
 msgid "Developer Tools"
-msgstr ""
+msgstr "開発者向けツール"
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:178
@@ -584,7 +584,7 @@ msgstr "バックアップファイルをここにドラッグ&ドロップ"
 
 #: src/electron-starter.js:210
 msgid "Edit"
-msgstr ""
+msgstr "編集"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -697,7 +697,7 @@ msgstr "全手数料"
 #: src/electron-starter.js:202
 #: src/electron-starter.js:409
 msgid "File"
-msgstr ""
+msgstr "ファイル"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -716,11 +716,11 @@ msgstr "完成"
 
 #: src/electron-starter.js:354
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Twitter でフォロー"
 
 #: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "よくある質問"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
@@ -733,7 +733,7 @@ msgstr "フルノードの状態"
 
 #: src/electron-starter.js:279
 msgid "Full Screen"
-msgstr ""
+msgstr "全画面表示"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -763,9 +763,9 @@ msgstr "高さ"
 
 #: src/electron-starter.js:301
 msgid "Help"
-msgstr ""
+msgstr "ヘルプ"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
 msgid "Help translate"
 msgstr "翻訳に協力"
 
@@ -943,7 +943,7 @@ msgstr "ネットワーク名"
 
 #: src/components/fullNode/FullNode.jsx:106
 #~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr "ネットワークがまだ開始していません。開始したらフルノードが自動的に起動します。"
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1344,7 +1344,7 @@ msgstr "耕地一覧を更新"
 
 #: src/electron-starter.js:321
 msgid "Release Notes"
-msgstr ""
+msgstr "リリースノート"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1352,7 +1352,7 @@ msgstr "名称変更"
 
 #: src/electron-starter.js:340
 msgid "Report an Issue..."
-msgstr ""
+msgstr "問題を報告"
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1477,7 +1477,7 @@ msgstr "ログイン"
 
 #: src/electron-starter.js:423
 msgid "Speech"
-msgstr ""
+msgstr "スピーチ"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1805,7 +1805,7 @@ msgstr "VDF サブスロット評価回数"
 
 #: src/electron-starter.js:242
 msgid "View"
-msgstr ""
+msgstr "表示"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:25
@@ -1833,12 +1833,12 @@ msgstr "同期待ち"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
-#~ msgstr "開始待ち"
+#~ msgstr "Waiting for launch"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
 #~ msgid "Waiting for network to launch"
-#~ msgstr "ネットワーク開始待ち"
+#~ msgstr "Waiting for network to launch"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1907,7 +1907,7 @@ msgstr "管理者からセットアップ用の情報パケットを受け取っ
 
 #: src/electron-starter.js:287
 msgid "Window"
-msgstr ""
+msgstr "ウィンドウ"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
