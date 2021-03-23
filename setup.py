@@ -95,6 +95,7 @@ kwargs = dict(
         ]
     },
     package_data={
+        "src": ["pyinstaller.spec"],
         "src.wallet.puzzles": ["*.clvm", "*.clvm.hex"],
         "src.util": ["initial-*.yaml", "english.txt"],
         "src.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
