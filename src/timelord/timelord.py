@@ -30,7 +30,6 @@ from src.types.blockchain_format.slots import (
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint8, uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -88,20 +87,6 @@ class Timelord:
         self.sanitizer_mode = self.config["sanitizer_mode"]
         self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
 
-    async def delayed_start(self):
-        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants, "timelord")
-        self.config = config
-        self.constants = constants
-        await self.regular_start()
-
-    async def regular_start(self):
-        self.last_state: LastState = LastState(self.constants)
-        if not self.sanitizer_mode:
-            self.main_loop = asyncio.create_task(self._manage_chains())
-        else:
-            self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
-        log.info("Started timelord.")
-
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
@@ -109,10 +94,12 @@ class Timelord:
             self.config["vdf_server"]["host"],
             self.config["vdf_server"]["port"],
         )
-        if self.constants.GENESIS_CHALLENGE is None:
-            asyncio.create_task(self.delayed_start())
+        self.last_state: LastState = LastState(self.constants)
+        if not self.sanitizer_mode:
+            self.main_loop = asyncio.create_task(self._manage_chains())
         else:
-            await self.regular_start()
+            self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
+        log.info("Started timelord.")
 
     def _close(self):
         self._shut_down = True
