@@ -1943,12 +1943,12 @@ msgstr "Din fullständiga nods anslutning"
 msgid "Your Harvester Network"
 msgstr "Ditt nätverk av skördare"
 
-#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "anslutningar:"
 
-#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "höjd:"

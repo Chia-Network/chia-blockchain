@@ -1943,12 +1943,12 @@ msgstr "Conexiunea nodului dvs"
 msgid "Your Harvester Network"
 msgstr "Reteaua dvs. de 'Harvesteri'"
 
-#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "conexiuni:"
 
-#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "inaltimea:"

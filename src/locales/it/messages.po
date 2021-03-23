@@ -1943,12 +1943,12 @@ msgstr "La tua Connessione del Full Node"
 msgid "Your Harvester Network"
 msgstr "La rete del tuo Harvester"
 
-#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "connessioni:"
 
-#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "altezza:"
