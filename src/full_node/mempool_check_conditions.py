@@ -101,31 +101,31 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
     return None
 
 
- def mempool_assert_my_parent_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
-     """
-     Checks if coin's parent ID matches the ID from the condition
-     """
-     if unspent.coin.parent_coin_info != condition.vars[0]:
-         return Err.ASSERT_MY_PARENT_ID_FAILED
-     return None
+def mempool_assert_my_parent_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+    """
+    Checks if coin's parent ID matches the ID from the condition
+    """
+    if unspent.coin.parent_coin_info != condition.vars[0]:
+        return Err.ASSERT_MY_PARENT_ID_FAILED
+    return None
 
 
- def mempool_assert_my_puzzlehash(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
-     """
-     Checks if coin's puzzlehash matches the puzzlehash from the condition
-     """
-     if unspent.coin.puzzle_hash != condition.vars[0]:
-         return Err.ASSERT_MY_PUZZLEHASH_FAILED
-     return None
+def mempool_assert_my_puzzlehash(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+    """
+    Checks if coin's puzzlehash matches the puzzlehash from the condition
+    """
+    if unspent.coin.puzzle_hash != condition.vars[0]:
+        return Err.ASSERT_MY_PUZZLEHASH_FAILED
+    return None
 
 
- def mempool_assert_my_amount(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
-     """
-     Checks if coin's amount matches the amount from the condition
-     """
-     if unspent.coin.amount != condition.vars[0]:
-         return Err.ASSERT_MY_AMOUNT_FAILED
-     return None
+def mempool_assert_my_amount(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+    """
+    Checks if coin's amount matches the amount from the condition
+    """
+    if unspent.coin.amount != int_from_bytes(condition.vars[0]):
+        return Err.ASSERT_MY_AMOUNT_FAILED
+    return None
 
 
 def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
