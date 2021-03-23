@@ -47,8 +47,7 @@ def service_kwargs_for_full_node(
         on_connect_callback=crawler.on_connect,
         network_id=network_id,
     )
-    if config["start_rpc_server"]:
-        kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
+
     return kwargs
 
 
