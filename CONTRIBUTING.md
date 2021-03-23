@@ -30,12 +30,12 @@ In the event an emergency fix is required for the release version of Chia, membe
 
 ## Branching Strategy
 
-[Branching Strategy Diagram](https://drive.google.com/file/d/1NF2zdQOfCGlcRu6qKMlV_NlO4uqnIvoE/view?usp=sharing)
+[Branching Strategy Diagram](https://drive.google.com/file/d/1rNxUwjzidt8LtpSh2yUgEr-PWsP1hxg9/view?usp=sharing)
 
 1. All changes go into the main branch.
 2. Main is stable at all times, all tests pass.
 3. Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
-4. The public testnet is running the current release branch i.e `1.0.0`.
+4. The public testnet is running the current release branch i.e `v1.0.x`.
 5. The `main` branch will have a long running `beta testnet` to allow previewing of changes.
 6. Pull Request events may require a `beta testnet` review environment, at the moment this is at the discretion of the reviewer.
 7. Hotfixes land in the release branch they fix, and all later versions. (this will be achieved by regularly merging from 1.0.x -> main).
@@ -87,11 +87,11 @@ workflow.
 ## Testnets and review environments
 
 With the launch of `1.0.0` we will begin running an official `testnet`.  
-Prior to the release of `1.1.0` there will be two running test nets. `1.0` and `1.1b`. The `1.1b` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
+Prior to the release of `1.1.0` there will be two running testnets. `testnet` and `transaction-beta-testnet`. The `1.1b` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the current release branch.
 
 Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.
-Changes that impact the block chain could require a review environment before acceptance into `main`. This is at the discretion of the reviewer.
+Changes that impact the blockchain could require a review environment before acceptance into `main`. This is at the discretion of the reviewer.
 Chia organization members have been granted CI access to deploy `beta testnets`.
 If you are not a Chia organization member, you can enquire about deploying a `beta testnet` in the public dev keybase channel.
 
