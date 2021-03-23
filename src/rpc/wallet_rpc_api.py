@@ -257,7 +257,10 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def get_sync_status(self, request: Dict):
-        return {"synced": False, "syncing": False, "genesis_initialized": True}
+        assert self.service.wallet_state_manager is not None
+        syncing = self.service.wallet_state_manager.sync_mode
+        synced = await self.service.wallet_state_manager.synced()
+        return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
