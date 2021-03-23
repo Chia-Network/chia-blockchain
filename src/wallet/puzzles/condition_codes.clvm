@@ -17,4 +17,8 @@
     (defconstant ASSERT_HEIGHT_NOW_EXCEEDS 58)
 
     (defconstant RESERVE_FEE 59)
+
+    (defconstant ASSERT_MY_PARENT_ID 60)
+    (defconstant ASSERT_MY_PUZZLEHASH 61)
+    (defconstant ASSERT_MY_AMOUNT 62)
 )
