@@ -1,0 +1,68 @@
+name: Linux ARM64 installer on Python 3.8
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+        - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: Linux ARM64 installer on Python 3.8
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: [3.8]
+        os: [ARM64]
+
+    steps:
+    - name: Cancel previous runs on the same branch
+      if: ${{ github.ref != 'refs/heads/dev' }}
+      uses: styfle/cancel-workflow-action@0.8.0
+      with:
+        access_token: ${{ github.token }}
+
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Build ARM64 Installer
+      run: |
+        podman run --rm=true \
+          -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
+          quay.io/pypa/manylinux2014_aarch64 \
+          bash -exc '\
+            echo $PATH && \
+            yum install -y epel-release && \
+            curl -sL https://rpm.nodesource.com/setup_12.x | bash - && \
+            yum clean all && yum makecache fast && \
+            yum install -y nodejs fakeroot dpkg && \
+            rm -rf venv && \
+            export PATH=/opt/python/cp38-cp38/bin/:$PATH && \
+            /opt/python/cp38-cp38/bin/python -m venv venv && \
+            if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
+            . ./activate && \
+            sh install.sh && \
+            ldd --version && \
+            cd build_scripts && \
+            sh build_linux.sh arm64 \
+          '
+
+    - name: Upload Linux artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Linux-ARM-64-Installer
+        path: ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Clean up on self hosted runner
+      run: |
+        sudo rm -rf build_scrpits/final_installer

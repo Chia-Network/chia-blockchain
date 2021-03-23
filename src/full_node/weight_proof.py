@@ -376,9 +376,7 @@ class WeightProofHandler:
         tmp_sub_slots_data: List[SubSlotData] = []
         while not blocks[curr.header_hash].is_challenge_block(self.constants):
             if curr.first_in_sub_slot:
-                # if not blue boxed
-                if not blue_boxed_end_of_slot(curr.finished_sub_slots[0]):
-                    sub_slots_data.extend(tmp_sub_slots_data)
+                sub_slots_data.extend(tmp_sub_slots_data)
                 # add collected vdfs
                 for idx, sub_slot in enumerate(curr.finished_sub_slots):
                     prev_rec = blocks[curr.prev_header_hash]
@@ -955,6 +953,19 @@ def _validate_sub_slot_data(
             log.error(f"failed cc slot end validation  {sub_slot_data.cc_slot_end_info}")
             return False
     else:
+        # find end of slot
+        idx = sub_slot_idx
+        while idx < len(sub_slots) - 1:
+            curr_slot = sub_slots[idx]
+            if curr_slot.is_end_of_slot():
+                # dont validate intermediate vdfs if slot is blue boxed
+                assert curr_slot.cc_slot_end
+                if curr_slot.cc_slot_end.normalized_to_identity is True:
+                    log.debug(f"skip intermediate vdfs slot {sub_slot_idx}")
+                    return True
+                else:
+                    break
+            idx += 1
         if sub_slot_data.icc_infusion_point is not None and sub_slot_data.icc_ip_vdf_info is not None:
             input = ClassgroupElement.get_default_element()
             if not prev_ssd.is_challenge() and prev_ssd.icc_ip_vdf_info is not None:

@@ -1,6 +1,10 @@
 import logging
 
-import miniupnpc
+try:
+    import miniupnpc
+except ImportError:
+    pass
+
 
 log = logging.getLogger(__name__)
 

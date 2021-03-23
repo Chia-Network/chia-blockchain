@@ -888,10 +888,13 @@ def validate_finished_header_block(
             log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_difficulty}")
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
+        # 27b. Check genesis block height, weight, and prev block hash
         if header_block.height != uint32(0):
             return None, ValidationError(Err.INVALID_HEIGHT)
         if header_block.weight != constants.DIFFICULTY_STARTING:
             return None, ValidationError(Err.INVALID_WEIGHT)
+        if header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
+            return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
     if genesis_block:

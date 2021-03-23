@@ -6,14 +6,21 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
+from src.consensus.blockchain import Blockchain
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from src.consensus.full_block_to_block_record import block_to_block_record
 from src.full_node.block_store import BlockStore
+from src.full_node.coin_store import CoinStore
+from src.server.start_full_node import SERVICE_NAME
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.util.block_cache import BlockCache
 from src.util.block_tools import test_constants
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
 from tests.setup_nodes import bt
 
 try:
@@ -244,7 +251,60 @@ class TestWeightProof:
         )
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
-            10, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=4,
+            normalized_to_identity_cc_eos=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=4,
+            normalized_to_identity_icc_eos=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=4,
+            normalized_to_identity_cc_ip=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            10,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+        )
+
+        blocks: List[FullBlock] = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=4,
+            normalized_to_identity_cc_sp=True,
         )
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
@@ -321,7 +381,9 @@ class TestWeightProof:
             100,
             block_list_input=default_10000_blocks_compact,
             seed=b"asdfghjkl",
-            normalized_to_identity=False,
+            normalized_to_identity_cc_ip=True,
+            normalized_to_identity_cc_eos=True,
+            normalized_to_identity_icc_eos=True,
         )
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
