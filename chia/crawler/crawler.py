@@ -67,17 +67,19 @@ class Crawler:
         self.crawl_store = await CrawlStore.create(self.connection)
         while True:
             print("Started")
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             async def introducer_action(peer: ws.WSChiaConnection):
                 # Ask introducer for peers
                 response = await peer.request_peers_introducer(introducer_protocol.RequestPeersIntroducer())
                 # Add peers to DB
                 if isinstance(response, introducer_protocol.RespondPeersIntroducer):
+                    self.log.info(f"Introduced sent us {len(response.peer_list)} peers")
                     for response_peer in response.peer_list:
                         current = await self.crawl_store.get_peer_by_ip(response_peer.host)
                         if current is None:
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
-                                                  False, 0, 0, 0, 0)
+                                                  False, 0, 0, 0, utc_timestamp())
+                            # self.log.info(f"Adding {new_peer.ip_address}")
                             await self.crawl_store.add_peer(new_peer)
                 # disconnect
                 await peer.close()
@@ -88,29 +90,63 @@ class Crawler:
 
             async def peer_action(peer: ws.WSChiaConnection):
                 # Ask peer for peers
-                response = await peer.request_peers(full_node_protocol.RequestPeers())
+                response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=3)
                 # Add peers to DB
                 if isinstance(response, full_node_protocol.RespondPeers):
+                    self.log.info(f"{peer.peer_host} sent us {len(response.peer_list)}")
                     for response_peer in response.peer_list:
                         current = await self.crawl_store.get_peer_by_ip(response_peer.host)
                         if current is None:
-                            new_peer = PeerRecord(peer.peer_node_id.hex(), response_peer.peer.host, response_peer.port,
-                                                  False, 0, 0, 0, 0)
-                            self.crawl_store.add_peer(new_peer)
+                            new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
+                                                  False, 0, 0, 0, utc_timestamp())
+                            # self.log.info(f"Adding {new_peer.ip_address}")
+                            await self.crawl_store.add_peer(new_peer)
 
                 await peer.close()
 
             self.log.info(f"Current not_connected_peers count = {len(not_connected_peers)}")
             self.log.info(f"Current connected_peers count = {len(connected_peers)}")
 
-            for peer in not_connected_peers:
-                now = utc_timestamp()
-                if peer.try_count == 0:
-                    connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
-                elif peer.try_count > 0 and peer.try_count < 24 and peer.last_try_timestamp - 3600 > now:
-                    connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
-                elif peer.last_try_timestamp - 3600 * 24 > now:
-                    connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+            tasks = []
+
+            async def connect_task(self, peer):
+                try:
+                    now = utc_timestamp()
+                    connected = False
+                    tried = False
+                    if peer.try_count == 0:
+                        connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+                    elif peer.try_count > 0 and peer.try_count < 24 and peer.last_try_timestamp - 3600 > now:
+                        connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+                    elif peer.last_try_timestamp - 3600 * 24 > now:
+                        connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+                    if connected:
+                        await self.crawl_store.peer_connected(peer)
+                    elif tried:
+                        await self.crawl_store.peer_tried_to_connect(peer)
+                except Exception as e:
+                    self.log.info(f"Error: {e}")
+
+            start = 0
+
+            def batch(iterable, n=1):
+                l = len(iterable)
+                for ndx in range(0, l, n):
+                    yield iterable[ndx:min(ndx + n, l)]
+
+            batch_count = 0
+            for peers in batch(not_connected_peers,100):
+                self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
+                batch_count += 1
+                tasks = []
+                for peer in peers:
+                    task = asyncio.create_task(connect_task(self, peer))
+                    tasks.append(task)
+                await asyncio.wait(tasks)
+                stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
+                stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
+                self.log.info(f"Current not_connected_peers count = {len(stat_not_connected_peers)}")
+                self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
 
             self.server.banned_peers = {}
 

@@ -1,3 +1,4 @@
+import dataclasses
 import time
 from datetime import timedelta
 from datetime import datetime
@@ -17,7 +18,7 @@ def utc_to_eastern(date: datetime):
 def utc_timestamp():
     now = datetime.utcnow()
     now = now.replace(tzinfo=timezone("UTC"))
-    return now.timestamp()
+    return int(now.timestamp())
 
 def utc_timestamp_to_eastern(timestamp: float):
     date = datetime.fromtimestamp(timestamp, tz=timezone("UTC"))
@@ -74,7 +75,7 @@ class CrawlStore:
         return self
 
     async def add_peer(self, peer_record: PeerRecord):
-        added_timestamp = int(time.time())
+        added_timestamp = utc_timestamp()
         cursor = await self.crawl_db.execute(
             "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -89,6 +90,21 @@ class CrawlStore:
             ),
         )
         await cursor.close()
+
+    async def delete_by_ip(self, ip):
+        # Delete from storage
+        c1 = await self.crawl_db.execute("DELETE FROM peer_records WHERE ip_address=?", (ip,))
+        await c1.close()
+
+    async def peer_tried_to_connect(self, peer: PeerRecord):
+        now = utc_timestamp()
+        replaced = dataclasses.replace(peer, try_count=peer.try_count+1, last_try_timestamp=now)
+        await self.add_peer(replaced)
+
+    async def peer_connected(self, peer: PeerRecord):
+        now = utc_timestamp()
+        replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
+        await self.add_peer(replaced)
 
     async def get_peers_today(self) -> List[PeerRecord]:
         now = utc_timestamp()
@@ -110,7 +126,7 @@ class CrawlStore:
 
     async def get_peer_by_ip(self, ip_address) -> Optional[PeerRecord]:
         cursor = await self.crawl_db.execute(
-            f"SELECT * from peer_records WHERE ip_address>?",
+            f"SELECT * from peer_records WHERE ip_address=?",
             (ip_address,),
         )
         row = await cursor.fetchone()
@@ -122,14 +138,14 @@ class CrawlStore:
             return None
 
     async def get_peers_today_not_connected(self):
-        now = utc_timestamp()
-        start = utc_timestamp_to_eastern(now)
-        start = start - timedelta(days=1)
-        start = start.replace(hour=23, minute=59, second=59)
-        start_timestamp = int(start.timestamp())
+        # now = utc_timestamp()
+        # start = utc_timestamp_to_eastern(now)
+        # start = start - timedelta(days=1)
+        # start = start.replace(hour=23, minute=59, second=59)
+        # start_timestamp = int(start.timestamp())
         cursor = await self.crawl_db.execute(
-            f"SELECT * from peer_records WHERE added_timestamp>? and connected=?",
-            (start_timestamp,0,),
+            f"SELECT * from peer_records WHERE connected=?",
+            (0,),
         )
         rows = await cursor.fetchall()
         peers = []
@@ -146,7 +162,7 @@ class CrawlStore:
         start = start.replace(hour=23, minute=59, second=59)
         start_timestamp = int(start.timestamp())
         cursor = await self.crawl_db.execute(
-            f"SELECT * from peer_records WHERE added_timestamp>? and connected=?",
+            f"SELECT * from peer_records WHERE connected_timestamp>? and connected=?",
             (start_timestamp,1,),
         )
         rows = await cursor.fetchall()
