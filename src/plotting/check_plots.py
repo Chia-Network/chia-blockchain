@@ -96,7 +96,6 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"\tFarmer public key: {farmer_public_key}")
         log.info(f"\tLocal sk: {local_sk}")
         total_proofs = 0
-        caught_exception: bool = False
         for i in range(num_start, num_end):
             challenge = std_hash(i.to_bytes(32, "big"))
             # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
@@ -105,21 +104,19 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
                         proof = pr.get_full_proof(challenge, index)
-                        total_proofs += 1
                         ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
-                        assert quality_str == ver_quality_str
+                        if quality_str == ver_quality_str:
+                            total_proofs += 1
+                        else:
+                            log.debug(f"error in proving/verifying for plot {plot_path}")
                     except AssertionError as e:
                         log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
-                        caught_exception = True
             except BaseException as e:
                 if isinstance(e, KeyboardInterrupt):
                     log.warning("Interrupted, closing")
                     return
-                log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
-                caught_exception = True
-            if caught_exception is True:
-                break
-        if total_proofs > 0 and caught_exception is False:
+                log.debug(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
+        if total_proofs > 0:
             log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
