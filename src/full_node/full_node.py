@@ -136,6 +136,7 @@ class FullNode:
                 self.broadcast_uncompact_blocks(
                     self.config["send_uncompact_interval"],
                     self.config["target_uncompact_proofs"],
+                    self.config["sanitize_weight_proof_only"],
                 )
             )
         self.initialized = True
@@ -1606,7 +1607,9 @@ class FullNode:
         if self.server is not None:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-    async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_proofs: int):
+    async def broadcast_uncompact_blocks(
+        self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
+    ):
         min_height: Optional[int] = 0
         try:
             while not self._shut_down:
@@ -1666,6 +1669,18 @@ class FullNode:
                                         uint8(CompressibleVDFField.ICC_EOS_VDF),
                                     )
                                 )
+                        # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
+                        # unless this is a transaction block.
+                        if sanitize_weight_proof_only and not header.is_transaction_block:
+                            # Calculates 'new_min_height' as described below.
+                            if (
+                                prev_broadcast_list_len == 0
+                                and len(broadcast_list) > 0
+                                and h <= max(0, max_height - 1000)
+                            ):
+                                new_min_height = header.height
+                            # Skip calculations for CC_SP_VDF and CC_IP_VDF.
+                            continue
                         if header.challenge_chain_sp_proof is not None and (
                             header.challenge_chain_sp_proof.witness_type > 0
                             or not header.challenge_chain_sp_proof.normalized_to_identity

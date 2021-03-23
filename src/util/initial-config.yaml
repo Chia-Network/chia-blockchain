@@ -220,6 +220,9 @@ full_node:
   send_uncompact_interval: 0
   # At every 'send_uncompact_interval' seconds, send blueboxes 'target_uncompact_proofs' proofs to be normalized.
   target_uncompact_proofs: 100
+  # Setting this flag as True, blueboxes will sanitize only data needed in weight proof calculation, as opposed to whole blocks.
+  # Default is set to False, as the network needs only one or two blueboxes like this.
+  sanitize_weight_proof_only: False
 
   farmer_peer:
       host: *self_hostname
