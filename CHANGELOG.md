@@ -10,7 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- There is now a simple progress bar on the GUI plotter.
+- There is now a simple progress bar on the GUI Plot page and when you view the log from the three dots on the right.
 - Users must now explicitly set the `--show-mnemonic-seed` flag to see their private keys when running `chia keys show`.
 - We are now building Linux GUI installers. These should be considered beta quality for now.
 - Translations now available for German, Traditional Chinese, and Danish. Thanks to @Dravenex, @MaestroOnICe, @loudsyncro, @loppefaaret, @thirteenthd, @wong8888, @N418, and @swjz for all the translation help. You to can translate at our [Crowdin project](https://crowdin.com/project/chia-blockchain/).
@@ -18,6 +18,8 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - The mainnet genesis is now in the initial config.yaml and the green flag components have been removed.
+- Our release process and branching strategy has changed. CONTRIBUTING.md will be updated in the main branch soon with details.
+- This mainnet release does not migrate previous testnet configuration files.
 
 ### Fixed
 
