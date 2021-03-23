@@ -76,6 +76,7 @@ async def setup_full_node(
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
     config["peer_connect_interval"] = 50
+    config["sanitize_weight_proof_only"] = True
     if introducer_port is not None:
         config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port
