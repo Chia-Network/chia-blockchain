@@ -721,6 +721,7 @@ class FullNode:
                 )
                 return False, advanced_peak, fork_height
 
+        for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
