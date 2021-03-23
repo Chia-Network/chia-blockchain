@@ -125,17 +125,13 @@ class WalletStateManager:
         self.user_settings = await UserSettings.create(self.basic_store)
         self.block_store = await WalletBlockStore.create(self.db_connection)
 
-        if self.constants.GENESIS_CHALLENGE is not None:
-            self.blockchain = await WalletBlockchain.create(
-                self.block_store,
-                self.constants,
-                self.coins_of_interest_received,
-                self.reorg_rollback,
-            )
-            self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
-        else:
-            self.blockchain = None
-            self.weight_proof_handler = None
+        self.blockchain = await WalletBlockchain.create(
+            self.block_store,
+            self.constants,
+            self.coins_of_interest_received,
+            self.reorg_rollback,
+        )
+        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
@@ -177,17 +173,6 @@ class WalletStateManager:
                 await self.create_more_puzzle_hashes(from_zero=True)
 
         return self
-
-    async def initialize_constants(self, config, constants):
-        self.config = config
-        self.constants = constants
-        self.blockchain = await WalletBlockchain.create(
-            self.block_store,
-            self.constants,
-            self.coins_of_interest_received,
-            self.reorg_rollback,
-        )
-        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
     @property
     def peak(self) -> Optional[BlockRecord]:
