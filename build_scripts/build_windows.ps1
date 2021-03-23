@@ -66,7 +66,7 @@ pip install --no-index --find-links=.\win_build\ chia-blockchain
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
-pyinstaller --log-level INFO daemon_windows.spec
+pyinstaller --log-level INFO daemon.spec
 
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
