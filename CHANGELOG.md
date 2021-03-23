@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.0.1 Chia Blockchain 2021-03-23
+
+### Added
+
+- There is now a simple progress bar on the GUI Plot page and when you view the log from the three dots on the right.
+- Users must now explicitly set the `--show-mnemonic-seed` flag to see their private keys when running `chia keys show`.
+- We are now building Linux GUI installers. These should be considered beta quality for now.
+- Translations now available for German, Traditional Chinese, and Danish. Thanks to @Dravenex, @MaestroOnICe, @loudsyncro, @loppefaaret, @thirteenthd, @wong8888, @N418, and @swjz for all the translation help. You to can translate at our [Crowdin project](https://crowdin.com/project/chia-blockchain/).
+
+### Changed
+
+- The mainnet genesis is now in the initial config.yaml and the green flag components have been removed.
+- Our release process and branching strategy has changed. CONTRIBUTING.md will be updated in the main branch soon with details.
+- This mainnet release does not migrate previous testnet configuration files.
+
+### Fixed
+
+- Weight proofs, especially wallet weight proofs were failing when some Blueboxed proofs of time were encountered.
+- Users can now pip install e.g. chia-blockchain==1.0.1 on most platforms.
+- Sometimes the GUI had an error regarding MainWindow.
+
 ## 1.0.0 First Release of Chia Blockchain 2021-03-17
 
 ### Added
