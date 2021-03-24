@@ -30,7 +30,7 @@ In the event an emergency fix is required for the release version of Chia, membe
 
 ## Branching Strategy
 
-[Branching Strategy Diagram](https://drive.google.com/file/d/1rNxUwjzidt8LtpSh2yUgEr-PWsP1hxg9/view?usp=sharing)
+[Branching Strategy Diagram](https://drive.google.com/file/d/1mYmTi-aFgcyCc39pHyBaaBjV-vjvllBT/view?usp=sharing)
 
 1. All changes go into the main branch.
 2. Main is stable at all times, all tests pass.
