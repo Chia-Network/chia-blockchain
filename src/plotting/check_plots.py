@@ -14,6 +14,8 @@ from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
+min_num = 5
+default_num = 30
 
 min_success_rate = 0.0
 max_success_rate = 1.0
@@ -26,13 +28,13 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         if num == 0:
             log.warning("Not opening plot files")
         else:
-            if num < 5:
+            if num < min_num:
                 log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
-                num = 5
-            if num < 30:
-                log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
+                num = min_num
+            if num < default_num:
+                log.warning(f"Use {default_num} challenges (our default) for balance of speed and accurate results")
     else:
-        num = 30
+        num = default_num
 
     expected_proofs = min(num, int((num * success_rate) + 0.5))
 
@@ -40,7 +42,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.error(f"success_rate must be higher than {min_success_rate} and less than {max_success_rate}")
         return
 
-    if success_rate > default_success_rate and num <= 30:
+    if success_rate > default_success_rate and num <= default_num:
         log.error("Higher success_rate requires a higher number of challenges")
         return
 
