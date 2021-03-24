@@ -148,6 +148,8 @@ class FullNodeAPI:
 
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
+        if self.full_node.weight_proof_handler is None:
+            return None
         if not self.full_node.blockchain.contains_block(request.tip):
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
