@@ -128,11 +128,11 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                         else:
                             log.debug(f"error in proving/verifying for plot {plot_path}")
                     except AssertionError as e:
-                        log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
-            except BaseException as e:
-                if isinstance(e, KeyboardInterrupt):
-                    log.warning("Interrupted, closing")
-                    return
+                        log.debug(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+            except KeyboardInterrupt:
+                log.warning("Interrupted, closing")
+                return
+            except Exception as e:
                 log.debug(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
 
         if plot_proofs >= expected_proofs:
