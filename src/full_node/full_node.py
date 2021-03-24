@@ -1677,7 +1677,8 @@ class FullNode:
                                 )
                         # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
                         # unless this is a challenge block.
-                        if sanitize_weight_proof_only and not record.is_challenge_block(self.constants):
+                        if sanitize_weight_proof_only:
+                            if not record.is_challenge_block(self.constants):
                             # Calculates 'new_min_height' as described below.
                             if (
                                 prev_broadcast_list_len == 0
