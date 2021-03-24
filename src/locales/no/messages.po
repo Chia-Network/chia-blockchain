@@ -8,7 +8,7 @@ msgstr ""
 "Language: no_NO\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-23 22:09\n"
+"PO-Revision-Date: 2021-03-24 07:31\n"
 "Last-Translator: \n"
 "Language-Team: Norwegian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "*Vil du utforske Chia bokkene? Sjekk ut <0>Chia Utforsker</0> bygget av en åpen kildekode utvikler."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,11 +28,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "128 bøtter er anbefalt"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "En innhøster er en tjeneste som kjører på en maskin hvor plottet/ene er lagret. Bonden og innhøsteren snakker med en full node for å sjekke kjedens tilstand. Se ditt nettverk av tilkoblede innhøstere nedenfor. Les mer"
 
 #: src/electron-starter.js:369
 #: src/electron-starter.js:462
