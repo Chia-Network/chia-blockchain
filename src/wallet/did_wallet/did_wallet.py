@@ -406,8 +406,9 @@ class DIDWallet:
         return core.hex()
 
     # This is used to cash out, or update the id_list
-    async def create_spend(self, puzhash):
+    async def create_spend(self, puzhash: bytes32):
         coins = await self.select_coins(1)
+        assert coins is not None
         coin = coins.pop()
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = Program.to([0, coin.amount, puzhash, coin.name(), coin.puzzle_hash])
@@ -419,6 +420,7 @@ class DIDWallet:
             self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
+        assert parent_info is not None
 
         fullsol = Program.to(
             [
@@ -465,7 +467,9 @@ class DIDWallet:
 
     # Pushes the a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
-    async def create_attestment(self, recovering_coin_name, newpuz, pubkey, filename=None) -> SpendBundle:
+    async def create_attestment(
+        self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element, filename=None
+    ) -> SpendBundle:
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
         coin = coins.pop()
