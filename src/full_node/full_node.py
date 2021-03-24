@@ -1679,15 +1679,15 @@ class FullNode:
                         # unless this is a challenge block.
                         if sanitize_weight_proof_only:
                             if not record.is_challenge_block(self.constants):
-                            # Calculates 'new_min_height' as described below.
-                            if (
-                                prev_broadcast_list_len == 0
-                                and len(broadcast_list) > 0
-                                and h <= max(0, max_height - 1000)
-                            ):
-                                new_min_height = header.height
-                            # Skip calculations for CC_SP_VDF and CC_IP_VDF.
-                            continue
+                                # Calculates 'new_min_height' as described below.
+                                if (
+                                    prev_broadcast_list_len == 0
+                                    and len(broadcast_list) > 0
+                                    and h <= max(0, max_height - 1000)
+                                ):
+                                    new_min_height = header.height
+                                # Skip calculations for CC_SP_VDF and CC_IP_VDF.
+                                continue
                         if header.challenge_chain_sp_proof is not None and (
                             header.challenge_chain_sp_proof.witness_type > 0
                             or not header.challenge_chain_sp_proof.normalized_to_identity
