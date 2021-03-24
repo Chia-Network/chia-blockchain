@@ -99,9 +99,12 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     total_size = 0
     bad_plots_list: List[Path] = []
     total_proofs = 0
+    current_plot = 0
     for plot_path, plot_info in provers.items():
+        current_plot += 1
+        progress = min(99, int((float(current_plot) / len(provers)) * 100))
         pr = plot_info.prover
-        log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+        log.info(f"[{progress}%] Testing plot {plot_path} k={pr.get_size()}")
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
 
         # Look up local_sk from plot to save locked memory
