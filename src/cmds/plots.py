@@ -146,11 +146,14 @@ def create_cmd(
 @click.option("-l", "--list_duplicates", help="List plots with duplicate IDs", default=False, is_flag=True)
 @click.option("--debug-show-memo", help="Shows memo to recreate the same exact plot", default=False, is_flag=True)
 @click.option("--challenge-start", help="Begins at a different [start] for -n [challenges]", type=int, default=None)
+@click.option("-s", "--success-rate", help="Require at least [rate] * [challenges] proofs. Default: 0.5 (50%)",
+              type=float, default=0.5)
 @click.pass_context
 def check_cmd(
-    ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int
+    ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int,
+        success_rate: int
 ):
-    check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
+    check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo, success_rate)
 
 
 @plots_cmd.command("add", short_help="Adds a directory of plots")
