@@ -35,7 +35,7 @@ In the event an emergency fix is required for the release version of Chia, membe
 1. All changes go into the main branch.
 2. Main is stable at all times, all tests pass.
 3. Features (with tests) are developed and fully tested on feature branches, and reviewed before landing in main.
-4. The public testnet is running the current release branch i.e `v1.0.x`.
+4. Chia Network's nodes on the public testnet are running latest version x.y.z
 5. The `main` branch will have a long running `beta testnet` to allow previewing of changes.
 6. Pull Request events may require a `beta testnet` review environment, at the moment this is at the discretion of the reviewer.
 7. Hotfixes land in the release branch they fix, and all later versions. (this will be achieved by regularly merging from 1.0.x -> main).
@@ -82,12 +82,12 @@ workflow.
 3. Install BlackConnect plugin
 4. Set to run python black on save
 5. Set line length to 120
-6. Install mypy plugin
+6. Install these linters https://github.com/Chia-Network/chia-blockchain/tree/main/.github/linters
 
 ## Testnets and review environments
 
 With the launch of `1.0.0` we will begin running an official `testnet`.  
-Prior to the release of `1.1.0` there will be two running testnets. `testnet` and `transaction-beta-testnet`. The `1.1b` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
+Prior to the release of `1.1.0` there will be two running test nets. `testnet` and `transaction-beta-testnet`. The `transaction-beta-testnet` testnet will be a beta of the pending 1.1 release, which will enable transactions on the chia blockchain.
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the current release branch.
 
 Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.
