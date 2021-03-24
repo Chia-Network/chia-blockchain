@@ -30,7 +30,7 @@ In the event an emergency fix is required for the release version of Chia, membe
 
 ## Branching Strategy
 
-[Branching Strategy Diagram](https://drive.google.com/file/d/1NF2zdQOfCGlcRu6qKMlV_NlO4uqnIvoE/view?usp=sharing)
+[Branching Strategy Diagram](https://drive.google.com/file/d/1mYmTi-aFgcyCc39pHyBaaBjV-vjvllBT/view?usp=sharing)
 
 1. All changes go into the main branch.
 2. Main is stable at all times, all tests pass.
@@ -91,7 +91,7 @@ Prior to the release of `1.1.0` there will be two running test nets. `testnet` a
 Following the release of `1.1.0`, the official `testnet` will include all changes that have been accepted to the current release branch.
 
 Prior to proposing changes to `main`, proposers should consider if running a `beta testnet` review environment will make the reviewer more effective when evaluating a change.
-Changes that impact the block chain could require a review environment before acceptance into `main`. This is at the discretion of the reviewer.
+Changes that impact the blockchain could require a review environment before acceptance into `main`. This is at the discretion of the reviewer.
 Chia organization members have been granted CI access to deploy `beta testnets`.
 If you are not a Chia organization member, you can enquire about deploying a `beta testnet` in the public dev keybase channel.
 
