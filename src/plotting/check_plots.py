@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+from Crypto import Random
 from pathlib import Path
 from typing import Dict, List
 
@@ -22,7 +23,7 @@ max_success_rate = 1.0
 default_success_rate = 0.5
 
 
-def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo, success_rate):
+def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo, success_rate, random):
     config = load_config(root_path, "config.yaml")
     if num is not None:
         if num == 0:
@@ -120,7 +121,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         log.info(f"\tLocal sk: {local_sk}")
         plot_proofs = 0
         for i in range(num_start, num_end):
-            challenge = std_hash(i.to_bytes(32, "big"))
+            challenge = std_hash(Random.get_random_bytes(32) if random else i.to_bytes(32, "big"))
             # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
             try:
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):

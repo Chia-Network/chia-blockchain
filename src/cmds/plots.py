@@ -149,12 +149,14 @@ def create_cmd(
               default=None)
 @click.option("-s", "--success-rate", help="Require at least [rate] * [challenges] proofs. Default: 0.5 (50%)",
               type=float, default=0.5)
+@click.option("-r", "--random", help="Use random challenges", default=False, is_flag=True)
 @click.pass_context
 def check_cmd(
     ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int,
-        success_rate: int
+        success_rate: int, random: bool
 ):
-    check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo, success_rate)
+    check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo, success_rate,
+                random)
 
 
 @plots_cmd.command("add", short_help="Adds a directory of plots")
