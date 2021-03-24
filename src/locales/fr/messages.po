@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-24 11:03\n"
+"PO-Revision-Date: 2021-03-24 17:13\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -1716,7 +1716,7 @@ msgstr "À"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
-msgstr ""
+msgstr "Solde total"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -1724,7 +1724,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
-msgstr ""
+msgstr "Itérations totales"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
@@ -1740,7 +1740,7 @@ msgstr "Taille totale des plots"
 
 #: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Itérations VDF totales"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
@@ -1819,11 +1819,11 @@ msgstr "Voir les offres"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr ""
+msgstr "Voir le solde en attente"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "Voir le solde en attente..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1883,7 +1883,7 @@ msgstr "Vous voulez gagner plus de Chia ? Ajoutez plus de plots a votre farm."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Voulez-vous un délai d'attente avant que le prochain plot démarre ?"
 
 #: src/components/block/Block.jsx:195
 msgid "Weight"
