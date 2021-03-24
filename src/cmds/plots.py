@@ -144,8 +144,9 @@ def create_cmd(
     default=None,
 )
 @click.option("-l", "--list_duplicates", help="List plots with duplicate IDs", default=False, is_flag=True)
-@click.option("--debug-show-memo", help="Shows memo to recreate the same exact plot", default=False, is_flag=True)
-@click.option("--challenge-start", help="Begins at a different [start] for -n [challenges]", type=int, default=None)
+@click.option("-d", "--debug-show-memo", help="Shows memo to recreate the same exact plot", default=False, is_flag=True)
+@click.option("-c", "--challenge-start", help="Begins at a different [start] for -n [challenges]", type=int,
+              default=None)
 @click.option("-s", "--success-rate", help="Require at least [rate] * [challenges] proofs. Default: 0.5 (50%)",
               type=float, default=0.5)
 @click.pass_context
