@@ -126,7 +126,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                         if quality_str == ver_quality_str:
                             plot_proofs += 1
                         else:
-                            log.debug(f"error in proving/verifying for plot {plot_path}")
+                            log.debug(f"challenge: {challenge}, quality does not match for plot {plot_path}")
                     except AssertionError as e:
                         log.debug(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
             except KeyboardInterrupt:
