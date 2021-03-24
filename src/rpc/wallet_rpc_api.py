@@ -386,7 +386,7 @@ class WalletRpcApi:
                     backup_dids = []
                     num_needed = 0
                     for d in request["backup_dids"]:
-                        backup_dids.append(bytes.fromhex(d))
+                        backup_dids.append(hexstr_to_bytes(d))
                     if len(backup_dids) > 0:
                         num_needed = uint64(request["num_of_backup_ids_needed"])
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -468,7 +468,7 @@ class WalletRpcApi:
 
     async def get_transaction(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
-        transaction_id: bytes32 = bytes32(bytes.fromhex(request["transaction_id"]))
+        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
@@ -725,7 +725,7 @@ class WalletRpcApi:
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = []
         for _ in request["new_list"]:
-            recovery_list.append(bytes.fromhex(_))
+            recovery_list.append(hexstr_to_bytes(_))
         if "num_verifications_required" in request:
             new_amount_verifications_required = uint64(request["num_verifications_required"])
         else:
@@ -781,11 +781,11 @@ class WalletRpcApi:
             info_list,
             message_spend_bundle,
         ) = await wallet.load_attest_files_for_recovery_spend(request["attest_filenames"])
-        pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+        pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
 
         success = await wallet.recovery_spend(
             wallet.did_info.temp_coin,
-            bytes.fromhex(request["puzhash"]),
+            hexstr_to_bytes(request["puzhash"]),
             info_list,
             pubkey,
             message_spend_bundle,
@@ -802,10 +802,10 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
-        coin = bytes.fromhex(request["coin_name"])
-        pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+        coin = hexstr_to_bytes(request["coin_name"])
+        pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
-            coin, bytes.fromhex(request["puzhash"]), pubkey, request["filename"]
+            coin, hexstr_to_bytes(request["puzhash"]), pubkey, request["filename"]
         )
         if spend_bundle is not None:
             return {
