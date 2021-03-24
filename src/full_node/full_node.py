@@ -1638,11 +1638,17 @@ class FullNode:
                         break
                     stop_height = min(h + 99, max_height)
                     headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
+                    records: Dict[bytes32, BlockRecord] = {}
+                    if sanitize_weight_proof_only:
+                        records = await self.blockchain.get_block_records_in_range(min_height, stop_height)
                     for header in headers.values():
                         prev_broadcast_list_len = len(broadcast_list)
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
+                        if sanitize_weight_proof_only:
+                            assert header.header_hash in records
+                            record = records[header.header_hash]
                         for sub_slot in header.finished_sub_slots:
                             if (
                                 sub_slot.proofs.challenge_chain_slot_proof.witness_type > 0
@@ -1670,8 +1676,8 @@ class FullNode:
                                     )
                                 )
                         # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
-                        # unless this is a transaction block.
-                        if sanitize_weight_proof_only and not header.is_transaction_block:
+                        # unless this is a challenge block.
+                        if sanitize_weight_proof_only and not record.is_challenge_block(self.constants):
                             # Calculates 'new_min_height' as described below.
                             if (
                                 prev_broadcast_list_len == 0
