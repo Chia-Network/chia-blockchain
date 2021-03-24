@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-23 22:09\n"
+"PO-Revision-Date: 2021-03-24 17:13\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -37,7 +37,7 @@ msgstr "En harvester er en service der kører på en maskine hvor plot filen(fil
 #: src/electron-starter.js:369
 #: src/electron-starter.js:462
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Om Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -129,7 +129,7 @@ msgstr "Er du sikker du vil afbryde forbindelsen?"
 
 #: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "Er du sikker du vil afslutte? GUI Plotning og farmning vil stoppe."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -261,15 +261,15 @@ msgstr "Udfordringshash"
 
 #: src/electron-starter.js:348
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Chat på KeyBase"
 
 #: src/electron-starter.js:366
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia Blockchain Wiki"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
@@ -323,7 +323,7 @@ msgstr "Farvet Mønt Indstillinger"
 
 #: src/electron-starter.js:138
 msgid "Confirm"
-msgstr ""
+msgstr "Bekræft"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -374,7 +374,7 @@ msgstr "Forbindelser"
 
 #: src/electron-starter.js:329
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Bidrag på GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -533,11 +533,11 @@ msgstr "Sletning af nøglen vil permanent fjerne nøglen fra denne computer, væ
 
 #: src/electron-starter.js:251
 msgid "Developer"
-msgstr ""
+msgstr "Udvikler"
 
 #: src/electron-starter.js:254
 msgid "Developer Tools"
-msgstr ""
+msgstr "Udvikler Værktøjer"
 
 #: src/components/block/Block.jsx:213
 #: src/components/fullNode/FullNode.jsx:178
@@ -584,7 +584,7 @@ msgstr "Træk og slip din backup fil"
 
 #: src/electron-starter.js:210
 msgid "Edit"
-msgstr ""
+msgstr "Rediger"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -697,7 +697,7 @@ msgstr "Gebyr Beløb"
 #: src/electron-starter.js:202
 #: src/electron-starter.js:409
 msgid "File"
-msgstr ""
+msgstr "Fil"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
@@ -716,11 +716,11 @@ msgstr "Færdig"
 
 #: src/electron-starter.js:354
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Følg på Twitter"
 
 #: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Ofte Stillet Spørgsmål"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
@@ -733,7 +733,7 @@ msgstr "Fuld Node Status"
 
 #: src/electron-starter.js:279
 msgid "Full Screen"
-msgstr ""
+msgstr "Fuld Skærm"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -763,7 +763,7 @@ msgstr "Højde"
 
 #: src/electron-starter.js:301
 msgid "Help"
-msgstr ""
+msgstr "Hjælp"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
 msgid "Help translate"
@@ -1344,7 +1344,7 @@ msgstr "Opdater Plotfiler"
 
 #: src/electron-starter.js:321
 msgid "Release Notes"
-msgstr ""
+msgstr "Udgivelses Noter"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1352,7 +1352,7 @@ msgstr "Omdøb"
 
 #: src/electron-starter.js:340
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Raportér et Problem..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1477,7 +1477,7 @@ msgstr "Log Ind"
 
 #: src/electron-starter.js:423
 msgid "Speech"
-msgstr ""
+msgstr "Tale"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1805,7 +1805,7 @@ msgstr "VDF blok iterationer"
 
 #: src/electron-starter.js:242
 msgid "View"
-msgstr ""
+msgstr "Se"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:25
@@ -1907,7 +1907,7 @@ msgstr "Når du modtager din opsætningspakke fra din admin, indtast den herunde
 
 #: src/electron-starter.js:287
 msgid "Window"
-msgstr ""
+msgstr "Vindue"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
