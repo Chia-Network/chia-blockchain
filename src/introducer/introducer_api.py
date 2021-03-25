@@ -13,7 +13,7 @@ from src.util.ints import uint64
 class IntroducerAPI:
     introducer: Introducer
 
-    def __init__(self, introducer):
+    def __init__(self, introducer) -> None:
         self.introducer = introducer
 
     def _set_state_changed_callback(self, callback: Callable):

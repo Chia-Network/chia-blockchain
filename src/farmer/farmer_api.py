@@ -18,7 +18,7 @@ from src.util.ints import uint32, uint64
 class FarmerAPI:
     farmer: Farmer
 
-    def __init__(self, farmer):
+    def __init__(self, farmer) -> None:
         self.farmer = farmer
 
     def _set_state_changed_callback(self, callback: Callable):

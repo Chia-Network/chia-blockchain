@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 class TimelordAPI:
     timelord: Timelord
 
-    def __init__(self, timelord):
+    def __init__(self, timelord) -> None:
         self.timelord = timelord
 
     def _set_state_changed_callback(self, callback: Callable):

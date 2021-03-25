@@ -11,11 +11,11 @@ from src.types.spend_bundle import SpendBundle
 from src.util.bech32m import decode_puzzle_hash
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.ints import uint32
+from src.util.ints import uint32, uint16
 
 
-async def main():
-    rpc_port = 8555
+async def main() -> None:
+    rpc_port: uint16 = uint16(8555)
     self_hostname = "localhost"
     path = DEFAULT_ROOT_PATH
     config = load_config(path, "config.yaml")

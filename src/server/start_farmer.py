@@ -56,7 +56,7 @@ def service_kwargs_for_farmer(
     return kwargs
 
 
-def main():
+def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     keychain = Keychain()

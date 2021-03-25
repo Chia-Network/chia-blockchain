@@ -1215,9 +1215,11 @@ def get_icc(
         curr = blocks[curr.prev_hash]
     icc_iters = uint64(vdf_end_total_iters - latest_block.total_iters)
     if latest_block.is_challenge_block(constants):
-        icc_input = ClassgroupElement.get_default_element()
+        icc_input: Optional[ClassgroupElement] = ClassgroupElement.get_default_element()
     else:
         icc_input = latest_block.infused_challenge_vdf_output
+    assert icc_input is not None
+
     if curr.is_challenge_block(constants):  # Deficit 4
         icc_challenge_hash = curr.challenge_block_info_hash
     else:

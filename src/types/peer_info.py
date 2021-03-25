@@ -1,5 +1,6 @@
 import ipaddress
 from dataclasses import dataclass
+from typing import Optional, Union
 
 from src.util.ints import uint16, uint64
 from src.util.streamable import Streamable, streamable
@@ -11,8 +12,8 @@ class PeerInfo(Streamable):
     host: str
     port: uint16
 
-    def is_valid(self, allow_private_subnets=False):
-        ip = None
+    def is_valid(self, allow_private_subnets=False) -> bool:
+        ip: Optional[Union[ipaddress.IPv6Address, ipaddress.IPv4Address]] = None
         try:
             ip = ipaddress.IPv6Address(self.host)
         except ValueError:

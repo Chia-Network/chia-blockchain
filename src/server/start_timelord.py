@@ -49,7 +49,7 @@ def service_kwargs_for_timelord(
     return kwargs
 
 
-def main():
+def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     kwargs = service_kwargs_for_timelord(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)

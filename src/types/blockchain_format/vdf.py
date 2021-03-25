@@ -58,7 +58,7 @@ class VDFProof(Streamable):
         input_el: ClassgroupElement,
         info: VDFInfo,
         target_vdf_info: Optional[VDFInfo] = None,
-    ):
+    ) -> bool:
         """
         If target_vdf_info is passed in, it is compared with info.
         """

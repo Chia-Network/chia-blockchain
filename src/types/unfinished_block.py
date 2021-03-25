@@ -34,7 +34,7 @@ class UnfinishedBlock(Streamable):
     def partial_hash(self):
         return self.reward_chain_block.get_hash()
 
-    def is_transaction_block(self):
+    def is_transaction_block(self) -> bool:
         return self.foliage.foliage_transaction_block_hash is not None
 
     @property

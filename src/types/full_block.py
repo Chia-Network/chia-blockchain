@@ -58,7 +58,7 @@ class FullBlock(Streamable):
     def header_hash(self):
         return self.foliage.get_hash()
 
-    def is_transaction_block(self):
+    def is_transaction_block(self) -> bool:
         return self.foliage_transaction_block is not None
 
     def get_block_header(self, addition_coins=None, removals_names=None) -> HeaderBlock:

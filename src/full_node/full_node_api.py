@@ -38,7 +38,7 @@ from src.util.merkle_set import MerkleSet
 class FullNodeAPI:
     full_node: FullNode
 
-    def __init__(self, full_node):
+    def __init__(self, full_node) -> None:
         self.full_node = full_node
 
     def _set_state_changed_callback(self, callback: Callable):

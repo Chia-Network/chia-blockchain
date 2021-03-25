@@ -51,12 +51,12 @@ class FullNodeDiscovery:
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue = None
-        self.address_manager = None
+        self.address_manager: Optional[AddressManager] = None
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
         self.lock = asyncio.Lock()
 
-    async def initialize_address_manager(self):
+    async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
         self.connection = await aiosqlite.connect(self.peer_db_path)
         self.address_manager_store = await AddressManagerStore.create(self.connection)
@@ -67,13 +67,13 @@ class FullNodeDiscovery:
             self.address_manager = AddressManager()
         self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
-    async def start_tasks(self):
+    async def start_tasks(self) -> None:
         random = Random()
         self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
         self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
         self.cleanup_task = asyncio.create_task(self._periodically_cleanup())
 
-    async def _close_common(self):
+    async def _close_common(self) -> None:
         self.is_closed = True
         self.connect_peers_task.cancel()
         self.serialize_task.cancel()
@@ -155,13 +155,15 @@ class FullNodeDiscovery:
 
         await self.server.start_client(self.introducer_info, on_connect)
 
-    async def _connect_to_peers(self, random):
+    async def _connect_to_peers(self, random) -> None:
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         empty_tables = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
             try:
+                assert self.address_manager is not None
+
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
                 if size == 0 or empty_tables:
@@ -265,10 +267,10 @@ class FullNodeDiscovery:
                     disconnect_after_handshake = True
                     empty_tables = False
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
-                connected = False
+                client_connected = False
                 if addr is not None and initiate_connection:
                     try:
-                        connected = await self.server.start_client(
+                        client_connected = await self.server.start_client(
                             addr,
                             is_feeler=disconnect_after_handshake,
                             on_connect=self.server.on_connect,
@@ -281,7 +283,7 @@ class FullNodeDiscovery:
                         # Mark it as a softer attempt, without counting the failures.
                         await self.address_manager.attempt(addr, False)
                     else:
-                        if connected is True:
+                        if client_connected is True:
                             await self.address_manager.mark_good(addr)
                             await self.address_manager.connect(addr)
                         else:
@@ -304,7 +306,7 @@ class FullNodeDiscovery:
             async with self.address_manager.lock:
                 await self.address_manager_store.serialize(self.address_manager)
 
-    async def _periodically_cleanup(self):
+    async def _periodically_cleanup(self) -> None:
         while not self.is_closed:
             # Removes entries with timestamp worse than 14 days ago
             # and with a high number of failed attempts.
@@ -319,11 +321,11 @@ class FullNodeDiscovery:
             full_node_connected = self.server.get_full_node_connections()
             connected = [c.get_peer_info() for c in full_node_connected]
             connected = [c for c in connected if c is not None]
-            if len(connected) >= 3:
+            if self.address_manager is not None and len(connected) >= 3:
                 async with self.address_manager.lock:
                     self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
 
-    async def _respond_peers_common(self, request, peer_src, is_full_node):
+    async def _respond_peers_common(self, request, peer_src, is_full_node) -> None:
         # Check if we got the peers from a full node or from the introducer.
         peers_adjusted_timestamp = []
         is_misbehaving = False
@@ -357,6 +359,8 @@ class FullNodeDiscovery:
                     uint64(0),
                 )
             peers_adjusted_timestamp.append(current_peer)
+
+        assert self.address_manager is not None
 
         if is_full_node:
             await self.address_manager.add_to_new_table(peers_adjusted_timestamp, peer_src, 2 * 60 * 60)
@@ -542,7 +546,7 @@ class WalletPeers(FullNodeDiscovery):
         introducer_info,
         peer_connect_interval,
         log,
-    ):
+    ) -> None:
         super().__init__(
             server,
             root_path,
@@ -553,14 +557,14 @@ class WalletPeers(FullNodeDiscovery):
             log,
         )
 
-    async def start(self):
+    async def start(self) -> None:
         await self.initialize_address_manager()
         await self.start_tasks()
 
-    async def ensure_is_closed(self):
+    async def ensure_is_closed(self) -> None:
         if self.is_closed:
             return
         await self._close_common()
 
-    async def respond_peers(self, request, peer_src, is_full_node):
+    async def respond_peers(self, request, peer_src, is_full_node) -> None:
         await self._respond_peers_common(request, peer_src, is_full_node)

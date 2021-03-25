@@ -20,6 +20,7 @@ from src.types.peer_info import PeerInfo
 from src.util.chia_logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from src.util.setproctitle import setproctitle
+from src.util.ints import uint16
 
 from .reconnect_task import start_reconnect_task
 
@@ -42,7 +43,7 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
-    ):
+    ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
         ping_interval = self.config.get("ping_interval")
@@ -52,7 +53,8 @@ class Service:
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self._rpc_task = None
+        self._rpc_task: Optional[asyncio.Task] = None
+        self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
 
         proctitle_name = f"chia_{service_name}"
@@ -107,13 +109,17 @@ class Service:
         self._advertised_port = advertised_port
         self._reconnect_tasks: List[asyncio.Task] = []
 
-    async def start(self, **kwargs):
+    async def start(self, **kwargs) -> None:
         # we include `kwargs` as a hack for the wallet, which for some
         # reason allows parameters to `_start`. This is serious BRAIN DAMAGE,
         # and should be fixed at some point.
         # TODO: move those parameters to `__init__`
         if self._did_start:
             return
+
+        assert self.self_hostname is not None
+        assert self.daemon_port is not None
+
         self._did_start = True
 
         self._enable_signals()
@@ -138,7 +144,7 @@ class Service:
                     rpc_api(self._node),
                     self.self_hostname,
                     self.daemon_port,
-                    rpc_port,
+                    uint16(rpc_port),
                     self.stop,
                     self.root_path,
                     self.config,
@@ -146,11 +152,11 @@ class Service:
                 )
             )
 
-    async def run(self):
+    async def run(self) -> None:
         await self.start()
         await self.wait_closed()
 
-    def _enable_signals(self):
+    def _enable_signals(self) -> None:
         signal.signal(signal.SIGINT, self._accept_signal)
         signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
@@ -161,7 +167,7 @@ class Service:
         self._log.info(f"got signal {signal_number}")
         self.stop()
 
-    def stop(self):
+    def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
             self._log.info("Cancelling reconnect task")
@@ -177,12 +183,13 @@ class Service:
             if self._rpc_task is not None:
                 self._log.info("Closing RPC server")
 
-                async def close_rpc_server():
-                    await (await self._rpc_task)()
+                async def close_rpc_server() -> None:
+                    if self._rpc_task:
+                        await (await self._rpc_task)()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 
-    async def wait_closed(self):
+    async def wait_closed(self) -> None:
         await self._is_stopping.wait()
 
         self._log.info("Waiting for socket to be closed (if opened)")
@@ -200,12 +207,12 @@ class Service:
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
-async def async_run_service(*args, **kwargs):
+async def async_run_service(*args, **kwargs) -> None:
     service = Service(*args, **kwargs)
     return await service.run()
 
 
-def run_service(*args, **kwargs):
+def run_service(*args, **kwargs) -> None:
     if uvloop is not None:
         uvloop.install()
     return asyncio.run(async_run_service(*args, **kwargs))

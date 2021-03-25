@@ -194,7 +194,7 @@ class CCWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.COLOURED_COIN)
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_info.id
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:

@@ -13,7 +13,7 @@ class IntroducerPeers:
     connected to, and the time that they were last added.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._peers: List[PeerInfo] = []
         self.time_added: Dict[bytes32, uint64] = {}
 

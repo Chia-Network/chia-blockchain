@@ -150,7 +150,7 @@ class RLWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.RATE_LIMITED)
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_info.id
 
     async def admin_create_coin(

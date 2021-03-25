@@ -1016,7 +1016,7 @@ def validate_finished_header_block(
                 last_ss = header_block.finished_sub_slots[-1]
                 assert last_ss.infused_challenge_chain is not None
                 icc_vdf_challenge: bytes32 = last_ss.infused_challenge_chain.get_hash()
-                icc_vdf_input = ClassgroupElement.get_default_element()
+                icc_vdf_input: Optional[ClassgroupElement] = ClassgroupElement.get_default_element()
             else:
                 assert prev_b is not None
                 if prev_b.is_challenge_block(constants):
@@ -1038,7 +1038,8 @@ def validate_finished_header_block(
                 ip_vdf_iters,
                 header_block.reward_chain_block.infused_challenge_chain_ip_vdf.output,
             )
-            if not header_block.infused_challenge_chain_ip_proof.is_valid(
+
+            if icc_vdf_input is None or not header_block.infused_challenge_chain_ip_proof.is_valid(
                 constants,
                 icc_vdf_input,
                 header_block.reward_chain_block.infused_challenge_chain_ip_vdf,

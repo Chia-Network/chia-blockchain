@@ -97,7 +97,7 @@ class Wallet:
     def type(cls) -> uint8:
         return uint8(WalletType.STANDARD_WALLET)
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_id
 
     async def get_confirmed_balance(self, unspent_records=None) -> uint128:
