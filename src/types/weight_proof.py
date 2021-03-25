@@ -82,6 +82,13 @@ class SubEpochSegments(Streamable):
 
 @dataclass(frozen=True)
 @streamable
+# this is used only for serialization to database
+class RecentChainData(Streamable):
+    recent_chain_data: List[HeaderBlock]
+
+
+@dataclass(frozen=True)
+@streamable
 class ProofBlockHeader(Streamable):
     finished_sub_slots: List[EndOfSubSlotBundle]
     reward_chain_block: RewardChainBlock
