@@ -34,7 +34,7 @@ class AddressManagerStore:
     db: aiosqlite.Connection
 
     @classmethod
-    async def create(cls, connection) -> 'AddressManagerStore':
+    async def create(cls, connection) -> "AddressManagerStore":
         self = cls()
         self.db = connection
         await self.db.commit()
