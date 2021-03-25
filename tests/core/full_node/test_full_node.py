@@ -17,7 +17,7 @@ from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.server.address_manager import AddressManager
 from src.types.blockchain_format.classgroup import ClassgroupElement
 from src.types.blockchain_format.program import SerializedProgram
-from src.types.blockchain_format.vdf import CompressibleVDFField
+from src.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock
@@ -1039,6 +1039,233 @@ class TestFullNodeProtocol:
         for height, block in enumerate(stored_blocks):
             await full_node_2.full_node.respond_block(fnp.RespondBlock(block))
             assert full_node_2.full_node.blockchain.get_peak().height == height
+
+    @pytest.mark.asyncio
+    async def test_compact_protocol_invalid_messages(self, setup_two_nodes):
+        nodes, _ = setup_two_nodes
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+        blocks = bt.get_consecutive_blocks(num_blocks=1, skip_slots=3)
+        blocks_2 = bt.get_consecutive_blocks(num_blocks=3, block_list_input=blocks, skip_slots=3)
+        for block in blocks_2[:2]:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        assert full_node_1.full_node.blockchain.get_peak().height == 1
+        # (wrong_vdf_info, wrong_vdf_proof) pair verifies, but it's not present in the blockchain at all.
+        block = blocks_2[2]
+        wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
+            test_constants,
+            ClassgroupElement.get_default_element(),
+            block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+            block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+            True,
+        )
+        timelord_protocol_invalid_messages = []
+        full_node_protocol_invalid_messaages = []
+        for block in blocks_2[:2]:
+            for sub_slot in block.finished_sub_slots:
+                vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
+                    True,
+                )
+                assert wrong_vdf_proof != correct_vdf_proof
+                timelord_protocol_invalid_messages.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info,
+                        wrong_vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.CC_EOS_VDF,
+                    )
+                )
+                full_node_protocol_invalid_messaages.append(
+                    fnp.RespondCompactVDF(
+                        block.height,
+                        block.header_hash,
+                        CompressibleVDFField.CC_EOS_VDF,
+                        vdf_info,
+                        wrong_vdf_proof,
+                    )
+                )
+                if sub_slot.infused_challenge_chain is not None:
+                    vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                        test_constants,
+                        ClassgroupElement.get_default_element(),
+                        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
+                        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
+                        True,
+                    )
+                    assert wrong_vdf_proof != correct_vdf_proof
+                    timelord_protocol_invalid_messages.append(
+                        timelord_protocol.RespondCompactProofOfTime(
+                            vdf_info,
+                            wrong_vdf_proof,
+                            block.header_hash,
+                            block.height,
+                            CompressibleVDFField.ICC_EOS_VDF,
+                        )
+                    )
+                    full_node_protocol_invalid_messaages.append(
+                        fnp.RespondCompactVDF(
+                            block.height,
+                            block.header_hash,
+                            CompressibleVDFField.ICC_EOS_VDF,
+                            vdf_info,
+                            wrong_vdf_proof,
+                        )
+                    )
+
+            if block.reward_chain_block.challenge_chain_sp_vdf is not None:
+                vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                    test_constants,
+                    ClassgroupElement.get_default_element(),
+                    block.reward_chain_block.challenge_chain_sp_vdf.challenge,
+                    block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
+                    True,
+                )
+                sp_vdf_proof = wrong_vdf_proof
+                if wrong_vdf_proof == correct_vdf_proof:
+                    # This can actually happen...
+                    sp_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
+                timelord_protocol_invalid_messages.append(
+                    timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info,
+                        sp_vdf_proof,
+                        block.header_hash,
+                        block.height,
+                        CompressibleVDFField.CC_SP_VDF,
+                    )
+                )
+                full_node_protocol_invalid_messaages.append(
+                    fnp.RespondCompactVDF(
+                        block.height,
+                        block.header_hash,
+                        CompressibleVDFField.CC_SP_VDF,
+                        vdf_info,
+                        sp_vdf_proof,
+                    )
+                )
+
+            vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
+                test_constants,
+                ClassgroupElement.get_default_element(),
+                block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+                block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+                True,
+            )
+            ip_vdf_proof = wrong_vdf_proof
+            if wrong_vdf_proof == correct_vdf_proof:
+                # This can actually happen...
+                ip_vdf_proof = VDFProof(uint8(0), b"1239819023890", True)
+            timelord_protocol_invalid_messages.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    vdf_info,
+                    ip_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_IP_VDF,
+                )
+            )
+            full_node_protocol_invalid_messaages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.CC_IP_VDF,
+                    vdf_info,
+                    ip_vdf_proof,
+                )
+            )
+
+            timelord_protocol_invalid_messages.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_EOS_VDF,
+                )
+            )
+            timelord_protocol_invalid_messages.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.ICC_EOS_VDF,
+                )
+            )
+            timelord_protocol_invalid_messages.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_SP_VDF,
+                )
+            )
+            timelord_protocol_invalid_messages.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_IP_VDF,
+                )
+            )
+            full_node_protocol_invalid_messaages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.CC_EOS_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+            full_node_protocol_invalid_messaages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.ICC_EOS_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+            full_node_protocol_invalid_messaages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.CC_SP_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+            full_node_protocol_invalid_messaages.append(
+                fnp.RespondCompactVDF(
+                    block.height,
+                    block.header_hash,
+                    CompressibleVDFField.CC_IP_VDF,
+                    wrong_vdf_info,
+                    wrong_vdf_proof,
+                )
+            )
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        peer = await connect_and_get_peer(server_1, server_2)
+        for invalid_compact_proof in timelord_protocol_invalid_messages:
+            await full_node_1.full_node.respond_compact_vdf_timelord(invalid_compact_proof)
+        for invalid_compact_proof in full_node_protocol_invalid_messaages:
+            await full_node_1.full_node.respond_compact_vdf(invalid_compact_proof, peer)
+        stored_blocks = await full_node_1.get_all_full_blocks()
+        for block in stored_blocks:
+            for sub_slot in block.finished_sub_slots:
+                assert not sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity
+                if sub_slot.proofs.infused_challenge_chain_slot_proof is not None:
+                    assert not sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+            if block.challenge_chain_sp_proof is not None:
+                assert not block.challenge_chain_sp_proof.normalized_to_identity
+            assert not block.challenge_chain_ip_proof.normalized_to_identity
 
     #
     # async def test_new_unfinished(self, two_nodes, wallet_nodes):

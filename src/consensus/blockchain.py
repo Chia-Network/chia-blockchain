@@ -186,6 +186,9 @@ class Blockchain(BlockchainInterface):
                 None,
             )
 
+        if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
+            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+
         if pre_validation_result is None:
             if block.height == 0:
                 prev_b: Optional[BlockRecord] = None

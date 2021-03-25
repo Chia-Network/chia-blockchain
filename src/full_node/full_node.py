@@ -45,7 +45,6 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import ConsensusError, Err
-from src.util.genesis_wait import wait_for_genesis_challenge
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.util.path import mkdir, path_from_root
 
@@ -69,6 +68,7 @@ class FullNode:
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
     initialized: bool
+    weight_proof_handler: Optional[WeightProofHandler]
 
     def __init__(
         self,
@@ -100,8 +100,9 @@ class FullNode:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    async def regular_start(self):
-        self.log.info("regular_start")
+    async def _start(self):
+        self.timelord_lock = asyncio.Lock()
+        # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.block_store = await BlockStore.create(self.connection)
         self.full_node_store = await FullNodeStore.create(self.constants)
@@ -111,7 +112,8 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
+        self.weight_proof_handler = None
+        asyncio.create_task(self.initialize_weight_proof())
         self._sync_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
@@ -140,21 +142,9 @@ class FullNode:
             )
         self.initialized = True
 
-    async def delayed_start(self):
-        self.log.info("delayed_start")
-        config, constants = await wait_for_genesis_challenge(self.root_path, self.constants, "full_node")
-
-        self.config = config
-        self.constants = constants
-        await self.regular_start()
-
-    async def _start(self):
-        self.timelord_lock = asyncio.Lock()
-        # create the store (db) and full node instance
-        if self.constants.GENESIS_CHALLENGE is not None:
-            await self.regular_start()
-        else:
-            asyncio.create_task(self.delayed_start())
+    async def initialize_weight_proof(self):
+        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
+        await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -528,7 +518,8 @@ class FullNode:
             - Download blocks in batch (and in parallel) and verify them one at a time
             - Disconnect peers that provide invalid blocks or don't have the blocks
         """
-
+        if self.weight_proof_handler is None:
+            return
         # Ensure we are only syncing once and not double calling this method
         if self.sync_store.get_sync_mode():
             return
@@ -736,6 +727,7 @@ class FullNode:
                 )
                 return False, advanced_peak, fork_height
 
+        for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
@@ -747,7 +739,7 @@ class FullNode:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                 return False, advanced_peak, fork_height
             block_record = self.blockchain.block_record(block.header_hash)
-            if block_record.sub_epoch_summary_included is not None:
+            if block_record.sub_epoch_summary_included is not None and self.weight_proof_handler is not None:
                 await self.weight_proof_handler.create_prev_sub_epoch_segments()
         if advanced_peak:
             self._state_changed("new_peak")
@@ -775,7 +767,7 @@ class FullNode:
             if peak is not None:
                 await self.peak_post_processing(peak_fb, peak, peak.height - 1, None)
 
-        if peak is not None:
+        if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             self._state_changed("block")
 

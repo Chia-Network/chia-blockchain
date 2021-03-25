@@ -140,14 +140,15 @@ async def pre_validate_blocks_multiprocessing(
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
-        if block.height != 0 and prev_b is None:
-            prev_b = block_records.block_record(block.prev_header_hash)
+        if block.height != 0:
+            assert block_records.contains_block(block.prev_header_hash)
+            if prev_b is None:
+                prev_b = block_records.block_record(block.prev_header_hash)
+
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
         )
 
-        if block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
-            log.warning(f"Block: {block.reward_chain_block}")
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -178,9 +179,14 @@ async def pre_validate_blocks_multiprocessing(
             block,
             None,
         )
-        recent_blocks[block_rec.header_hash] = block_rec
-        recent_blocks_compressed[block_rec.header_hash] = block_rec
-        block_records.add_block_record(block_rec)  # Temporarily add block to dict
+        # Makes sure to not override the valid blocks already in block_records
+        if not block_records.contains_block(block_rec.header_hash):
+            block_records.add_block_record(block_rec)  # Temporarily add block to dict
+            recent_blocks[block_rec.header_hash] = block_rec
+            recent_blocks_compressed[block_rec.header_hash] = block_rec
+        else:
+            recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
+            recent_blocks_compressed[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 

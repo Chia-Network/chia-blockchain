@@ -12,7 +12,7 @@ dependencies = [
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
-    "colorlog==4.7.2",  # Adds color to logs
+    "colorlog==4.8.0",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.4.6",  # Python cryptography library for TLS - keyring conflict
     "keyring==23.0",  # Store keys in MacOS Keychain, Windows Credential Locker
@@ -23,7 +23,7 @@ dependencies = [
     "setproctitle==1.2.2",  # Gives the chia processes readable names
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
-    "click@https://github.com/Chia-Network/click/tarball/master#egg=package-1.0",  # For the CLI
+    "click==7.1.2",  # For the CLI
 ]
 
 upnp_dependencies = [
@@ -64,18 +64,21 @@ kwargs = dict(
         "src.farmer",
         "src.harvester",
         "src.introducer",
+        "src.plotting",
         "src.protocols",
         "src.rpc",
         "src.server",
         "src.simulator",
+        "src.types.blockchain_format",
         "src.types",
         "src.util",
         "src.wallet",
         "src.wallet.puzzles",
         "src.wallet.rl_wallet",
         "src.wallet.cc_wallet",
-        "src.wallet.util",
+        "src.wallet.settings",
         "src.wallet.trading",
+        "src.wallet.util",
         "src.ssl",
         "mozilla-ca",
     ],
@@ -93,6 +96,7 @@ kwargs = dict(
         ]
     },
     package_data={
+        "src.wallet.puzzles": ["*.clvm", "*.clvm.hex"],
         "src.util": ["initial-*.yaml", "english.txt"],
         "src.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
