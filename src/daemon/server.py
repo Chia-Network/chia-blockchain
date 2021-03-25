@@ -653,9 +653,8 @@ class WebSocketServer:
             self.connections[service] = []
         self.connections[service].append(websocket)
 
-        response: Dict[str, Any] = {"success": False}
         if service == service_plotter:
-            response = {
+            response: Dict[str, Any] = {
                 "success": True,
                 "service": service,
                 "queue": self.extract_plot_queue(),
