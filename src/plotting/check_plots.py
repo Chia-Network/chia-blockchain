@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+from Crypto import Random
 from pathlib import Path
 from typing import Dict, List
 
@@ -14,20 +15,40 @@ from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
+min_num = 5
+default_num = 30
 
-def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo):
+min_success_rate = 0.0
+max_success_rate = 1.0
+default_success_rate = 0.5
+
+
+def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, debug_show_memo, success_rate, random):
     config = load_config(root_path, "config.yaml")
     if num is not None:
         if num == 0:
             log.warning("Not opening plot files")
         else:
-            if num < 5:
+            if num < min_num:
                 log.warning(f"{num} challenges is too low, setting it to the minimum of 5")
-                num = 5
-            if num < 30:
-                log.warning("Use 30 challenges (our default) for balance of speed and accurate results")
+                num = min_num
+            if num < default_num:
+                log.warning(f"Use {default_num} challenges (our default) for balance of speed and accurate results")
     else:
-        num = 30
+        num = default_num
+
+    expected_proofs = min(num, int((num * success_rate) + 0.5))
+
+    if success_rate <= min_success_rate or success_rate > max_success_rate:
+        log.error(f"success_rate must be higher than {min_success_rate} and less than {max_success_rate}")
+        return
+
+    if success_rate > default_success_rate and num <= default_num:
+        log.error("Higher success_rate requires a higher number of challenges")
+        return
+
+    if success_rate <= max_success_rate:
+        log.warning(f"Setting success_rate to {max_success_rate} will most likely result in false negatives")
 
     if challenge_start is not None:
         num_start = challenge_start
@@ -80,10 +101,13 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
     total_bad_plots = 0
     total_size = 0
     bad_plots_list: List[Path] = []
-
+    total_proofs = 0
+    current_plot = 0
     for plot_path, plot_info in provers.items():
+        current_plot += 1
+        progress = min(99, int((float(current_plot) / len(provers)) * 100))
         pr = plot_info.prover
-        log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+        log.info(f"[{progress}%] Testing plot {plot_path} k={pr.get_size()}")
         log.info(f"\tPool public key: {plot_info.pool_public_key}")
 
         # Look up local_sk from plot to save locked memory
@@ -95,43 +119,44 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         local_sk = master_sk_to_local_sk(local_master_sk)
         log.info(f"\tFarmer public key: {farmer_public_key}")
         log.info(f"\tLocal sk: {local_sk}")
-        total_proofs = 0
-        caught_exception: bool = False
+        plot_proofs = 0
         for i in range(num_start, num_end):
-            challenge = std_hash(i.to_bytes(32, "big"))
+            challenge = std_hash(Random.get_random_bytes(32) if random else i.to_bytes(32, "big"))
             # Some plot errors cause get_qualities_for_challenge to throw a RuntimeError
             try:
                 for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                     # Other plot errors cause get_full_proof or validate_proof to throw an AssertionError
                     try:
                         proof = pr.get_full_proof(challenge, index)
-                        total_proofs += 1
                         ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
-                        assert quality_str == ver_quality_str
+                        if quality_str == ver_quality_str:
+                            plot_proofs += 1
+                        else:
+                            log.debug(f"challenge: {challenge}, quality does not match for plot {plot_path}")
                     except AssertionError as e:
-                        log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
-                        caught_exception = True
-            except BaseException as e:
-                if isinstance(e, KeyboardInterrupt):
-                    log.warning("Interrupted, closing")
-                    return
-                log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
-                caught_exception = True
-            if caught_exception is True:
-                break
-        if total_proofs > 0 and caught_exception is False:
-            log.info(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+                        log.debug(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+            except KeyboardInterrupt:
+                log.warning("Interrupted, closing")
+                return
+            except Exception as e:
+                log.debug(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
+
+        if plot_proofs >= expected_proofs:
+            log.info(f"\tProofs {plot_proofs} / {challenges}, {round(plot_proofs/float(challenges), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
+            total_proofs += plot_proofs
         else:
             total_bad_plots += 1
-            log.error(f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}")
+            log.error(f"\tNot enough proofs: {plot_proofs} / {challenges}, {round(plot_proofs/float(challenges), 4)}")
             bad_plots_list.append(plot_path)
     log.info("")
     log.info("")
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
     log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
+    log.info(f"Got {total_proofs} proofs while at least {expected_proofs * len(provers)} were expected"
+             f" ({expected_proofs} peer plot) with the success rate {success_rate}")
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
     grand_total_bad = total_bad_plots + len(failed_to_open_filenames)
