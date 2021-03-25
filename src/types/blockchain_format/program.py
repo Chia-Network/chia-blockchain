@@ -13,6 +13,8 @@ from clvm_tools.curry import curry, uncurry
 from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.hash import std_hash
 
+from .tree_hash import sha256_treehash
+
 
 def run_program(
     program,
@@ -55,27 +57,12 @@ class Program(SExp):
     def __str__(self) -> str:
         return bytes(self).hex()
 
-    def _tree_hash(self, precalculated: Set[bytes32]) -> bytes32:
-        """
-        Hash values in `precalculated` are presumed to have been hashed already.
-        """
-        if self.listp():
-            left = self.to(self.first())._tree_hash(precalculated)
-            right = self.to(self.rest())._tree_hash(precalculated)
-            s = b"\2" + left + right
-        else:
-            atom = self.as_atom()
-            if atom in precalculated:
-                return bytes32(atom)
-            s = b"\1" + atom
-        return bytes32(std_hash(s))
-
     def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
         """
-        return self._tree_hash(set(args))
+        return sha256_treehash(self, set(args))
 
     def run_with_cost(self, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
