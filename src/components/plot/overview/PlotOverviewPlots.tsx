@@ -63,12 +63,6 @@ const cols = [
   },
   {
     minWidth: '100px',
-    field: 'plot-seed',
-    tooltip: 'plot-seed',
-    title: <Trans>Plot Seed</Trans>,
-  },
-  {
-    minWidth: '100px',
     field: 'plot_public_key',
     tooltip: 'plot_public_key',
     title: <Trans>Plot Key</Trans>,
@@ -136,7 +130,6 @@ export default function PlotOverviewPlots() {
                       <PlotQueueSize queueItem={item} />
                     </TableCell>
                     <TableCell>{item.queue}</TableCell>
-                    <TableCell />
                     <TableCell />
                     <TableCell />
                     <TableCell />
