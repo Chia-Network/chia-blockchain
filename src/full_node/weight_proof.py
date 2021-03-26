@@ -104,17 +104,19 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
+        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        if prev_ses_block is None:
+            return None
         sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
         # use second to last ses as seed
         seed = self.blockchain.get_ses(summary_heights[-2]).get_hash()
         rng = random.Random(seed)
         weight_to_check = _get_weights_for_sampling(rng, tip_rec.weight, recent_chain)
-
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
-        if prev_ses_block is None:
+        sample_n = 0
+        ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
+        if ses_blocks is None:
             return None
 
-        sample_n = 0
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_rec.height:
                 break
@@ -125,7 +127,7 @@ class WeightProofHandler:
                 break
             # sample sub epoch
             # next sub block
-            ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(ses_height))
+            ses_block = ses_blocks[sub_epoch_n]
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
                 log.error("error while building proof")
                 return None
@@ -151,8 +153,13 @@ class WeightProofHandler:
         recent_chain: List[HeaderBlock] = []
         ses_heights = self.blockchain.get_ses_heights()
         min_height = 0
-        if len(ses_heights) > 3:
-            min_height = ses_heights[-3]
+        count_ses = 0
+        for ses_height in reversed(ses_heights):
+            if ses_height <= tip_height:
+                count_ses += 1
+            if count_ses == 2:
+                min_height = ses_height - 1
+        log.info(f"start {min_height} end {tip_height}")
         headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0

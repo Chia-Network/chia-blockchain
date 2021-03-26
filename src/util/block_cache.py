@@ -59,6 +59,12 @@ class BlockCache(BlockchainInterface):
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
         return self._block_records
 
+    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+        block_records: List[BlockRecord] = []
+        for height in heights:
+            block_records.append(self.height_to_block_record(height))
+        return block_records
+
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records[header_hash]
 
