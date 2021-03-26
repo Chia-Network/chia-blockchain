@@ -12,7 +12,7 @@ from src.protocols import full_node_protocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from src.wallet.transaction_record import TransactionRecord
-from tests.core.full_node.test_full_node import connect_and_get_peer
+from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.core.fixtures import (

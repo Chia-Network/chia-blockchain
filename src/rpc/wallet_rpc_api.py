@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey
 
-from src.cmds.init import check_keys
+from src.cmds.init_funcs import check_keys
 from src.consensus.block_rewards import calculate_base_farmer_reward
 from src.consensus.network_type import NetworkType
 from src.protocols.protocol_message_types import ProtocolMessageTypes

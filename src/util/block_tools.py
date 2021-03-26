@@ -13,8 +13,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from src.cmds.init import create_all_ssl, create_default_chia_config
-from src.cmds.plots import create_plots
+from src.cmds.init_funcs import create_all_ssl, create_default_chia_config
+from src.plotting.create_plots import create_plots
 from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from src.consensus.block_record import BlockRecord
 from src.consensus.blockchain_interface import BlockchainInterface

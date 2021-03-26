@@ -4,16 +4,13 @@ from pathlib import Path
 
 import click
 
-from src.plotting.check_plots import check_plots
-from src.plotting.create_plots import create_plots
-from src.plotting.plot_tools import add_plot_directory, get_plot_directories, remove_plot_directory
-from src.util.chia_logging import initialize_logging
-
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
 
 
 def show_plots(root_path: Path):
+    from src.plotting.plot_tools import get_plot_directories
+
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually")
     print(
@@ -30,6 +27,8 @@ def show_plots(root_path: Path):
 @click.pass_context
 def plots_cmd(ctx: click.Context):
     """Create, add, remove and check your plots"""
+    from src.util.chia_logging import initialize_logging
+
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with 'chia init'")
@@ -103,6 +102,8 @@ def create_cmd(
     nobitfield: bool,
     exclude_final_dir: bool,
 ):
+    from src.plotting.create_plots import create_plots
+
     class Params(object):
         def __init__(self):
             self.size = size
@@ -150,6 +151,8 @@ def create_cmd(
 def check_cmd(
     ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int
 ):
+    from src.plotting.check_plots import check_plots
+
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
 
 
@@ -164,6 +167,8 @@ def check_cmd(
 )
 @click.pass_context
 def add_cmd(ctx: click.Context, final_dir: str):
+    from src.plotting.plot_tools import add_plot_directory
+
     add_plot_directory(Path(final_dir), ctx.obj["root_path"])
     print(f'Added plot directory "{final_dir}".')
 
@@ -179,6 +184,8 @@ def add_cmd(ctx: click.Context, final_dir: str):
 )
 @click.pass_context
 def remove_cmd(ctx: click.Context, final_dir: str):
+    from src.plotting.plot_tools import remove_plot_directory
+
     remove_plot_directory(Path(final_dir), ctx.obj["root_path"])
     print(f'Removed plot directory "{final_dir}".')
 

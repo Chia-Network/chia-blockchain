@@ -137,6 +137,10 @@ class Err(Enum):
     INVALID_REQUIRED_ITERS = 112
     PRE_SOFT_FORK_MAX_GENERATOR_REF_LIST_SIZE = 113
 
+    ASSERT_MY_PARENT_ID_FAILED = 114
+    ASSERT_MY_PUZZLEHASH_FAILED = 115
+    ASSERT_MY_AMOUNT_FAILED = 116
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

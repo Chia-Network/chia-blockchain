@@ -35,3 +35,15 @@ def make_assert_announcement(announcement_hash):
 
 def make_create_announcement(message):
     return [ConditionOpcode.CREATE_ANNOUNCEMENT, message]
+
+
+def make_assert_my_parent_id(parent_id):
+    return [ConditionOpcode.ASSERT_MY_PARENT_ID, parent_id]
+
+
+def make_assert_my_puzzlehash(puzzlehash):
+    return [ConditionOpcode.ASSERT_MY_PUZZLEHASH, puzzlehash]
+
+
+def make_assert_my_amount(amount):
+    return [ConditionOpcode.ASSERT_MY_AMOUNT, amount]

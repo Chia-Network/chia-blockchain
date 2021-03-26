@@ -214,7 +214,7 @@ class FullNodeStore:
                 if rc_challenge not in self.future_eos_cache:
                     self.future_eos_cache[rc_challenge] = []
                 self.future_eos_cache[rc_challenge].append(eos)
-                log.warning(f"Don't have challenge hash {rc_challenge}")
+                log.info(f"Don't have challenge hash {rc_challenge}")
                 return None
 
             if peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
