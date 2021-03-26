@@ -765,7 +765,7 @@ msgstr "高さ"
 msgid "Help"
 msgstr "ヘルプ"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:56
 msgid "Help translate"
 msgstr "翻訳に協力"
 
@@ -1991,4 +1991,3 @@ msgstr "{currencyCode} 全収穫チア"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} ユーザー取引手数料"
-

@@ -765,7 +765,7 @@ msgstr "Lohkokorkeus"
 msgid "Help"
 msgstr "Apuja"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:56
 msgid "Help translate"
 msgstr "Auta kääntämisessä"
 
@@ -1991,4 +1991,3 @@ msgstr "{currencyCode} Chioja Farmaroitu"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Transaktioveloitukset Käyttäjälle"
-

@@ -765,7 +765,7 @@ msgstr "高度"
 msgid "Help"
 msgstr "幫助"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:54
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:56
 msgid "Help translate"
 msgstr "協助翻譯"
 
@@ -1991,4 +1991,3 @@ msgstr "{currencyCode}　總 Chia 農田"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 使用者交易費用"
-
