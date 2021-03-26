@@ -130,17 +130,14 @@ class WalletRpcClient(RpcClient):
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
 
-    async def create_signed_transaction(self, amount: uint64, puzzle_hash: bytes32, coins: List[Coin]=None) -> Dict:
-
+    async def create_signed_transaction(self, additions: List[Dict], coins: List[Coin] = None) -> Dict:
+        # Converts bytes to hex for puzzle hashes
+        additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
         if coins is not None and len(coins) > 0:
             coins = [c.to_json_dict() for c in coins]
-            return await self.fetch("create_signed_transaction",
-                                    {"amount": amount, "puzzle_hash": puzzle_hash.hex(), "coins": coins})
+            return await self.fetch("create_signed_transaction", {"additions": additions_hex, "coins": coins})
         else:
-            return await self.fetch("create_signed_transaction",
-                                    {"amount": amount, "puzzle_hash": puzzle_hash.hex()})
-
-
+            return await self.fetch("create_signed_transaction", {"additions": additions_hex})
 
 
 # TODO: add APIs for coloured coins and RL wallet

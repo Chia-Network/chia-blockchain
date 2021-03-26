@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey
+from clvm.casts import int_to_bytes
 
 from src.cmds.init_funcs import check_keys
 from src.consensus.block_rewards import calculate_base_farmer_reward
@@ -14,6 +15,8 @@ from src.server.outbound_message import NodeType, make_msg
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.sized_bytes import bytes32
+from src.types.condition_opcodes import ConditionOpcode
+from src.types.condition_var_pair import ConditionVarPair
 from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
@@ -732,23 +735,36 @@ class WalletRpcApi:
         }
 
     async def create_signed_transaction(self, request):
-        if "amount" not in request:
-            raise ValueError("Specify amount")
-        amount = uint64(request["amount"])
+        if "additions" not in request or len(request["additions"]) < 1:
+            raise ValueError("Specify additions list")
+
+        conditions_dict = {}
+        additions: List[Dict] = request["additions"]
+        amount_0: uint64 = uint64(additions[0]["amount"])
+        assert amount_0 <= self.service.constants.MAX_COIN_AMOUNT
+        puzzle_hash_0 = hexstr_to_bytes(additions[0]["puzzle_hash"])
+        if len(puzzle_hash_0) != 32:
+            raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0}")
+
+        for addition in additions[1:]:
+            receiver_ph = hexstr_to_bytes(addition["puzzle_hash"])
+            if len(receiver_ph) != 32:
+                raise ValueError(f"Address must be 32 bytes. {receiver_ph}")
+            amount = uint64(addition["amount"])
+            if amount > self.service.constants.MAX_COIN_AMOUNT:
+                raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
+            output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_ph, int_to_bytes(amount)])
+            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         fee = uint64(0)
         if "fee" in request:
             fee = uint64(request["fee"])
-
-        if "puzzle_hash" not in request:
-            raise ValueError("Specify puzzle_hash")
-        puzzle_hash: bytes32 = bytes32(hexstr_to_bytes(request["puzzle_hash"]))
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
         signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-            amount, puzzle_hash, fee, coins=coins, ignore_max_send_amount=True
+            amount_0, puzzle_hash_0, fee, coins=coins, ignore_max_send_amount=True
         )
         return {"signed_tx": signed_tx}
