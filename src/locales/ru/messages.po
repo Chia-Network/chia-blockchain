@@ -34,8 +34,8 @@ msgstr "128 корзин рекомендуется"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Комбайн - это служба, работающая на машине, в которой фактически хранятся участки. Фермер и комбайн разговаривают с полным узлом, чтобы увидеть состояние цепи. Просмотрите сеть своих подключенных комбайнов ниже. <0>Подробнее</0>"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:371
+#: src/electron-starter.js:464
 msgid "About Chia Blockchain"
 msgstr "О программе Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Вы уверены, что хотите удалить участок? 
 msgid "Are you sure you want to disconnect?"
 msgstr "Вы уверены, что хотите отключиться?"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:142
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Вы уверены, что хотите выйти? Засеивание и фарминг будут остановлены."
 
@@ -259,15 +259,15 @@ msgstr "Испытание"
 msgid "Challenge Hash"
 msgstr "Хэш испытания"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:350
 msgid "Chat on KeyBase"
 msgstr "Чат в KeyBase"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:368
 msgid "Chia"
 msgstr "Чиа"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:307
 msgid "Chia Blockchain Wiki"
 msgstr "Блокчейн Chia на Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Цветная Монета"
 msgid "Coloured Coin Options"
 msgstr "Настройки Цветной Монеты"
 
-#: src/electron-starter.js:138
+#: src/electron-starter.js:140
 msgid "Confirm"
 msgstr "Подтвердить"
 
@@ -372,7 +372,7 @@ msgstr "Тип подключения"
 msgid "Connections"
 msgstr "Подключения"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:331
 msgid "Contribute on GitHub"
 msgstr "Сотрудничать на GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Удаление всех ключей приведет к безвоз�
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Удаление ключа приведет к безвозвратному удалению ключа с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:253
 msgid "Developer"
 msgstr "Разработчик"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:256
 msgid "Developer Tools"
 msgstr "Инструменты разработчика"
 
@@ -582,7 +582,7 @@ msgstr "Перетащите сюда файл с предложением сд�
 msgid "Drag and drop your backup file"
 msgstr "Перетащите файл резервной копии"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:212
 msgid "Edit"
 msgstr "Правка"
 
@@ -694,8 +694,8 @@ msgstr "Объем коммисий"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:204
+#: src/electron-starter.js:411
 msgid "File"
 msgstr "Файл"
 
@@ -714,11 +714,11 @@ msgstr "Путь к папке для окончательного хранен�
 msgid "Finished"
 msgstr "Завершен"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:356
 msgid "Follow on Twitter"
 msgstr "Следить в Twitter"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:315
 msgid "Frequently Asked Questions"
 msgstr "Часто задаваемые вопросы"
 
@@ -731,7 +731,7 @@ msgstr "Полный узел"
 msgid "Full Node Status"
 msgstr "Статус полного узла"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:281
 msgid "Full Screen"
 msgstr "Полный экран"
 
@@ -761,7 +761,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:303
 msgid "Help"
 msgstr "Помощь"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr "Псевдоним"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "No"
 msgstr "Нет"
 
@@ -1342,7 +1342,7 @@ msgstr "Восстанавление Кошелека Децентрализов
 msgid "Refresh Plots"
 msgstr "Обновить участки"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:323
 msgid "Release Notes"
 msgstr "Примечания к релизу"
 
@@ -1350,7 +1350,7 @@ msgstr "Примечания к релизу"
 msgid "Rename"
 msgstr "Переименовать"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:342
 msgid "Report an Issue..."
 msgstr "Сообщить о проблеме..."
 
@@ -1475,7 +1475,7 @@ msgstr "Войти в систему"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:425
 msgid "Speech"
 msgstr "Речь"
 
@@ -1803,7 +1803,7 @@ msgstr "Пользовательский публичный ключ"
 msgid "VDF Sub Slot Iterations"
 msgstr "Итерации VDF суб слота"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:244
 msgid "View"
 msgstr "Вид"
 
@@ -1905,7 +1905,7 @@ msgstr "Добро пожаловать! Перечисленные слова �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:289
 msgid "Window"
 msgstr "Окно"
 
@@ -1915,7 +1915,7 @@ msgstr "Без комиссии"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "Yes"
 msgstr "Да"
 

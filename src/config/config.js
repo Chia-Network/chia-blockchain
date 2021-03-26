@@ -1,4 +1,4 @@
 module.exports = {
-  local_test: false, // process.env.NODE_ENV === 'development' && process.env.TESTNET !== 'true',
+  local_test: process.env.REACT_APP_LOCAL_TEST === 'true',
   backup_host: 'https://backup.chia.net',
 };

@@ -34,8 +34,8 @@ msgstr "推荐设置为128个桶"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "收割者（程序）是一个在存有农田plot(s) 文件的机器上运行的服务。农夫（程序）和收割者（程序）通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割者们。 了解更多"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:371
+#: src/electron-starter.js:464
 msgid "About Chia Blockchain"
 msgstr "关于奇亚Chia区块链项目"
 
@@ -127,7 +127,7 @@ msgstr "你确定要删除这个绘图文件吗？删除后将不可恢复"
 msgid "Are you sure you want to disconnect?"
 msgstr "确定要断开连接吗?"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:142
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "确定要退出吗? 当前正在绘图中."
 
@@ -259,15 +259,15 @@ msgstr "挑战"
 msgid "Challenge Hash"
 msgstr "挑战哈希"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:350
 msgid "Chat on KeyBase"
 msgstr "在Keybase上讨论"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:368
 msgid "Chia"
 msgstr "奇亚"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:307
 msgid "Chia Blockchain Wiki"
 msgstr "奇亚区块链项目维基"
 
@@ -321,7 +321,7 @@ msgstr "染色币"
 msgid "Coloured Coin Options"
 msgstr "染色币选项"
 
-#: src/electron-starter.js:138
+#: src/electron-starter.js:140
 msgid "Confirm"
 msgstr "确认"
 
@@ -372,7 +372,7 @@ msgstr "连接类型"
 msgid "Connections"
 msgstr "连接数"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:331
 msgid "Contribute on GitHub"
 msgstr "来Github出点力"
 
@@ -531,11 +531,11 @@ msgstr "删除所有密钥将会把你的密钥永久删除，请确保你已备
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "删除密钥将会把此密钥永久删除，请确保你已备份。确定还要继续吗？"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:253
 msgid "Developer"
 msgstr "开发者"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:256
 msgid "Developer Tools"
 msgstr "开发工具"
 
@@ -582,7 +582,7 @@ msgstr "拖放Offer文件"
 msgid "Drag and drop your backup file"
 msgstr "拖拽你的备份文件"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:212
 msgid "Edit"
 msgstr "编辑"
 
@@ -694,8 +694,8 @@ msgstr "费用数据"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:204
+#: src/electron-starter.js:411
 msgid "File"
 msgstr "文件"
 
@@ -714,11 +714,11 @@ msgstr "最终文件夹位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:356
 msgid "Follow on Twitter"
 msgstr "关注我们的Twitter"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:315
 msgid "Frequently Asked Questions"
 msgstr "常见问题解答"
 
@@ -731,7 +731,7 @@ msgstr "全节点"
 msgid "Full Node Status"
 msgstr "全节点状态"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:281
 msgid "Full Screen"
 msgstr "全屏"
 
@@ -761,7 +761,7 @@ msgstr "头部哈希"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:303
 msgid "Help"
 msgstr "帮助"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr "昵称"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "No"
 msgstr "否"
 
@@ -1342,7 +1342,7 @@ msgstr "恢复DID钱包"
 msgid "Refresh Plots"
 msgstr "刷新绘图"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:323
 msgid "Release Notes"
 msgstr "发布通知"
 
@@ -1350,7 +1350,7 @@ msgstr "发布通知"
 msgid "Rename"
 msgstr "重命名"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:342
 msgid "Report an Issue..."
 msgstr "报告问题"
 
@@ -1475,7 +1475,7 @@ msgstr "登录"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:425
 msgid "Speech"
 msgstr "演说"
 
@@ -1803,7 +1803,7 @@ msgstr "用户公钥"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF子项迭代数"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:244
 msgid "View"
 msgstr "查看"
 
@@ -1905,7 +1905,7 @@ msgstr "欢迎使用奇亚! 下面的词语列表是你的钱包密语, 请务�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下面以便完成费用限定型钱包设置:"
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:289
 msgid "Window"
 msgstr "窗口"
 
@@ -1915,7 +1915,7 @@ msgstr "没有费用"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "Yes"
 msgstr "是"
 

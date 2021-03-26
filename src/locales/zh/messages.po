@@ -34,8 +34,8 @@ msgstr "建議使用 128 個桶"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "取圖器是在實際存放圖區的機器上運作的服務。塊農和取圖器會與一個完整節點溝通以取得區塊鍵狀態。以下是你的取圖器與塊農網路 學習更多"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:371
+#: src/electron-starter.js:464
 msgid "About Chia Blockchain"
 msgstr "關於 Chia 區塊鏈"
 
@@ -127,7 +127,7 @@ msgstr "您確要刪除這個耕地嗎？此耕地將無法尋回。"
 msgid "Are you sure you want to disconnect?"
 msgstr "您確定要斷線嗎？"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:142
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "您確定要退出？耕地和種田將會停止。"
 
@@ -259,15 +259,15 @@ msgstr "挑戰"
 msgid "Challenge Hash"
 msgstr "挑戰雜湊值"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:350
 msgid "Chat on KeyBase"
 msgstr "在 KeyBase 上閒聊"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:368
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:307
 msgid "Chia Blockchain Wiki"
 msgstr "Chia 區塊鏈維基"
 
@@ -321,7 +321,7 @@ msgstr "有色代幣"
 msgid "Coloured Coin Options"
 msgstr "有色代幣選項"
 
-#: src/electron-starter.js:138
+#: src/electron-starter.js:140
 msgid "Confirm"
 msgstr "確認"
 
@@ -372,7 +372,7 @@ msgstr "連線類別"
 msgid "Connections"
 msgstr "連線"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:331
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上貢獻"
 
@@ -531,11 +531,11 @@ msgstr "刪除全部鑰匙將會永久從您的電腦中移除，請確保您有
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除此鑰匙將會永久從您的電腦中移除，請確保您有備份。您確定要繼續？"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:253
 msgid "Developer"
 msgstr "開發者"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:256
 msgid "Developer Tools"
 msgstr "開發者工具"
 
@@ -582,7 +582,7 @@ msgstr "拖放提案檔案"
 msgid "Drag and drop your backup file"
 msgstr "拖放你的備份檔案"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:212
 msgid "Edit"
 msgstr "編輯"
 
@@ -694,8 +694,8 @@ msgstr "費用數量"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:204
+#: src/electron-starter.js:411
 msgid "File"
 msgstr "檔案"
 
@@ -714,11 +714,11 @@ msgstr "最終文件位置"
 msgid "Finished"
 msgstr "完成"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:356
 msgid "Follow on Twitter"
 msgstr "Twitter 上追隨"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:315
 msgid "Frequently Asked Questions"
 msgstr "常見問題"
 
@@ -731,7 +731,7 @@ msgstr "全節點"
 msgid "Full Node Status"
 msgstr "全節點狀態"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:281
 msgid "Full Screen"
 msgstr "全螢幕"
 
@@ -761,7 +761,7 @@ msgstr "表頭雜湊值"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:303
 msgid "Help"
 msgstr "幫助"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr "暱稱"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "No"
 msgstr "否"
 
@@ -1342,7 +1342,7 @@ msgstr "恢復 DID 錢包"
 msgid "Refresh Plots"
 msgstr "刷新耕地"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:323
 msgid "Release Notes"
 msgstr "版本注釋"
 
@@ -1350,7 +1350,7 @@ msgstr "版本注釋"
 msgid "Rename"
 msgstr "重新命名"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:342
 msgid "Report an Issue..."
 msgstr "回報問題..."
 
@@ -1475,7 +1475,7 @@ msgstr "登入"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:425
 msgid "Speech"
 msgstr "語音"
 
@@ -1803,7 +1803,7 @@ msgstr "使用者金鑰"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF 子欄位迭代次數"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:244
 msgid "View"
 msgstr "檢視"
 
@@ -1905,7 +1905,7 @@ msgstr "歡迎！下面的字是用來為你的錢包備份。沒有他們，你
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "當你在你的管理員中收到設定資訊封包，在下面輸入以完成你的速率限制錢包設定："
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:289
 msgid "Window"
 msgstr "視窗"
 
@@ -1915,7 +1915,7 @@ msgstr "不用費用"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "Yes"
 msgstr "是"
 
