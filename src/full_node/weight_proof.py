@@ -150,17 +150,10 @@ class WeightProofHandler:
     async def _get_recent_chain(self, tip_height: uint32) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
         ses_heights = self.blockchain.get_ses_heights()
-        min_height = max(0, tip_height - ses_heights[-2] - 100)
-        if self.proof is not None:
-            headers: Dict[bytes32, HeaderBlock] = {}
-            for block in self.proof.recent_chain_data:
-                headers[block.header_hash] = block
-            start_height = self.proof.recent_chain_data[-1].height
-            db_headers = await self.blockchain.get_header_blocks_in_range(start_height, tip_height)
-            headers.update(db_headers)
-        else:
-            headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
-
+        min_height = 0
+        if len(ses_heights) > 3:
+            min_height = ses_heights[-3]
+        headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
         ses_count = 0
         curr_height = tip_height
@@ -330,7 +323,6 @@ class WeightProofHandler:
             else:
                 while not curr_sub_rec.first_in_sub_slot and curr_sub_rec.height > 0:
                     curr_sub_rec = blocks[curr_sub_rec.prev_hash]
-
         curr = header_blocks[curr_sub_rec.header_hash]
         sub_slots_data: List[SubSlotData] = []
         tmp_sub_slots_data: List[SubSlotData] = []
