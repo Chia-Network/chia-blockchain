@@ -80,8 +80,9 @@ class HarvesterAPI:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
+                plot_id = plot_info.prover.get_id()
                 sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
-                    plot_info.prover.get_id(),
+                    plot_id,
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 )
@@ -89,6 +90,9 @@ class HarvesterAPI:
                     quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
                 except Exception as e:
                     self.harvester.log.error(f"Error using prover object {e}")
+                    self.harvester.log.error(
+                        f"File: {filename} Plot ID: {plot_id}, challenge: {sp_challenge_hash}, plot_info: {plot_info}"
+                    )
                     return []
 
                 responses: List[Tuple[bytes32, ProofOfSpace]] = []
@@ -110,8 +114,12 @@ class HarvesterAPI:
                             # then send to farmer
                             try:
                                 proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
-                            except RuntimeError:
-                                self.harvester.log.error(f"Exception fetching full proof for {filename}")
+                            except Exception as e:
+                                self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
+                                self.harvester.log.error(
+                                    f"File: {filename} Plot ID: {plot_id}, challenge: {sp_challenge_hash}, "
+                                    f"plot_info: {plot_info}"
+                                )
                                 continue
 
                             # Look up local_sk from plot to save locked memory
