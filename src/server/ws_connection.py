@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
-from src.cmds.init import chia_full_version_str
+from src.cmds.init_funcs import chia_full_version_str
 from src.protocols.protocol_message_types import ProtocolMessageTypes
 from src.protocols.shared_protocol import Capability, Handshake
 from src.server.outbound_message import Message, NodeType, make_msg
