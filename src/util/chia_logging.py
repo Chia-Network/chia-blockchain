@@ -10,6 +10,8 @@ from src.util.path import mkdir, path_from_root
 
 def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):
     log_path = path_from_root(root_path, logging_config.get("log_filename", "log/debug.log"))
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+
     mkdir(str(log_path.parent))
     file_name_length = 33 - len(service_name)
     if logging_config["log_stdout"]:
@@ -18,7 +20,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
             colorlog.ColoredFormatter(
                 f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
                 f"%(log_color)s%(levelname)-8s%(reset)s %(message)s",
-                datefmt="%H:%M:%S",
+                datefmt=log_date_format,
                 reset=True,
             )
         )
@@ -31,7 +33,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         handler.setFormatter(
             logging.Formatter(
                 fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
-                datefmt="%H:%M:%S",
+                datefmt=log_date_format,
             )
         )
         logger.addHandler(handler)
