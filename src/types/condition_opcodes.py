@@ -32,6 +32,11 @@ class ConditionOpcode(bytes, enum.Enum):
     # fee
     RESERVE_FEE = bytes([59])
 
+    # fine-grained self assertions
+    ASSERT_MY_PARENT_ID = bytes([60])
+    ASSERT_MY_PUZZLEHASH = bytes([61])
+    ASSERT_MY_AMOUNT = bytes([62])
+
     def __bytes__(self) -> bytes:
         return bytes(self.value)
 
