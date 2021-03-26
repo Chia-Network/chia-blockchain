@@ -55,7 +55,8 @@ jobs:
 
     - name: Lint source with mypy
       run: |
-        mypy src tests
+        mypy --exclude config.py tests
+        mypy src
 
     - name: Build source distribution
       run: |

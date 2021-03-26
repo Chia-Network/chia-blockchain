@@ -1,4 +1,4 @@
-name: MacOS Core Tests
+name: MacOS core Tests
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: MacOS Core Tests
+    name: MacOS core Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 80
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -85,9 +85,9 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
     - name: Test core code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core -s -v --durations 0
+        ./venv/bin/py.test tests/core/test_setproctitle.py tests/core/test_cost_calculation.py tests/core/test_full_node_rpc.py tests/core/test_farmer_harvester_rpc.py tests/core/test_merkle_set.py tests/core/test_filter.py -s -v --durations 0 

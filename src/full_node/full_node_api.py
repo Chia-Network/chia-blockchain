@@ -438,7 +438,7 @@ class FullNodeAPI:
                 )
                 return make_msg(ProtocolMessageTypes.respond_signage_point, full_node_response)
             else:
-                self.log.warning(f"Don't have signage point {request}")
+                self.log.info(f"Don't have signage point {request}")
         return None
 
     @peer_required
