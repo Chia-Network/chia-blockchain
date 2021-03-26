@@ -653,8 +653,9 @@ class WebSocketServer:
             self.connections[service] = []
         self.connections[service].append(websocket)
 
+        response: Dict[str, Any] = {"success": True}
         if service == service_plotter:
-            response: Dict[str, Any] = {
+            response = {
                 "success": True,
                 "service": service,
                 "queue": self.extract_plot_queue(),
@@ -663,7 +664,6 @@ class WebSocketServer:
             self.remote_address_map[websocket] = service
             if self.ping_job is None:
                 self.ping_job = asyncio.create_task(self.ping_task())
-            response = {"success": True}
         self.log.info(f"registered for service {service}")
         return response
 
