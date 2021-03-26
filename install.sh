@@ -46,13 +46,13 @@ if [ "$(uname)" = "Linux" ]; then
 		# Arch Linux
 		echo "Installing on Arch Linux"
 		sudo pacman -S --needed python git
-	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
+	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2"
 		sudo yum install -y python3 git
-	elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
-		# CentOS or Redhat
-		echo "Installing on CentOS/Redhat"
+	elif type yum && [ -f "/etc/redhat-release" ] || [ -f "/etc/centos-release" ] || [ -f "/etc/fedora-release" ]; then
+		# CentOS or Redhat or Fedora
+		echo "Installing on CentOS/Redhat/Fedora"
 	fi
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
 	echo "Installation currently requires brew on MacOS - https://brew.sh/"
