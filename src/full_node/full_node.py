@@ -131,12 +131,15 @@ class FullNode:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
         if self.config["send_uncompact_interval"] != 0:
+            sanitize_weight_proof_only = False
+            if "sanitize_weight_proof_only" in self.config:
+                sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
             assert self.config["target_uncompact_proofs"] != 0
             self.uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(
                     self.config["send_uncompact_interval"],
                     self.config["target_uncompact_proofs"],
-                    self.config["sanitize_weight_proof_only"],
+                    sanitize_weight_proof_only,
                 )
             )
         self.initialized = True
