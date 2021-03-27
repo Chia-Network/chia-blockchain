@@ -1,4 +1,4 @@
-name: MacOS Blockchain Tests
+name: MacOS blockchain Tests
 
 on:
   push:
@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-    name: MacOS Blockchain Tests
+    name: MacOS blockchain Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -85,9 +85,9 @@ jobs:
     - name: Install developer requirements
       run: |
         . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio
+        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist
 
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/blockchain -s -v --durations 0
+        ./venv/bin/py.test tests/blockchain/test_blockchain_transactions.py tests/blockchain/test_blockchain.py -s -v --durations 0 

@@ -32,8 +32,8 @@ def _get_filenames(directory: Path) -> List[Path]:
         if not directory.exists():
             log.warning(f"Directory: {directory} does not exist.")
             return []
-    except OSError:
-        log.warning(OSError.strerror)
+    except OSError as e:
+        log.warning(f"Error checking if directory {directory} exists: {e}")
         return []
     all_files: List[Path] = []
     try:

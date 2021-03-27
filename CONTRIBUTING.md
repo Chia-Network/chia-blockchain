@@ -51,7 +51,7 @@ proofs of space during testing. The next time tests are run, this won't be neces
 
 ```bash
 . ./activate
-pip install -r requirements-dev.txt
+pip install ".[dev]"
 black src tests && mypy src tests && flake8 src tests
 py.test tests -v --durations 0
 ```

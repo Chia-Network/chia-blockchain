@@ -29,6 +29,9 @@ from src.wallet.puzzles.puzzle_utils import (
     make_create_announcement,
     make_create_coin_condition,
     make_reserve_fee_condition,
+    make_assert_my_parent_id,
+    make_assert_my_puzzlehash,
+    make_assert_my_amount,
 )
 
 DEFAULT_SEED = b"seed" * 8
@@ -111,6 +114,12 @@ class WalletTool:
                     ret.append(make_assert_height_age_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.RESERVE_FEE:
                     ret.append(make_reserve_fee_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_MY_PARENT_ID:
+                    ret.append(make_assert_my_parent_id(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_MY_PUZZLEHASH:
+                    ret.append(make_assert_my_puzzlehash(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_MY_AMOUNT:
+                    ret.append(make_assert_my_amount(cvp.vars[0]))
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(

@@ -71,7 +71,7 @@ def mempool_assert_block_age_exceeds(
     return None
 
 
-def mempool_assert_time_exceeds(condition: ConditionVarPair):
+def mempool_assert_time_exceeds(condition: ConditionVarPair) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -86,7 +86,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord):
+def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -98,6 +98,33 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
     current_time = uint64(int(time.time() * 1000))
     if current_time <= expected_mili_time + unspent.timestamp:
         return Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
+    return None
+
+
+def mempool_assert_my_parent_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+    """
+    Checks if coin's parent ID matches the ID from the condition
+    """
+    if unspent.coin.parent_coin_info != condition.vars[0]:
+        return Err.ASSERT_MY_PARENT_ID_FAILED
+    return None
+
+
+def mempool_assert_my_puzzlehash(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+    """
+    Checks if coin's puzzlehash matches the puzzlehash from the condition
+    """
+    if unspent.coin.puzzle_hash != condition.vars[0]:
+        return Err.ASSERT_MY_PUZZLEHASH_FAILED
+    return None
+
+
+def mempool_assert_my_amount(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+    """
+    Checks if coin's amount matches the amount from the condition
+    """
+    if unspent.coin.amount != int_from_bytes(condition.vars[0]):
+        return Err.ASSERT_MY_AMOUNT_FAILED
     return None
 
 
@@ -171,7 +198,7 @@ def mempool_check_conditions_dict(
     for con_list in conditions_dict.values():
         cvp: ConditionVarPair
         for cvp in con_list:
-            error = None
+            error: Optional[Err] = None
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
@@ -184,6 +211,12 @@ def mempool_check_conditions_dict(
                 error = mempool_assert_time_exceeds(cvp)
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:
                 error = mempool_assert_relative_time_exceeds(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
+                error = mempool_assert_my_parent_id(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
+                error = mempool_assert_my_puzzlehash(cvp, unspent)
+            elif cvp.opcode is ConditionOpcode.ASSERT_MY_AMOUNT:
+                error = mempool_assert_my_amount(cvp, unspent)
             if error:
                 return error
 
