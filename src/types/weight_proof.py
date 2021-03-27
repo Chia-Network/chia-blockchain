@@ -82,7 +82,7 @@ class SubEpochSegments(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-# this is used only for serialization to database
+# this is used only for serialization into multiprocess
 class RecentChainData(Streamable):
     recent_chain_data: List[HeaderBlock]
 
