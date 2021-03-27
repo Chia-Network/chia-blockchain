@@ -144,7 +144,6 @@ class WalletStateManager:
         assert main_wallet_info is not None
 
         self.private_key = private_key
-        self.log.warning(f"Main wallet info: {main_wallet_info}, bytes: {bytes(main_wallet_info)}")
         self.main_wallet = await Wallet.create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}

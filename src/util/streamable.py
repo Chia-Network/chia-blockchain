@@ -95,7 +95,7 @@ def recurse_jsonify(d):
             if isinstance(item, Enum):
                 item = item.name
             if isinstance(item, int) and type(item) in big_ints:
-                item = str(item)
+                item = int(item)
             new_list.append(item)
         d = new_list
 
@@ -110,7 +110,7 @@ def recurse_jsonify(d):
             if isinstance(value, Enum):
                 d[key] = value.name
             if isinstance(value, int) and type(value) in big_ints:
-                d[key] = str(value)
+                d[key] = int(value)
     return d
 
 
