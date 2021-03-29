@@ -9,6 +9,7 @@ import type { RootState } from '../../../modules/rootReducer';
 const StyledLinearProgress = styled(LinearProgress)`
   height: 10px;
   border-radius: 0;
+  width: 100%;
 `;
 
 type Props = {

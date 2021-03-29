@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Flex } from '@chia/core';
-import { LinearProgress } from '@material-ui/core';
+import { LinearProgress, Typography } from '@material-ui/core';
 import styled from 'styled-components';
 
 const StyledIndicator = styled.div`
@@ -28,7 +28,15 @@ export default function PlotStatus(props: Props) {
   return (
     <Flex flexDirection="column" gap={1}>
       {progress !== undefined ? (
-        <StyledLinearProgress variant="determinate" value={progress * 100} color="secondary" />
+        <Flex gap={1} alignItems="center">
+          <StyledLinearProgress variant="determinate" value={progress * 100} color="secondary" />
+          <Flex>
+            <Typography variant="body2" color="textSecondary">
+              {`${Math.round(progress * 100)}%`}
+            </Typography>
+          </Flex>
+        </Flex>  
+        
       ) : (
         <StyledIndicator color={color} />
       )}

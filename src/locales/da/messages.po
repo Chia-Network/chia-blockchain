@@ -34,8 +34,8 @@ msgstr "128 buckets er anbefalet"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "En harvester er en service der kører på en maskine hvor plot filen(filerne) er opbevaret. En farmer og harvester snakker med en fuld node for at følge kædens nuværende form. Se dit netværk af tilsluttede harvesters her under Lær mere"
 
-#: src/electron-starter.js:371
-#: src/electron-starter.js:464
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
 msgid "About Chia Blockchain"
 msgstr "Om Chia Blockchain"
 
@@ -49,7 +49,7 @@ msgstr "Accepteret tidspunkt:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "Aktion"
 
@@ -127,7 +127,7 @@ msgstr "Er du sikker du vil slette plotfilen? Plotfilen kan ikke gendannes."
 msgid "Are you sure you want to disconnect?"
 msgstr "Er du sikker du vil afbryde forbindelsen?"
 
-#: src/electron-starter.js:142
+#: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Er du sikker du vil afslutte? GUI Plotning og farmning vil stoppe."
 
@@ -259,15 +259,15 @@ msgstr "Udfordring"
 msgid "Challenge Hash"
 msgstr "Udfordringshash"
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:348
 msgid "Chat on KeyBase"
 msgstr "Chat på KeyBase"
 
-#: src/electron-starter.js:368
+#: src/electron-starter.js:366
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:307
+#: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Vælg plotfil størrelse"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:47
 msgid "Close"
 msgstr "Luk"
 
@@ -321,7 +321,7 @@ msgstr "Farvet Mønt"
 msgid "Coloured Coin Options"
 msgstr "Farvet Mønt Indstillinger"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:138
 msgid "Confirm"
 msgstr "Bekræft"
 
@@ -372,7 +372,7 @@ msgstr "Forbindelses Type"
 msgid "Connections"
 msgstr "Forbindelser"
 
-#: src/electron-starter.js:331
+#: src/electron-starter.js:329
 msgid "Contribute on GitHub"
 msgstr "Bidrag på GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Sletning af alle nøgler vil permanent fjerne nøglerne fra din computer
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Sletning af nøglen vil permanent fjerne nøglen fra denne computer, vær sikker på at du har backup. Er du sikker på at du bil fortsætte?"
 
-#: src/electron-starter.js:253
+#: src/electron-starter.js:251
 msgid "Developer"
 msgstr "Udvikler"
 
-#: src/electron-starter.js:256
+#: src/electron-starter.js:254
 msgid "Developer Tools"
 msgstr "Udvikler Værktøjer"
 
@@ -582,7 +582,7 @@ msgstr "Træk og slip bud fil"
 msgid "Drag and drop your backup file"
 msgstr "Træk og slip din backup fil"
 
-#: src/electron-starter.js:212
+#: src/electron-starter.js:210
 msgid "Edit"
 msgstr "Rediger"
 
@@ -694,14 +694,14 @@ msgstr "Gebyr Beløb"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:204
-#: src/electron-starter.js:411
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
 msgid "File"
 msgstr "Fil"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "Filnavn"
 
@@ -714,11 +714,11 @@ msgstr "Endelig folder placering"
 msgid "Finished"
 msgstr "Færdig"
 
-#: src/electron-starter.js:356
+#: src/electron-starter.js:354
 msgid "Follow on Twitter"
 msgstr "Følg på Twitter"
 
-#: src/electron-starter.js:315
+#: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
 msgstr "Ofte Stillet Spørgsmål"
 
@@ -731,7 +731,7 @@ msgstr "Fuld Node"
 msgid "Full Node Status"
 msgstr "Fuld Node Status"
 
-#: src/electron-starter.js:281
+#: src/electron-starter.js:279
 msgid "Full Screen"
 msgstr "Fuld Skærm"
 
@@ -761,7 +761,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Højde"
 
-#: src/electron-starter.js:303
+#: src/electron-starter.js:301
 msgid "Help"
 msgstr "Hjælp"
 
@@ -863,7 +863,7 @@ msgstr "Sidste Blok Udfordring"
 msgid "Loading..."
 msgstr "Loader..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "Lokal Harvester Plotfiler"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr "Øgenavn"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "No"
 msgstr "Nej"
 
@@ -1165,7 +1165,7 @@ msgstr "Plot Antal"
 msgid "Plot Id"
 msgstr "Plot ID"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "Plot Nøgle"
 
@@ -1178,8 +1178,8 @@ msgid "Plot Public Key"
 msgstr "Plot Offentlig Nøgle"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-msgid "Plot Seed"
-msgstr "Plot Seed"
+#~ msgid "Plot Seed"
+#~ msgstr "Plot Seed"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1213,7 +1213,7 @@ msgstr "Plotter"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Plotte i parallel can spare tid. Ellers tilføj plot til kø."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Pool Nøgle"
 
@@ -1342,7 +1342,7 @@ msgstr "Gendan DID pung"
 msgid "Refresh Plots"
 msgstr "Opdater Plotfiler"
 
-#: src/electron-starter.js:323
+#: src/electron-starter.js:321
 msgid "Release Notes"
 msgstr "Udgivelses Noter"
 
@@ -1350,7 +1350,7 @@ msgstr "Udgivelses Noter"
 msgid "Rename"
 msgstr "Omdøb"
 
-#: src/electron-starter.js:342
+#: src/electron-starter.js:340
 msgid "Report an Issue..."
 msgstr "Raportér et Problem..."
 
@@ -1475,7 +1475,7 @@ msgstr "Log Ind"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:425
+#: src/electron-starter.js:423
 msgid "Speech"
 msgstr "Tale"
 
@@ -1515,7 +1515,7 @@ msgstr "Status"
 #: src/components/fullNode/FullNode.jsx:121
 #: src/components/fullNode/FullNode.jsx:129
 #: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
 #: src/components/wallet/WalletStatusCard.tsx:11
@@ -1730,7 +1730,7 @@ msgstr "Total iterationer"
 msgid "Total Network Space"
 msgstr "Total Netværks Plads"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:97
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "Total Plot Størrelse:"
 
@@ -1803,7 +1803,7 @@ msgstr "Bruger Pubkey"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF blok iterationer"
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:242
 msgid "View"
 msgstr "Se"
 
@@ -1877,7 +1877,7 @@ msgstr "Punge"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:90
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Vil du tjene flere Chia? Tilføj flere plotfiler til din farmer."
 
@@ -1905,7 +1905,7 @@ msgstr "Velkommen! De følgende ord bruges som backup til din pung. Uden disse, 
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Når du modtager din opsætningspakke fra din admin, indtast den herunder for at gennemfører din Rate Begrænset Pung opsætning:"
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:287
 msgid "Window"
 msgstr "Vindue"
 
@@ -1915,7 +1915,7 @@ msgstr "Uden gebyr"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "Yes"
 msgstr "Ja"
 

@@ -34,8 +34,8 @@ msgstr "Eine Größe von 128 buckets ist empfohlen"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Ein harvester ist ein Dienst auf einer Machine auf der die Plots gespeichert sind. Ein farmer und harvester kommunizieren zu einem full node um den Status der Chain zu ermitteln. Betrachte unten dein Netzwerk an verbundenen Harvestern Lerne mehr"
 
-#: src/electron-starter.js:371
-#: src/electron-starter.js:464
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
 msgid "About Chia Blockchain"
 msgstr "Mehr über die Chia Blockchain"
 
@@ -49,7 +49,7 @@ msgstr "Zur Zeit akzeptiert:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "Aktion"
 
@@ -127,7 +127,7 @@ msgstr "Bist du sicher, dass du den Plot löschen möchtest? Der Plot kann nicht
 msgid "Are you sure you want to disconnect?"
 msgstr "Bist du sicher, dass du die Verbindung beenden möchtest?"
 
-#: src/electron-starter.js:142
+#: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Bist du sicher, dass du beenden willst? GUI Plotting und farming werden gestoppt."
 
@@ -259,15 +259,15 @@ msgstr "Herausforderung"
 msgid "Challenge Hash"
 msgstr "Herausforderungs Hash"
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:348
 msgid "Chat on KeyBase"
 msgstr "Chatte auf KeyBase"
 
-#: src/electron-starter.js:368
+#: src/electron-starter.js:366
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:307
+#: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Wähle Plot Größe"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:47
 msgid "Close"
 msgstr "Schließen"
 
@@ -321,7 +321,7 @@ msgstr "Farbige Münze"
 msgid "Coloured Coin Options"
 msgstr "Optionen für farbige Münze"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:138
 msgid "Confirm"
 msgstr "Bestätigen"
 
@@ -372,7 +372,7 @@ msgstr "Verbindungsart"
 msgid "Connections"
 msgstr "Verbindungen"
 
-#: src/electron-starter.js:331
+#: src/electron-starter.js:329
 msgid "Contribute on GitHub"
 msgstr "Wirke auf GitHub mit"
 
@@ -537,11 +537,11 @@ msgstr ""
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
-#: src/electron-starter.js:253
+#: src/electron-starter.js:251
 msgid "Developer"
 msgstr "Entwickler"
 
-#: src/electron-starter.js:256
+#: src/electron-starter.js:254
 msgid "Developer Tools"
 msgstr "Entwickler Werkzeuge"
 
@@ -588,7 +588,7 @@ msgstr "\"Drag and drop\" Angebots Datei"
 msgid "Drag and drop your backup file"
 msgstr "Drag and drop deine Backup Datei"
 
-#: src/electron-starter.js:212
+#: src/electron-starter.js:210
 msgid "Edit"
 msgstr "Ändern"
 
@@ -700,14 +700,14 @@ msgstr "Höhe der Gebühr"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:204
-#: src/electron-starter.js:411
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
 msgid "File"
 msgstr "Datei"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "Dateiname"
 
@@ -720,11 +720,11 @@ msgstr "Finaler Speicherort"
 msgid "Finished"
 msgstr "Beendet"
 
-#: src/electron-starter.js:356
+#: src/electron-starter.js:354
 msgid "Follow on Twitter"
 msgstr "Folge auf Twitter"
 
-#: src/electron-starter.js:315
+#: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
 msgstr "Häufig gestellte Fragen"
 
@@ -737,7 +737,7 @@ msgstr "Full Node"
 msgid "Full Node Status"
 msgstr "Full Node Status"
 
-#: src/electron-starter.js:281
+#: src/electron-starter.js:279
 msgid "Full Screen"
 msgstr "Vollbild"
 
@@ -767,7 +767,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Höhe"
 
-#: src/electron-starter.js:303
+#: src/electron-starter.js:301
 msgid "Help"
 msgstr "Hilfe"
 
@@ -869,7 +869,7 @@ msgstr "Jüngste Block Herausforderung"
 msgid "Loading..."
 msgstr "Lädt..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "Lokale Harvester Plots"
 
@@ -975,7 +975,7 @@ msgid "Nickname"
 msgstr "Spitzname"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "No"
 msgstr "Nein"
 
@@ -1171,7 +1171,7 @@ msgstr "Plot Anzahl"
 msgid "Plot Id"
 msgstr "Plot Id"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "Plot Schlüssel"
 
@@ -1184,8 +1184,8 @@ msgid "Plot Public Key"
 msgstr "Öffentlicher Plot Schlüssel"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-msgid "Plot Seed"
-msgstr "Plot Seed"
+#~ msgid "Plot Seed"
+#~ msgstr "Plot Seed"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1219,7 +1219,7 @@ msgstr "Plotting"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Paralleles plotten kann Zeit sparen. Andernfalls kannst du Plots der Warteschlange hinzufügen."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Pool Schlüssel"
 
@@ -1348,7 +1348,7 @@ msgstr "DID Wallet wiederherstellen"
 msgid "Refresh Plots"
 msgstr "Plots aktualisieren"
 
-#: src/electron-starter.js:323
+#: src/electron-starter.js:321
 msgid "Release Notes"
 msgstr "Versionshinweise"
 
@@ -1356,7 +1356,7 @@ msgstr "Versionshinweise"
 msgid "Rename"
 msgstr "Umbenennen"
 
-#: src/electron-starter.js:342
+#: src/electron-starter.js:340
 msgid "Report an Issue..."
 msgstr "Einen Fehler melden..."
 
@@ -1481,7 +1481,7 @@ msgstr "Einloggen"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:425
+#: src/electron-starter.js:423
 msgid "Speech"
 msgstr "Sprache"
 
@@ -1521,7 +1521,7 @@ msgstr "Status"
 #: src/components/fullNode/FullNode.jsx:121
 #: src/components/fullNode/FullNode.jsx:129
 #: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
 #: src/components/wallet/WalletStatusCard.tsx:11
@@ -1736,7 +1736,7 @@ msgstr "Gesamte Iterationen"
 msgid "Total Network Space"
 msgstr "Gesamte Netzwerkgröße"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:97
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "Totale Plot Größe:"
 
@@ -1809,7 +1809,7 @@ msgstr "Benutzer Pubkey"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterationen"
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:242
 msgid "View"
 msgstr "Ansicht"
 
@@ -1883,7 +1883,7 @@ msgstr "Wallets"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:90
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Willst du mehr Chia verdienen? Füge mehr Plots deiner Farm hinzu."
 
@@ -1911,7 +1911,7 @@ msgstr "Willkommen! Die folgenden Wörter werden zum Wiederherstellen deines Wal
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Wenn du das Setup-Informationspaket von deinem Administrator erhalten hast, gebe Ihn unten ein, um das Setup für das Rate Limited Wallet abzuschließen:"
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:287
 msgid "Window"
 msgstr "Fenster"
 
@@ -1921,7 +1921,7 @@ msgstr "Ohne Gebühren"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "Yes"
 msgstr "Ja"
 

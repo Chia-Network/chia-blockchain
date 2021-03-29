@@ -34,8 +34,8 @@ msgstr "128 este recomandat"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un harvester este un serviciu care rulează pe o mașină în care plot (urile) sunt efectiv stocate. Un farmer și un harvester comunica cu un nod complet pentru a vedea starea lanțului. Vedeți mai jos rețeaua dvs. de harvesters conectate Aflați mai multe"
 
-#: src/electron-starter.js:371
-#: src/electron-starter.js:464
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
 msgid "About Chia Blockchain"
 msgstr "Despre blockchain-ul Chia"
 
@@ -49,7 +49,7 @@ msgstr "Acceptat la:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "Actiune"
 
@@ -127,7 +127,7 @@ msgstr "Sunteti sigur ca vreti sa stergeti plotul? Plotul nu va putea fi recuper
 msgid "Are you sure you want to disconnect?"
 msgstr "Sigur vrei să deconectezi?"
 
-#: src/electron-starter.js:142
+#: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Sigur vrei să închizi? Parcelarea și cultivarea se vor opri."
 
@@ -259,15 +259,15 @@ msgstr "Provocare"
 msgid "Challenge Hash"
 msgstr "Hashul provocarii"
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:348
 msgid "Chat on KeyBase"
 msgstr "Discută pe KeyBase"
 
-#: src/electron-starter.js:368
+#: src/electron-starter.js:366
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:307
+#: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchain Chia"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Alegeti marimea plotului"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:47
 msgid "Close"
 msgstr "Inchide"
 
@@ -321,7 +321,7 @@ msgstr "Monede colorate"
 msgid "Coloured Coin Options"
 msgstr "Opțiuni monede colorate"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:138
 msgid "Confirm"
 msgstr "Confirmare"
 
@@ -372,7 +372,7 @@ msgstr "Tipul conexiunii"
 msgid "Connections"
 msgstr "Conexiuni"
 
-#: src/electron-starter.js:331
+#: src/electron-starter.js:329
 msgid "Contribute on GitHub"
 msgstr "Contribuie pe GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Ștergerea tuturor cheilor va elimina definitiv cheile de pe computer, a
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Ștergerea tuturor cheilor va elimina definitiv cheile de pe computer, asigurați-vă că aveți copii de rezervă. Esti sigur ca vrei sa continui?"
 
-#: src/electron-starter.js:253
+#: src/electron-starter.js:251
 msgid "Developer"
 msgstr "Dezvoltator"
 
-#: src/electron-starter.js:256
+#: src/electron-starter.js:254
 msgid "Developer Tools"
 msgstr "Unelte Dezvoltator"
 
@@ -582,7 +582,7 @@ msgstr "Drag and drop fisierul cu oferta"
 msgid "Drag and drop your backup file"
 msgstr "Drag and drop fisierul backup"
 
-#: src/electron-starter.js:212
+#: src/electron-starter.js:210
 msgid "Edit"
 msgstr "Editare"
 
@@ -694,14 +694,14 @@ msgstr "Suma taxe"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:204
-#: src/electron-starter.js:411
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
 msgid "File"
 msgstr "Filă"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "Nume fisier"
 
@@ -714,11 +714,11 @@ msgstr "Locatia folderului final"
 msgid "Finished"
 msgstr "Terminat"
 
-#: src/electron-starter.js:356
+#: src/electron-starter.js:354
 msgid "Follow on Twitter"
 msgstr "Urmărește pe Twitter"
 
-#: src/electron-starter.js:315
+#: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
 msgstr "Întrebări frecvente"
 
@@ -731,7 +731,7 @@ msgstr "Nod complet"
 msgid "Full Node Status"
 msgstr "Stare nod complet"
 
-#: src/electron-starter.js:281
+#: src/electron-starter.js:279
 msgid "Full Screen"
 msgstr "Ecran Complet"
 
@@ -761,7 +761,7 @@ msgstr "hashul Headerului"
 msgid "Height"
 msgstr "Inaltime"
 
-#: src/electron-starter.js:303
+#: src/electron-starter.js:301
 msgid "Help"
 msgstr "Ajutor"
 
@@ -863,7 +863,7 @@ msgstr "Ultimele provocari la bloc"
 msgid "Loading..."
 msgstr "Incarcare..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "Ploturi locale ale 'Harvesterului'"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr "Porecla"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "No"
 msgstr "Nu"
 
@@ -1165,7 +1165,7 @@ msgstr "Număr Parcele"
 msgid "Plot Id"
 msgstr "Id Parcelă"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "Cheie Parcelă"
 
@@ -1178,8 +1178,8 @@ msgid "Plot Public Key"
 msgstr "Cheie Publică Parcelă"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-msgid "Plot Seed"
-msgstr "Sămânță Parcelă"
+#~ msgid "Plot Seed"
+#~ msgstr "Sămânță Parcelă"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1213,7 +1213,7 @@ msgstr "Parcelează"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Parcelarea în paralel poate economisi timp. Altfel, adaugă parcele la coada de așteptare."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Cheie Asociație"
 
@@ -1342,7 +1342,7 @@ msgstr "Recuperare portofel DID"
 msgid "Refresh Plots"
 msgstr "Improspateaza ploturile"
 
-#: src/electron-starter.js:323
+#: src/electron-starter.js:321
 msgid "Release Notes"
 msgstr "Note de lansare"
 
@@ -1350,7 +1350,7 @@ msgstr "Note de lansare"
 msgid "Rename"
 msgstr "Redenumeste"
 
-#: src/electron-starter.js:342
+#: src/electron-starter.js:340
 msgid "Report an Issue..."
 msgstr "Semnalează o problemă..."
 
@@ -1475,7 +1475,7 @@ msgstr "Inregistreaza-te"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:425
+#: src/electron-starter.js:423
 msgid "Speech"
 msgstr "Vorbire"
 
@@ -1515,7 +1515,7 @@ msgstr "Stare"
 #: src/components/fullNode/FullNode.jsx:121
 #: src/components/fullNode/FullNode.jsx:129
 #: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
 #: src/components/wallet/WalletStatusCard.tsx:11
@@ -1730,7 +1730,7 @@ msgstr "Iteratii totale"
 msgid "Total Network Space"
 msgstr "Spatiul din retea total"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:97
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "Marimea totala a ploturilor:"
 
@@ -1803,7 +1803,7 @@ msgstr "Pubkey Utilizator"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteratii sub slot VDF"
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:242
 msgid "View"
 msgstr "Afișare"
 
@@ -1877,7 +1877,7 @@ msgstr "Portofele"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:90
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Vrei sa castigi mai multi Chia? Adauga mai multe ploturi la ferma ta."
 
@@ -1905,7 +1905,7 @@ msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portof
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cand primiti pachetul de informatii despre configurare de la administratorul dvs., introduceti-l mai jos pentru a finaliza configurarea portofelului dvs. limitat:"
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:287
 msgid "Window"
 msgstr "Fereastră"
 
@@ -1915,7 +1915,7 @@ msgstr "Fara taxe"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "Yes"
 msgstr "Da"
 
