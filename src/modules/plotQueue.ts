@@ -107,9 +107,7 @@ function addPlotProgress(queue: PlotQueueItem[]): PlotQueueItem[] {
 
     if (log) {
       const lines = log.trim().split(/\r\n|\r|\n/).length;
-      progress = lines > FINISHED_LOG_LINES
-        ? 1
-        : lines / FINISHED_LOG_LINES;
+      progress = lines > FINISHED_LOG_LINES ? 1 : lines / FINISHED_LOG_LINES;
     }
 
     return {

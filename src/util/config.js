@@ -32,11 +32,19 @@ function loadConfig(version) {
     global.daemon_rpc_ws = `wss://${self_hostname}:${daemon_port}`;
     global.cert_path = path.join(
       config_root_dir,
-      lodash.get(config, 'ui.daemon_ssl.private_crt', 'config/ssl/daemon/private_daemon.crt'),
+      lodash.get(
+        config,
+        'ui.daemon_ssl.private_crt',
+        'config/ssl/daemon/private_daemon.crt',
+      ),
     ); // jshint ignore:line
     global.key_path = path.join(
       config_root_dir,
-      lodash.get(config, 'ui.daemon_ssl.private_key', 'config/ssl/daemon/private_daemon.key'),
+      lodash.get(
+        config,
+        'ui.daemon_ssl.private_key',
+        'config/ssl/daemon/private_daemon.key',
+      ),
     ); // jshint ignore:line
   } catch (e) {
     console.log('Error loading config - using defaults');

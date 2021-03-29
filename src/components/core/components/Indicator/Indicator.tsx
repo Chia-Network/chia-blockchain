@@ -35,8 +35,7 @@ export default function PlotStatus(props: Props) {
               {`${Math.round(progress * 100)}%`}
             </Typography>
           </Flex>
-        </Flex>  
-        
+        </Flex>
       ) : (
         <StyledIndicator color={color} />
       )}
