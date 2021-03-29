@@ -155,29 +155,22 @@ if (!setupEvents.handleSquirrelEvent()) {
     };
 
     const createMenu = () => {
-      const menu = Menu.buildFromTemplate(getMenuTemplate());
-      return menu;
+      return Menu.buildFromTemplate(getMenuTemplate());
     };
 
     const appReady = async () => {
+      createWindow();
       app.applicationMenu = createMenu();
       // if the daemon isn't local we aren't going to try to start/stop it
       if (chiaConfig.manageDaemonLifetime()) {
         chiaEnvironment.startChiaDaemon();
       }
-      createWindow();
     };
 
     app.on("ready", appReady);
 
     app.on("window-all-closed", () => {
       app.quit();
-    });
-
-    app.on("activate", () => {
-      if (mainWindow === null) {
-        createWindow();
-      }
     });
 
     ipcMain.on("load-page", (event, arg) => {
