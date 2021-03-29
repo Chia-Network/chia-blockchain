@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-29 11:58\n"
+"PO-Revision-Date: 2021-03-29 19:20\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -34,8 +34,8 @@ msgstr "Se recomiendan 128 cubos"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un cosechador es un servicio que se ejecuta en una máquina en donde actualmente se almacena(n) la(s) parcela(s). Un agricultor y un cosechador hablan con un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
 
-#: src/electron-starter.js:371
-#: src/electron-starter.js:464
+#: src/electron-starter.js:362
+#: src/electron-starter.js:455
 msgid "About Chia Blockchain"
 msgstr "Acerca de Chia Blockchain"
 
@@ -49,7 +49,7 @@ msgstr "Aceptado en el tiempo:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "Acción"
 
@@ -77,7 +77,7 @@ msgstr "Añadir Monedero"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "Añadir una Parcela"
@@ -127,7 +127,7 @@ msgstr "¿Está seguro de que desea eliminar la parcela? La parcela no se puede 
 msgid "Are you sure you want to disconnect?"
 msgstr "¿Estás seguro de que te quieres desconectar?"
 
-#: src/electron-starter.js:142
+#: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "¿Está seguro que quiere salir? Sembrar y Cultivar en el GUI se detendrán."
 
@@ -259,15 +259,15 @@ msgstr "Desafío"
 msgid "Challenge Hash"
 msgstr "Desafío Hash"
 
-#: src/electron-starter.js:350
+#: src/electron-starter.js:341
 msgid "Chat on KeyBase"
 msgstr "Chatear en Keybase"
 
-#: src/electron-starter.js:368
+#: src/electron-starter.js:359
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:307
+#: src/electron-starter.js:298
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki de Cadena de Bloques Chia"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Elegir el Tamaño de la Parcela"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
 msgstr "Cerrar"
 
@@ -321,7 +321,7 @@ msgstr "Moneda de Color"
 msgid "Coloured Coin Options"
 msgstr "Opciones de Moneda de Color"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:138
 msgid "Confirm"
 msgstr "Confirmar"
 
@@ -372,7 +372,7 @@ msgstr "Tipo de Conexión"
 msgid "Connections"
 msgstr "Conexiones"
 
-#: src/electron-starter.js:331
+#: src/electron-starter.js:322
 msgid "Contribute on GitHub"
 msgstr "Contribuir en GitHub"
 
@@ -408,7 +408,7 @@ msgstr "Crear Monedero DID"
 msgid "Create Offer"
 msgstr "Crear Oferta"
 
-#: src/components/plot/add/PlotAdd.tsx:66
+#: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
 msgstr "Crear Parcela"
 
@@ -531,11 +531,11 @@ msgstr "Borrar todas las llaves eliminará permanentemente las llaves de su orde
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Borrar la llave eliminará permanentemente la llave de su ordenador, asegurase de tener una copia de seguridad. ¿Está seguro de que quiere continuar?"
 
-#: src/electron-starter.js:253
+#: src/electron-starter.js:244
 msgid "Developer"
 msgstr "Desarrollador"
 
-#: src/electron-starter.js:256
+#: src/electron-starter.js:247
 msgid "Developer Tools"
 msgstr "Herramientas de Desarrollador"
 
@@ -582,7 +582,7 @@ msgstr "Arrastre el fichero de oferta"
 msgid "Drag and drop your backup file"
 msgstr "Arrastra y suelta tu archivo de respaldo"
 
-#: src/electron-starter.js:212
+#: src/electron-starter.js:203
 msgid "Edit"
 msgstr "Editar"
 
@@ -611,6 +611,10 @@ msgstr "Espacio estimado de red"
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Suma estimada de todo el espacio en disco trazado de todos los agricultores de la red"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
+msgid "Exclude final directory"
+msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -694,14 +698,14 @@ msgstr "Monto de tarifas"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:204
-#: src/electron-starter.js:411
+#: src/electron-starter.js:195
+#: src/electron-starter.js:402
 msgid "File"
 msgstr "Archivo"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "Nombre del Archivo"
 
@@ -714,11 +718,11 @@ msgstr "Ubicación de la Carpeta Final"
 msgid "Finished"
 msgstr "Finalizado"
 
-#: src/electron-starter.js:356
+#: src/electron-starter.js:347
 msgid "Follow on Twitter"
 msgstr "Seguir en Twitter"
 
-#: src/electron-starter.js:315
+#: src/electron-starter.js:306
 msgid "Frequently Asked Questions"
 msgstr "Preguntas Frecuentes"
 
@@ -731,7 +735,7 @@ msgstr "Nodo Completo"
 msgid "Full Node Status"
 msgstr "Estado de Nodo Completo"
 
-#: src/electron-starter.js:281
+#: src/electron-starter.js:272
 msgid "Full Screen"
 msgstr "Pantalla Completa"
 
@@ -761,7 +765,7 @@ msgstr "Encabezado de hash"
 msgid "Height"
 msgstr "Altura"
 
-#: src/electron-starter.js:303
+#: src/electron-starter.js:294
 msgid "Help"
 msgstr "Ayuda"
 
@@ -859,11 +863,11 @@ msgstr "Última Altura Cultivada"
 msgid "Latest Block Challenges"
 msgstr "Últimos Desafíos de Bloque"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:14
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
 msgstr "Cargando..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "Parcelas de Cosechador Locales"
 
@@ -969,7 +973,7 @@ msgid "Nickname"
 msgstr "Apodo"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "No"
 msgstr "No"
 
@@ -1165,7 +1169,7 @@ msgstr "Cantidad de Parcelas"
 msgid "Plot Id"
 msgstr "Id de Parcela"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "Llave de Parcela"
 
@@ -1178,8 +1182,8 @@ msgid "Plot Public Key"
 msgstr "Llave Pública de Parcela"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-msgid "Plot Seed"
-msgstr "Semilla de Parcela"
+#~ msgid "Plot Seed"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1213,7 +1217,7 @@ msgstr "Sembrando"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Sembrar en paralelo puede ahorrar tiempo. De lo contrario, agregue la(s) parcela(s) a la cola."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Llave de Conjunto"
 
@@ -1342,7 +1346,7 @@ msgstr "Recuperar Monedero DID"
 msgid "Refresh Plots"
 msgstr "Actualizar Parcelas"
 
-#: src/electron-starter.js:323
+#: src/electron-starter.js:314
 msgid "Release Notes"
 msgstr "Notas de lanzamiento"
 
@@ -1350,7 +1354,7 @@ msgstr "Notas de lanzamiento"
 msgid "Rename"
 msgstr "Renombrar"
 
-#: src/electron-starter.js:342
+#: src/electron-starter.js:333
 msgid "Report an Issue..."
 msgstr "Reportar un problema..."
 
@@ -1475,7 +1479,15 @@ msgstr "Iniciar Sesión"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:425
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+msgid "Skips adding a final directory to harvester for farming"
+msgstr ""
+
+#: src/electron-starter.js:416
 msgid "Speech"
 msgstr "Habla"
 
@@ -1515,7 +1527,7 @@ msgstr "Estado"
 #: src/components/fullNode/FullNode.jsx:121
 #: src/components/fullNode/FullNode.jsx:129
 #: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
 #: src/components/wallet/WalletStatusCard.tsx:11
@@ -1730,7 +1742,7 @@ msgstr "Total de iteraciones"
 msgid "Total Network Space"
 msgstr "Espacio Total de Red"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:97
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "Tamaño Total de Parcela:"
 
@@ -1803,12 +1815,12 @@ msgstr "Llave Pública de Usuario"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteraciones VDF Sub Slot"
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:235
 msgid "View"
 msgstr "Vista"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:25
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Ver Registro"
 
@@ -1877,7 +1889,7 @@ msgstr "Monederos"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:90
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "¿Quieres ganar más Chia? Añade más parcelas a tu granja."
 
@@ -1905,7 +1917,7 @@ msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de segur
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Monedero con Tarifa Limitada:"
 
-#: src/electron-starter.js:289
+#: src/electron-starter.js:280
 msgid "Window"
 msgstr "Ventana"
 
@@ -1915,7 +1927,7 @@ msgstr "Sin tarifas"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:139
+#: src/electron-starter.js:137
 msgid "Yes"
 msgstr "Sí"
 
