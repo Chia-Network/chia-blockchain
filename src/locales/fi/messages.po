@@ -34,8 +34,8 @@ msgstr "128 muistilohkoa on suositusmäärä"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. Farmari ja harvesteri ovat yhteydessä noodiin, jolta saavat lohkoketjun tilatiedot. Katso alta yhdistetyt harvesteripalvelut"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:362
+#: src/electron-starter.js:455
 msgid "About Chia Blockchain"
 msgstr "Chia Lohkoketjusta"
 
@@ -259,15 +259,15 @@ msgstr "Haaste"
 msgid "Challenge Hash"
 msgstr "Haastetiiviste"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:341
 msgid "Chat on KeyBase"
 msgstr "Keskustele KeyBasessa"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:359
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:298
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Wiki"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Anna Tiedoston Koko"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
 msgstr "Sulje"
 
@@ -372,7 +372,7 @@ msgstr "Yhteystyyppi"
 msgid "Connections"
 msgstr "Yhteydet"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:322
 msgid "Contribute on GitHub"
 msgstr "Anna panoksesi GitHubissa"
 
@@ -531,11 +531,11 @@ msgstr "Avainten poisto poistaa ne tietokoneeltasi. Varmista että sinulla on va
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Avaimen poisto poistaa sen tietokoneeltasi. Varmista että sinulla on varmuuskopio. Haluatko jatkaa?"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:244
 msgid "Developer"
 msgstr "Kehittäjä"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:247
 msgid "Developer Tools"
 msgstr "Kehitystyökalut"
 
@@ -582,7 +582,7 @@ msgstr "Raahaa ja pudota tarjoustiedosto"
 msgid "Drag and drop your backup file"
 msgstr "Raahaa ja pudota varmuuskopiotiedosto"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:203
 msgid "Edit"
 msgstr "Muokkaa"
 
@@ -698,8 +698,8 @@ msgstr "Palkkiosumma"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:195
+#: src/electron-starter.js:402
 msgid "File"
 msgstr "Tiedosto"
 
@@ -718,11 +718,11 @@ msgstr "Lopullinen hakemisto"
 msgid "Finished"
 msgstr "Valmis"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:347
 msgid "Follow on Twitter"
 msgstr "Seuraa Twitterissä"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:306
 msgid "Frequently Asked Questions"
 msgstr "Usein Kysytyt Kysymykset"
 
@@ -735,7 +735,7 @@ msgstr "Verkkonoodi"
 msgid "Full Node Status"
 msgstr "Verkkonoodin Tila"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:272
 msgid "Full Screen"
 msgstr "Kokoruutu"
 
@@ -765,7 +765,7 @@ msgstr "Lohkotunniste"
 msgid "Height"
 msgstr "Lohkokorkeus"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:294
 msgid "Help"
 msgstr "Apuja"
 
@@ -863,7 +863,7 @@ msgstr "Viimeisin Tuotettu Lohkokorkeus"
 msgid "Latest Block Challenges"
 msgstr "Viimeisimmät Lohkohaasteet"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:14
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
 msgstr "Lataa..."
 
@@ -1346,7 +1346,7 @@ msgstr "Palauta hajautetettu lompakko"
 msgid "Refresh Plots"
 msgstr "Päivitä Plot-tiedostot"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:314
 msgid "Release Notes"
 msgstr "Version Muutokset"
 
@@ -1354,7 +1354,7 @@ msgstr "Version Muutokset"
 msgid "Rename"
 msgstr "Nimeä Uudelleen"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:333
 msgid "Report an Issue..."
 msgstr "Raportoi Ongelma..."
 
@@ -1487,7 +1487,7 @@ msgstr "Kirjaudu"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:416
 msgid "Speech"
 msgstr "Puhe"
 
@@ -1815,12 +1815,12 @@ msgstr "Käyttäjän julkinen avain"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF -alaiteraatioita"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:235
 msgid "View"
 msgstr "Näkymä"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:25
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Katso Loki"
 
@@ -1917,7 +1917,7 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:280
 msgid "Window"
 msgstr "Ikkuna"
 

@@ -34,8 +34,8 @@ msgstr "建議使用 128 個桶"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "取圖器是在實際存放圖區的機器上運作的服務。塊農和取圖器會與一個完整節點溝通以取得區塊鍵狀態。以下是你的取圖器與塊農網路 學習更多"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:362
+#: src/electron-starter.js:455
 msgid "About Chia Blockchain"
 msgstr "關於 Chia 區塊鏈"
 
@@ -259,15 +259,15 @@ msgstr "挑戰"
 msgid "Challenge Hash"
 msgstr "挑戰雜湊值"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:341
 msgid "Chat on KeyBase"
 msgstr "在 KeyBase 上閒聊"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:359
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:298
 msgid "Chia Blockchain Wiki"
 msgstr "Chia 區塊鏈維基"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "選擇耕地大小"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
 msgstr "關閉"
 
@@ -372,7 +372,7 @@ msgstr "連線類別"
 msgid "Connections"
 msgstr "連線"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:322
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上貢獻"
 
@@ -531,11 +531,11 @@ msgstr "刪除全部鑰匙將會永久從您的電腦中移除，請確保您有
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除此鑰匙將會永久從您的電腦中移除，請確保您有備份。您確定要繼續？"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:244
 msgid "Developer"
 msgstr "開發者"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:247
 msgid "Developer Tools"
 msgstr "開發者工具"
 
@@ -582,7 +582,7 @@ msgstr "拖放提案檔案"
 msgid "Drag and drop your backup file"
 msgstr "拖放你的備份檔案"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:203
 msgid "Edit"
 msgstr "編輯"
 
@@ -698,8 +698,8 @@ msgstr "費用數量"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:195
+#: src/electron-starter.js:402
 msgid "File"
 msgstr "檔案"
 
@@ -718,11 +718,11 @@ msgstr "最終文件位置"
 msgid "Finished"
 msgstr "完成"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:347
 msgid "Follow on Twitter"
 msgstr "Twitter 上追隨"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:306
 msgid "Frequently Asked Questions"
 msgstr "常見問題"
 
@@ -735,7 +735,7 @@ msgstr "全節點"
 msgid "Full Node Status"
 msgstr "全節點狀態"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:272
 msgid "Full Screen"
 msgstr "全螢幕"
 
@@ -765,7 +765,7 @@ msgstr "表頭雜湊值"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:294
 msgid "Help"
 msgstr "幫助"
 
@@ -863,7 +863,7 @@ msgstr "最後耕種高度"
 msgid "Latest Block Challenges"
 msgstr "最新區塊挑戰"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:14
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
 msgstr "載入中"
 
@@ -1346,7 +1346,7 @@ msgstr "恢復 DID 錢包"
 msgid "Refresh Plots"
 msgstr "刷新耕地"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:314
 msgid "Release Notes"
 msgstr "版本注釋"
 
@@ -1354,7 +1354,7 @@ msgstr "版本注釋"
 msgid "Rename"
 msgstr "重新命名"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:333
 msgid "Report an Issue..."
 msgstr "回報問題..."
 
@@ -1487,7 +1487,7 @@ msgstr "登入"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:416
 msgid "Speech"
 msgstr "語音"
 
@@ -1815,12 +1815,12 @@ msgstr "使用者金鑰"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF 子欄位迭代次數"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:235
 msgid "View"
 msgstr "檢視"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:25
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "檢視日誌"
 
@@ -1917,7 +1917,7 @@ msgstr "歡迎！下面的字是用來為你的錢包備份。沒有他們，你
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "當你在你的管理員中收到設定資訊封包，在下面輸入以完成你的速率限制錢包設定："
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:280
 msgid "Window"
 msgstr "視窗"
 

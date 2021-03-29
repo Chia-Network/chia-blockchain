@@ -34,8 +34,8 @@ msgstr "128 buckets rekommenderas"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "En skördare är en tjänst som körs på en maskin där plottar lagras. En odlare och skördare kommunicerar med en fullständig nod för att läsa blockkedjans tillstånd. Du kan se ditt nätverk av anslutna skördare nedan Läs mer"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:362
+#: src/electron-starter.js:455
 msgid "About Chia Blockchain"
 msgstr "Om Chia Blockchain"
 
@@ -259,15 +259,15 @@ msgstr "Verifiering"
 msgid "Challenge Hash"
 msgstr "Verifieringshash"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:341
 msgid "Chat on KeyBase"
 msgstr "Chatta på KeyBase"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:359
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:298
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchains wiki"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Välj plottstorlek"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
 msgstr "Stäng"
 
@@ -372,7 +372,7 @@ msgstr "Anslutningstyp"
 msgid "Connections"
 msgstr "Anslutningar"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:322
 msgid "Contribute on GitHub"
 msgstr "Delta på GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Om du tar bort alla nycklar kommer de att permanent tas bort från dator
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Om du tar bort nyckeln kommer den att permanent tas bort från datorn. Se till att du har säkerhetskopierat den. Är det säkert att du vill fortsätta?"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:244
 msgid "Developer"
 msgstr "Utvecklare"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:247
 msgid "Developer Tools"
 msgstr "Utvecklarverktyg"
 
@@ -582,7 +582,7 @@ msgstr "Dra och släpp erbjudandefil"
 msgid "Drag and drop your backup file"
 msgstr "Drag och släpp din säkerhetskopierade fil"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:203
 msgid "Edit"
 msgstr "Redigera"
 
@@ -698,8 +698,8 @@ msgstr "Avgiftsbelopp"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:195
+#: src/electron-starter.js:402
 msgid "File"
 msgstr "Fil"
 
@@ -718,11 +718,11 @@ msgstr "Sökväg till slutlig mapp"
 msgid "Finished"
 msgstr "Färdig"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:347
 msgid "Follow on Twitter"
 msgstr "Följ på Twitter"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:306
 msgid "Frequently Asked Questions"
 msgstr "Vanliga frågor"
 
@@ -735,7 +735,7 @@ msgstr "Fullständig nod"
 msgid "Full Node Status"
 msgstr "Status för full nod"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:272
 msgid "Full Screen"
 msgstr "Helskärm"
 
@@ -765,7 +765,7 @@ msgstr "Huvudhash"
 msgid "Height"
 msgstr "Höjd"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:294
 msgid "Help"
 msgstr "Hjälp"
 
@@ -863,7 +863,7 @@ msgstr "Senaste höjd som odlats på"
 msgid "Latest Block Challenges"
 msgstr "Senaste blockverifieringar"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:14
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
 msgstr "Läser in …"
 
@@ -1346,7 +1346,7 @@ msgstr "Återställ DID-plånbok"
 msgid "Refresh Plots"
 msgstr "Uppdatera plottar"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:314
 msgid "Release Notes"
 msgstr "Viktig information"
 
@@ -1354,7 +1354,7 @@ msgstr "Viktig information"
 msgid "Rename"
 msgstr "Byt namn"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:333
 msgid "Report an Issue..."
 msgstr "Rapportera ett problem ..."
 
@@ -1487,7 +1487,7 @@ msgstr "Logga in"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:416
 msgid "Speech"
 msgstr "Tal"
 
@@ -1815,12 +1815,12 @@ msgstr "Publik nyckel för användare"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF-underslot-iterationer"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:235
 msgid "View"
 msgstr "Visa"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:25
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Visa logg"
 
@@ -1917,7 +1917,7 @@ msgstr "Välkommen! Följande ord används för din plånboks säkerhetskopia. U
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:280
 msgid "Window"
 msgstr "Fönster"
 
