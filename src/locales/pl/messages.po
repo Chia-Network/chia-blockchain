@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-29 11:59\n"
+"PO-Revision-Date: 2021-03-29 15:59\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "Chciałbyś dowiedzieć się więcej o blockchainie Chia? Sprawdź otwarto źródłowy eksplorator bloków <0>Chia Explorer</0>."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,12 +32,12 @@ msgstr ""
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "Żniwiarz to usługa pracująca na maszynie przechowywującej akcje (plots). Rolnik i żniwiarz komunikują się z pełnym węzłem (full node) sprawdzając stan blockchaina. Wyświetl swoją sieć podłączonych żniwiarzy poniżej Dowiedz się więcej"
 
 #: src/electron-starter.js:371
 #: src/electron-starter.js:464
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Na temat blockchainu Chia"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -45,7 +45,7 @@ msgstr "Zaakceptuj"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Dozwolone w czasie:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
