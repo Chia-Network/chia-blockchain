@@ -467,7 +467,7 @@ class WeightProofHandler:
         return True, self.get_fork_point(summaries)
 
     def get_fork_point_no_validations(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
-        log.debug(f"get fork point skip validations")
+        log.debug("get fork point skip validations")
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
