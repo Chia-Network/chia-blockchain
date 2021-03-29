@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl_NL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-28 12:15\n"
+"PO-Revision-Date: 2021-03-29 11:58\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -34,8 +34,8 @@ msgstr "128 buckets is aanbevolen"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Een 'harvester' is een service op een machine waar plot bestanden opgeslagen zijn. Een 'farmer' en 'harvester' communiceren via jou 'node' met het blockchain netwerk. Je vindt een overzicht van jou geconnecteerde 'harvesters' onderaan. Meer info"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:371
+#: src/electron-starter.js:464
 msgid "About Chia Blockchain"
 msgstr "Over Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Bent U zeker dat u het plot-bestand wil verwijderen? Dit is onomkeerbaar
 msgid "Are you sure you want to disconnect?"
 msgstr "Ben je zeker dat je de verbinding wilt verbreken?"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:142
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Ben je zeker dat je wil afsluiten? BUI Plotting en farming zullen stoppen."
 
@@ -259,15 +259,15 @@ msgstr "Uitdaging"
 msgid "Challenge Hash"
 msgstr "Te vinden Hash"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:350
 msgid "Chat on KeyBase"
 msgstr "Chat op KeyBase"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:368
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:307
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Gekleurde Munt"
 msgid "Coloured Coin Options"
 msgstr "Opties gekleurde munt"
 
-#: src/electron-starter.js:138
+#: src/electron-starter.js:140
 msgid "Confirm"
 msgstr "Bevestig"
 
@@ -372,7 +372,7 @@ msgstr "Verbindingstype"
 msgid "Connections"
 msgstr "Verbindingen"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:331
 msgid "Contribute on GitHub"
 msgstr "Bijdrage op GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Alle sleutels zullen permanent verwijderd worden op deze computer, zorg 
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "De sleutel zal permanent verwijderd worden op deze computer, zorg dat je een reservekopie hebt. Ben je zeker dat je verder wil gaan?"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:253
 msgid "Developer"
 msgstr "Ontwikkelaar"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:256
 msgid "Developer Tools"
 msgstr "Ontwikkelaarstools"
 
@@ -582,7 +582,7 @@ msgstr "Drag en drop aanbiedings bestand"
 msgid "Drag and drop your backup file"
 msgstr "Drag en drop van je back-up bestand"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:212
 msgid "Edit"
 msgstr "Bewerk"
 
@@ -694,8 +694,8 @@ msgstr "Bedrag vergoeding"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:204
+#: src/electron-starter.js:411
 msgid "File"
 msgstr "Bestand"
 
@@ -714,11 +714,11 @@ msgstr "Finale locatie map"
 msgid "Finished"
 msgstr "Beëindigd"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:356
 msgid "Follow on Twitter"
 msgstr "Volg op Twitter"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:315
 msgid "Frequently Asked Questions"
 msgstr "Veel gestelde vragen"
 
@@ -731,7 +731,7 @@ msgstr "Volledige Node"
 msgid "Full Node Status"
 msgstr "Status Volledige Node"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:281
 msgid "Full Screen"
 msgstr "Volledig scherm"
 
@@ -761,7 +761,7 @@ msgstr ""
 msgid "Height"
 msgstr "Hoogte"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:303
 msgid "Help"
 msgstr "Hulp"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr "Bijnaam"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "No"
 msgstr "Geen"
 
@@ -1342,7 +1342,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr "Vernieuw plots"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:323
 msgid "Release Notes"
 msgstr ""
 
@@ -1350,7 +1350,7 @@ msgstr ""
 msgid "Rename"
 msgstr "Hernoem"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:342
 msgid "Report an Issue..."
 msgstr "Meld een probleem..."
 
@@ -1475,7 +1475,7 @@ msgstr "Meld aan"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:425
 msgid "Speech"
 msgstr "Spraak"
 
@@ -1803,7 +1803,7 @@ msgstr ""
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:244
 msgid "View"
 msgstr "Bekijk"
 
@@ -1905,7 +1905,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:289
 msgid "Window"
 msgstr "Scherm"
 
@@ -1915,7 +1915,7 @@ msgstr "Zonder vergoeding"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "Yes"
 msgstr "Ja"
 
