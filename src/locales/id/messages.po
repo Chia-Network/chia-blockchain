@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-26 20:26\n"
+"PO-Revision-Date: 2021-03-29 11:59\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -34,8 +34,8 @@ msgstr "Baiknya gunakan 128 buckets"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr ""
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:371
+#: src/electron-starter.js:464
 msgid "About Chia Blockchain"
 msgstr "Tentang Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Anda yakin ingin menghapus plot ini? Plot ini tidak akan dapat dipulihka
 msgid "Are you sure you want to disconnect?"
 msgstr "Anda yakin ingin memutus koneksi?"
 
-#: src/electron-starter.js:140
+#: src/electron-starter.js:142
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Anda yakin ingin menutup program? Plotting dan Farming di GUI akan berhenti."
 
@@ -259,15 +259,15 @@ msgstr "Challenge"
 msgid "Challenge Hash"
 msgstr "Challenge Hash"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:350
 msgid "Chat on KeyBase"
 msgstr "Chat di KeyBase"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:368
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:307
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Chia Blockchain"
 
@@ -321,7 +321,7 @@ msgstr ""
 msgid "Coloured Coin Options"
 msgstr ""
 
-#: src/electron-starter.js:138
+#: src/electron-starter.js:140
 msgid "Confirm"
 msgstr "Konfirmasi"
 
@@ -372,7 +372,7 @@ msgstr "Jenis koneksi"
 msgid "Connections"
 msgstr "Koneksi"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:331
 msgid "Contribute on GitHub"
 msgstr "Berkontribusi di GitHub"
 
@@ -531,11 +531,11 @@ msgstr ""
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:253
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:256
 msgid "Developer Tools"
 msgstr "Developer Tools"
 
@@ -582,7 +582,7 @@ msgstr ""
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:212
 msgid "Edit"
 msgstr "Ubah"
 
@@ -694,8 +694,8 @@ msgstr "Jumlah Biaya"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:204
+#: src/electron-starter.js:411
 msgid "File"
 msgstr "File"
 
@@ -714,11 +714,11 @@ msgstr "Lokasi folder akhir"
 msgid "Finished"
 msgstr "Selesai"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:356
 msgid "Follow on Twitter"
 msgstr "Follow di Twitter"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:315
 msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
@@ -731,7 +731,7 @@ msgstr "Full Node"
 msgid "Full Node Status"
 msgstr "Status Full Node"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:281
 msgid "Full Screen"
 msgstr "Layar Penuh"
 
@@ -761,7 +761,7 @@ msgstr ""
 msgid "Height"
 msgstr "Tinggi"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:303
 msgid "Help"
 msgstr "Bantuan"
 
@@ -969,7 +969,7 @@ msgid "Nickname"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "No"
 msgstr "Tidak"
 
@@ -1342,7 +1342,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:323
 msgid "Release Notes"
 msgstr ""
 
@@ -1350,7 +1350,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:342
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1475,7 +1475,7 @@ msgstr ""
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/electron-starter.js:425
 msgid "Speech"
 msgstr ""
 
@@ -1803,7 +1803,7 @@ msgstr "Pubkey User"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iterasi VDF Sub Slot"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:244
 msgid "View"
 msgstr "Lihat"
 
@@ -1905,7 +1905,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:289
 msgid "Window"
 msgstr "Jendela"
 
@@ -1915,7 +1915,7 @@ msgstr "Tanpa biaya"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron-starter.js:139
 msgid "Yes"
 msgstr "Ya"
 
