@@ -77,7 +77,7 @@ msgstr "Lägg till plånbok"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "Lägg till en plott"
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Välj plottstorlek"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:47
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:41
 msgid "Close"
 msgstr "Stäng"
 
@@ -408,7 +408,7 @@ msgstr "Skapa DID-plånbok"
 msgid "Create Offer"
 msgstr "Skapa erbjudande"
 
-#: src/components/plot/add/PlotAdd.tsx:66
+#: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
 msgstr "Skapa plott"
 
@@ -611,6 +611,10 @@ msgstr "Uppskattat nätverksutrymme"
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Uppskattad summa av allt plottat diskutrymme hos alla odlare i nätverket"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
+msgid "Exclude final directory"
+msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -1474,6 +1478,14 @@ msgstr "Logga in"
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
 #~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+msgid "Skips adding a final directory to harvester for farming"
+msgstr ""
 
 #: src/electron-starter.js:423
 msgid "Speech"

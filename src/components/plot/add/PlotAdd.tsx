@@ -38,6 +38,7 @@ export default function PlotAdd() {
       delay: 0,
       parallel: false,
       disableBitfieldPlotting: false,
+      excludeFinalDir: false,
     },
   });
 

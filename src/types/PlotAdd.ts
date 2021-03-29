@@ -14,6 +14,7 @@ type PlotAdd = {
   delay: number;
   fingerprint?: Fingerprint;
   disableBitfieldPlotting?: boolean;
+  excludeFinalDir?: boolean;
   overrideK?: boolean;
 };
 

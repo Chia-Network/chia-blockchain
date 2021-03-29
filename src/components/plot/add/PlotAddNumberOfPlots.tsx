@@ -214,6 +214,33 @@ export default function PlotAddNumberOfPlots() {
               />
             </FormControl>
           </Grid>
+          <Grid xs={12} item>
+            <FormControl
+              variant="filled"
+              fullWidth
+            >
+              <FormControlLabel
+                control={(
+                  <Checkbox
+                    name="excludeFinalDir"
+                  />
+                )}
+                label={(
+                  <>
+                    <Trans>
+                      Exclude final directory
+                    </Trans>
+                    {' '}
+                    <TooltipIcon>
+                      <Trans>
+                        Skips adding a final directory to harvester for farming
+                      </Trans>
+                    </TooltipIcon>
+                  </>
+                )}
+              />
+            </FormControl>
+          </Grid>
         </Grid>
       </AdvancedOptions>
     </CardStep>

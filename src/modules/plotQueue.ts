@@ -28,6 +28,7 @@ export function plotQueueAdd(
       parallel,
       delay,
       disableBitfieldPlotting,
+      excludeFinalDir,
       overrideK,
     } = config;
 
@@ -46,6 +47,7 @@ export function plotQueueAdd(
         parallel,
         delay,
         disableBitfieldPlotting,
+        excludeFinalDir,
         overrideK,
       ),
     );

@@ -30,6 +30,7 @@ export const startPlotting = (
   parallel,
   delay,
   e,
+  x,
   overrideK,
 ) => {
   const action = daemonMessage();
@@ -49,6 +50,7 @@ export const startPlotting = (
     parallel,
     delay,
     e,
+    x,
     overrideK,
   };
 
