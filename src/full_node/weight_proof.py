@@ -137,10 +137,11 @@ class WeightProofHandler:
         count = 0
         ses = None
         for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
-            if ses_height < tip_height:
+            if ses_height <= tip_height:
                 count += 1
             if count == 2:
                 ses = self.blockchain.get_ses(ses_height)
+                break
         assert ses is not None
         seed = ses.get_hash()
         return seed
