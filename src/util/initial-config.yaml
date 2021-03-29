@@ -320,4 +320,4 @@ wallet:
     public_key:  "config/ssl/wallet/public_wallet.key"
 
   trusted_peers:
-    public_crt: "config/ssl/full_node/public_full_node.crt"
+    trusted_node_1: "config/ssl/full_node/public_full_node.crt"
