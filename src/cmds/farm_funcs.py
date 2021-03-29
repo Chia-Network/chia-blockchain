@@ -1,4 +1,3 @@
-import math
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -12,6 +11,7 @@ from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint16
+from src.util.misc import format_minutes
 
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
@@ -241,19 +241,9 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
     else:
         print("Estimated network space: Unknown")
 
+    minutes = -1
     if blockchain_state is not None and plots is not None:
-        proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else 0
-        minutes = (await get_average_block_time(rpc_port) / 60) / proportion if proportion else 0
-
-        print("Expected time to win: ", end="")
-        if minutes == 0:
-            print("Unknown")
-        elif minutes > 60 * 24:
-            print(f"{math.floor(minutes/(60*24))} days")
-        elif minutes > 60:
-            print(f"{math.floor(minutes/60)} hours")
-        else:
-            print(f"{math.floor(minutes)} minutes")
-    else:
-        print("Expected time to win: Unknown")
+        proportion = total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
+    print("Expected time to win: " + format_minutes(minutes))
     print("Note: log into your key using 'chia wallet show' to see rewards for each key")

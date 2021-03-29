@@ -144,7 +144,9 @@ class FullNode:
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
-        await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
+        peak = self.blockchain.get_peak()
+        if peak is not None:
+            await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
 
     def set_server(self, server: ChiaServer):
         self.server = server

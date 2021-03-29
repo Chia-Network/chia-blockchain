@@ -71,9 +71,12 @@ class Timelord:
         # For each iteration submitted, know if it's a signage point, an infusion point or an end of slot.
         self.iteration_to_proof_type: Dict[uint64, IterationType] = {}
         # List of proofs finished.
-        self.proofs_finished: List[Tuple[Chain, VDFInfo, VDFProof]] = []
+        self.proofs_finished: List[Tuple[Chain, VDFInfo, VDFProof, int]] = []
         # Data to send at vdf_client initialization.
         self.overflow_blocks: List[timelord_protocol.NewUnfinishedBlock] = []
+        # Incremented each time `reset_chains` has been called.
+        # Used to label proofs in `finished_proofs` and to only filter proofs corresponding to the most recent state.
+        self.num_resets: int = 0
 
         self.process_communication_tasks: List[asyncio.Task] = []
         self.main_loop = None
@@ -218,6 +221,7 @@ class Timelord:
         # Adjust all unfinished blocks iterations to the peak.
         new_unfinished_blocks = []
         self.proofs_finished = []
+        self.num_resets += 1
         for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN]:
             self.iters_to_submit[chain] = []
             self.iters_submitted[chain] = []
@@ -290,7 +294,9 @@ class Timelord:
             log.info(f"Mapping free vdf_client with chain: {picked_chain}.")
             self.process_communication_tasks.append(
                 asyncio.create_task(
-                    self._do_process_communication(picked_chain, challenge, initial_form, ip, reader, writer)
+                    self._do_process_communication(
+                        picked_chain, challenge, initial_form, ip, reader, writer, proof_label=self.num_resets
+                    )
                 )
             )
 
@@ -313,7 +319,9 @@ class Timelord:
 
     def _clear_proof_list(self, iters: uint64):
         return [
-            (chain, info, proof) for chain, info, proof in self.proofs_finished if info.number_of_iterations != iters
+            (chain, info, proof, label)
+            for chain, info, proof, label in self.proofs_finished
+            if info.number_of_iterations != iters
         ]
 
     async def _check_for_new_sp(self):
@@ -329,8 +337,8 @@ class Timelord:
             signage_iter = potential_sp_iters
             proofs_with_iter = [
                 (chain, info, proof)
-                for chain, info, proof in self.proofs_finished
-                if info.number_of_iterations == signage_iter
+                for chain, info, proof, label in self.proofs_finished
+                if info.number_of_iterations == signage_iter and label == self.num_resets
             ]
             # Wait for both cc and rc to have the signage point.
             if len(proofs_with_iter) == 2:
@@ -394,8 +402,8 @@ class Timelord:
         for iteration in infusion_iters:
             proofs_with_iter = [
                 (chain, info, proof)
-                for chain, info, proof in self.proofs_finished
-                if info.number_of_iterations == iteration
+                for chain, info, proof, label in self.proofs_finished
+                if info.number_of_iterations == iteration and label == self.num_resets
             ]
             if self.last_state.get_challenge(Chain.INFUSED_CHALLENGE_CHAIN) is not None:
                 chain_count = 3
@@ -587,8 +595,8 @@ class Timelord:
             return
         chains_finished = [
             (chain, info, proof)
-            for chain, info, proof in self.proofs_finished
-            if info.number_of_iterations == left_subslot_iters[0]
+            for chain, info, proof, label in self.proofs_finished
+            if info.number_of_iterations == left_subslot_iters[0] and label == self.num_resets
         ]
         if self.last_state.get_challenge(Chain.INFUSED_CHALLENGE_CHAIN) is not None:
             chain_count = 3
@@ -756,6 +764,8 @@ class Timelord:
         header_hash: Optional[bytes32] = None,
         height: Optional[uint32] = None,
         field_vdf: Optional[uint8] = None,
+        # Labels a proof to the current state only
+        proof_label: Optional[int] = None,
     ):
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
@@ -893,7 +903,8 @@ class Timelord:
                         log.error("Invalid proof of time!")
                     if not self.sanitizer_mode:
                         async with self.lock:
-                            self.proofs_finished.append((chain, vdf_info, vdf_proof))
+                            assert proof_label is not None
+                            self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
                     else:
                         async with self.lock:
                             writer.write(b"010")

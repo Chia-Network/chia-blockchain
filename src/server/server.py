@@ -656,3 +656,15 @@ class ChiaServer:
         if node_type == NodeType.TIMELORD:
             return inbound_count < self.config["max_inbound_timelord"]
         return True
+
+    def is_trusted_peer(self, peer: WSChiaConnection) -> bool:
+        for trusted_peer in self.config["trusted_peers"]:
+            cert = self.root_path / self.config["trusted_peers"][trusted_peer]
+            pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
+            cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
+            der_cert = x509.load_der_x509_certificate(cert_bytes)
+            peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
+            if peer_id == peer.peer_node_id:
+                self.log.debug(f"trusted node {peer.peer_node_id} {peer.peer_host}")
+                return True
+        return False

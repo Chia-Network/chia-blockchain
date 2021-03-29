@@ -93,7 +93,7 @@ class AddressManagerStore:
                 (key, value),
             )
             await cursor.close()
-            await self.db.commit()
+        await self.db.commit()
 
     async def set_nodes(self, node_list):
         for node_id, peer_info in node_list:
@@ -102,7 +102,7 @@ class AddressManagerStore:
                 (node_id, peer_info.to_string()),
             )
             await cursor.close()
-            await self.db.commit()
+        await self.db.commit()
 
     async def set_new_table(self, entries):
         for node_id, bucket in entries:
@@ -111,7 +111,7 @@ class AddressManagerStore:
                 (node_id, bucket),
             )
             await cursor.close()
-            await self.db.commit()
+        await self.db.commit()
 
     async def serialize(self, address_manager: AddressManager):
         metadata = []
