@@ -442,16 +442,21 @@ class WalletNode:
                 weight_proof = weight_proof_response.wp
                 if self.wallet_state_manager is None:
                     return
-                valid, fork_point = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
-                    weight_proof
-                )
-                if not valid:
-                    self.log.error(
-                        f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
-                        f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+                if self.server.is_trusted_peer(peer):
+                    valid, fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
+                        weight_proof
                     )
-                    self.log.debug(f"{weight_proof}")
-                    return None
+                else:
+                    valid, fork_point = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
+                        weight_proof
+                    )
+                    if not valid:
+                        self.log.error(
+                            f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
+                            f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+                        )
+                        self.log.debug(f"{weight_proof}")
+                        return None
                 self.log.info(f"Validated, fork point is {fork_point}")
                 self.wallet_state_manager.sync_store.add_potential_fork_point(
                     header_block.header_hash, uint32(fork_point)
