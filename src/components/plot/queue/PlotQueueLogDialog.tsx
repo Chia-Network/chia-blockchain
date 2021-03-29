@@ -1,6 +1,6 @@
 import React, { useEffect, useState, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Button, Dialog, DialogActions, DialogTitle, DialogContent, LinearProgress } from '@material-ui/core';
+import { Button, Dialog, DialogActions, DialogTitle, DialogContent, LinearProgress, Typography } from '@material-ui/core';
 import { useSelector } from 'react-redux';
 import { Flex, Log } from '@chia/core';
 import styled from 'styled-components';
@@ -10,7 +10,6 @@ const StyledLinearProgress = styled(LinearProgress)`
   height: 10px;
   border-radius: 0;
 `;
-
 
 type Props = {
   id: string;
@@ -48,14 +47,20 @@ export default function PlotQueueLogDialog(props: Props) {
         </Trans>
       </DialogTitle>
 
-
-
       <DialogContent dividers>
         <Flex flexDirection="column" gap={2}>
           {!!queueItem && queueItem.progress !== undefined && (
-            <StyledLinearProgress variant="determinate" value={queueItem.progress * 100} color="secondary" />
+            <Flex gap={1} alignItems="center">
+              <Flex flexGrow={1}>
+                <StyledLinearProgress variant="determinate" value={queueItem.progress * 100} color="secondary" />
+              </Flex>
+              <Flex>
+                <Typography variant="body2" color="textSecondary">
+                  {`${Math.round(queueItem.progress * 100)}%`}
+                </Typography>
+              </Flex>
+            </Flex>  
           )}
-        
           <Log>{log}</Log>
         </Flex>
       </DialogContent>
