@@ -64,7 +64,7 @@ export function getBlocksRecords(end, count = 10) {
         command: 'get_blocks',
         data: {
           start,
-          end,
+          end: end + 1,
         },
       }),
       false,
