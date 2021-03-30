@@ -244,8 +244,7 @@ def wallet_cmd() -> None:
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
@@ -262,8 +261,7 @@ def get_transaction_cmd(wallet_rpc_port: int, fingerprint: int, id: int, tx_id: 
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
@@ -279,8 +277,7 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbos
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
@@ -300,8 +297,7 @@ def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: 
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
@@ -314,8 +310,7 @@ def show_cmd(wallet_rpc_port: int, fingerprint: int) -> None:
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
