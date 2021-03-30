@@ -19,11 +19,10 @@ from src.wallet.puzzles.lowlevel_generator import get_generator
 GENERATOR_MOD = get_generator()
 
 
-def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
+def mempool_assert_announcement_consumed(condition: ConditionVarPair, announcements: List[bytes32]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
-    announcements = spend_bundle.announcement_names()
     announcement_hash = bytes32(condition.vars[0])
     if announcement_hash not in announcements:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
@@ -188,7 +187,7 @@ def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name
 
 def mempool_check_conditions_dict(
     unspent: CoinRecord,
-    spend_bundle: SpendBundle,
+    announcement_names: List[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     prev_transaction_block_height: uint32,
 ) -> Optional[Err]:
@@ -202,7 +201,7 @@ def mempool_check_conditions_dict(
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                error = mempool_assert_announcement_consumed(cvp, spend_bundle)
+                error = mempool_assert_announcement_consumed(cvp, announcement_names)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
                 error = mempool_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
