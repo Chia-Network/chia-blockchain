@@ -21,6 +21,7 @@ for setuptools_scm/PEP 440 reasons.
 - Wallet now uses a trusted node and, when syncing from that node, Wallet does not do as many validations.
 - @jespino changed `chia keys show` to require the `--show-mnemonic-seed` before it displays your 24 work private key mnemonic.
 - We decreased the size of the block cache in node to perform better with longer chains.
+- You can now add a private key mnemonic from a file with `chia keys show`.
 - @Flofie caught an error in CONTRIBUTING.md.
 - We no longer rely on aiter so it has been removed.
 - Keyring deprecated the use of OS_X in favor of MacOS.
