@@ -1,3 +1,5 @@
+from typing import Any
+
 import click
 
 
@@ -221,7 +223,7 @@ async def show_async(
                     tx_filter_hash = "Not a transaction block"
                     if full_block.foliage_transaction_block:
                         tx_filter_hash = full_block.foliage_transaction_block.filter_hash
-                    fees = block.fees
+                    fees: Any = block.fees
                 else:
                     block_time_string = "Not a transaction block"
                     cost = "Not a transaction block"

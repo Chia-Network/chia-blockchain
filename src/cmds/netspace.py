@@ -11,7 +11,7 @@ import click
         "[default: 8555]"
     ),
     type=int,
-    show_default=True,
+    default=None,
 )
 @click.option(
     "-d",
