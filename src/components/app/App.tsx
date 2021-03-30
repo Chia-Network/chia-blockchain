@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
-import { enUS, zhCN, esES, fiFI, itIT, roRO, ruRU, skSK, svSE } from '@material-ui/core/locale';
+import { deDE, enUS, zhCN, esES, frFR, fiFI, itIT, jaJP, nlNL, ptPT, plPL, roRO, ruRU, skSK, svSE } from '@material-ui/core/locale';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
 import { ConnectedRouter } from 'connected-react-router';
@@ -19,28 +19,41 @@ import AppLoading from './AppLoading';
 import i18n from '../../config/locales';
 
 function localeToMaterialLocale(locale: string): object {
-    switch(locale) {
-        case 'en':
-            return enUS;
-        case 'es':
-            return esES;
-        case 'it':
-            return itIT;
-        case 'fi':
-            return fiFI;
-        case'ro':
-            return roRO;
-        case 'ru':
-            return ruRU;
-        case 'sk':
-            return skSK;
-        case 'sv':
-            return svSE;
-        case 'zh-CN':
-            return zhCN;
-        default:
-            return enUS;
-    }
+  switch(locale) {
+    case 'de-DE':
+      return deDE;
+    case 'en-US':
+      return enUS;
+    case 'es-ES':
+      return esES;
+    case 'fr-FR':
+      return frFR;
+    case 'it-IT':
+      return itIT;
+    case 'ja-JP':
+      return jaJP;
+    case 'nl-NL':
+      return nlNL;
+    case 'fi-FI':
+      return fiFI;
+    case 'pl-PL':
+      return plPL;
+    case 'pt-PT':
+      return ptPT;
+    case 'ro-RO':
+      return roRO;
+    case 'ru-RU':
+      return ruRU;
+    case 'sk-SK':
+      return skSK;
+    case 'sv-SE':
+      return svSE;
+    case 'zh-TW':
+    case 'zh-CN':
+      return zhCN;
+    default:
+      return enUS;
+  }
 }
 
 export default function App() {
