@@ -442,7 +442,7 @@ class WalletNode:
                 weight_proof = weight_proof_response.wp
                 if self.wallet_state_manager is None:
                     return
-                if self.server is not None and self.server.is_trusted_peer(peer):
+                if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
                     valid, fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
                         weight_proof
                     )
