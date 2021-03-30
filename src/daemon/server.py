@@ -387,6 +387,7 @@ class WebSocketServer:
         r = request["r"]
         a = request.get("a")
         e = request["e"]
+        x = request["x"]
         override_k = request["overrideK"]
 
         command_args: List[str] = []
@@ -405,6 +406,9 @@ class WebSocketServer:
 
         if e is True:
             command_args.append("-e")
+
+        if x is True:
+            command_args.append("-x")
 
         if override_k is True:
             command_args.append("--override-k")
