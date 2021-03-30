@@ -657,9 +657,11 @@ class ChiaServer:
             return inbound_count < self.config["max_inbound_timelord"]
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection) -> bool:
-        for trusted_peer in self.config["trusted_peers"]:
-            cert = self.root_path / self.config["trusted_peers"][trusted_peer]
+    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
+        if trusted_peers is None:
+            return False
+        for trusted_peer in trusted_peers:
+            cert = self.root_path / trusted_peers[trusted_peer]
             pem_cert = x509.load_pem_x509_certificate(cert.read_bytes())
             cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
             der_cert = x509.load_der_x509_certificate(cert_bytes)
