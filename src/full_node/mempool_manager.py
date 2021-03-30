@@ -318,7 +318,9 @@ class MempoolManager:
             chialisp_height = (
                 self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
             )
-            error = mempool_check_conditions_dict(coin_record, announcements_in_spend, npc.condition_dict, uint32(chialisp_height))
+            error = mempool_check_conditions_dict(
+                coin_record, announcements_in_spend, npc.condition_dict, uint32(chialisp_height)
+            )
 
             if error:
                 if error is Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED or error is Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED:
