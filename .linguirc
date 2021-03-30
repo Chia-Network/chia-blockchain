@@ -4,10 +4,10 @@
     "include": ["<rootDir>/src"],
     "exclude": ["**/node_modules/**"]
   }],
-  "locales": ["da", "de", "en", "es", "fi", "fr", "it", "ja", "pt", "ro", "ru", "sk", "sv", "zh", "zh-CN"],
+  "locales": ["da-DK", "de-DE", "en-US", "es-ES", "fi-FI", "fr-FR", "it-IT", "ja-JP", "pt-PT", "ro-RO", "ru-RU", "sk-SK", "sv-SE", "zh-TW", "zh-CN"],
   "format": "po",
-  "sourceLocale": "en",
+  "sourceLocale": "en-US",
   "fallbackLocales": {
-    default: "en"
+    default: "en-US"
   }
 }

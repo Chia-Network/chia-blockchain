@@ -1,67 +1,53 @@
 const { i18n } = require('@lingui/core');
-const {
-  da,
-  de,
-  en,
-  fi,
-  fr,
-  it,
-  ja,
-  pt,
-  ro,
-  ru,
-  sk,
-  sv,
-  zh,
-  es,
-} = require('make-plural/plurals');
-const catalogDa = require('../locales/da/messages');
-const catalogDe = require('../locales/de/messages');
-const catalogEn = require('../locales/en/messages');
-const catalogEs = require('../locales/es/messages');
-const catalogFi = require('../locales/fi/messages');
-const catalogFr = require('../locales/fr/messages');
-const catalogIt = require('../locales/it/messages');
-const catalogJa = require('../locales/ja/messages');
-const catalogPt = require('../locales/pt/messages');
-const catalogRo = require('../locales/ro/messages');
-const catalogRu = require('../locales/ru/messages');
-const catalogSk = require('../locales/sk/messages');
-const catalogSv = require('../locales/sv/messages');
-const catalogZh = require('../locales/zh/messages');
+const { da, de, en, fi, fr, it, ja, pt, ro, ru, sk, sv, zh, es } = require('make-plural/plurals');
+
+const catalogDa = require('../locales/da-DK/messages');
+const catalogDe = require('../locales/de-DE/messages');
+const catalogEn = require('../locales/en-US/messages');
+const catalogEs = require('../locales/es-ES/messages');
+const catalogFi = require('../locales/fi-FI/messages');
+const catalogFr = require('../locales/fr-FR/messages');
+const catalogIt = require('../locales/it-IT/messages');
+const catalogJa = require('../locales/ja-JP/messages');
+const catalogPt = require('../locales/pt-PT/messages');
+const catalogRo = require('../locales/ro-RO/messages');
+const catalogRu = require('../locales/ru-RU/messages');
+const catalogSk = require('../locales/sk-SK/messages');
+const catalogSv = require('../locales/sv-SE/messages');
+const catalogZh = require('../locales/zh-TW/messages');
 const catalogZhCN = require('../locales/zh-CN/messages');
 
-i18n.loadLocaleData('da', { plurals: da });
-i18n.loadLocaleData('de', { plurals: de });
-i18n.loadLocaleData('en', { plurals: en });
-i18n.loadLocaleData('es', { plurals: es });
-i18n.loadLocaleData('fi', { plurals: fi });
-i18n.loadLocaleData('fr', { plurals: fr });
-i18n.loadLocaleData('it', { plurals: it });
-i18n.loadLocaleData('ja', { plurals: ja });
-i18n.loadLocaleData('pt', { plurals: pt });
-i18n.loadLocaleData('ro', { plurals: ro });
-i18n.loadLocaleData('ru', { plurals: ru });
-i18n.loadLocaleData('sk', { plurals: sk });
-i18n.loadLocaleData('sv', { plurals: sv });
-i18n.loadLocaleData('zh', { plurals: zh });
+i18n.loadLocaleData('da-DK', { plurals: da });
+i18n.loadLocaleData('de-DE', { plurals: de });
+i18n.loadLocaleData('en-US', { plurals: en });
+i18n.loadLocaleData('es-ES', { plurals: es });
+i18n.loadLocaleData('fi-FI', { plurals: fi });
+i18n.loadLocaleData('fr-FR', { plurals: fr });
+i18n.loadLocaleData('it-IT', { plurals: it });
+i18n.loadLocaleData('ja-JP', { plurals: ja });
+i18n.loadLocaleData('pt-PT', { plurals: pt });
+i18n.loadLocaleData('ro-RO', { plurals: ro });
+i18n.loadLocaleData('ru-RU', { plurals: ru });
+i18n.loadLocaleData('sk-SK', { plurals: sk });
+i18n.loadLocaleData('sv-SE', { plurals: sv });
+i18n.loadLocaleData('zh-TW', { plurals: zh });
 i18n.loadLocaleData('zh-CN', { plurals: zh });
-i18n.load('da', catalogDa.messages);
-i18n.load('de', catalogDe.messages);
-i18n.load('en', catalogEn.messages);
-i18n.load('es', catalogEs.messages);
-i18n.load('fi', catalogFi.messages);
-i18n.load('fr', catalogFr.messages);
-i18n.load('it', catalogIt.messages);
-i18n.load('ja', catalogJa.messages);
-i18n.load('pt', catalogPt.messages);
-i18n.load('ro', catalogRo.messages);
-i18n.load('ru', catalogRu.messages);
-i18n.load('sk', catalogSk.messages);
-i18n.load('sv', catalogSv.messages);
-i18n.load('zh', catalogZh.messages);
+i18n.load('da-DK', catalogDa.messages);
+i18n.load('de-DE', catalogDe.messages);
+i18n.load('en-US', catalogEn.messages);
+i18n.load('es-ES', catalogEs.messages);
+i18n.load('fi-FI', catalogFi.messages);
+i18n.load('fr-FR', catalogFr.messages);
+i18n.load('it-IT', catalogIt.messages);
+i18n.load('ja-JP', catalogJa.messages);
+i18n.load('pt-PT', catalogPt.messages);
+i18n.load('ro-RO', catalogRo.messages);
+i18n.load('ru-RU', catalogRu.messages);
+i18n.load('sk-SK', catalogSk.messages);
+i18n.load('sv-SE', catalogSv.messages);
+i18n.load('zh-TW', catalogZh.messages);
 i18n.load('zh-CN', catalogZhCN.messages);
 
-i18n.activate('en');
+i18n.activate('en-US');
 
 module.exports = i18n;

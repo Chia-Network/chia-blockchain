@@ -45,7 +45,7 @@ function localeToMaterialLocale(locale: string): object {
 
 export default function App() {
   const { value: darkMode } = useDarkMode();
-  const [locale] = useLocale('en');
+  const [locale] = useLocale('en-US');
   const [theme, setTheme] = useState(lightTheme(localeToMaterialLocale(locale)));
 
   // get the daemon's uri from global storage (put there by loadConfig)

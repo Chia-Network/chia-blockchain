@@ -8,25 +8,25 @@ import useOpenExternal from '../../../../hooks/useOpenExternal';
 
 // https://www.codetwo.com/admins-blog/list-of-office-365-language-id/
 const locales: { [char: string]: string } = {
-  da: 'Dansk',
-  de: 'Deutsch',
-  en: 'English',
-  es: 'Español',
-  fr: 'Français',
-  it: 'Italiano',
-  ja: '日本語 (日本)',
-  pt: 'Português',
-  ru: 'Русский',
-  ro: 'Română',
-  sk: 'Slovenčina',
-  fi: 'Suomi',
-  sv: 'Svenska',
-  "zh": '中文',
-  "zh-CN": '中文 (中国)',
+  'da-DK': 'Dansk',
+  'de-DE': 'Deutsch',
+  'en-US': 'English',
+  'es-ES': 'Español',
+  'fr-FR': 'Français',
+  'it-IT': 'Italiano',
+  'ja-JP': '日本語 (日本)',
+  'pt-PT': 'Português',
+  'ro-RO': 'Română',
+  'ru-RU': 'Русский',
+  'sk-SK': 'Slovenčina',
+  'fi-FI': 'Suomi',
+  'sv-SE': 'Svenska',
+  'zh-TW': '中文',
+  'zh-CN': '中文 (中国)',
 };
 
 export default function LocaleToggle() {
-  const [currentLocale, setLocale] = useLocale('en');
+  const [currentLocale, setLocale] = useLocale('en-US');
   const [open, toggleOpen] = useToggle(false);
   const openExternal = useOpenExternal();
 
