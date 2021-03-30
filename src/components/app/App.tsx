@@ -19,7 +19,7 @@ import AppLoading from './AppLoading';
 import i18n from '../../config/locales';
 
 function localeToMaterialLocale(locale: string): object {
-  switch(locale) {
+  switch (locale) {
     case 'de-DE':
       return deDE;
     case 'en-US':
