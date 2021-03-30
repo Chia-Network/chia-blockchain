@@ -447,6 +447,9 @@ class AddressManager:
                 cached_tried_matrix_positions = list(self.used_tried_matrix_positions)
             while True:
                 if len(self.used_tried_matrix_positions) < math.sqrt(TRIED_BUCKET_COUNT * BUCKET_SIZE):
+                    if len(self.used_tried_matrix_positions) == 0:
+                        log.error(f"Empty tried table, but tried_count shows {self.tried_count}.")
+                        return None
                     # The table is sparse, randomly pick from positions list.
                     index = randrange(len(cached_tried_matrix_positions))
                     tried_bucket, tried_bucket_pos = cached_tried_matrix_positions[index]
@@ -473,6 +476,9 @@ class AddressManager:
                 cached_new_matrix_positions = list(self.used_new_matrix_positions)
             while True:
                 if len(self.used_new_matrix_positions) < math.sqrt(NEW_BUCKET_COUNT * BUCKET_SIZE):
+                    if len(self.used_new_matrix_positions) == 0:
+                        log.error(f"Empty new table, but new_count shows {self.new_count}.")
+                        return None
                     index = randrange(len(cached_new_matrix_positions))
                     new_bucket, new_bucket_pos = cached_new_matrix_positions[index]
                 else:

@@ -160,7 +160,8 @@ class AddressManagerStore:
 
         address_manager.key = int(metadata["key"])
         address_manager.new_count = int(metadata["new_count"])
-        address_manager.tried_count = int(metadata["tried_count"])
+        # address_manager.tried_count = int(metadata["tried_count"])
+        address_manager.tried_count = 0
 
         new_table_nodes = [(node_id, info) for node_id, info in nodes if node_id < address_manager.new_count]
         for n, info in new_table_nodes:
@@ -170,7 +171,7 @@ class AddressManagerStore:
             address_manager.random_pos.append(n)
         address_manager.id_count = len(new_table_nodes)
         tried_table_nodes = [(node_id, info) for node_id, info in nodes if node_id >= address_manager.new_count]
-        lost_count = 0
+        # lost_count = 0
         for node_id, info in tried_table_nodes:
             tried_bucket = info.get_tried_bucket(address_manager.key)
             tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
@@ -183,10 +184,11 @@ class AddressManagerStore:
                 address_manager.map_addr[info.peer_info.host] = id_count
                 address_manager.tried_matrix[tried_bucket][tried_bucket_pos] = id_count
                 address_manager.id_count += 1
-            else:
-                lost_count += 1
+                address_manager.tried_count += 1
+            # else:
+            #    lost_count += 1
 
-        address_manager.tried_count -= lost_count
+        # address_manager.tried_count -= lost_count
         for node_id, bucket in new_table_entries:
             if node_id >= 0 and node_id < address_manager.new_count:
                 info = address_manager.map_info[node_id]
