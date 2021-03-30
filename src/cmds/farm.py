@@ -15,7 +15,7 @@ def farm_cmd() -> None:
         "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
-    default=8555,
+    default=None,
     show_default=True,
 )
 @click.option(
@@ -23,7 +23,7 @@ def farm_cmd() -> None:
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
+    default=None,
     show_default=True,
 )
 @click.option(
@@ -34,7 +34,7 @@ def farm_cmd() -> None:
         "See the rpc_port under harvester in config.yaml"
     ),
     type=int,
-    default=8560,
+    default=None,
     show_default=True,
 )
 @click.option(
@@ -44,7 +44,7 @@ def farm_cmd() -> None:
         "Set the port where the Farmer is hosting the RPC interface. " "See the rpc_port under farmer in config.yaml"
     ),
     type=int,
-    default=8559,
+    default=None,
     show_default=True,
 )
 def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
@@ -60,7 +60,7 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
     "--farmer-rpc-port",
     help="Set the port where the Farmer is hosting the RPC interface. See the rpc_port under farmer in config.yaml",
     type=int,
-    default=8559,
+    default=None,
     show_default=True,
 )
 @click.option(
