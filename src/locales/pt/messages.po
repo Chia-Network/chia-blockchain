@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-29 19:20\n"
+"PO-Revision-Date: 2021-03-30 01:21\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -614,7 +614,7 @@ msgstr "Soma estimada de todo o espaço em disco plotado de todos os farmers na 
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "Excluir diretório final"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -1485,7 +1485,7 @@ msgstr "Iniciar Sessão"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Ignora a adição de um diretório final ao harvester para farming"
 
 #: src/electron-starter.js:416
 msgid "Speech"
