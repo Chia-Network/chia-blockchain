@@ -387,6 +387,7 @@ class WebSocketServer:
         r = request["r"]
         a = request.get("a")
         e = request["e"]
+        x = request["x"]
         override_k = request["overrideK"]
 
         command_args: List[str] = []
@@ -405,6 +406,9 @@ class WebSocketServer:
 
         if e is True:
             command_args.append("-e")
+
+        if x is True:
+            command_args.append("-x")
 
         if override_k is True:
             command_args.append("--override-k")
@@ -732,7 +736,9 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    # Innsert proper e
+    log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
+
+    # Insert proper e
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
@@ -746,11 +752,9 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         creationflags = 0
+    environ_copy = os.environ.copy()
     process = subprocess.Popen(
-        service_array,
-        shell=False,
-        startupinfo=startupinfo,
-        creationflags=creationflags,
+        service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
     )
     pid_path = pid_path_for_service(root_path, service_command)
     try:

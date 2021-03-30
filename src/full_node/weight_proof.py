@@ -479,6 +479,18 @@ class WeightProofHandler:
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
+    def get_fork_point_no_validations(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
+        log.debug("get fork point skip validations")
+        assert self.blockchain is not None
+        assert len(weight_proof.sub_epochs) > 0
+        if len(weight_proof.sub_epochs) == 0:
+            return False, uint32(0)
+        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        if summaries is None:
+            log.warning("weight proof failed to validate sub epoch summaries")
+            return False, uint32(0)
+        return True, self.get_fork_point(summaries)
+
     async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0

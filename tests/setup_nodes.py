@@ -66,7 +66,8 @@ async def setup_full_node(
     local_bt,
     introducer_port=None,
     simulator=False,
-    send_uncompact_interval=30,
+    send_uncompact_interval=0,
+    sanitize_weight_proof_only=False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -76,6 +77,7 @@ async def setup_full_node(
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
     config["peer_connect_interval"] = 50
+    config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
     if introducer_port is not None:
         config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port
@@ -440,8 +442,8 @@ async def setup_full_system(consensus_constants: ConsensusConstants, b_tools=Non
         setup_farmer(21235, consensus_constants, b_tools, uint16(21237)),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants, b_tools),
-        setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10),
+        setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10, True),
+        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10, True),
         setup_vdf_client(7999),
         setup_timelord(21239, 21238, True, consensus_constants, b_tools_1),
     ]
