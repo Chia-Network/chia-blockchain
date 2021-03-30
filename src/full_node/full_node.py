@@ -410,7 +410,7 @@ class FullNode:
             if peer is None:
                 await self.server.send_to_all([msg], NodeType.TIMELORD)
             else:
-                await peer.new_peak_timelord(timelord_new_peak)
+                await self.server.send_to_specific([msg], peer.peer_node_id)
 
     async def synced(self) -> bool:
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
