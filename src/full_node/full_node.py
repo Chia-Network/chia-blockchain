@@ -133,11 +133,15 @@ class FullNode:
             full_peak = await self.blockchain.get_full_peak()
             await self.peak_post_processing(full_peak, peak, max(peak.height - 1, 0), None)
         if self.config["send_uncompact_interval"] != 0:
+            sanitize_weight_proof_only = False
+            if "sanitize_weight_proof_only" in self.config:
+                sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
             assert self.config["target_uncompact_proofs"] != 0
             self.uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(
                     self.config["send_uncompact_interval"],
                     self.config["target_uncompact_proofs"],
+                    sanitize_weight_proof_only,
                 )
             )
         self.initialized = True
@@ -1600,7 +1604,9 @@ class FullNode:
         if self.server is not None:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-    async def broadcast_uncompact_blocks(self, uncompact_interval_scan: int, target_uncompact_proofs: int):
+    async def broadcast_uncompact_blocks(
+        self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
+    ):
         min_height: Optional[int] = 0
         try:
             while not self._shut_down:
@@ -1629,11 +1635,17 @@ class FullNode:
                         break
                     stop_height = min(h + 99, max_height)
                     headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
+                    records: Dict[bytes32, BlockRecord] = {}
+                    if sanitize_weight_proof_only:
+                        records = await self.blockchain.get_block_records_in_range(min_height, stop_height)
                     for header in headers.values():
                         prev_broadcast_list_len = len(broadcast_list)
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
+                        if sanitize_weight_proof_only:
+                            assert header.header_hash in records
+                            record = records[header.header_hash]
                         for sub_slot in header.finished_sub_slots:
                             if (
                                 sub_slot.proofs.challenge_chain_slot_proof.witness_type > 0
@@ -1660,6 +1672,19 @@ class FullNode:
                                         uint8(CompressibleVDFField.ICC_EOS_VDF),
                                     )
                                 )
+                        # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
+                        # unless this is a challenge block.
+                        if sanitize_weight_proof_only:
+                            if not record.is_challenge_block(self.constants):
+                                # Calculates 'new_min_height' as described below.
+                                if (
+                                    prev_broadcast_list_len == 0
+                                    and len(broadcast_list) > 0
+                                    and h <= max(0, max_height - 1000)
+                                ):
+                                    new_min_height = header.height
+                                # Skip calculations for CC_SP_VDF and CC_IP_VDF.
+                                continue
                         if header.challenge_chain_sp_proof is not None and (
                             header.challenge_chain_sp_proof.witness_type > 0
                             or not header.challenge_chain_sp_proof.normalized_to_identity
