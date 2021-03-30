@@ -15,6 +15,8 @@ const locales: { [char: string]: string } = {
   'fr-FR': 'Français',
   'it-IT': 'Italiano',
   'ja-JP': '日本語 (日本)',
+  'nl-NL': 'Nederlands',
+  'pl-PL': 'Polski',
   'pt-PT': 'Português',
   'ro-RO': 'Română',
   'ru-RU': 'Русский',
