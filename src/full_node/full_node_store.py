@@ -660,9 +660,10 @@ class FullNodeStore:
         found_connecting_challenge = False
         for sub_slot, sps, total_iters in self.finished_sub_slots[1:]:
             assert sub_slot is not None
-            collected_sub_slots.append(sub_slot)
             if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge == challenge_in_chain:
                 found_connecting_challenge = True
+            if found_connecting_challenge:
+                collected_sub_slots.append(sub_slot)
             if found_connecting_challenge and sub_slot.challenge_chain.get_hash() == last_challenge_to_add:
                 found_last_challenge = True
                 break
