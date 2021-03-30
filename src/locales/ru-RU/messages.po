@@ -769,7 +769,7 @@ msgstr "Высота"
 msgid "Help"
 msgstr "Помощь"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:56
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:58
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
@@ -2003,4 +2003,3 @@ msgstr "{currencyCode} Всего Чиа выращено"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Комиссия за транзакции пользователей"
-
