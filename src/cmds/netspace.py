@@ -88,7 +88,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
         "[default: 8555]"
     ),
     type=int,
-    show_default=True,
+    default=None,
 )
 @click.option(
     "-d",

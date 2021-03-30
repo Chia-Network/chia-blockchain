@@ -1,21 +1,6 @@
-import asyncio
-import time
-import traceback
-from time import localtime, struct_time
-from typing import List, Optional
+from typing import Any
 
-import aiohttp
 import click
-
-from src.consensus.block_record import BlockRecord
-from src.rpc.full_node_rpc_client import FullNodeRpcClient
-from src.server.outbound_message import NodeType
-from src.types.full_block import FullBlock
-from src.util.bech32m import encode_puzzle_hash
-from src.util.byte_types import hexstr_to_bytes
-from src.util.config import load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.ints import uint16
 
 
 async def show_async(
@@ -28,6 +13,21 @@ async def show_async(
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
+    import aiohttp
+    import time
+    import traceback
+
+    from time import localtime, struct_time
+    from typing import List, Optional
+    from src.consensus.block_record import BlockRecord
+    from src.rpc.full_node_rpc_client import FullNodeRpcClient
+    from src.server.outbound_message import NodeType
+    from src.types.full_block import FullBlock
+    from src.util.bech32m import encode_puzzle_hash
+    from src.util.byte_types import hexstr_to_bytes
+    from src.util.config import load_config
+    from src.util.default_root import DEFAULT_ROOT_PATH
+    from src.util.ints import uint16
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -223,18 +223,24 @@ async def show_async(
                     tx_filter_hash = "Not a transaction block"
                     if full_block.foliage_transaction_block:
                         tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+                    fees: Any = block.fees
                 else:
                     block_time_string = "Not a transaction block"
                     cost = "Not a transaction block"
                     tx_filter_hash = "Not a transaction block"
-                print("Block at height", block.height, ":")
+                    fees = "Not a transaction block"
                 address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
                 farmer_address = encode_puzzle_hash(block.farmer_puzzle_hash, address_prefix)
                 pool_address = encode_puzzle_hash(block.pool_puzzle_hash, address_prefix)
+                pool_pk = (
+                    full_block.reward_chain_block.proof_of_space.pool_public_key
+                    if full_block.reward_chain_block.proof_of_space.pool_public_key is not None
+                    else "Pay to pool puzzle hash"
+                )
                 print(
+                    f"Block Height           {block.height}\n"
                     f"Header Hash            0x{block.header_hash.hex()}\n"
                     f"Timestamp              {block_time_string}\n"
-                    f"Block Height       {block.height}\n"
                     f"Weight                 {block.weight}\n"
                     f"Previous Block         0x{block.prev_hash.hex()}\n"
                     f"Difficulty             {difficulty}\n"
@@ -245,14 +251,11 @@ async def show_async(
                     f"Deficit                {block.deficit}\n"
                     f"PoSpace 'k' Size       {full_block.reward_chain_block.proof_of_space.size}\n"
                     f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
-                    f"Pool Public Key        0x{full_block.reward_chain_block.proof_of_space.pool_public_key}\n"
-                    f"Pool Public Key        "
-                    f"0x{full_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash}\n"
-                    f"{full_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash}\n"
+                    f"Pool Public Key        {pool_pk}\n"
                     f"Tx Filter Hash         {tx_filter_hash}\n"
                     f"Farmer Address         {farmer_address}\n"
                     f"Pool Address           {pool_address}\n"
-                    f"Fees Amount            {block.fees}\n"
+                    f"Fees Amount            {fees}\n"
                 )
             else:
                 print("Block with header hash", block_header_hash_by_height, "not found")
@@ -278,16 +281,14 @@ async def show_async(
         "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
-    default=8555,
-    show_default=True,
+    default=None,
 )
 @click.option(
     "-wp",
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
-    default=9256,
-    show_default=True,
+    default=None,
 )
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
@@ -313,6 +314,8 @@ def show_cmd(
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
+    import asyncio
+
     asyncio.run(
         show_async(
             rpc_port,
