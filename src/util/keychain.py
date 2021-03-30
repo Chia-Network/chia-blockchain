@@ -19,9 +19,9 @@ if platform == "win32" or platform == "cygwin":
 
     keyring.set_keyring(keyring.backends.Windows.WinVaultKeyring())
 elif platform == "darwin":
-    import keyring.backends.OS_X
+    import keyring.backends.macOS
 
-    keyring.set_keyring(keyring.backends.OS_X.Keyring())
+    keyring.set_keyring(keyring.backends.macOS.Keyring())
 elif platform == "linux":
     keyring = CryptFileKeyring()
     keyring.keyring_key = "your keyring password"  # type: ignore
