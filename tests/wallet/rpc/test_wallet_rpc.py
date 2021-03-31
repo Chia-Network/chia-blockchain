@@ -5,14 +5,18 @@ from pathlib import Path
 import pytest
 
 from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from src.rpc.full_node_rpc_api import FullNodeRpcApi
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.blockchain_format.coin import Coin
 from src.types.peer_info import PeerInfo
+from src.types.spend_bundle import SpendBundle
 from src.util.bech32m import encode_puzzle_hash
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import bt, setup_simulators_and_wallets
+from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -27,6 +31,7 @@ class TestWalletRpc:
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(self, two_wallet_nodes):
         test_rpc_port = uint16(21529)
+        test_rpc_port_node = uint16(21530)
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -62,6 +67,18 @@ class TestWalletRpc:
         def stop_node_cb():
             pass
 
+        full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
+
+        rpc_cleanup_node = await start_rpc_server(
+            full_node_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port_node,
+            stop_node_cb,
+            bt.root_path,
+            config,
+            connect_to_daemon=False,
+        )
         rpc_cleanup = await start_rpc_server(
             wallet_rpc_api,
             hostname,
@@ -76,7 +93,8 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create("localhost", test_rpc_port, bt.root_path, config)
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
         try:
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
             tx_amount = 15600000
@@ -86,6 +104,7 @@ class TestWalletRpc:
             except ValueError:
                 pass
 
+            # Tests sending a basic transaction
             tx = await client.send_transaction("1", tx_amount, addr)
             transaction_id = tx.name
 
@@ -100,12 +119,73 @@ class TestWalletRpc:
 
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.5)
 
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
+
+            # Tests offline signing
+            ph_3 = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            ph_4 = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            ph_5 = await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
+
+            # Test basic transaction to one output
+            signed_tx_amount = 888000
+            tx_res = await client.create_signed_transaction([{"amount": signed_tx_amount, "puzzle_hash": ph_3}])
+
+            assert tx_res["success"]
+            assert tx_res["signed_tx"]["fee_amount"] == 0
+            assert tx_res["signed_tx"]["amount"] == signed_tx_amount
+            assert len(tx_res["signed_tx"]["additions"]) == 2  # The output and the change
+            assert any([addition["amount"] == signed_tx_amount for addition in tx_res["signed_tx"]["additions"]])
+
+            push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
+            assert push_res["success"]
+            assert (await client.get_wallet_balance("1"))[
+                "confirmed_wallet_balance"
+            ] == initial_funds_eventually - tx_amount
+
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
+
+            # Test transaction to two outputs, from a specified coin, with a fee
+            coin_to_spend = None
+            for addition in tx_res["signed_tx"]["additions"]:
+                if addition["amount"] != signed_tx_amount:
+                    coin_to_spend = Coin.from_json_dict(addition)
+            assert coin_to_spend is not None
+
+            tx_res = await client.create_signed_transaction(
+                [{"amount": 444, "puzzle_hash": ph_4}, {"amount": 999, "puzzle_hash": ph_5}],
+                coins=[coin_to_spend],
+                fee=100,
+            )
+            assert tx_res["success"]
+            assert tx_res["signed_tx"]["fee_amount"] == 100
+            assert tx_res["signed_tx"]["amount"] == 444 + 999
+            assert len(tx_res["signed_tx"]["additions"]) == 3  # The outputs and the change
+            assert any([addition["amount"] == 444 for addition in tx_res["signed_tx"]["additions"]])
+            assert any([addition["amount"] == 999 for addition in tx_res["signed_tx"]["additions"]])
+            assert (
+                sum([rem["amount"] for rem in tx_res["signed_tx"]["removals"]])
+                - sum([ad["amount"] for ad in tx_res["signed_tx"]["additions"]])
+                == 100
+            )
+
+            push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
+            assert push_res["success"]
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await asyncio.sleep(0.5)
+
+            await time_out_assert(
+                5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
+            )
 
             address = await client.get_next_address("1", True)
             assert len(address) > 10
@@ -164,5 +244,8 @@ class TestWalletRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
+            client_node.close()
             await client.await_closed()
+            await client_node.await_closed()
             await rpc_cleanup()
+            await rpc_cleanup_node()
