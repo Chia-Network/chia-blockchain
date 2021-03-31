@@ -71,6 +71,9 @@ class WeightProofHandler:
             return None
 
         async with self.lock:
+            if self.proof is not None:
+                if self.proof.recent_chain_data[-1].header_hash == tip:
+                    return self.proof
             wp = await self._create_proof_of_weight(tip)
             if wp is None:
                 return None
