@@ -153,9 +153,21 @@ def show_cmd(show_mnemonic_seed):
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
+@click.option(
+    "--filename",
+    "-f",
+    default=None,
+    help="The filename containing the secret key mnemonic to add",
+    type=str,
+    required=False,
+)
 @click.pass_context
-def add_cmd(ctx: click.Context):
-    query_and_add_private_key_seed()
+def add_cmd(ctx: click.Context, filename: str):
+    if filename:
+        mnemonic = Path(filename).read_text().rstrip()
+        add_private_key_seed(mnemonic)
+    else:
+        query_and_add_private_key_seed()
     check_keys(ctx.obj["root_path"])
 
 
