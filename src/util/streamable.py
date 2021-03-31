@@ -190,7 +190,7 @@ class Streamable:
             bytes_read = f.read(list_size)
             assert bytes_read is not None and len(bytes_read) == list_size
             return bytes_read
-        if hasattr(f_type, "parse") and f_type in unhashable_types:
+        if hasattr(f_type, "parse"):
             return f_type.parse(f)
         if hasattr(f_type, "from_bytes") and size_hints[f_type.__name__]:
             bytes_to_read = size_hints[f_type.__name__]
