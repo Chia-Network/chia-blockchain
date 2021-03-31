@@ -261,7 +261,9 @@ class Streamable:
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:
         f = io.BytesIO(blob)
-        return cls.parse(f)
+        parsed = cls.parse(f)
+        assert f.read() == b""
+        return parsed
 
     def __bytes__(self: Any) -> bytes:
         f = io.BytesIO()
