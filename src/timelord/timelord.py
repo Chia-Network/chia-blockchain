@@ -202,6 +202,7 @@ class Timelord:
 
     async def _reset_chains(self, first_run=False):
         # First, stop all chains.
+        self.last_active_time = time.time()
         log.debug("Resetting chains")
         ip_iters = self.last_state.get_last_ip()
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -746,6 +747,7 @@ class Timelord:
         # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
         # there are no other timelords, this reset should bring the timelord back to a running state.
         if time.time() - self.last_active_time > 60:
+            log.error("Not active for over 60 seconds, restarting all chains")
             await self._reset_chains()
 
     async def _manage_chains(self):
