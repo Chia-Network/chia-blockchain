@@ -89,6 +89,7 @@ class Timelord:
         self.state_changed_callback: Optional[Callable] = None
         self.sanitizer_mode = self.config["sanitizer_mode"]
         self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
+        self.last_active_time = time.time()
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -360,6 +361,7 @@ class Timelord:
                     log.error(f"Insufficient signage point data {signage_iter}")
                     continue
                 self.iters_finished.add(iter_to_look_for)
+                self.last_active_time = time.time()
 
                 rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
                 if rc_info.challenge != rc_challenge:
@@ -465,6 +467,7 @@ class Timelord:
                         continue
 
                     self.iters_finished.add(iter_to_look_for)
+                    self.last_active_time = time.time()
                     self.unfinished_blocks.remove(block)
                     self.total_infused += 1
                     log.debug(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
@@ -642,6 +645,7 @@ class Timelord:
                 return
             log.debug("Collected end of subslot vdfs.")
             self.iters_finished.add(iter_to_look_for)
+            self.last_active_time = time.time()
             iters_from_sub_slot_start = cc_vdf.number_of_iterations + self.last_state.get_last_ip()
             cc_vdf = dataclasses.replace(cc_vdf, number_of_iterations=iters_from_sub_slot_start)
             if icc_ip_vdf is not None:
@@ -737,6 +741,12 @@ class Timelord:
             self.iters_to_submit[failed_chain].append(left_subslot_iters)
             self.iters_submitted[failed_chain] = []
             self.vdf_failures = self.vdf_failures[1:]
+
+        # If something goes wrong in the VDF client due to a failed thread, we might get stuck in a situation where we
+        # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
+        # there are no other timelords, this reset should bring the timelord back to a running state.
+        if time.time() - self.last_active_time > 60:
+            await self._reset_chains()
 
     async def _manage_chains(self):
         async with self.lock:
