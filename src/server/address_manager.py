@@ -67,7 +67,7 @@ class ExtendedPeerInfo:
         return out
 
     @classmethod
-    def from_string(cls, peer_str: str):
+    def from_string(cls, peer_str: str) -> "ExtendedPeerInfo":
         blobs = peer_str.split(" ")
         assert len(blobs) == 5
         peer_info = TimestampedPeerInfo(blobs[0], uint16(int(blobs[1])), uint64(int(blobs[2])))
@@ -141,7 +141,7 @@ class ExtendedPeerInfo:
 
         return False
 
-    def get_selection_chance(self, now: Optional[int] = None):
+    def get_selection_chance(self, now: Optional[int] = None) -> float:
         if now is None:
             now = int(math.floor(time.time()))
         chance = 1.0
@@ -197,7 +197,7 @@ class AddressManager:
         self.allow_private_subnets = True
 
     # Use only this method for modifying new matrix.
-    def _set_new_matrix(self, row: int, col: int, value: int):
+    def _set_new_matrix(self, row: int, col: int, value: int) -> None:
         self.new_matrix[row][col] = value
         if value == -1:
             if (row, col) in self.used_new_matrix_positions:
@@ -207,7 +207,7 @@ class AddressManager:
                 self.used_new_matrix_positions.add((row, col))
 
     # Use only this method for modifying tried matrix.
-    def _set_tried_matrix(self, row: int, col: int, value: int):
+    def _set_tried_matrix(self, row: int, col: int, value: int) -> None:
         self.tried_matrix[row][col] = value
         if value == -1:
             if (row, col) in self.used_tried_matrix_positions:
@@ -245,7 +245,7 @@ class AddressManager:
             return (None, node_id)
         return (self.map_info[node_id], node_id)
 
-    def swap_random_(self, rand_pos_1: int, rand_pos_2: int):
+    def swap_random_(self, rand_pos_1: int, rand_pos_2: int) -> None:
         if rand_pos_1 == rand_pos_2:
             return
         assert rand_pos_1 < len(self.random_pos) and rand_pos_2 < len(self.random_pos)
@@ -256,7 +256,7 @@ class AddressManager:
         self.random_pos[rand_pos_1] = node_id_2
         self.random_pos[rand_pos_2] = node_id_1
 
-    def make_tried_(self, info: ExtendedPeerInfo, node_id: int):
+    def make_tried_(self, info: ExtendedPeerInfo, node_id: int) -> None:
         for bucket in range(NEW_BUCKET_COUNT):
             pos = info.get_bucket_position(self.key, True, bucket)
             if self.new_matrix[bucket][pos] == node_id:
@@ -285,7 +285,7 @@ class AddressManager:
         self.tried_count += 1
         info.is_tried = True
 
-    def clear_new_(self, bucket: int, pos: int):
+    def clear_new_(self, bucket: int, pos: int) -> None:
         if self.new_matrix[bucket][pos] != -1:
             delete_id = self.new_matrix[bucket][pos]
             delete_info = self.map_info[delete_id]
@@ -295,7 +295,7 @@ class AddressManager:
             if delete_info.ref_count == 0:
                 self.delete_new_entry_(delete_id)
 
-    def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int):
+    def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
         if not addr.is_valid(self.allow_private_subnets):
@@ -347,7 +347,7 @@ class AddressManager:
         else:
             self.make_tried_(info, node_id)
 
-    def delete_new_entry_(self, node_id: int):
+    def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
         if info is None or info.random_pos is None:
             return
@@ -419,7 +419,7 @@ class AddressManager:
                         self.delete_new_entry_(node_id)
         return is_unique
 
-    def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int):
+    def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
         info, _ = self.find_(addr)
         if info is None:
             return
@@ -562,7 +562,7 @@ class AddressManager:
 
         return addr
 
-    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int):
+    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
         now = int(math.floor(time.time()))
         for bucket in range(NEW_BUCKET_COUNT):
             for pos in range(BUCKET_SIZE):
@@ -575,7 +575,7 @@ class AddressManager:
                     ):
                         self.clear_new_(bucket, pos)
 
-    def connect_(self, addr: PeerInfo, timestamp: int):
+    def connect_(self, addr: PeerInfo, timestamp: int) -> None:
         info, _ = self.find_(addr)
         if info is None:
             return
@@ -611,7 +611,7 @@ class AddressManager:
         addr: PeerInfo,
         test_before_evict: bool = True,
         timestamp: int = -1,
-    ):
+    ) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
@@ -623,7 +623,7 @@ class AddressManager:
         addr: PeerInfo,
         count_failures: bool,
         timestamp: int = -1,
-    ):
+    ) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
@@ -649,8 +649,8 @@ class AddressManager:
         async with self.lock:
             return self.get_peers_()
 
-    async def connect(self, addr: PeerInfo, timestamp: int = -1):
+    async def connect(self, addr: PeerInfo, timestamp: int = -1) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
-            return self.connect_(addr, timestamp)
+            self.connect_(addr, timestamp)
