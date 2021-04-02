@@ -101,7 +101,7 @@ class WalletStateManager:
         db_path: Path,
         constants: ConsensusConstants,
         name: str = None,
-    ) -> 'WalletStateManager':
+    ) -> "WalletStateManager":
         self = WalletStateManager()
         self.new_wallet = False
         self.config = config
@@ -396,7 +396,9 @@ class WalletStateManager:
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_spendable_balance_for_wallet(
+        self, wallet_id: int, unspent_records: Optional[Set[WalletCoinRecord]] = None
+    ) -> uint128:
         """
         Returns the balance amount of all coins that are spendable.
         """
@@ -965,7 +967,9 @@ class WalletStateManager:
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
 
-    async def get_spendable_coins_for_wallet(self, wallet_id: int, records: Optional[Set[WalletCoinRecord]] = None) -> Set[WalletCoinRecord]:
+    async def get_spendable_coins_for_wallet(
+        self, wallet_id: int, records: Optional[Set[WalletCoinRecord]] = None
+    ) -> Set[WalletCoinRecord]:
         if self.peak is None:
             return set()
 

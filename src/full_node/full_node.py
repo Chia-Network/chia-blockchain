@@ -632,7 +632,9 @@ class FullNode:
                 return
             await self._finish_sync()
 
-    async def sync_from_fork_point(self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32) -> None:
+    async def sync_from_fork_point(
+        self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32
+    ) -> None:
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
@@ -1545,7 +1547,9 @@ class FullNode:
             )
             await peer.send_message(msg)
 
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection) -> None:
+    async def request_compact_vdf(
+        self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection
+    ) -> None:
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
         if header_block is None:
             return
@@ -1587,7 +1591,9 @@ class FullNode:
         msg = make_msg(ProtocolMessageTypes.respond_compact_vdf, compact_vdf)
         await peer.send_message(msg)
 
-    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection) -> None:
+    async def respond_compact_vdf(
+        self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection
+    ) -> None:
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf

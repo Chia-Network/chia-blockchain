@@ -475,7 +475,9 @@ class RLWallet:
 
         return rl_parent.coin
 
-    async def rl_generate_unsigned_transaction(self, to_puzzlehash: bytes32, amount: uint64, fee: uint64) -> List[CoinSolution]:
+    async def rl_generate_unsigned_transaction(
+        self, to_puzzlehash: bytes32, amount: uint64, fee: uint64
+    ) -> List[CoinSolution]:
         spends = []
         assert self.rl_coin_record is not None
         coin = self.rl_coin_record.coin
@@ -517,7 +519,9 @@ class RLWallet:
         spends.append(CoinSolution(coin, puzzle, solution))
         return spends
 
-    async def generate_signed_transaction(self, amount: uint64, to_puzzle_hash: bytes32, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def generate_signed_transaction(
+        self, amount: uint64, to_puzzle_hash: bytes32, fee: uint64 = uint64(0)
+    ) -> TransactionRecord:
         self.rl_coin_record = await self._get_rl_coin_record()
         if not self.rl_coin_record:
             raise ValueError("No unspent coin (zero balance)")
@@ -555,7 +559,9 @@ class RLWallet:
 
         return SpendBundle(spends, aggsig)
 
-    def generate_unsigned_clawback_transaction(self, clawback_coin: Coin, clawback_puzzle_hash: bytes32, fee: uint64) -> List[Tuple[Program, CoinSolution]]:
+    def generate_unsigned_clawback_transaction(
+        self, clawback_coin: Coin, clawback_puzzle_hash: bytes32, fee: uint64
+    ) -> List[Tuple[Program, CoinSolution]]:
         if (
             self.rl_info.limit is None
             or self.rl_info.interval is None
