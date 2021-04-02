@@ -47,7 +47,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
     return kwargs
 
 
-def main():
+def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config["database_path"] = config["simulator_database_path"]
     config["peer_db_path"] = config["simulator_peer_db_path"]

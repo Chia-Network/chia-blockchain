@@ -34,7 +34,7 @@ class AddressManagerStore:
     db: aiosqlite.Connection
 
     @classmethod
-    async def create(cls, connection):
+    async def create(cls, connection) -> "AddressManagerStore":
         self = cls()
         self.db = connection
         await self.db.commit()
@@ -49,7 +49,7 @@ class AddressManagerStore:
         await self.db.commit()
         return self
 
-    async def clear(self):
+    async def clear(self) -> None:
         cursor = await self.db.execute("DELETE from peer_metadata")
         await cursor.close()
         cursor = await self.db.execute("DELETE from peer_nodes")
@@ -86,7 +86,7 @@ class AddressManagerStore:
         await cursor.close()
         return [(node_id, bucket) for node_id, bucket in entries]
 
-    async def set_metadata(self, metadata):
+    async def set_metadata(self, metadata) -> None:
         for key, value in metadata:
             cursor = await self.db.execute(
                 "INSERT OR REPLACE INTO peer_metadata VALUES(?, ?)",
@@ -95,7 +95,7 @@ class AddressManagerStore:
             await cursor.close()
         await self.db.commit()
 
-    async def set_nodes(self, node_list):
+    async def set_nodes(self, node_list) -> None:
         for node_id, peer_info in node_list:
             cursor = await self.db.execute(
                 "INSERT OR REPLACE INTO peer_nodes VALUES(?, ?)",
@@ -104,7 +104,7 @@ class AddressManagerStore:
             await cursor.close()
         await self.db.commit()
 
-    async def set_new_table(self, entries):
+    async def set_new_table(self, entries) -> None:
         for node_id, bucket in entries:
             cursor = await self.db.execute(
                 "INSERT OR REPLACE INTO peer_new_table VALUES(?, ?)",

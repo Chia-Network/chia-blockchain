@@ -53,7 +53,7 @@ class HeaderBlock(Streamable):
         return "block " + str(self.header_hash) + " sb_height " + str(self.height) + " "
 
     @property
-    def is_transaction_block(self):
+    def is_transaction_block(self) -> bool:
         return self.reward_chain_block.is_transaction_block
 
     @property

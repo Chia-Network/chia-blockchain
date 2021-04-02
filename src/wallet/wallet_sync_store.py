@@ -28,7 +28,7 @@ class WalletSyncStore:
     peak_fork_point: Dict[bytes32, uint32]
 
     @classmethod
-    async def create(cls):
+    async def create(cls) -> "WalletSyncStore":
         self = cls()
 
         self.sync_mode = False

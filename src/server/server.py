@@ -143,7 +143,7 @@ class ChiaServer:
         self.invalid_protocol_ban_seconds = 10
         self.api_exception_ban_seconds = 10
 
-    def my_id(self):
+    def my_id(self) -> bytes32:
         """ If node has public cert use that one for id, if not use private."""
         if self.p2p_crt_path is not None:
             pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
@@ -156,7 +156,7 @@ class ChiaServer:
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
 
-    async def garbage_collect_connections_task(self):
+    async def garbage_collect_connections_task(self) -> None:
         """
         Periodically checks for connections with no activity (have not sent us any data), and removes them,
         to allow room for other peers.
@@ -467,7 +467,7 @@ class ChiaServer:
             task = self.api_tasks[task_id]
             task.cancel()
 
-    async def incoming_api_task(self):
+    async def incoming_api_task(self) -> None:
         self.tasks = set()
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
@@ -500,7 +500,7 @@ class ChiaServer:
                     else:
                         coroutine = f(full_message.data)
 
-                    async def wrapped_coroutine():
+                    async def wrapped_coroutine() -> Optional[Message]:
                         try:
                             result = await coroutine
                             return result
@@ -510,6 +510,7 @@ class ChiaServer:
                             tb = traceback.format_exc()
                             connection.log.error(f"Exception: {e}, {connection.get_peer_info()}. {tb}")
                             raise e
+                        return None
 
                     response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=600)
                     connection.log.debug(
@@ -591,7 +592,7 @@ class ChiaServer:
             result.append(connection)
         return result
 
-    async def close_all_connections(self):
+    async def close_all_connections(self) -> None:
         keys = [a for a, b in self.all_connections.items()]
         for node_id in keys:
             try:
@@ -601,7 +602,7 @@ class ChiaServer:
             except Exception as e:
                 self.log.error(f"Exception while closing connection {e}")
 
-    def close_all(self):
+    def close_all(self) -> None:
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
         if self.runner is not None:
             self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
@@ -614,7 +615,7 @@ class ChiaServer:
         self.incoming_task.cancel()
         self.gc_task.cancel()
 
-    async def await_closed(self):
+    async def await_closed(self) -> None:
         self.log.debug("Await Closed")
         await self.shut_down_event.wait()
         if self.connection_close_task is not None:

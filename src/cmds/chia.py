@@ -16,7 +16,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
-def monkey_patch_click():
+def monkey_patch_click() -> None:
     # this hacks around what seems to be an incompatibility between the python from `pyinstaller`
     # and `click`
     #
@@ -29,7 +29,7 @@ def monkey_patch_click():
 
     import click.core
 
-    click.core._verify_python3_env = lambda *args, **kwargs: 0
+    click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore
 
 
 @click.group(

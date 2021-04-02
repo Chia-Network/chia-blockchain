@@ -61,15 +61,15 @@ class BlockStore:
         self.block_cache = LRUCache(1000)
         return self
 
-    async def begin_transaction(self):
+    async def begin_transaction(self) -> None:
         # Also locks the coin store, since both stores must be updated at once
         cursor = await self.db.execute("BEGIN TRANSACTION")
         await cursor.close()
 
-    async def commit_transaction(self):
+    async def commit_transaction(self) -> None:
         await self.db.commit()
 
-    async def rollback_transaction(self):
+    async def rollback_transaction(self) -> None:
         # Also rolls back the coin store, since both stores must be updated at once
         cursor = await self.db.execute("ROLLBACK")
         await cursor.close()
@@ -108,7 +108,7 @@ class BlockStore:
 
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
-    ):
+    ) -> None:
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO sub_epoch_segments_v2 VALUES(?, ?)",
             (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
@@ -128,7 +128,7 @@ class BlockStore:
             return SubEpochSegments.from_bytes(row[0]).challenge_segments
         return None
 
-    async def delete_sub_epoch_challenge_segments(self, fork_height: uint32):
+    async def delete_sub_epoch_challenge_segments(self, fork_height: uint32) -> None:
         cursor = await self.db.execute("delete from sub_epoch_segments_v2 WHERE ses_height>?", (fork_height,))
         await cursor.close()
 

@@ -46,7 +46,7 @@ def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict
             updated[k] = v
 
 
-def check_keys(new_root):
+def check_keys(new_root: Path) -> None:
     keychain: Keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:

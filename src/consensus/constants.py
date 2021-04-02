@@ -64,10 +64,10 @@ class ConsensusConstants:
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
 
-    def replace(self, **changes):
+    def replace(self, **changes) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 
-    def replace_str_to_bytes(self, **changes):
+    def replace_str_to_bytes(self, **changes) -> "ConsensusConstants":
         """
         Overrides str (hex) values with bytes.
         """

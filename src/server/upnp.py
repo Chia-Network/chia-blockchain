@@ -9,7 +9,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def upnp_remap_port(port):
+def upnp_remap_port(port) -> None:
     log.info(f"Attempting to enable UPnP (open up port {port})")
     try:
         upnp = miniupnpc.UPnP()

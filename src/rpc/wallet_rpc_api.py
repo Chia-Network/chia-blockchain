@@ -297,7 +297,7 @@ class WalletRpcApi:
 
         return {"wallets": wallets}
 
-    async def _create_backup_and_upload(self, host):
+    async def _create_backup_and_upload(self, host) -> None:
         assert self.service.wallet_state_manager is not None
         try:
             if "testing" in self.service.config and self.service.config["testing"] is True:

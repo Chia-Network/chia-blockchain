@@ -93,7 +93,7 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
-    async def close(self):
+    async def close(self) -> None:
         await self.websocket.close()
 
     async def exit(self) -> WsRpcMessage:

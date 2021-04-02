@@ -92,7 +92,7 @@ class Node(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def is_double(self):
+    def is_double(self) -> bool:
         pass
 
     @abstractmethod
@@ -158,7 +158,7 @@ class EmptyNode(Node):
     def is_terminal(self) -> bool:
         return False
 
-    def is_double(self):
+    def is_double(self) -> bool:
         raise SetError()
 
     def add(self, toadd: bytes, depth: int) -> Node:

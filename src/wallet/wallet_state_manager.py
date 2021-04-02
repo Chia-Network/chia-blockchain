@@ -364,7 +364,7 @@ class WalletStateManager:
             return
         self.state_changed_callback(state, wallet_id, data_object)
 
-    def tx_pending_changed(self):
+    def tx_pending_changed(self) -> None:
         """
         Notifies the wallet node that there's new tx pending
         """
@@ -871,7 +871,7 @@ class WalletStateManager:
 
         self.tx_pending_changed()
 
-    async def close_all_stores(self):
+    async def close_all_stores(self) -> None:
         if self.blockchain is not None:
             self.blockchain.shut_down()
         await self.db_connection.close()
@@ -938,7 +938,7 @@ class WalletStateManager:
         backup_file_text = json.dumps(backup)
         file_path.write_text(backup_file_text)
 
-    async def import_backup_info(self, file_path):
+    async def import_backup_info(self, file_path) -> None:
         json_dict = open_backup_file(file_path, self.private_key)
         wallet_list_json = json_dict["data"]["wallet_list"]
 

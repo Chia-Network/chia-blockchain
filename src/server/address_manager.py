@@ -173,11 +173,11 @@ class AddressManager:
     used_tried_matrix_positions: Set[Tuple[int, int]]
     allow_private_subnets: bool
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.clear()
         self.lock: Lock = Lock()
 
-    def clear(self):
+    def clear(self) -> None:
         self.id_count = 0
         self.key = randbits(256)
         self.random_pos = []
@@ -193,11 +193,11 @@ class AddressManager:
         self.used_tried_matrix_positions = set()
         self.allow_private_subnets = False
 
-    def make_private_subnets_valid(self):
+    def make_private_subnets_valid(self) -> None:
         self.allow_private_subnets = True
 
     # Use only this method for modifying new matrix.
-    def _set_new_matrix(self, row: int, col: int, value: int):
+    def _set_new_matrix(self, row: int, col: int, value: int) -> None:
         self.new_matrix[row][col] = value
         if value == -1:
             if (row, col) in self.used_new_matrix_positions:
@@ -207,7 +207,7 @@ class AddressManager:
                 self.used_new_matrix_positions.add((row, col))
 
     # Use only this method for modifying tried matrix.
-    def _set_tried_matrix(self, row: int, col: int, value: int):
+    def _set_tried_matrix(self, row: int, col: int, value: int) -> None:
         self.tried_matrix[row][col] = value
         if value == -1:
             if (row, col) in self.used_tried_matrix_positions:
@@ -216,7 +216,7 @@ class AddressManager:
             if (row, col) not in self.used_tried_matrix_positions:
                 self.used_tried_matrix_positions.add((row, col))
 
-    def load_used_table_positions(self):
+    def load_used_table_positions(self) -> None:
         self.used_new_matrix_positions = set()
         self.used_tried_matrix_positions = set()
         for bucket in range(NEW_BUCKET_COUNT):
@@ -245,7 +245,7 @@ class AddressManager:
             return (None, node_id)
         return (self.map_info[node_id], node_id)
 
-    def swap_random_(self, rand_pos_1: int, rand_pos_2: int):
+    def swap_random_(self, rand_pos_1: int, rand_pos_2: int) -> None:
         if rand_pos_1 == rand_pos_2:
             return
         assert rand_pos_1 < len(self.random_pos) and rand_pos_2 < len(self.random_pos)
@@ -256,7 +256,7 @@ class AddressManager:
         self.random_pos[rand_pos_1] = node_id_2
         self.random_pos[rand_pos_2] = node_id_1
 
-    def make_tried_(self, info: ExtendedPeerInfo, node_id: int):
+    def make_tried_(self, info: ExtendedPeerInfo, node_id: int) -> None:
         for bucket in range(NEW_BUCKET_COUNT):
             pos = info.get_bucket_position(self.key, True, bucket)
             if self.new_matrix[bucket][pos] == node_id:
@@ -285,7 +285,7 @@ class AddressManager:
         self.tried_count += 1
         info.is_tried = True
 
-    def clear_new_(self, bucket: int, pos: int):
+    def clear_new_(self, bucket: int, pos: int) -> None:
         if self.new_matrix[bucket][pos] != -1:
             delete_id = self.new_matrix[bucket][pos]
             delete_info = self.map_info[delete_id]
@@ -295,7 +295,7 @@ class AddressManager:
             if delete_info.ref_count == 0:
                 self.delete_new_entry_(delete_id)
 
-    def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int):
+    def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
         if not addr.is_valid(self.allow_private_subnets):
@@ -347,7 +347,7 @@ class AddressManager:
         else:
             self.make_tried_(info, node_id)
 
-    def delete_new_entry_(self, node_id: int):
+    def delete_new_entry_(self, node_id: int) -> None:
         info = self.map_info[node_id]
         if info is None or info.random_pos is None:
             return
@@ -419,7 +419,7 @@ class AddressManager:
                         self.delete_new_entry_(node_id)
         return is_unique
 
-    def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int):
+    def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int) -> None:
         info, _ = self.find_(addr)
         if info is None:
             return
@@ -496,7 +496,7 @@ class AddressManager:
                     return info
                 chance *= 1.2
 
-    def resolve_tried_collisions_(self):
+    def resolve_tried_collisions_(self) -> None:
         for node_id in self.tried_collisions[:]:
             resolved = False
             if node_id not in self.map_info:
@@ -513,13 +513,13 @@ class AddressManager:
                         resolved = True
                     elif time.time() - old_info.last_try < 4 * 60 * 60:
                         if time.time() - old_info.last_try > 60:
-                            self.mark_good_(peer, False, time.time())
+                            self.mark_good_(peer, False, math.floor(time.time()))
                             resolved = True
                     elif time.time() - info.last_success > 40 * 60:
-                        self.mark_good_(peer, False, time.time())
+                        self.mark_good_(peer, False, math.floor(time.time()))
                         resolved = True
                 else:
-                    self.mark_good_(peer, False, time.time())
+                    self.mark_good_(peer, False, math.floor(time.time()))
                     resolved = True
             if resolved:
                 self.tried_collisions.remove(node_id)

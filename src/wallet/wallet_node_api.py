@@ -10,7 +10,7 @@ from src.wallet.wallet_node import WalletNode
 class WalletNodeAPI:
     wallet_node: WalletNode
 
-    def __init__(self, wallet_node):
+    def __init__(self, wallet_node) -> None:
         self.wallet_node = wallet_node
 
     @property

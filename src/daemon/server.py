@@ -102,7 +102,7 @@ else:
         return service_name
 
 
-async def ping():
+async def ping() -> Dict:
     response = {"success": True, "value": "pong"}
     return response
 
@@ -153,11 +153,12 @@ class WebSocketServer:
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
-    async def stop(self):
+    async def stop(self) -> Dict:
         self.shut_down = True
         self.cancel_task_safe(self.ping_job)
         await self.exit()
-        self.websocket_server.close()
+        if self.websocket_server is not None:
+            self.websocket_server.close()
         return {"success": True}
 
     async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
@@ -213,7 +214,7 @@ class WebSocketServer:
                     after_removal.append(connection)
             self.connections[service_name] = after_removal
 
-    async def ping_task(self):
+    async def ping_task(self) -> None:
         restart = True
         await asyncio.sleep(30)
         for remote_address, service_name in self.remote_address_map.items():
@@ -289,11 +290,11 @@ class WebSocketServer:
         full_response = format_response(message, response)
         return full_response, [websocket]
 
-    def get_status(self):
+    def get_status(self) -> Dict:
         response = {"success": True, "genesis_initialized": True}
         return response
 
-    def plot_queue_to_payload(self, plot_queue_item):
+    def plot_queue_to_payload(self, plot_queue_item) -> Dict:
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -308,7 +309,7 @@ class WebSocketServer:
             "log": plot_queue_item.get("log"),
         }
 
-    def extract_plot_queue(self):
+    def extract_plot_queue(self) -> List[Dict]:
         data = []
         for item in self.plots_queue:
             data.append(WebSocketServer.plot_queue_to_payload(self, item))
@@ -544,7 +545,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, request: Dict[str, Any]):
+    async def stop_plotting(self, request: Dict[str, Any]) -> Dict:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -615,13 +616,13 @@ class WebSocketServer:
         response = {"success": success, "service": service_command, "error": error}
         return response
 
-    async def stop_service(self, request: Dict[str, Any]):
+    async def stop_service(self, request: Dict[str, Any]) -> Dict:
         service_name = request["service"]
         result = await kill_service(self.root_path, self.services, service_name)
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]):
+    async def is_running(self, request: Dict[str, Any]) -> Dict:
         service_name = request["service"]
 
         if service_name == service_plotter:
@@ -643,7 +644,7 @@ class WebSocketServer:
 
         return response
 
-    async def exit(self):
+    async def exit(self) -> Dict:
         jobs = []
         for k in self.services.keys():
             jobs.append(kill_service(self.root_path, self.services, k))
@@ -658,14 +659,14 @@ class WebSocketServer:
         response = {"success": True}
         return response
 
-    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]):
+    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]) -> Dict:
         self.log.info(f"Register service {request}")
         service = request["service"]
         if service not in self.connections:
             self.connections[service] = []
         self.connections[service].append(websocket)
 
-        response = {"success": False}
+        response: Dict[str, Any] = {"success": True}
         if service == service_plotter:
             response = {
                 "success": True,
@@ -676,7 +677,6 @@ class WebSocketServer:
             self.remote_address_map[websocket] = service
             if self.ping_job is None:
                 self.ping_job = asyncio.create_task(self.ping_task())
-            response = {"success": True}
         self.log.info(f"registered for service {service}")
         return response
 

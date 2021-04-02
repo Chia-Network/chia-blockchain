@@ -17,13 +17,13 @@ class ClassgroupElement(Streamable):
     data: bytes100
 
     @staticmethod
-    def from_bytes(data):
+    def from_bytes(data) -> "ClassgroupElement":
         if len(data) < 100:
             data += b"\x00" * (100 - len(data))
         return ClassgroupElement(bytes(data))
 
     @staticmethod
-    def get_default_element():
+    def get_default_element() -> "ClassgroupElement":
         # Bit 3 in the first byte of serialized compressed form indicates if
         # it's the default generator element.
         return ClassgroupElement.from_bytes(b"\x08")

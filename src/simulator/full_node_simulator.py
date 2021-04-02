@@ -11,7 +11,7 @@ from src.util.ints import uint8
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node, block_tools):
+    def __init__(self, full_node, block_tools) -> None:
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node

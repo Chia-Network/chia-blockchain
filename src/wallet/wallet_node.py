@@ -318,7 +318,7 @@ class WalletNode:
         if not self.has_full_node() and self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.on_connect(peer))
 
-    async def _periodically_check_full_node(self):
+    async def _periodically_check_full_node(self) -> None:
         tries = 0
         while not self._shut_down and tries < 5:
             if self.has_full_node():
@@ -464,11 +464,14 @@ class WalletNode:
                 self.wallet_state_manager.sync_store.add_potential_peak(header_block)
                 self.start_sync()
 
-    def start_sync(self):
+    def start_sync(self) -> None:
         self.log.info("self.sync_event.set()")
         self.sync_event.set()
 
-    async def check_new_peak(self):
+    async def check_new_peak(self) -> None:
+        if self.wallet_state_manager is None:
+            return
+
         current_peak: Optional[BlockRecord] = self.wallet_state_manager.blockchain.get_peak()
         if current_peak is None:
             return
@@ -481,7 +484,7 @@ class WalletNode:
                 self.start_sync()
                 return
 
-    async def sync_job(self):
+    async def sync_job(self) -> None:
         while True:
             self.log.info("Loop start in sync job")
             if self._shut_down is True:
@@ -493,6 +496,7 @@ class WalletNode:
             if self._shut_down is True:
                 break
             try:
+                assert self.wallet_state_manager is not None
                 self.wallet_state_manager.set_sync_mode(True)
                 await self._sync()
             except Exception as e:
@@ -503,12 +507,12 @@ class WalletNode:
                     self.wallet_state_manager.set_sync_mode(False)
             self.log.info("Loop end in sync job")
 
-    async def _sync(self):
+    async def _sync(self) -> None:
         """
         Wallet has fallen far behind (or is starting up for the first time), and must be synced
         up to the LCA of the blockchain.
         """
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if self.wallet_state_manager is None or self.backup_initialized is False or self.server is None:
             return
 
         highest_weight: uint128 = uint128(0)
@@ -539,21 +543,23 @@ class WalletNode:
             return
 
         async with self.wallet_state_manager.blockchain.lock:
-            fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
+            fork_height = None
+            if peak is not None:
+                fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
             if fork_height is None:
-                fork_height = 0
+                fork_height = uint32(0)
             await self.wallet_state_manager.blockchain.warmup(fork_height)
             batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
             advanced_peak = False
             for i in range(max(0, fork_height - 1), peak_height, batch_size):
                 start_height = i
                 end_height = min(peak_height, start_height + batch_size)
-                peers: List[WSChiaConnection] = self.server.get_full_node_connections()
+                peers = self.server.get_full_node_connections()
                 added = False
                 for peer in peers:
                     try:
                         added, advanced_peak = await self.fetch_blocks_and_validate(
-                            peer, uint32(start_height), end_height, None if advanced_peak else fork_height
+                            peer, uint32(start_height), uint32(end_height), None if advanced_peak else fork_height
                         )
                         if added:
                             break
@@ -578,7 +584,7 @@ class WalletNode:
         peer: WSChiaConnection,
         height_start: uint32,
         height_end: uint32,
-        fork_point_with_peak: uint32,
+        fork_point_with_peak: Optional[uint32],
     ) -> Tuple[bool, bool]:
         """
         Returns whether the blocks validated, and whether the peak was advanced
