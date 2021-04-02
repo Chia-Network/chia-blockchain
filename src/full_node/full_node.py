@@ -97,7 +97,7 @@ class FullNode:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: Callable) -> None:
         self.state_changed_callback = callback
 
     async def _start(self):
@@ -152,7 +152,7 @@ class FullNode:
         if peak is not None:
             await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
 
-    def set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer) -> None:
         self.server = server
         try:
             self.full_node_peers = FullNodePeers(
@@ -172,7 +172,7 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
@@ -241,7 +241,7 @@ class FullNode:
 
     async def short_sync_backtrack(
         self, peer: ws.WSChiaConnection, peak_height: uint32, target_height: uint32, target_unf_hash: bytes32
-    ):
+    ) -> bool:
         """
         Performs a backtrack sync, where blocks are downloaded one at a time from newest to oldest. If we do not
         find the fork point 5 deeper than our peak, we return False and do a long sync instead.
@@ -291,7 +291,7 @@ class FullNode:
         self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
 
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> None:
         """
         We have received a notification of a new peak from a peer. This happens either when we have just connected,
         or when the peer has updated their peak.
@@ -359,7 +359,7 @@ class FullNode:
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[ws.WSChiaConnection] = None
-    ):
+    ) -> None:
         """
         Sends current peak to timelords
         """
@@ -431,7 +431,7 @@ class FullNode:
         else:
             return True
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: ws.WSChiaConnection) -> None:
         """
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
@@ -482,7 +482,7 @@ class FullNode:
             elif connection.connection_type is NodeType.TIMELORD:
                 await self.send_peak_to_timelords()
 
-    def on_disconnect(self, connection: ws.WSChiaConnection):
+    def on_disconnect(self, connection: ws.WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self._state_changed("close_connection")
         self._state_changed("sync_mode")
@@ -632,7 +632,7 @@ class FullNode:
                 return
             await self._finish_sync()
 
-    async def sync_from_fork_point(self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32):
+    async def sync_from_fork_point(self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32) -> None:
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
@@ -777,7 +777,7 @@ class FullNode:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             self._state_changed("block")
 
-    def has_valid_pool_sig(self, block: Union[UnfinishedBlock, FullBlock]):
+    def has_valid_pool_sig(self, block: Union[UnfinishedBlock, FullBlock]) -> bool:
         if (
             block.foliage.foliage_block_data.pool_target
             == PoolTarget(self.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
@@ -794,7 +794,7 @@ class FullNode:
 
     async def peak_post_processing(
         self, block: FullBlock, record: BlockRecord, fork_height: uint32, peer: Optional[ws.WSChiaConnection]
-    ):
+    ) -> None:
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
         latest peak information. It also notifies peers about the new peak.
@@ -1010,7 +1010,7 @@ class FullNode:
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
         peer: Optional[ws.WSChiaConnection],
         farmed_block: bool = False,
-    ):
+    ) -> None:
         """
         We have received an unfinished block, either created by us, or from another peer.
         We can validate it and if it's a good block, propagate it to other peers and
@@ -1476,7 +1476,7 @@ class FullNode:
         vdf_proof: VDFProof,
         height: uint32,
         field_vdf: CompressibleVDFField,
-    ):
+    ) -> None:
         full_blocks = await self.block_store.get_full_blocks_at([height])
         assert len(full_blocks) > 0
         for block in full_blocks:
@@ -1513,7 +1513,7 @@ class FullNode:
             assert new_block is not None
             await self.block_store.add_full_block(new_block, block_record)
 
-    async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
+    async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
@@ -1528,10 +1528,10 @@ class FullNode:
         if self.server is not None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection) -> None:
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
-            return False
+            return
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
         if header_block is None:
             return
@@ -1545,7 +1545,7 @@ class FullNode:
             )
             await peer.send_message(msg)
 
-    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
+    async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection) -> None:
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
         if header_block is None:
             return
@@ -1587,7 +1587,7 @@ class FullNode:
         msg = make_msg(ProtocolMessageTypes.respond_compact_vdf, compact_vdf)
         await peer.send_message(msg)
 
-    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
+    async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection) -> None:
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
@@ -1606,7 +1606,7 @@ class FullNode:
 
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
-    ):
+    ) -> None:
         min_height: Optional[int] = 0
         try:
             while not self._shut_down:

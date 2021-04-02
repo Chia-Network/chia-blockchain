@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 service_plotter = "chia plots create"
 
 
-async def fetch(url: str):
+async def fetch(url: str) -> Optional[str]:
     async with ClientSession() as session:
         try:
             mozzila_root = get_mozzila_ca_crt()
@@ -146,7 +146,7 @@ class WebSocketServer:
         )
         self.log.info("Waiting Daemon WebSocketServer closure")
 
-    def cancel_task_safe(self, task: Optional[asyncio.Task]):
+    def cancel_task_safe(self, task: Optional[asyncio.Task]) -> None:
         if task is not None:
             try:
                 task.cancel()
@@ -160,7 +160,7 @@ class WebSocketServer:
         self.websocket_server.close()
         return {"success": True}
 
-    async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
+    async def safe_handle(self, websocket: WebSocketServerProtocol, path: str) -> None:
         service_name = ""
         try:
             async for message in websocket:
@@ -199,7 +199,7 @@ class WebSocketServer:
             self.remove_connection(websocket)
             await websocket.close()
 
-    def remove_connection(self, websocket: WebSocketServerProtocol):
+    def remove_connection(self, websocket: WebSocketServerProtocol) -> None:
         service_name = None
         if websocket in self.remote_address_map:
             service_name = self.remote_address_map[websocket]
@@ -293,7 +293,7 @@ class WebSocketServer:
         response = {"success": True, "genesis_initialized": True}
         return response
 
-    def plot_queue_to_payload(self, plot_queue_item):
+    def plot_queue_to_payload(self, plot_queue_item: Dict) -> Dict:
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -314,7 +314,7 @@ class WebSocketServer:
             data.append(WebSocketServer.plot_queue_to_payload(self, item))
         return data
 
-    async def _state_changed(self, service: str, state: str):
+    async def _state_changed(self, service: str, state: str) -> None:
         if service not in self.connections:
             return
 
@@ -341,10 +341,10 @@ class WebSocketServer:
                 websockets.remove(websocket)
                 await websocket.close()
 
-    def state_changed(self, service: str, state: str):
+    def state_changed(self, service: str, state: str) -> None:
         asyncio.create_task(self._state_changed(service, state))
 
-    async def _watch_file_changes(self, id: str, loop: asyncio.AbstractEventLoop):
+    async def _watch_file_changes(self, id: str, loop: asyncio.AbstractEventLoop) -> None:
         config = self._get_plots_queue_item(id)
 
         if config is None:
@@ -369,7 +369,7 @@ class WebSocketServer:
             else:
                 time.sleep(0.5)
 
-    async def _track_plotting_progress(self, id: str, loop: asyncio.AbstractEventLoop):
+    async def _track_plotting_progress(self, id: str, loop: asyncio.AbstractEventLoop) -> None:
         config = self._get_plots_queue_item(id)
 
         if config is None:
@@ -420,18 +420,18 @@ class WebSocketServer:
 
         return command_args
 
-    def _is_serial_plotting_running(self, queue: str = "default"):
+    def _is_serial_plotting_running(self, queue: str = "default") -> bool:
         response = False
         for item in self.plots_queue:
             if item["queue"] == queue and item["parallel"] is False and item["state"] is PlotState.RUNNING:
                 response = True
         return response
 
-    def _get_plots_queue_item(self, id: str):
+    def _get_plots_queue_item(self, id: str) -> Dict:
         config = next(item for item in self.plots_queue if item["id"] == id)
         return config
 
-    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop, queue: str = "default"):
+    def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop, queue: str = "default") -> None:
         next_plot_id = None
 
         for item in self.plots_queue:
@@ -441,7 +441,7 @@ class WebSocketServer:
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
 
-    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
+    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default") -> None:
         current_process = None
         try:
             log.info(f"Starting plotting with ID {id}")
@@ -500,7 +500,7 @@ class WebSocketServer:
                 self.services[service_name].remove(current_process)
             self._run_next_serial_plotting(loop, queue)
 
-    async def start_plotting(self, request: Dict[str, Any]):
+    async def start_plotting(self, request: Dict[str, Any]) -> Dict:
         service_name = request["service"]
 
         delay = request.get("delay", 0)
@@ -579,7 +579,7 @@ class WebSocketServer:
             pass
             return {"success": False}
 
-    async def start_service(self, request: Dict[str, Any]):
+    async def start_service(self, request: Dict[str, Any]) -> Dict:
         service_command = request["service"]
 
         error = None
@@ -697,11 +697,11 @@ def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
     return root_path / "run" / f"{pid_name}{id}.pid"
 
 
-def plotter_log_path(root_path: Path, id: str):
+def plotter_log_path(root_path: Path, id: str) -> Path:
     return root_path / "plotter" / f"plotter_log_{id}.txt"
 
 
-def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str):
+def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str) -> Tuple[subprocess.Popen, Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -734,7 +734,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     return process, pid_path
 
 
-def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, Path]:
+def launch_service(root_path: Path, service_command: str) -> Tuple[subprocess.Popen, Path]:
     """
     Launch a child process.
     """
@@ -828,7 +828,7 @@ def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool
     return process is not None and process.poll() is None
 
 
-def create_server_for_daemon(root_path: Path):
+def create_server_for_daemon(root_path: Path) -> None:
     routes = web.RouteTableDef()
 
     services: Dict = dict()
@@ -878,13 +878,14 @@ def create_server_for_daemon(root_path: Path):
         return web.Response(text=str(r))
 
     @routes.get("/daemon/exit/")
-    async def exit(request: web.Request):
+    async def exit(request: web.Request) -> web.Response:
         jobs = []
         for k in services.keys():
             jobs.append(kill_service(root_path, services, k))
         if jobs:
             await asyncio.wait(jobs)
         services.clear()
+        return web.Response()
 
         # we can't await `site.stop()` here because that will cause a deadlock, waiting for this
         # request to exit

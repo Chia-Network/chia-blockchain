@@ -101,7 +101,7 @@ class WalletStateManager:
         db_path: Path,
         constants: ConsensusConstants,
         name: str = None,
-    ):
+    ) -> 'WalletStateManager':
         self = WalletStateManager()
         self.new_wallet = False
         self.config = config
@@ -214,7 +214,7 @@ class WalletStateManager:
         pubkey = private.get_g1()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(self, from_zero: bool = False):
+    async def create_more_puzzle_hashes(self, from_zero: bool = False) -> None:
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
@@ -330,31 +330,31 @@ class WalletStateManager:
             )
             return current
 
-    def set_callback(self, callback: Callable):
+    def set_callback(self, callback: Callable) -> None:
         """
         Callback to be called when the state of the wallet changes.
         """
         self.state_changed_callback = callback
 
-    def set_pending_callback(self, callback: Callable):
+    def set_pending_callback(self, callback: Callable) -> None:
         """
         Callback to be called when new pending transaction enters the store
         """
         self.pending_tx_callback = callback
 
-    def set_coin_with_puzzlehash_created_callback(self, puzzlehash, callback: Callable):
+    def set_coin_with_puzzlehash_created_callback(self, puzzlehash, callback: Callable) -> None:
         """
         Callback to be called when new coin is seen with specified puzzlehash
         """
         self.puzzle_hash_created_callbacks[puzzlehash] = callback
 
-    async def puzzle_hash_created(self, coin: Coin):
+    async def puzzle_hash_created(self, coin: Coin) -> None:
         callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
         if callback is None:
             return
         await callback(coin)
 
-    def state_changed(self, state: str, wallet_id: int = None, data_object=None):
+    def state_changed(self, state: str, wallet_id: int = None, data_object=None) -> None:
         """
         Calls the callback if it's present.
         """
@@ -389,14 +389,14 @@ class WalletStateManager:
             return True
         return False
 
-    def set_sync_mode(self, mode: bool):
+    def set_sync_mode(self, mode: bool) -> None:
         """
         Sets the sync mode. This changes the behavior of the wallet node.
         """
         self.sync_mode = mode
         self.state_changed("sync_changed")
 
-    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint128:
+    async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         """
         Returns the balance amount of all coins that are spendable.
         """
@@ -439,7 +439,7 @@ class WalletStateManager:
         return uint128(amount)
 
     async def get_unconfirmed_balance(
-        self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
     ) -> uint128:
         """
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
@@ -481,7 +481,7 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32):
+    async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32) -> None:
         for coin in additions:
             await self.puzzle_hash_created(coin)
         trade_additions = await self.coins_of_interest_added(additions, height)
@@ -572,7 +572,7 @@ class WalletStateManager:
 
         return trade_coin_removed
 
-    async def coin_removed(self, coin: Coin, height: uint32, wallet_id: int):
+    async def coin_removed(self, coin: Coin, height: uint32, wallet_id: int) -> None:
         """
         Called when coin gets spent
         """
@@ -593,7 +593,7 @@ class WalletStateManager:
         wallet_id: uint32,
         wallet_type: WalletType,
         height: uint32,
-    ):
+    ) -> None:
         """
         Adding coin to DB
         """
@@ -669,7 +669,7 @@ class WalletStateManager:
 
         self.state_changed("coin_added", wallet_id)
 
-    async def add_pending_transaction(self, tx_record: TransactionRecord):
+    async def add_pending_transaction(self, tx_record: TransactionRecord) -> None:
         """
         Called from wallet before new transaction is sent to the full_node
         """
@@ -680,7 +680,7 @@ class WalletStateManager:
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
-    async def add_transaction(self, tx_record: TransactionRecord):
+    async def add_transaction(self, tx_record: TransactionRecord) -> None:
         """
         Called from wallet to add transaction that is not being set to full_node
         """
@@ -693,7 +693,7 @@ class WalletStateManager:
         name: str,
         send_status: MempoolInclusionStatus,
         error: Optional[Err],
-    ):
+    ) -> None:
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
@@ -812,7 +812,7 @@ class WalletStateManager:
 
         return result
 
-    async def is_addition_relevant(self, addition: Coin):
+    async def is_addition_relevant(self, addition: Coin) -> bool:
         """
         Check whether we care about a new addition (puzzle_hash). Returns true if we
         control this puzzle hash.
@@ -841,7 +841,7 @@ class WalletStateManager:
 
         return result
 
-    async def reorg_rollback(self, height: int):
+    async def reorg_rollback(self, height: int) -> None:
         """
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
@@ -853,7 +853,7 @@ class WalletStateManager:
 
         await self.retry_sending_after_reorg(reorged)
 
-    async def retry_sending_after_reorg(self, records: List[TransactionRecord]):
+    async def retry_sending_after_reorg(self, records: List[TransactionRecord]) -> None:
         """
         Retries sending spend_bundle to the Full_Node, after confirmed tx
         get's excluded from chain because of the reorg.
@@ -903,7 +903,7 @@ class WalletStateManager:
 
         return start_height
 
-    async def create_wallet_backup(self, file_path: Path):
+    async def create_wallet_backup(self, file_path: Path) -> None:
         all_wallets = await self.get_all_wallet_info_entries()
         for wallet in all_wallets:
             if wallet.id == 1:
@@ -938,7 +938,7 @@ class WalletStateManager:
         backup_file_text = json.dumps(backup)
         file_path.write_text(backup_file_text)
 
-    async def import_backup_info(self, file_path):
+    async def import_backup_info(self, file_path: Path) -> None:
         json_dict = open_backup_file(file_path, self.private_key)
         wallet_list_json = json_dict["data"]["wallet_list"]
 
@@ -961,11 +961,11 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def add_new_wallet(self, wallet: Any, wallet_id: int):
+    async def add_new_wallet(self, wallet: Any, wallet_id: int) -> None:
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
 
-    async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
+    async def get_spendable_coins_for_wallet(self, wallet_id: int, records: Optional[Set[WalletCoinRecord]] = None) -> Set[WalletCoinRecord]:
         if self.peak is None:
             return set()
 
@@ -1002,14 +1002,14 @@ class WalletStateManager:
         callback: str,
         done: bool,
         data: str,
-    ):
+    ) -> None:
         await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data)
         self.tx_pending_changed()
 
-    async def set_action_done(self, action_id: int):
+    async def set_action_done(self, action_id: int) -> None:
         await self.action_store.action_done(action_id)
 
-    async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
+    async def generator_received(self, height: uint32, header_hash: uint32, program: Program) -> None:
 
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
         for action in actions:
@@ -1027,7 +1027,7 @@ class WalletStateManager:
                         callback = getattr(wallet, callback_str)
                         await callback(height, header_hash, program, action.id)
 
-    async def puzzle_solution_received(self, response: RespondPuzzleSolution):
+    async def puzzle_solution_received(self, response: RespondPuzzleSolution) -> None:
         unwrapped: PuzzleSolutionResponse = response.response
         actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
         for action in actions:

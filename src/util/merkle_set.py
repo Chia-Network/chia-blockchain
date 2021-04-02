@@ -54,14 +54,14 @@ def init_prehashed():
 init_prehashed()
 
 
-def hashdown(mystr: bytes):
+def hashdown(mystr: bytes) -> bytes:
     assert len(mystr) == 66
     h = prehashed[bytes(mystr[0:1] + mystr[33:34])].copy()
     h.update(mystr[1:33] + mystr[34:])
     return h.digest()[:32]
 
 
-def compress_root(mystr: bytes):
+def compress_root(mystr: bytes) -> bytes:
     assert len(mystr) == 33
     if mystr[0:1] == MIDDLE:
         return mystr[1:]
@@ -71,7 +71,7 @@ def compress_root(mystr: bytes):
     return sha256(mystr).digest()[:32]
 
 
-def get_bit(mybytes: bytes, pos: int):
+def get_bit(mybytes: bytes, pos: int) -> int:
     assert len(mybytes) == 32
     return (mybytes[pos // 8] >> (7 - (pos % 8))) & 1
 
@@ -100,19 +100,19 @@ class Node(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def remove(self, toremove: bytes, depth: int):
+    def remove(self, toremove: bytes, depth: int) -> "Node":
         pass
 
     @abstractmethod
-    def is_included(self, tocheck: bytes, depth: int, p: List[bytes]):
+    def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         pass
 
     @abstractmethod
-    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool):
+    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool) -> None:
         pass
 
     @abstractmethod
-    def _audit(self, hashes: List[bytes], bits: List[int]):
+    def _audit(self, hashes: List[bytes], bits: List[int]) -> None:
         pass
 
 
@@ -125,13 +125,13 @@ class MerkleSet:
         else:
             self.root = root
 
-    def get_root(self) -> Node:
+    def get_root(self) -> bytes:
         return compress_root(self.root.get_hash())
 
-    def add_already_hashed(self, toadd: bytes):
+    def add_already_hashed(self, toadd: bytes) -> None:
         self.root = self.root.add(toadd, 0)
 
-    def remove_already_hashed(self, toremove: bytes):
+    def remove_already_hashed(self, toremove: bytes) -> None:
         self.root = self.root.remove(toremove, 0)
 
     def is_included_already_hashed(self, tocheck: bytes) -> Tuple[bool, bytes]:
@@ -139,7 +139,7 @@ class MerkleSet:
         r = self.root.is_included(tocheck, 0, proof)
         return r, b"".join(proof)
 
-    def _audit(self, hashes: List[bytes]):
+    def _audit(self, hashes: List[bytes]) -> None:
         newhashes: List = []
         self.root._audit(newhashes, [])
         assert newhashes == sorted(newhashes)
@@ -171,10 +171,10 @@ class EmptyNode(Node):
         p.append(EMPTY)
         return False
 
-    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool):
+    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool) -> None:
         p.append(EMPTY)
 
-    def _audit(self, hashes: List[bytes], bits: List[int]):
+    def _audit(self, hashes: List[bytes], bits: List[int]) -> None:
         pass
 
 
@@ -226,10 +226,10 @@ class TerminalNode(Node):
         p.append(TERMINAL + self.hash)
         return tocheck == self.hash
 
-    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool):
+    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool) -> None:
         p.append(TERMINAL + self.hash)
 
-    def _audit(self, hashes: List[bytes], bits: List[int]):
+    def _audit(self, hashes: List[bytes], bits: List[int]) -> None:
         hashes.append(self.hash)
         for pos, v in enumerate(bits):
             assert get_bit(self.hash, pos) == v
@@ -302,13 +302,13 @@ class MiddleNode(Node):
             self.children[0].other_included(tocheck, depth + 1, p, not self.children[1].is_empty())
             return self.children[1].is_included(tocheck, depth + 1, p)
 
-    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool):
+    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool) -> None:
         if collapse or not self.is_double():
             p.append(TRUNCATED + self.hash)
         else:
             self.is_included(tocheck, depth, p)
 
-    def _audit(self, hashes: List[bytes], bits: List[int]):
+    def _audit(self, hashes: List[bytes], bits: List[int]) -> None:
         self.children[0]._audit(hashes, bits + [0])
         self.children[1]._audit(hashes, bits + [1])
 
@@ -338,10 +338,10 @@ class TruncatedNode(Node):
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         raise SetError()
 
-    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool):
+    def other_included(self, tocheck: bytes, depth: int, p: List[bytes], collapse: bool) -> None:
         p.append(TRUNCATED + self.hash)
 
-    def _audit(self, hashes: List[bytes], bits: List[int]):
+    def _audit(self, hashes: List[bytes], bits: List[int]) -> None:
         pass
 
 
