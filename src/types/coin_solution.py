@@ -3,9 +3,9 @@ from typing import List
 
 from src.types.blockchain_format.coin import Coin
 from src.types.blockchain_format.program import Program
-from src.util.chain_utils import additions_for_solution, announcements_for_solution
+from src.util.chain_utils import additions_for_solution, announcements_for_solution, announcement_names_for_solution
 from src.util.streamable import Streamable, streamable
-
+from src.types.blockchain_format.sized_bytes import bytes32
 from .announcement import Announcement
 
 
@@ -27,3 +27,6 @@ class CoinSolution(Streamable):
 
     def announcements(self) -> List[Announcement]:
         return announcements_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)
+
+    def announcement_names(self) -> List[bytes32]:
+        return announcement_names_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)

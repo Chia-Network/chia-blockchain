@@ -7,6 +7,7 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.util.condition_tools import (
     conditions_dict_for_solution,
     created_announcements_for_conditions_dict,
+    created_announcement_names_for_conditions_dict,
     created_outputs_for_conditions_dict,
 )
 
@@ -29,3 +30,13 @@ def announcements_for_solution(coin_name: bytes, puzzle_reveal: Program, solutio
     if err or dic is None:
         return []
     return created_announcements_for_conditions_dict(dic, coin_name)
+
+
+def announcement_names_for_solution(coin_name: bytes, puzzle_reveal: Program, solution: Program) -> List[bytes32]:
+    """
+    Checks the conditions created by CoinSolution and returns the list of announcements
+    """
+    err, dic, cost = conditions_dict_for_solution(puzzle_reveal, solution)
+    if err or dic is None:
+        return []
+    return created_announcement_names_for_conditions_dict(dic, coin_name)

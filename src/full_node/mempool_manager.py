@@ -26,7 +26,7 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
 from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_from_bytes
-from src.util.condition_tools import pkm_pairs_for_conditions_dict
+from src.util.condition_tools import pkm_pairs_for_conditions_dict, announcements_names_for_npc
 from src.util.errors import Err
 from src.util.ints import uint32, uint64
 from src.util.streamable import dataclass_from_dict, recurse_jsonify
@@ -306,6 +306,7 @@ class MempoolManager:
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
         error: Optional[Err] = None
+        announcements_in_spend: List[bytes32] = announcements_names_for_npc(npc_list)
         for npc in npc_list:
             coin_record: CoinRecord = removal_record_dict[npc.coin_name]
             # Check that the revealed removal puzzles actually match the puzzle hash
@@ -317,7 +318,9 @@ class MempoolManager:
             chialisp_height = (
                 self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
             )
-            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, uint32(chialisp_height))
+            error = mempool_check_conditions_dict(
+                coin_record, announcements_in_spend, npc.condition_dict, uint32(chialisp_height)
+            )
 
             if error:
                 if error is Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED or error is Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED:

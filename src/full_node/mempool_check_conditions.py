@@ -7,7 +7,6 @@ from src.types.blockchain_format.sized_bytes import bytes32
 from src.types.coin_record import CoinRecord
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.name_puzzle_condition import NPC
-from src.types.spend_bundle import SpendBundle
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err
@@ -19,13 +18,12 @@ from src.wallet.puzzles.lowlevel_generator import get_generator
 GENERATOR_MOD = get_generator()
 
 
-def mempool_assert_announcement_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
+def mempool_assert_announcement_consumed(condition: ConditionVarPair, announcements: List[bytes32]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
-    announcements = spend_bundle.announcements()
-    announcement_hash = condition.vars[0]
-    if announcement_hash not in [ann.name() for ann in announcements]:
+    announcement_hash = bytes32(condition.vars[0])
+    if announcement_hash not in announcements:
         return Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     return None
@@ -188,7 +186,7 @@ def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name
 
 def mempool_check_conditions_dict(
     unspent: CoinRecord,
-    spend_bundle: SpendBundle,
+    announcement_names: List[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     prev_transaction_block_height: uint32,
 ) -> Optional[Err]:
@@ -202,7 +200,7 @@ def mempool_check_conditions_dict(
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                error = mempool_assert_announcement_consumed(cvp, spend_bundle)
+                error = mempool_assert_announcement_consumed(cvp, announcement_names)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
                 error = mempool_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:

@@ -124,6 +124,24 @@ def created_announcements_for_conditions_dict(
     return output_announcements
 
 
+def announcements_names_for_npc(npc_list) -> List[bytes32]:
+    announcement_names: List[bytes32] = []
+
+    for npc in npc_list:
+        for coin in created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name):
+            announcement_names.append(coin.name())
+
+    return announcement_names
+
+
+def created_announcement_names_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    input_coin_name: bytes32,
+) -> List[bytes32]:
+    output = [an.name() for an in created_announcements_for_conditions_dict(conditions_dict, input_coin_name)]
+    return output
+
+
 def conditions_dict_for_solution(
     puzzle_reveal: Program,
     solution: Program,
