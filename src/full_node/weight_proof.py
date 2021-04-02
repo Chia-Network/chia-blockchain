@@ -89,7 +89,7 @@ class WeightProofHandler:
 
         summary_heights = self.blockchain.get_ses_heights()
         # use second to last ses as seed
-        seed = self.blockchain.get_ses(summary_heights[-2]).get_hash()
+        seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
         rng = random.Random(seed)
         weight_to_check = _get_weights_for_sampling(rng, tip_rec.weight, recent_chain)
 
@@ -132,6 +132,19 @@ class WeightProofHandler:
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
+
+    def get_seed_for_proof(self, summary_heights: List[uint32], tip_height) -> bytes32:
+        count = 0
+        ses = None
+        for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
+            if ses_height <= tip_height:
+                count += 1
+            if count == 2:
+                ses = self.blockchain.get_ses(ses_height)
+                break
+        assert ses is not None
+        seed = ses.get_hash()
+        return seed
 
     async def _get_recent_chain(self, tip_height: uint32) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
