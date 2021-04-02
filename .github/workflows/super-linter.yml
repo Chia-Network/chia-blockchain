@@ -21,7 +21,7 @@ on:
       - 'main'
   pull_request:
     branches-ignore:
-      - 'main'
+      - ''
 
 ###############
 # Set the Job #
