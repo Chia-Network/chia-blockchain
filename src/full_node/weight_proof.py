@@ -162,6 +162,7 @@ class WeightProofHandler:
                 count_ses += 1
             if count_ses == 2:
                 min_height = ses_height - 1
+                break
         log.debug(f"start {min_height} end {tip_height}")
         headers = await self.blockchain.get_header_blocks_in_range(min_height, tip_height)
         blocks = await self.blockchain.get_block_records_in_range(min_height, tip_height)
