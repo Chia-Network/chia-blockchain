@@ -185,7 +185,7 @@ class Wallet:
 
     def make_solution(
         self,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,
         announcements=None,
@@ -272,15 +272,17 @@ class Wallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries_input: Optional[List[Dict[str, Any]]] = None,
         ignore_max_send_amount: bool = False,
     ) -> List[CoinSolution]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         """
-        if primaries is None:
+        if primaries_input is None:
+            primaries = None
             total_amount = amount + fee
         else:
+            primaries = primaries_input.copy()
             primaries_amount = 0
             for prim in primaries:
                 primaries_amount += prim["amount"]
@@ -339,6 +341,10 @@ class Wallet:
         ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
         """ Use this to generate transaction. """
+        if primaries is None:
+            non_change_amount = amount
+        else:
+            non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
         transaction = await self.generate_unsigned_transaction(
             amount, puzzle_hash, fee, origin_id, coins, primaries, ignore_max_send_amount
@@ -354,12 +360,13 @@ class Wallet:
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
+        assert sum(a.amount for a in add_list) + fee == sum(r.amount for r in rem_list)
 
         return TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=now,
             to_puzzle_hash=puzzle_hash,
-            amount=uint64(amount),
+            amount=uint64(non_change_amount),
             fee_amount=uint64(fee),
             confirmed=False,
             sent=uint32(0),

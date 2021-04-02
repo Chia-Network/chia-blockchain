@@ -47,7 +47,9 @@ class Program(SExp):
     @classmethod
     def from_bytes(cls, blob: bytes) -> "Program":
         f = io.BytesIO(blob)
-        return cls.parse(f)  # type: ignore # noqa
+        result = cls.parse(f)  # type: ignore # noqa
+        assert f.read() == b""
+        return result
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()

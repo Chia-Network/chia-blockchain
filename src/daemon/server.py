@@ -66,6 +66,7 @@ class PlotState(str, Enum):
     SUBMITTED = "SUBMITTED"
     RUNNING = "RUNNING"
     ERROR = "ERROR"
+    DELETED = "DELETED"
     FINISHED = "FINISHED"
 
 
@@ -356,13 +357,16 @@ class WebSocketServer:
         while True:
             new = await loop.run_in_executor(io_pool_exc, fp.readline)
 
+            if config["state"] is not PlotState.RUNNING:
+                return
+
             config["log"] = new if config["log"] is None else config["log"] + new
             self.state_changed(service_plotter, "log_changed")
 
             if new:
                 for word in words:
                     if word in new:
-                        yield (word, new)
+                        return
             else:
                 time.sleep(0.5)
 
@@ -372,8 +376,7 @@ class WebSocketServer:
         if config is None:
             raise Exception(f"Plot queue config with ID {id} is not defined")
 
-        async for hit_word, hit_sentence in self._watch_file_changes(id, loop):
-            break
+        await self._watch_file_changes(id, loop)
 
     def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         service_name = request["service"]
@@ -388,6 +391,7 @@ class WebSocketServer:
         r = request["r"]
         a = request.get("a")
         e = request["e"]
+        x = request["x"]
         override_k = request["overrideK"]
 
         command_args: List[str] = []
@@ -406,6 +410,9 @@ class WebSocketServer:
 
         if e is True:
             command_args.append("-e")
+
+        if x is True:
+            command_args.append("-x")
 
         if override_k is True:
             command_args.append("--override-k")
@@ -451,6 +458,9 @@ class WebSocketServer:
             id = config["id"]
             delay = config["delay"]
             await asyncio.sleep(delay)
+
+            if config["state"] is PlotState.DELETED:
+                return
 
             service_name = config["service_name"]
             command_args = config["command_args"]
@@ -545,6 +555,9 @@ class WebSocketServer:
         state = config["state"]
         process = config["process"]
         queue = config["queue"]
+
+        # mark plot config as deleted for already running asyncio functions
+        config["state"] = PlotState.DELETED
 
         try:
             run_next = False
@@ -732,7 +745,9 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    # Innsert proper e
+    log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
+
+    # Insert proper e
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
@@ -746,11 +761,9 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         creationflags = 0
+    environ_copy = os.environ.copy()
     process = subprocess.Popen(
-        service_array,
-        shell=False,
-        startupinfo=startupinfo,
-        creationflags=creationflags,
+        service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
     )
     pid_path = pid_path_for_service(root_path, service_command)
     try:
