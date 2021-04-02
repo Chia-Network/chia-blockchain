@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/dev' }}
+      if: ${{ github.ref != 'refs/heads/main' }}
       uses: styfle/cancel-workflow-action@0.8.0
       with:
         access_token: ${{ github.token }}
@@ -90,4 +90,4 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/blockchain/test_blockchain_transactions.py tests/blockchain/test_blockchain.py -s -v --durations 0 
+        ./venv/bin/py.test tests/blockchain/test_blockchain.py tests/blockchain/test_blockchain_transactions.py -s -v --durations 0 
