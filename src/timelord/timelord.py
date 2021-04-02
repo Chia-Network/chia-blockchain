@@ -5,7 +5,7 @@ import logging
 import random
 import time
 import traceback
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from chiavdf import create_discriminant
 
@@ -30,7 +30,7 @@ from src.types.blockchain_format.slots import (
 from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from src.types.blockchain_format.vdf import VDFInfo, VDFProof
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.util.ints import uint8, uint32, uint64
+from src.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +60,6 @@ class Timelord:
         # Last end of subslot bundle, None if we built a peak on top of it.
         self.new_subslot_end: Optional[EndOfSubSlotBundle] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
-        self.last_state: Optional[LastState] = None
         # Unfinished block info, iters adjusted to the last peak.
         self.unfinished_blocks: List[timelord_protocol.NewUnfinishedBlock] = []
         # Signage points iters, adjusted to the last peak.
@@ -68,6 +67,7 @@ class Timelord:
         # For each chain, send those info when the process spawns.
         self.iters_to_submit: Dict[Chain, List[uint64]] = {}
         self.iters_submitted: Dict[Chain, List[uint64]] = {}
+        self.iters_finished: Set = set()
         # For each iteration submitted, know if it's a signage point, an infusion point or an end of slot.
         self.iteration_to_proof_type: Dict[uint64, IterationType] = {}
         # List of proofs finished.
@@ -89,6 +89,7 @@ class Timelord:
         self.state_changed_callback: Optional[Callable] = None
         self.sanitizer_mode = self.config["sanitizer_mode"]
         self.pending_bluebox_info: List[timelord_protocol.RequestCompactProofOfTime] = []
+        self.last_active_time = time.time()
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -120,10 +121,10 @@ class Timelord:
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
-            log.info(f"New timelord connection from client: {client_ip}.")
+            log.debug(f"New timelord connection from client: {client_ip}.")
             if client_ip in self.ip_whitelist:
                 self.free_clients.append((client_ip, reader, writer))
-                log.info(f"Added new VDF client {client_ip}.")
+                log.debug(f"Added new VDF client {client_ip}.")
                 for ip, end_time in list(self.potential_free_clients):
                     if ip == client_ip:
                         self.potential_free_clients.remove((ip, end_time))
@@ -201,6 +202,8 @@ class Timelord:
 
     async def _reset_chains(self, first_run=False):
         # First, stop all chains.
+        self.last_active_time = time.time()
+        log.debug("Resetting chains")
         ip_iters = self.last_state.get_last_ip()
         sub_slot_iters = self.last_state.get_sub_slot_iters()
 
@@ -220,6 +223,7 @@ class Timelord:
             assert k * iters_per_signage < sub_slot_iters
         # Adjust all unfinished blocks iterations to the peak.
         new_unfinished_blocks = []
+        self.iters_finished = set()
         self.proofs_finished = []
         self.num_resets += 1
         for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN]:
@@ -228,7 +232,8 @@ class Timelord:
         self.iteration_to_proof_type = {}
         for block in self.unfinished_blocks:
             new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
-            if new_block_iters:
+            # Does not add duplicates, or blocks that we cannot infuse
+            if new_block_iters and new_block_iters not in self.iters_to_submit[Chain.CHALLENGE_CHAIN]:
                 new_unfinished_blocks.append(block)
                 for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
                     self.iters_to_submit[chain].append(new_block_iters)
@@ -291,7 +296,7 @@ class Timelord:
                 self.unspawned_chains = self.unspawned_chains[1:]
                 self.chain_start_time[picked_chain] = time.time()
 
-            log.info(f"Mapping free vdf_client with chain: {picked_chain}.")
+            log.debug(f"Mapping free vdf_client with chain: {picked_chain}.")
             self.process_communication_tasks.append(
                 asyncio.create_task(
                     self._do_process_communication(
@@ -303,11 +308,11 @@ class Timelord:
     async def _submit_iterations(self):
         for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN]:
             if chain in self.allows_iters:
-                # log.info(f"Trying to submit for chain {chain}.")
                 _, _, writer = self.chain_type_to_stream[chain]
                 for iteration in self.iters_to_submit[chain]:
                     if iteration in self.iters_submitted[chain]:
                         continue
+                    log.debug(f"Submitting iterations to {chain}: {iteration}")
                     assert iteration > 0
                     prefix = str(len(str(iteration)))
                     if len(str(iteration)) < 10:
@@ -324,7 +329,7 @@ class Timelord:
             if info.number_of_iterations != iters
         ]
 
-    async def _check_for_new_sp(self):
+    async def _check_for_new_sp(self, iter_to_look_for: uint64):
         signage_iters = [
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.SIGNAGE_POINT
         ]
@@ -332,7 +337,7 @@ class Timelord:
             return
         to_remove = []
         for potential_sp_iters, signage_point_index in self.signage_point_iters:
-            if potential_sp_iters not in signage_iters:
+            if potential_sp_iters not in signage_iters or potential_sp_iters != iter_to_look_for:
                 continue
             signage_iter = potential_sp_iters
             proofs_with_iter = [
@@ -356,12 +361,13 @@ class Timelord:
                 if cc_info is None or cc_proof is None or rc_info is None or rc_proof is None:
                     log.error(f"Insufficient signage point data {signage_iter}")
                     continue
+                self.iters_finished.add(iter_to_look_for)
+                self.last_active_time = time.time()
 
-                if rc_info.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
-                    log.warning(
-                        f"SP: Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()}"
-                        f" has {rc_info.challenge}"
-                    )
+                rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
+                if rc_info.challenge != rc_challenge:
+                    assert rc_challenge is not None
+                    log.warning(f"SP: Do not have correct challenge {rc_challenge.hex()}" f" has {rc_info.challenge}")
                     # This proof is on an outdated challenge, so don't use it
                     continue
                 iters_from_sub_slot_start = cc_info.number_of_iterations + self.last_state.get_last_ip()
@@ -395,11 +401,13 @@ class Timelord:
         for r in to_remove:
             self.signage_point_iters.remove(r)
 
-    async def _check_for_new_ip(self):
+    async def _check_for_new_ip(self, iter_to_look_for: uint64):
         infusion_iters = [
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.INFUSION_POINT
         ]
         for iteration in infusion_iters:
+            if iteration != iter_to_look_for:
+                continue
             proofs_with_iter = [
                 (chain, info, proof)
                 for chain, info, proof, label in self.proofs_finished
@@ -425,6 +433,7 @@ class Timelord:
                     if ip_iters - self.last_state.get_last_ip() == iteration:
                         block = unfinished_block
                         break
+                assert ip_iters is not None
                 if block is not None:
                     ip_total_iters = self.last_state.get_total_iters() + iteration
                     challenge = block.reward_chain_block.get_hash()
@@ -448,17 +457,21 @@ class Timelord:
                         log.error(f"Insufficient VDF proofs for infusion point ch: {challenge} iterations:{iteration}")
                         return
 
-                    if rc_info.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
+                    rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
+                    if rc_info.challenge != rc_challenge:
+                        assert rc_challenge is not None
                         log.warning(
-                            f"Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} "
+                            f"Do not have correct challenge {rc_challenge.hex()} "
                             f"has {rc_info.challenge}, partial hash {block.reward_chain_block.get_hash()}"
                         )
                         # This proof is on an outdated challenge, so don't use it
                         continue
 
+                    self.iters_finished.add(iter_to_look_for)
+                    self.last_active_time = time.time()
                     self.unfinished_blocks.remove(block)
                     self.total_infused += 1
-                    log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
+                    log.debug(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
 
                     overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
 
@@ -503,8 +516,10 @@ class Timelord:
                         is_transaction_block = True
                         height: uint32 = uint32(0)
                     else:
-                        is_transaction_block = self.last_state.get_last_block_total_iters() < sp_total_iters
-                        height: uint32 = self.last_state.get_height() + 1
+                        last_block_ti = self.last_state.get_last_block_total_iters()
+                        assert last_block_ti is not None
+                        is_transaction_block = last_block_ti < sp_total_iters
+                        height = uint32(self.last_state.get_height() + 1)
 
                     if height < 5:
                         # Don't directly update our state for the first few blocks, because we cannot validate
@@ -512,9 +527,9 @@ class Timelord:
                         return
 
                     new_reward_chain_block = RewardChainBlock(
-                        self.last_state.get_weight() + block.difficulty,
+                        uint128(self.last_state.get_weight() + block.difficulty),
                         height,
-                        ip_total_iters,
+                        uint128(ip_total_iters),
                         block.reward_chain_block.signage_point_index,
                         block.reward_chain_block.pos_ss_cc_challenge_hash,
                         block.reward_chain_block.proof_of_space,
@@ -569,11 +584,11 @@ class Timelord:
                     self.new_peak = timelord_protocol.NewPeakTimelord(
                         new_reward_chain_block,
                         block.difficulty,
-                        new_deficit,
+                        uint8(new_deficit),
                         block.sub_slot_iters,
                         new_sub_epoch_summary,
                         self.last_state.reward_challenge_cache,
-                        last_csb_or_eos,
+                        uint128(last_csb_or_eos),
                         passed_ses_height_but_not_yet_included,
                     )
                     if self.total_unfinished > 0:
@@ -587,11 +602,13 @@ class Timelord:
                     # Break so we alternate between checking SP and IP
                     break
 
-    async def _check_for_end_of_subslot(self):
+    async def _check_for_end_of_subslot(self, iter_to_look_for: uint64):
         left_subslot_iters = [
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.END_OF_SUBSLOT
         ]
         if len(left_subslot_iters) == 0:
+            return
+        if left_subslot_iters[0] != iter_to_look_for:
             return
         chains_finished = [
             (chain, info, proof)
@@ -621,14 +638,15 @@ class Timelord:
                     icc_ip_proof = proof
             assert cc_proof is not None and rc_proof is not None and cc_vdf is not None and rc_vdf is not None
 
-            if rc_vdf.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
-                log.warning(
-                    f"Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} has"
-                    f" {rc_vdf.challenge}"
-                )
+            rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
+            if rc_vdf.challenge != rc_challenge:
+                assert rc_challenge is not None
+                log.warning(f"Do not have correct challenge {rc_challenge.hex()} has" f" {rc_vdf.challenge}")
                 # This proof is on an outdated challenge, so don't use it
                 return
-            log.info("Collected end of subslot vdfs.")
+            log.debug("Collected end of subslot vdfs.")
+            self.iters_finished.add(iter_to_look_for)
+            self.last_active_time = time.time()
             iters_from_sub_slot_start = cc_vdf.number_of_iterations + self.last_state.get_last_ip()
             cc_vdf = dataclasses.replace(cc_vdf, number_of_iterations=iters_from_sub_slot_start)
             if icc_ip_vdf is not None:
@@ -651,7 +669,11 @@ class Timelord:
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = (
                 None if icc_ip_vdf is None else InfusedChallengeChainSubSlot(icc_ip_vdf)
             )
-            icc_sub_slot_hash = icc_sub_slot.get_hash() if self.last_state.get_deficit() == 0 else None
+            if self.last_state.get_deficit() == 0:
+                assert icc_sub_slot is not None
+                icc_sub_slot_hash = icc_sub_slot.get_hash()
+            else:
+                icc_sub_slot_hash = None
             next_ses: Optional[SubEpochSummary] = self.last_state.get_next_sub_epoch_summary()
             if next_ses is not None:
                 log.info(f"Including sub epoch summary{next_ses}")
@@ -721,6 +743,13 @@ class Timelord:
             self.iters_submitted[failed_chain] = []
             self.vdf_failures = self.vdf_failures[1:]
 
+        # If something goes wrong in the VDF client due to a failed thread, we might get stuck in a situation where we
+        # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
+        # there are no other timelords, this reset should bring the timelord back to a running state.
+        if time.time() - self.last_active_time > 60:
+            log.error("Not active for over 60 seconds, restarting all chains")
+            await self._reset_chains()
+
     async def _manage_chains(self):
         async with self.lock:
             await asyncio.sleep(5)
@@ -741,12 +770,22 @@ class Timelord:
                 async with self.lock:
                     # Submit pending iterations.
                     await self._submit_iterations()
-                    # Check for new signage point and broadcast it if present.
-                    await self._check_for_new_sp()
+
+                    not_finished_iters = [
+                        it for it in self.iters_submitted[Chain.REWARD_CHAIN] if it not in self.iters_finished
+                    ]
+                    if len(not_finished_iters) == 0:
+                        await asyncio.sleep(0.1)
+                        continue
+                    selected_iter = min(not_finished_iters)
+
                     # Check for new infusion point and broadcast it if present.
-                    await self._check_for_new_ip()
+                    await self._check_for_new_ip(selected_iter)
+                    # Check for new signage point and broadcast it if present.
+                    await self._check_for_new_sp(selected_iter)
                     # Check for end of subslot, respawn chains and build EndOfSubslotBundle.
-                    await self._check_for_end_of_subslot()
+                    await self._check_for_end_of_subslot(selected_iter)
+
             except Exception:
                 tb = traceback.format_exc()
                 log.error(f"Error while handling message: {tb}")
@@ -809,7 +848,7 @@ class Timelord:
             if ok.decode() != "OK":
                 return
 
-            log.info("Got handshake with VDF client.")
+            log.debug("Got handshake with VDF client.")
             if not self.sanitizer_mode:
                 async with self.lock:
                     self.allows_iters.append(chain)
@@ -845,7 +884,7 @@ class Timelord:
                 except Exception:
                     pass
                 if msg == "STOP":
-                    log.info(f"Stopped client running on ip {ip}.")
+                    log.debug(f"Stopped client running on ip {ip}.")
                     async with self.lock:
                         writer.write(b"ACK")
                         await writer.drain()
@@ -919,7 +958,7 @@ class Timelord:
                             message = make_msg(ProtocolMessageTypes.respond_compact_vdf_timelord, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
         except ConnectionResetError as e:
-            log.info(f"Connection reset with VDF client {e}")
+            log.debug(f"Connection reset with VDF client {e}")
 
     async def _manage_discriminant_queue_sanitizer(self):
         while not self._shut_down:
