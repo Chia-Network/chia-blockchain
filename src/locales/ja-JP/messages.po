@@ -8,15 +8,15 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-30 17:27\n"
+"PO-Revision-Date: 2021-04-03 19:59\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: ja\n"
-"X-Crowdin-File: /main/src/locales/en/messages.po\n"
-"X-Crowdin-File-ID: 94\n"
+"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 72\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -34,8 +34,8 @@ msgstr "バケツ数は 128 がおすすめ"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "収穫機は耕地が実際に保存されているデバイス上に走らせるサービスです。農家と収穫機はフルノードと通信することでブロックチェーンの状態を認識します。以下が接続されている収穫機ネットワークです。詳しく"
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
 msgid "About Chia Blockchain"
 msgstr "チアブロックチェーンについて"
 
@@ -49,7 +49,7 @@ msgstr "承諾日時:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "Action"
 msgstr "操作"
 
@@ -77,7 +77,7 @@ msgstr "ウォレット追加"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:55
+#: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "耕地を追加"
@@ -198,7 +198,7 @@ msgstr "ハッシュ値 {headerHash} のブロック"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "ハッシュ値 {headerHash} のブロックは存在しません。"
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
 msgstr "ブロック"
 
@@ -259,15 +259,15 @@ msgstr "チャレンジ"
 msgid "Challenge Hash"
 msgstr "チャレンジのハッシュ値"
 
-#: src/electron-starter.js:341
+#: src/electron-starter.js:348
 msgid "Chat on KeyBase"
 msgstr "Keybase でチャット"
 
-#: src/electron-starter.js:359
+#: src/electron-starter.js:366
 msgid "Chia"
 msgstr "チア"
 
-#: src/electron-starter.js:298
+#: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
 msgstr "チアブロックチェーンの Wiki"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "耕地容量を選択"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
 msgstr "閉じる"
 
@@ -347,7 +347,7 @@ msgid "Connect to other peers"
 msgstr "手動で接続"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connected"
 msgstr "接続済み"
 
@@ -355,7 +355,7 @@ msgstr "接続済み"
 msgid "Connecting to wallet"
 msgstr "ウォレットに接続中"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:154
 msgid "Connection Status"
 msgstr "接続状態"
 
@@ -372,7 +372,7 @@ msgstr "接続の種類"
 msgid "Connections"
 msgstr "接続数"
 
-#: src/electron-starter.js:322
+#: src/electron-starter.js:329
 msgid "Contribute on GitHub"
 msgstr "GitHub で開発協力"
 
@@ -408,7 +408,7 @@ msgstr "DID ウォレットを作成"
 msgid "Create Offer"
 msgstr "注文を作成"
 
-#: src/components/plot/add/PlotAdd.tsx:67
+#: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr "耕地を作る"
 
@@ -531,16 +531,16 @@ msgstr "全ての鍵を削除するとどれも復元することができなく
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "鍵を削除すると復元することができませんので、必ずバックアップを取ってください。本当に続行しますか？"
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:251
 msgid "Developer"
 msgstr "開発者"
 
-#: src/electron-starter.js:247
+#: src/electron-starter.js:254
 msgid "Developer Tools"
 msgstr "開発者向けツール"
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Difficulty"
 msgstr "難易度"
 
@@ -582,7 +582,7 @@ msgstr "注文ファイルをここにドラッグ&ドロップ"
 msgid "Drag and drop your backup file"
 msgstr "バックアップファイルをここにドラッグ&ドロップ"
 
-#: src/electron-starter.js:203
+#: src/electron-starter.js:210
 msgid "Edit"
 msgstr "編集"
 
@@ -604,17 +604,13 @@ msgstr "エラー"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "エラー: チアは色付きのアドレスには送れません。チアのアドレスを入力してください。"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated network space"
 msgstr "推定ネットワーク容量"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "ネットワーク上の全農家が耕した全容量の推定値"
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
-msgid "Exclude final directory"
-msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -698,14 +694,14 @@ msgstr "全手数料"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
 msgid "File"
 msgstr "ファイル"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:67
 msgid "Filename"
 msgstr "ファイル名"
 
@@ -718,24 +714,24 @@ msgstr "最終フォルダの場所"
 msgid "Finished"
 msgstr "完成"
 
-#: src/electron-starter.js:347
+#: src/electron-starter.js:354
 msgid "Follow on Twitter"
 msgstr "Twitter でフォロー"
 
-#: src/electron-starter.js:306
+#: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
 msgstr "よくある質問"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:325
 msgid "Full Node"
 msgstr "フルノード"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:268
 msgid "Full Node Status"
 msgstr "フルノードの状態"
 
-#: src/electron-starter.js:272
+#: src/electron-starter.js:279
 msgid "Full Screen"
 msgstr "全画面表示"
 
@@ -765,11 +761,11 @@ msgstr "ヘッダーのハッシュ値"
 msgid "Height"
 msgstr "高さ"
 
-#: src/electron-starter.js:294
+#: src/electron-starter.js:301
 msgid "Help"
 msgstr "ヘルプ"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:58
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
 msgid "Help translate"
 msgstr "翻訳に協力"
 
@@ -863,11 +859,11 @@ msgstr "最後に収穫した高さ"
 msgid "Latest Block Challenges"
 msgstr "最近のブロックチャレンジ"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
 msgstr "読み込み中…"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
 msgstr "ローカル収穫機上の耕地"
 
@@ -941,13 +937,13 @@ msgstr "メモリ使用量を増やすと速度が微上昇します"
 msgid "My Pubkey"
 msgstr "私の公開鍵"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:173
 msgid "Network Name"
 msgstr "ネットワーク名"
 
 #: src/components/fullNode/FullNode.jsx:106
-#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+msgid "Network has not yet been launched, once it launches full node will start automatically."
+msgstr "ネットワークがまだ開始していません。開始したらフルノードが自動的に起動します。"
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1010,7 +1006,7 @@ msgstr "お持ちの耕地は現在、どれも耕地フィルターを通過で
 msgid "Not Available"
 msgstr "該当なし"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Not Synced"
 msgstr "同期されていません"
 
@@ -1023,8 +1019,8 @@ msgid "Not confirmed yet"
 msgstr "未承認"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:165
 msgid "Not connected"
 msgstr "未接続"
 
@@ -1056,7 +1052,7 @@ msgstr "作成した注文"
 msgid "Outgoing"
 msgstr "出金"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
 msgstr "先端の高さ"
 
@@ -1064,7 +1060,7 @@ msgstr "先端の高さ"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
 msgstr "先端の日時"
 
@@ -1169,7 +1165,7 @@ msgstr "耕地数"
 msgid "Plot Id"
 msgstr "耕地 Id"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Key"
 msgstr "耕地鍵"
 
@@ -1182,8 +1178,8 @@ msgid "Plot Public Key"
 msgstr "耕地公開鍵"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-#~ msgid "Plot Seed"
-#~ msgstr ""
+msgid "Plot Seed"
+msgstr "耕地種"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1217,7 +1213,7 @@ msgstr "耕し中"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "並行で耕すと時間の節約になる場合があります。スペックが足りない場合はキューに追加してください。"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Pool Key"
 msgstr "プール鍵"
 
@@ -1346,7 +1342,7 @@ msgstr "DID ウォレットを復元"
 msgid "Refresh Plots"
 msgstr "耕地一覧を更新"
 
-#: src/electron-starter.js:314
+#: src/electron-starter.js:321
 msgid "Release Notes"
 msgstr "リリースノート"
 
@@ -1354,7 +1350,7 @@ msgstr "リリースノート"
 msgid "Rename"
 msgstr "名称変更"
 
-#: src/electron-starter.js:333
+#: src/electron-starter.js:340
 msgid "Report an Issue..."
 msgstr "問題を報告"
 
@@ -1479,15 +1475,7 @@ msgstr "ログイン"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-#~ msgid "Skips adding [final dir] to harvester for farming"
-#~ msgstr "Skips adding [final dir] to harvester for farming"
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
-
-#: src/electron-starter.js:416
+#: src/electron-starter.js:423
 msgid "Speech"
 msgstr "スピーチ"
 
@@ -1523,15 +1511,16 @@ msgstr "支払い額上限 (チア毎インターバル): {0}"
 msgid "State"
 msgstr "状態"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/fullNode/FullNode.jsx:102
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:164
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/WalletStatusCard.tsx:12
+#: src/components/wallet/Wallets.tsx:94
 msgid "Status"
 msgstr "状態"
 
@@ -1571,7 +1560,7 @@ msgstr "状態:"
 msgid "Submit"
 msgstr "提出"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Synced"
 msgstr "同期完了"
 
@@ -1581,7 +1570,7 @@ msgstr "同期完了"
 msgid "Syncing"
 msgstr "同期中"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:119
 msgid "Syncing {progress}/{tip}"
 msgstr "同期中 {progress}/{tip}"
 
@@ -1622,11 +1611,11 @@ msgstr "以下が農家の接続先のフルノードです。<0>詳しく</0>"
 msgid "The minimum required size for mainnet is k=32"
 msgstr "メインネットで必要な最小サイズは k=32 です"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:137
 msgid "The node is not synced"
 msgstr "ノードが同期されていません"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "ノードが同期中です。ブロックチェーンの先端に辿り着くまで他のノードからブロックをダウンロードします。"
 
@@ -1672,7 +1661,7 @@ msgstr "保留中のお釣り、つまり自己送信したが、まだ承認さ
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "これが (まだブロックチェーンに含まれていない) 保留中の入出金の合計です。耕作報酬は含まれていません。"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:186
 msgid "This is the time of the latest peak sub block."
 msgstr "最新のピークサブブロックの日時です。"
 
@@ -1688,7 +1677,7 @@ msgstr "現在の先端サブブロックにおいて、あなたの秘密鍵が
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "これが全残高 + 保留中残高です: 全ての保留中の取引が承認されたら、残高はこの額になります。"
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:146
 msgid "This node is fully caught up and validating the network"
 msgstr "このノードは先端に辿り着いて、ネットワークの検証に携わっています"
 
@@ -1734,7 +1723,7 @@ msgstr "全残高"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
 msgstr "全評価回数"
 
@@ -1742,7 +1731,7 @@ msgstr "全評価回数"
 msgid "Total Network Space"
 msgstr "全ネットワーク容量"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:91
+#: src/components/plot/overview/PlotOverviewPlots.tsx:97
 msgid "Total Plot Size:"
 msgstr "全耕地容量:"
 
@@ -1754,7 +1743,7 @@ msgstr "全ての耕地の容量の合計"
 msgid "Total VDF Iterations"
 msgstr "全 VDF 評価回数"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:206
 msgid "Total iterations since the start of the blockchain"
 msgstr "ブロックチェーンの開始からの合計評価回数"
 
@@ -1811,16 +1800,16 @@ msgstr "一意的識別子"
 msgid "User Pubkey"
 msgstr "ユーザー公開鍵"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:198
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF サブスロット評価回数"
 
-#: src/electron-starter.js:235
+#: src/electron-starter.js:242
 msgid "View"
 msgstr "表示"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
 msgstr "ログを表示"
 
@@ -1844,13 +1833,13 @@ msgid "Wait for synchronization"
 msgstr "同期待ち"
 
 #: src/components/wallet/Wallets.tsx:104
-#~ msgid "Waiting for launch"
-#~ msgstr "Waiting for launch"
+msgid "Waiting for launch"
+msgstr "開始待ち"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
-#~ msgid "Waiting for network to launch"
-#~ msgstr "Waiting for network to launch"
+msgid "Waiting for network to launch"
+msgstr "ネットワーク開始待ち"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1881,7 +1870,7 @@ msgstr "同期待ち"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:134
 msgid "Wallets"
 msgstr "ウォレット"
 
@@ -1889,7 +1878,7 @@ msgstr "ウォレット"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/plot/overview/PlotOverviewPlots.tsx:90
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "畑に耕地を増やしましょう。さらにチアを得られますよ。"
 
@@ -1917,7 +1906,7 @@ msgstr "ご利用ありがとうございます！以下の合言葉はあなた
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "管理者からセットアップ用の情報パケットを受け取ったら、以下に入力してレート制限付きウォレットのセットアップを完了してください:"
 
-#: src/electron-starter.js:280
+#: src/electron-starter.js:287
 msgid "Window"
 msgstr "ウィンドウ"
 
@@ -1955,32 +1944,32 @@ msgstr "あなたのフルノード接続"
 msgid "Your Harvester Network"
 msgstr "あなたの収穫機ネットワーク"
 
-#: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/Wallets.tsx:122
 msgid "connections:"
 msgstr "接続数:"
 
-#: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/Wallets.tsx:116
 msgid "height:"
 msgstr "高さ:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:110
 msgid "not synced"
 msgstr "同期されていません"
 
-#: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/WalletStatusCard.tsx:17
+#: src/components/wallet/Wallets.tsx:99
 msgid "status:"
 msgstr "状態:"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:108
 msgid "synced"
 msgstr "同期完了"
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:106
 msgid "syncing"
 msgstr "同期中"
 
@@ -2003,3 +1992,4 @@ msgstr "{currencyCode} 全収穫チア"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} ユーザー取引手数料"
+
