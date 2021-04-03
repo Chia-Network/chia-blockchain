@@ -43,7 +43,7 @@ jobs:
           bash -exc '\
             echo $PATH && \
             sudo apt update && \
-            sudo apt update -y && \
+            sudo apt upgrade -y && \
             curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && \
             sudo apt -y install nodejs fakeroot && \
             sudo add-apt-repository ppa:deadsnakes/ppa -y && \
