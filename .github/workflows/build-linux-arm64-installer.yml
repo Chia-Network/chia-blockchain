@@ -44,7 +44,7 @@ jobs:
             echo $PATH && \
             apt update && \
             apt upgrade -y && \
-            apt -y install software-properties-common curl git lsb bc dialog && \
+            apt -y install software-properties-common curl git lsb bc dialog apt-utils && \
             add-apt-repository ppa:deadsnakes/ppa -y && \
             curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
             apt -y install nodejs fakeroot sudo && \
@@ -53,7 +53,10 @@ jobs:
             python3 --version && \
             python3.8 -m venv venv && \
             if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
-            . ./activate && \
+            source venv/bin/activate && \
+            echo "Should be Python 3.8.x" && \
+            python --version && \
+            echo "Running install.sh"
             sh install.sh && \
             ldd --version && \
             cd build_scripts && \
