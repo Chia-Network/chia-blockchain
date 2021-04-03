@@ -44,10 +44,11 @@ jobs:
             echo $PATH && \
             apt update && \
             apt upgrade -y && \
+            apt install software-properties-common
             curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-            apt -y install nodejs fakeroot && \
             add-apt-repository ppa:deadsnakes/ppa -y && \
-            apt install python3.8 &&\
+            apt update && \
+            apt -y install nodejs fakeroot python3.8 && \
             rm -rf venv && \
             python3.8 -m venv venv && \
             if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
