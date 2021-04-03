@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-03 19:59\n"
+"PO-Revision-Date: 2021-04-03 20:03\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -34,8 +34,8 @@ msgstr ""
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Żniwiarz to usługa pracująca na maszynie przechowywującej działki (plots). Rolnik i żniwiarz komunikują się z pełnym węzłem (full node) sprawdzając stan blockchaina. Wyświetl swoją sieć podłączonych żniwiarzy poniżej Dowiedz się więcej"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:362
+#: src/electron-starter.js:455
 msgid "About Chia Blockchain"
 msgstr "O blockchainie Chia"
 
@@ -49,7 +49,7 @@ msgstr "Zaakceptowano o:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "Działanie"
 
@@ -77,7 +77,7 @@ msgstr "Dodaj Portfel"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "Dodaj działkę"
@@ -198,7 +198,7 @@ msgstr "Blok o hashu {headerHash}"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Blok o hashu {headerHash} nie istnieje."
 
-#: src/components/fullNode/FullNode.jsx:311
+#: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
 msgstr "Bloki"
 
@@ -259,15 +259,15 @@ msgstr "Wyzwanie"
 msgid "Challenge Hash"
 msgstr "Hash wyzwania"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:341
 msgid "Chat on KeyBase"
 msgstr "Czat na KeyBase"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:359
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:298
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchainu Chia"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "Wybierz rozmiar działki"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
 msgstr "Zamknij"
 
@@ -347,7 +347,7 @@ msgid "Connect to other peers"
 msgstr "Połącz się z innymi peerami"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
 msgstr "Połączono"
 
@@ -355,7 +355,7 @@ msgstr "Połączono"
 msgid "Connecting to wallet"
 msgstr "Łączenie z portfelem"
 
-#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
 msgstr "Status Połączenia"
 
@@ -372,7 +372,7 @@ msgstr "Typ połączenia"
 msgid "Connections"
 msgstr "Połączenia"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:322
 msgid "Contribute on GitHub"
 msgstr "Współtwórz na GitHubie"
 
@@ -408,7 +408,7 @@ msgstr "Utwórz portfel DID"
 msgid "Create Offer"
 msgstr "Stwórz ofertę"
 
-#: src/components/plot/add/PlotAdd.tsx:66
+#: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
 msgstr "Stwórz działkę"
 
@@ -531,16 +531,16 @@ msgstr "Usunięcie wszystkich kluczy nieodwracalnie usunie je z twojego komputer
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Usunięcie klucza nieodwracalnie usunie z twojego komputera plik klucza, bądź pewien że masz kopię zapasową. Czy chcesz kontynuować?"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:244
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:247
 msgid "Developer Tools"
 msgstr "Narzędzia Programistyczne"
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "Trudność"
 
@@ -582,7 +582,7 @@ msgstr "Przesuń i upuść plik oferty"
 msgid "Drag and drop your backup file"
 msgstr "Przesuń i upuść twój plik kopii zapasowej"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:203
 msgid "Edit"
 msgstr "Edytuj"
 
@@ -604,13 +604,17 @@ msgstr "Błąd"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Błąd: Nie można wysłać chia na adres colored. Proszę podać adres chia."
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Przybliżona przestrzeń sieci"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Szacunkowa suma przestrzeni dyskowej wykorzystanej na działki wszystkich rolników w sieci"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
+msgid "Exclude final directory"
+msgstr "Pomiń folder docelowy"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -694,14 +698,14 @@ msgstr "Kwota opłaty"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:195
+#: src/electron-starter.js:402
 msgid "File"
 msgstr "Plik"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "Nazwa pliku"
 
@@ -714,24 +718,24 @@ msgstr "Lokalizacja folderu docelowego"
 msgid "Finished"
 msgstr "Zakończono"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:347
 msgid "Follow on Twitter"
 msgstr "Śledź na Twitterze"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:306
 msgid "Frequently Asked Questions"
 msgstr "Często zadawane pytania"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:325
+#: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
 msgstr "Pełen węzeł"
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
 msgstr "Stan pełnego węzła"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:272
 msgid "Full Screen"
 msgstr "Pełny ekran"
 
@@ -761,11 +765,11 @@ msgstr "Hash Nagłówka"
 msgid "Height"
 msgstr "Wysokość"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:294
 msgid "Help"
 msgstr "Pomoc"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:58
 msgid "Help translate"
 msgstr "Pomóż przetłumaczyć"
 
@@ -859,11 +863,11 @@ msgstr "Ostatnia wyfarmiona wysokość"
 msgid "Latest Block Challenges"
 msgstr "Ostatnie wyzwania blokowe"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
 msgstr "Wczytywanie..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "Twoje działki"
 
@@ -937,13 +941,13 @@ msgstr "Więcej pamięci lekko zwiększa prędkość"
 msgid "My Pubkey"
 msgstr "Mój publiczny klucz"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
 msgstr "Nazwa sieci"
 
 #: src/components/fullNode/FullNode.jsx:106
-msgid "Network has not yet been launched, once it launches full node will start automatically."
-msgstr ""
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1006,7 +1010,7 @@ msgstr "Żadna z twoich działek nie przeszła jeszcze przez filtr."
 msgid "Not Available"
 msgstr "Nie dostępne"
 
-#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
 msgstr "Nie zsynchronizowane"
 
@@ -1019,8 +1023,8 @@ msgid "Not confirmed yet"
 msgstr "Nie zostało jeszcze potwierdzone"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:158
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
 msgstr "Nie połączono"
 
@@ -1052,7 +1056,7 @@ msgstr "Stworzone oferty"
 msgid "Outgoing"
 msgstr "Wychodzące"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
 msgstr ""
 
@@ -1060,7 +1064,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
 msgstr ""
 
@@ -1165,7 +1169,7 @@ msgstr "Ilość działek"
 msgid "Plot Id"
 msgstr "ID działki"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "Klucz działki"
 
@@ -1178,8 +1182,8 @@ msgid "Plot Public Key"
 msgstr "Klucz publiczny działki"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-msgid "Plot Seed"
-msgstr "Ziarno działki"
+#~ msgid "Plot Seed"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1213,7 +1217,7 @@ msgstr "Generowanie działki"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Równoległe generowanie dzialek może oszczędzać czas. W przeciwnym wypadku dodaj działkę (działki) do kolejki."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Klucz farmera"
 
@@ -1342,7 +1346,7 @@ msgstr "Odzyskaj portfel DID"
 msgid "Refresh Plots"
 msgstr "Odśwież działki"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:314
 msgid "Release Notes"
 msgstr "Informacje o wydaniu"
 
@@ -1350,7 +1354,7 @@ msgstr "Informacje o wydaniu"
 msgid "Rename"
 msgstr "Zmień nazwę"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:333
 msgid "Report an Issue..."
 msgstr "Zgłoś problem..."
 
@@ -1475,7 +1479,15 @@ msgstr "Zaloguj się"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+msgid "Skips adding a final directory to harvester for farming"
+msgstr "Pomija dodawanie docelowego folderu do żniwiarza"
+
+#: src/electron-starter.js:416
 msgid "Speech"
 msgstr "Mowa"
 
@@ -1511,16 +1523,15 @@ msgstr ""
 msgid "State"
 msgstr "Stan"
 
-#: src/components/fullNode/FullNode.jsx:102
-#: src/components/fullNode/FullNode.jsx:117
-#: src/components/fullNode/FullNode.jsx:134
-#: src/components/fullNode/FullNode.jsx:142
-#: src/components/fullNode/FullNode.jsx:164
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/fullNode/FullNode.jsx:104
+#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:129
+#: src/components/fullNode/FullNode.jsx:151
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:12
-#: src/components/wallet/Wallets.tsx:94
+#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/Wallets.tsx:93
 msgid "Status"
 msgstr "Status"
 
@@ -1560,7 +1571,7 @@ msgstr "Stan:"
 msgid "Submit"
 msgstr "Zatwierdź"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
 msgstr "Zsynchronizowano"
 
@@ -1570,7 +1581,7 @@ msgstr "Zsynchronizowano"
 msgid "Syncing"
 msgstr "Synchronizowanie"
 
-#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
 msgstr "Synchronizowanie {progress}/{tip}"
 
@@ -1611,11 +1622,11 @@ msgstr "Poniżej pełen węzeł do którego jest podłączony twój rolnik. <0>D
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Najmniejszy dopuszczalny rozmiar w mainnecie to k=32"
 
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
 msgstr "Węzeł nie jest zsynchronizowany"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Węzeł jest w trakcie synchronizacji, co znaczy że pobiera bloki z innych węzłów, aby osiągnąć najświeższy element blockchaina"
 
@@ -1661,7 +1672,7 @@ msgstr ""
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:186
+#: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1677,7 +1688,7 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1723,7 +1734,7 @@ msgstr "Aktualne saldo"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:204
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
 msgstr "Wszystkie powtórzenia"
 
@@ -1731,7 +1742,7 @@ msgstr "Wszystkie powtórzenia"
 msgid "Total Network Space"
 msgstr "Całkowita przestrzeń sieci"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:97
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "Całkowity rozmiar działki:"
 
@@ -1743,7 +1754,7 @@ msgstr "Całkowity rozmiar działek"
 msgid "Total VDF Iterations"
 msgstr "Wszystkie powtórzenia VDF"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
 msgstr "Wszystkie powtórzenia od początku blockchainu"
 
@@ -1800,16 +1811,16 @@ msgstr "Unikalny identyfikator"
 msgid "User Pubkey"
 msgstr "Klucz Publiczny Użytkownika"
 
-#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:235
 msgid "View"
 msgstr "Widok"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Zobacz Log"
 
@@ -1833,13 +1844,13 @@ msgid "Wait for synchronization"
 msgstr "Oczekiwanie na synchronizację"
 
 #: src/components/wallet/Wallets.tsx:104
-msgid "Waiting for launch"
-msgstr "Oczekiwanie na uruchomienie"
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
-msgid "Waiting for network to launch"
-msgstr "Oczekiwanie na uruchomienie sieci"
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1870,7 +1881,7 @@ msgstr "Oczekiwanie na uruchomienie sieci"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
 msgstr "Portfele"
 
@@ -1878,7 +1889,7 @@ msgstr "Portfele"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:90
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "Chcesz zarabiać więcej Chia? Dodaj więcej działek do swojej farmy."
 
@@ -1906,7 +1917,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:280
 msgid "Window"
 msgstr "Okno"
 
@@ -1944,32 +1955,32 @@ msgstr "Twoje połączenie pełnego węzła"
 msgid "Your Harvester Network"
 msgstr "Twoja sieć żniwiarza"
 
-#: src/components/wallet/WalletStatusCard.tsx:31
-#: src/components/wallet/Wallets.tsx:122
+#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "połączenia:"
 
-#: src/components/wallet/WalletStatusCard.tsx:25
-#: src/components/wallet/Wallets.tsx:116
+#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "wysokość:"
 
-#: src/components/wallet/Wallets.tsx:110
+#: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
 msgstr "nie zsynchronizowane"
 
-#: src/components/wallet/WalletStatusCard.tsx:17
-#: src/components/wallet/Wallets.tsx:99
+#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/Wallets.tsx:98
 msgid "status:"
 msgstr "status:"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:108
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:105
 msgid "synced"
 msgstr "zsynchronizowano"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:106
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "synchronizowanie"
 
