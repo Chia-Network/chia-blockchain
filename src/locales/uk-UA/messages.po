@@ -8,15 +8,15 @@ msgstr ""
 "Language: uk_UA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-30 17:26\n"
+"PO-Revision-Date: 2021-04-03 19:59\n"
 "Last-Translator: \n"
 "Language-Team: Ukrainian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: uk\n"
-"X-Crowdin-File: /main/src/locales/en/messages.po\n"
-"X-Crowdin-File-ID: 94\n"
+"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 72\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -28,16 +28,16 @@ msgstr "Бажаєте подивитися більше інформації п
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "128 кошиків рекомендовано"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Комбайн - це служба, що працює на машині, де фактично зберігаються ділянка(и). Фермер та комбайн розмовляють із повним вузлом, щоб побачити стан ланцюга. Перегляньте свою мережу підключених комбайнів нижче. Докладніше"
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Про програму Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -49,7 +49,7 @@ msgstr "Прийняти в:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "Action"
 msgstr "Дія"
 
@@ -69,26 +69,26 @@ msgstr "Додати директорію з ділянками"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr ""
+msgstr "Додати ділянку до черги"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Додати гаманець"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:55
+#: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "Додати ділянку"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr ""
+msgstr "Додати ділянку"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr ""
+msgstr "Додати директорію з ділянками"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -125,7 +125,7 @@ msgstr "Ви впевнені, що хочете видалити ділянку
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr ""
+msgstr "Ви впевнені, що бажаєте відключиться?"
 
 #: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
@@ -137,7 +137,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr ""
+msgstr "Ви впевнені, що бажаєте використовувати k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -146,7 +146,7 @@ msgstr "Назад"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Файл резервної копії використовується для відновлення розумних гаманців."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -176,7 +176,7 @@ msgstr "Блок"
 
 #: src/components/block/Block.jsx:121
 msgid "Block Test"
-msgstr ""
+msgstr "Перевірка блоку"
 
 #: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
@@ -192,13 +192,13 @@ msgstr "Блок на висоті {0} в блокчейне Chia"
 
 #: src/components/block/Block.jsx:126
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "Блок з хешем {headerHash}"
 
 #: src/components/block/Block.jsx:155
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Блок з хешем {headerHash} не існує."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
 msgstr "Блоки"
 
@@ -224,7 +224,7 @@ msgstr "Покупка"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "Гаманець Кольорової Монети"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -259,21 +259,21 @@ msgstr "Випробування"
 msgid "Challenge Hash"
 msgstr "Хеш випробування"
 
-#: src/electron-starter.js:341
+#: src/electron-starter.js:348
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Чат у KeyBase"
 
-#: src/electron-starter.js:359
+#: src/electron-starter.js:366
 msgid "Chia"
 msgstr ""
 
-#: src/electron-starter.js:298
+#: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Гаманець Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -284,9 +284,9 @@ msgid "Choose Plot Size"
 msgstr "Виберіть розмір ділянки"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "Закрити"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -315,19 +315,19 @@ msgstr "Колір:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Кольорова Монета"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Налаштування Кольорової Монети"
 
 #: src/electron-starter.js:138
 msgid "Confirm"
-msgstr ""
+msgstr "Підтвердити"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr ""
+msgstr "Підтвердити відключення"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -347,7 +347,7 @@ msgid "Connect to other peers"
 msgstr "Підключитися до інших вузлів"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connected"
 msgstr "Підключено"
 
@@ -355,7 +355,7 @@ msgstr "Підключено"
 msgid "Connecting to wallet"
 msgstr "Підключення до гаманця"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:154
 msgid "Connection Status"
 msgstr "Стан підключення"
 
@@ -372,13 +372,13 @@ msgstr "Тип підключення"
 msgid "Connections"
 msgstr "Підключення"
 
-#: src/electron-starter.js:322
+#: src/electron-starter.js:329
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Внести свій внесок на GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Скопійовано"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:461
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -390,7 +390,7 @@ msgstr "Копіювати"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Скопійувати до буферу обміну"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -402,13 +402,13 @@ msgstr "Створити"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Створити DID гаманець"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Створити пропозицію"
 
-#: src/components/plot/add/PlotAdd.tsx:67
+#: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr "Створити ділянку"
 
@@ -426,33 +426,33 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Створити торгову пропозицію"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
-msgstr ""
+msgstr "Створити транзакцію"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr ""
+msgstr "Створити резервну копію"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Створити новий закритий ключ"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Створити адміністративний гаманець"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Створити нову кольорову монету"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr ""
+msgstr "Створити гаманець користувача"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
@@ -476,15 +476,15 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
-msgstr ""
+msgstr "Поточний торговий статус"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr ""
+msgstr "НЕБЕЗПЕКА: видалити закритий ключ назавжди"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID гаманець"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -494,11 +494,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:137
 #: src/components/wallet/WalletHistory.tsx:35
 msgid "Date"
-msgstr ""
+msgstr "Дата"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "Delay"
-msgstr ""
+msgstr "Затримка"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/PlotAction.tsx:43
@@ -507,42 +507,42 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
-msgstr ""
+msgstr "Видалити"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "Delete Plot"
-msgstr ""
+msgstr "Видалити ділянку"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Видалити всі ключі"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Видалити ключ"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Видалення усіх ключів призведе до безповоротного видалення ключів з Вашого компьютеру. Переконайтесь, що маєте резевні копії. Ви впевнені, що хочете продовжити?"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Видалення ключа призведе до безповоротного його видалення з Вашого компьютеру. Переконайтесь, що маєте резевні копії. Ви впевнені, що хочете продовжити?"
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:251
 msgid "Developer"
-msgstr ""
+msgstr "Розробник"
 
-#: src/electron-starter.js:247
+#: src/electron-starter.js:254
 msgid "Developer Tools"
-msgstr ""
+msgstr "Інструменти розробника"
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Difficulty"
-msgstr ""
+msgstr "Складність"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -554,7 +554,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr ""
+msgstr "Від'єднати"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -567,7 +567,7 @@ msgstr ""
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr ""
+msgstr "У Вас є існуючі ділянки на цій машині? <0>Додати директорію з ділянками</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -582,13 +582,13 @@ msgstr ""
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron-starter.js:203
+#: src/electron-starter.js:210
 msgid "Edit"
-msgstr ""
+msgstr "Редагувати"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "Введіть мнемоніку з 24 слів, яку ви зберегли, для відновлення гаманця Chia."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -598,38 +598,34 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "Помилка"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated network space"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr ""
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
-msgid "Exclude final directory"
 msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Expected Time to Win"
-msgstr ""
+msgstr "Очікуваний час до виграшу"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr ""
+msgstr "Не вдалося відкрити (недійсні ділянки)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
-msgstr ""
+msgstr "Ферма"
 
 #: src/components/block/Block.jsx:249
 msgid "Farmer Puzzle Hash"
@@ -642,12 +638,12 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "Фермер не підключений"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "Фермер не запущений"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -676,7 +672,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
 #: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
-msgstr ""
+msgstr "Комісія"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee (TXCH)"
@@ -688,26 +684,26 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr ""
+msgstr "Комісія ({currencyCode})"
 
 #: src/components/block/Block.jsx:291
 msgid "Fees Amount"
-msgstr ""
+msgstr "Сума збору"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
 msgid "File"
-msgstr ""
+msgstr "Файл"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:67
 msgid "Filename"
-msgstr ""
+msgstr "Назва файлу"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
@@ -716,28 +712,28 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
-msgstr ""
+msgstr "Завершено"
 
-#: src/electron-starter.js:347
+#: src/electron-starter.js:354
 msgid "Follow on Twitter"
 msgstr ""
 
-#: src/electron-starter.js:306
+#: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:325
 msgid "Full Node"
-msgstr ""
+msgstr "Повний вузол"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:268
 msgid "Full Node Status"
-msgstr ""
+msgstr "Статус повного вузла"
 
-#: src/electron-starter.js:272
+#: src/electron-starter.js:279
 msgid "Full Screen"
-msgstr ""
+msgstr "Повний екран"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
@@ -765,11 +761,11 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
-#: src/electron-starter.js:294
+#: src/electron-starter.js:301
 msgid "Help"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:56
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
 msgid "Help translate"
 msgstr ""
 
@@ -863,11 +859,11 @@ msgstr ""
 msgid "Latest Block Challenges"
 msgstr ""
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
 msgstr ""
 
@@ -941,13 +937,13 @@ msgstr ""
 msgid "My Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:173
 msgid "Network Name"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:106
-#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+msgid "Network has not yet been launched, once it launches full node will start automatically."
+msgstr ""
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1010,7 +1006,7 @@ msgstr ""
 msgid "Not Available"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Not Synced"
 msgstr ""
 
@@ -1023,8 +1019,8 @@ msgid "Not confirmed yet"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:165
 msgid "Not connected"
 msgstr ""
 
@@ -1056,7 +1052,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
 msgstr ""
 
@@ -1064,7 +1060,7 @@ msgstr ""
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
 msgstr ""
 
@@ -1169,7 +1165,7 @@ msgstr ""
 msgid "Plot Id"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Key"
 msgstr ""
 
@@ -1182,8 +1178,8 @@ msgid "Plot Public Key"
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-#~ msgid "Plot Seed"
-#~ msgstr ""
+msgid "Plot Seed"
+msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1217,7 +1213,7 @@ msgstr ""
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Pool Key"
 msgstr ""
 
@@ -1346,7 +1342,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron-starter.js:314
+#: src/electron-starter.js:321
 msgid "Release Notes"
 msgstr ""
 
@@ -1354,7 +1350,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron-starter.js:333
+#: src/electron-starter.js:340
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1479,15 +1475,7 @@ msgstr ""
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-#~ msgid "Skips adding [final dir] to harvester for farming"
-#~ msgstr "Skips adding [final dir] to harvester for farming"
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
-
-#: src/electron-starter.js:416
+#: src/electron-starter.js:423
 msgid "Speech"
 msgstr ""
 
@@ -1523,15 +1511,16 @@ msgstr ""
 msgid "State"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/fullNode/FullNode.jsx:102
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:164
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/WalletStatusCard.tsx:12
+#: src/components/wallet/Wallets.tsx:94
 msgid "Status"
 msgstr ""
 
@@ -1571,7 +1560,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Synced"
 msgstr ""
 
@@ -1581,7 +1570,7 @@ msgstr ""
 msgid "Syncing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:119
 msgid "Syncing {progress}/{tip}"
 msgstr ""
 
@@ -1622,11 +1611,11 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:137
 msgid "The node is not synced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr ""
 
@@ -1672,7 +1661,7 @@ msgstr ""
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:186
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1688,7 +1677,7 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:146
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1734,7 +1723,7 @@ msgstr ""
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
 msgstr ""
 
@@ -1742,7 +1731,7 @@ msgstr ""
 msgid "Total Network Space"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:91
+#: src/components/plot/overview/PlotOverviewPlots.tsx:97
 msgid "Total Plot Size:"
 msgstr ""
 
@@ -1754,7 +1743,7 @@ msgstr ""
 msgid "Total VDF Iterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:206
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
@@ -1811,16 +1800,16 @@ msgstr ""
 msgid "User Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:198
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:235
+#: src/electron-starter.js:242
 msgid "View"
 msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
 msgstr ""
 
@@ -1844,13 +1833,13 @@ msgid "Wait for synchronization"
 msgstr ""
 
 #: src/components/wallet/Wallets.tsx:104
-#~ msgid "Waiting for launch"
-#~ msgstr "Waiting for launch"
+msgid "Waiting for launch"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
-#~ msgid "Waiting for network to launch"
-#~ msgstr "Waiting for network to launch"
+msgid "Waiting for network to launch"
+msgstr ""
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1881,7 +1870,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:134
 msgid "Wallets"
 msgstr ""
 
@@ -1889,7 +1878,7 @@ msgstr ""
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/plot/overview/PlotOverviewPlots.tsx:90
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr ""
 
@@ -1917,7 +1906,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:280
+#: src/electron-starter.js:287
 msgid "Window"
 msgstr ""
 
@@ -1955,32 +1944,32 @@ msgstr ""
 msgid "Your Harvester Network"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/Wallets.tsx:122
 msgid "connections:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/Wallets.tsx:116
 msgid "height:"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:110
 msgid "not synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/WalletStatusCard.tsx:17
+#: src/components/wallet/Wallets.tsx:99
 msgid "status:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:108
 msgid "synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:106
 msgid "syncing"
 msgstr ""
 
