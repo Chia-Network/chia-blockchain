@@ -8,19 +8,19 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-03-30 17:27\n"
+"PO-Revision-Date: 2021-04-03 19:59\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: ko\n"
-"X-Crowdin-File: /main/src/locales/en/messages.po\n"
-"X-Crowdin-File-ID: 94\n"
+"X-Crowdin-File: /main/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 72\n"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "Chia의 블록을 더 탐험하고 싶으십니까? 오픈 소스 개발자가 만든 <0>Chia Explorer</0> 를 확인하세요."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -34,34 +34,34 @@ msgstr "128의 버킷이 권장됩니다."
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr ""
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
+#: src/electron-starter.js:369
+#: src/electron-starter.js:462
 msgid "About Chia Blockchain"
 msgstr "치아 블록체인에 대하여"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "승인"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "승인 시각"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "Action"
-msgstr ""
+msgstr "행동"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr ""
+msgstr "행동들"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "더하기"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
@@ -77,7 +77,7 @@ msgstr "지갑을 추가"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:55
+#: src/components/plot/add/PlotAdd.tsx:54
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "플롯을 추가"
@@ -112,7 +112,7 @@ msgstr "양"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "수량 ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
@@ -121,15 +121,15 @@ msgstr ""
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "정말로 플롯을 삭제하시겠습니까? 삭제된 플롯은 복구되지 않습니다."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr ""
+msgstr "정말로 접속을 끊으시겠습니까?"
 
 #: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "정말로 나가시겠습니까? GUI 플로팅과 파밍 역시 멈출 것입니다."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -137,7 +137,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr ""
+msgstr "정말로 다음값으로 정하시겠습니까? k={plotSize}"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -146,7 +146,7 @@ msgstr "뒤로"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "백업된 파일은 스마트 월렛을 복구하는데 사용됩니다."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -156,27 +156,27 @@ msgstr "잔고"
 
 #: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "기본 농부 보상 수량"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "아래는 현재 도전중인 블록입니다. 당신은 이 도전에 대한 공간증명을 가지고 있거나 가지고 있지 않을 수 있습니다. 이 블록들은 현재 시간 증명은 포함하지 않습니다."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
-msgstr ""
+msgstr "지난 5시간에 대한 예측치"
 
 #: src/components/block/Block.jsx:109
 #: src/components/block/Block.jsx:143
 #: src/components/block/Block.jsx:148
 #: src/components/block/Block.jsx:303
 msgid "Block"
-msgstr ""
+msgstr "블록"
 
 #: src/components/block/Block.jsx:121
 msgid "Block Test"
-msgstr ""
+msgstr "블록 테스트"
 
 #: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
@@ -198,9 +198,9 @@ msgstr ""
 msgid "Block with hash {headerHash} does not exists."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:311
 msgid "Blocks"
-msgstr ""
+msgstr "블록들"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -214,17 +214,17 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr ""
+msgstr "하지만 당신은 현재 파밍 중에 있습니다<0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "사기"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC 월렛"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -232,7 +232,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "니모닉 시드로 백업될 수 있습니다"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -241,11 +241,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "취소"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "취소 그리고 전송"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -253,40 +253,40 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "도전"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "도전 해시"
 
-#: src/electron-starter.js:341
+#: src/electron-starter.js:348
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "키베이스에서 채팅하기"
 
-#: src/electron-starter.js:359
+#: src/electron-starter.js:366
 msgid "Chia"
-msgstr ""
+msgstr "치아"
 
-#: src/electron-starter.js:298
+#: src/electron-starter.js:305
 msgid "Chia Blockchain Wiki"
 msgstr "치아 블록체인 위키"
 
 #: src/components/wallet/Wallets.tsx:30
 msgid "Chia Wallet"
-msgstr ""
+msgstr "치아 지갑"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "플롯의 갯수를 고르세요"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "플롯의 크기를 고르세요"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
 msgid "Close"
-msgstr ""
+msgstr "닫기"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
@@ -311,19 +311,19 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "컬러"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "컬러드 코인"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "컬러드 코인 옵션"
 
 #: src/electron-starter.js:138
 msgid "Confirm"
-msgstr ""
+msgstr "승인"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
@@ -347,7 +347,7 @@ msgid "Connect to other peers"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:156
 msgid "Connected"
 msgstr ""
 
@@ -355,7 +355,7 @@ msgstr ""
 msgid "Connecting to wallet"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:154
 msgid "Connection Status"
 msgstr ""
 
@@ -372,7 +372,7 @@ msgstr ""
 msgid "Connections"
 msgstr ""
 
-#: src/electron-starter.js:322
+#: src/electron-starter.js:329
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -408,7 +408,7 @@ msgstr ""
 msgid "Create Offer"
 msgstr ""
 
-#: src/components/plot/add/PlotAdd.tsx:67
+#: src/components/plot/add/PlotAdd.tsx:66
 msgid "Create Plot"
 msgstr ""
 
@@ -531,16 +531,16 @@ msgstr "모든 키를 제거하는 것은 당신의 컴퓨터로부터 영구적
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 
-#: src/electron-starter.js:244
+#: src/electron-starter.js:251
 msgid "Developer"
 msgstr "개발자"
 
-#: src/electron-starter.js:247
+#: src/electron-starter.js:254
 msgid "Developer Tools"
 msgstr "개발자 도구"
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Difficulty"
 msgstr "난이도"
 
@@ -554,7 +554,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr ""
+msgstr "연결 끊김"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -582,13 +582,13 @@ msgstr ""
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron-starter.js:203
+#: src/electron-starter.js:210
 msgid "Edit"
-msgstr ""
+msgstr "수정"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "치아 지갑을 복구하기 위해서 24자로 된 니모닉 단어를 입력하세요."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -598,67 +598,63 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "에러"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "에러: 치아를 컬러드 주소로 보낼 수 없습니다. 치아 주소를 입력하세요."
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:210
 msgid "Estimated network space"
-msgstr ""
+msgstr "전체 넷용량 추측치"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:213
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr ""
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
-msgid "Exclude final directory"
-msgstr ""
+msgstr "네트워크에 있는 모든 농부의 총 플롯된 디스크 용량의 총합 예측치"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Expected Time to Win"
-msgstr ""
+msgstr "블록보상을 얻기까지 걸리는 시간"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr ""
+msgstr "실패했습니다(부적절한 플롯들)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
-msgstr ""
+msgstr "농장"
 
 #: src/components/block/Block.jsx:249
 msgid "Farmer Puzzle Hash"
-msgstr ""
+msgstr "수확기 퍼즐 해시"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr ""
+msgstr "농부 보상 주소"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "수확기가 연결되어 있지 않습니다"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "수확기가 작동중이 아닙니다"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "농부들은 안전한 거래를 돕기 위해 네트워크에 여유 공간을 할당함으로써 블록 보상과 거래 수수료를받습니다. 여기에 플롯을 추가하면 농장이 생깁니다. <0>더 알아보세요</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr ""
+msgstr "수확중"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -666,7 +662,7 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr ""
+msgstr "수확 상태"
 
 #: src/components/wallet/WalletHistory.tsx:52
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -676,7 +672,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
 #: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
-msgstr ""
+msgstr "수수료"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee (TXCH)"
@@ -688,60 +684,60 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr ""
+msgstr "수수료 ({currencyCode})"
 
 #: src/components/block/Block.jsx:291
 msgid "Fees Amount"
-msgstr ""
+msgstr "수수료 양"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
+#: src/electron-starter.js:202
+#: src/electron-starter.js:409
 msgid "File"
-msgstr ""
+msgstr "파일"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:67
 msgid "Filename"
-msgstr ""
+msgstr "파일 이름"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "최종 폴더 위치"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
-msgstr ""
+msgstr "완료됨"
 
-#: src/electron-starter.js:347
+#: src/electron-starter.js:354
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "트위터 팔로우하기"
 
-#: src/electron-starter.js:306
+#: src/electron-starter.js:313
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "자주 묻는 질문"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:325
 msgid "Full Node"
-msgstr ""
+msgstr "전체 노드"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:268
 msgid "Full Node Status"
-msgstr ""
+msgstr "전체 노드 현황"
 
-#: src/electron-starter.js:272
+#: src/electron-starter.js:279
 msgid "Full Screen"
-msgstr ""
+msgstr "전체 화면"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "새로운 컬러 만들기"
 
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
@@ -753,54 +749,54 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
-msgstr ""
+msgstr "헤더 해시"
 
 #: src/components/block/Block.jsx:177
 msgid "Header hash"
-msgstr ""
+msgstr "해더 해시"
 
 #: src/components/block/Block.jsx:191
 #: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
-msgstr ""
+msgstr "높이"
 
-#: src/electron-starter.js:294
+#: src/electron-starter.js:301
 msgid "Help"
-msgstr ""
+msgstr "도움말"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:56
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
 msgid "Help translate"
-msgstr ""
+msgstr "번역 돕기"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr ""
+msgstr "고급 옵션 숨기기"
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "History"
-msgstr ""
+msgstr "이력"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "호스트 이름"
 
 #: src/components/fullNode/FullNodeConnections.tsx:27
 msgid "IP address"
-msgstr ""
+msgstr "IP 주소"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
-msgstr ""
+msgstr "IP주소 / 호스트"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr ""
+msgstr "아무 것도 선택 되지 않으면, 기본 임시 디렉토리로 설정됩니다."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr ""
+msgstr "니모닉으로부터 지갑 가져오기"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
@@ -863,11 +859,11 @@ msgstr ""
 msgid "Latest Block Challenges"
 msgstr ""
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
 msgid "Loading..."
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:86
 msgid "Local Harvester Plots"
 msgstr ""
 
@@ -941,13 +937,13 @@ msgstr ""
 msgid "My Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:173
 msgid "Network Name"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:106
-#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
+msgid "Network has not yet been launched, once it launches full node will start automatically."
+msgstr ""
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1010,7 +1006,7 @@ msgstr ""
 msgid "Not Available"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Not Synced"
 msgstr ""
 
@@ -1023,69 +1019,69 @@ msgid "Not confirmed yet"
 msgstr ""
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:158
+#: src/components/fullNode/FullNode.jsx:165
 msgid "Not connected"
 msgstr ""
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr ""
+msgstr "플롯을 찾지 못했습니다"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "버킷 넘버"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr ""
+msgstr "쓰레드 숫자"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "제안"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "제안이 생성되었습니다"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr ""
+msgstr "내보내는 중"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Peak Height"
-msgstr ""
+msgstr "최고 높이"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:184
 msgid "Peak Time"
-msgstr ""
+msgstr "최고 시간"
 
 #: src/components/wallet/WalletHistory.tsx:41
 msgid "Pending"
-msgstr ""
+msgstr "보류중"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr ""
+msgstr "보류중인 잔고"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr ""
+msgstr "잔고 변화"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "전체 보류중인 잔고"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1169,7 +1165,7 @@ msgstr ""
 msgid "Plot Id"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Plot Key"
 msgstr ""
 
@@ -1182,8 +1178,8 @@ msgid "Plot Public Key"
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-#~ msgid "Plot Seed"
-#~ msgstr ""
+msgid "Plot Seed"
+msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1217,7 +1213,7 @@ msgstr ""
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Pool Key"
 msgstr ""
 
@@ -1346,7 +1342,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron-starter.js:314
+#: src/electron-starter.js:321
 msgid "Release Notes"
 msgstr ""
 
@@ -1354,7 +1350,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron-starter.js:333
+#: src/electron-starter.js:340
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1479,15 +1475,7 @@ msgstr ""
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-#~ msgid "Skips adding [final dir] to harvester for farming"
-#~ msgstr "Skips adding [final dir] to harvester for farming"
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
-
-#: src/electron-starter.js:416
+#: src/electron-starter.js:423
 msgid "Speech"
 msgstr ""
 
@@ -1523,15 +1511,16 @@ msgstr ""
 msgid "State"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/fullNode/FullNode.jsx:102
+#: src/components/fullNode/FullNode.jsx:117
+#: src/components/fullNode/FullNode.jsx:134
+#: src/components/fullNode/FullNode.jsx:142
+#: src/components/fullNode/FullNode.jsx:164
+#: src/components/plot/overview/PlotOverviewPlots.tsx:71
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/WalletStatusCard.tsx:12
+#: src/components/wallet/Wallets.tsx:94
 msgid "Status"
 msgstr ""
 
@@ -1571,7 +1560,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Synced"
 msgstr ""
 
@@ -1581,7 +1570,7 @@ msgstr ""
 msgid "Syncing"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:119
 msgid "Syncing {progress}/{tip}"
 msgstr ""
 
@@ -1622,11 +1611,11 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:137
 msgid "The node is not synced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr ""
 
@@ -1672,7 +1661,7 @@ msgstr ""
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:186
 msgid "This is the time of the latest peak sub block."
 msgstr ""
 
@@ -1688,7 +1677,7 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:146
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
@@ -1734,7 +1723,7 @@ msgstr ""
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:204
 msgid "Total Iterations"
 msgstr ""
 
@@ -1742,7 +1731,7 @@ msgstr ""
 msgid "Total Network Space"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:91
+#: src/components/plot/overview/PlotOverviewPlots.tsx:97
 msgid "Total Plot Size:"
 msgstr ""
 
@@ -1754,7 +1743,7 @@ msgstr ""
 msgid "Total VDF Iterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:206
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
@@ -1811,16 +1800,16 @@ msgstr ""
 msgid "User Pubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:198
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:235
+#: src/electron-starter.js:242
 msgid "View"
 msgstr ""
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
 msgid "View Log"
 msgstr ""
 
@@ -1844,13 +1833,13 @@ msgid "Wait for synchronization"
 msgstr ""
 
 #: src/components/wallet/Wallets.tsx:104
-#~ msgid "Waiting for launch"
-#~ msgstr "Waiting for launch"
+msgid "Waiting for launch"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
-#~ msgid "Waiting for network to launch"
-#~ msgstr "Waiting for network to launch"
+msgid "Waiting for network to launch"
+msgstr ""
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1881,7 +1870,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:134
 msgid "Wallets"
 msgstr ""
 
@@ -1889,7 +1878,7 @@ msgstr ""
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:84
+#: src/components/plot/overview/PlotOverviewPlots.tsx:90
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr ""
 
@@ -1917,7 +1906,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:280
+#: src/electron-starter.js:287
 msgid "Window"
 msgstr ""
 
@@ -1955,32 +1944,32 @@ msgstr ""
 msgid "Your Harvester Network"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/WalletStatusCard.tsx:31
+#: src/components/wallet/Wallets.tsx:122
 msgid "connections:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/WalletStatusCard.tsx:25
+#: src/components/wallet/Wallets.tsx:116
 msgid "height:"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:110
 msgid "not synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/WalletStatusCard.tsx:17
+#: src/components/wallet/Wallets.tsx:99
 msgid "status:"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:108
 msgid "synced"
 msgstr ""
 
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/WalletStatusCard.tsx:20
+#: src/components/wallet/Wallets.tsx:106
 msgid "syncing"
 msgstr ""
 
