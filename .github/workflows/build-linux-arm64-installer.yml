@@ -44,7 +44,7 @@ jobs:
             echo $PATH && \
             apt update && \
             apt upgrade -y && \
-            apt -y install software-properties-common curl git dialog apt-utils && \
+            apt -y install software-properties-common build-essential curl git dialog apt-utils && \
             add-apt-repository ppa:deadsnakes/ppa -y && \
             curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
             apt -y install nodejs fakeroot && \
