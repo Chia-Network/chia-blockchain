@@ -44,7 +44,7 @@ jobs:
             echo $PATH && \
             apt update && \
             apt upgrade -y && \
-            apt install software-properties-common
+            apt -y install software-properties-common
             curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
             add-apt-repository ppa:deadsnakes/ppa -y && \
             apt update && \
