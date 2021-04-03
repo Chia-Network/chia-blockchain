@@ -44,10 +44,10 @@ jobs:
             echo $PATH && \
             apt update && \
             apt upgrade -y && \
-            apt -y install software-properties-common curl git lsb bc dialog apt-utils && \
+            apt -y install software-properties-common curl lsb dialog apt-utils && \
             add-apt-repository ppa:deadsnakes/ppa -y && \
             curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-            apt -y install nodejs fakeroot sudo && \
+            apt -y install nodejs fakeroot && \
             apt -y install python3.8 python3.8-venv python3.8-distutils && \
             rm -rf venv && \
             python3 --version && \
@@ -56,8 +56,11 @@ jobs:
             source venv/bin/activate && \
             echo "Should be Python 3.8.x" && \
             python --version && \
-            echo "Running install.sh"
-            sh install.sh && \
+            echo "Emulating install.sh" && \
+            pip install --upgrade pip && \
+            pip install wheel && \
+            pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1 && \
+            pip install -e . --extra-index-url https://pypi.chia.net/simple/ && \
             ldd --version && \
             cd build_scripts && \
             sh build_linux.sh arm64 \
