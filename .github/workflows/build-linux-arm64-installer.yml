@@ -51,7 +51,8 @@ jobs:
             apt -y install nodejs fakeroot && \
             apt -y python3.8 python3.8-venv python3.8-distutils && \
             rm -rf venv && \
-            python3.8 -m venv venv && \
+            python3 --version && \
+            python3 -m venv venv && \
             if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
             . ./activate && \
             sh install.sh && \
