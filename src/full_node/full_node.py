@@ -305,6 +305,10 @@ class FullNode:
         # Store this peak/peer combination in case we want to sync to it, and to keep track of peers
         self.sync_store.peer_has_block(request.header_hash, peer.peer_node_id, request.weight, request.height, True)
 
+        # We may not have initialized this yet on startup, don't want to ban a peer so just ignore 
+        if not hasattr(self, 'blockchain'):
+            return None
+
         if self.blockchain.contains_block(request.header_hash):
             return None
 
