@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-03 19:59\n"
+"PO-Revision-Date: 2021-04-03 20:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,10 +32,10 @@ msgstr "建議使用 128 個桶"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "收割機是在實際存放耕地的機器上運作的服務。塊農和收割機會與一個完整節點溝通以取得區塊鍵狀態。以下是你的收割機與塊農網路 學習更多"
+msgstr "取圖器是在實際存放圖區的機器上運作的服務。塊農和取圖器會與一個完整節點溝通以取得區塊鍵狀態。以下是你的取圖器與塊農網路 學習更多"
 
-#: src/electron-starter.js:369
-#: src/electron-starter.js:462
+#: src/electron-starter.js:362
+#: src/electron-starter.js:455
 msgid "About Chia Blockchain"
 msgstr "關於 Chia 區塊鏈"
 
@@ -49,7 +49,7 @@ msgstr "接受於："
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
 msgstr "動作"
 
@@ -77,7 +77,7 @@ msgstr "新增錢包"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
 msgstr "新增耕地"
@@ -198,7 +198,7 @@ msgstr "帶雜湊值 {headerHash} 的區塊"
 msgid "Block with hash {headerHash} does not exists."
 msgstr "帶雜湊值 {headerHash} 的區塊不存在。"
 
-#: src/components/fullNode/FullNode.jsx:311
+#: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
 msgstr "區塊"
 
@@ -259,15 +259,15 @@ msgstr "挑戰"
 msgid "Challenge Hash"
 msgstr "挑戰雜湊值"
 
-#: src/electron-starter.js:348
+#: src/electron-starter.js:341
 msgid "Chat on KeyBase"
 msgstr "在 KeyBase 上閒聊"
 
-#: src/electron-starter.js:366
+#: src/electron-starter.js:359
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:305
+#: src/electron-starter.js:298
 msgid "Chia Blockchain Wiki"
 msgstr "Chia 區塊鏈維基"
 
@@ -284,7 +284,7 @@ msgid "Choose Plot Size"
 msgstr "選擇耕地大小"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:29
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
 msgstr "關閉"
 
@@ -347,7 +347,7 @@ msgid "Connect to other peers"
 msgstr "連線到其他同儕"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:156
+#: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
 msgstr "已連線"
 
@@ -355,7 +355,7 @@ msgstr "已連線"
 msgid "Connecting to wallet"
 msgstr "連線至錢包中"
 
-#: src/components/fullNode/FullNode.jsx:154
+#: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
 msgstr "連線狀態"
 
@@ -372,7 +372,7 @@ msgstr "連線類別"
 msgid "Connections"
 msgstr "連線"
 
-#: src/electron-starter.js:329
+#: src/electron-starter.js:322
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上貢獻"
 
@@ -408,7 +408,7 @@ msgstr "建立 DID 錢包"
 msgid "Create Offer"
 msgstr "建立提案"
 
-#: src/components/plot/add/PlotAdd.tsx:66
+#: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
 msgstr "新建耕地"
 
@@ -531,16 +531,16 @@ msgstr "刪除全部鑰匙將會永久從您的電腦中移除，請確保您有
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除此鑰匙將會永久從您的電腦中移除，請確保您有備份。您確定要繼續？"
 
-#: src/electron-starter.js:251
+#: src/electron-starter.js:244
 msgid "Developer"
 msgstr "開發者"
 
-#: src/electron-starter.js:254
+#: src/electron-starter.js:247
 msgid "Developer Tools"
 msgstr "開發者工具"
 
 #: src/components/block/Block.jsx:213
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "難度"
 
@@ -582,7 +582,7 @@ msgstr "拖放提案檔案"
 msgid "Drag and drop your backup file"
 msgstr "拖放你的備份檔案"
 
-#: src/electron-starter.js:210
+#: src/electron-starter.js:203
 msgid "Edit"
 msgstr "編輯"
 
@@ -604,13 +604,17 @@ msgstr "錯誤"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "錯誤：不能發送 Chia 到有色地址。請輸入 Chia 地址。"
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "估計的網路空間"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "網路中所有農夫的所有已耕地磁碟空間的估計總和"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
+msgid "Exclude final directory"
+msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -694,14 +698,14 @@ msgstr "費用數量"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:202
-#: src/electron-starter.js:409
+#: src/electron-starter.js:195
+#: src/electron-starter.js:402
 msgid "File"
 msgstr "檔案"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
 msgstr "檔案名稱"
 
@@ -714,24 +718,24 @@ msgstr "最終資料夾位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron-starter.js:354
+#: src/electron-starter.js:347
 msgid "Follow on Twitter"
 msgstr "Twitter 上追隨"
 
-#: src/electron-starter.js:313
+#: src/electron-starter.js:306
 msgid "Frequently Asked Questions"
 msgstr "常見問題"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:325
+#: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
 msgstr "完整節點"
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
 msgstr "完整節點狀態"
 
-#: src/electron-starter.js:279
+#: src/electron-starter.js:272
 msgid "Full Screen"
 msgstr "全螢幕"
 
@@ -761,11 +765,11 @@ msgstr "表頭雜湊值"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron-starter.js:301
+#: src/electron-starter.js:294
 msgid "Help"
 msgstr "幫助"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:51
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:58
 msgid "Help translate"
 msgstr "協助翻譯"
 
@@ -859,11 +863,11 @@ msgstr "最後耕種高度"
 msgid "Latest Block Challenges"
 msgstr "最新區塊挑戰"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:9
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
 msgstr "載入中..."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:86
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
 msgstr "本地耕地收割機"
 
@@ -937,13 +941,13 @@ msgstr "更多記憶體可略微提高速度"
 msgid "My Pubkey"
 msgstr "我的公鑰"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
 msgstr "網路名稱"
 
 #: src/components/fullNode/FullNode.jsx:106
-msgid "Network has not yet been launched, once it launches full node will start automatically."
-msgstr "網路還未啟動，一旦啟動後完整節點將會自動開始。"
+#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
+#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
 
 #: src/components/app/AppRouter.tsx:24
 #~ msgid "Network not launched yet, waiting for genesis challenge!"
@@ -1006,7 +1010,7 @@ msgstr "你還沒有任何的耕地通過篩選。"
 msgid "Not Available"
 msgstr "無可用"
 
-#: src/components/fullNode/FullNode.jsx:135
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
 msgstr "未同步"
 
@@ -1019,8 +1023,8 @@ msgid "Not confirmed yet"
 msgstr "還未確認"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:158
-#: src/components/fullNode/FullNode.jsx:165
+#: src/components/fullNode/FullNode.jsx:145
+#: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
 msgstr "未連線"
 
@@ -1052,7 +1056,7 @@ msgstr "提案已建立"
 msgid "Outgoing"
 msgstr "傳出"
 
-#: src/components/fullNode/FullNode.jsx:179
+#: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
 msgstr "峰值高度"
 
@@ -1060,7 +1064,7 @@ msgstr "峰值高度"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
 msgstr "峰值時間"
 
@@ -1165,7 +1169,7 @@ msgstr "耕地數量"
 msgid "Plot Id"
 msgstr "耕地 ID"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
 msgstr "耕地金鑰"
 
@@ -1178,8 +1182,8 @@ msgid "Plot Public Key"
 msgstr "耕地公鑰"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
-msgid "Plot Seed"
-msgstr "耕地種子"
+#~ msgid "Plot Seed"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
@@ -1213,7 +1217,7 @@ msgstr "規劃耕地中"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "平行規劃耕地可節省時間。若不，新增耕地至隊列。"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:61
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "池鑰匙"
 
@@ -1342,7 +1346,7 @@ msgstr "恢復 DID 錢包"
 msgid "Refresh Plots"
 msgstr "刷新耕地"
 
-#: src/electron-starter.js:321
+#: src/electron-starter.js:314
 msgid "Release Notes"
 msgstr "版本注釋"
 
@@ -1350,7 +1354,7 @@ msgstr "版本注釋"
 msgid "Rename"
 msgstr "重新命名"
 
-#: src/electron-starter.js:340
+#: src/electron-starter.js:333
 msgid "Report an Issue..."
 msgstr "回報問題..."
 
@@ -1475,7 +1479,15 @@ msgstr "登入"
 #~ msgid "Skip"
 #~ msgstr ""
 
-#: src/electron-starter.js:423
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+#~ msgid "Skips adding [final dir] to harvester for farming"
+#~ msgstr "Skips adding [final dir] to harvester for farming"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
+msgid "Skips adding a final directory to harvester for farming"
+msgstr ""
+
+#: src/electron-starter.js:416
 msgid "Speech"
 msgstr "語音"
 
@@ -1511,16 +1523,15 @@ msgstr "花費限制 (每間隔 Chia)：{0}"
 msgid "State"
 msgstr "狀態"
 
-#: src/components/fullNode/FullNode.jsx:102
-#: src/components/fullNode/FullNode.jsx:117
-#: src/components/fullNode/FullNode.jsx:134
-#: src/components/fullNode/FullNode.jsx:142
-#: src/components/fullNode/FullNode.jsx:164
-#: src/components/plot/overview/PlotOverviewPlots.tsx:71
+#: src/components/fullNode/FullNode.jsx:104
+#: src/components/fullNode/FullNode.jsx:121
+#: src/components/fullNode/FullNode.jsx:129
+#: src/components/fullNode/FullNode.jsx:151
+#: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:42
-#: src/components/wallet/WalletStatusCard.tsx:12
-#: src/components/wallet/Wallets.tsx:94
+#: src/components/wallet/WalletStatusCard.tsx:11
+#: src/components/wallet/Wallets.tsx:93
 msgid "Status"
 msgstr "狀態"
 
@@ -1560,7 +1571,7 @@ msgstr "狀態："
 msgid "Submit"
 msgstr "確認"
 
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
 msgstr "已同步"
 
@@ -1570,7 +1581,7 @@ msgstr "已同步"
 msgid "Syncing"
 msgstr "同步中"
 
-#: src/components/fullNode/FullNode.jsx:119
+#: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
 msgstr "同步中 {progress}/{tip}"
 
@@ -1611,11 +1622,11 @@ msgstr "你的農夫已連接的完整節點在下面。<0>了解更多</0>"
 msgid "The minimum required size for mainnet is k=32"
 msgstr "主網最小要求的大小是 k=32"
 
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
 msgstr "此節點是未同步"
 
-#: src/components/fullNode/FullNode.jsx:125
+#: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "節點同步中，這代表從其他節點中下載區塊直到到達區塊鏈的最新區塊"
 
@@ -1661,7 +1672,7 @@ msgstr "這是待處理的改變，是你發送到自己的但還沒確認的改
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "這是傳入和傳出的待處理交易的總和 (還沒包含在區塊鏈中)。這不包括耕種獎勵。"
 
-#: src/components/fullNode/FullNode.jsx:186
+#: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
 msgstr "這是最後的峰值子區塊的時間。"
 
@@ -1677,7 +1688,7 @@ msgstr "這是由你的私鑰控制的目前峰值子區塊中區塊鏈中 Chia 
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "這是總餘額 + 確認中餘額：這是在全部確認中交易完成後您的餘額。"
 
-#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
 msgstr "這個節點是完全趕上和驗證網路中"
 
@@ -1723,7 +1734,7 @@ msgstr "總餘額"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:204
+#: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
 msgstr "總迭代次數"
 
@@ -1731,7 +1742,7 @@ msgstr "總迭代次數"
 msgid "Total Network Space"
 msgstr "總網路空間"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:97
+#: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
 msgstr "總耕地大小："
 
@@ -1743,7 +1754,7 @@ msgstr "總農田區大小"
 msgid "Total VDF Iterations"
 msgstr "總 VDF 疊代"
 
-#: src/components/fullNode/FullNode.jsx:206
+#: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
 msgstr "從開始區塊鏈後的總迭代次數"
 
@@ -1800,16 +1811,16 @@ msgstr "唯一標識符"
 msgid "User Pubkey"
 msgstr "使用者金鑰"
 
-#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF 子欄位迭代次數"
 
-#: src/electron-starter.js:242
+#: src/electron-starter.js:235
 msgid "View"
 msgstr "檢視"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:20
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "檢視日誌"
 
@@ -1833,13 +1844,13 @@ msgid "Wait for synchronization"
 msgstr "等待同步中"
 
 #: src/components/wallet/Wallets.tsx:104
-msgid "Waiting for launch"
-msgstr "等待啟動中"
+#~ msgid "Waiting for launch"
+#~ msgstr "Waiting for launch"
 
 #: src/components/fullNode/FullNode.jsx:103
 #: src/components/wallet/WalletStatusCard.tsx:20
-msgid "Waiting for network to launch"
-msgstr "等待網路啟動中"
+#~ msgid "Waiting for network to launch"
+#~ msgstr "Waiting for network to launch"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -1870,7 +1881,7 @@ msgstr "等待網路啟動中"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:134
+#: src/components/wallet/Wallets.tsx:131
 msgid "Wallets"
 msgstr "錢包"
 
@@ -1878,7 +1889,7 @@ msgstr "錢包"
 #~ msgid "Wallets.title"
 #~ msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:90
+#: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
 msgstr "想要獲得更多 Chia？增加更多耕地到你的農場。"
 
@@ -1906,7 +1917,7 @@ msgstr "歡迎！下面的字是用來為你的錢包備份。沒有他們，你
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "當你在你的管理員中收到設定資訊封包，在下面輸入以完成你的速率限制錢包設定："
 
-#: src/electron-starter.js:287
+#: src/electron-starter.js:280
 msgid "Window"
 msgstr "視窗"
 
@@ -1944,32 +1955,32 @@ msgstr "你的完整節點連線"
 msgid "Your Harvester Network"
 msgstr "你的取圖器網路"
 
-#: src/components/wallet/WalletStatusCard.tsx:31
-#: src/components/wallet/Wallets.tsx:122
+#: src/components/wallet/WalletStatusCard.tsx:30
+#: src/components/wallet/Wallets.tsx:119
 msgid "connections:"
 msgstr "連線："
 
-#: src/components/wallet/WalletStatusCard.tsx:25
-#: src/components/wallet/Wallets.tsx:116
+#: src/components/wallet/WalletStatusCard.tsx:24
+#: src/components/wallet/Wallets.tsx:113
 msgid "height:"
 msgstr "高度："
 
-#: src/components/wallet/Wallets.tsx:110
+#: src/components/wallet/Wallets.tsx:107
 msgid "not synced"
 msgstr "未同步"
 
-#: src/components/wallet/WalletStatusCard.tsx:17
-#: src/components/wallet/Wallets.tsx:99
+#: src/components/wallet/WalletStatusCard.tsx:16
+#: src/components/wallet/Wallets.tsx:98
 msgid "status:"
 msgstr "狀態："
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:108
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:105
 msgid "synced"
 msgstr "已同步"
 
-#: src/components/wallet/WalletStatusCard.tsx:20
-#: src/components/wallet/Wallets.tsx:106
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
 msgstr "同步中"
 
