@@ -42,12 +42,12 @@ jobs:
           docker.io/library/ubuntu:18.04 \
           bash -exc '\
             echo $PATH && \
-            sudo apt update && \
-            sudo apt upgrade -y && \
-            curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && \
-            sudo apt -y install nodejs fakeroot && \
-            sudo add-apt-repository ppa:deadsnakes/ppa -y && \
-            sudo apt install python3.8 &&\
+            apt update && \
+            apt upgrade -y && \
+            curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
+            apt -y install nodejs fakeroot && \
+            add-apt-repository ppa:deadsnakes/ppa -y && \
+            apt install python3.8 &&\
             rm -rf venv && \
             python3.8 -m venv venv && \
             if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
