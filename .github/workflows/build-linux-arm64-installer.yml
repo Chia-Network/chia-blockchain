@@ -39,16 +39,17 @@ jobs:
       run: |
         podman run --rm=true \
           -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
-          quay.io/pypa/manylinux2014_aarch64 \
+          docker.io/library/ubuntu:18.04 \
           bash -exc '\
             echo $PATH && \
-            yum install -y epel-release && \
-            curl -sL https://rpm.nodesource.com/setup_12.x | bash - && \
-            yum clean all && yum makecache fast && \
-            yum install -y nodejs fakeroot dpkg && \
+            sudo apt update && \
+            sudo apt update -y && \
+            curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && \
+            sudo apt -y install nodejs fakeroot && \
+            sudo add-apt-repository ppa:deadsnakes/ppa -y && \
+            sudo apt install python3.8 &&\
             rm -rf venv && \
-            export PATH=/opt/python/cp38-cp38/bin/:$PATH && \
-            /opt/python/cp38-cp38/bin/python -m venv venv && \
+            python3.8 -m venv venv && \
             if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
             . ./activate && \
             sh install.sh && \
