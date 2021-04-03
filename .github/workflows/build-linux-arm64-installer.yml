@@ -44,15 +44,15 @@ jobs:
             echo $PATH && \
             apt update && \
             apt upgrade -y && \
-            apt -y install software-properties-common build-essential curl git dialog apt-utils && \
+            apt -y install software-properties-common build-essential \
+            curl git dialog apt-utils zlib1g-dev && \
             add-apt-repository ppa:deadsnakes/ppa -y && \
             curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-            apt -y install nodejs fakeroot && \
-            apt -y install python3.8 python3.8-venv python3.8-distutils && \
+            apt -y install nodejs fakeroot \
+            python3.8 python3.8-venv python3.8-distutils && \
             rm -rf venv && \
             python3 --version && \
             python3.8 -m venv venv && \
-            if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
             source venv/bin/activate && \
             echo "Should be Python 3.8.x" && \
             python --version && \
