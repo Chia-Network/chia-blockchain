@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-03 20:03\n"
+"PO-Revision-Date: 2021-04-04 02:02\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -546,7 +546,7 @@ msgstr "Pirate Hunters"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "Disable bitfield recruitin' when yer temporary directory be on fast storage like SSD or ye needs lower per process RAM. Recruitin' wit' bitfield enabled has about 20% less overall writes."
+msgstr "Disable bitfield recruitin' when yer temporary folder be on fast storage like SSD or ye needs lower per process RAM. Recruitin' wit' bitfield enabled has about 20% less overall writes."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -567,7 +567,7 @@ msgstr "Distributed Identity Voodoo"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "Ye 'ave existin' crewdogs on this ship? <0>Add Crewdog Directory</0>"
+msgstr "Ye 'ave existin' crewdogs on this ship? <0>Add Crewdog Folder</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -614,7 +614,7 @@ msgstr "Guessed strength of all pirates on the seas"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "Don't add final folder"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -796,7 +796,7 @@ msgstr "Moorin' location / host"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr "If none given, 'twill default t' the temporary directory."
+msgstr "If none given, 'twill default t' the temporary folder."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
@@ -1149,12 +1149,12 @@ msgstr "Choose jinx o' dubloon"
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr "Give final directory"
+msgstr "Give final folder"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr "Give temporary directory"
+msgstr "Give temporary folder"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1402,11 +1402,11 @@ msgstr "Seed:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr "Give 2nd Temporary Directory"
+msgstr "Give 2nd Temporary Folder"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr "Give Final Directory"
+msgstr "Give Final Folder"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
@@ -1418,7 +1418,7 @@ msgstr "Choose Offer"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr "Give Temporary Directory"
+msgstr "Give Temporary Folder"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
@@ -1485,7 +1485,7 @@ msgstr "Enter"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Final folder won't be added t' plunderer"
 
 #: src/electron-starter.js:416
 msgid "Speech"
@@ -1994,7 +1994,7 @@ msgstr "catchin' up"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr "{currencyCode} Booty"
+msgstr "{currencyCode} Booty Looted"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
