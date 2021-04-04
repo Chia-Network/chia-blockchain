@@ -105,7 +105,7 @@ def create_cmd(
     from src.plotting.create_plots import create_plots
 
     class Params(object):
-        def __init__(self):
+        def __init__(self) -> None:
             self.size = size
             self.num = num
             self.buffer = buffer

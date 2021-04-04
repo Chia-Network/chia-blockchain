@@ -39,14 +39,14 @@ def rl_puzzle_for_pk(
     return MOD.curry(pubkey, rate_amount, interval_time, origin_id, clawback_pk)
 
 
-def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_amount):
+def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_amount) -> Program:
     opcode_myid = "0x" + hexlify(myid).decode("ascii")
     primary_input = "0x" + hexlify(wallet_coin_primary_input).decode("ascii")
     sol = sexp(opcode_myid, primary_input, wallet_coin_amount)
     return Program.to(binutils.assemble(sol))
 
 
-def make_clawback_solution(puzzlehash, amount, fee):
+def make_clawback_solution(puzzlehash, amount, fee) -> Program:
     opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
     solution = sexp(CLAWBACK_MODE, sexp("0x" + opcode_create, "0x" + str(puzzlehash), amount - fee))
     return Program.to(binutils.assemble(solution))
@@ -61,7 +61,7 @@ def rl_make_solution_mode_2(
     incoming_amount,
     parent_amount,
     my_parent_parent_id,
-):
+) -> Program:
     my_puzzle_hash = hexlify(my_puzzle_hash).decode("ascii")
     consolidating_primary_input = hexlify(consolidating_primary_input).decode("ascii")
     consolidating_coin_puzzle_hash = hexlify(consolidating_coin_puzzle_hash).decode("ascii")
@@ -114,7 +114,7 @@ def solution_for_rl(
     return Program.to(binutils.assemble(solution))
 
 
-def rl_make_aggregation_puzzle(wallet_puzzle):
+def rl_make_aggregation_puzzle(wallet_puzzle) -> Program:
     """
     If Wallet A wants to send further funds to Wallet B then they can lock them up using this code
     Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)

@@ -1,6 +1,7 @@
 import base64
 import json
-from typing import Any
+from typing import Any, Dict
+from pathlib import Path
 
 import aiohttp
 from blspy import AugSchemeMPL, PrivateKey, PublicKeyMPL, SignatureMPL
@@ -14,7 +15,7 @@ from src.wallet.derive_keys import master_sk_to_backup_sk
 from src.wallet.util.wallet_types import WalletType
 
 
-def open_backup_file(file_path, private_key):
+def open_backup_file(file_path: Path, private_key: bytes) -> Dict:
     backup_file_text = file_path.read_text()
     backup_file_json = json.loads(backup_file_text)
     meta_data = backup_file_json["meta_data"]
@@ -47,7 +48,7 @@ def open_backup_file(file_path, private_key):
     return unencrypted
 
 
-def get_backup_info(file_path, private_key):
+def get_backup_info(file_path: Path, private_key: bytes) -> Dict:
     json_dict = open_backup_file(file_path, private_key)
     data = json_dict["data"]
     wallet_list_json = data["wallet_list"]

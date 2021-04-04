@@ -1,12 +1,13 @@
 import sys
 from pathlib import Path
+from typing import List
 
 import click
 
 from src.util.service_groups import all_groups, services_for_groups
 
 
-async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
+async def async_stop(root_path: Path, group: List[str], stop_daemon: bool) -> int:
     from src.daemon.client import connect_to_daemon_and_validate
 
     daemon = await connect_to_daemon_and_validate(root_path)
@@ -40,7 +41,7 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
 @click.pass_context
-def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
+def stop_cmd(ctx: click.Context, daemon: bool, group: List[str]) -> None:
     import asyncio
 
     sys.exit(asyncio.get_event_loop().run_until_complete(async_stop(ctx.obj["root_path"], group, daemon)))

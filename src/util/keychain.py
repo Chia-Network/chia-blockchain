@@ -124,7 +124,7 @@ class Keychain:
         self.testing = testing
         self.user = user
 
-    def _get_service(self):
+    def _get_service(self) -> str:
         """
         The keychain stores keys under a different name for tests.
         """
@@ -299,7 +299,7 @@ class Keychain:
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
-    def delete_all_keys(self):
+    def delete_all_keys(self) -> None:
         """
         Deletes all keys from the keychain.
         """

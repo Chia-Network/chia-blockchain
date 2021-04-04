@@ -623,7 +623,9 @@ class RLWallet:
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
-    async def rl_generate_signed_aggregation_transaction(self, rl_info, consolidating_coin, rl_parent, rl_coin):
+    async def rl_generate_signed_aggregation_transaction(
+        self, rl_info, consolidating_coin, rl_parent, rl_coin
+    ) -> SpendBundle:
         if (
             rl_info.limit is None
             or rl_info.interval is None
@@ -636,6 +638,8 @@ class RLWallet:
 
         list_of_coinsolutions = []
         self.rl_coin_record = await self._get_rl_coin_record()
+        if self.rl_coin_record is None:
+            raise ValueError("Rl coin record is None")
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
         puzzle = rl_puzzle_for_pk(
@@ -675,7 +679,7 @@ class RLWallet:
 
         return SpendBundle(list_of_coinsolutions, aggsig)
 
-    def rl_get_aggregation_puzzlehash(self, wallet_puzzle):
+    def rl_get_aggregation_puzzlehash(self, wallet_puzzle) -> bytes32:
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()
 
         return puzzle_hash

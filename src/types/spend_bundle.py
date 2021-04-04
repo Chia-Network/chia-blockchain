@@ -69,7 +69,7 @@ class SpendBundle(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def not_ephemeral_spends(self):
+    def not_ephemeral_spends(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()
         result: List[Coin] = []
@@ -81,7 +81,7 @@ class SpendBundle(Streamable):
 
         return result
 
-    def not_ephemeral_additions(self):
+    def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()
         result: List[Coin] = []

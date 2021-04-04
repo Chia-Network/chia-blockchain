@@ -1,5 +1,5 @@
 import io
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Type
 
 
 def hexstr_to_bytes(input_str: str) -> bytes:
@@ -11,7 +11,7 @@ def hexstr_to_bytes(input_str: str) -> bytes:
     return bytes.fromhex(input_str)
 
 
-def make_sized_bytes(size):
+def make_sized_bytes(size: int) -> Type:
     """
     Create a streamable type that subclasses "bytes" but requires instances
     to be a certain, fixed size.

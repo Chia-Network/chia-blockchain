@@ -2,7 +2,7 @@ import asyncio
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from src.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from src.util.service_groups import services_for_groups
@@ -32,7 +32,7 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
     return None
 
 
-async def async_start(root_path: Path, group: str, restart: bool) -> None:
+async def async_start(root_path: Path, group: List[str], restart: bool) -> None:
     daemon = await create_start_daemon_connection(root_path)
     if daemon is None:
         print("Failed to create the chia daemon")

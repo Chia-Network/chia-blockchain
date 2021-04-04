@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 discriminant_cache: Dict[Tuple[bytes32, int], int] = {}
 
 
-def add_to_cache(challenge_size, dsc):
+def add_to_cache(challenge_size, dsc: int) -> None:
     if len(discriminant_cache.keys()) > 10:
         keys = list(discriminant_cache.keys())
         for i in range(0, 5):
@@ -25,7 +25,7 @@ def add_to_cache(challenge_size, dsc):
     discriminant_cache[challenge_size] = dsc
 
 
-def get_discriminant(challenge, size_bites):
+def get_discriminant(challenge, size_bites) -> int:
     if (challenge, size_bites) in discriminant_cache:
         return discriminant_cache[(challenge, size_bites)]
     else:

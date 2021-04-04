@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from blspy import G1Element
+from blspy import G1Element, PrivateKey
 
 import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from src.consensus.coinbase import create_puzzlehash_for_pk
@@ -124,10 +124,10 @@ class Farmer:
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
         self.state_changed("close_connection", {})
 
-    def get_public_keys(self):
+    def get_public_keys(self) -> List[G1Element]:
         return [child_sk.get_g1() for child_sk in self._private_keys]
 
-    def get_private_keys(self):
+    def get_private_keys(self) -> List[PrivateKey]:
         return self._private_keys
 
     def get_reward_targets(self, search_for_private_key: bool) -> Dict:

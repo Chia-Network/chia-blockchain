@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.settings.default_settings import default_settings
@@ -20,11 +20,11 @@ class UserSettings:
         await self.load_store()
         return self
 
-    def _keys(self):
+    def _keys(self) -> List[BackupInitialized]:
         all_keys = [BackupInitialized]
         return all_keys
 
-    async def load_store(self):
+    async def load_store(self) -> None:
         keys = self._keys()
         for setting in keys:
             name = setting.__name__

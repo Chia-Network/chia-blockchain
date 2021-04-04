@@ -41,7 +41,7 @@ class WalletUserStore:
         await self.init_wallet()
         return self
 
-    async def init_wallet(self):
+    async def init_wallet(self) -> None:
         all_wallets = await self.get_all_wallet_info_entries()
         if len(all_wallets) == 0:
             await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")

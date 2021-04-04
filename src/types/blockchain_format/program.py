@@ -2,7 +2,7 @@ import io
 from typing import List, Optional, Set, Tuple
 
 from clvm import KEYWORD_FROM_ATOM, KEYWORD_TO_ATOM, SExp
-from clvm import run_program as default_run_program
+from clvm import run_program as default_run_program, CLVMObject
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.operators import OP_REWRITE, OPERATOR_LOOKUP
@@ -22,7 +22,7 @@ def run_program(
     operator_lookup=OPERATOR_LOOKUP,
     max_cost=None,
     pre_eval_f=None,
-):
+) -> Tuple[int, CLVMObject]:
     return default_run_program(
         program,
         args,

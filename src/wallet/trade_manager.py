@@ -174,7 +174,7 @@ class TradeManager:
 
         return result
 
-    async def get_all_trades(self):
+    async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
@@ -532,7 +532,9 @@ class TradeManager:
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
             # debug_spend_bundle(spend_bundle)
-            if chia_discrepancy < 0:
+            if chia_discrepancy is None:
+                pass
+            elif chia_discrepancy < 0:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=now,
@@ -572,7 +574,9 @@ class TradeManager:
 
         for colour, amount in cc_discrepancies.items():
             wallet = wallets[colour]
-            if chia_discrepancy > 0:
+            if chia_discrepancy is None:
+                pass
+            elif chia_discrepancy > 0:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),

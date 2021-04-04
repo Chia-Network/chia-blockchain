@@ -1,10 +1,16 @@
-def format_minutes(minutes):
+from typing import Union, Literal
 
+
+def format_minutes(minutes: int) -> str:
     if not isinstance(minutes, int):
         return "Invalid"
 
     if minutes == 0:
         return "Now"
+
+    UnitType = Union[
+        Literal["year"], Literal["month"], Literal["week"], Literal["day"], Literal["hour"], Literal["minute"]
+    ]
 
     hour_minutes = 60
     day_minutes = 24 * hour_minutes
@@ -18,10 +24,10 @@ def format_minutes(minutes):
     days = int(minutes / day_minutes)
     hours = int(minutes / hour_minutes)
 
-    def format_unit_string(str_unit, count):
+    def format_unit_string(str_unit: UnitType, count: int) -> str:
         return f"{count} {str_unit}{('s' if count > 1 else '')}"
 
-    def format_unit(unit, count, unit_minutes, next_unit, next_unit_minutes):
+    def format_unit(unit: UnitType, count: int, unit_minutes: int, next_unit: UnitType, next_unit_minutes: int) -> str:
         formatted = format_unit_string(unit, count)
         minutes_left = minutes % unit_minutes
         if minutes_left >= next_unit_minutes:

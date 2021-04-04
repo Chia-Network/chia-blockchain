@@ -4,7 +4,7 @@ import pathlib
 import signal
 import socket
 import time
-from typing import List
+from typing import List, Union
 
 import pkg_resources
 
@@ -32,14 +32,14 @@ async def kill_processes():
                 pass
 
 
-def find_vdf_client():
+def find_vdf_client() -> pathlib.Path:
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
     if p.is_file():
         return p
     raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(host, port, counter):
+async def spawn_process(host, port, counter) -> None:
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()
@@ -77,7 +77,7 @@ async def spawn_process(host, port, counter):
         await asyncio.sleep(0.1)
 
 
-async def spawn_all_processes(config, net_config):
+async def spawn_all_processes(config, net_config) -> None:
     await asyncio.sleep(5)
     port = config["port"]
     process_count = config["process_count"]
@@ -85,7 +85,7 @@ async def spawn_all_processes(config, net_config):
     await asyncio.gather(*awaitables)
 
 
-def main():
+def main() -> None:
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")

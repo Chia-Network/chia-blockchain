@@ -1,16 +1,19 @@
-def sexp(*argv):
+from typing import Any
+
+
+def sexp(*argv) -> str:
     return f'({f" ".join([str(arg) for arg in argv])})'
 
 
-def cons(a, b):
+def cons(a, b) -> str:
     return sexp("c", a, b)
 
 
-def first(obj):
+def first(obj) -> str:
     return sexp("f", obj)
 
 
-def rest(obj):
+def rest(obj) -> str:
     return sexp("r", obj)
 
 
@@ -25,7 +28,7 @@ def nth(obj, *path):
         return nth(rest(obj), *(path[0] - 1,) + path[1:])
 
 
-def args(*path, p=1):
+def args(*path, p=1) -> Any:
     if len(path) == 0:
         return str(p)
     if path[0] < 0:
@@ -33,26 +36,26 @@ def args(*path, p=1):
     return args(*path[1:], p=(2 * p << path[0]) | (2 ** path[0] - 1))
 
 
-def eval(code, env=args()):
+def eval(code, env=args()) -> str:
     return sexp("a", code, env)
 
 
-def apply(name, argv):
+def apply(name, argv) -> str:
     return sexp(*[name] + list(argv))
 
 
-def quote(obj):
+def quote(obj) -> str:
     return sexp("q .", obj)
 
 
 nil = sexp()
 
 
-def make_if(predicate, true_expression, false_expression):
+def make_if(predicate, true_expression, false_expression) -> str:
     return eval(apply("i", [predicate, quote(true_expression), quote(false_expression)]))
 
 
-def make_list(*argv, terminator=nil):
+def make_list(*argv, terminator=nil) -> str:
     if len(argv) == 0:
         return terminator
     else:
@@ -77,7 +80,7 @@ SHA256TREE_PROG = """
 """
 
 
-def sha256tree(*argv):
+def sha256tree(*argv) -> str:
     return SHA256TREE_PROG % argv[0]
 
 

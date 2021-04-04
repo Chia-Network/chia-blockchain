@@ -554,7 +554,7 @@ class Blockchain(BlockchainInterface):
             height = height - 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
-    def clean_block_records(self):
+    def clean_block_records(self) -> None:
         """
         Cleans the cache so that we only maintain relevant blocks. This removes
         block records that have height < peak - BLOCKS_CACHE_SIZE.

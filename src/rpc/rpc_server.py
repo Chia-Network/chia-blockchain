@@ -180,7 +180,7 @@ class RpcServer:
             self.stop_cb()
         return {}
 
-    async def ws_api(self, message):
+    async def ws_api(self, message: Dict) -> Optional[Dict]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -204,7 +204,7 @@ class RpcServer:
 
         raise ValueError(f"unknown_command {command}")
 
-    async def safe_handle(self, websocket, payload):
+    async def safe_handle(self, websocket: aiohttp.ClientWebSocketResponse, payload: str) -> None:
         message = None
         try:
             message = json.loads(payload)
@@ -230,7 +230,7 @@ class RpcServer:
                 return
             await websocket.send_str(format_response(message, error))
 
-    async def connection(self, ws):
+    async def connection(self, ws: aiohttp.ClientWebSocketResponse) -> None:
         data = {"service": self.service_name}
         payload = create_payload("register_service", data, self.service_name, "daemon")
         await ws.send_str(payload)

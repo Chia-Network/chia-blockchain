@@ -62,13 +62,13 @@ class WalletPuzzleStore:
         await self._init_cache()
         return self
 
-    async def close(self):
+    async def close(self) -> None:
         await self.db_connection.close()
 
-    async def _init_cache(self):
+    async def _init_cache(self) -> None:
         self.all_puzzle_hashes = await self.get_all_puzzle_hashes()
 
-    async def _clear_database(self):
+    async def _clear_database(self) -> None:
         cursor = await self.db_connection.execute("DELETE FROM derivation_paths")
         await cursor.close()
         await self.db_connection.commit()

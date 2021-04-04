@@ -1131,7 +1131,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir():
+def get_plot_dir() -> Path:
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path

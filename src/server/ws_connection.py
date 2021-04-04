@@ -191,11 +191,11 @@ class WSChiaConnection:
             raise
         self.close_callback(self, ban_time)
 
-    def cancel_pending_timeouts(self):
+    def cancel_pending_timeouts(self) -> None:
         for _, task in self.pending_timeouts.items():
             task.cancel()
 
-    async def outbound_handler(self):
+    async def outbound_handler(self) -> None:
         try:
             while not self.closed:
                 msg = await self.outgoing_queue.get()
@@ -212,10 +212,10 @@ class WSChiaConnection:
             self.log.error(f"Exception: {e} with {self.peer_host}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    async def inbound_handler(self):
+    async def inbound_handler(self) -> None:
         try:
             while not self.closed:
-                message: Message = await self._read_one_message()
+                message: Optional[Message] = await self._read_one_message()
                 if message is not None:
                     if message.id in self.pending_requests:
                         self.request_results[message.id] = message
@@ -289,7 +289,7 @@ class WSChiaConnection:
         await self.outgoing_queue.put(message)
 
         # If the timeout passes, we set the event
-        async def time_out(req_id, req_timeout):
+        async def time_out(req_id, req_timeout) -> None:
             try:
                 await asyncio.sleep(req_timeout)
                 if req_id in self.pending_requests:

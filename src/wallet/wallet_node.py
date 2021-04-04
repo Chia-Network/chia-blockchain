@@ -38,7 +38,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.errors import Err, ValidationError
 from src.util.ints import uint32, uint128
 from src.util.keychain import Keychain
-from src.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from src.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed, Node
 from src.util.path import mkdir, path_from_root
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.derivation_record import DerivationRecord
@@ -190,14 +190,15 @@ class WalletNode:
         self.logged_in_fingerprint = fingerprint
         return True
 
-    def _close(self):
+    def _close(self) -> None:
         self.log.info("self._close")
         self.logged_in_fingerprint = None
         self._shut_down = True
 
-    async def _await_closed(self):
+    async def _await_closed(self) -> None:
         self.log.info("self._await_closed")
-        await self.server.close_all_connections()
+        if self.server is not None:
+            await self.server.close_all_connections()
         asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
@@ -723,7 +724,9 @@ class WalletNode:
 
         return True
 
-    def validate_removals(self, coins, proofs, root):
+    def validate_removals(
+        self, coins: List[Tuple[bytes32, Optional[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes]]], root: Node
+    ) -> bool:
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # we must find the ones relevant to our wallets.

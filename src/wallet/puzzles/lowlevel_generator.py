@@ -4,7 +4,7 @@ from src.types.blockchain_format.program import Program, SerializedProgram
 from src.wallet.chialisp import args, cons, eval, make_if, make_list, quote, rest, sexp, sha256tree
 
 
-def get_generator():
+def get_generator() -> SerializedProgram:
 
     # args0 is generate_npc_pair_list, args1 is coin_solutions, args2 is output_list
     programs = args(0)

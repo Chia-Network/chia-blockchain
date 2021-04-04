@@ -11,7 +11,7 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
     """
     peer_info = PeerInfo(socket.gethostbyname(peer_info_arg.host), peer_info_arg.port)
 
-    async def connection_check():
+    async def connection_check() -> None:
         while True:
             peer_retry = True
             for _, connection in server.all_connections.items():

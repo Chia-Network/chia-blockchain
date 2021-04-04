@@ -188,7 +188,7 @@ class WalletStateManager:
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
-    async def load_wallets(self):
+    async def load_wallets(self) -> None:
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.id in self.wallets:
                 continue
@@ -373,7 +373,7 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
-    async def synced(self):
+    async def synced(self) -> bool:
         if self.sync_mode is True:
             return False
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -385,6 +385,8 @@ class WalletStateManager:
             curr = self.blockchain.try_block_record(curr.prev_hash)
             if curr is None:
                 return False
+
+        assert curr.timestamp is not None
         if curr.is_transaction_block and curr.timestamp > int(time.time()) - 7 * 60:
             return True
         return False
@@ -889,7 +891,7 @@ class WalletStateManager:
     async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries()
 
-    async def get_start_height(self):
+    async def get_start_height(self) -> uint32:
         """
         If we have coin use that as starting height next time,
         otherwise use the peak

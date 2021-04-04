@@ -13,7 +13,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
-from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
+from websockets import (
+    ConnectionClosedOK,
+    WebSocketException,
+    WebSocketServerProtocol,
+    serve,
+    WebSocketServer as WebSocketServerType,
+)
 
 from src.cmds.init_funcs import chia_init
 from src.daemon.windows_signal import kill
@@ -84,7 +90,7 @@ if getattr(sys, "frozen", False):
         "chia_full_node_simulator": "start_simulator",
     }
 
-    def executable_for_service(service_name):
+    def executable_for_service(service_name: str) -> str:
         application_path = os.path.dirname(sys.executable)
         if sys.platform == "win32" or sys.platform == "cygwin":
             executable = name_map[service_name]
@@ -98,7 +104,7 @@ if getattr(sys, "frozen", False):
 else:
     application_path = os.path.dirname(__file__)
 
-    def executable_for_service(service_name):
+    def executable_for_service(service_name: str) -> str:
         return service_name
 
 
@@ -119,14 +125,14 @@ class WebSocketServer:
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
-        self.websocket_server = None
+        self.websocket_server: Optional[WebSocketServerType] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path)
         self.shut_down = False
 
-    async def start(self):
+    async def start(self) -> None:
         self.log.info("Starting Daemon Server")
 
-        def master_close_cb():
+        def master_close_cb() -> None:
             asyncio.create_task(self.stop())
 
         try:
@@ -953,7 +959,7 @@ def run_daemon(root_path: Path) -> int:
     return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path))
 
 
-def main():
+def main() -> int:
     from src.util.default_root import DEFAULT_ROOT_PATH
 
     return run_daemon(DEFAULT_ROOT_PATH)

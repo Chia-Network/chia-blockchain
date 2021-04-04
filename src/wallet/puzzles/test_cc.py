@@ -96,7 +96,7 @@ def solution_for_pay_to_any(puzzle_hash_amount_pairs: List[Tuple[bytes32, int]])
     return Program.to(output_conditions)
 
 
-def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
+def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n) -> None:
     """
     Test to spend ccs from a farmed coin to a cc genesis coin, then to N outputs,
     then joining back down to two outputs.
@@ -225,7 +225,7 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     debug_spend_bundle(spend_bundle)
 
 
-def main():
+def main() -> None:
     mod_code = CC_MOD
 
     def coin_checker_for_farmed_coin_by_coin_id(coin: Coin):

@@ -195,7 +195,7 @@ def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
     return mod_hash, genesis_coin_checker, inner_puzzle
 
 
-def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
+def get_lineage_proof_from_coin_and_puz(parent_coin: Coin, parent_puzzle: Program) -> Program:
     r = uncurry_cc(parent_puzzle)
     if r:
         mod_hash, genesis_checker, inner_puzzle = r

@@ -14,21 +14,22 @@ from src.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class DaemonProxy:
-    def __init__(self, uri, ssl_context):
+    def __init__(self, uri, ssl_context) -> None:
         self._uri = uri
         self._request_dict: Dict[bytes32, asyncio.Event] = {}
         self.response_dict: Dict[bytes32, Any] = {}
-        self.websocket = None
+        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
         self.ssl_context = ssl_context
 
     def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
-    async def start(self):
-        self.websocket = await websockets.connect(self._uri, max_size=None, ssl=self.ssl_context)
+    async def start(self) -> None:
+        self.websocket = await websockets.connect(self._uri, max_size=None, ssl=self.ssl_context)  # type: ignore
 
-        async def listener():
+        async def listener() -> None:
+            assert self.websocket is not None
             while True:
                 try:
                     message = await self.websocket.recv()
@@ -46,12 +47,14 @@ class DaemonProxy:
         await asyncio.sleep(1)
 
     async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
+        assert self.websocket is not None
+
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
         asyncio.create_task(self.websocket.send(string))
 
-        async def timeout():
+        async def timeout() -> None:
             await asyncio.sleep(30)
             if request_id in self._request_dict:
                 print("Error, timeout.")
@@ -94,7 +97,8 @@ class DaemonProxy:
         return response
 
     async def close(self) -> None:
-        await self.websocket.close()
+        if self.websocket is not None:
+            await self.websocket.close()
 
     async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})

@@ -279,7 +279,7 @@ class FullNodeAPI:
 
         # However, we want to eventually download from other peers, if this peer does not respond
         # Todo: keep track of who it was
-        async def eventually_clear():
+        async def eventually_clear() -> None:
             await asyncio.sleep(5)
             if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
                 self.full_node.full_node_store.requesting_unfinished_blocks.remove(block_hash)

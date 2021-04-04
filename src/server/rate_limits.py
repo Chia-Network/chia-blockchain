@@ -100,11 +100,11 @@ rate_limits_other = {
 
 
 class RateLimiter:
-    def __init__(self, reset_seconds=60, percentage_of_limit=100):
+    def __init__(self, reset_seconds=60, percentage_of_limit=100) -> None:
         self.reset_seconds = reset_seconds
         self.current_minute = time.time() // reset_seconds
-        self.message_counts = Counter()
-        self.message_cumulative_sizes = Counter()
+        self.message_counts: Counter = Counter()
+        self.message_cumulative_sizes: Counter = Counter()
         self.percentage_of_limit = percentage_of_limit
         self.non_tx_message_counts = 0
         self.non_tx_cumulative_size = 0
