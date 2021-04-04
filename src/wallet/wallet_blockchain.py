@@ -6,25 +6,25 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from src.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
-from src.consensus.block_record import BlockRecord
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.constants import ConsensusConstants
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.header_block import HeaderBlock
-from src.types.unfinished_block import UnfinishedBlock
-from src.types.unfinished_header_block import UnfinishedHeaderBlock
-from src.util.errors import Err, ValidationError
-from src.util.ints import uint32, uint64
-from src.util.streamable import recurse_jsonify
-from src.wallet.block_record import HeaderBlockRecord
-from src.wallet.wallet_block_store import WalletBlockStore
-from src.wallet.wallet_coin_store import WalletCoinStore
+from chia.consensus.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.find_fork_point import find_fork_point_in_chain
+from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.header_block import HeaderBlock
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.util.errors import Err, ValidationError
+from chia.util.ints import uint32, uint64
+from chia.util.streamable import recurse_jsonify
+from chia.wallet.block_record import HeaderBlockRecord
+from chia.wallet.wallet_block_store import WalletBlockStore
+from chia.wallet.wallet_coin_store import WalletCoinStore
 
 log = logging.getLogger(__name__)
 

@@ -5,22 +5,22 @@ import signal
 from sys import platform
 from typing import Any, Callable, List, Optional, Tuple
 
-from src.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
+from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 
 try:
     import uvloop
 except ImportError:
     uvloop = None
 
-from src.rpc.rpc_server import start_rpc_server
-from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
-from src.server.upnp import upnp_remap_port
-from src.types.peer_info import PeerInfo
-from src.util.chia_logging import initialize_logging
-from src.util.config import load_config, load_config_cli
-from src.util.setproctitle import setproctitle
-from src.util.ints import uint16
+from chia.rpc.rpc_server import start_rpc_server
+from chia.server.outbound_message import NodeType
+from chia.server.server import ChiaServer
+from chia.server.upnp import upnp_remap_port
+from chia.types.peer_info import PeerInfo
+from chia.util.chia_logging import initialize_logging
+from chia.util.config import load_config, load_config_cli
+from chia.util.setproctitle import setproctitle
+from chia.util.ints import uint16
 
 from .reconnect_task import start_reconnect_task
 

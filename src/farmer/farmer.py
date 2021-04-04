@@ -6,20 +6,20 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from blspy import G1Element
 
-import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.consensus.constants import ConsensusConstants
-from src.protocols import farmer_protocol, harvester_protocol
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.outbound_message import NodeType, make_msg
-from src.server.ws_connection import WSChiaConnection
-from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.bech32m import decode_puzzle_hash
-from src.util.config import load_config, save_config
-from src.util.ints import uint32, uint64
-from src.util.keychain import Keychain
-from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
+import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.consensus.constants import ConsensusConstants
+from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash
+from chia.util.config import load_config, save_config
+from chia.util.ints import uint32, uint64
+from chia.util.keychain import Keychain
+from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 log = logging.getLogger(__name__)
 

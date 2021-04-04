@@ -15,17 +15,17 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
 
-from src.cmds.init_funcs import chia_init
-from src.daemon.windows_signal import kill
-from src.server.server import ssl_context_for_root, ssl_context_for_server
-from src.ssl.create_ssl import get_mozzila_ca_crt
-from src.util.chia_logging import initialize_logging
-from src.util.config import load_config
-from src.util.json_util import dict_to_json_str
-from src.util.path import mkdir
-from src.util.service_groups import validate_service
-from src.util.setproctitle import setproctitle
-from src.util.ws_message import WsRpcMessage, create_payload, format_response
+from chia.cmds.init_funcs import chia_init
+from chia.daemon.windows_signal import kill
+from chia.server.server import ssl_context_for_root, ssl_context_for_server
+from chia.ssl.create_ssl import get_mozzila_ca_crt
+from chia.util.chia_logging import initialize_logging
+from chia.util.config import load_config
+from chia.util.json_util import dict_to_json_str
+from chia.util.path import mkdir
+from chia.util.service_groups import validate_service
+from chia.util.setproctitle import setproctitle
+from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 
 io_pool_exc = ThreadPoolExecutor()
 

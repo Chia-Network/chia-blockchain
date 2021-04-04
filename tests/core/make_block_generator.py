@@ -2,14 +2,14 @@ from typing import Dict
 
 import blspy
 
-from src.full_node.bundle_tools import best_solution_program
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.program import Program, SerializedProgram
-from src.types.coin_solution import CoinSolution
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.spend_bundle import SpendBundle
-from src.util.ints import uint64
-from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
+from chia.full_node.bundle_tools import best_solution_program
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.coin_solution import CoinSolution
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint64
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 

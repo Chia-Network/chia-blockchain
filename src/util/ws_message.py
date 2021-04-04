@@ -1,7 +1,7 @@
 from secrets import token_bytes
 from typing import Any, Dict
 
-from src.util.json_util import dict_to_json_str
+from chia.util.json_util import dict_to_json_str
 
 try:
     from typings import TypedDict

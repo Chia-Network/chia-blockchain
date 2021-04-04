@@ -10,8 +10,8 @@ from clvm.serialize import sexp_buffer_from_stream, sexp_from_stream, sexp_to_st
 from clvm_rs import STRICT_MODE, deserialize_and_run_program
 from clvm_tools.curry import curry, uncurry
 
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.hash import std_hash
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
 
 from .tree_hash import sha256_treehash
 

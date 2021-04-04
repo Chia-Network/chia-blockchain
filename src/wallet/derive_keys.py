@@ -2,7 +2,7 @@ from typing import List
 
 from blspy import AugSchemeMPL, PrivateKey
 
-from src.util.ints import uint32
+from chia.util.ints import uint32
 
 # EIP 2334 bls key derivation
 # https://eips.ethereum.org/EIPS/eip-2334

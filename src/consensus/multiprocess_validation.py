@@ -5,24 +5,24 @@ from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from src.consensus.block_header_validation import validate_finished_header_block
-from src.consensus.block_record import BlockRecord
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.constants import ConsensusConstants
-from src.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.get_block_challenge import get_block_challenge
-from src.consensus.network_type import NetworkType
-from src.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.util.block_cache import BlockCache
-from src.util.errors import Err
-from src.util.ints import uint16, uint64
-from src.util.streamable import Streamable, dataclass_from_dict, streamable
+from chia.consensus.block_header_validation import validate_finished_header_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.get_block_challenge import get_block_challenge
+from chia.consensus.network_type import NetworkType
+from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.util.block_cache import BlockCache
+from chia.util.errors import Err
+from chia.util.ints import uint16, uint64
+from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
 

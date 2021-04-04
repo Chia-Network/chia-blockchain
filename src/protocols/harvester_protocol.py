@@ -3,10 +3,10 @@ from typing import List, Tuple
 
 from blspy import G1Element, G2Element
 
-from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint8, uint64
-from src.util.streamable import Streamable, streamable
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint8, uint64
+from chia.util.streamable import Streamable, streamable
 
 """
 Protocol between harvester and farmer.

@@ -2,9 +2,9 @@ import random
 import time
 from typing import Dict, List, Optional
 
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint64
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint64
 
 
 class IntroducerPeers:

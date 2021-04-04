@@ -1,17 +1,17 @@
 import click
 
-from src import __version__
-from src.cmds.configure import configure_cmd
-from src.cmds.farm import farm_cmd
-from src.cmds.init import init_cmd
-from src.cmds.keys import keys_cmd
-from src.cmds.netspace import netspace_cmd
-from src.cmds.plots import plots_cmd
-from src.cmds.show import show_cmd
-from src.cmds.start import start_cmd
-from src.cmds.stop import stop_cmd
-from src.cmds.wallet import wallet_cmd
-from src.util.default_root import DEFAULT_ROOT_PATH
+from chia import __version__
+from chia.cmds.configure import configure_cmd
+from chia.cmds.farm import farm_cmd
+from chia.cmds.init import init_cmd
+from chia.cmds.keys import keys_cmd
+from chia.cmds.netspace import netspace_cmd
+from chia.cmds.plots import plots_cmd
+from chia.cmds.show import show_cmd
+from chia.cmds.start import start_cmd
+from chia.cmds.stop import stop_cmd
+from chia.cmds.wallet import wallet_cmd
+from chia.util.default_root import DEFAULT_ROOT_PATH
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 

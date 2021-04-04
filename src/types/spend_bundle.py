@@ -3,10 +3,10 @@ from typing import List
 
 from blspy import AugSchemeMPL, G2Element
 
-from src.types.announcement import Announcement
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.streamable import Streamable, streamable
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.streamable import Streamable, streamable
 
 from .coin_solution import CoinSolution
 

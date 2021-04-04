@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.util.ints import uint8, uint32, uint64, uint128
-from src.util.streamable import Streamable, streamable
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

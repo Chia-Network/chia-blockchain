@@ -4,7 +4,7 @@ from secrets import token_bytes
 
 from blspy import AugSchemeMPL, PrivateKey
 
-from src.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
+from chia.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 
 
 class TesKeychain(unittest.TestCase):

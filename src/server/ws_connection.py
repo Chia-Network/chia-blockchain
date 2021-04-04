@@ -6,18 +6,18 @@ from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
-from src.cmds.init_funcs import chia_full_version_str
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.shared_protocol import Capability, Handshake
-from src.server.outbound_message import Message, NodeType, make_msg
-from src.server.rate_limits import RateLimiter
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.peer_info import PeerInfo
-from src.util.errors import Err, ProtocolError
-from src.util.ints import uint8, uint16
+from chia.cmds.init_funcs import chia_full_version_str
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability, Handshake
+from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.rate_limits import RateLimiter
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+from chia.util.errors import Err, ProtocolError
+from chia.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from src.util.network import class_for_type, is_localhost
+from chia.util.network import class_for_type, is_localhost
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
