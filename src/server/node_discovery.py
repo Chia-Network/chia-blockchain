@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from random import Random
 from secrets import randbits
-from typing import Dict, Optional, Union, Any, List
+from typing import Dict, Optional, Union, List
 
 import aiosqlite
 

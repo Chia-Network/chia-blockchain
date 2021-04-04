@@ -4,7 +4,7 @@ import pathlib
 import signal
 import socket
 import time
-from typing import List, Union
+from typing import List
 
 import pkg_resources
 

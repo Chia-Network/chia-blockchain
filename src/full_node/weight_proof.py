@@ -4,7 +4,7 @@ import logging
 import math
 import random
 from concurrent.futures.process import ProcessPoolExecutor
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple
 
 from src.consensus.block_header_validation import validate_finished_header_block
 from src.consensus.block_record import BlockRecord
