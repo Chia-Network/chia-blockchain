@@ -1,4 +1,4 @@
-from src.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64
 
 # 1 Chia coin = 1,000,000,000,000 = 1 trillion mojo.
 _mojo_per_chia = 1000000000000

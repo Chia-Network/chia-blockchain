@@ -1,10 +1,10 @@
 from typing import List
 
-from src.types.announcement import Announcement
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.program import Program
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.condition_tools import (
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.condition_tools import (
     conditions_dict_for_solution,
     created_announcements_for_conditions_dict,
     created_announcement_names_for_conditions_dict,

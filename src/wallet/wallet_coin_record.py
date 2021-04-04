@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint32
-from src.util.streamable import Streamable, streamable
-from src.wallet.util.wallet_types import WalletType
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.wallet_types import WalletType
 
 
 @dataclass(frozen=True)

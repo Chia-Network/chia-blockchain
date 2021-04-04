@@ -2,14 +2,14 @@ import asyncio
 
 import pytest
 
-from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from src.protocols.full_node_protocol import RespondBlock
-from src.server.server import ChiaServer
-from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32
-from src.wallet.util.transaction_type import TransactionType
-from src.wallet.wallet_state_manager import WalletStateManager
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.protocols.full_node_protocol import RespondBlock
+from chia.server.server import ChiaServer
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16, uint32
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cc_wallet.test_cc_wallet import tx_in_pool

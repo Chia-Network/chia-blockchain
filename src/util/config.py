@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, Optional, Union
 import pkg_resources
 import yaml
 
-from src.util.path import mkdir
+from chia.util.path import mkdir
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:

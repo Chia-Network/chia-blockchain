@@ -1,6 +1,6 @@
 import blspy
 
-from src.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 def std_hash(b) -> bytes32:

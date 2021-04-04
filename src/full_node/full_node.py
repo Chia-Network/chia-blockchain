@@ -10,43 +10,43 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import aiosqlite
 from blspy import AugSchemeMPL
 
-import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from src.consensus.block_creation import unfinished_block_to_full_block
-from src.consensus.block_record import BlockRecord
-from src.consensus.blockchain import Blockchain, ReceiveBlockResult
-from src.consensus.constants import ConsensusConstants
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from src.consensus.multiprocess_validation import PreValidationResult
-from src.consensus.network_type import NetworkType
-from src.consensus.pot_iterations import calculate_sp_iters
-from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
-from src.full_node.full_node_store import FullNodeStore
-from src.full_node.mempool_manager import MempoolManager
-from src.full_node.signage_point import SignagePoint
-from src.full_node.sync_store import SyncStore
-from src.full_node.weight_proof import WeightProofHandler
-from src.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
-from src.protocols.full_node_protocol import RejectBlocks, RequestBlocks, RespondBlock, RespondBlocks
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.node_discovery import FullNodePeers
-from src.server.outbound_message import Message, NodeType, make_msg
-from src.server.server import ChiaServer
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.pool_target import PoolTarget
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.types.spend_bundle import SpendBundle
-from src.types.unfinished_block import UnfinishedBlock
-from src.util.errors import ConsensusError, Err
-from src.util.ints import uint8, uint32, uint64, uint128
-from src.util.path import mkdir, path_from_root
+import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
+from chia.consensus.block_creation import unfinished_block_to_full_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.network_type import NetworkType
+from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
+from chia.full_node.full_node_store import FullNodeStore
+from chia.full_node.mempool_manager import MempoolManager
+from chia.full_node.signage_point import SignagePoint
+from chia.full_node.sync_store import SyncStore
+from chia.full_node.weight_proof import WeightProofHandler
+from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
+from chia.protocols.full_node_protocol import RejectBlocks, RequestBlocks, RespondBlock, RespondBlocks
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.node_discovery import FullNodePeers
+from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.server import ChiaServer
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.errors import ConsensusError, Err
+from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.path import mkdir, path_from_root
 
 
 class FullNode:

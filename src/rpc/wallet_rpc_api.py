@@ -6,30 +6,30 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey
 
-from src.cmds.init_funcs import check_keys
-from src.consensus.block_rewards import calculate_base_farmer_reward
-from src.consensus.network_type import NetworkType
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.outbound_message import NodeType, make_msg
-from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
-from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint32, uint64
-from src.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from src.util.path import path_from_root
-from src.util.ws_message import WsRpcMessage, create_payload_dict
-from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.rl_wallet.rl_wallet import RLWallet
-from src.wallet.trade_record import TradeRecord
-from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
-from src.wallet.util.trade_utils import trade_record_to_dict
-from src.wallet.util.transaction_type import TransactionType
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet_info import WalletInfo
-from src.wallet.wallet_node import WalletNode
+from chia.cmds.init_funcs import check_keys
+from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.network_type import NetworkType
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint32, uint64
+from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chia.util.path import path_from_root
+from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.rl_wallet.rl_wallet import RLWallet
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.backup_utils import download_backup, get_backup_info, upload_backup
+from chia.wallet.util.trade_utils import trade_record_to_dict
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import WalletNode
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30

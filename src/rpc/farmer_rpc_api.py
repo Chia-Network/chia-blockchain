@@ -1,8 +1,8 @@
 from typing import Callable, Dict, List
 
-from src.farmer.farmer import Farmer
-from src.util.byte_types import hexstr_to_bytes
-from src.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.farmer.farmer import Farmer
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class FarmerRpcApi:

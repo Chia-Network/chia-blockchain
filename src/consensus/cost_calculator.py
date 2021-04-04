@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from src.consensus.condition_costs import ConditionCost
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.name_puzzle_condition import NPC
-from src.util.ints import uint16, uint64
-from src.util.streamable import Streamable, streamable
+from chia.consensus.condition_costs import ConditionCost
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.name_puzzle_condition import NPC
+from chia.util.ints import uint16, uint64
+from chia.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

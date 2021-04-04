@@ -10,7 +10,7 @@ from bitstring import BitArray
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 
-from src.util.hash import std_hash
+from chia.util.hash import std_hash
 
 MAX_KEYS = 100
 

@@ -13,54 +13,54 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from src.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from src.plotting.create_plots import create_plots
-from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
-from src.consensus.block_record import BlockRecord
-from src.consensus.blockchain_interface import BlockchainInterface
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.consensus.constants import ConsensusConstants
-from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.consensus.deficit import calculate_deficit
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from src.consensus.pot_iterations import (
+from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
+from chia.plotting.create_plots import create_plots
+from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.deficit import calculate_deficit
+from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
     calculate_sp_interval_iters,
     calculate_sp_iters,
     is_overflow_block,
 )
-from src.consensus.vdf_info_computation import get_signage_point_vdf_info
-from src.full_node.signage_point import SignagePoint
-from src.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.pool_target import PoolTarget
-from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.slots import (
+from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.full_node.signage_point import SignagePoint
+from chia.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
     InfusedChallengeChainSubSlot,
     RewardChainSubSlot,
     SubSlotProofs,
 )
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
-from src.types.spend_bundle import SpendBundle
-from src.types.unfinished_block import UnfinishedBlock
-from src.util.bech32m import encode_puzzle_hash
-from src.util.block_cache import BlockCache
-from src.util.config import load_config, save_config
-from src.util.hash import std_hash
-from src.util.ints import uint8, uint32, uint64, uint128
-from src.util.keychain import Keychain, bytes_to_mnemonic
-from src.util.path import mkdir
-from src.util.vdf_prover import get_vdf_info_and_proof
-from src.util.wallet_tools import WalletTool
-from src.wallet.derive_keys import (
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.types.full_block import FullBlock
+from chia.types.spend_bundle import SpendBundle
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.block_cache import BlockCache
+from chia.util.config import load_config, save_config
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.keychain import Keychain, bytes_to_mnemonic
+from chia.util.path import mkdir
+from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.util.wallet_tools import WalletTool
+from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,

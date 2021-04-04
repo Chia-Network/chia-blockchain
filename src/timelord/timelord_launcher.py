@@ -8,10 +8,10 @@ from typing import List
 
 import pkg_resources
 
-from src.util.chia_logging import initialize_logging
-from src.util.config import load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.setproctitle import setproctitle
+from chia.util.chia_logging import initialize_logging
+from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False

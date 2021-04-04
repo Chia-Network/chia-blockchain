@@ -5,21 +5,21 @@ from typing import Any, Dict, List, Tuple
 
 import yaml
 
-from src import __version__
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
-from src.util.bech32m import encode_puzzle_hash
-from src.util.config import (
+from chia import __version__
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.config import (
     create_default_chia_config,
     initial_config_file,
     load_config,
     save_config,
     unflatten_properties,
 )
-from src.util.ints import uint32
-from src.util.keychain import Keychain
-from src.util.path import mkdir
-from src.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
+from chia.util.ints import uint32
+from chia.util.keychain import Keychain
+from chia.util.path import mkdir
+from chia.wallet.derive_keys import master_sk_to_pool_sk, master_sk_to_wallet_sk
 
 private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord"}

@@ -3,7 +3,7 @@ import pathlib
 import pkg_resources
 from clvm_tools.clvmc import compile_clvm
 
-from src.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program, SerializedProgram
 
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
