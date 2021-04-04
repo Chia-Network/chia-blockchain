@@ -39,19 +39,28 @@ jobs:
       run: |
         podman run --rm=true \
           -v ${{ github.workspace }}:/ws:rw --workdir=/ws \
-          quay.io/pypa/manylinux2014_aarch64 \
+          docker.io/library/ubuntu:18.04 \
           bash -exc '\
             echo $PATH && \
-            yum install -y epel-release && \
-            curl -sL https://rpm.nodesource.com/setup_12.x | bash - && \
-            yum clean all && yum makecache fast && \
-            yum install -y nodejs fakeroot dpkg && \
+            apt update && \
+            apt upgrade -y && \
+            apt -y install software-properties-common build-essential \
+            curl git dialog apt-utils zlib1g-dev && \
+            add-apt-repository ppa:deadsnakes/ppa -y && \
+            curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
+            apt -y install nodejs fakeroot \
+            python3.8 python3.8-venv libpython3.8-dev python3.8-distutils && \
             rm -rf venv && \
-            export PATH=/opt/python/cp38-cp38/bin/:$PATH && \
-            /opt/python/cp38-cp38/bin/python -m venv venv && \
-            if [ ! -f "activate" ]; then ln -s venv/bin/activate; fi && \
-            . ./activate && \
-            sh install.sh && \
+            python3 --version && \
+            python3.8 -m venv venv && \
+            source venv/bin/activate && \
+            echo "Should be Python 3.8.x" && \
+            python --version && \
+            echo "Emulating install.sh" && \
+            pip install --upgrade pip && \
+            pip install wheel && \
+            pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1 && \
+            pip install . --extra-index-url https://pypi.chia.net/simple/ && \
             ldd --version && \
             cd build_scripts && \
             sh build_linux.sh arm64 \
