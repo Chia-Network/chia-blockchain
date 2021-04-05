@@ -4,7 +4,6 @@ import logging
 import socket
 import time
 import traceback
-from asyncio import Task
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -104,7 +103,7 @@ class WalletNode:
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.server = None
         self.wsm_close_task = None
-        self.sync_task: Optional[Task] = None
+        self.sync_task: Optional[asyncio.Task] = None
         self.new_peak_lock: Optional[asyncio.Lock] = None
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None

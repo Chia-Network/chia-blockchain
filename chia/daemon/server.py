@@ -577,7 +577,6 @@ class WebSocketServer:
             config["state"] = PlotState.ERROR
             config["error"] = str(e)
             self.state_changed(service_plotter, "state")
-            pass
             return {"success": False}
 
     async def start_service(self, request: Dict[str, Any]):
