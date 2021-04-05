@@ -2,9 +2,9 @@ from typing import List
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.coin_solution import CoinSolution
-from src.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_solution import CoinSolution
+from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
 from tests.core.make_block_generator import GROUP_ORDER, int_to_public_key
 
 

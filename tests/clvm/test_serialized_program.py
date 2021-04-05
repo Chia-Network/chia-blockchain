@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from src.types.blockchain_format.program import Program, SerializedProgram
-from src.wallet.puzzles.load_clvm import load_clvm
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.wallet.puzzles.load_clvm import load_clvm
 
 SHA256TREE_MOD = load_clvm("sha256tree_module.clvm")
 

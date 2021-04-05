@@ -24,7 +24,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/dev' }}
+      if: ${{ github.ref != 'refs/heads/main' }}
       uses: styfle/cancel-workflow-action@0.8.0
       with:
         access_token: ${{ github.token }}
@@ -102,4 +102,4 @@ jobs:
     - name: Test wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/test_bech32m.py tests/wallet/test_puzzle_store.py tests/wallet/test_wallet_store.py tests/wallet/test_taproot.py tests/wallet/test_wallet.py tests/wallet/test_chialisp.py tests/wallet/test_backup.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/test_chialisp.py tests/wallet/test_wallet_store.py tests/wallet/test_puzzle_store.py tests/wallet/test_wallet.py tests/wallet/test_taproot.py tests/wallet/test_backup.py tests/wallet/test_bech32m.py -s -v --durations 0 

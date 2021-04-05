@@ -6,21 +6,21 @@ from typing import Dict, List, Optional, Tuple
 import aiosqlite
 import pytest
 
-from src.consensus.block_header_validation import validate_finished_header_block
-from src.consensus.block_record import BlockRecord
-from src.consensus.blockchain import Blockchain
-from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from src.consensus.full_block_to_block_record import block_to_block_record
-from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
-from src.server.start_full_node import SERVICE_NAME
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from src.util.block_cache import BlockCache
-from src.util.block_tools import test_constants
-from src.util.config import load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
+from chia.consensus.block_header_validation import validate_finished_header_block
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import Blockchain
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
+from chia.server.start_full_node import SERVICE_NAME
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.util.block_cache import BlockCache
+from chia.util.block_tools import test_constants
+from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from tests.setup_nodes import bt
 
 try:
@@ -29,16 +29,16 @@ except ImportError:
     pass
 
 
-from src.consensus.pot_iterations import calculate_iterations_quality
-from src.full_node.weight_proof import (  # type: ignore
+from chia.consensus.pot_iterations import calculate_iterations_quality
+from chia.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _map_sub_epoch_summaries,
     _validate_sub_epoch_segments,
     _validate_summaries_weight,
 )
-from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.util.ints import uint32, uint64
+from chia.types.full_block import FullBlock
+from chia.types.header_block import HeaderBlock
+from chia.util.ints import uint32, uint64
 from tests.core.fixtures import (
     default_400_blocks,
     default_1000_blocks,
@@ -458,9 +458,18 @@ class TestWeightProof:
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
-        summaries[last_ses_height] = last_ses
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
+        summaries[last_ses_height] = last_ses
+        wpf_synced.blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        new_wp = await wpf_synced._create_proof_of_weight(blocks[-1].header_hash)
+        valid, fork_point = await wpf_not_synced.validate_weight_proof(new_wp)
+        assert valid
+        assert fork_point == 0
+        wpf_synced.blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        new_wp = await wpf_synced._create_proof_of_weight(blocks[last_ses_height].header_hash)
+        valid, fork_point = await wpf_not_synced.validate_weight_proof(new_wp)
+        assert valid
+        assert fork_point == 0
         valid, fork_point = await wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0

@@ -2,14 +2,14 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Dict, Iterator, List
 
-from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
-from src.types.announcement import Announcement
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.coin_record import CoinRecord
-from src.types.spend_bundle import SpendBundle
-from src.util.condition_tools import conditions_dict_for_solution, created_announcements_for_conditions_dict
-from src.util.ints import uint32, uint64
+from chia.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
+from chia.types.spend_bundle import SpendBundle
+from chia.util.condition_tools import conditions_dict_for_solution, created_announcements_for_conditions_dict
+from chia.util.ints import uint32, uint64
 
 
 class BadSpendBundleError(Exception):
