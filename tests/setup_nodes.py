@@ -68,6 +68,7 @@ async def setup_full_node(
     simulator=False,
     send_uncompact_interval=0,
     sanitize_weight_proof_only=False,
+    connect_to_daemon=False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -94,7 +95,7 @@ async def setup_full_node(
 
     kwargs.update(
         parse_cli_args=False,
-        connect_to_daemon=False,
+        connect_to_daemon=connect_to_daemon,
     )
 
     service = Service(**kwargs)
@@ -431,7 +432,9 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
     await _teardown_nodes(node_iters)
 
 
-async def setup_full_system(consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None):
+async def setup_full_system(
+    consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, connect_to_daemon=False
+):
     if b_tools is None:
         b_tools = BlockTools(constants=test_constants)
     if b_tools_1 is None:
@@ -442,8 +445,12 @@ async def setup_full_system(consensus_constants: ConsensusConstants, b_tools=Non
         setup_farmer(21235, consensus_constants, b_tools, uint16(21237)),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants, b_tools),
-        setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10, True),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10, True),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10, True, connect_to_daemon
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10, True, connect_to_daemon
+        ),
         setup_vdf_client(7999),
         setup_timelord(21239, 21238, True, consensus_constants, b_tools_1),
     ]
