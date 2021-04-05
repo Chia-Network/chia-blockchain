@@ -1,8 +1,8 @@
 import dataclasses
 
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint8, uint32, uint64, uint128
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint8, uint32, uint64, uint128
 
 
 @dataclasses.dataclass(frozen=True)

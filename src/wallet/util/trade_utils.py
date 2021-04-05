@@ -1,12 +1,12 @@
 from typing import Dict, Optional, Tuple
 
-from src.types.blockchain_format.program import Program
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.spend_bundle import SpendBundle
-from src.util.condition_tools import conditions_dict_for_solution
-from src.wallet.cc_wallet import cc_utils
-from src.wallet.trade_record import TradeRecord
-from src.wallet.trading.trade_status import TradeStatus
+from chia.types.blockchain_format.program import Program
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.spend_bundle import SpendBundle
+from chia.util.condition_tools import conditions_dict_for_solution
+from chia.wallet.cc_wallet import cc_utils
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.trade_status import TradeStatus
 
 
 def trade_status_ui_string(status: TradeStatus):

@@ -1,7 +1,7 @@
 from clvm_tools import binutils
 
-from src.types.blockchain_format.program import Program, SerializedProgram
-from src.wallet.chialisp import args, cons, eval, make_if, make_list, quote, rest, sexp, sha256tree
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.wallet.chialisp import args, cons, eval, make_if, make_list, quote, rest, sexp, sha256tree
 
 
 def get_generator():

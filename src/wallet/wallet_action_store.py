@@ -2,9 +2,9 @@ from typing import List, Optional
 
 import aiosqlite
 
-from src.util.ints import uint32
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet_action import WalletAction
+from chia.util.ints import uint32
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_action import WalletAction
 
 
 class WalletActionStore:

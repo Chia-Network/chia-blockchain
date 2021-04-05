@@ -2,24 +2,24 @@ from typing import Dict, List, Optional
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.program import Program
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.coin_solution import CoinSolution
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.spend_bundle import SpendBundle
-from src.util.clvm import int_from_bytes, int_to_bytes
-from src.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
-from src.util.ints import uint32, uint64
-from src.wallet.derive_keys import master_sk_to_wallet_sk
-from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_solution import CoinSolution
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.spend_bundle import SpendBundle
+from chia.util.clvm import int_from_bytes, int_to_bytes
+from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.ints import uint32, uint64
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     solution_for_conditions,
 )
-from src.wallet.puzzles.puzzle_utils import (
+from chia.wallet.puzzles.puzzle_utils import (
     make_assert_aggsig_condition,
     make_assert_announcement,
     make_assert_height_age_exceeds_condition,

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import click
 
-from src.daemon.client import connect_to_daemon_and_validate
-from src.util.service_groups import all_groups, services_for_groups
+from chia.daemon.client import connect_to_daemon_and_validate
+from chia.util.service_groups import all_groups, services_for_groups
 
 
 async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:

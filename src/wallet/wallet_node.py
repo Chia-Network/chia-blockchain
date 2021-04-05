@@ -10,13 +10,13 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import PrivateKey
 
-from src.consensus.block_record import BlockRecord
-from src.consensus.constants import ConsensusConstants
-from src.consensus.multiprocess_validation import PreValidationResult
-from src.protocols import wallet_protocol
-from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.wallet_protocol import (
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.protocols import wallet_protocol
+from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.wallet_protocol import (
     RejectAdditionsRequest,
     RejectRemovalsRequest,
     RequestAdditions,
@@ -26,29 +26,29 @@ from src.protocols.wallet_protocol import (
     RespondHeaderBlocks,
     RespondRemovals,
 )
-from src.server.node_discovery import WalletPeers
-from src.server.outbound_message import Message, NodeType, make_msg
-from src.server.server import ChiaServer
-from src.server.ws_connection import WSChiaConnection
-from src.types.blockchain_format.coin import Coin, hash_coin_list
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.header_block import HeaderBlock
-from src.types.peer_info import PeerInfo
-from src.util.byte_types import hexstr_to_bytes
-from src.util.errors import Err, ValidationError
-from src.util.ints import uint32, uint128
-from src.util.keychain import Keychain
-from src.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
-from src.util.path import mkdir, path_from_root
-from src.wallet.block_record import HeaderBlockRecord
-from src.wallet.derivation_record import DerivationRecord
-from src.wallet.settings.settings_objects import BackupInitialized
-from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.backup_utils import open_backup_file
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet_action import WalletAction
-from src.wallet.wallet_blockchain import ReceiveBlockResult
-from src.wallet.wallet_state_manager import WalletStateManager
+from chia.server.node_discovery import WalletPeers
+from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.header_block import HeaderBlock
+from chia.types.peer_info import PeerInfo
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.errors import Err, ValidationError
+from chia.util.ints import uint32, uint128
+from chia.util.keychain import Keychain
+from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed, confirm_not_included_already_hashed
+from chia.util.path import mkdir, path_from_root
+from chia.wallet.block_record import HeaderBlockRecord
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.settings.settings_objects import BackupInitialized
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.backup_utils import open_backup_file
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_action import WalletAction
+from chia.wallet.wallet_blockchain import ReceiveBlockResult
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 class WalletNode:

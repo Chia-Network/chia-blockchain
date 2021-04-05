@@ -2,11 +2,11 @@ from typing import Dict, List, Optional
 
 import aiosqlite
 
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.coin_record import CoinRecord
-from src.types.full_block import FullBlock
-from src.util.ints import uint32, uint64
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
+from chia.types.full_block import FullBlock
+from chia.util.ints import uint32, uint64
 
 
 class CoinStore:
