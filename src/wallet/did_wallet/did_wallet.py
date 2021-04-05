@@ -49,6 +49,8 @@ class DIDWallet:
         num_of_backup_ids_needed: uint64 = None,
         name: str = None,
     ):
+        if amount & 1 == 0:
+            raise ValueError("DID amount must be odd number")
         self = DIDWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None

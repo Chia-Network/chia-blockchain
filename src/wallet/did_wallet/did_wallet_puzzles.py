@@ -9,7 +9,7 @@ from src.util.ints import uint64
 from src.wallet.puzzles.load_clvm import load_clvm
 from src.types.condition_opcodes import ConditionOpcode
 
-DID_CORE_MOD = load_clvm("did_core.clvm")
+DID_CORE_MOD = load_clvm("singleton_top_layer.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
 
 

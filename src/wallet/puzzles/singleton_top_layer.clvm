@@ -76,7 +76,7 @@
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-  (defun create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
     (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
                     mod_hash
                     mod_hash_hash
@@ -89,22 +89,22 @@
   )
 
   (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_id my_innerpuzhash parent_info my_amount)
-    (if (> my_amount 0)
+    (if (logand my_amount 1)
       (if (l parent_info)
         (list ASSERT_MY_COIN_ID (create_my_ID mod_hash mod_hash_hash genesis_id my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
         (list ASSERT_MY_COIN_ID (sha256 genesis_id (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount))
       )
-      (x "my_amount_and_id fail")
+      (x)
     )
   )
 
-  ; Check that only one output with value > 0 exists
+  ; Check that only one output with odd value exists
   (defun check_outputs_value (outputs_loop flag)
     (if outputs_loop
       (if (= (f (f outputs_loop)) CREATE_COIN)
-        (if (> (f (r (r (f outputs_loop)))) 0)
+        (if (logand (f (r (r (f outputs_loop)))) 1)
           (if flag
-            (x "more than one output with value > 1")
+            (x)
             (check_outputs_value (r outputs_loop) 1)
           )
           (check_outputs_value (r outputs_loop) flag)
