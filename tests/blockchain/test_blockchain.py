@@ -9,21 +9,21 @@ from secrets import token_bytes
 import pytest
 from blspy import AugSchemeMPL, G2Element
 
-from src.consensus.blockchain import ReceiveBlockResult
-from src.consensus.pot_iterations import is_overflow_block
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.blockchain_format.slots import InfusedChallengeChainSubSlot
-from src.types.blockchain_format.vdf import VDFInfo, VDFProof
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
-from src.types.unfinished_block import UnfinishedBlock
-from src.util.block_tools import BlockTools, get_vdf_info_and_proof
-from src.util.errors import Err
-from src.util.hash import std_hash
-from src.util.ints import uint8, uint64
-from src.util.recursive_replace import recursive_replace
-from src.util.wallet_tools import WalletTool
+from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.pot_iterations import is_overflow_block
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.types.full_block import FullBlock
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.block_tools import BlockTools, get_vdf_info_and_proof
+from chia.util.errors import Err
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint64
+from chia.util.recursive_replace import recursive_replace
+from chia.util.wallet_tools import WalletTool
 from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
 from tests.core.fixtures import default_1000_blocks  # noqa: F401
 from tests.core.fixtures import default_10000_blocks  # noqa: F401

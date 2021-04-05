@@ -9,28 +9,28 @@ from typing import Dict
 
 import pytest
 
-from src.consensus.pot_iterations import is_overflow_block
-from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import full_node_protocol as fnp
-from src.protocols import timelord_protocol
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.address_manager import AddressManager
-from src.types.blockchain_format.classgroup import ClassgroupElement
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.full_block import FullBlock
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.types.spend_bundle import SpendBundle
-from src.types.unfinished_block import UnfinishedBlock
-from src.util.block_tools import get_signage_point
-from src.util.clvm import int_to_bytes
-from src.util.errors import Err
-from src.util.hash import std_hash
-from src.util.ints import uint8, uint16, uint32, uint64
-from src.util.vdf_prover import get_vdf_info_and_proof
-from src.util.wallet_tools import WalletTool
+from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols import full_node_protocol as fnp
+from chia.protocols import timelord_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.address_manager import AddressManager
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.full_block import FullBlock
+from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
+from chia.types.spend_bundle import SpendBundle
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.block_tools import get_signage_point
+from chia.util.clvm import int_to_bytes
+from chia.util.errors import Err
+from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.util.wallet_tools import WalletTool
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
@@ -1014,7 +1014,7 @@ class TestFullNodeProtocol:
 
         assert cc_eos_count == 3 and icc_eos_count == 3
         for compact_proof in timelord_protocol_finished:
-            await full_node_1.full_node.respond_compact_vdf_timelord(compact_proof)
+            await full_node_1.full_node.respond_compact_proof_of_time(compact_proof)
         stored_blocks = await full_node_1.get_all_full_blocks()
         cc_eos_compact_count = 0
         icc_eos_compact_count = 0
@@ -1255,7 +1255,7 @@ class TestFullNodeProtocol:
         server_2 = full_node_2.full_node.server
         peer = await connect_and_get_peer(server_1, server_2)
         for invalid_compact_proof in timelord_protocol_invalid_messages:
-            await full_node_1.full_node.respond_compact_vdf_timelord(invalid_compact_proof)
+            await full_node_1.full_node.respond_compact_proof_of_time(invalid_compact_proof)
         for invalid_compact_proof in full_node_protocol_invalid_messaages:
             await full_node_1.full_node.respond_compact_vdf(invalid_compact_proof, peer)
         stored_blocks = await full_node_1.get_all_full_blocks()

@@ -51,12 +51,12 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        flake8 src tests
+        flake8 chia tests
 
     - name: Lint source with mypy
       run: |
         mypy --exclude config.py tests
-        mypy src
+        mypy chia
 
     - name: Build source distribution
       run: |

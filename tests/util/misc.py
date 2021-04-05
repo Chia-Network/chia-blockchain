@@ -1,5 +1,5 @@
 import pytest
-from src.util.misc import format_minutes
+from chia.util.misc import format_minutes
 
 
 class TestMisc:

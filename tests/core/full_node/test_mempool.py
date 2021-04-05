@@ -4,22 +4,22 @@ from typing import Dict, List
 
 import pytest
 
-from src.protocols import full_node_protocol
-from src.types.announcement import Announcement
-from src.types.blockchain_format.coin import Coin
-from src.types.coin_solution import CoinSolution
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.spend_bundle import SpendBundle
-from src.util.clvm import int_to_bytes
-from src.util.condition_tools import conditions_for_solution
-from src.util.ints import uint64
+from chia.protocols import full_node_protocol
+from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.coin_solution import CoinSolution
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.spend_bundle import SpendBundle
+from chia.util.clvm import int_to_bytes
+from chia.util.condition_tools import conditions_for_solution
+from chia.util.ints import uint64
 
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from src.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32

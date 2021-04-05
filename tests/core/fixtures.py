@@ -6,12 +6,12 @@ from typing import List
 import aiosqlite
 import pytest
 
-from src.consensus.blockchain import Blockchain
-from src.consensus.constants import ConsensusConstants
-from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
-from src.types.full_block import FullBlock
-from src.util.path import mkdir
+from chia.consensus.blockchain import Blockchain
+from chia.consensus.constants import ConsensusConstants
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
+from chia.types.full_block import FullBlock
+from chia.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
 
 

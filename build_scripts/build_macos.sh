@@ -23,8 +23,13 @@ mkdir dist
 
 echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
-SPEC_FILE=$(python -c 'import src; print(src.PYINSTALLER_SPEC_PATH)')
+SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
+LAST_EXIT_CODE=$?
+if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+	echo >&2 "pyinstaller failed!"
+	exit $LAST_EXIT_CODE
+fi
 cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
 cd chia-blockchain-gui || exit
@@ -40,7 +45,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
+--icon=chia/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
