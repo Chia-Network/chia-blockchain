@@ -24,12 +24,14 @@ mkdir dist
 echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
+echo "SPEC_FILE is $SPEC_FILE"
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
+
 cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
 cd chia-blockchain-gui || exit

@@ -41,9 +41,7 @@ SUBCOMMANDS = [
 block_cipher = None
 subcommand_modules = [f"{root}/chia.cmds.%s" % _ for _ in SUBCOMMANDS]
 subcommand_modules.extend([f"chia.cmds.%s" % _ for _ in SUBCOMMANDS])
-other = ["aiter.active_aiter", "aiter.aiter_forker", "aiter.aiter_to_iter", "aiter.azip", "aiter.flatten_aiter", "aiter.gated_aiter",
-"aiter.iter_to_aiter", "aiter.join_aiters", "aiter.map_aiter", "aiter.map_filter_aiter", "aiter.preload_aiter",
-"aiter.push_aiter", "aiter.sharable_aiter", "aiter.stoppable_aiter", "pkg_resources.py2_warn"]
+other = ["pkg_resources.py2_warn"]
 
 entry_points = ["chia.cmds.chia",
             "chia.server.start_wallet",
@@ -61,7 +59,7 @@ subcommand_modules.extend(entry_points)
 
 
 daemon = Analysis([f"{root}/chia/daemon/server.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+             pathex=[f"{root}"],
              binaries = [],
              datas=[version_data, (f"../chia/util/initial-config.yaml", f"./chia/util/"), ] +
              hex_puzzles,
@@ -75,7 +73,7 @@ daemon = Analysis([f"{root}/chia/daemon/server.py"],
              noarchive=False)
 
 full_node = Analysis([f"{root}/chia/server/start_full_node.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+             pathex=[f"{root}"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -88,7 +86,7 @@ full_node = Analysis([f"{root}/chia/server/start_full_node.py"],
              noarchive=False)
 
 wallet = Analysis([f"{root}/chia/server/start_wallet.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+             pathex=[f"{root}"],
              binaries = [],
              datas=[(f"../mozilla-ca/cacert.pem", f"./mozilla-ca/"), (f"../chia/ssl/dst_root_ca.pem", f"./chia/ssl/"), (f"../chia/ssl/chia_ca.key", f"./chia/ssl/"), (f"../chia/ssl/chia_ca.crt", f"./chia/ssl/"), (f"../chia/util/english.txt", f"./chia/util/"), version_data ] + hex_puzzles,
              hiddenimports=subcommand_modules,
@@ -101,7 +99,7 @@ wallet = Analysis([f"{root}/chia/server/start_wallet.py"],
              noarchive=False)
 
 chia = Analysis([f"{root}/chia/cmds/chia.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+             pathex=[f"{root}"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -114,7 +112,7 @@ chia = Analysis([f"{root}/chia/cmds/chia.py"],
              noarchive=False)
 
 farmer = Analysis([f"{root}/chia/server/start_farmer.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+             pathex=[f"{root}"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
@@ -127,7 +125,7 @@ farmer = Analysis([f"{root}/chia/server/start_farmer.py"],
              noarchive=False)
 
 harvester = Analysis([f"{root}/chia/server/start_harvester.py"],
-             pathex=[f"{root}/venv/lib/python3.8/site-packages/aiter/", f"{root}"],
+             pathex=[f"{root}"],
              binaries = [],
              datas=[version_data],
              hiddenimports=subcommand_modules,
