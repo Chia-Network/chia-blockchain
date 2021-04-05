@@ -1,4 +1,5 @@
-from typing import Union, Literal
+from typing import Union
+from typing_extensions import Literal
 
 
 def format_minutes(minutes: int) -> str:
