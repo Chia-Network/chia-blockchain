@@ -6,4 +6,4 @@ except DistributionNotFound:
     # package is not installed
     __version__ = "unknown"
 
-PYINSTALLER_SPEC_PATH = resource_filename("src", "pyinstaller.spec")
+PYINSTALLER_SPEC_PATH = resource_filename("chia", "pyinstaller.spec")
