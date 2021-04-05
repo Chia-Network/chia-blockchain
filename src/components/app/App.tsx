@@ -4,6 +4,7 @@ import { I18nProvider } from '@lingui/react';
 import { deDE, enUS, zhCN, esES, frFR, fiFI, itIT, jaJP, nlNL, ptBR, ptPT, plPL, roRO, ruRU, skSK, svSE } from '@material-ui/core/locale';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
+import { createGlobalStyle } from 'styled-components'
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
@@ -13,11 +14,24 @@ import WebSocketConnection from '../../hocs/WebsocketConnection';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
 import useLocale from '../../hooks/useLocale';
-import './App.css';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
 import i18n from '../../config/locales';
+import Fonts from './fonts/Fonts';
 import TimeBomb from './AppTimeBomb';
+
+const GlobalStyle = createGlobalStyle`
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  #root {
+    display: flex;
+    flex-direction: column;
+  }
+`;
 
 function localeToMaterialLocale(locale: string): object {
   switch (locale) {
@@ -100,6 +114,8 @@ export default function App() {
         <I18nProvider i18n={i18n}>
           <WebSocketConnection host={daemon_uri}>
             <ThemeProvider theme={theme}>
+              <GlobalStyle />
+              <Fonts />
               <TimeBomb />
               <AppRouter />
               <AppModalDialogs />

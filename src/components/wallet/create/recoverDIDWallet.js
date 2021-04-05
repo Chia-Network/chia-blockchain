@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import { Dropzone } from '@chia/core';
 import { Trans } from '@lingui/macro';
 import {
+  CssBaseline, 
+  Container,
   Typography,
   Paper,
   Grid,
@@ -12,8 +14,6 @@ import {
   Backdrop,
   CircularProgress,
 } from '@material-ui/core';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import Container from '@material-ui/core/Container';
 import { makeStyles } from '@material-ui/core/styles';
 import { Card } from '@chia/core';
 

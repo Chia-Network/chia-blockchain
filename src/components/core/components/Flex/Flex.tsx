@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, BoxProps, useTheme } from '@material-ui/core';
+import { Box, BoxProps } from '@material-ui/core';
+import { useTheme } from '@material-ui/core/styles';
 import styled from 'styled-components';
 
 type GAP_SIZE = number | string | 'small' | 'normal' | 'large';

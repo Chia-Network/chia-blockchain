@@ -1,13 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  makeStyles,
   Typography,
   Button,
   Box,
   Backdrop,
   CircularProgress,
 } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 
 import { useDispatch, useSelector } from 'react-redux';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';

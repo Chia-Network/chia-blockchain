@@ -1,8 +1,9 @@
 import React, { ReactNode } from 'react';
-import { CssBaseline ,
+import { CssBaseline } from '@material-ui/core';
+import {
   ThemeProvider as MaterialThemeProvider,
   StylesProvider,
-} from '@material-ui/core';
+} from '@material-ui/core/styles';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 
 

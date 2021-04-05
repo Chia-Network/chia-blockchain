@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  makeStyles,
   Typography,
   Button,
   Box,
@@ -8,6 +7,7 @@ import {
   Backdrop,
   CircularProgress,
 } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
 
 import {
   createState,
