@@ -111,10 +111,13 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                     except AssertionError as e:
                         log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
                         caught_exception = True
-            except BaseException as e:
-                if isinstance(e, KeyboardInterrupt):
-                    log.warning("Interrupted, closing")
-                    return
+            except KeyboardInterrupt:
+                log.warning("Interrupted, closing")
+                return
+            except SystemExit:
+                log.warning("System is shutting down.")
+                return
+            except Exception as e:
                 log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                 caught_exception = True
             if caught_exception is True:
