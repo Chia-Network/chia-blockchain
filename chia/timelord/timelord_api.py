@@ -44,7 +44,7 @@ class TimelordAPI:
                 self.timelord.new_subslot_end = None
 
     @api_request
-    async def new_unfinished_block(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlock):
+    async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
         if self.timelord.last_state is None:
             return
         async with self.timelord.lock:

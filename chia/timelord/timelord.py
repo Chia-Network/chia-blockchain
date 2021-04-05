@@ -61,7 +61,7 @@ class Timelord:
         self.new_subslot_end: Optional[EndOfSubSlotBundle] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
         # Unfinished block info, iters adjusted to the last peak.
-        self.unfinished_blocks: List[timelord_protocol.NewUnfinishedBlock] = []
+        self.unfinished_blocks: List[timelord_protocol.NewUnfinishedBlockTimelord] = []
         # Signage points iters, adjusted to the last peak.
         self.signage_point_iters: List[Tuple[uint64, uint8]] = []
         # For each chain, send those info when the process spawns.
@@ -73,7 +73,7 @@ class Timelord:
         # List of proofs finished.
         self.proofs_finished: List[Tuple[Chain, VDFInfo, VDFProof, int]] = []
         # Data to send at vdf_client initialization.
-        self.overflow_blocks: List[timelord_protocol.NewUnfinishedBlock] = []
+        self.overflow_blocks: List[timelord_protocol.NewUnfinishedBlockTimelord] = []
         # Incremented each time `reset_chains` has been called.
         # Used to label proofs in `finished_proofs` and to only filter proofs corresponding to the most recent state.
         self.num_resets: int = 0
@@ -84,6 +84,7 @@ class Timelord:
         self._shut_down = False
         self.vdf_failures: List[Chain] = []
         self.vdf_failures_count: int = 0
+        self.vdf_failure_time: float = 0
         self.total_unfinished: int = 0
         self.total_infused: int = 0
         self.state_changed_callback: Optional[Callable] = None
@@ -153,7 +154,7 @@ class Timelord:
         except ConnectionResetError as e:
             log.error(f"{e}")
 
-    def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlock) -> Optional[uint64]:
+    def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlockTimelord) -> Optional[uint64]:
         assert self.last_state is not None
         sub_slot_iters = self.last_state.get_sub_slot_iters()
         difficulty = self.last_state.get_difficulty()
@@ -727,6 +728,10 @@ class Timelord:
 
     async def _handle_failures(self):
         while len(self.vdf_failures) > 0:
+            # This can happen if one of the VDF processes has an issue. In this case, we abort all other
+            # infusion points and signage points, and go straight to the end of slot, so we avoid potential
+            # issues with the number of iterations that failed.
+
             log.error(f"Vdf clients failed {self.vdf_failures_count} times.")
             failed_chain = self.vdf_failures[0]
             if failed_chain in self.allows_iters:
@@ -737,17 +742,23 @@ class Timelord:
                 del self.chain_type_to_stream[failed_chain]
             ip_iters = self.last_state.get_last_ip()
             sub_slot_iters = self.last_state.get_sub_slot_iters()
-            left_subslot_iters = sub_slot_iters - ip_iters
-            self.iters_to_submit[failed_chain] = []
-            self.iters_to_submit[failed_chain].append(left_subslot_iters)
+            self.iters_to_submit[failed_chain] = [sub_slot_iters - ip_iters]
             self.iters_submitted[failed_chain] = []
             self.vdf_failures = self.vdf_failures[1:]
+            self.vdf_failure_time = time.time()
 
         # If something goes wrong in the VDF client due to a failed thread, we might get stuck in a situation where we
         # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
         # there are no other timelords, this reset should bring the timelord back to a running state.
-        if time.time() - self.last_active_time > 60:
-            log.error("Not active for over 60 seconds, restarting all chains")
+        if time.time() - self.vdf_failure_time < self.constants.SUB_SLOT_TIME_TARGET * 3:
+            # If we have recently had a failure, allow some more time to finish the slot (we can be up to 3x slower)
+            active_time_threshold = self.constants.SUB_SLOT_TIME_TARGET * 3
+        else:
+            # If there were no failures recently trigger a reset after 60 seconds of no activity.
+            # Signage points should be every 9 seconds
+            active_time_threshold = 60
+        if time.time() - self.last_active_time > active_time_threshold:
+            log.error(f"Not active for {active_time_threshold} seconds, restarting all chains")
             await self._reset_chains()
 
     async def _manage_chains(self):
@@ -955,7 +966,7 @@ class Timelord:
                             vdf_info, vdf_proof, header_hash, height, field_vdf
                         )
                         if self.server is not None:
-                            message = make_msg(ProtocolMessageTypes.respond_compact_vdf_timelord, response)
+                            message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")

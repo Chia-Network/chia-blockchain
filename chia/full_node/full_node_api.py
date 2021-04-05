@@ -1093,10 +1093,10 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
+    async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.respond_compact_vdf_timelord(request)
+        await self.full_node.respond_compact_proof_of_time(request)
 
     @peer_required
     @api_request

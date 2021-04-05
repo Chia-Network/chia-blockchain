@@ -398,7 +398,8 @@ class WSChiaConnection:
                     return None
                 else:
                     self.log.warning(
-                        f"Peer surpassed rate limit {self.peer_host}, message: {message.type}, but not disconnecting"
+                        f"Peer surpassed rate limit {self.peer_host}, message: {message.type}, "
+                        f"{self.peer_port} but not disconnecting"
                     )
                     return full_message_loaded
             return full_message_loaded
