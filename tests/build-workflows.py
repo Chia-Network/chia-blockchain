@@ -6,8 +6,9 @@ import argparse
 import testconfig
 import logging
 import subprocess
+from typing import Optional
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 
 def subdirs(root_dirs: List[str]) -> List[Path]:
@@ -17,11 +18,11 @@ def subdirs(root_dirs: List[str]) -> List[Path]:
     return [d for d in dirs if not (any(c.startswith("_") for c in d.parts) or any(c.startswith(".") for c in d.parts))]
 
 
-def module_dict(module):
+def module_dict(module) -> Dict:
     return {k: v for k, v in module.__dict__.items() if not k.startswith("_")}
 
 
-def dir_config(dir):
+def dir_config(dir: Path) -> Dict:
     import importlib
 
     module_name = str(dir).replace("/", ".") + ".config"
@@ -31,44 +32,48 @@ def dir_config(dir):
         return {}
 
 
-def read_file(filename):
+def read_file(filename) -> Optional[str]:
     with open(filename) as f:
         return f.read()
     return None
 
 
 # input file
-def workflow_yaml_template_text(os):
+def workflow_yaml_template_text(os) -> str:
     return Path(f"runner-templates/build-test-{os}").read_text()
 
 
 # output files
-def workflow_yaml_file(dir, os, test_name):
+def workflow_yaml_file(dir: Path, os: str, test_name: str) -> Path:
     return Path(dir / f"build-test-{os}-{test_name}.yml")
 
 
 # Function from test dir to test name
-def test_name(dir):
+def test_name(dir: str) -> str:
     return str(dir).replace("/", "-")
 
 
-def transform_template(template_text, replacements):
+def transform_template(template_text: str, replacements: Dict) -> str:
     t = template_text
     for r, v in replacements.items():
         t = t.replace(r, v)
     return t
 
 
-def test_files_in_dir(dir):
+def test_files_in_dir(dir: Path) -> List[Path]:
     g = dir.glob("test_*.py")
     return [] if g is None else [f for f in g]
 
 
 # -----
 
+install_timelord_include_yml = read_file("runner-templates/install-timelord.include.yml")
+assert install_timelord_include_yml is not None
+checkout_test_plots_include_yml = read_file("runner-templates/checkout-test-plots.include.yml")
+assert checkout_test_plots_include_yml is not None
 default_replacements = {
-    "INSTALL_TIMELORD": read_file("runner-templates/install-timelord.include.yml").rstrip(),
-    "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file("runner-templates/checkout-test-plots.include.yml").rstrip(),
+    "INSTALL_TIMELORD": install_timelord_include_yml.rstrip(),
+    "CHECKOUT_TEST_BLOCKS_AND_PLOTS": checkout_test_plots_include_yml.rstrip(),
     "TEST_DIR": "",
     "TEST_NAME": "",
     "PYTEST_PARALLEL_ARGS": "",
@@ -78,7 +83,7 @@ default_replacements = {
 
 
 # replace with update_config
-def generate_replacements(defaults, conf, dir, test_files):
+def generate_replacements(defaults: Dict, conf: Dict, dir: Path, test_files: List[Path]) -> Dict:
     assert len(test_files) > 0
     replacements = dict(defaults)
 
@@ -101,7 +106,7 @@ def generate_replacements(defaults, conf, dir, test_files):
 
 
 # overwrite with directory specific values
-def update_config(parent, child):
+def update_config(parent, child) -> Dict:
     if child is None:
         return parent
     conf = child
@@ -141,8 +146,8 @@ for os in testconfig.oses:
         conf = update_config(module_dict(testconfig), dir_config(dir))
         replacements = generate_replacements(default_replacements, conf, dir, test_files)
         txt = transform_template(template_text, replacements)
-        logging.info(f"Writing {os}-{test_name(dir)}")
-        workflow_yaml_file(args.output_dir, os, test_name(dir)).write_text(txt)
+        logging.info(f"Writing {os}-{test_name(str(dir))}")
+        workflow_yaml_file(args.output_dir, os, test_name(str(dir))).write_text(txt)
 
 out = subprocess.run(["git", "diff", args.output_dir])
 if out.stdout:

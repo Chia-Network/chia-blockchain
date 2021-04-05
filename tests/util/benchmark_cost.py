@@ -1,4 +1,5 @@
 import time
+from typings import Tuple
 from secrets import token_bytes
 
 from blspy import AugSchemeMPL, PrivateKey
@@ -13,7 +14,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
 
-def float_to_str(f):
+def float_to_str(f: float) -> str:
     float_string = repr(f)
     if "e" in float_string:  # detect scientific notation
         digits, exp_str = float_string.split("e")
@@ -28,7 +29,7 @@ def float_to_str(f):
     return float_string
 
 
-def run_and_return_cost_time(chialisp):
+def run_and_return_cost_time(chialisp) -> Tuple[int, float]:
 
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
@@ -47,11 +48,11 @@ def run_and_return_cost_time(chialisp):
     return cost, total_time
 
 
-def get_cost_compared_to_addition(addition_cost, addition_time, other_time):
+def get_cost_compared_to_addition(addition_cost: int, addition_time: float, other_time: float) -> float:
     return (addition_cost * other_time) / addition_time
 
 
-def benchmark_all_operators():
+def benchmark_all_operators() -> None:
     addition = "(+ (q 1000000000) (q 1000000000))"
     substraction = "(- (q 1000000000) (q 1000000000))"
     multiply = "(* (q 1000000000) (q 1000000000))"

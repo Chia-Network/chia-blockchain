@@ -20,7 +20,7 @@ lock = asyncio.Lock()
 log = logging.getLogger(__name__)
 
 
-async def kill_processes():
+async def kill_processes() -> None:
     global stopped
     global active_processes
     async with lock:

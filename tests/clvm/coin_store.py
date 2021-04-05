@@ -23,9 +23,9 @@ class CoinTimestamp:
 
 
 class CoinStore:
-    def __init__(self):
+    def __init__(self) -> None:
         self._db: Dict[bytes32, CoinRecord] = dict()
-        self._ph_index = defaultdict(list)
+        self._ph_index: defaultdict = defaultdict(list)
 
     def farm_coin(self, puzzle_hash: bytes32, birthday: CoinTimestamp, amount: int = 1024) -> Coin:
         parent = birthday.height.to_bytes(32, "big")

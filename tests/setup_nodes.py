@@ -1,7 +1,7 @@
 import asyncio
 import signal
 from secrets import token_bytes
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, AsyncGenerator, Tuple, Any
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
@@ -28,7 +28,7 @@ bt = BlockTools(constants=test_constants)
 self_hostname = bt.config["self_hostname"]
 
 
-def constants_for_dic(dic):
+def constants_for_dic(dic) -> ConsensusConstants:
     return test_constants.replace(**dic)
 
 
@@ -231,7 +231,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(port):
+async def setup_introducer(port) -> AsyncGenerator[Tuple[Any, Any], None]:
     kwargs = service_kwargs_for_introducer(
         bt.root_path,
         bt.config["introducer"],
@@ -252,7 +252,7 @@ async def setup_introducer(port):
     await service.wait_closed()
 
 
-async def setup_vdf_client(port):
+async def setup_vdf_client(port) -> AsyncGenerator[asyncio.Task, None]:
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
 
     def stop():
@@ -265,7 +265,7 @@ async def setup_vdf_client(port):
     await kill_processes()
 
 
-async def setup_vdf_clients(port):
+async def setup_vdf_clients(port) -> AsyncGenerator[Tuple[asyncio.Task, asyncio.Task, asyncio.Task], None]:
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
     vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2))
     vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3))

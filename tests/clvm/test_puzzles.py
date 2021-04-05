@@ -100,7 +100,7 @@ def default_payments_and_conditions(
     return payments, conditions
 
 
-def make_create_coin_condition(puzzle_hash, amount):
+def make_create_coin_condition(puzzle_hash: bytes32, amount: int) -> Program:
     return Program.to([ConditionOpcode.CREATE_COIN, puzzle_hash, amount])
 
 

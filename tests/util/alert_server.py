@@ -48,13 +48,13 @@ class AlertServer:
         await site.start()
 
 
-async def run_and_wait(file_path, port):
+async def run_and_wait(file_path, port) -> None:
     server = await AlertServer.create_alert_server(Path(file_path), port)
     await server.run()
     await server.shut_down_event.wait()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("-file_path", type=str, dest="file_path")
     parser.add_argument("-port", type=str, dest="port")
