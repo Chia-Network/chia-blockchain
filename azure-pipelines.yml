@@ -22,6 +22,11 @@ variables:
   - group: Apple-Notarize-Variables
 
 steps:
+  - checkout: self  # self represents the repo where the initial Azure Pipelines YAML file was found
+    submodules: recursive
+    fetchDepth: 0
+    displayName: "Checkout code"
+
   - task: UsePythonVersion@0
     inputs:
       versionSpec: "$(python.version)"
