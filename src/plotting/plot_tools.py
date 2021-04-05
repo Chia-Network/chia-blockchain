@@ -8,11 +8,11 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
 
-from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
-from src.types.blockchain_format.proof_of_space import ProofOfSpace
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.config import load_config, save_config
-from src.wallet.derive_keys import master_sk_to_local_sk
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.config import load_config, save_config
+from chia.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 

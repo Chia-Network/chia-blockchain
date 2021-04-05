@@ -1,8 +1,8 @@
 import pytest
 
-from src.types.peer_info import PeerInfo
-from src.util.block_tools import BlockTools
-from src.util.ints import uint16
+from chia.types.peer_info import PeerInfo
+from chia.util.block_tools import BlockTools
+from chia.util.ints import uint16
 from tests.core.full_node.test_full_sync import node_height_at_least
 from tests.setup_nodes import self_hostname, setup_full_node, setup_full_system, test_constants
 from tests.time_out_assert import time_out_assert

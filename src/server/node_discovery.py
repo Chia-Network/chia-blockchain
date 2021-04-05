@@ -9,17 +9,17 @@ from typing import Dict, Optional
 
 import aiosqlite
 
-import src.server.ws_connection as ws
-from src.protocols import full_node_protocol, introducer_protocol
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.address_manager import AddressManager, ExtendedPeerInfo
-from src.server.address_manager_store import AddressManagerStore
-from src.server.outbound_message import NodeType, make_msg
-from src.server.server import ChiaServer
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.util.hash import std_hash
-from src.util.ints import uint64
-from src.util.path import mkdir, path_from_root
+import chia.server.ws_connection as ws
+from chia.protocols import full_node_protocol, introducer_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.address_manager import AddressManager, ExtendedPeerInfo
+from chia.server.address_manager_store import AddressManagerStore
+from chia.server.outbound_message import NodeType, make_msg
+from chia.server.server import ChiaServer
+from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
+from chia.util.hash import std_hash
+from chia.util.ints import uint64
+from chia.util.path import mkdir, path_from_root
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000

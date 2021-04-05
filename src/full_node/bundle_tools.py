@@ -1,8 +1,8 @@
 from clvm import SExp
 from clvm_tools import binutils
 
-from src.types.blockchain_format.program import SerializedProgram
-from src.types.spend_bundle import SpendBundle
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.spend_bundle import SpendBundle
 
 
 def best_solution_program(bundle: SpendBundle) -> SerializedProgram:

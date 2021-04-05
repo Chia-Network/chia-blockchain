@@ -6,11 +6,11 @@ from typing import Dict, List
 from blspy import G1Element
 from chiapos import Verifier
 
-from src.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots, parse_plot_info
-from src.util.config import load_config
-from src.util.hash import std_hash
-from src.util.keychain import Keychain
-from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
+from chia.plotting.plot_tools import find_duplicate_plot_IDs, get_plot_filenames, load_plots, parse_plot_info
+from chia.util.config import load_config
+from chia.util.hash import std_hash
+from chia.util.keychain import Keychain
+from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 

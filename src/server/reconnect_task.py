@@ -1,8 +1,8 @@
 import asyncio
 import socket
 
-from src.server.server import ChiaServer
-from src.types.peer_info import PeerInfo
+from chia.server.server import ChiaServer
+from chia.types.peer_info import PeerInfo
 
 
 def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool):

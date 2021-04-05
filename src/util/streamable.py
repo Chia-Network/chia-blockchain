@@ -10,12 +10,12 @@ from typing import Any, BinaryIO, Dict, List, Tuple, Type, get_type_hints
 
 from blspy import G1Element, G2Element, PrivateKey
 
-from src.types.blockchain_format.program import Program, SerializedProgram
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.byte_types import hexstr_to_bytes
-from src.util.hash import std_hash
-from src.util.ints import int64, int512, uint32, uint64, uint128
-from src.util.type_checking import is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
+from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
+from chia.util.ints import int64, int512, uint32, uint64, uint128
+from chia.util.type_checking import is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
 
 if sys.version_info < (3, 8):
 

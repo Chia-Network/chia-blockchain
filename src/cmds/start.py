@@ -6,8 +6,8 @@ from typing import Optional
 
 import click
 
-from src.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from src.util.service_groups import all_groups, services_for_groups
+from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
+from chia.util.service_groups import all_groups, services_for_groups
 
 
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:

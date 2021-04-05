@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.server.outbound_message import make_msg
-from src.server.rate_limits import RateLimiter
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import make_msg
+from chia.server.rate_limits import RateLimiter
 from tests.setup_nodes import test_constants
 
 

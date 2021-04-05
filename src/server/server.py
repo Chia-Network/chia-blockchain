@@ -15,17 +15,17 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from src.protocols.protocol_message_types import ProtocolMessageTypes
-from src.protocols.shared_protocol import protocol_version
-from src.server.introducer_peers import IntroducerPeers
-from src.server.outbound_message import Message, NodeType
-from src.server.ssl_context import private_ssl_paths, public_ssl_paths
-from src.server.ws_connection import WSChiaConnection
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.peer_info import PeerInfo
-from src.util.errors import Err, ProtocolError
-from src.util.ints import uint16
-from src.util.network import is_localhost
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import protocol_version
+from chia.server.introducer_peers import IntroducerPeers
+from chia.server.outbound_message import Message, NodeType
+from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+from chia.util.errors import Err, ProtocolError
+from chia.util.ints import uint16
+from chia.util.network import is_localhost
 
 
 def ssl_context_for_server(

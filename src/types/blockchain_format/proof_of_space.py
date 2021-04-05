@@ -6,11 +6,11 @@ from bitstring import BitArray
 from blspy import G1Element
 from chiapos import Verifier
 
-from src.consensus.constants import ConsensusConstants
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.hash import std_hash
-from src.util.ints import uint8
-from src.util.streamable import Streamable, streamable
+from chia.consensus.constants import ConsensusConstants
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
+from chia.util.ints import uint8
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 

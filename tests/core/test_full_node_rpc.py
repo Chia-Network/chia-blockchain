@@ -1,17 +1,17 @@
 import pytest
 from blspy import AugSchemeMPL
 
-from src.consensus.pot_iterations import is_overflow_block
-from src.protocols import full_node_protocol
-from src.rpc.full_node_rpc_api import FullNodeRpcApi
-from src.rpc.full_node_rpc_client import FullNodeRpcClient
-from src.rpc.rpc_server import start_rpc_server
-from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.spend_bundle import SpendBundle
-from src.types.unfinished_block import UnfinishedBlock
-from src.util.hash import std_hash
-from src.util.ints import uint16
-from src.util.wallet_tools import WalletTool
+from chia.consensus.pot_iterations import is_overflow_block
+from chia.protocols import full_node_protocol
+from chia.rpc.full_node_rpc_api import FullNodeRpcApi
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.rpc_server import start_rpc_server
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.spend_bundle import SpendBundle
+from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.hash import std_hash
+from chia.util.ints import uint16
+from chia.util.wallet_tools import WalletTool
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
-from src.util.streamable import Streamable, streamable
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint32, uint64
+from chia.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)

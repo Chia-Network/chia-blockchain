@@ -1,12 +1,12 @@
 from typing import Dict, List, Optional, Set
 
-from src.types.announcement import Announcement
-from src.types.coin_record import CoinRecord
-from src.types.condition_var_pair import ConditionVarPair
-from src.util.clvm import int_from_bytes
-from src.util.condition_tools import ConditionOpcode
-from src.util.errors import Err
-from src.util.ints import uint32, uint64
+from chia.types.announcement import Announcement
+from chia.types.coin_record import CoinRecord
+from chia.types.condition_var_pair import ConditionVarPair
+from chia.util.clvm import int_from_bytes
+from chia.util.condition_tools import ConditionOpcode
+from chia.util.errors import Err
+from chia.util.ints import uint32, uint64
 
 
 def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
