@@ -6,13 +6,8 @@ DID_CORE_MOD = load_clvm("singleton_top_layer.clvm")
 
 def test_only_odd_coins():
     did_core_hash = DID_CORE_MOD.get_tree_hash()
-    solution = Program.to([
-        did_core_hash,
-        did_core_hash,
-        1,
-        [0xdeadbeef, 0xcafef00d, 200],
-        200,
-        [[51, 0xcafef00d, 200]]]
+    solution = Program.to(
+        [did_core_hash, did_core_hash, 1, [0xDEADBEEF, 0xCAFEF00D, 200], 200, [[51, 0xCAFEF00D, 200]]]
     )
     try:
         result, cost = DID_CORE_MOD.run_with_cost(solution)
@@ -20,13 +15,8 @@ def test_only_odd_coins():
         assert e.args == ("clvm raise",)
     else:
         assert False
-    solution = Program.to([
-        did_core_hash,
-        did_core_hash,
-        1,
-        [0xdeadbeef, 0xcafef00d, 210],
-        205,
-        [[51, 0xcafef00d, 205]]]
+    solution = Program.to(
+        [did_core_hash, did_core_hash, 1, [0xDEADBEEF, 0xCAFEF00D, 210], 205, [[51, 0xCAFEF00D, 205]]]
     )
     try:
         result, cost = DID_CORE_MOD.run_with_cost(solution)
@@ -36,13 +26,15 @@ def test_only_odd_coins():
 
 def test_only_one_odd_coin_created():
     did_core_hash = DID_CORE_MOD.get_tree_hash()
-    solution = Program.to([
-        did_core_hash,
-        did_core_hash,
-        1,
-        [0xdeadbeef, 0xcafef00d, 411],
-        411,
-        [[51, 0xcafef00d, 203], [51, 0xfadeddab, 203]]]
+    solution = Program.to(
+        [
+            did_core_hash,
+            did_core_hash,
+            1,
+            [0xDEADBEEF, 0xCAFEF00D, 411],
+            411,
+            [[51, 0xCAFEF00D, 203], [51, 0xFADEDDAB, 203]],
+        ]
     )
     try:
         result, cost = DID_CORE_MOD.run_with_cost(solution)
@@ -50,13 +42,15 @@ def test_only_one_odd_coin_created():
         assert e.args == ("clvm raise",)
     else:
         assert False
-    solution = Program.to([
-        did_core_hash,
-        did_core_hash,
-        1,
-        [0xdeadbeef, 0xcafef00d, 411],
-        411,
-        [[51, 0xcafef00d, 203], [51, 0xfadeddab, 202], [51, 0xfadeddab, 4]]]
+    solution = Program.to(
+        [
+            did_core_hash,
+            did_core_hash,
+            1,
+            [0xDEADBEEF, 0xCAFEF00D, 411],
+            411,
+            [[51, 0xCAFEF00D, 203], [51, 0xFADEDDAB, 202], [51, 0xFADEDDAB, 4]],
+        ]
     )
     try:
         result, cost = DID_CORE_MOD.run_with_cost(solution)
