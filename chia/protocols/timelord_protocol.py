@@ -33,7 +33,7 @@ class NewPeakTimelord(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class NewUnfinishedBlock(Streamable):
+class NewUnfinishedBlockTimelord(Streamable):
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
     difficulty: uint64
     sub_slot_iters: uint64  # SSi in the slot where block is infused

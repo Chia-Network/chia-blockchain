@@ -26,7 +26,7 @@ class ProtocolMessageTypes(Enum):
     new_signage_point_vdf = 16
     new_end_of_sub_slot_vdf = 17
     request_compact_proof_of_time = 18
-    respond_compact_vdf_timelord = 19
+    respond_compact_proof_of_time = 19
 
     # Full node protocol (full_node <-> full_node)
     new_peak = 20

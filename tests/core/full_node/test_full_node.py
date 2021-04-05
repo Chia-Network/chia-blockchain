@@ -1014,7 +1014,7 @@ class TestFullNodeProtocol:
 
         assert cc_eos_count == 3 and icc_eos_count == 3
         for compact_proof in timelord_protocol_finished:
-            await full_node_1.full_node.respond_compact_vdf_timelord(compact_proof)
+            await full_node_1.full_node.respond_compact_proof_of_time(compact_proof)
         stored_blocks = await full_node_1.get_all_full_blocks()
         cc_eos_compact_count = 0
         icc_eos_compact_count = 0
@@ -1255,7 +1255,7 @@ class TestFullNodeProtocol:
         server_2 = full_node_2.full_node.server
         peer = await connect_and_get_peer(server_1, server_2)
         for invalid_compact_proof in timelord_protocol_invalid_messages:
-            await full_node_1.full_node.respond_compact_vdf_timelord(invalid_compact_proof)
+            await full_node_1.full_node.respond_compact_proof_of_time(invalid_compact_proof)
         for invalid_compact_proof in full_node_protocol_invalid_messaages:
             await full_node_1.full_node.respond_compact_vdf(invalid_compact_proof, peer)
         stored_blocks = await full_node_1.get_all_full_blocks()

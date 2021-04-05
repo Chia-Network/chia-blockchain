@@ -1117,7 +1117,7 @@ class FullNode:
             assert block.reward_chain_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
-        timelord_request = timelord_protocol.NewUnfinishedBlock(
+        timelord_request = timelord_protocol.NewUnfinishedBlockTimelord(
             block.reward_chain_block,
             difficulty,
             sub_slot_iters,
@@ -1126,8 +1126,8 @@ class FullNode:
             rc_prev,
         )
 
-        msg = make_msg(ProtocolMessageTypes.new_unfinished_block, timelord_request)
-        await self.server.send_to_all([msg], NodeType.TIMELORD)
+        timelord_msg = make_msg(ProtocolMessageTypes.new_unfinished_block_timelord, timelord_request)
+        await self.server.send_to_all([timelord_msg], NodeType.TIMELORD)
 
         full_node_request = full_node_protocol.NewUnfinishedBlock(block.reward_chain_block.get_hash())
         msg = make_msg(ProtocolMessageTypes.new_unfinished_block, full_node_request)
@@ -1513,7 +1513,7 @@ class FullNode:
             assert new_block is not None
             await self.block_store.add_full_block(new_block, block_record)
 
-    async def respond_compact_vdf_timelord(self, request: timelord_protocol.RespondCompactProofOfTime):
+    async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf

@@ -52,6 +52,8 @@ rate_limits_other = {
     ProtocolMessageTypes.new_signage_point_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_infusion_point_vdf: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_end_of_sub_slot_vdf: RLSettings(100, 100 * 1024),
+    ProtocolMessageTypes.request_compact_proof_of_time: RLSettings(100, 10 * 1024),
+    ProtocolMessageTypes.respond_compact_proof_of_time: RLSettings(100, 100 * 1024),
     ProtocolMessageTypes.new_peak: RLSettings(200, 512),
     ProtocolMessageTypes.request_proof_of_weight: RLSettings(5, 100),
     ProtocolMessageTypes.respond_proof_of_weight: RLSettings(5, 50 * 1024 * 1024, 100 * 1024 * 1024),
