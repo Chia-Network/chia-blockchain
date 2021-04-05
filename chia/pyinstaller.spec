@@ -47,7 +47,7 @@ def path_for_file(mod_name, filename=None):
 # Include all files that end with clvm.hex
 puzzles_path = dir_for_module("chia.wallet.puzzles")
 
-puzzle_dist_path = "./chia/wallet/puzzles"
+puzzle_dist_path = "./data/chia/wallet/puzzles"
 onlyfiles = [f for f in listdir(puzzles_path) if isfile(join(puzzles_path, f))]
 
 root = pathlib.Path().absolute()
@@ -110,10 +110,10 @@ if THIS_IS_WINDOWS:
 datas = [
     (puzzles_path, puzzle_dist_path),
     (path_for_file("mozilla-ca", "cacert.pem"), f"./mozilla-ca/"),
-    (path_for_file("chia.ssl", "dst_root_ca.pem"), f"./chia/ssl/"),
-    (path_for_file("chia.ssl", "chia_ca.key"), f"./chia/ssl/"),
-    (path_for_file("chia.ssl", "chia_ca.crt"), f"./chia/ssl/"),
-    (path_for_file("chia.util", "english.txt"), f"./chia/util/"),
+    (path_for_file("chia.ssl", "dst_root_ca.pem"), f"./data/chia/ssl/"),
+    (path_for_file("chia.ssl", "chia_ca.key"), f"./data/chia/ssl/"),
+    (path_for_file("chia.ssl", "chia_ca.crt"), f"./data/chia/ssl/"),
+    (path_for_file("chia.util", "english.txt"), f"./data/chia/util/"),
     version_data,
 ]
 
