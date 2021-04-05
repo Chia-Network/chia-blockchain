@@ -22,6 +22,11 @@ variables:
   - group: Apple-Notarize-Variables
 
 steps:
+  - checkout: self  # self represents the repo where the initial Azure Pipelines YAML file was found
+    submodules: recursive
+    fetchDepth: 0
+    displayName: "Checkout code"
+
   - task: UsePythonVersion@0
     inputs:
       versionSpec: "$(python.version)"
@@ -65,7 +70,8 @@ steps:
       APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       export APPLE_NOTARIZE_PASSWORD
       if [ "$(APPLE_NOTARIZE_PASSWORD)" ]; then NOTARIZE="true"; export NOTARIZE; fi
-      git submodule update --init --recursive
+      ls
+      ls mozilla-ca
       cd build_scripts || exit
       sh build_macos.sh
     displayName: "Build DMG with build_scripts/build_macos.sh"
