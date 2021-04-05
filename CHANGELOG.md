@@ -6,6 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.0.3 Chia Blockchain 2021-03-30
+
+### Added
+
+- This is a minor bug fix release for version 1.0.2
+- You should review the [release notes for v1.0.2](https://github.com/Chia-Network/chia-blockchain/releases/tag/1.0.2) but we especially want to point out that wallet sync is much faster than in 1.0.1 and earlier versions.
+
+### Fixed
+
+- An incorrect merge brought in unreleased features and broke `chia keys`.
+- Omitted from the 1.0.2 changelog, we fixed one crash in harvester with the release of chaipos 1.0.0 as well.
+
+## 1.0.2 Chia Blockchain 2021-03-30
+
+### Added
+
+- We have released version 1.0.0 of [chiapos](https://github.com/Chia-Network/chiapos). This includes a 20% speed increase for bitfield plotting compared to the previous version on the same machine. In many cases this will mean that bitfield plotting is as fast or faster than non bitfield plotting.
+- @xorinox improved our support for RedHat related distributions in `install.sh`.
+- @ayaseen improved our support for RedHat related distributions in `install-timelord.sh`.
+- We have added Dutch and Polish to supported translations. Thanks @psydafke, @WesleyVH, @pieterhauwaerts, @bartlomiej.tokarzewski, @abstruso, @feel.the.code, and @Axadiw for contributions to [translations on Crowdin](https://crowdin.com/project/chia-blockchain).
+- The GUI now supports "Exclude final directory" when plotting. This is found in the Advanced Options for step 2 on the plot creation page.
+
+### Changed
+
+- Wallet now uses a trusted node and, when syncing from that node, Wallet does not do as many validations.
+- @jespino changed `chia keys show` to require the `--show-mnemonic-seed` before it displays your 24 work private key mnemonic.
+- We decreased the size of the block cache in node to perform better with longer chains.
+- You can now add a private key mnemonic from a file with `chia keys show`.
+- @Flofie caught an error in CONTRIBUTING.md.
+- We no longer rely on aiter so it has been removed.
+- Keyring deprecated the use of OS_X in favor of MacOS.
+- "Broken pipe" error was decreased to a warning.
+- Many non critical log messages were decreased from warning to info log level.
+- Harvester should now log the plot file name if it finds a bad plot at error log level.
+
+### Fixed
+
+- Peer ips were being written to the database on a per ip basis. This caused a lot of wasted disk activity and was costing full node performance.
+- We fixed an issue where the last block wasn't fetched by the GUI.
+- There was an edge case with full node store that can stall syncing.
+- There was a potential node locking issue that could have prevented a Timelord from getting a new peak and cause a chain stall.
+- We did not correctly support some Crowdin locales. Pirate English was starting to overwrite US English for example.
+
+## 1.0.1 Chia Blockchain 2021-03-23
+
+### Added
+
+- There is now a simple progress bar on the GUI Plot page and when you view the log from the three dots on the right.
+- Users must now explicitly set the `--show-mnemonic-seed` flag to see their private keys when running `chia keys show`.
+- We are now building Linux GUI installers. These should be considered beta quality for now.
+- Translations now available for German, Traditional Chinese, and Danish. Thanks to @Dravenex, @MaestroOnICe, @loudsyncro, @loppefaaret, @thirteenthd, @wong8888, @N418, and @swjz for all the translation help. You to can translate at our [Crowdin project](https://crowdin.com/project/chia-blockchain/).
+
+### Changed
+
+- The mainnet genesis is now in the initial config.yaml and the green flag components have been removed.
+- Our release process and branching strategy has changed. CONTRIBUTING.md will be updated in the main branch soon with details.
+- This mainnet release does not migrate previous testnet configuration files.
+
+### Fixed
+
+- Weight proofs, especially wallet weight proofs were failing when some Blueboxed proofs of time were encountered.
+- Users can now pip install e.g. chia-blockchain==1.0.1 on most platforms.
+- Sometimes the GUI had an error regarding MainWindow.
+
 ## 1.0.0 First Release of Chia Blockchain 2021-03-17
 
 ### Added

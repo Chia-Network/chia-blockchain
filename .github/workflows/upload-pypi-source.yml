@@ -18,7 +18,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/dev' }}
+      if: ${{ github.ref != 'refs/heads/main' }}
       uses: styfle/cancel-workflow-action@0.8.0
       with:
         access_token: ${{ github.token }}
@@ -27,6 +27,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+        submodules: recursive
 
     - uses: actions/setup-python@v2
       name: Install Python
@@ -50,11 +51,12 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        flake8 src tests
+        flake8 chia tests
 
     - name: Lint source with mypy
       run: |
-        mypy src tests
+        mypy --exclude config.py tests
+        mypy chia
 
     - name: Build source distribution
       run: |

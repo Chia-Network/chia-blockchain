@@ -2,15 +2,17 @@ import unittest
 from dataclasses import dataclass
 from typing import List, Optional
 
+from clvm_tools import binutils
 from pytest import raises
 
-from src.protocols.wallet_protocol import RespondRemovals
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.full_block import FullBlock
-from src.types.weight_proof import SubEpochChallengeSegment
-from src.util.ints import uint8, uint32
-from src.util.streamable import Streamable, streamable
+from chia.protocols.wallet_protocol import RespondRemovals
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
+from chia.types.weight_proof import SubEpochChallengeSegment
+from chia.util.ints import uint8, uint32
+from chia.util.streamable import Streamable, streamable
 from tests.setup_nodes import bt, test_constants
 
 
@@ -160,6 +162,19 @@ class TestStreamable(unittest.TestCase):
 
         TestClassBool.from_bytes(bytes([0]))
         TestClassBool.from_bytes(bytes([1]))
+
+    def test_ambiguous_deserialization_program(self):
+        @dataclass(frozen=True)
+        @streamable
+        class TestClassProgram(Streamable):
+            a: Program
+
+        program = Program.to(binutils.assemble("()"))
+
+        TestClassProgram.from_bytes(bytes(program))
+
+        with raises(AssertionError):
+            TestClassProgram.from_bytes(bytes(program) + b"9")
 
 
 if __name__ == "__main__":

@@ -3,24 +3,24 @@ import signal
 from secrets import token_bytes
 from typing import Dict, List, Optional
 
-from src.consensus.constants import ConsensusConstants
-from src.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
-from src.full_node.full_node_api import FullNodeAPI
-from src.server.start_farmer import service_kwargs_for_farmer
-from src.server.start_full_node import service_kwargs_for_full_node
-from src.server.start_harvester import service_kwargs_for_harvester
-from src.server.start_introducer import service_kwargs_for_introducer
-from src.server.start_service import Service
-from src.server.start_timelord import service_kwargs_for_timelord
-from src.server.start_wallet import service_kwargs_for_wallet
-from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
-from src.timelord.timelord_launcher import kill_processes, spawn_process
-from src.types.peer_info import PeerInfo
-from src.util.bech32m import encode_puzzle_hash
-from src.util.block_tools import BlockTools, test_constants
-from src.util.hash import std_hash
-from src.util.ints import uint16, uint32
-from src.util.keychain import Keychain, bytes_to_mnemonic
+from chia.consensus.constants import ConsensusConstants
+from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.server.start_farmer import service_kwargs_for_farmer
+from chia.server.start_full_node import service_kwargs_for_full_node
+from chia.server.start_harvester import service_kwargs_for_harvester
+from chia.server.start_introducer import service_kwargs_for_introducer
+from chia.server.start_service import Service
+from chia.server.start_timelord import service_kwargs_for_timelord
+from chia.server.start_wallet import service_kwargs_for_wallet
+from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
+from chia.timelord.timelord_launcher import kill_processes, spawn_process
+from chia.types.peer_info import PeerInfo
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.block_tools import BlockTools, test_constants
+from chia.util.hash import std_hash
+from chia.util.ints import uint16, uint32
+from chia.util.keychain import Keychain, bytes_to_mnemonic
 from tests.time_out_assert import time_out_assert_custom_interval
 
 bt = BlockTools(constants=test_constants)
@@ -66,7 +66,8 @@ async def setup_full_node(
     local_bt,
     introducer_port=None,
     simulator=False,
-    send_uncompact_interval=30,
+    send_uncompact_interval=0,
+    sanitize_weight_proof_only=False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -76,6 +77,7 @@ async def setup_full_node(
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
     config["peer_connect_interval"] = 50
+    config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
     if introducer_port is not None:
         config["introducer_peer"]["host"] = self_hostname
         config["introducer_peer"]["port"] = introducer_port
@@ -440,8 +442,8 @@ async def setup_full_system(consensus_constants: ConsensusConstants, b_tools=Non
         setup_farmer(21235, consensus_constants, b_tools, uint16(21237)),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants, b_tools),
-        setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10),
+        setup_full_node(consensus_constants, "blockchain_test.db", 21237, b_tools, 21233, False, 10, True),
+        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, b_tools_1, 21233, False, 10, True),
         setup_vdf_client(7999),
         setup_timelord(21239, 21238, True, consensus_constants, b_tools_1),
     ]
