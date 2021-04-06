@@ -82,7 +82,7 @@ class Timelord:
         self.main_loop = None
         self.vdf_server = None
         self._shut_down = False
-        self.vdf_failures: List[Tuple[Chain, int]] = []
+        self.vdf_failures: List[Tuple[Chain, Optional[int]]] = []
         self.vdf_failures_count: int = 0
         self.vdf_failure_time: float = 0
         self.total_unfinished: int = 0
