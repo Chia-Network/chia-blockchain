@@ -495,6 +495,11 @@ class ChiaServer:
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
+                    # If api is not ready ignore the request
+                    if hasattr(self.api, "api_ready"):
+                        if self.api.api_ready is False:
+                            return None
+
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
                     else:
