@@ -616,8 +616,7 @@ class Blockchain(BlockchainInterface):
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
-        async with self.lock:
-            return await self.block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_height, segments)
+        return await self.block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_height, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
