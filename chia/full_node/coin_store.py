@@ -25,6 +25,8 @@ class CoinStore:
 
         self.cache_size = cache_size
         self.coin_record_db = connection
+        await self.coin_record_db.execute("pragma journal_mode=wal")
+        await self.coin_record_db.execute("pragma synchronous=2")
         await self.coin_record_db.execute(
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("
