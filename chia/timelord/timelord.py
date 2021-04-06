@@ -298,8 +298,6 @@ class Timelord:
         for block in self.unfinished_blocks:
             if self._can_infuse_unfinished_block(block) is not None:
                 self.total_unfinished += 1
-            else:
-                log.error("CAn't infuse!!")
         self.new_subslot_end = None
         await self._reset_chains()
 
