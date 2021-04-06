@@ -82,7 +82,7 @@ class Timelord:
         self.main_loop = None
         self.vdf_server = None
         self._shut_down = False
-        self.vdf_failures: List[Chain] = []
+        self.vdf_failures: List[Tuple[Chain, int]] = []
         self.vdf_failures_count: int = 0
         self.vdf_failure_time: float = 0
         self.total_unfinished: int = 0
@@ -273,7 +273,7 @@ class Timelord:
 
         if self.total_unfinished > 0:
             remove_unfinished = []
-            for unf_block_timelord in self.unfinished_blocks:
+            for unf_block_timelord in self.unfinished_blocks + self.overflow_blocks:
                 if (
                     unf_block_timelord.reward_chain_block.get_hash()
                     == self.new_peak.reward_chain_block.get_unfinished().get_hash()
@@ -281,7 +281,8 @@ class Timelord:
                     self.total_infused += 1
                     remove_unfinished.append(unf_block_timelord)
             for block in remove_unfinished:
-                self.unfinished_blocks.remove(block)
+                if block in self.unfinished_blocks:
+                    self.unfinished_blocks.remove(block)
             infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
             log.info(
                 f"Total unfinished blocks: {self.total_unfinished}. "
@@ -293,8 +294,12 @@ class Timelord:
         await self._reset_chains()
 
     async def _handle_subslot_end(self):
-        self.total_unfinished += len(self.unfinished_blocks)
         self.last_state.set_state(self.new_subslot_end)
+        for block in self.unfinished_blocks:
+            if self._can_infuse_unfinished_block(block) is not None:
+                self.total_unfinished += 1
+            else:
+                log.error("CAn't infuse!!")
         self.new_subslot_end = None
         await self._reset_chains()
 
@@ -425,6 +430,8 @@ class Timelord:
             self.signage_point_iters.remove(r)
 
     async def _check_for_new_ip(self, iter_to_look_for: uint64):
+        if len(self.unfinished_blocks) == 0:
+            return
         infusion_iters = [
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.INFUSION_POINT
         ]
@@ -451,7 +458,8 @@ class Timelord:
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
                         )
-                    except Exception:
+                    except Exception as e:
+                        log.error(f"Error {e}")
                         continue
                     if ip_iters - self.last_state.get_last_ip() == iteration:
                         block = unfinished_block
@@ -730,7 +738,7 @@ class Timelord:
             )
 
             if next_ses is None or next_ses.new_difficulty is None:
-                self.unfinished_blocks = self.overflow_blocks
+                self.unfinished_blocks = self.overflow_blocks.copy()
             else:
                 # No overflow blocks in a new epoch
                 self.unfinished_blocks = []
@@ -745,9 +753,12 @@ class Timelord:
             # infusion points and signage points, and go straight to the end of slot, so we avoid potential
             # issues with the number of iterations that failed.
 
-            failed_chain = self.vdf_failures[0]
-            log.error(f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}")
-            await self._reset_chains(only_eos=True)
+            failed_chain, proof_label = self.vdf_failures[0]
+            log.error(
+                f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}, label {proof_label}, current: {self.num_resets}"
+            )
+            if proof_label == self.num_resets:
+                await self._reset_chains(only_eos=True)
             self.vdf_failure_time = time.time()
             self.vdf_failures = []
 
@@ -856,7 +867,7 @@ class Timelord:
             except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
                 log.warning(f"{type(e)} {e}")
                 async with self.lock:
-                    self.vdf_failures.append(chain)
+                    self.vdf_failures.append((chain, proof_label))
                     self.vdf_failures_count += 1
                 return
 
@@ -889,7 +900,7 @@ class Timelord:
                 ) as e:
                     log.warning(f"{type(e)} {e}")
                     async with self.lock:
-                        self.vdf_failures.append(chain)
+                        self.vdf_failures.append((chain, proof_label))
                         self.vdf_failures_count += 1
                     break
 
@@ -917,7 +928,7 @@ class Timelord:
                     ) as e:
                         log.warning(f"{type(e)} {e}")
                         async with self.lock:
-                            self.vdf_failures.append(chain)
+                            self.vdf_failures.append((chain, proof_label))
                             self.vdf_failures_count += 1
                         break
 
