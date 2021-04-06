@@ -25,6 +25,8 @@ class TradeStore:
         self.cache_size = cache_size
 
         self.db_connection = connection
+        await self.db_connection.execute("pragma journal_mode=wal")
+        await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS trade_records("
