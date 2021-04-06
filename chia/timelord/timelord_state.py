@@ -75,6 +75,7 @@ class LastState:
                 self.passed_ses_height_but_not_yet_included = True
             else:
                 self.passed_ses_height_but_not_yet_included = state.passes_ses_height_but_not_yet_included
+            log.warning(f"Signage point index: {self.peak.reward_chain_block.signage_point_index}")
         elif isinstance(state, EndOfSubSlotBundle):
             self.state_type = StateType.END_OF_SUB_SLOT
             if self.peak is not None:

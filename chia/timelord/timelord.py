@@ -191,10 +191,11 @@ class Timelord:
                 )
                 return None
             if self.last_state.reward_challenge_cache[found_index][1] > block_sp_total_iters:
-                log.error(
-                    f"Will not infuse unfinished block {block.rc_prev}, sp total iters: {block_sp_total_iters}, "
-                    f"because its iters are too low"
-                )
+                if not is_overflow_block(self.constants, block.reward_chain_block.signage_point_index):
+                    log.error(
+                        f"Will not infuse unfinished block {block.rc_prev}, sp total iters: {block_sp_total_iters}, "
+                        f"because its iters are too low"
+                    )
                 return None
 
         if new_block_iters > 0:
@@ -232,7 +233,7 @@ class Timelord:
             self.iters_submitted[chain] = []
         self.iteration_to_proof_type = {}
         if not only_eos:
-            for block in self.unfinished_blocks:
+            for block in self.unfinished_blocks + self.overflow_blocks:
                 new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
                 # Does not add duplicates, or blocks that we cannot infuse
                 if new_block_iters and new_block_iters not in self.iters_to_submit[Chain.CHALLENGE_CHAIN]:
