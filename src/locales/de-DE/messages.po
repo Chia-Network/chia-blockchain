@@ -8,7 +8,7 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-04 02:02\n"
+"PO-Revision-Date: 2021-04-06 21:47\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -662,7 +662,7 @@ msgstr "Farmer erhalten Block Belohnungen und Transaktionsgebühren indem dem Ne
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr "Ernten"
+msgstr "Farming"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -670,7 +670,7 @@ msgstr "Ernten"
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr "Ernte Status"
+msgstr "Farm Status"
 
 #: src/components/wallet/WalletHistory.tsx:52
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -861,7 +861,7 @@ msgstr "Letzter versuchter Nachweis"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr "Letzte geerntete Höhe"
+msgstr "Letzte gefarmte Höhe"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
@@ -987,7 +987,7 @@ msgstr "Kein 24 Wort Seed seit dieser Schlüssel importiert wurde."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "No blocks farmed yet"
-msgstr "Bisher keine Blocks geerntet"
+msgstr "Bisher keine Blocks gefarmt"
 
 #: src/components/wallet/WalletHistory.tsx:62
 msgid "No previous transactions"
