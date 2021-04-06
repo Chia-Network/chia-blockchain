@@ -22,7 +22,8 @@ class WalletBlockStore:
         self = cls()
 
         self.db = connection
-
+        await self.db.execute("pragma journal_mode=wal")
+        await self.db.execute("pragma synchronous=2")
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS header_blocks(header_hash text PRIMARY KEY, height int,"
             " timestamp int, block blob)"
