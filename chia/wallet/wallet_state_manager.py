@@ -1010,7 +1010,7 @@ class WalletStateManager:
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
 
-     # search through the blockrecords and return the most recent coin to use a given puzzlehash
+    # search through the blockrecords and return the most recent coin to use a given puzzlehash
     async def search_blockrecords_for_puzzlehash(self, puzzlehash: bytes32):
         header_hash_of_interest = None
         heighest_block_height = 0

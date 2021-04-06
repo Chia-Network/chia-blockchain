@@ -59,7 +59,7 @@ def dataclass_from_dict(klass, d):
             return None
         return dataclass_from_dict(get_args(klass)[0], d)
     elif is_type_Tuple(klass):
-         # Type is tuple, can have multiple different types inside
+        # Type is tuple, can have multiple different types inside
         i = 0
         klass_properties = []
         for item in d:
