@@ -1003,6 +1003,10 @@ class FullNode:
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
         self._state_changed("block")
+        record = self.blockchain.block_record(block.header_hash)
+        assert record is not None
+        if record.sub_epoch_summary_included is not None:
+            await self.weight_proof_handler.create_prev_sub_epoch_segments()
         return None
 
     async def respond_unfinished_block(
