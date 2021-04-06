@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-04 02:02\n"
+"PO-Revision-Date: 2021-04-06 21:47\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -156,7 +156,7 @@ msgstr "餘額"
 
 #: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
-msgstr "基礎農夫獎勵數量"
+msgstr "基礎塊農獎勵數量"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -610,7 +610,7 @@ msgstr "估計的網路空間"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr "網路中所有農夫的所有已耕地磁碟空間的估計總和"
+msgstr "網路中所有塊農的所有已耕地磁碟空間的估計總和"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
@@ -1038,7 +1038,7 @@ msgstr "桶數量"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr "線程數量"
+msgstr "執行緒數："
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
@@ -1054,7 +1054,7 @@ msgstr "提案已建立"
 
 #: src/components/wallet/WalletHistory.tsx:18
 msgid "Outgoing"
-msgstr "傳出"
+msgstr "匯出"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
@@ -1070,22 +1070,22 @@ msgstr "峰值時間"
 
 #: src/components/wallet/WalletHistory.tsx:41
 msgid "Pending"
-msgstr "確認中"
+msgstr "未結"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr "確認中餘額"
+msgstr "未結餘額"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr "確認中改變"
+msgstr "未結更動"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr "確認中總餘額"
+msgstr "未結總餘額"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1119,7 +1119,7 @@ msgstr "請輸入有效的數字間隔長度值"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr "請輸入有效的可花費數字量值"
+msgstr "請輸入有效的可花用數字量值"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
@@ -1154,7 +1154,7 @@ msgstr "請指定最終資料夾"
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr "請指定臨時資料夾"
+msgstr "請指定暫存目錄"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1219,7 +1219,7 @@ msgstr "平行規劃耕地可節省時間。若不，新增耕地至隊列。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
-msgstr "池鑰匙"
+msgstr "池金鑰"
 
 #: src/components/block/Block.jsx:245
 msgid "Pool Public Key"
@@ -1274,7 +1274,7 @@ msgstr "私鑰："
 
 #: src/components/block/Block.jsx:237
 msgid "Proof of Space Size"
-msgstr "證明的空間大小"
+msgstr "空間證明的大小"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
@@ -1318,7 +1318,7 @@ msgstr "RL 錢包"
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr "速率限制"
+msgstr "已限速"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
@@ -1352,7 +1352,7 @@ msgstr "版本注釋"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr "重新命名"
+msgstr "更改名稱"
 
 #: src/electron-starter.js:333
 msgid "Report an Issue..."
@@ -1360,7 +1360,7 @@ msgstr "回報問題..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr "從備份還原顏色代幣和其他智能錢包的元數據"
+msgstr "從備份還原有色代幣和其他智慧錢包的元數據"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1373,7 +1373,7 @@ msgstr "從備份還原顏色代幣和其他智能錢包的元數據"
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr "安全跳過"
+msgstr "可安全跳過"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1390,7 +1390,7 @@ msgstr "儲存"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr "第二個臨時資料夾位置"
+msgstr "第二暫存資料夾位置"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
@@ -1402,7 +1402,7 @@ msgstr "種子："
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr "選擇第二臨時資料夾"
+msgstr "選擇第二暫存資料夾"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
@@ -1410,7 +1410,7 @@ msgstr "選擇最終資料夾"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr "選擇鑰匙"
+msgstr "選擇金鑰"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
@@ -1418,7 +1418,7 @@ msgstr "選擇提案"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr "選擇臨時資料夾"
+msgstr "選擇暫存資料夾"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
@@ -1426,11 +1426,11 @@ msgstr "選擇錢包類型"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr "選擇你想要儲存農田區的最終目的地資料夾。我們建議你使用較大的慢速硬盤 (像外部硬盤)。"
+msgstr "選擇你想要儲存耕地的最終資料夾。我們建議你使用較大的慢速硬碟（像是外接硬碟）。"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr "選擇你想要儲存農田區的臨時目的地資料夾。我們建議你使用快速固態硬盤。"
+msgstr "選擇你想要儲存耕地的暫存資料夾。我們建議你使用快速固態硬碟（SSD）。"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1493,22 +1493,22 @@ msgstr "語音"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr "可用數量"
+msgstr "可花用數量"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr "每間隔可用數量"
+msgstr "每間隔可花用數量"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr "可用餘額"
+msgstr "可花用餘額"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr "花費間隔 (區塊數量)：{interval}"
+msgstr "花用間隔 (區塊數量)：{interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
@@ -1517,7 +1517,7 @@ msgstr "花費間隔長度 (區塊數量)"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr "花費限制 (每間隔 Chia)：{0}"
+msgstr "花用限制（每間隔可用 Chia）：{0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
@@ -1583,7 +1583,7 @@ msgstr "同步中"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
-msgstr "同步中 {progress}/{tip}"
+msgstr "同步中 {progress}／{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1611,7 +1611,7 @@ msgstr "同步中 {progress}/{tip}"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr "臨時資料夾位置"
+msgstr "暫存資料夾位置"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1624,23 +1624,23 @@ msgstr "主網最小要求的大小是 k=32"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr "此節點是未同步"
+msgstr "此節點尚未同步"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "節點同步中，這代表從其他節點中下載區塊直到到達區塊鏈的最新區塊"
+msgstr "節點同步中，這代表正從其他節點中下載區塊，直到到達區塊鏈的最新區塊"
 
 #: src/components/block/Block.jsx:268
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr "種子用來建立農田區。這基於池主鍵和農田區主鍵。"
+msgstr "用來建立耕地的種子。這取決於池主鍵和耕地主鍵。"
 
 #: src/components/block/Block.jsx:220
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr "總 VDF(可驗證的延遲功能) 數量或直到這子區塊的整個鏈上的時間迭代證明。"
+msgstr "總 VDF（可驗證的延遲函數）數量或整個鏈上直到此子區塊的時間疊代證明。"
 
 #: src/components/block/Block.jsx:230
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr "總 VDF(可驗證的延遲功能) 數量或這區塊上的時間迭代證明。"
+msgstr "VDF（可驗證的延遲函數）數量或此區塊上的時間疊代證明。"
 
 #: src/components/block/Block.jsx:294
 msgid "The total transactions fees in this block. Rewarded to the farmer."
@@ -1652,25 +1652,25 @@ msgstr "這些農田區是無效的，你可能想要刪除他們。"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr "這允許你增加已有農田區的資料夾。如果你還沒建立任何的農田區，去規劃農田區畫面吧。"
+msgstr "這允許你增加已存有耕地的資料夾。如果你還沒建立任何的耕地，去規劃耕地畫面吧。"
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr "這個功能只能在 GUI 中可用。"
+msgstr "這個功能只能在 GUI 中提供。"
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr "這是你目前可使用來交易的 Chia 數量。他不包括確認中的種田獎勵，確認中的傳入交易和你剛使用的 Chia 但還沒到區塊鏈的部份。"
+msgstr "這是你目前可用來交易的 Chia 數量。他不包括未結的耕種獎勵，未結的匯入交易和你剛花用，但還沒在區塊鏈內的 Chia 。"
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr "這是待處理的改變，是你發送到自己的但還沒確認的改變。"
+msgstr "這是待處理的改變，是你發送給自己的但還沒確認的改變。"
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr "這是傳入和傳出的待處理交易的總和 (還沒包含在區塊鏈中)。這不包括耕種獎勵。"
+msgstr "這是匯入和匯出的未結交易的總和（還沒包含在區塊鏈中）。這不包括耕種獎勵。"
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
@@ -1682,15 +1682,15 @@ msgstr "這是農夫建立區塊的時間，這是在用時間證明最終確定
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "這是由你的私鑰控制的目前峰值子區塊中區塊鏈中 Chia 的總量。他包括凍結種田獎勵，但不包括待處理的傳入和傳出交易。"
+msgstr "這是由你的私鑰控制的目前峰值子區塊中區塊鏈中 Chia 的總量。他包括凍結耕種獎勵，但不包括未結的匯入和匯出交易。"
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "這是總餘額 + 確認中餘額：這是在全部確認中交易完成後您的餘額。"
+msgstr "這是總餘額 + 未結餘額：這是在全部未結交易完成後您的餘額。"
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr "這個節點是完全趕上和驗證網路中"
+msgstr "此節點已完全跟上和驗證網路"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1698,15 +1698,15 @@ msgstr "這個節點是完全趕上和驗證網路中"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr "這個表格顯示你最後一次你的農場嘗試去勝出區塊挑戰。<0>了解更多</0>"
+msgstr "這個表格顯示上次你的農場試著獲勝的區塊挑戰。<0>了解更多</0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr "此交易是在這個時候建立的"
+msgstr "此貿易是在這個時候建立的"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr "此交易已包含在區塊鏈中的這個區塊高度"
+msgstr "此貿易已包含在區塊鏈中的這個區塊高度"
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1736,7 +1736,7 @@ msgstr "總餘額"
 
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
-msgstr "總迭代次數"
+msgstr "總疊代次數"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
@@ -1756,43 +1756,43 @@ msgstr "總 VDF 疊代"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr "從開始區塊鏈後的總迭代次數"
+msgstr "從起始區塊鏈後的總疊代次數"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr "交易"
+msgstr "貿易"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr "交易明細"
+msgstr "貿易明細"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr "交易 ID"
+msgstr "貿易 ID"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr "交易 ID："
+msgstr "貿易 ID:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr "交易概觀"
+msgstr "貿易概觀"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr "交易將會在此顯示"
+msgstr "貿易將會在此顯示"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr "交易中"
+msgstr "貿易中"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr "交易歷史"
+msgstr "貿易歷史"
 
 #: src/components/block/Block.jsx:276
 msgid "Transactions Filter Hash"
-msgstr "交易過濾雜湊"
+msgstr "交易過濾雜湊值"
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
@@ -1804,7 +1804,7 @@ msgstr "未完成"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr "唯一標識符"
+msgstr "唯一識別碼"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -1813,7 +1813,7 @@ msgstr "使用者金鑰"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr "VDF 子欄位迭代次數"
+msgstr "VDF 子欄位疊代次數"
 
 #: src/electron-starter.js:235
 msgid "View"
@@ -1831,11 +1831,11 @@ msgstr "檢視提案"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr "檢視確認中餘額"
+msgstr "檢視未結餘額"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr "檢視確認中餘額..."
+msgstr "檢視未結餘額..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1895,7 +1895,7 @@ msgstr "想要獲得更多 Chia？增加更多耕地到你的農場。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr "想要在下一個農田區開始前一點延遲嗎？"
+msgstr "想要在下次規劃耕地開始前有一段延遲？"
 
 #: src/components/block/Block.jsx:195
 msgid "Weight"
@@ -1907,15 +1907,15 @@ msgstr "權重是所有包括這個的子區塊的總增加難度"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr "歡迎來到 Chia。請用已有的鑰匙或建立新的鑰匙來登入。"
+msgstr "歡迎來到 Chia。請用已有的金鑰登入，或建立新的金鑰。"
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr "歡迎！下面的字是用來為你的錢包備份。沒有他們，你將會失去進入你的錢包，保障他們安全！寫下每個字，包括他們旁邊的順序數字。(順序是重點的)"
+msgstr "歡迎！以下的字是用來為你的錢包備份。沒有這些你將會無法進入你的錢包。將這些安全保存好！寫下每個字，包括他們旁邊的順序數字。（順序很重要）"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr "當你在你的管理員中收到設定資訊封包，在下面輸入以完成你的速率限制錢包設定："
+msgstr "當你從你的管理員收到設定資訊封包時，在下面輸入以完成你的速率限制錢包設定："
 
 #: src/electron-starter.js:280
 msgid "Window"
@@ -1937,15 +1937,15 @@ msgstr "是"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "你不需要已同步或已連接去農田區。臨時檔案在規劃農田區中會建立，將會超過最終農田區檔案大小。請確保你有足夠空間。<0>了解更多</0>"
+msgstr "你不需要同步或連線後才能規劃耕地。規劃耕地時所產生的暫存檔將大於最終的耕地大小。確保你有足夠的空間。<0>了解更多</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-msgstr "你擁有網路上的 {0}%的空間，因此對區塊進行耕種將期望使用 {expectedTimeToWin} 的時間。"
+msgstr "你擁有網路 {0}%的空間，因此耕種一區塊將預期使用 {expectedTimeToWin} 的時間。"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
-msgstr "你的種田概觀"
+msgstr "你的農場概觀"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
@@ -1953,7 +1953,7 @@ msgstr "你的完整節點連線"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr "你的取圖器網路"
+msgstr "你的收割機網路"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
