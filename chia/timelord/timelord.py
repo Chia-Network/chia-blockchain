@@ -267,11 +267,32 @@ class Timelord:
                 assert iteration > 0
 
     async def _handle_new_peak(self):
+        assert self.new_peak is not None
         self.last_state.set_state(self.new_peak)
+
+        if self.total_unfinished > 0:
+            remove_unfinished = []
+            for unf_block_timelord in self.unfinished_blocks:
+                if (
+                    unf_block_timelord.reward_chain_block.get_hash()
+                    == self.new_peak.reward_chain_block.get_unfinished().get_hash()
+                ):
+                    self.total_infused += 1
+                    remove_unfinished.append(unf_block_timelord)
+            for block in remove_unfinished:
+                self.unfinished_blocks.remove(block)
+            infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
+            log.info(
+                f"Total unfinished blocks: {self.total_unfinished}. "
+                f"Total infused blocks: {self.total_infused}. "
+                f"Infusion rate: {infusion_rate}%."
+            )
+
         self.new_peak = None
         await self._reset_chains()
 
     async def _handle_subslot_end(self):
+        self.total_unfinished += len(self.unfinished_blocks)
         self.last_state.set_state(self.new_subslot_end)
         self.new_subslot_end = None
         await self._reset_chains()
@@ -470,8 +491,6 @@ class Timelord:
 
                     self.iters_finished.add(iter_to_look_for)
                     self.last_active_time = time.time()
-                    self.unfinished_blocks.remove(block)
-                    self.total_infused += 1
                     log.debug(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
 
                     overflow = is_overflow_block(self.constants, block.reward_chain_block.signage_point_index)
@@ -592,13 +611,7 @@ class Timelord:
                         uint128(last_csb_or_eos),
                         passed_ses_height_but_not_yet_included,
                     )
-                    if self.total_unfinished > 0:
-                        infusion_rate = int(self.total_infused / self.total_unfinished * 100)
-                        log.info(
-                            f"Total unfinished blocks: {self.total_unfinished}."
-                            f"Total infused blocks: {self.total_infused}."
-                            f"Infusion rate: {infusion_rate}."
-                        )
+
                     await self._handle_new_peak()
                     # Break so we alternate between checking SP and IP
                     break
@@ -716,7 +729,6 @@ class Timelord:
             )
 
             if next_ses is None or next_ses.new_difficulty is None:
-                self.total_unfinished += len(self.overflow_blocks)
                 self.unfinished_blocks = self.overflow_blocks
             else:
                 # No overflow blocks in a new epoch
@@ -727,22 +739,26 @@ class Timelord:
             await self._handle_subslot_end()
 
     async def _handle_failures(self):
+        if len(self.vdf_failures) > 0:
+            # This resets the "iters_submitted" lists, so that we only look for the end of slots.
+            eos_iters = self.last_state.get_sub_slot_iters() - self.last_state.get_last_ip()
+            for chain in [Chain.CHALLENGE_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN, Chain.REWARD_CHAIN]:
+                self.iters_submitted[chain] = [eos_iters] if eos_iters in self.iters_submitted[chain] else []
+                self.iters_to_submit[chain] = [eos_iters]
+
         while len(self.vdf_failures) > 0:
             # This can happen if one of the VDF processes has an issue. In this case, we abort all other
             # infusion points and signage points, and go straight to the end of slot, so we avoid potential
             # issues with the number of iterations that failed.
 
-            log.error(f"Vdf clients failed {self.vdf_failures_count} times.")
             failed_chain = self.vdf_failures[0]
+            log.error(f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}")
             if failed_chain in self.allows_iters:
                 self.allows_iters.remove(failed_chain)
             if failed_chain not in self.unspawned_chains:
                 self.unspawned_chains.append(failed_chain)
             if failed_chain in self.chain_type_to_stream:
                 del self.chain_type_to_stream[failed_chain]
-            ip_iters = self.last_state.get_last_ip()
-            sub_slot_iters = self.last_state.get_sub_slot_iters()
-            self.iters_to_submit[failed_chain] = [sub_slot_iters - ip_iters]
             self.iters_submitted[failed_chain] = []
             self.vdf_failures = self.vdf_failures[1:]
             self.vdf_failure_time = time.time()

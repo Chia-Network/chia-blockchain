@@ -34,6 +34,8 @@ dev_dependencies = [
     "flake8",
     "mypy",
     "black",
+    "aiotthp_cors",  # For blackd
+    "ipython",  # For asyncio debugging
 ]
 
 kwargs = dict(
