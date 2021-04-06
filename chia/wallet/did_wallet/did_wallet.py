@@ -402,7 +402,7 @@ class DIDWallet:
                             innerpuz,
                             coin,
                             new_puzhash,
-                            new_pubkey
+                            new_pubkey,
                         )
                         await self.save_info(did_info)
 
