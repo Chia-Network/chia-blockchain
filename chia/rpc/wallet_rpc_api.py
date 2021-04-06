@@ -391,7 +391,7 @@ class WalletRpcApi:
                         main_wallet,
                         int(request["amount"]),
                         backup_dids,
-                        num_needed,
+                        uint64(num_needed),
                     )
                     my_did = did_wallet.get_my_DID()
                     return {
@@ -404,6 +404,7 @@ class WalletRpcApi:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
                         wallet_state_manager, main_wallet, request["filename"]
                     )
+                    assert did_wallet.did_info.temp_coin is not None
                     my_did = did_wallet.get_my_DID()
                     coin_name = did_wallet.did_info.temp_coin.name().hex()
                     coin_list = did_wallet.did_info.temp_coin.as_list()

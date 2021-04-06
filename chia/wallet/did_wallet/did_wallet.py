@@ -308,6 +308,7 @@ class DIDWallet:
         await self.add_parent(coin.name(), future_parent)
 
     def create_backup(self, filename: str):
+        assert self.did_info.current_inner is not None
         try:
             f = open(filename, "w")
             output_str = f"{self.get_my_DID()}:"
@@ -405,17 +406,19 @@ class DIDWallet:
 
     def get_my_DID(self) -> str:
         core = self.did_info.my_did
+        assert core is not None
         return core.hex()
 
     # This is used to cash out, or update the id_list
     async def create_spend(self, puzhash: bytes32):
+        assert self.did_info.current_inner is not None
         coins = await self.select_coins(1)
         assert coins is not None
         coin = coins.pop()
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to([0, coin.amount, puzhash, coin.name(), coin.puzzle_hash])
+        innersol: Program = Program.to([0, coin.amount, puzhash, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz = self.did_info.current_inner
+        innerpuz: Program = self.did_info.current_inner
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
@@ -472,6 +475,7 @@ class DIDWallet:
     async def create_attestment(
         self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element, filename=None
     ) -> SpendBundle:
+        assert self.did_info.current_inner is not None
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
         coin = coins.pop()
@@ -480,7 +484,7 @@ class DIDWallet:
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = Program.to([1, coin.amount, innermessage, recovering_coin_name, coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz = self.did_info.current_inner
+        innerpuz: Program = self.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.my_did,
@@ -686,7 +690,11 @@ class DIDWallet:
         return innerpuz.get_tree_hash()
 
     async def get_innerhash_for_pubkey(self, pubkey: bytes):
-        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuz = did_wallet_puzzles.create_innerpuz(
+            pubkey,
+            self.did_info.backup_ids,
+            uint64(self.did_info.num_of_backup_ids_needed),
+        )
         return innerpuz.get_tree_hash()
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
