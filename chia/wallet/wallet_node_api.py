@@ -17,6 +17,10 @@ class WalletNodeAPI:
     def log(self):
         return self.wallet_node.log
 
+    @property
+    def api_ready(self):
+        return self.wallet_node.logged_in
+
     @peer_required
     @api_request
     async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
