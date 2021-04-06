@@ -279,8 +279,9 @@ class Timelord:
                     unf_block_timelord.reward_chain_block.get_hash()
                     == self.new_peak.reward_chain_block.get_unfinished().get_hash()
                 ):
-                    self.total_infused += 1
                     remove_unfinished.append(unf_block_timelord)
+            if len(remove_unfinished) > 0:
+                self.total_infused += 1
             for block in remove_unfinished:
                 if block in self.unfinished_blocks:
                     self.unfinished_blocks.remove(block)
