@@ -201,7 +201,7 @@ class Timelord:
             return new_block_iters
         return None
 
-    async def _reset_chains(self, first_run=False):
+    async def _reset_chains(self, first_run=False, only_eos=False):
         # First, stop all chains.
         self.last_active_time = time.time()
         log.debug("Resetting chains")
@@ -231,20 +231,21 @@ class Timelord:
             self.iters_to_submit[chain] = []
             self.iters_submitted[chain] = []
         self.iteration_to_proof_type = {}
-        for block in self.unfinished_blocks:
-            new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
-            # Does not add duplicates, or blocks that we cannot infuse
-            if new_block_iters and new_block_iters not in self.iters_to_submit[Chain.CHALLENGE_CHAIN]:
-                new_unfinished_blocks.append(block)
-                for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
-                    self.iters_to_submit[chain].append(new_block_iters)
-                if self.last_state.get_deficit() < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
-                    self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
-                self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
+        if not only_eos:
+            for block in self.unfinished_blocks:
+                new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
+                # Does not add duplicates, or blocks that we cannot infuse
+                if new_block_iters and new_block_iters not in self.iters_to_submit[Chain.CHALLENGE_CHAIN]:
+                    new_unfinished_blocks.append(block)
+                    for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
+                        self.iters_to_submit[chain].append(new_block_iters)
+                    if self.last_state.get_deficit() < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
+                        self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
+                    self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
         # Signage points.
-        if len(self.signage_point_iters) > 0:
+        if not only_eos and len(self.signage_point_iters) > 0:
             count_signage = 0
             for signage, k in self.signage_point_iters:
                 for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN]:
@@ -740,28 +741,15 @@ class Timelord:
 
     async def _handle_failures(self):
         if len(self.vdf_failures) > 0:
-            # This resets the "iters_submitted" lists, so that we only look for the end of slots.
-            eos_iters = self.last_state.get_sub_slot_iters() - self.last_state.get_last_ip()
-            for chain in [Chain.CHALLENGE_CHAIN, Chain.INFUSED_CHALLENGE_CHAIN, Chain.REWARD_CHAIN]:
-                self.iters_submitted[chain] = [eos_iters] if eos_iters in self.iters_submitted[chain] else []
-                self.iters_to_submit[chain] = [eos_iters]
-
-        while len(self.vdf_failures) > 0:
             # This can happen if one of the VDF processes has an issue. In this case, we abort all other
             # infusion points and signage points, and go straight to the end of slot, so we avoid potential
             # issues with the number of iterations that failed.
 
             failed_chain = self.vdf_failures[0]
             log.error(f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}")
-            if failed_chain in self.allows_iters:
-                self.allows_iters.remove(failed_chain)
-            if failed_chain not in self.unspawned_chains:
-                self.unspawned_chains.append(failed_chain)
-            if failed_chain in self.chain_type_to_stream:
-                del self.chain_type_to_stream[failed_chain]
-            self.iters_submitted[failed_chain] = []
-            self.vdf_failures = self.vdf_failures[1:]
+            await self._reset_chains(only_eos=True)
             self.vdf_failure_time = time.time()
+            self.vdf_failures = []
 
         # If something goes wrong in the VDF client due to a failed thread, we might get stuck in a situation where we
         # are waiting for that client to finish. Usually other peers will finish the VDFs and reset us. In the case that
