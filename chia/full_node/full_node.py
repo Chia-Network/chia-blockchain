@@ -1004,8 +1004,7 @@ class FullNode:
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
         self._state_changed("block")
         record = self.blockchain.block_record(block.header_hash)
-        assert record is not None
-        if record.sub_epoch_summary_included is not None:
+        if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             await self.weight_proof_handler.create_prev_sub_epoch_segments()
         return None
 
