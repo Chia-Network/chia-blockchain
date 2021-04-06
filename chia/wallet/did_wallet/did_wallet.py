@@ -6,28 +6,28 @@ from typing import Dict, Optional, List, Any, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
-from src.protocols import wallet_protocol
-from src.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
-from src.server.outbound_message import NodeType
-from src.types.blockchain_format.coin import Coin
-from src.types.coin_solution import CoinSolution
+from chia.protocols import wallet_protocol
+from chia.protocols.wallet_protocol import RespondAdditions, RejectAdditionsRequest
+from chia.server.outbound_message import NodeType
+from chia.types.blockchain_format.coin import Coin
+from chia.types.coin_solution import CoinSolution
 
-from src.types.blockchain_format.program import Program
-from src.types.spend_bundle import SpendBundle
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.wallet.util.transaction_type import TransactionType
-from src.util.ints import uint64, uint32, uint8
+from chia.types.blockchain_format.program import Program
+from chia.types.spend_bundle import SpendBundle
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.util.transaction_type import TransactionType
+from chia.util.ints import uint64, uint32, uint8
 
-from src.wallet.did_wallet.did_info import DIDInfo
-from src.wallet.cc_wallet.ccparent import CCParent
-from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet import Wallet
-from src.wallet.wallet_coin_record import WalletCoinRecord
-from src.wallet.wallet_info import WalletInfo
-from src.wallet.derivation_record import DerivationRecord
-from src.wallet.did_wallet import did_wallet_puzzles
-from src.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.cc_wallet.ccparent import CCParent
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.did_wallet import did_wallet_puzzles
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 class DIDWallet:
