@@ -145,6 +145,8 @@ class FullNode:
                 )
             )
         self.initialized = True
+        if self.full_node_peers is not None:
+            asyncio.create_task(self.full_node_peers.start())
 
     async def initialize_weight_proof(self):
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
@@ -165,7 +167,6 @@ class FullNode:
                 self.config["peer_connect_interval"],
                 self.log,
             )
-            asyncio.create_task(self.full_node_peers.start())
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")

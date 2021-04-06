@@ -52,6 +52,10 @@ class FullNodeAPI:
     def log(self):
         return self.full_node.log
 
+    @property
+    def api_ready(self):
+        return self.full_node.initialized
+
     @peer_required
     @api_request
     async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
