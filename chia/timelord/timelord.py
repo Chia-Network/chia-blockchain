@@ -753,7 +753,8 @@ class Timelord:
 
             failed_chain, proof_label = self.vdf_failures[0]
             log.error(
-                f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}, label {proof_label}, current: {self.num_resets}"
+                f"Vdf clients failed {self.vdf_failures_count} times. Last failure: {failed_chain}, "
+                f"label {proof_label}, current: {self.num_resets}"
             )
             if proof_label == self.num_resets:
                 await self._reset_chains(only_eos=True)
