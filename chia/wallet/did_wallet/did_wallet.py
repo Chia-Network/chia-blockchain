@@ -65,7 +65,7 @@ class DIDWallet:
             num_of_backup_ids_needed = uint64(len(backups_ids))
         if num_of_backup_ids_needed > len(backups_ids):
             raise ValueError("Cannot require more IDs than are known.")
-        self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None)
+        self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None)
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
@@ -141,7 +141,7 @@ class DIDWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.did_info = DIDInfo(None, [], uint64(0), [], None, None)
+        self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None)
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
@@ -296,6 +296,8 @@ class DIDWallet:
             self.did_info.parent_info,
             inner_puzzle,
             None,
+            None,
+            None,
         )
         await self.save_info(new_info)
 
@@ -337,6 +339,17 @@ class DIDWallet:
             if num_of_backup_ids_needed > len(backup_ids):
                 raise Exception
             innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
+            did_info = DIDInfo(
+                genesis_id,
+                backup_ids,
+                num_of_backup_ids_needed,
+                self.did_info.parent_info,
+                innerpuz,
+                None,
+                None,
+                None,
+            )
+            await self.save_info(did_info)
             full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
             full_puzzle_hash = full_puz.get_tree_hash()
             (
@@ -358,6 +371,10 @@ class DIDWallet:
             assert additions is not None
             assert isinstance(additions, RespondAdditions)
             # All additions in this block here:
+            new_puzhash = (await self.get_new_puzzle()).get_tree_hash()
+            new_pubkey = bytes(
+                (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
+            )
 
             all_parents: bytes32 = set()
             for puzzle_list_coin in additions.coins:
@@ -384,6 +401,8 @@ class DIDWallet:
                             self.did_info.parent_info,
                             innerpuz,
                             coin,
+                            new_puzhash,
+                            new_pubkey
                         )
                         await self.save_info(did_info)
 
@@ -758,6 +777,8 @@ class DIDWallet:
             self.did_info.parent_info,
             did_inner,
             None,
+            None,
+            None,
         )
         await self.save_info(did_info)
         eve_spend = await self.generate_eve_spend(eve_coin, did_puz, origin_id, did_inner)
@@ -806,6 +827,8 @@ class DIDWallet:
             current_list,
             self.did_info.current_inner,
             self.did_info.temp_coin,
+            self.did_info.temp_puzhash,
+            self.did_info.temp_pubkey,
         )
         await self.save_info(did_info)
 
@@ -819,6 +842,8 @@ class DIDWallet:
             self.did_info.parent_info,
             self.did_info.current_inner,
             self.did_info.temp_coin,
+            self.did_info.temp_puzhash,
+            self.did_info.temp_pubkey,
         )
         await self.save_info(did_info)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)

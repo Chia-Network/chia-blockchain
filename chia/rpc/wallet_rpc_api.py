@@ -405,13 +405,13 @@ class WalletRpcApi:
                         wallet_state_manager, main_wallet, request["filename"]
                     )
                     assert did_wallet.did_info.temp_coin is not None
+                    assert did_wallet.did_info.temp_puzhash is not None
+                    assert did_wallet.did_info.temp_pubkey is not None
                     my_did = did_wallet.get_my_DID()
                     coin_name = did_wallet.did_info.temp_coin.name().hex()
                     coin_list = did_wallet.did_info.temp_coin.as_list()
-                    newpuzhash = (await did_wallet.get_new_puzzle()).get_tree_hash().hex()
-                    pubkey = bytes(
-                        (await wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-                    ).hex()
+                    newpuzhash = did_wallet.did_info.temp_puzhash
+                    pubkey = did_wallet.did_info.temp_pubkey
                     return {
                         "success": True,
                         "type": did_wallet.type(),
@@ -419,8 +419,8 @@ class WalletRpcApi:
                         "wallet_id": did_wallet.id(),
                         "coin_name": coin_name,
                         "coin_list": coin_list,
-                        "newpuzhash": newpuzhash,
-                        "pubkey": pubkey,
+                        "newpuzhash": newpuzhash.hex(),
+                        "pubkey": pubkey.hex(),
                         "backup_dids": did_wallet.did_info.backup_ids,
                         "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                     }
@@ -784,11 +784,22 @@ class WalletRpcApi:
             info_list,
             message_spend_bundle,
         ) = await wallet.load_attest_files_for_recovery_spend(request["attest_filenames"])
-        pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
+
+        if "pubkey" in request:
+            pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
+        else:
+            assert wallet.did_info.temp_pubkey is not None
+            pubkey = wallet.did_info.temp_pubkey
+
+        if "puzhash" in request:
+            puzhash = hexstr_to_bytes(request["puzhash"])
+        else:
+            assert wallet.did_info.temp_puzhash is not None
+            puzhash = wallet.did_info.temp_puzhash
 
         success = await wallet.recovery_spend(
             wallet.did_info.temp_coin,
-            hexstr_to_bytes(request["puzhash"]),
+            puzhash,
             info_list,
             pubkey,
             message_spend_bundle,

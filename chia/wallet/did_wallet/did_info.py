@@ -17,4 +17,6 @@ class DIDInfo(Streamable):
     num_of_backup_ids_needed: uint64
     parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
     current_inner: Optional[Program]  # represents a Program as bytes
-    temp_coin: Optional[Coin]  # partially recovered wallet uses this to hold info
+    temp_coin: Optional[Coin]  # partially recovered wallet uses these to hold info
+    temp_puzhash: Optional[bytes32]
+    temp_pubkey: Optional[bytes]
