@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { t } from '@lingui/macro';
 import { RootState } from '../../modules/rootReducer';
 
-const CRITICAL_HEIGHT = 4608*42;
+const CRITICAL_HEIGHT = 4608 * 30;
 
 export default function AppTimeBomb() {
   const [showed, setShowed] = useState<boolean>(false);
