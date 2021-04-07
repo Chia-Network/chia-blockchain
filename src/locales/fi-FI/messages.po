@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-03 20:03\n"
+"PO-Revision-Date: 2021-04-07 21:47\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -619,7 +619,7 @@ msgstr "Kaikkien farmien sisältämien plot-tiedostojen arvoitu yhteiskoko"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "Jätä pois lopullinen hakemisto"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -1494,7 +1494,7 @@ msgstr "Kirjaudu"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Ei lisää lopullista hakemistoa harvesteriin farmaroitavaksi"
 
 #: src/electron/main.tsx:410
 msgid "Speech"
@@ -2036,3 +2036,4 @@ msgstr "{currencyCode} Chioja Farmaroitu"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Transaktioveloitukset Käyttäjälle"
+
