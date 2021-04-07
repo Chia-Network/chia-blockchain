@@ -1943,6 +1943,10 @@ msgstr "Noodin ei tarvitse olla synkronissa tai yhteydessä plotataksesi. Plotta
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Sinulla on {0}% verkon tila-avaruudesta, joten yhden lohkon farmaroinnin odotusarvo on {expectedTimeToWin}."
 
+#: src/components/app/AppTimeBomb.tsx:16
+msgid "You need to upgrade the Chia application as this version will stop working soon!"
+msgstr ""
+
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
 msgstr "Farmin Yleiskuva"

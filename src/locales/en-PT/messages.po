@@ -1943,6 +1943,10 @@ msgstr "Ye nah need t' be synched or connected t' recruit. Temporary files are c
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Ye have {0}% o' th' manpower o' all pirates, so takin' a ship will take about {expectedTimeToWin} dependin' on yer luck."
 
+#: src/components/app/AppTimeBomb.tsx:16
+msgid "You need to upgrade the Chia application as this version will stop working soon!"
+msgstr ""
+
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
 msgstr "State o' yer lootin'"

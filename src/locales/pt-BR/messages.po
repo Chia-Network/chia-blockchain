@@ -1943,6 +1943,10 @@ msgstr "Você não precisa estar sincronizado ou conectado ao loteamento. Arquiv
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Você tem {0}% do espaço na rede, portanto, o tempo esperado para cultivar um bloco levará {expectedTimeToWin}."
 
+#: src/components/app/AppTimeBomb.tsx:16
+msgid "You need to upgrade the Chia application as this version will stop working soon!"
+msgstr ""
+
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
 msgstr "Visão geral da sua fazenda"
