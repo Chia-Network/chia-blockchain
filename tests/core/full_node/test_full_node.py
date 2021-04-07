@@ -445,7 +445,6 @@ class TestFullNodeProtocol:
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
 
-        tx_per_sec = bt.constants.TX_PER_SEC
         sec_per_block = bt.constants.SUB_SLOT_TIME_TARGET // bt.constants.SLOT_BLOCKS_TARGET
         block_buffer_count = bt.constants.MEMPOOL_BLOCK_BUFFER
         mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)

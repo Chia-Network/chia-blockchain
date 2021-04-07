@@ -36,10 +36,8 @@ testnet_kwargs = {
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Target tx count per sec
-    "TX_PER_SEC": 20,
-    # Size of mempool = 10x the size of block
-    "MEMPOOL_BLOCK_BUFFER": 10,
+    # Size of mempool = 5x the size of block
+    "MEMPOOL_BLOCK_BUFFER": 5,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
     # Targeting twice bitcoin's block size of 1.3MB per block
