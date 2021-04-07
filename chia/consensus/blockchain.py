@@ -414,9 +414,10 @@ class Blockchain(BlockchainInterface):
         if peak is None:
             return []
         recent_rc: List[Tuple[bytes32, uint128]] = []
-        curr = self.try_block_record(peak.prev_hash)
+        curr: Optional[BlockRecord] = peak
         while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
-            recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
+            if curr != peak:
+                recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
             if curr.first_in_sub_slot:
                 assert curr.finished_reward_slot_hashes is not None
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
