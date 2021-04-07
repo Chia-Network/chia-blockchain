@@ -289,7 +289,9 @@ class Timelord:
             for block in remove_unfinished:
                 if block in self.unfinished_blocks:
                     self.unfinished_blocks.remove(block)
-            infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
+                if block in self.overflow_blocks:
+                    self.overflow_blocks.remove(block)
+                infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
             log.info(
                 f"Total unfinished blocks: {self.total_unfinished}. "
                 f"Total infused blocks: {self.total_infused}. "
@@ -793,9 +795,6 @@ class Timelord:
                     # We've got a new peak, process it.
                     if self.new_peak is not None:
                         await self._handle_new_peak()
-                    # A subslot ended, process it.
-                    if self.new_subslot_end is not None:
-                        await self._handle_subslot_end()
                 # Map free vdf_clients to unspawned chains.
                 await self._map_chains_with_vdf_clients()
                 async with self.lock:
