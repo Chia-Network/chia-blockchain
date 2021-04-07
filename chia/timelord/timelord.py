@@ -291,7 +291,7 @@ class Timelord:
                     self.unfinished_blocks.remove(block)
                 if block in self.overflow_blocks:
                     self.overflow_blocks.remove(block)
-                infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
+            infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
             log.info(
                 f"Total unfinished blocks: {self.total_unfinished}. "
                 f"Total infused blocks: {self.total_infused}. "
