@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-07 09:51\n"
+"PO-Revision-Date: 2021-04-07 21:46\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -769,7 +769,7 @@ msgstr "Chiều cao"
 msgid "Help"
 msgstr "Hỗ trợ"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:58
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Hỗ trợ dịch thuật"
 
@@ -1942,6 +1942,10 @@ msgstr "Bạn không cần phải được đồng bộ hóa hoặc kết nối 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Bạn có {0}% dung lượng trên mạng, vì vậy, việc farm một khối sẽ chiếm {{expectedTimeToWin} trong dự kiến ."
+
+#: src/components/app/AppTimeBomb.tsx:16
+msgid "You need to upgrade the Chia application as this version will stop working soon!"
+msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
