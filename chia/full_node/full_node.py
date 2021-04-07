@@ -1005,7 +1005,7 @@ class FullNode:
         self._state_changed("block")
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
-            await self.weight_proof_handler.create_prev_sub_epoch_segments()
+            asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
     async def respond_unfinished_block(
