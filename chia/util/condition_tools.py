@@ -111,35 +111,43 @@ def created_outputs_for_conditions_dict(
 
 def created_announcements_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin_name: bytes32,
+    input_coin: Coin,
 ) -> List[Announcement]:
     output_announcements = []
-    for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT, []):
-        # TODO: check condition very carefully
-        # (ensure there are the correct number and type of parameters)
-        # maybe write a type-checking framework for conditions
-        # and don't just fail with asserts
+    for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, []):
         message = cvp.vars[0]
-        announcement = Announcement(input_coin_name, message)
+        announcement = Announcement(input_coin.name(), message)
+        output_announcements.append(announcement)
+    for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH, []):
+        message = cvp.vars[0]
+        announcement = Announcement(input_coin.puzzle_hash, message)
         output_announcements.append(announcement)
     return output_announcements
 
 
 def announcements_names_for_npc(npc_list) -> List[bytes32]:
-    announcement_names: List[bytes32] = []
-
+    output_announcements = []
     for npc in npc_list:
-        for coin in created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name):
-            announcement_names.append(coin.name())
-
-    return announcement_names
+        for condition, cvp_list in npc.conditions:
+            if condition == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
+                for cvp in cvp_list:
+                    message = cvp.vars[0]
+                    announcement = Announcement(npc.coin_name, message)
+                    output_announcements.append(announcement.name())
+        for condition, cvp_list in npc.conditions:
+            if condition == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
+                for cvp in cvp_list:
+                    message = cvp.vars[0]
+                    announcement = Announcement(npc.coin_name, message)
+                    output_announcements.append(announcement.name())
+    return output_announcements
 
 
 def created_announcement_names_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin_name: bytes32,
+    input_coin: Coin,
 ) -> List[bytes32]:
-    output = [an.name() for an in created_announcements_for_conditions_dict(conditions_dict, input_coin_name)]
+    output = [an.name() for an in created_announcements_for_conditions_dict(conditions_dict, input_coin)]
     return output
 
 

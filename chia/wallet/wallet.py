@@ -23,7 +23,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_assert_announcement,
     make_assert_my_coin_id_condition,
     make_assert_seconds_now_exceeds_condition,
-    make_create_announcement,
+    make_create_announcement_with_id,
     make_create_coin_condition,
     make_reserve_fee_condition,
 )
@@ -205,7 +205,7 @@ class Wallet:
             condition_list.append(make_reserve_fee_condition(fee))
         if announcements:
             for announcement in announcements:
-                condition_list.append(make_create_announcement(announcement))
+                condition_list.append(make_create_announcement_with_id(announcement))
         if announcements_to_consume:
             for announcement_hash in announcements_to_consume:
                 condition_list.append(make_assert_announcement(announcement_hash))

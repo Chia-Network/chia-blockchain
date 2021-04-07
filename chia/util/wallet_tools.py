@@ -26,7 +26,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_assert_height_now_exceeds_condition,
     make_assert_my_coin_id_condition,
     make_assert_seconds_now_exceeds_condition,
-    make_create_announcement,
+    make_create_announcement_with_id,
     make_create_coin_condition,
     make_reserve_fee_condition,
     make_assert_my_parent_id,
@@ -98,8 +98,8 @@ class WalletTool:
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN:
                     ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
-                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT:
-                    ret.append(make_create_announcement(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
+                    ret.append(make_create_announcement_with_id(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:

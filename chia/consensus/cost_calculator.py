@@ -49,8 +49,8 @@ def calculate_cost_of_program(
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.RESERVE_FEE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.RESERVE_FEE.value
-            elif condition is ConditionOpcode.CREATE_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_ANNOUNCEMENT.value
+            elif condition is ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_ANNOUNCEMENT_WITH_ID.value
             elif condition is ConditionOpcode.ASSERT_ANNOUNCEMENT:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_ANNOUNCEMENT.value
             else:

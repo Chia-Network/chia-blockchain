@@ -33,8 +33,8 @@ def make_assert_announcement(announcement_hash):
     return [ConditionOpcode.ASSERT_ANNOUNCEMENT, announcement_hash]
 
 
-def make_create_announcement(message):
-    return [ConditionOpcode.CREATE_ANNOUNCEMENT, message]
+def make_create_announcement_with_id(message):
+    return [ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, message]
 
 
 def make_assert_my_parent_id(parent_id):

@@ -26,7 +26,7 @@ class CoinSolution(Streamable):
         return additions_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)
 
     def announcements(self) -> List[Announcement]:
-        return announcements_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)
+        return announcements_for_solution(self.coin, self.puzzle_reveal, self.solution)
 
     def announcement_names(self) -> List[bytes32]:
-        return announcement_names_for_solution(self.coin.name(), self.puzzle_reveal, self.solution)
+        return announcement_names_for_solution(self.coin, self.puzzle_reveal, self.solution)

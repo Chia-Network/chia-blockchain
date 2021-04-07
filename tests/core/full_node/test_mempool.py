@@ -473,7 +473,7 @@ class TestMempool:
 
         dic = {cvp.opcode: [cvp]}
 
-        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_ANNOUNCEMENT, [bytes("test", "utf-8")])
+        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, [bytes("test", "utf-8")])
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
 
@@ -517,7 +517,7 @@ class TestMempool:
 
         dic = {cvp.opcode: [cvp]}
 
-        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_ANNOUNCEMENT, [bytes(0x80)])
+        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, [bytes(0x80)])
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
 
@@ -562,7 +562,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         cvp2 = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT,
+            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
             [bytes("wrong test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
@@ -609,7 +609,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         cvp2 = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT,
+            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
             [bytes("test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
