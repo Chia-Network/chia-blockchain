@@ -151,6 +151,7 @@ class FullNode:
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
+            await self.weight_proof_handler.create_sub_epoch_segments()
 
     def set_server(self, server: ChiaServer):
         self.server = server
