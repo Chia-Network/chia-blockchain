@@ -135,10 +135,10 @@ def announcements_names_for_npc(npc_list) -> List[bytes32]:
                     announcement = Announcement(npc.coin_name, message)
                     output_announcements.append(announcement.name())
         for condition, cvp_list in npc.conditions:
-            if condition == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
+            if condition == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
-                    announcement = Announcement(npc.coin_name, message)
+                    announcement = Announcement(npc.puzzle_hash, message)
                     output_announcements.append(announcement.name())
     return output_announcements
 
