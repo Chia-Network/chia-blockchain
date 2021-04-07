@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-06 21:47\n"
+"PO-Revision-Date: 2021-04-07 03:52\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -121,7 +121,7 @@ msgstr "初始代幣數量"
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "您確要刪除這個耕地嗎？此耕地將無法尋回。"
+msgstr "你確要刪除這個耕地嗎？此耕地將無法尋回。"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -129,7 +129,7 @@ msgstr "您確定要斷線嗎？"
 
 #: src/electron-starter.js:140
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "您確定要退出？耕地和種田將會停止。"
+msgstr "你確定要退出？耕地規劃和耕種將會停止。"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -137,7 +137,7 @@ msgstr "您確定要退出？耕地和種田將會停止。"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "您確定 k 的大小為 {plotSize}?"
+msgstr "你確定 k 的大小為 {plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -161,7 +161,7 @@ msgstr "基礎塊農獎勵數量"
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "以下是目前的區塊挑戰。您可能會或可能不會有這些挑戰的空間證明。這些區塊目前不包含時間證明。"
+msgstr "以下是目前的區塊挑戰。你可能會或可能不會有這些挑戰的空間證明。這些區塊目前不包含時間證明。"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
@@ -214,7 +214,7 @@ msgstr "瀏覽"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr "但您目前耕種 <0/>"
+msgstr "但你目前耕種 <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -440,7 +440,7 @@ msgstr "建立備份"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr "建立一個新的私人鑰匙"
+msgstr "建立一個新的私鑰"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
@@ -456,11 +456,11 @@ msgstr "建立使用者錢包"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr "以顏色建立錢包"
+msgstr "建立有色代幣錢包"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr "用已有的顏色去建立錢包"
+msgstr "用已有的有色代幣去建立錢包"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -480,7 +480,7 @@ msgstr "目前貿易狀態"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr "危險：永久刪除私人鑰匙"
+msgstr "危險：將永久刪除私鑰"
 
 #: src/components/wallet/Wallets.tsx:48
 msgid "DID Wallet"
@@ -517,19 +517,19 @@ msgstr "刪除耕地"
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr "刪除全部鑰匙"
+msgstr "刪除全部金鑰"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr "刪除鑰匙"
+msgstr "刪除金鑰"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "刪除全部鑰匙將會永久從您的電腦中移除，請確保您有備份。您確定要繼續？"
+msgstr "刪除全部金鑰將會永久從你的電腦中移除，請確保你有備份。你確定要繼續？"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "刪除此鑰匙將會永久從您的電腦中移除，請確保您有備份。您確定要繼續？"
+msgstr "刪除此金鑰將會永久從你的電腦中移除，請確保你有備份。你確定要繼續？"
 
 #: src/electron-starter.js:244
 msgid "Developer"
@@ -546,7 +546,7 @@ msgstr "難度"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "若您的暫存目錄位於高速儲存設備如固態硬碟 SSD ，或您需要降低每個執行序的記憶體需求，禁用 bitfield 耕地。啟用 bitfield 耕地可以減少約 20％總寫入量。"
+msgstr "若你的暫存目錄位於高速儲存設備如固態硬碟 SSD ，或你需要降低每個執行序的記憶體需求，禁用 bitfield 耕地。啟用 bitfield 耕地可以減少約 20％總寫入量。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -567,7 +567,7 @@ msgstr "分散式識別選項"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "您有已存在的耕地在本機上？ <0>加入耕地目錄</0>"
+msgstr "你有已存在的耕地在本機上？ <0>加入耕地目錄</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -588,7 +588,7 @@ msgstr "編輯"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "輸入您已存的 24 字助記符號以復原您的 Chia 錢包。"
+msgstr "輸入你已存的 24 字助記符號以復原您的 Chia 錢包。"
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -633,25 +633,25 @@ msgstr "耕種"
 
 #: src/components/block/Block.jsx:249
 msgid "Farmer Puzzle Hash"
-msgstr "農夫拼圖雜湊值"
+msgstr "塊農拼圖雜湊值"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr "農夫獎勵地址"
+msgstr "塊農獎勵地址"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "農夫目前未連線"
+msgstr "塊農目前未連線"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "農夫未運作"
+msgstr "塊農未運作"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr "農夫可通過在網路上保證空閒的空間來幫助保護交易，從而獲得區塊獎勵和交易費。這就是新增農地後耕種的方式。　<0>了解詳情</0>"
+msgstr "塊農可通過在網路上承諾閒置的空間來幫助保護交易，從而獲得區塊獎勵和交易費。這就是新增耕地後耕種的地方。　<0>了解詳情</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
@@ -745,7 +745,7 @@ msgstr "生成新顏色"
 
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr "層及式確定性鑰匙是一種公鑰/私鑰格式，一個私鑰可以具有幾乎無限數量的不同公鑰（以此類推，同錢包接收地址），最終所有這些公鑰都將回朔於一個私鑰使用／花用。"
+msgstr "層及式確定性金鑰是一種公鑰/私鑰格式，一個私鑰可以具有幾乎無限數量的不同公鑰（以此類推，同錢包接收地址），最終所有這些公鑰都將回朔於一個私鑰使用／花用。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -1207,7 +1207,7 @@ msgstr "已通過篩選耕地"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr "耕地是在您硬碟上劃出的空間，用於耕種來賺取 Chia 。 <0>了解更多</0>"
+msgstr "耕地是在你硬碟上劃出的空間，用於耕種來賺取 Chia 。 <0>了解更多</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
@@ -1615,7 +1615,7 @@ msgstr "暫存資料夾位置"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "你的農夫已連接的完整節點在下面。<0>了解更多</0>"
+msgstr "你的塊農連接上的完整節點列在下方。<0>了解更多</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1644,7 +1644,7 @@ msgstr "VDF（可驗證的延遲函數）數量或此區塊上的時間疊代證
 
 #: src/components/block/Block.jsx:294
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr "在這個區塊的總交易費用。是獎勵給農夫的。"
+msgstr "在這個區塊的總交易費用。是獎勵給塊農的。"
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
@@ -1678,7 +1678,7 @@ msgstr "這是最後的峰值子區塊的時間。"
 
 #: src/components/block/Block.jsx:184
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr "這是農夫建立區塊的時間，這是在用時間證明最終確定之前的時間"
+msgstr "這是塊農建立區塊的時間，這是在用時間證明最終確定之前的時間"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -1686,7 +1686,7 @@ msgstr "這是由你的私鑰控制的目前峰值子區塊中區塊鏈中 Chia 
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "這是總餘額 + 未結餘額：這是在全部未結交易完成後您的餘額。"
+msgstr "這是總餘額 + 未結餘額：這是在全部未結交易完成後你的餘額。"
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
@@ -1809,7 +1809,7 @@ msgstr "唯一識別碼"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr "使用者金鑰"
+msgstr "使用者公鑰"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
