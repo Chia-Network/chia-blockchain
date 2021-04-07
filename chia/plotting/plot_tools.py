@@ -262,8 +262,8 @@ def load_plots(
                 plot_memo_str: str = plot_memo.hex()
                 log.info(f"Memo: {plot_memo_str}")
 
-    with ThreadPoolExecutor(max_workers=48) as executor:
-            executor.map(process_file, all_filenames)
+    with ThreadPoolExecutor(s) as executor:
+        executor.map(process_file, all_filenames)
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
