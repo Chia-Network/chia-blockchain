@@ -59,7 +59,13 @@ def dataclass_from_dict(klass, d):
             return None
         return dataclass_from_dict(get_args(klass)[0], d)
     elif is_type_Tuple(klass):
-        return tuple(dataclass_from_dict(get_args(klass)[0], item) for item in d)
+        # Type is tuple, can have multiple different types inside
+        i = 0
+        klass_properties = []
+        for item in d:
+            klass_properties.append(dataclass_from_dict(klass.__args__[i], item))
+            i = i + 1
+        return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
         fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
@@ -83,7 +89,7 @@ def recurse_jsonify(d):
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
     """
-    if isinstance(d, list):
+    if isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
             if type(item) in unhashable_types or issubclass(type(item), bytes):
@@ -91,6 +97,8 @@ def recurse_jsonify(d):
             if isinstance(item, dict):
                 item = recurse_jsonify(item)
             if isinstance(item, list):
+                item = recurse_jsonify(item)
+            if isinstance(item, tuple):
                 item = recurse_jsonify(item)
             if isinstance(item, Enum):
                 item = item.name
@@ -106,6 +114,8 @@ def recurse_jsonify(d):
             if isinstance(value, dict):
                 d[key] = recurse_jsonify(value)
             if isinstance(value, list):
+                d[key] = recurse_jsonify(value)
+            if isinstance(value, tuple):
                 d[key] = recurse_jsonify(value)
             if isinstance(value, Enum):
                 d[key] = value.name

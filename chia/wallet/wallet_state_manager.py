@@ -53,6 +53,8 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
+from chia.server.server import ChiaServer
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 
 
 class WalletStateManager:
@@ -93,6 +95,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     weight_proof_handler: Any
+    server: ChiaServer
 
     @staticmethod
     async def create(
@@ -100,12 +103,14 @@ class WalletStateManager:
         config: Dict,
         db_path: Path,
         constants: ConsensusConstants,
+        server: ChiaServer,
         name: str = None,
     ):
         self = WalletStateManager()
         self.new_wallet = False
         self.config = config
         self.constants = constants
+        self.server = server
 
         if name:
             self.log = logging.getLogger(name)
@@ -148,22 +153,28 @@ class WalletStateManager:
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
+        wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
             # self.log.info(f"wallet_info {wallet_info}")
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(config, wallet_info)
-                self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-                self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED:
                 wallet = await RLWallet.create(self, wallet_info)
+            elif wallet_info.type == WalletType.DISTRIBUTED_ID:
+                wallet = await DIDWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
@@ -200,6 +211,13 @@ class WalletStateManager:
             # TODO add RL AND DiD WALLETS HERE
             elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.DISTRIBUTED_ID:
+                wallet = await DIDWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -296,6 +314,33 @@ class WalletStateManager:
             await self.puzzle_store.add_derivation_paths(derivation_paths)
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+
+    async def update_wallet_puzzle_hashes(self, wallet_id):
+        derivation_paths: List[DerivationRecord] = []
+        target_wallet = self.wallets[wallet_id]
+        last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        if unused is None:
+            # This handles the case where the database has entries but they have all been used
+            unused = await self.puzzle_store.get_last_derivation_path()
+            if unused is None:
+                # This handles the case where the database is empty
+                unused = uint32(0)
+        for index in range(unused, last):
+            pubkey: G1Element = self.get_public_key(uint32(index))
+            puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+            puzzlehash: bytes32 = puzzle.get_tree_hash()
+            self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
+            derivation_paths.append(
+                DerivationRecord(
+                    uint32(index),
+                    puzzlehash,
+                    pubkey,
+                    target_wallet.wallet_info.type,
+                    uint32(target_wallet.wallet_info.id),
+                )
+            )
+        await self.puzzle_store.add_derivation_paths(derivation_paths)
 
     async def get_unused_derivation_record(self, wallet_id: uint32) -> DerivationRecord:
         """
@@ -659,8 +704,8 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record)
 
-        if wallet_type == WalletType.COLOURED_COIN:
-            wallet: CCWallet = self.wallets[wallet_id]
+        if wallet_type == WalletType.COLOURED_COIN or wallet_type == WalletType.DISTRIBUTED_ID:
+            wallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.blockchain.height_to_hash(height)
             block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
@@ -964,6 +1009,29 @@ class WalletStateManager:
     async def add_new_wallet(self, wallet: Any, wallet_id: int):
         self.wallets[uint32(wallet_id)] = wallet
         await self.create_more_puzzle_hashes()
+
+    # search through the blockrecords and return the most recent coin to use a given puzzlehash
+    async def search_blockrecords_for_puzzlehash(self, puzzlehash: bytes32):
+        header_hash_of_interest = None
+        heighest_block_height = 0
+        peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        if peak is None:
+            return None, None
+        peak_block: Optional[HeaderBlockRecord] = await self.blockchain.block_store.get_header_block_record(
+            peak.header_hash
+        )
+        while peak_block is not None:
+            tx_filter = PyBIP158([b for b in peak_block.header.transactions_filter])
+            if tx_filter.Match(bytearray(puzzlehash)) and peak_block.height > heighest_block_height:
+                header_hash_of_interest = peak_block.header_hash
+                heighest_block_height = peak_block.height
+                break
+            else:
+                peak_block = await self.blockchain.block_store.get_header_block_record(
+                    peak_block.header.prev_header_hash
+                )
+
+        return heighest_block_height, header_hash_of_interest
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
         if self.peak is None:

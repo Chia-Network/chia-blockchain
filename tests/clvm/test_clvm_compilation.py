@@ -24,6 +24,8 @@ wallet_program_files = set(
         "chia/wallet/puzzles/rl_aggregation.clvm",
         "chia/wallet/puzzles/rl.clvm",
         "chia/wallet/puzzles/sha256tree_module.clvm",
+        "chia/wallet/puzzles/singleton_top_layer.clvm",
+        "chia/wallet/puzzles/did_innerpuz.clvm",
     ]
 )
 
