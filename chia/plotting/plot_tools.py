@@ -153,34 +153,31 @@ def load_plots(
     all_filenames: List[Path] = []
     for paths in plot_filenames.values():
         all_filenames += paths
-    total_size = 0
     new_provers: Dict[Path, PlotInfo] = {}
     plot_ids: Set[bytes32] = set()
 
     if match_str is not None:
         log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
 
-    def process_file(filename):
-        nonlocal total_size
+    def process_file(filename: Path) -> int:
         nonlocal changed
         filename_str = str(filename)
         if match_str is not None and match_str not in filename_str:
-            return
+            return 0
         if filename.exists():
             if filename in failed_to_open_filenames and (time.time() - failed_to_open_filenames[filename]) < 1200:
                 # Try once every 20 minutes to open the file
-                return
+                return 0
             if filename in provers:
                 try:
                     stat_info = filename.stat()
                 except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
-                    return
+                    return 0
                 if stat_info.st_mtime == provers[filename].time_modified:
-                    total_size += stat_info.st_size
                     new_provers[filename] = provers[filename]
                     plot_ids.add(provers[filename].prover.get_id())
-                    return
+                    return stat_info.st_size
             try:
                 prover = DiskProver(str(filename))
 
@@ -195,11 +192,11 @@ def load_plots(
                         f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
                         f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                     )
-                    return
+                    return 0
 
                 if prover.get_id() in plot_ids:
                     log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
-                    return
+                    return 0
 
                 (
                     pool_public_key_or_puzzle_hash,
@@ -212,7 +209,7 @@ def load_plots(
                     log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")
                     no_key_filenames.add(filename)
                     if not open_no_key_filenames:
-                        return
+                        return 0
 
                 if isinstance(pool_public_key_or_puzzle_hash, G1Element):
                     pool_public_key = pool_public_key_or_puzzle_hash
@@ -230,7 +227,7 @@ def load_plots(
                     log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
                     no_key_filenames.add(filename)
                     if not open_no_key_filenames:
-                        return
+                        return 0
 
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
@@ -244,13 +241,12 @@ def load_plots(
                     stat_info.st_mtime,
                 )
                 plot_ids.add(prover.get_id())
-                total_size += stat_info.st_size
                 changed = True
             except Exception as e:
                 tb = traceback.format_exc()
                 log.error(f"Failed to open file {filename}. {e} {tb}")
                 failed_to_open_filenames[filename] = int(time.time())
-                return
+                return 0
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
             if show_memo:
@@ -262,8 +258,10 @@ def load_plots(
                 plot_memo_str: str = plot_memo.hex()
                 log.info(f"Memo: {plot_memo_str}")
 
+            return stat_info.st_size
+
     with ThreadPoolExecutor() as executor:
-        executor.map(process_file, all_filenames)
+        total_size = sum(executor.map(process_file, all_filenames))
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
