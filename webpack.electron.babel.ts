@@ -1,4 +1,5 @@
 import path from 'path';
+import CopyPlugin from 'copy-webpack-plugin';
 
 export default {
   resolve: {
@@ -7,6 +8,7 @@ export default {
   devtool: 'source-map',
   entry: './src/electron/main.ts',
   target: 'electron-main',
+  stats: 'errors-only',
   module: {
     rules: [
       {
@@ -22,4 +24,12 @@ export default {
     path: path.resolve(__dirname, './build/electron'),
     filename: '[name].js',
   },
+  plugins: [
+    new CopyPlugin({
+      patterns: [{ 
+        from: path.resolve(__dirname, './src/electron/preload.js'),
+        to: path.resolve(__dirname, './build/electron'),
+      }],
+    }),
+  ],
 };

@@ -49,13 +49,20 @@ export default {
   context: CONTEXT,
   devtool: DEV ? 'inline-source-map' : 'source-map',
   entry: path.join(CONTEXT, '/src/index'),
-  target: 'electron-main',
-  // stats: 'errors-only', 
+  target: 'electron-renderer',
+  stats: 'errors-only',
+  devServer: DEV ? {
+    contentBase: path.join(__dirname, '../dist/renderer'),
+    historyApiFallback: true,
+    compress: true,
+    hot: true,
+    port: PORT,
+    publicPath: '/',
+  } : undefined,
   output: {
-    filename: DEV ? '[name].js' : '[name]-[contenthash].js',
-    chunkFilename: DEV ? '[name].js' : '[name]-[contenthash].js',
-    path: path.join(CONTEXT, '/build'),
-    // publicPath: './public/js/',
+    path: path.resolve(__dirname, './build/renderer'),
+    filename: 'js/[name].js',
+    publicPath: './',
   },
   externals: {
     electron: 'electron',
@@ -118,7 +125,6 @@ export default {
     }),
     new HtmlWebpackPlugin({
       template: './src/index.html',
-      filename: path.join(__dirname, '/build/index.html'),
     }),
     DEV && new ReactRefreshWebpackPlugin(),
   ].filter(Boolean),
@@ -167,22 +173,4 @@ export default {
       }],
     }],
   },
-  devServer: DEV ? {
-    hot: true,
-    // open: true,
-    host: '0.0.0.0',
-    overlay: true,
-    disableHostCheck: true,
-    // public: `http://local.chia.net:${PORT}`,
-    publicPath: '/public/js',
-    port: PORT,
-    headers: { 'Access-Control-Allow-Origin': '*' },
-    /*
-    historyApiFallback: {
-      rewrites: [
-        { from: /^\//, to: '/build/index.html' },
-      ],
-    },
-    */
-  } : undefined,
 };

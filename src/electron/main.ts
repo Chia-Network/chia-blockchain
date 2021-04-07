@@ -100,13 +100,15 @@ if (!setupEvents.handleSquirrelEvent()) {
         );
       }
 
-      var startUrl =
-        process.env.ELECTRON_START_URL ||
-        url.format({
-          pathname: path.join(__dirname, "/../index.html"),
-          protocol: "file:",
-          slashes: true
-        });
+      var startUrl = process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3000'
+        : url.format({
+            pathname: path.join(__dirname, "/../renderer/index.html"),
+            protocol: "file:",
+            slashes: true,
+          });
+      
+      console.log('startUrl', startUrl);
 
       mainWindow.loadURL(startUrl);
 
