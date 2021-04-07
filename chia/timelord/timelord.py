@@ -237,6 +237,8 @@ class Timelord:
                 new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
                 # Does not add duplicates, or blocks that we cannot infuse
                 if new_block_iters and new_block_iters not in self.iters_to_submit[Chain.CHALLENGE_CHAIN]:
+                    if block not in self.unfinished_blocks:
+                        self.total_unfinished += 1
                     new_unfinished_blocks.append(block)
                     for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
                         self.iters_to_submit[chain].append(new_block_iters)
