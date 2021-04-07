@@ -841,6 +841,7 @@ class WalletRpcApi:
         ).hex()
         return {
             "success": True,
+            "wallet_id": wallet_id,
             "my_did": my_did,
             "coin_name": coin_name,
             "newpuzhash": newpuzhash,
