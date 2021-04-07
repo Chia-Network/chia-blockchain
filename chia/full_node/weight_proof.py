@@ -296,7 +296,7 @@ class WeightProofHandler:
             curr = header_blocks[self.blockchain.height_to_hash(height)]
             if curr is None:
                 return None
-        log.info(f"next sub epoch starts at {height}")
+        log.debug(f"next sub epoch starts at {height}")
         return segments
 
     async def get_prev_two_slots_height(self, se_start: BlockRecord) -> uint32:
