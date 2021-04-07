@@ -13,13 +13,13 @@ if (!setupEvents.handleSquirrelEvent()) {
   } = require("electron");
   const openAboutWindow = require("about-window").default;
   const path = require("path");
-  const dev_config = require("./dev_config");
-  const chiaEnvironment = require("./util/chiaEnvironment");
-  const chiaConfig = require("./util/config");
-  const local_test =  require("./config/config").local_test;
+  const dev_config = require("../dev_config");
+  const chiaEnvironment = require("../util/chiaEnvironment");
+  const chiaConfig = require("../util/config");
+  const local_test =  require("../config/config").local_test;
   const url = require("url");
   const os = require("os");
-  const i18n = require("./config/locales");
+  const i18n = require("../config/locales");
 
   const ensureSingleInstance = () => {
     const gotTheLock = app.requestSingleInstanceLock();
@@ -103,7 +103,7 @@ if (!setupEvents.handleSquirrelEvent()) {
       var startUrl =
         process.env.ELECTRON_START_URL ||
         url.format({
-          pathname: path.join(__dirname, "/../build/index.html"),
+          pathname: path.join(__dirname, "/../index.html"),
           protocol: "file:",
           slashes: true
         });
