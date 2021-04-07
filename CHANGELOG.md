@@ -16,7 +16,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 
 - An incorrect merge brought in unreleased features and broke `chia keys`.
-- Omitted from the 1.0.2 changelog, we fixed one crash in harvester with the release of chaipos 1.0.0 as well.
+- Omitted from the 1.0.2 changelog, we fixed one crash in harvester with the release of chiapos 1.0.0 as well.
 
 ## 1.0.2 Chia Blockchain 2021-03-30
 
