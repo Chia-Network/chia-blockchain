@@ -223,10 +223,10 @@ class WeightProofHandler:
         return
 
     async def create_sub_epoch_segments(self):
-        log.debug("create prev create_sub_epoch_segments")
+        log.debug("start create_sub_epoch_segments")
         """
-        Creates a weight proof object
-         """
+        make sure all segments are saved in database
+        """
         assert self.blockchain is not None
         sub_epoch_segments: List[SubEpochChallengeSegment] = []
         peak_height = self.blockchain.get_peak_height()
