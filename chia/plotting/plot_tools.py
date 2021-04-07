@@ -4,6 +4,7 @@ import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
+from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
@@ -159,25 +160,27 @@ def load_plots(
     if match_str is not None:
         log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
 
-    for filename in all_filenames:
+    def process_file(filename):
+        nonlocal total_size
+        nonlocal changed
         filename_str = str(filename)
         if match_str is not None and match_str not in filename_str:
-            continue
+            return
         if filename.exists():
             if filename in failed_to_open_filenames and (time.time() - failed_to_open_filenames[filename]) < 1200:
                 # Try once every 20 minutes to open the file
-                continue
+                return
             if filename in provers:
                 try:
                     stat_info = filename.stat()
                 except Exception as e:
                     log.error(f"Failed to open file {filename}. {e}")
-                    continue
+                    return
                 if stat_info.st_mtime == provers[filename].time_modified:
                     total_size += stat_info.st_size
                     new_provers[filename] = provers[filename]
                     plot_ids.add(provers[filename].prover.get_id())
-                    continue
+                    return
             try:
                 prover = DiskProver(str(filename))
 
@@ -192,11 +195,11 @@ def load_plots(
                         f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
                         f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                     )
-                    continue
+                    return
 
                 if prover.get_id() in plot_ids:
                     log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
-                    continue
+                    return
 
                 (
                     pool_public_key_or_puzzle_hash,
@@ -209,7 +212,7 @@ def load_plots(
                     log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")
                     no_key_filenames.add(filename)
                     if not open_no_key_filenames:
-                        continue
+                        return
 
                 if isinstance(pool_public_key_or_puzzle_hash, G1Element):
                     pool_public_key = pool_public_key_or_puzzle_hash
@@ -227,7 +230,7 @@ def load_plots(
                     log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
                     no_key_filenames.add(filename)
                     if not open_no_key_filenames:
-                        continue
+                        return
 
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
@@ -247,7 +250,7 @@ def load_plots(
                 tb = traceback.format_exc()
                 log.error(f"Failed to open file {filename}. {e} {tb}")
                 failed_to_open_filenames[filename] = int(time.time())
-                continue
+                return
             log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
             if show_memo:
@@ -258,6 +261,9 @@ def load_plots(
                     plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
                 plot_memo_str: str = plot_memo.hex()
                 log.info(f"Memo: {plot_memo_str}")
+
+    with ThreadPoolExecutor(max_workers=48) as executor:
+            executor.map(process_file, all_filenames)
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
