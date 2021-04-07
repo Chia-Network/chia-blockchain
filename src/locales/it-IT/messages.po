@@ -769,7 +769,7 @@ msgstr "Altezza"
 msgid "Help"
 msgstr "Aiuto"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:58
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Aiuta a tradurre"
 
@@ -2003,4 +2003,3 @@ msgstr "{currencyCode} Chia Farmati in Totale"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Tasse Transazione Utente"
-

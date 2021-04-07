@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
-import { deDE, enUS, zhCN, esES, frFR, fiFI, itIT, jaJP, nlNL, ptPT, plPL, roRO, ruRU, skSK, svSE } from '@material-ui/core/locale';
+import { deDE, enUS, zhCN, esES, frFR, fiFI, itIT, jaJP, nlNL, ptBR, ptPT, plPL, roRO, ruRU, skSK, svSE } from '@material-ui/core/locale';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
 import { ConnectedRouter } from 'connected-react-router';
@@ -38,6 +38,8 @@ function localeToMaterialLocale(locale: string): object {
       return fiFI;
     case 'pl-PL':
       return plPL;
+    case 'pt-BR':
+      return ptBR;
     case 'pt-PT':
       return ptPT;
     case 'ro-RO':
