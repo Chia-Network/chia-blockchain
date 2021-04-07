@@ -17,6 +17,7 @@ import './App.css';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
 import i18n from '../../config/locales';
+import TimeBomb from './AppTimeBomb';
 
 function localeToMaterialLocale(locale: string): object {
   switch (locale) {
@@ -99,6 +100,7 @@ export default function App() {
         <I18nProvider i18n={i18n}>
           <WebSocketConnection host={daemon_uri}>
             <ThemeProvider theme={theme}>
+              <TimeBomb />
               <AppRouter />
               <AppModalDialogs />
               <AppLoading />

@@ -19,6 +19,7 @@ type FullNodeState = {
       sync_tip_height: number;
     };
     peak?: {
+      height: number;
       foliage_transaction_block: FoliageTransactionBlock;
       foliage: Foliage;
     };
