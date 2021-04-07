@@ -10,7 +10,7 @@
     "start": "cross-env NODE_ENV=development webpack serve --config ./webpack.react.babel.ts",
     "dev:electron": "cross-env NODE_ENV=development webpack --config webpack.electron.babel.ts --mode development && electron .",
     "dev:react": "cross-env NODE_ENV=development webpack serve --config webpack.react.babel.ts --mode development",
-    "dev": "npm run locale && npm run dev:react & npm run dev:electron",
+    "dev": "npm run locale && (npm run dev:react & npm run dev:electron)",
     "build:electron": "cross-env NODE_ENV=production webpack --config ./webpack.electron.babel.ts",
     "build:react": "cross-env NODE_ENV=production webpack --config ./webpack.react.babel.ts",
     "build": "npm run locale && npm run build:electron && npm run build:react",
