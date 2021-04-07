@@ -33,7 +33,7 @@ class WalletTransactionStore:
             (
                 "CREATE TABLE IF NOT EXISTS transaction_record("
                 " transaction_record blob,"
-                " bundle_id text PRIMARY KEY,"
+                " bundle_id text PRIMARY KEY,"  # NOTE: bundle_id is being stored as bytes, not hex
                 " confirmed_at_height bigint,"
                 " created_at_time bigint,"
                 " to_puzzle_hash text,"
@@ -95,7 +95,7 @@ class WalletTransactionStore:
             "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 bytes(record),
-                record.name,
+                record.name,  # NOTE: bundle_id is being stored as bytes, not hex
                 record.confirmed_at_height,
                 record.created_at_time,
                 record.to_puzzle_hash.hex(),
@@ -257,7 +257,9 @@ class WalletTransactionStore:
         """
         if tx_id in self.tx_record_cache:
             return self.tx_record_cache[tx_id]
-        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (tx_id.hex(),))
+
+        # NOTE: bundle_id is being stored as bytes, not hex
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (tx_id,))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
