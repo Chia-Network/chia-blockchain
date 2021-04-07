@@ -1,31 +1,28 @@
+import { app, dialog, shell, ipcMain, BrowserWindow, Menu } from 'electron';
+import path from 'path';
+import url from 'url';
+import os from 'os';
+import openAboutWindow from 'about-window';
 //handle setupevents as quickly as possible
-const setupEvents = require("./setupEvents");
+import handleSquirrelEvent from './handleSquirrelEvent';
+import config from '../config/config';
+import dev_config from '../dev_config';
+import chiaEnvironment from '../util/chiaEnvironment';
+import chiaConfig from '../util/config';
+import i18n from '../config/locales';
+import icon from '../assets/img/chia_circle.png';
 
-if (!setupEvents.handleSquirrelEvent()) {
+console.log('icon', path.join(__dirname, icon));
+
+const { local_test } = config;
+
+if (!handleSquirrelEvent()) {
   // squirrel event handled and app will exit in 1000ms, so don't do anything else
-  const {
-    app,
-    dialog,
-    shell,
-    ipcMain,
-    BrowserWindow,
-    Menu
-  } = require("electron");
-  const openAboutWindow = require("about-window").default;
-  const path = require("path");
-  const dev_config = require("../dev_config");
-  const chiaEnvironment = require("../util/chiaEnvironment");
-  const chiaConfig = require("../util/config");
-  const local_test =  require("../config/config").local_test;
-  const url = require("url");
-  const os = require("os");
-  const i18n = require("../config/locales");
-
   const ensureSingleInstance = () => {
     const gotTheLock = app.requestSingleInstanceLock();
 
     if (!gotTheLock) {
-      console.log("Second instance. Quitting.");
+      console.log('Second instance. Quitting.');
       app.quit();
       return false;
     } else {
@@ -46,7 +43,7 @@ if (!setupEvents.handleSquirrelEvent()) {
   const ensureCorrectEnvironment = () => {
     // check that the app is either packaged or running in the python venv
     if (!chiaEnvironment.guessPackaged() && !('VIRTUAL_ENV' in process.env)) {
-      console.log("App must be installed or in venv");
+      console.log('App must be installed or in venv');
       app.quit();
       return false;
     }
@@ -54,7 +51,7 @@ if (!setupEvents.handleSquirrelEvent()) {
     return true;
   };
 
-  let mainWindow = null;  
+  let mainWindow = null;
 
   // if any of these checks return false, don't do any other initialization since the app is quitting
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
@@ -62,9 +59,9 @@ if (!setupEvents.handleSquirrelEvent()) {
     chiaConfig.loadConfig(chiaEnvironment.getChiaVersion());
     global.sharedObj = { local_test: local_test };
 
-    const exitPyProc = e => {};
+    const exitPyProc = (e) => {};
 
-    app.on("will-quit", exitPyProc);
+    app.on('will-quit', exitPyProc);
 
     /*************************************************************
      * window management
@@ -79,40 +76,41 @@ if (!setupEvents.handleSquirrelEvent()) {
         height: 1200,
         minWidth: 500,
         minHeight: 500,
-        backgroundColor: "#ffffff",
+        backgroundColor: '#ffffff',
         show: false,
         webPreferences: {
-          preload: __dirname + "/preload.js",
+          preload: __dirname + '/preload.js',
           nodeIntegration: true,
-          enableRemoteModule: true
-        }
+          enableRemoteModule: true,
+        },
       });
 
       if (dev_config.redux_tool) {
         BrowserWindow.addDevToolsExtension(
-          path.join(os.homedir(), dev_config.redux_tool)
+          path.join(os.homedir(), dev_config.redux_tool),
         );
       }
 
       if (dev_config.react_tool) {
         BrowserWindow.addDevToolsExtension(
-          path.join(os.homedir(), dev_config.react_tool)
+          path.join(os.homedir(), dev_config.react_tool),
         );
       }
 
-      var startUrl = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:3000'
-        : url.format({
-            pathname: path.join(__dirname, "/../renderer/index.html"),
-            protocol: "file:",
-            slashes: true,
-          });
-      
+      var startUrl =
+        process.env.NODE_ENV === 'development'
+          ? 'http://localhost:3000'
+          : url.format({
+              pathname: path.join(__dirname, '/../renderer/index.html'),
+              protocol: 'file:',
+              slashes: true,
+            });
+
       console.log('startUrl', startUrl);
 
       mainWindow.loadURL(startUrl);
 
-      mainWindow.once("ready-to-show", function() {
+      mainWindow.once('ready-to-show', function () {
         mainWindow.show();
       });
 
@@ -126,32 +124,39 @@ if (!setupEvents.handleSquirrelEvent()) {
       // if (!guessPackaged()) {
       //   mainWindow.webContents.openDevTools();
       // }
-      mainWindow.on("close", e => {
+      mainWindow.on('close', (e) => {
         // if the daemon isn't local we aren't going to try to start/stop it
         if (decidedToClose || !chiaConfig.manageDaemonLifetime()) {
           return;
         }
         e.preventDefault();
         if (!isClosing) {
-            isClosing = true;
-            var choice = dialog.showMessageBoxSync({
-              type: "question",
-              buttons: [i18n._(/*i18n*/{id: "No"}), i18n._(/*i18n*/{id: "Yes"})],
-              title: i18n._(/*i18n*/{id: "Confirm"}),
-              message:
-                i18n._(/*i18n*/{id: "Are you sure you want to quit? GUI Plotting and farming will stop."})
-            });
-            if (choice == 0) {
-              isClosing = false;
-              return;
-            }
+          isClosing = true;
+          var choice = dialog.showMessageBoxSync({
+            type: 'question',
+            buttons: [
+              i18n._(/*i18n*/ { id: 'No' }),
+              i18n._(/*i18n*/ { id: 'Yes' }),
+            ],
+            title: i18n._(/*i18n*/ { id: 'Confirm' }),
+            message: i18n._(
+              /*i18n*/ {
+                id:
+                  'Are you sure you want to quit? GUI Plotting and farming will stop.',
+              },
+            ),
+          });
+          if (choice == 0) {
             isClosing = false;
-            decidedToClose = true;
-            mainWindow.webContents.send("exit-daemon");
-            mainWindow.setBounds({ height: 500, width: 500 });
-            ipcMain.on("daemon-exited", (event, args) => {
-              mainWindow.close();
-            });
+            return;
+          }
+          isClosing = false;
+          decidedToClose = true;
+          mainWindow.webContents.send('exit-daemon');
+          mainWindow.setBounds({ height: 500, width: 500 });
+          ipcMain.on('daemon-exited', (event, args) => {
+            mainWindow.close();
+          });
         }
       });
     };
@@ -169,24 +174,24 @@ if (!setupEvents.handleSquirrelEvent()) {
       }
     };
 
-    app.on("ready", appReady);
+    app.on('ready', appReady);
 
-    app.on("window-all-closed", () => {
+    app.on('window-all-closed', () => {
       app.quit();
     });
 
-    ipcMain.on("load-page", (event, arg) => {
+    ipcMain.on('load-page', (_, arg: { file: string; query: string }) => {
       mainWindow.loadURL(
-        require("url").format({
+        require('url').format({
           pathname: path.join(__dirname, arg.file),
-          protocol: "file:",
-          slashes: true
-        }) + arg.query
+          protocol: 'file:',
+          slashes: true,
+        }) + arg.query,
       );
     });
 
-    ipcMain.on("set-locale", (event, locale) => {
-      i18n.activate(locale || 'en-US');
+    ipcMain.on('set-locale', (_, locale: string = 'en-US') => {
+      i18n.activate(locale);
       app.applicationMenu = createMenu();
     });
   }
@@ -194,277 +199,278 @@ if (!setupEvents.handleSquirrelEvent()) {
   const getMenuTemplate = () => {
     const template = [
       {
-        label: i18n._(/*i18n*/{id: "File"}),
+        label: i18n._(/*i18n*/ { id: 'File' }),
         submenu: [
           {
-            role: "quit"
-          }
-        ]
+            role: 'quit',
+          },
+        ],
       },
       {
-        label: i18n._(/*i18n*/{id: "Edit"}),
+        label: i18n._(/*i18n*/ { id: 'Edit' }),
         submenu: [
           {
-            role: "undo"
+            role: 'undo',
           },
           {
-            role: "redo"
+            role: 'redo',
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "cut"
+            role: 'cut',
           },
           {
-            role: "copy"
+            role: 'copy',
           },
           {
-            role: "paste"
+            role: 'paste',
           },
           {
-            role: "delete"
+            role: 'delete',
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "selectall"
-          }
-        ]
+            role: 'selectall',
+          },
+        ],
       },
       {
-        label: i18n._(/*i18n*/{id: "View"}),
+        label: i18n._(/*i18n*/ { id: 'View' }),
         submenu: [
           {
-            role: "reload"
+            role: 'reload',
           },
           {
-            role: "forcereload"
+            role: 'forcereload',
           },
           {
-            label: i18n._(/*i18n*/{id: "Developer"}),
+            label: i18n._(/*i18n*/ { id: 'Developer' }),
             submenu: [
               {
-                label: i18n._(/*i18n*/{id: "Developer Tools"}),
+                label: i18n._(/*i18n*/ { id: 'Developer Tools' }),
                 accelerator:
-                  process.platform === "darwin"
-                    ? "Alt+Command+I"
-                    : "Ctrl+Shift+I",
-                click: () => mainWindow.toggleDevTools()
-              }
-            ]
+                  process.platform === 'darwin'
+                    ? 'Alt+Command+I'
+                    : 'Ctrl+Shift+I',
+                click: () => mainWindow.toggleDevTools(),
+              },
+            ],
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "resetzoom"
+            role: 'resetzoom',
           },
           {
-            role: "zoomin"
+            role: 'zoomin',
           },
           {
-            role: "zoomout"
+            role: 'zoomout',
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            label: i18n._(/*i18n*/{id: "Full Screen"}),
-            type: "checkbox",
-            accelerator: process.platform === "darwin" ? "Ctrl+Command+F" : "F11",
-            click: () => windows.main.toggleFullScreen()
-          }
-        ]
+            label: i18n._(/*i18n*/ { id: 'Full Screen' }),
+            type: 'checkbox',
+            accelerator:
+              process.platform === 'darwin' ? 'Ctrl+Command+F' : 'F11',
+            click: () => windows.main.toggleFullScreen(),
+          },
+        ],
       },
       {
-        label: i18n._(/*i18n*/{id: "Window"}),
+        label: i18n._(/*i18n*/ { id: 'Window' }),
         submenu: [
           {
-            role: "minimize"
+            role: 'minimize',
           },
           {
-            role: "zoom"
+            role: 'zoom',
           },
           {
-            role: "close"
-          }
-        ]
+            role: 'close',
+          },
+        ],
       },
       {
-        label: i18n._(/*i18n*/{id: "Help"}),
-        role: "help",
+        label: i18n._(/*i18n*/ { id: 'Help' }),
+        role: 'help',
         submenu: [
           {
-            label: i18n._(/*i18n*/{id: "Chia Blockchain Wiki"}),
+            label: i18n._(/*i18n*/ { id: 'Chia Blockchain Wiki' }),
             click: () => {
               openExternal(
-                "https://github.com/Chia-Network/chia-blockchain/wiki"
+                'https://github.com/Chia-Network/chia-blockchain/wiki',
               );
-            }
+            },
           },
           {
-            label: i18n._(/*i18n*/{id: "Frequently Asked Questions"}),
+            label: i18n._(/*i18n*/ { id: 'Frequently Asked Questions' }),
             click: () => {
               openExternal(
-                "https://github.com/Chia-Network/chia-blockchain/wiki/FAQ"
+                'https://github.com/Chia-Network/chia-blockchain/wiki/FAQ',
               );
-            }
+            },
           },
           {
-            label: i18n._(/*i18n*/{id: "Release Notes"}),
+            label: i18n._(/*i18n*/ { id: 'Release Notes' }),
             click: () => {
               openExternal(
-                "https://github.com/Chia-Network/chia-blockchain/releases"
+                'https://github.com/Chia-Network/chia-blockchain/releases',
               );
-            }
+            },
           },
           {
-            label: i18n._(/*i18n*/{id: "Contribute on GitHub"}),
+            label: i18n._(/*i18n*/ { id: 'Contribute on GitHub' }),
             click: () => {
               openExternal(
-                "https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md"
+                'https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md',
               );
-            }
+            },
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            label: i18n._(/*i18n*/{id: "Report an Issue..."}),
+            label: i18n._(/*i18n*/ { id: 'Report an Issue...' }),
             click: () => {
               openExternal(
-                "https://github.com/Chia-Network/chia-blockchain/issues"
+                'https://github.com/Chia-Network/chia-blockchain/issues',
               );
-            }
+            },
           },
           {
-            label: i18n._(/*i18n*/{id: "Chat on KeyBase"}),
+            label: i18n._(/*i18n*/ { id: 'Chat on KeyBase' }),
             click: () => {
-              openExternal("https://keybase.io/team/chia_network.public");
-            }
+              openExternal('https://keybase.io/team/chia_network.public');
+            },
           },
           {
-            label: i18n._(/*i18n*/{id: "Follow on Twitter"}),
+            label: i18n._(/*i18n*/ { id: 'Follow on Twitter' }),
             click: () => {
-              openExternal("https://twitter.com/chia_project");
-            }
-          }
-        ]
-      }
+              openExternal('https://twitter.com/chia_project');
+            },
+          },
+        ],
+      },
     ];
 
-    if (process.platform === "darwin") {
+    if (process.platform === 'darwin') {
       // Chia Blockchain menu (Mac)
       template.unshift({
-        label: i18n._(/*i18n*/{id: "Chia"}),
+        label: i18n._(/*i18n*/ { id: 'Chia' }),
         submenu: [
           {
-            label: i18n._(/*i18n*/{id: "About Chia Blockchain"}),
+            label: i18n._(/*i18n*/ { id: 'About Chia Blockchain' }),
             click: () =>
               openAboutWindow({
-                homepage: "https://www.chia.net/",
+                homepage: 'https://www.chia.net/',
                 bug_report_url:
-                  "https://github.com/Chia-Network/chia-blockchain/issues",
-                icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
-                copyright: "Copyright (c) 2021 Chia Network",
-                license: "Apache 2.0"
-              })
+                  'https://github.com/Chia-Network/chia-blockchain/issues',
+                icon_path: path.join(__dirname, icon),
+                copyright: 'Copyright (c) 2021 Chia Network',
+                license: 'Apache 2.0',
+              }),
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "services"
+            role: 'services',
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "hide"
+            role: 'hide',
           },
           {
-            role: "hideothers"
+            role: 'hideothers',
           },
           {
-            role: "unhide"
+            role: 'unhide',
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "quit"
-          }
-        ]
+            role: 'quit',
+          },
+        ],
       });
 
       // File menu (MacOS)
       template.splice(1, 1, {
-        label: i18n._(/*i18n*/{id: "File"}),
+        label: i18n._(/*i18n*/ { id: 'File' }),
         submenu: [
           {
-            role: "close"
-          }
-        ]
+            role: 'close',
+          },
+        ],
       });
 
       // Edit menu (MacOS)
       template[2].submenu.push(
         {
-          type: "separator"
+          type: 'separator',
         },
         {
-          label: i18n._(/*i18n*/{id: "Speech"}),
+          label: i18n._(/*i18n*/ { id: 'Speech' }),
           submenu: [
             {
-              role: "startspeaking"
+              role: 'startspeaking',
             },
             {
-              role: "stopspeaking"
-            }
-          ]
-        }
+              role: 'stopspeaking',
+            },
+          ],
+        },
       );
 
       // Window menu (MacOS)
       template.splice(4, 1, {
-        role: "window",
+        role: 'window',
         submenu: [
           {
-            role: "minimize"
+            role: 'minimize',
           },
           {
-            role: "zoom"
+            role: 'zoom',
           },
           {
-            type: "separator"
+            type: 'separator',
           },
           {
-            role: "front"
-          }
-        ]
+            role: 'front',
+          },
+        ],
       });
     }
 
-    if (process.platform === "linux" || process.platform === "win32") {
+    if (process.platform === 'linux' || process.platform === 'win32') {
       // Help menu (Windows, Linux)
       template[4].submenu.push(
         {
-          type: "separator"
+          type: 'separator',
         },
         {
-          label: i18n._(/*i18n*/{id: "About Chia Blockchain"}),
+          label: i18n._(/*i18n*/ { id: 'About Chia Blockchain' }),
           click: () =>
             openAboutWindow({
-              homepage: "https://www.chia.net/",
+              homepage: 'https://www.chia.net/',
               bug_report_url:
-                "https://github.com/Chia-Network/chia-blockchain/issues",
-              icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
-              copyright: "Copyright (c) 2021 Chia Network",
-              license: "Apache 2.0"
-            })
-        }
+                'https://github.com/Chia-Network/chia-blockchain/issues',
+              icon_path: path.join(__dirname, icon),
+              copyright: 'Copyright (c) 2021 Chia Network',
+              license: 'Apache 2.0',
+            }),
+        },
       );
     }
 

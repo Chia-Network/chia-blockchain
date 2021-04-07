@@ -34,8 +34,8 @@ msgstr ""
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Kombajn je služba bežiaca na stroji, kde sú uložené polia. Farmár a kombajn komunikujú s plným uzlom, aby zistili stav reťaze. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
 
-#: src/electron/main.ts:322
-#: src/electron/main.ts:404
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr ""
 
@@ -127,7 +127,7 @@ msgstr "Naozaj chcete odstrániť pole? Pole nie je možné obnoviť."
 msgid "Are you sure you want to disconnect?"
 msgstr "Naozaj sa chcete odpojiť?"
 
-#: src/electron/main.ts:121
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr ""
 
@@ -259,15 +259,15 @@ msgstr "Výzva"
 msgid "Challenge Hash"
 msgstr "Hash výzvy"
 
-#: src/electron/main.ts:302
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron/main.ts:319
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:269
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
@@ -321,7 +321,7 @@ msgstr "Farebná minca"
 msgid "Coloured Coin Options"
 msgstr "Možnosti farebných mincí"
 
-#: src/electron/main.ts:120
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Potvrdiť"
 
@@ -372,7 +372,7 @@ msgstr "Typ pripojenia"
 msgid "Connections"
 msgstr "Pripojenia"
 
-#: src/electron/main.ts:287
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -531,11 +531,11 @@ msgstr "Po stlačení tlačidla zmazať odstránite natrvalo všetký kľúče z
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
 
-#: src/electron/main.ts:216
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Vývojár"
 
-#: src/electron/main.ts:219
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Nástroje pre vývojárov"
 
@@ -582,7 +582,7 @@ msgstr "Súbor s ponukami presuňte tu"
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron/main.ts:175
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Upraviť"
 
@@ -698,8 +698,8 @@ msgstr "Množstvo odmeny"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:167
-#: src/electron/main.ts:359
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "Súbor"
 
@@ -718,11 +718,11 @@ msgstr "Cieľový adresár"
 msgid "Finished"
 msgstr "Dokončené"
 
-#: src/electron/main.ts:308
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Sledujte na twitteri"
 
-#: src/electron/main.ts:275
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Často kladené otázky (FAQ)"
 
@@ -735,7 +735,7 @@ msgstr "Domov"
 msgid "Full Node Status"
 msgstr "Stav siete"
 
-#: src/electron/main.ts:243
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr ""
 
@@ -765,7 +765,7 @@ msgstr "Poradie hlavičky"
 msgid "Height"
 msgstr "Poradie"
 
-#: src/electron/main.ts:265
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr ""
 
@@ -973,7 +973,7 @@ msgid "Nickname"
 msgstr "Prezývka"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:119
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Nie"
 
@@ -1346,7 +1346,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr "Obnoviť polia"
 
-#: src/electron/main.ts:281
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr ""
 
@@ -1354,7 +1354,7 @@ msgstr ""
 msgid "Rename"
 msgstr "Premenovať"
 
-#: src/electron/main.ts:296
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1487,7 +1487,7 @@ msgstr "Prihlásiť sa"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.ts:370
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr ""
 
@@ -1815,7 +1815,7 @@ msgstr "Používateľov verejný kľúč"
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron/main.ts:207
+#: src/electron/main.ts:216
 msgid "View"
 msgstr ""
 
@@ -1917,7 +1917,7 @@ msgstr "Vitajte! Pre zálohovanie vašej peňaženky sa používajú nasledujúc
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.ts:251
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr ""
 
@@ -1927,7 +1927,7 @@ msgstr "Bez poplatkov"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:119
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Áno"
 

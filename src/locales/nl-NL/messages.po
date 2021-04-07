@@ -34,8 +34,8 @@ msgstr "128 buckets is aanbevolen"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Een 'harvester' is een service op een machine waar plot bestanden opgeslagen zijn. Een 'farmer' en 'harvester' communiceren via jou 'node' met het blockchain netwerk. Je vindt een overzicht van jou geconnecteerde 'harvesters' onderaan. Meer info"
 
-#: src/electron/main.ts:322
-#: src/electron/main.ts:404
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "Over Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Bent U zeker dat u het plot-bestand wil verwijderen? Dit is onomkeerbaar
 msgid "Are you sure you want to disconnect?"
 msgstr "Ben je zeker dat je de verbinding wilt verbreken?"
 
-#: src/electron/main.ts:121
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Ben je zeker dat je wil afsluiten? BUI Plotting en farming zullen stoppen."
 
@@ -259,15 +259,15 @@ msgstr "Uitdaging"
 msgid "Challenge Hash"
 msgstr "Te vinden Hash"
 
-#: src/electron/main.ts:302
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "Chat op KeyBase"
 
-#: src/electron/main.ts:319
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:269
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Gekleurde Munt"
 msgid "Coloured Coin Options"
 msgstr "Opties gekleurde munt"
 
-#: src/electron/main.ts:120
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Bevestig"
 
@@ -372,7 +372,7 @@ msgstr "Verbindingstype"
 msgid "Connections"
 msgstr "Verbindingen"
 
-#: src/electron/main.ts:287
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr "Bijdrage op GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Alle sleutels zullen permanent verwijderd worden op deze computer, zorg 
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "De sleutel zal permanent verwijderd worden op deze computer, zorg dat je een reservekopie hebt. Ben je zeker dat je verder wil gaan?"
 
-#: src/electron/main.ts:216
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Ontwikkelaar"
 
-#: src/electron/main.ts:219
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Ontwikkelaarstools"
 
@@ -582,7 +582,7 @@ msgstr "Drag en drop aanbiedings bestand"
 msgid "Drag and drop your backup file"
 msgstr "Drag en drop van je back-up bestand"
 
-#: src/electron/main.ts:175
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Bewerk"
 
@@ -698,8 +698,8 @@ msgstr "Bedrag vergoeding"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:167
-#: src/electron/main.ts:359
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "Bestand"
 
@@ -718,11 +718,11 @@ msgstr "Finale locatie map"
 msgid "Finished"
 msgstr "Beëindigd"
 
-#: src/electron/main.ts:308
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Volg op Twitter"
 
-#: src/electron/main.ts:275
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Veel gestelde vragen"
 
@@ -735,7 +735,7 @@ msgstr "Volledige Node"
 msgid "Full Node Status"
 msgstr "Status Volledige Node"
 
-#: src/electron/main.ts:243
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "Volledig scherm"
 
@@ -765,7 +765,7 @@ msgstr ""
 msgid "Height"
 msgstr "Hoogte"
 
-#: src/electron/main.ts:265
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "Hulp"
 
@@ -973,7 +973,7 @@ msgid "Nickname"
 msgstr "Bijnaam"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:119
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Geen"
 
@@ -1346,7 +1346,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr "Vernieuw plots"
 
-#: src/electron/main.ts:281
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr "Release Nota's"
 
@@ -1354,7 +1354,7 @@ msgstr "Release Nota's"
 msgid "Rename"
 msgstr "Hernoem"
 
-#: src/electron/main.ts:296
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr "Meld een probleem..."
 
@@ -1487,7 +1487,7 @@ msgstr "Meld aan"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.ts:370
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr "Spraak"
 
@@ -1815,7 +1815,7 @@ msgstr ""
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron/main.ts:207
+#: src/electron/main.ts:216
 msgid "View"
 msgstr "Bekijk"
 
@@ -1917,7 +1917,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.ts:251
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr "Scherm"
 
@@ -1927,7 +1927,7 @@ msgstr "Zonder vergoeding"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:119
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Ja"
 

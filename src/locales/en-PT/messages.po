@@ -34,8 +34,8 @@ msgstr "128 buckets be good fer many"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "A tender be a vessel where crewdogs are actually at. A plunderer 'n tender coordinate wit' a cap'n t' see the state o' the chain. View yer connected tenders below Learn more"
 
-#: src/electron/main.ts:322
-#: src/electron/main.ts:404
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "About Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Be ye sure ye want to let the crewdog go o'er board? Th' scurvy dog cann
 msgid "Are you sure you want to disconnect?"
 msgstr "Be ye sure ye want t' give it up?"
 
-#: src/electron/main.ts:121
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Be ye sure ye want t' give up? GUI crew 'n boardin' will stop."
 
@@ -259,15 +259,15 @@ msgstr "Challenge"
 msgid "Challenge Hash"
 msgstr "Challenge Hash"
 
-#: src/electron/main.ts:302
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "Natter on KeyBase"
 
-#: src/electron/main.ts:319
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:269
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Jinxed Dubloon"
 msgid "Coloured Coin Options"
 msgstr "Jinxed Dubloon Voodoo"
 
-#: src/electron/main.ts:120
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Yarr"
 
@@ -372,7 +372,7 @@ msgstr "Contact type"
 msgid "Connections"
 msgstr "Contacts"
 
-#: src/electron/main.ts:287
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr "Get yerself busy on GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Burnin' all treasure maps will permanently scuttle the treasure maps fro
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Burnin' the treasure map will permanently scuttle the treasure map from yer computer, make sure ye 'ave backups. Are ye sure ye wants t' go on?"
 
-#: src/electron/main.ts:216
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Builder"
 
-#: src/electron/main.ts:219
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Builder Tools"
 
@@ -582,7 +582,7 @@ msgstr "Drag 'n drop offer file"
 msgid "Drag and drop your backup file"
 msgstr "Drag 'n drop yer scribble (backup) file"
 
-#: src/electron/main.ts:175
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Edit"
 
@@ -698,8 +698,8 @@ msgstr "Fees Amount"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:167
-#: src/electron/main.ts:359
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "File"
 
@@ -718,11 +718,11 @@ msgstr "Final folder"
 msgid "Finished"
 msgstr "Done"
 
-#: src/electron/main.ts:308
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Follow on Twitter"
 
-#: src/electron/main.ts:275
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Oftentimes Asked Questions"
 
@@ -735,7 +735,7 @@ msgstr "Captain"
 msgid "Full Node Status"
 msgstr "Report o' yer Cap'n"
 
-#: src/electron/main.ts:243
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "Full Screen"
 
@@ -765,7 +765,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Booty Number"
 
-#: src/electron/main.ts:265
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "Help"
 
@@ -973,7 +973,7 @@ msgid "Nickname"
 msgstr "Nickname"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:119
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Nay"
 
@@ -1346,7 +1346,7 @@ msgstr "Recover DID treasure chest"
 msgid "Refresh Plots"
 msgstr "Roll Call o' Crew"
 
-#: src/electron/main.ts:281
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr "Builder's Notes"
 
@@ -1354,7 +1354,7 @@ msgstr "Builder's Notes"
 msgid "Rename"
 msgstr "Change Name"
 
-#: src/electron/main.ts:296
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr "Speak up fer somethin'..."
 
@@ -1487,7 +1487,7 @@ msgstr "Enter"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Final folder won't be added t' plunderer"
 
-#: src/electron/main.ts:370
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr "Parler"
 
@@ -1815,7 +1815,7 @@ msgstr "Scallywag Pubkey"
 msgid "VDF Sub Slot Iterations"
 msgstr "Shots Fired"
 
-#: src/electron/main.ts:207
+#: src/electron/main.ts:216
 msgid "View"
 msgstr "View"
 
@@ -1917,7 +1917,7 @@ msgstr "Ahoy! Make sure t' scribble down the followin' secret code. Then ye can 
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "When ye 'ave the setup info packet from yer pirate lord, enter it below t' complete yer Rate Limited Treasure Chest:"
 
-#: src/electron/main.ts:251
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr "Porthole"
 
@@ -1927,7 +1927,7 @@ msgstr "Wit' no fees"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:119
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Aye"
 

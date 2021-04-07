@@ -3,10 +3,10 @@
 ## How to use local test and farm locally
 
 If you want to use local farming and not to connect to the network you need to set
-variable REACT_APP_LOCAL_TEST in your .env file. This file is located in the root directory of your chia-blockchain-gui directory.
+variable LOCAL_TEST in your .env file. This file is located in the root directory of your chia-blockchain-gui directory.
 
 ```env
-REACT_APP_LOCAL_TEST=true
+LOCAL_TEST=true
 ```
 
 ## Best practices

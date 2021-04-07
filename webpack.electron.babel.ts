@@ -10,15 +10,33 @@ export default {
   target: 'electron-main',
   stats: 'errors-only',
   module: {
-    rules: [
-      {
-        test: /\.(js|ts|tsx)$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'babel-loader',
-        },
+    rules: [{
+      test: /\.(js|ts|tsx)$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'babel-loader',
       },
-    ],
+    }, {
+      test: /\.(gif|png|jpe?g)$/i,
+      use: ['file-loader', {
+        loader: 'image-webpack-loader',
+        options: {
+          mozjpeg: {
+            progressive: true,
+          },
+          gifsicle: {
+            interlaced: false,
+          },
+          optipng: {
+            optimizationLevel: 4,
+          },
+          pngquant: {
+            quality: [0.75, 0.9],
+            speed: 3,
+          },
+        },
+      }],
+    }],
   },
   output: {
     path: path.resolve(__dirname, './build/electron'),
