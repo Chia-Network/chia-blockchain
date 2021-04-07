@@ -262,7 +262,7 @@ def load_plots(
                 plot_memo_str: str = plot_memo.hex()
                 log.info(f"Memo: {plot_memo_str}")
 
-    with ThreadPoolExecutor(s) as executor:
+    with ThreadPoolExecutor() as executor:
         executor.map(process_file, all_filenames)
 
     log.info(
