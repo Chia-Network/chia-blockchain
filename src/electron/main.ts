@@ -4,6 +4,7 @@ import url from 'url';
 import os from 'os';
 import openAboutWindow from 'about-window';
 //handle setupevents as quickly as possible
+import '../config/env';
 import handleSquirrelEvent from './handleSquirrelEvent';
 import config from '../config/config';
 import dev_config from '../dev_config';
@@ -11,8 +12,6 @@ import chiaEnvironment from '../util/chiaEnvironment';
 import chiaConfig from '../util/config';
 import i18n from '../config/locales';
 import icon from '../assets/img/chia_circle.png';
-
-console.log('icon', path.join(__dirname, icon));
 
 const { local_test } = config;
 

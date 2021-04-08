@@ -66,8 +66,6 @@ export default {
   },
   externals: {
     electron: 'electron',
-    fs: 'fs',
-    ws: 'ws',
   },
   resolve: {
     extensions: ['.wasm', '.mjs', '.ts', '.tsx', '.js', '.jsx', '.json'],
