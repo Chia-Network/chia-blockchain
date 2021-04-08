@@ -11,6 +11,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.full_block import FullBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir
 from tests.setup_nodes import bt, test_constants
 
@@ -21,7 +22,8 @@ async def create_blockchain(constants: ConsensusConstants):
         db_path.unlink()
     connection = await aiosqlite.connect(db_path)
     coin_store = await CoinStore.create(connection)
-    store = await BlockStore.create(connection)
+    wrapper = DBWrapper(connection)
+    store = await BlockStore.create(wrapper)
     bc1 = await Blockchain.create(coin_store, store, constants)
     assert bc1.get_peak() is None
     return bc1, connection, db_path
