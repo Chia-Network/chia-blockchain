@@ -154,6 +154,18 @@ class BlockStore:
         await cursor.close()
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
+    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+        if len(heights) == 0:
+            return []
+        heights_db = tuple(heights)
+        formatted_str = (
+            f'SELECT block from block_records WHERE height in ({"?," * (len(heights_db) - 1)}?) ORDER BY height ASC;'
+        )
+        cursor = await self.db.execute(formatted_str, heights_db)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [BlockRecord.from_bytes(row[0]) for row in rows]
+
     async def get_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[FullBlock]:
         """
         Returns a list of Full Blocks blocks, ordered by the same order in which header_hashes are passed in.
