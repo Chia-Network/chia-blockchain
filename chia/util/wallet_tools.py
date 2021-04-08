@@ -102,7 +102,7 @@ class WalletTool:
                     ret.append(make_create_announcement_with_id(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:
+                if cvp.opcode == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
                     ret.append(make_assert_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
                     ret.append(make_assert_seconds_now_exceeds_condition(cvp.vars[0]))

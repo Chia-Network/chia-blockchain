@@ -30,7 +30,7 @@ def make_reserve_fee_condition(fee):
 
 
 def make_assert_announcement(announcement_hash):
-    return [ConditionOpcode.ASSERT_ANNOUNCEMENT, announcement_hash]
+    return [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, announcement_hash]
 
 
 def make_create_announcement_with_id(message):

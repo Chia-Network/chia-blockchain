@@ -19,7 +19,8 @@ class ConditionOpcode(bytes, enum.Enum):
     CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH = bytes([63])
 
     # assertions: coins & announcements
-    ASSERT_ANNOUNCEMENT = bytes([53])
+    ASSERT_COIN_ANNOUNCEMENT = bytes([53])
+    ASSERT_PUZZLE_ANNOUNCEMENT = bytes([64])
     ASSERT_MY_COIN_ID = bytes([54])
 
     # wall-clock time

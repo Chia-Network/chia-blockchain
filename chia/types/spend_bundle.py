@@ -3,7 +3,6 @@ from typing import List
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.streamable import Streamable, streamable
@@ -39,15 +38,6 @@ class SpendBundle(Streamable):
         for coin_solution in self.coin_solutions:
             items.extend(coin_solution.additions())
         return items
-
-    def announcements(self) -> List[Announcement]:
-        items: List[Announcement] = []
-        for coin_solution in self.coin_solutions:
-            items.extend(coin_solution.announcements())
-        return items
-
-    def announcement_names(self) -> List[bytes32]:
-        return [cs.announcement_names() for cs in self.coin_solutions]
 
     def removals(self) -> List[Coin]:
         """ This should be used only by wallet"""

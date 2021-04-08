@@ -469,7 +469,7 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 
@@ -513,7 +513,7 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), bytes(0x80))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 
@@ -557,7 +557,7 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 
@@ -604,7 +604,7 @@ class TestMempool:
 
         announce = Announcement(coin_1.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_ANNOUNCEMENT, [announce.name()])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
 

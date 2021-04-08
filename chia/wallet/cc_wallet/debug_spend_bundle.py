@@ -89,7 +89,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                     [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, [])
                 )
                 asserted_annoucements.extend(
-                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_ANNOUNCEMENT, [])]
+                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
                 )
                 print()
             else:
