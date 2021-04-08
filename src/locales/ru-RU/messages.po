@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-07 21:47\n"
+"PO-Revision-Date: 2021-04-08 03:49\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -34,8 +34,8 @@ msgstr "128 корзин рекомендуется"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Комбайн - это служба, работающая на машине, на которой фактически хранятся участки. Фермер и комбайн общаются с полным узлом, чтобы увидеть состояние цепи. Просмотрите вашу сеть подключенных комбайнов ниже. <0>Подробнее</0>"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "О программе Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Вы уверены, что хотите удалить участок? 
 msgid "Are you sure you want to disconnect?"
 msgstr "Вы уверены, что хотите отключиться?"
 
-#: src/electron/main.tsx:164
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Вы уверены, что хотите выйти? Засеивание и фарминг будут остановлены."
 
@@ -259,15 +259,15 @@ msgstr "Испытание"
 msgid "Challenge Hash"
 msgstr "Хэш испытания"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "Чат в KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Чиа"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "Блокчейн Chia на Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Цветная Монета"
 msgid "Coloured Coin Options"
 msgstr "Настройки Цветной Монеты"
 
-#: src/electron/main.tsx:162
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Подтвердить"
 
@@ -372,7 +372,7 @@ msgstr "Тип подключения"
 msgid "Connections"
 msgstr "Подключения"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr "Сотрудничать на GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Удаление всех ключей приведет к безвоз�
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Удаление ключа приведет к безвозвратному удалению ключа с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
 
-#: src/electron/main.tsx:260
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Разработчик"
 
-#: src/electron/main.tsx:263
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Инструменты разработчика"
 
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "Сложность"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-#~ msgstr "Отключайте битовое поле при засевании участков, когда ваш временный каталог расположен на быстром хранилище, таком как SSD, или вам нужны более низкие требования к ОЗУ при засевании для каждого процесса. При засевании с включенным битовым полем общее количество операций записи сокращается примерно на 20%."
+msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+msgstr "Отключайте битовое поле при засевании участков, когда ваш временный каталог расположен на быстром хранилище, таком как SSD, или вам нужны более низкие требования к ОЗУ при засевании для каждого процесса. При засевании с включенным битовым полем общее количество операций записи сокращается примерно на 20%."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -582,7 +582,7 @@ msgstr "Перетащите сюда файл с предложением сд�
 msgid "Drag and drop your backup file"
 msgstr "Перетащите файл резервной копии"
 
-#: src/electron/main.tsx:219
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Правка"
 
@@ -604,11 +604,6 @@ msgstr "Ошибка"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Ошибка: не удается отправить чиа на цветной адрес. Пожалуйста, введите адрес chia."
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Estimated Time to Win"
-msgstr ""
-
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Расчетное пространство сети"
@@ -623,8 +618,8 @@ msgstr "Исключить окончательную директорию"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "Expected Time to Win"
-#~ msgstr "Ожидаемое время до выигрыша"
+msgid "Expected Time to Win"
+msgstr "Ожидаемое время до выигрыша"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -703,8 +698,8 @@ msgstr "Объем коммисий"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "Файл"
 
@@ -723,11 +718,11 @@ msgstr "Путь к папке для окончательного хранен�
 msgid "Finished"
 msgstr "Завершен"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Следить в Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Часто задаваемые вопросы"
 
@@ -740,7 +735,7 @@ msgstr "Полный узел"
 msgid "Full Node Status"
 msgstr "Статус полного узла"
 
-#: src/electron/main.tsx:287
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "Полный экран"
 
@@ -770,7 +765,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "Помощь"
 
@@ -978,7 +973,7 @@ msgid "Nickname"
 msgstr "Псевдоним"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:159
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Нет"
 
@@ -1222,10 +1217,6 @@ msgstr "Засеивание"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Параллельное засеивание позволяет сэкономить время. Также вы можете создать очередь засеивания участков."
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
-
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Ключ пула"
@@ -1355,7 +1346,7 @@ msgstr "Восстанавление Кошелека Децентрализов
 msgid "Refresh Plots"
 msgstr "Обновить участки"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr "Примечания к релизу"
 
@@ -1363,7 +1354,7 @@ msgstr "Примечания к релизу"
 msgid "Rename"
 msgstr "Переименовать"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr "Сообщить о проблеме..."
 
@@ -1496,7 +1487,7 @@ msgstr "Войти в систему"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Пропускает добавление окончательной директории в комбайн для фермерства"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr "Речь"
 
@@ -1622,10 +1613,6 @@ msgstr "Синхронизация {progress}/{tip}"
 msgid "Temporary folder location"
 msgstr "Расположение временной папки"
 
-#: src/components/app/AppTimeBomb.tsx:28
-msgid "The application will stop working at block height 193536."
-msgstr ""
-
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "Полный узел, к которому подключен ваш фермер, указан ниже. <0>Подробнее</0>"
@@ -1720,10 +1707,6 @@ msgstr "Сделка была создана в это время"
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
 msgstr "Сделка была включена в блокчейн на указанной высоте блока"
-
-#: src/components/app/AppTimeBombAlert.tsx:11
-msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1832,7 +1815,7 @@ msgstr "Пользовательский публичный ключ"
 msgid "VDF Sub Slot Iterations"
 msgstr "Итерации VDF суб слота"
 
-#: src/electron/main.tsx:251
+#: src/electron/main.ts:216
 msgid "View"
 msgstr "Вид"
 
@@ -1934,7 +1917,7 @@ msgstr "Добро пожаловать! Перечисленные слова �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr "Окно"
 
@@ -1944,7 +1927,7 @@ msgstr "Без комиссии"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:160
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Да"
 
@@ -1957,24 +1940,12 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr "Вам не нужно синхронизировать узел или быть подключенным к участку. Во время процесса засеивания участков создаются временные файлы, размер которых превышает размер итоговых файлов участков. Убедитесь, что у вас достаточно места. <0>Подробнее</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-#~ msgstr "Вы владеете {0}% пространства в сети, поэтому для обработки блока потребуется {expectedTimeToWin}."
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+msgstr "Вы владеете {0}% пространства в сети, поэтому для обработки блока потребуется {expectedTimeToWin}."
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
-#~ msgstr ""
-
-#: src/components/app/AppTimeBomb.tsx:28
-#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
-#~ msgstr ""
+#: src/components/app/AppTimeBomb.tsx:16
+msgid "You need to upgrade the Chia application as this version will stop working soon!"
+msgstr "Вам необходимо обновить приложение Chia, так как эта версия скоро перестанет работать!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
