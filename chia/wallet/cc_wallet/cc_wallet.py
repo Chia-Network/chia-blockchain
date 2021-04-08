@@ -283,7 +283,7 @@ class CCWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
         lineage_proof = Program.to((1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount]))
-        await self.add_lineage(coin.name(), lineage_proof)
+        await self.add_lineage(coin.name(), lineage_proof, True)
 
         for name, lineage_proofs in self.cc_info.lineage_proofs:
             if coin.parent_coin_info == name:
@@ -310,6 +310,7 @@ class CCWallet:
                 callback="puzzle_solution_received",
                 done=False,
                 data=data_str,
+                in_transaction=True,
             )
 
     async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
@@ -641,20 +642,20 @@ class CCWallet:
             name=spend_bundle.name(),
         )
 
-    async def add_lineage(self, name: bytes32, lineage: Optional[Program]):
+    async def add_lineage(self, name: bytes32, lineage: Optional[Program], in_transaction=False):
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list.append((name, lineage))
         cc_info: CCInfo = CCInfo(self.cc_info.my_genesis_checker, current_list)
-        await self.save_info(cc_info)
+        await self.save_info(cc_info, in_transaction)
 
-    async def save_info(self, cc_info: CCInfo):
+    async def save_info(self, cc_info: CCInfo, in_transaction):
         self.cc_info = cc_info
         current_info = self.wallet_info
         data_str = bytes(cc_info).hex()
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
-        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
 
     async def generate_new_coloured_coin(self, amount: uint64) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(amount)
@@ -676,7 +677,7 @@ class CCWallet:
         lineage_proof: Optional[Program] = lineage_proof_for_genesis(origin)
         lineage_proofs = [(origin_id, lineage_proof)]
         cc_info: CCInfo = CCInfo(genesis_coin_checker, lineage_proofs)
-        await self.save_info(cc_info)
+        await self.save_info(cc_info, False)
         return tx_record.spend_bundle
 
     async def create_spend_bundle_relative_amount(self, cc_amount, zero_coin: Coin = None) -> Optional[SpendBundle]:

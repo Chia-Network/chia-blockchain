@@ -3,6 +3,7 @@ from typing import Any
 import aiosqlite
 
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.db_wrapper import DBWrapper
 from chia.util.streamable import Streamable
 
 
@@ -12,14 +13,16 @@ class KeyValStore:
     """
 
     db_connection: aiosqlite.Connection
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
-
-        self.db_connection = connection
+        self.db_wrapper = db_wrapper
+        self.db_connection = db_wrapper.db
         await self.db_connection.execute("pragma journal_mode=wal")
         await self.db_connection.execute("pragma synchronous=2")
+
         await self.db_connection.execute(
             ("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value text)")
         )
@@ -52,9 +55,13 @@ class KeyValStore:
         """
         Adds object to key val store
         """
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
-            (key, bytes(obj).hex()),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
+                (key, bytes(obj).hex()),
+            )
+            await cursor.close()
+            await self.db_connection.commit()
+        finally:
+            self.db_wrapper.lock.release()

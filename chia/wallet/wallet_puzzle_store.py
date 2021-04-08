@@ -6,6 +6,7 @@ import aiosqlite
 from blspy import G1Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -22,14 +23,16 @@ class WalletPuzzleStore:
     lock: asyncio.Lock
     cache_size: uint32
     all_puzzle_hashes: Set[bytes32]
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
 
-        self.db_connection = connection
+        self.db_wrapper = db_wrapper
+        self.db_connection = self.db_wrapper.db
         await self.db_connection.execute("pragma journal_mode=wal")
         await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
@@ -78,27 +81,31 @@ class WalletPuzzleStore:
         """
         Insert many derivation paths into the database.
         """
-        sql_records = []
-        for record in records:
-            self.all_puzzle_hashes.add(record.puzzle_hash)
-            sql_records.append(
-                (
-                    record.index,
-                    bytes(record.pubkey).hex(),
-                    record.puzzle_hash.hex(),
-                    record.wallet_type,
-                    record.wallet_id,
-                    0,
-                ),
+        await self.db_wrapper.lock.acquire()
+        try:
+            sql_records = []
+            for record in records:
+                self.all_puzzle_hashes.add(record.puzzle_hash)
+                sql_records.append(
+                    (
+                        record.index,
+                        bytes(record.pubkey).hex(),
+                        record.puzzle_hash.hex(),
+                        record.wallet_type,
+                        record.wallet_id,
+                        0,
+                    ),
+                )
+
+            cursor = await self.db_connection.executemany(
+                "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?)",
+                sql_records,
             )
 
-        cursor = await self.db_connection.executemany(
-            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?)",
-            sql_records,
-        )
-
-        await cursor.close()
-        await self.db_connection.commit()
+            await cursor.close()
+            await self.db_connection.commit()
+        finally:
+            self.db_wrapper.lock.release()
 
     async def get_derivation_record(self, index: uint32, wallet_id: uint32) -> Optional[DerivationRecord]:
         """
@@ -151,12 +158,16 @@ class WalletPuzzleStore:
         """
         Sets a derivation path to used so we don't use it again.
         """
-        cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
-            (index,),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
+                (index,),
+            )
+            await cursor.close()
+            await self.db_connection.commit()
+        finally:
+            self.db_wrapper.lock.release()
 
     async def puzzle_hash_exists(self, puzzle_hash: bytes32) -> bool:
         """

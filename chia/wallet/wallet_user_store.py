@@ -2,6 +2,7 @@ from typing import List, Optional
 
 import aiosqlite
 
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -14,12 +15,14 @@ class WalletUserStore:
 
     db_connection: aiosqlite.Connection
     cache_size: uint32
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
 
-        self.db_connection = connection
+        self.db_wrapper = db_wrapper
+        self.db_connection = db_wrapper.db
         await self.db_connection.execute("pragma journal_mode=wal")
         await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
@@ -68,18 +71,24 @@ class WalletUserStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def update_wallet(self, wallet_info: WalletInfo):
-        cursor = await self.db_connection.execute(
-            "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
-            (
-                wallet_info.id,
-                wallet_info.name,
-                wallet_info.type,
-                wallet_info.data,
-            ),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+    async def update_wallet(self, wallet_info: WalletInfo, in_transaction):
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
+                (
+                    wallet_info.id,
+                    wallet_info.name,
+                    wallet_info.type,
+                    wallet_info.data,
+                ),
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def get_last_wallet(self) -> Optional[WalletInfo]:
         cursor = await self.db_connection.execute("SELECT MAX(id) FROM users_wallets;")

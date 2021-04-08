@@ -164,6 +164,7 @@ class WalletBlockchain(BlockchainInterface):
         Returns a header if block is added to head. Returns an error if the block is
         invalid. Also returns the fork height, in the case of a new peak.
         """
+
         block = header_block_record.header
         genesis: bool = block.height == 0
 
@@ -224,11 +225,21 @@ class WalletBlockchain(BlockchainInterface):
         )
 
         # Always add the block to the database
-        await self.block_store.add_block_record(header_block_record, block_record)
-        self.add_block_record(block_record)
-        self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
+        await self.block_store.db_wrapper.lock.acquire()
+        try:
+            await self.block_store.db_wrapper.begin_transaction()
+            await self.block_store.add_block_record(header_block_record, block_record)
+            self.add_block_record(block_record)
+            self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
 
-        fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+            fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+            await self.block_store.db_wrapper.commit_transaction()
+        except Exception as e:
+            self.log.error(f"Error during db transaction: {e}")
+            await self.block_store.db_wrapper.rollback_transaction()
+            raise
+        finally:
+            self.block_store.db_wrapper.lock.release()
         if fork_height is not None:
             self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
             return ReceiveBlockResult.NEW_PEAK, None, fork_height

@@ -2,6 +2,7 @@ from typing import List, Optional
 
 import aiosqlite
 
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action import WalletAction
@@ -15,12 +16,13 @@ class WalletActionStore:
 
     db_connection: aiosqlite.Connection
     cache_size: uint32
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
-
-        self.db_connection = connection
+        self.db_wrapper = db_wrapper
+        self.db_connection = db_wrapper.db
 
         await self.db_connection.execute(
             (
@@ -64,23 +66,23 @@ class WalletActionStore:
         return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
 
     async def create_action(
-        self,
-        name: str,
-        wallet_id: int,
-        type: int,
-        callback: str,
-        done: bool,
-        data: str,
+        self, name: str, wallet_id: int, type: int, callback: str, done: bool, data: str, in_transaction: bool
     ):
         """
         Creates Wallet Action
         """
-        cursor = await self.db_connection.execute(
-            "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-            (None, name, wallet_id, type, callback, done, data),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
+                (None, name, wallet_id, type, callback, done, data),
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def action_done(self, action_id: int):
         """
@@ -88,22 +90,25 @@ class WalletActionStore:
         """
         action: Optional[WalletAction] = await self.get_wallet_action(action_id)
         assert action is not None
+        await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
+                (
+                    action.id,
+                    action.name,
+                    action.wallet_id,
+                    action.type.value,
+                    action.wallet_callback,
+                    True,
+                    action.data,
+                ),
+            )
 
-        cursor = await self.db_connection.execute(
-            "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-            (
-                action.id,
-                action.name,
-                action.wallet_id,
-                action.type.value,
-                action.wallet_callback,
-                True,
-                action.data,
-            ),
-        )
-
-        await cursor.close()
-        await self.db_connection.commit()
+            await cursor.close()
+            await self.db_connection.commit()
+        finally:
+            self.db_wrapper.lock.release()
 
     async def get_all_pending_actions(self) -> List[WalletAction]:
         """

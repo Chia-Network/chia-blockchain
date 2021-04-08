@@ -262,16 +262,19 @@ class Blockchain(BlockchainInterface):
 
                 # Begins a transaction, because we want to ensure that the coin store and block store are only updated
                 # in sync.
-                await self.block_store.begin_transaction()
+                await self.block_store.db_wrapper.lock.acquire()
+                await self.block_store.db_wrapper.begin_transaction()
                 try:
                     await self.coin_store.new_block(block)
                     self.__height_to_hash[uint32(0)] = block.header_hash
                     self._peak_height = uint32(0)
                     await self.block_store.set_peak(block.header_hash)
-                    await self.block_store.commit_transaction()
+                    await self.block_store.db_wrapper.commit_transaction()
                 except Exception:
-                    await self.block_store.rollback_transaction()
+                    await self.block_store.db_wrapper.rollback_transaction()
                     raise
+                finally:
+                    self.block_store.db_wrapper.lock.release()
                 return uint32(0)
             return None
 
@@ -286,7 +289,8 @@ class Blockchain(BlockchainInterface):
 
             # Begins a transaction, because we want to ensure that the coin store and block store are only updated
             # in sync.
-            await self.block_store.begin_transaction()
+            await self.block_store.db_wrapper.lock.acquire()
+            await self.block_store.db_wrapper.begin_transaction()
             try:
                 # Rollback to fork
                 await self.coin_store.rollback_to_block(fork_height)
@@ -331,10 +335,12 @@ class Blockchain(BlockchainInterface):
                 # Changes the peak to be the new peak
                 await self.block_store.set_peak(block_record.header_hash)
                 self._peak_height = block_record.height
-                await self.block_store.commit_transaction()
+                await self.block_store.db_wrapper.commit_transaction()
             except Exception:
-                await self.block_store.rollback_transaction()
+                await self.block_store.db_wrapper.rollback_transaction()
                 raise
+            finally:
+                self.block_store.db_wrapper.lock.release()
 
             return uint32(max(fork_height, 0))
 

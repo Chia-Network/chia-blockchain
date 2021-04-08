@@ -44,6 +44,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
@@ -104,10 +105,11 @@ class FullNode:
         self.timelord_lock = asyncio.Lock()
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
-        self.block_store = await BlockStore.create(self.connection)
+        self.db_wrapper = DBWrapper(self.connection)
+        self.block_store = await BlockStore.create(self.db_wrapper)
         self.full_node_store = await FullNodeStore.create(self.constants)
         self.sync_store = await SyncStore.create()
-        self.coin_store = await CoinStore.create(self.connection)
+        self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
