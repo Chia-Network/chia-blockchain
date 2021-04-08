@@ -6,14 +6,14 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.name_puzzle_condition import NPC
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 
 @dataclass(frozen=True)
 @streamable
 class CostResult(Streamable):
-    error: Optional[uint16]
+    error: Optional[str]
     npc_list: List[NPC]
     cost: uint64
 
@@ -26,7 +26,7 @@ def calculate_cost_of_program(
     """
     total_clvm_cost = 0
     error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode)
-    if error:
+    if error or cost is None or npc_list is None:
         raise Exception("get_name_puzzle_conditions raised error:" + str(error))
     total_clvm_cost += cost
 
