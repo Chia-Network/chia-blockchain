@@ -2,14 +2,14 @@ from typing import Dict, List, Optional, Set
 
 from chia.types.announcement import Announcement
 from chia.types.coin_record import CoinRecord
-from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
 
-def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def blockchain_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
     """
@@ -19,7 +19,7 @@ def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecor
 
 
 def blockchain_assert_block_index_exceeds(
-    condition: ConditionVarPair, prev_transaction_block_height: uint32
+    condition: ConditionWithArgs, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
@@ -35,7 +35,7 @@ def blockchain_assert_block_index_exceeds(
 
 
 def blockchain_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, prev_transaction_block_height: uint32
+    condition: ConditionWithArgs, unspent: CoinRecord, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -50,7 +50,7 @@ def blockchain_assert_block_age_exceeds(
     return None
 
 
-def blockchain_assert_time_exceeds(condition: ConditionVarPair, timestamp):
+def blockchain_assert_time_exceeds(condition: ConditionWithArgs, timestamp):
     """
     Checks if current time in millis exceeds the time specified in condition
     """
@@ -65,7 +65,7 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair, timestamp):
     return None
 
 
-def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord, timestamp):
+def blockchain_assert_relative_time_exceeds(condition: ConditionWithArgs, unspent: CoinRecord, timestamp):
     """
     Checks if time since unspent creation in millis exceeds the time specified in condition
     """
@@ -80,7 +80,7 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent
     return None
 
 
-def blockchain_assert_announcement(condition: ConditionVarPair, announcements: Set[bytes]) -> Optional[Err]:
+def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
@@ -94,7 +94,7 @@ def blockchain_assert_announcement(condition: ConditionVarPair, announcements: S
 def blockchain_check_conditions_dict(
     unspent: CoinRecord,
     announcements: List[Announcement],
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
     timestamp: uint64,
 ) -> Optional[Err]:
@@ -103,7 +103,7 @@ def blockchain_check_conditions_dict(
     """
     announcement_names = set([a.name() for a in announcements])
     for con_list in conditions_dict.values():
-        cvp: ConditionVarPair
+        cvp: ConditionWithArgs
         for cvp in con_list:
             error = None
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
