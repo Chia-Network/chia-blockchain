@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-07 21:47\n"
+"PO-Revision-Date: 2021-04-08 03:49\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -34,8 +34,8 @@ msgstr "128의 버킷이 권장됩니다."
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr ""
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "치아 블록체인에 대하여"
 
@@ -127,7 +127,7 @@ msgstr "정말로 플롯을 삭제하시겠습니까? 삭제된 플롯은 복구
 msgid "Are you sure you want to disconnect?"
 msgstr "정말로 접속을 끊으시겠습니까?"
 
-#: src/electron-starter.js:140
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "정말로 나가시겠습니까? GUI 플로팅과 파밍 역시 멈출 것입니다."
 
@@ -259,15 +259,15 @@ msgstr "도전"
 msgid "Challenge Hash"
 msgstr "도전 해시"
 
-#: src/electron-starter.js:341
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "키베이스에서 채팅하기"
 
-#: src/electron-starter.js:359
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "치아"
 
-#: src/electron-starter.js:298
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "치아 블록체인 위키"
 
@@ -321,7 +321,7 @@ msgstr "컬러드 코인"
 msgid "Coloured Coin Options"
 msgstr "컬러드 코인 옵션"
 
-#: src/electron-starter.js:138
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "승인"
 
@@ -372,7 +372,7 @@ msgstr ""
 msgid "Connections"
 msgstr ""
 
-#: src/electron-starter.js:322
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -531,11 +531,11 @@ msgstr "모든 키를 제거하는 것은 당신의 컴퓨터로부터 영구적
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 
-#: src/electron-starter.js:244
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "개발자"
 
-#: src/electron-starter.js:247
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "개발자 도구"
 
@@ -582,7 +582,7 @@ msgstr ""
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron-starter.js:203
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "수정"
 
@@ -698,8 +698,8 @@ msgstr "수수료 양"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "파일"
 
@@ -718,11 +718,11 @@ msgstr "최종 폴더 위치"
 msgid "Finished"
 msgstr "완료됨"
 
-#: src/electron-starter.js:347
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "트위터 팔로우하기"
 
-#: src/electron-starter.js:306
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "자주 묻는 질문"
 
@@ -735,7 +735,7 @@ msgstr "전체 노드"
 msgid "Full Node Status"
 msgstr "전체 노드 현황"
 
-#: src/electron-starter.js:272
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "전체 화면"
 
@@ -765,7 +765,7 @@ msgstr "해더 해시"
 msgid "Height"
 msgstr "높이"
 
-#: src/electron-starter.js:294
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "도움말"
 
@@ -973,7 +973,7 @@ msgid "Nickname"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron/main.ts:123
 msgid "No"
 msgstr ""
 
@@ -1346,7 +1346,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron-starter.js:314
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr ""
 
@@ -1354,7 +1354,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron-starter.js:333
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1487,7 +1487,7 @@ msgstr ""
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron-starter.js:416
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr ""
 
@@ -1815,7 +1815,7 @@ msgstr ""
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron-starter.js:235
+#: src/electron/main.ts:216
 msgid "View"
 msgstr ""
 
@@ -1917,7 +1917,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron-starter.js:280
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr ""
 
@@ -1927,7 +1927,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr ""
 
