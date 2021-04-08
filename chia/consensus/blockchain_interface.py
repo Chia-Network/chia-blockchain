@@ -55,6 +55,9 @@ class BlockchainInterface:
     async def get_header_block_by_height(self, height: int, header_hash: bytes32) -> Optional[HeaderBlock]:
         pass
 
+    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+        pass
+
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         if self.contains_block(header_hash):
             return self.block_record(header_hash)
