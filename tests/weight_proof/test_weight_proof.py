@@ -499,40 +499,36 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/Downloads/blockchain_v1_mainnet.sqlite")
-        block_store = await BlockStore.create(connection)
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        overrides = config["network_overrides"]["constants"]["mainnet"]
-        updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-        coin_store = await CoinStore.create(connection)
-        blockchain = await Blockchain.create(coin_store, block_store, updated_constants)
-        peak = blockchain.get_peak()
-        peak_height = peak.height
-        peak_header = await block_store.get_full_blocks_at([peak_height])
-        peak = peak_header[0]
+        connection = await aiosqlite.connect("path to db")
+        block_store: BlockStore = await BlockStore.create(connection)
+        blocks, peak = await block_store.get_block_records()
+        peak_height = blocks[peak].height
+        headers = await block_store.get_header_blocks_in_range(0, peak_height)
+        sub_height_to_hash = {}
+        sub_epoch_summaries = {}
+        # peak_header = await block_store.get_full_blocks_at([peak_height])
+        if len(blocks) == 0:
+            return None, None
 
         assert peak is not None
 
         # Sets the other state variables (peak_height and height_to_hash)
-        # curr: BlockRecord = blocks[peak.header_hash]
-        # while True:
-        #     sub_height_to_hash[curr.height] = curr.header_hash
-        #     if curr.sub_epoch_summary_included is not None:
-        #         sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
-        #     if curr.height == 0:
-        #         break
-        #     curr = blocks[curr.prev_hash]
-        # assert len(sub_height_to_hash) == peak_height + 1
-        # block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-
-        wpf = WeightProofHandler(updated_constants, blockchain)
-        wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak_height))
-        # wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak_height))
-        wpf_not_synced = WeightProofHandler(updated_constants, BlockCache({}))
-        valid, fork_point = wpf_not_synced.validate_weight_proof_single_proc(wp)
+        curr: BlockRecord = blocks[peak]
+        while True:
+            sub_height_to_hash[curr.height] = curr.header_hash
+            if curr.sub_epoch_summary_included is not None:
+                sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
+            if curr.height == 0:
+                break
+            curr = blocks[curr.prev_hash]
+        assert len(sub_height_to_hash) == peak_height + 1
+        block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
+        wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
+        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 50])
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         await connection.close()
         assert valid
