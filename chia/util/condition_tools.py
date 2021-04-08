@@ -159,6 +159,7 @@ def conditions_for_solution(
 ) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
+        # TODO: Note this call to Program.run_with_cost
         cost, r = puzzle_reveal.run_with_cost(solution)
         error, result = parse_sexp_to_conditions(r)
         return error, result, uint64(cost)

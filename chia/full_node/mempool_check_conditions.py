@@ -127,14 +127,14 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
 
 
 def get_name_puzzle_conditions(
-    block_program: SerializedProgram, safe_mode: bool
+    block_program: SerializedProgram, *, strict_mode=True
 ) -> Tuple[Optional[str], Optional[List[NPC]], Optional[uint64]]:
     # TODO: allow generator mod to take something (future)
     # TODO: write more tests
     block_program_args = SerializedProgram.from_bytes(b"\x80")
 
     try:
-        if safe_mode:
+        if strict_mode:
             cost, result = GENERATOR_MOD.run_safe_with_cost(block_program, block_program_args)
         else:
             cost, result = GENERATOR_MOD.run_with_cost(block_program, block_program_args)
@@ -153,7 +153,7 @@ def get_name_puzzle_conditions(
             for cond in res.rest().first().as_iter():
                 if cond.first().as_atom() in opcodes:
                     opcode = ConditionOpcode(cond.first().as_atom())
-                elif not safe_mode:
+                elif not strict_mode:
                     opcode = ConditionOpcode.UNKNOWN
                 else:
                     return "Unknown operator in safe mode.", None, None
@@ -172,7 +172,7 @@ def get_name_puzzle_conditions(
 def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):
     try:
         block_program_args = SerializedProgram.from_bytes(b"\x80")
-        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, block_program_args, coin_name)
+        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_safe_with_cost(block_program, block_program_args, coin_name)
         puzzle = result.first()
         solution = result.rest().first()
         return None, puzzle, solution

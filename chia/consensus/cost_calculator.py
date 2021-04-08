@@ -19,13 +19,13 @@ class CostResult(Streamable):
 
 
 def calculate_cost_of_program(
-    program: SerializedProgram, clvm_cost_ratio_constant: int, strict_mode: bool = False
+    program: SerializedProgram, clvm_cost_ratio_constant: int, *, strict_mode=True
 ) -> CostResult:
     """
     This function calculates the total cost of either a block or a spendbundle
     """
     total_clvm_cost = 0
-    error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode)
+    error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode=strict_mode)
     if error or cost is None or npc_list is None:
         raise Exception("get_name_puzzle_conditions raised error:" + str(error))
     total_clvm_cost += cost

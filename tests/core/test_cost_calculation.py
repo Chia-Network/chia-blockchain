@@ -78,7 +78,7 @@ class TestCostCalculation:
         result: CostResult = calculate_cost_of_program(program, ratio)
         clvm_cost = result.cost
 
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode=True)
         assert error is None
         coin_name = npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
@@ -121,9 +121,9 @@ class TestCostCalculation:
                 f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
             ).as_bin()
         )
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+        error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode=True)
         assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode=False)
         assert error is None
 
         coin_name = npc_list[0].coin_name
@@ -139,9 +139,9 @@ class TestCostCalculation:
         # ("0xfe"). In strict mode, this should fail, but in non-strict
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+        error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode=True)
         assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode=False)
         assert error is None
 
     @pytest.mark.asyncio
@@ -151,7 +151,7 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(generator)
 
         start_time = time.time()
-        err, npc, cost = get_name_puzzle_conditions(program, False)
+        err, npc, cost = get_name_puzzle_conditions(program, strict_mode=False)
         end_time = time.time()
         duration = end_time - start_time
         assert err is None
