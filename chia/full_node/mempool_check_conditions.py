@@ -1,6 +1,6 @@
 import time
 import traceback
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -126,7 +126,9 @@ def mempool_assert_my_amount(condition: ConditionVarPair, unspent: CoinRecord) -
     return None
 
 
-def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool):
+def get_name_puzzle_conditions(
+    block_program: SerializedProgram, safe_mode: bool
+) -> Tuple[Optional[str], Optional[List[NPC]], Optional[uint64]]:
     # TODO: allow generator mod to take something (future)
     # TODO: write more tests
     block_program_args = SerializedProgram.from_bytes(b"\x80")
@@ -155,13 +157,7 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
                     opcode = ConditionOpcode.UNKNOWN
                 else:
                     return "Unknown operator in safe mode.", None, None
-                if len(list(cond.as_iter())) > 1:
-                    cond_var_list = []
-                    for cond_1 in cond.rest().as_iter():
-                        cond_var_list.append(cond_1.as_atom())
-                    cvl = ConditionVarPair(opcode, cond_var_list)
-                else:
-                    cvl = ConditionVarPair(opcode, [])
+                cvl = ConditionVarPair(opcode, cond.rest().as_atom_list())
                 conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
