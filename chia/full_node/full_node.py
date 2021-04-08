@@ -115,6 +115,7 @@ class FullNode:
         self.weight_proof_handler = None
         asyncio.create_task(self.initialize_weight_proof())
         self._sync_task = None
+        self._segment_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
@@ -533,7 +534,13 @@ class FullNode:
 
         self.sync_store.set_sync_mode(True)
         self._state_changed("sync_mode")
-
+        if self._segment_task is not None:
+            try:
+                if not self._segment_task.done():
+                    self._segment_task.cancel()
+            except Exception as e:
+                self.log.warning(f"failed to cancel segment task {e}")
+            self._segment_task = None
         try:
             self.log.info("Starting to perform sync.")
             self.log.info("Waiting to receive peaks from peers.")
@@ -1006,7 +1013,14 @@ class FullNode:
         self._state_changed("block")
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
-            asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
+            if self._segment_task is not None:
+                try:
+                    if not self._segment_task.done():
+                        self._segment_task.cancel()
+                except Exception as e:
+                    self.log.warning(f"failed to cancel segment task {e}")
+            self.log.error("failed to cancell segment task")
+            self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
     async def respond_unfinished_block(
