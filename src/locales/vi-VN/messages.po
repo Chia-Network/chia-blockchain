@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-07 21:46\n"
+"PO-Revision-Date: 2021-04-08 03:49\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -34,8 +34,8 @@ msgstr "128 nhóm được khuyến nghị"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot  . Một farmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
 
-#: src/electron-starter.js:362
-#: src/electron-starter.js:455
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "Về Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Bạn có muốn xoá plot ? Plot sẽ không thể khôi phục."
 msgid "Are you sure you want to disconnect?"
 msgstr "Bạn có muốn ngắt kết nối?"
 
-#: src/electron-starter.js:140
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Bạn có muốn thoát? GUI Plotting và farming sẽ dừng."
 
@@ -259,15 +259,15 @@ msgstr "Challenge"
 msgid "Challenge Hash"
 msgstr "Challenge Hash"
 
-#: src/electron-starter.js:341
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "Chat trên Keybase"
 
-#: src/electron-starter.js:359
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron-starter.js:298
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr " Coin sắc tố"
 msgid "Coloured Coin Options"
 msgstr "Tuỳ chọn coin sắc tố"
 
-#: src/electron-starter.js:138
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Xác nhận"
 
@@ -372,7 +372,7 @@ msgstr "Kiểu kết nối"
 msgid "Connections"
 msgstr "Các kết nối"
 
-#: src/electron-starter.js:322
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr "Đóng góp qua GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Xóa tất cả các khóa sẽ xóa vĩnh viễn các khóa khỏi máy
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Xóa khóa sẽ xóa vĩnh viễn khóa khỏi máy tính của bạn, hãy đảm bảo rằng bạn có các bản sao lưu. Bạn có chắc chắn muốn tiếp tục không?"
 
-#: src/electron-starter.js:244
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Nhà phát triển"
 
-#: src/electron-starter.js:247
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Công cụ nhà phát triển"
 
@@ -582,7 +582,7 @@ msgstr "Kéo và thả tệp đề nghị"
 msgid "Drag and drop your backup file"
 msgstr "Kéo và thả tệp sao lưu của bạn"
 
-#: src/electron-starter.js:203
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Chỉnh sửa"
 
@@ -698,8 +698,8 @@ msgstr "Số lượng phí"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron-starter.js:195
-#: src/electron-starter.js:402
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "Tệp"
 
@@ -718,11 +718,11 @@ msgstr "Thư mục cuối"
 msgid "Finished"
 msgstr "Hoàn thành"
 
-#: src/electron-starter.js:347
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Theo dõi trên Twitter"
 
-#: src/electron-starter.js:306
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Câu hỏi thường gặp"
 
@@ -735,7 +735,7 @@ msgstr "Node hoàn thiện"
 msgid "Full Node Status"
 msgstr "Tình trạng Node mạng"
 
-#: src/electron-starter.js:272
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "Toàn màn hình"
 
@@ -765,7 +765,7 @@ msgstr "Băm tiêu đề"
 msgid "Height"
 msgstr "Chiều cao"
 
-#: src/electron-starter.js:294
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "Hỗ trợ"
 
@@ -973,7 +973,7 @@ msgid "Nickname"
 msgstr "Biệt danh"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Không"
 
@@ -1346,7 +1346,7 @@ msgstr "Khôi phục ví DID"
 msgid "Refresh Plots"
 msgstr "Làm mới plot"
 
-#: src/electron-starter.js:314
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr "Ghi chú phát hành"
 
@@ -1354,7 +1354,7 @@ msgstr "Ghi chú phát hành"
 msgid "Rename"
 msgstr "Đổi tên"
 
-#: src/electron-starter.js:333
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr "Báo cáo vấn đề..."
 
@@ -1487,7 +1487,7 @@ msgstr "Đăng nhập"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Bỏ qua việc thêm thư mục cuối cùng vào máy gặt để trồng trọt"
 
-#: src/electron-starter.js:416
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr "Phát biểu"
 
@@ -1815,7 +1815,7 @@ msgstr "Khoá công khai"
 msgid "VDF Sub Slot Iterations"
 msgstr "Lặp lại vùng phụ VDF"
 
-#: src/electron-starter.js:235
+#: src/electron/main.ts:216
 msgid "View"
 msgstr "Xem"
 
@@ -1917,7 +1917,7 @@ msgstr "Chào mừng! Các từ sau được sử dụng để sao lưu ví củ
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Khi bạn nhận được gói thông tin thiết lập từ quản trị viên của mình, hãy nhập gói này vào bên dưới để hoàn tất quá trình thiết lập Ví giới hạn giá của bạn:"
 
-#: src/electron-starter.js:280
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr "Cửa sổ"
 
@@ -1927,7 +1927,7 @@ msgstr "Không mất phí"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron-starter.js:137
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Đồng ý"
 
