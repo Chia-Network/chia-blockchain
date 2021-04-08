@@ -259,6 +259,7 @@ def load_plots(
                 log.info(f"Memo: {plot_memo_str}")
 
             return stat_info.st_size
+        return 0
 
     with ThreadPoolExecutor() as executor:
         total_size = sum(executor.map(process_file, all_filenames))
