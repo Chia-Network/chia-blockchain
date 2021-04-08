@@ -220,6 +220,8 @@ full_node:
   send_uncompact_interval: 0
   # At every 'send_uncompact_interval' seconds, send blueboxes 'target_uncompact_proofs' proofs to be normalized.
   target_uncompact_proofs: 100
+  # timeout for weight proof request
+  weight_proof_timeout: 180
 
   farmer_peer:
       host: *self_hostname
