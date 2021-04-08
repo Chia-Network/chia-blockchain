@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
@@ -18,7 +18,7 @@ from chia.wallet.puzzles.lowlevel_generator import get_generator
 GENERATOR_MOD = get_generator()
 
 
-def mempool_assert_announcement_consumed(condition: ConditionVarPair, announcements: List[bytes32]) -> Optional[Err]:
+def mempool_assert_announcement_consumed(condition: ConditionWithArgs, announcements: List[bytes32]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
@@ -29,7 +29,7 @@ def mempool_assert_announcement_consumed(condition: ConditionVarPair, announceme
     return None
 
 
-def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
     """
@@ -39,7 +39,7 @@ def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) 
 
 
 def mempool_assert_block_index_exceeds(
-    condition: ConditionVarPair, prev_transaction_block_height: uint32
+    condition: ConditionWithArgs, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
@@ -54,7 +54,7 @@ def mempool_assert_block_index_exceeds(
 
 
 def mempool_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, prev_transaction_block_height: uint32
+    condition: ConditionWithArgs, unspent: CoinRecord, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -69,7 +69,7 @@ def mempool_assert_block_age_exceeds(
     return None
 
 
-def mempool_assert_time_exceeds(condition: ConditionVarPair) -> Optional[Err]:
+def mempool_assert_time_exceeds(condition: ConditionWithArgs) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -84,7 +84,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair) -> Optional[Err]:
     return None
 
 
-def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_relative_time_exceeds(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -99,7 +99,7 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
     return None
 
 
-def mempool_assert_my_parent_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_my_parent_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if coin's parent ID matches the ID from the condition
     """
@@ -108,7 +108,7 @@ def mempool_assert_my_parent_id(condition: ConditionVarPair, unspent: CoinRecord
     return None
 
 
-def mempool_assert_my_puzzlehash(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_my_puzzlehash(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if coin's puzzlehash matches the puzzlehash from the condition
     """
@@ -117,7 +117,7 @@ def mempool_assert_my_puzzlehash(condition: ConditionVarPair, unspent: CoinRecor
     return None
 
 
-def mempool_assert_my_amount(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if coin's amount matches the amount from the condition
     """
@@ -157,7 +157,7 @@ def get_name_puzzle_conditions(
                     opcode = ConditionOpcode.UNKNOWN
                 else:
                     return "Unknown operator in safe mode.", None, None
-                cvl = ConditionVarPair(opcode, cond.rest().as_atom_list())
+                cvl = ConditionWithArgs(opcode, cond.rest().as_atom_list())
                 conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
@@ -183,14 +183,14 @@ def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name
 def mempool_check_conditions_dict(
     unspent: CoinRecord,
     announcement_names: List[bytes32],
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
     """
     for con_list in conditions_dict.values():
-        cvp: ConditionVarPair
+        cvp: ConditionWithArgs
         for cvp in con_list:
             error: Optional[Err] = None
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
