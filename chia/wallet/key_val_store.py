@@ -55,13 +55,10 @@ class KeyValStore:
         """
         Adds object to key val store
         """
-        await self.db_wrapper.lock.acquire()
-        try:
+        async with self.db_wrapper.lock:
             cursor = await self.db_connection.execute(
                 "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
                 (key, bytes(obj).hex()),
             )
             await cursor.close()
             await self.db_connection.commit()
-        finally:
-            self.db_wrapper.lock.release()

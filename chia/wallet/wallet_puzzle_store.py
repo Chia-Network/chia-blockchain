@@ -81,8 +81,7 @@ class WalletPuzzleStore:
         """
         Insert many derivation paths into the database.
         """
-        await self.db_wrapper.lock.acquire()
-        try:
+        async with self.db_wrapper.lock:
             sql_records = []
             for record in records:
                 self.all_puzzle_hashes.add(record.puzzle_hash)
@@ -104,8 +103,6 @@ class WalletPuzzleStore:
 
             await cursor.close()
             await self.db_connection.commit()
-        finally:
-            self.db_wrapper.lock.release()
 
     async def get_derivation_record(self, index: uint32, wallet_id: uint32) -> Optional[DerivationRecord]:
         """
@@ -158,16 +155,13 @@ class WalletPuzzleStore:
         """
         Sets a derivation path to used so we don't use it again.
         """
-        await self.db_wrapper.lock.acquire()
-        try:
+        async with self.db_wrapper.lock:
             cursor = await self.db_connection.execute(
                 "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
                 (index,),
             )
             await cursor.close()
             await self.db_connection.commit()
-        finally:
-            self.db_wrapper.lock.release()
 
     async def puzzle_hash_exists(self, puzzle_hash: bytes32) -> bool:
         """

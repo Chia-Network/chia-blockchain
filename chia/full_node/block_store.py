@@ -100,16 +100,13 @@ class BlockStore:
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ) -> None:
-        await self.db_wrapper.lock.acquire()
-        try:
+        async with self.db_wrapper.lock:
             cursor_1 = await self.db.execute(
                 "INSERT OR REPLACE INTO sub_epoch_segments_v2 VALUES(?, ?)",
                 (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
             )
             await cursor_1.close()
             await self.db.commit()
-        finally:
-            self.db_wrapper.lock.release()
 
     async def get_sub_epoch_challenge_segments(
         self,
