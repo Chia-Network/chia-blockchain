@@ -14,6 +14,7 @@ const {
   ru,
   sk,
   sv,
+  vi,
   zh,
   es,
 } = require('make-plural/plurals');
@@ -36,6 +37,7 @@ const catalogRo = require('../locales/ro-RO/messages');
 const catalogRu = require('../locales/ru-RU/messages');
 const catalogSk = require('../locales/sk-SK/messages');
 const catalogSv = require('../locales/sv-SE/messages');
+const catalogViVn = require('../locales/vi-VN/messages');
 const catalogZh = require('../locales/zh-TW/messages');
 const catalogZhCN = require('../locales/zh-CN/messages');
 
@@ -57,6 +59,7 @@ i18n.loadLocaleData('ro-RO', { plurals: ro });
 i18n.loadLocaleData('ru-RU', { plurals: ru });
 i18n.loadLocaleData('sk-SK', { plurals: sk });
 i18n.loadLocaleData('sv-SE', { plurals: sv });
+i18n.loadLocaleData('vi-VN', { plurals: vi });
 i18n.loadLocaleData('zh-TW', { plurals: zh });
 i18n.loadLocaleData('zh-CN', { plurals: zh });
 i18n.load('da-DK', catalogDa.messages);
@@ -77,6 +80,7 @@ i18n.load('ro-RO', catalogRo.messages);
 i18n.load('ru-RU', catalogRu.messages);
 i18n.load('sk-SK', catalogSk.messages);
 i18n.load('sv-SE', catalogSv.messages);
+i18n.load('vi-VN', catalogViVn.messages);
 i18n.load('zh-TW', catalogZh.messages);
 i18n.load('zh-CN', catalogZhCN.messages);
 

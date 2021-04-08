@@ -4,7 +4,7 @@
     "include": ["<rootDir>/src"],
     "exclude": ["**/node_modules/**"]
   }],
-  "locales": ["da-DK", "de-DE", "en-AU", "en-PT", "en-US", "es-ES", "fi-FI", "fr-FR", "it-IT", "ja-JP", "nl-NL", "pl-PL", "pt-BR", "pt-PT", "ro-RO", "ru-RU", "sk-SK", "sv-SE", "zh-TW", "zh-CN"],
+  "locales": ["da-DK", "de-DE", "en-AU", "en-PT", "en-US", "es-ES", "fi-FI", "fr-FR", "it-IT", "ja-JP", "nl-NL", "pl-PL", "pt-BR", "pt-PT", "ro-RO", "ru-RU", "sk-SK", "sv-SE", "vi-VN", "zh-TW", "zh-CN"],
   "format": "po",
   "sourceLocale": "en-US",
   "fallbackLocales": {
