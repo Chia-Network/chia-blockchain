@@ -114,6 +114,7 @@ class BlockStore:
             (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
         )
         await cursor_1.close()
+        await self.db.commit()
 
     async def get_sub_epoch_challenge_segments(
         self,
