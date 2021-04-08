@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-07 21:47\n"
+"PO-Revision-Date: 2021-04-08 03:49\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -34,8 +34,8 @@ msgstr "バケツ数は 128 がおすすめ"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "収穫機は耕地が実際に保存されているデバイス上に走らせるサービスです。農家と収穫機はフルノードと通信することでブロックチェーンの状態を認識します。以下が接続されている収穫機ネットワークです。詳しく"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "チアブロックチェーンについて"
 
@@ -127,7 +127,7 @@ msgstr "本当にこの耕地を削除しますか？耕地は削除すると復
 msgid "Are you sure you want to disconnect?"
 msgstr "本当に接続を解除しますか？"
 
-#: src/electron/main.tsx:164
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "本当に終了しますか？ GUI 上の耕地作り及び耕作も停止します。"
 
@@ -259,15 +259,15 @@ msgstr "チャレンジ"
 msgid "Challenge Hash"
 msgstr "チャレンジのハッシュ値"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "Keybase でチャット"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "チア"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "チアブロックチェーンの Wiki"
 
@@ -321,7 +321,7 @@ msgstr "カラードコイン"
 msgid "Coloured Coin Options"
 msgstr "カラードコインのオプション"
 
-#: src/electron/main.tsx:162
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "了承"
 
@@ -372,7 +372,7 @@ msgstr "接続の種類"
 msgid "Connections"
 msgstr "接続数"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr "GitHub で開発協力"
 
@@ -531,11 +531,11 @@ msgstr "全ての鍵を削除するとどれも復元することができなく
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "鍵を削除すると復元することができませんので、必ずバックアップを取ってください。本当に続行しますか？"
 
-#: src/electron/main.tsx:260
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "開発者"
 
-#: src/electron/main.tsx:263
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "開発者向けツール"
 
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "難易度"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-#~ msgstr "ビットフィールドを有効にすると書き込み量が 20% ほど減少します。一時ディレクトリが SSD などの速いストレージ上にある場合、または RAM の使用量を抑えたい場合は、ビットフィールドを使わずに耕すことをおすすめします。"
+msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+msgstr "ビットフィールドを有効にすると書き込み量が 20% ほど減少します。一時ディレクトリが SSD などの速いストレージ上にある場合、または RAM の使用量を抑えたい場合は、ビットフィールドを使わずに耕すことをおすすめします。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -582,7 +582,7 @@ msgstr "注文ファイルをここにドラッグ&ドロップ"
 msgid "Drag and drop your backup file"
 msgstr "バックアップファイルをここにドラッグ&ドロップ"
 
-#: src/electron/main.tsx:219
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "編集"
 
@@ -604,11 +604,6 @@ msgstr "エラー"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "エラー: チアは色付きのアドレスには送れません。チアのアドレスを入力してください。"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Estimated Time to Win"
-msgstr ""
-
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "推定ネットワーク容量"
@@ -623,8 +618,8 @@ msgstr "最終ディレクトリを除外"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "Expected Time to Win"
-#~ msgstr "報酬が当たるまでの推定時間"
+msgid "Expected Time to Win"
+msgstr "報酬が当たるまでの推定時間"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -703,8 +698,8 @@ msgstr "全手数料"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "ファイル"
 
@@ -723,11 +718,11 @@ msgstr "最終フォルダの場所"
 msgid "Finished"
 msgstr "完成"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Twitter でフォロー"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "よくある質問"
 
@@ -740,7 +735,7 @@ msgstr "フルノード"
 msgid "Full Node Status"
 msgstr "フルノードの状態"
 
-#: src/electron/main.tsx:287
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "全画面表示"
 
@@ -770,7 +765,7 @@ msgstr "ヘッダーのハッシュ値"
 msgid "Height"
 msgstr "高さ"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "ヘルプ"
 
@@ -978,7 +973,7 @@ msgid "Nickname"
 msgstr "ニックネーム"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:159
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "いいえ"
 
@@ -1222,10 +1217,6 @@ msgstr "耕し中"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "並行で耕すと時間の節約になる場合があります。スペックが足りない場合はキューに追加してください。"
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
-
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "プール鍵"
@@ -1355,7 +1346,7 @@ msgstr "DID ウォレットを復元"
 msgid "Refresh Plots"
 msgstr "耕地一覧を更新"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr "リリースノート"
 
@@ -1363,7 +1354,7 @@ msgstr "リリースノート"
 msgid "Rename"
 msgstr "名称変更"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr "問題を報告"
 
@@ -1496,7 +1487,7 @@ msgstr "ログイン"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "最終ディレクトリを収穫機に追加せず、ディレクトリ内の耕地で耕作しません。"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr "スピーチ"
 
@@ -1622,10 +1613,6 @@ msgstr "同期中 {progress}/{tip}"
 msgid "Temporary folder location"
 msgstr "一時フォルダの場所"
 
-#: src/components/app/AppTimeBomb.tsx:28
-msgid "The application will stop working at block height 193536."
-msgstr ""
-
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "以下が農家の接続先のフルノードです。<0>詳しく</0>"
@@ -1720,10 +1707,6 @@ msgstr "この注文の作成日時です"
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
 msgstr "このトレードはこのブロック高でブロックチェーンに取り込まれました。"
-
-#: src/components/app/AppTimeBombAlert.tsx:11
-msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1832,7 +1815,7 @@ msgstr "ユーザー公開鍵"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF サブスロット評価回数"
 
-#: src/electron/main.tsx:251
+#: src/electron/main.ts:216
 msgid "View"
 msgstr "表示"
 
@@ -1934,7 +1917,7 @@ msgstr "ご利用ありがとうございます！以下の合言葉はあなた
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "管理者からセットアップ用の情報パケットを受け取ったら、以下に入力してレート制限付きウォレットのセットアップを完了してください:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr "ウィンドウ"
 
@@ -1944,7 +1927,7 @@ msgstr "手数料抜き"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:160
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "はい"
 
@@ -1957,24 +1940,12 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr "耕地作成には同期も接続も必要ありません。耕し中に作成される一時ファイルは、最終的な耕地ファイルより多くの容量を消費します。容量が足りるか今一度ご確認ください。<0>詳しく</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-#~ msgstr "あなたはネットワークの {0}% の容量を所有しているので、ブロック収穫には推定 {expectedTimeToWin} かかります。"
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+msgstr "あなたはネットワークの {0}% の容量を所有しているので、ブロック収穫には推定 {expectedTimeToWin} かかります。"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
-#~ msgstr ""
-
-#: src/components/app/AppTimeBomb.tsx:28
-#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
-#~ msgstr ""
+#: src/components/app/AppTimeBomb.tsx:16
+msgid "You need to upgrade the Chia application as this version will stop working soon!"
+msgstr "このバージョンは間もなく動作しなくなるため、チアアプリケーションをアップグレードしてください！"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
