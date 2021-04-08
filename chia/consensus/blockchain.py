@@ -234,12 +234,14 @@ class Blockchain(BlockchainInterface):
             None,
         )
         # Always add the block to the database
-        await self.block_store.add_full_block(block, block_record)
-
-        self.add_block_record(block_record)
-
-        fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
-
+        async with self.block_store.db_wrapper.lock:
+            try:
+                await self.block_store.add_full_block(block, block_record)
+                self.add_block_record(block_record)
+                fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+                await self.block_store.db_wrapper.commit_transaction()
+            except:
+                await self.block_store.db_wrapper.rollback_transaction()
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:
@@ -262,17 +264,10 @@ class Blockchain(BlockchainInterface):
 
                 # Begins a transaction, because we want to ensure that the coin store and block store are only updated
                 # in sync.
-                async with self.block_store.db_wrapper.lock:
-                    await self.block_store.db_wrapper.begin_transaction()
-                    try:
-                        await self.coin_store.new_block(block)
-                        self.__height_to_hash[uint32(0)] = block.header_hash
-                        self._peak_height = uint32(0)
-                        await self.block_store.set_peak(block.header_hash)
-                        await self.block_store.db_wrapper.commit_transaction()
-                    except Exception:
-                        await self.block_store.db_wrapper.rollback_transaction()
-                        raise
+                await self.coin_store.new_block(block)
+                self.__height_to_hash[uint32(0)] = block.header_hash
+                self._peak_height = uint32(0)
+                await self.block_store.set_peak(block.header_hash)
                 return uint32(0)
             return None
 
@@ -287,56 +282,49 @@ class Blockchain(BlockchainInterface):
 
             # Begins a transaction, because we want to ensure that the coin store and block store are only updated
             # in sync.
-            async with self.block_store.db_wrapper.lock:
-                await self.block_store.db_wrapper.begin_transaction()
-                try:
-                    # Rollback to fork
-                    await self.coin_store.rollback_to_block(fork_height)
-                    # Rollback sub_epoch_summaries
-                    heights_to_delete = []
-                    for ses_included_height in self.__sub_epoch_summaries.keys():
-                        if ses_included_height > fork_height:
-                            heights_to_delete.append(ses_included_height)
-                    for height in heights_to_delete:
-                        log.info(f"delete ses at height {height}")
-                        del self.__sub_epoch_summaries[height]
+            # Rollback to fork
+            await self.coin_store.rollback_to_block(fork_height)
+            # Rollback sub_epoch_summaries
+            heights_to_delete = []
+            for ses_included_height in self.__sub_epoch_summaries.keys():
+                if ses_included_height > fork_height:
+                    heights_to_delete.append(ses_included_height)
+            for height in heights_to_delete:
+                log.info(f"delete ses at height {height}")
+                del self.__sub_epoch_summaries[height]
 
-                    if len(heights_to_delete) > 0:
-                        # remove segments from prev fork
-                        log.info(f"remove segments for se above {fork_height}")
-                        await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_height))
+            if len(heights_to_delete) > 0:
+                # remove segments from prev fork
+                log.info(f"remove segments for se above {fork_height}")
+                await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_height))
 
-                    # Collect all blocks from fork point to new peak
-                    blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
-                    curr = block_record.header_hash
+            # Collect all blocks from fork point to new peak
+            blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
+            curr = block_record.header_hash
 
-                    while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
-                        fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
-                        fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
-                        assert fetched_full_block is not None
-                        assert fetched_block_record is not None
-                        blocks_to_add.append((fetched_full_block, fetched_block_record))
-                        if fetched_full_block.height == 0:
-                            # Doing a full reorg, starting at height 0
-                            break
-                        curr = fetched_block_record.prev_hash
+            while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
+                fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
+                fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
+                assert fetched_full_block is not None
+                assert fetched_block_record is not None
+                blocks_to_add.append((fetched_full_block, fetched_block_record))
+                if fetched_full_block.height == 0:
+                    # Doing a full reorg, starting at height 0
+                    break
+                curr = fetched_block_record.prev_hash
 
-                    for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
-                        self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
-                        if fetched_block_record.is_transaction_block:
-                            await self.coin_store.new_block(fetched_full_block)
-                        if fetched_block_record.sub_epoch_summary_included is not None:
-                            self.__sub_epoch_summaries[
-                                fetched_block_record.height
-                            ] = fetched_block_record.sub_epoch_summary_included
+            for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
+                self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
+                if fetched_block_record.is_transaction_block:
+                    await self.coin_store.new_block(fetched_full_block)
+                if fetched_block_record.sub_epoch_summary_included is not None:
+                    self.__sub_epoch_summaries[
+                        fetched_block_record.height
+                    ] = fetched_block_record.sub_epoch_summary_included
 
-                    # Changes the peak to be the new peak
-                    await self.block_store.set_peak(block_record.header_hash)
-                    self._peak_height = block_record.height
-                    await self.block_store.db_wrapper.commit_transaction()
-                except Exception:
-                    await self.block_store.db_wrapper.rollback_transaction()
-                    raise
+                # Changes the peak to be the new peak
+                await self.block_store.set_peak(block_record.header_hash)
+                self._peak_height = block_record.height
 
             return uint32(max(fork_height, 0))
 

@@ -1514,7 +1514,9 @@ class FullNode:
             if field_vdf == CompressibleVDFField.CC_IP_VDF:
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
             assert new_block is not None
-            await self.block_store.add_full_block(new_block, block_record)
+            async with self.db_wrapper.lock:
+                await self.block_store.add_full_block(new_block, block_record)
+                await self.block_store.db_wrapper.commit_transaction()
 
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):
         field_vdf = CompressibleVDFField(int(request.field_vdf))
