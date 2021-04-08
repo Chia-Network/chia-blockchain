@@ -1019,7 +1019,6 @@ class FullNode:
                         self._segment_task.cancel()
                 except Exception as e:
                     self.log.warning(f"failed to cancel segment task {e}")
-            self.log.error("failed to cancell segment task")
             self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
