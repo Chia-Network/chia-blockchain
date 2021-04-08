@@ -115,6 +115,8 @@ def create_foliage(
         prev_block_hash = prev_block.header_hash
 
     solution_program: Optional[SerializedProgram] = None
+    generator_block_heights_list: List[uint32] = []
+
     if is_transaction_block:
         aggregate_sig: G2Element = G2Element()
         cost = uint64(0)
@@ -137,7 +139,6 @@ def create_foliage(
         else:
             spend_bundle_fees = 0
 
-        # TODO: prev generators root
         reward_claims_incorporated = []
         if height > 0:
             assert prev_transaction_block is not None
@@ -213,8 +214,17 @@ def create_foliage(
         additions_root = addition_merkle_set.get_root()
         removals_root = removal_merkle_set.get_root()
 
-        generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
+        generator_hash = bytes32([0] * 32)
+        if solution_program is not None:
+            generator_hash = std_hash(solution_program)
+
         generator_refs_hash = bytes32([1] * 32)
+        if generator_block_heights_list not in (None, []):
+            generator_ref_list_bytes = b"".join(
+                [(i).to_bytes(4, byteorder="big") for i in generator_block_heights_list]
+            )
+            generator_refs_hash = std_hash(generator_ref_list_bytes)
+
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
