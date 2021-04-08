@@ -20,18 +20,17 @@ def parse_sexp_to_condition(
     Takes a ChiaLisp sexp and returns a ConditionVarPair.
     If it fails, returns an Error
     """
-    if not sexp.listp():
+    as_atoms = sexp.as_atom_list()
+    if len(as_atoms) < 1:
         return Err.INVALID_CONDITION, None
-    items = sexp.as_python()
-    if not isinstance(items[0], bytes):
-        return Err.INVALID_CONDITION, None
+    opcode = as_atoms[0]
     try:
-        opcode = ConditionOpcode(items[0])
+        opcode = ConditionOpcode(opcode)
     except ValueError:
+        # TODO: this remapping is bad, and should probably not happen
+        # it's simple enough to just store the opcode as a byte
         opcode = ConditionOpcode.UNKNOWN
-    if len(items) == 3:
-        return None, ConditionVarPair(opcode, [items[1], items[2]])
-    return None, ConditionVarPair(opcode, [items[1]])
+    return None, ConditionVarPair(opcode, as_atoms[1:])
 
 
 def parse_sexp_to_conditions(
@@ -70,7 +69,7 @@ def conditions_by_opcode(
 
 def pkm_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    coin_name: bytes32 = None,
+    coin_name: bytes32,
 ) -> List[Tuple[G1Element, bytes]]:
     ret: List[Tuple[G1Element, bytes]] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
