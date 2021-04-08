@@ -429,7 +429,8 @@ class MempoolManager:
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((tx, cached_result, cached_name))
         log.debug(
-            f"Size of mempool: {len(self.mempool.spends)}, minimum fee to get in: {self.mempool.get_min_fee_rate()}"
+            f"Size of mempool: {len(self.mempool.spends)}, minimum fee to get in: "
+            f"{self.mempool.get_min_fee_rate(40000)}"
         )
         return txs_added
 

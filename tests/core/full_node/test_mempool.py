@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import pytest
 
+from chia.full_node.mempool import Mempool
 from chia.protocols import full_node_protocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -47,20 +48,50 @@ def event_loop():
     yield loop
 
 
+@pytest.fixture(scope="module")
+async def two_nodes():
+    async_gen = setup_simulators_and_wallets(2, 1, {})
+    nodes, _ = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+    yield full_node_1, full_node_2, server_1, server_2
+
+    async for _ in async_gen:
+        yield _
+
+
 class TestMempool:
-    @pytest.fixture(scope="module")
-    async def two_nodes(self):
-        async_gen = setup_simulators_and_wallets(2, 1, {})
-        nodes, _ = await async_gen.__anext__()
-        full_node_1 = nodes[0]
-        full_node_2 = nodes[1]
-        server_1 = full_node_1.full_node.server
-        server_2 = full_node_2.full_node.server
-        yield full_node_1, full_node_2, server_1, server_2
+    @pytest.mark.asyncio
+    async def test_basic_mempool(self, two_nodes):
+        reward_ph = WALLET_A.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        peer = await connect_and_get_peer(server_1, server_2)
 
-        async for _ in async_gen:
-            yield _
+        for block in blocks:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
+        await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
+
+        max_mempool_cost = 40000000 * 5
+        mempool = Mempool(max_mempool_cost)
+        assert mempool.get_min_fee_rate(104000) == 0
+
+        with pytest.raises(ValueError):
+            mempool.get_min_fee_rate(max_mempool_cost + 1)
+
+        spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
+        assert spend_bundle is not None
+
+
+class TestMempoolManager:
     @pytest.mark.asyncio
     async def test_basic_mempool(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
