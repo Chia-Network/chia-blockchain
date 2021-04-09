@@ -61,7 +61,7 @@ import {
   DISTRIBUTED_ID,
 } from '../util/wallet_types';
 
-const config = require('../config/config');
+import config from '../config/config';
 
 const StyledTypographyDD = styled(Typography)`
   word-break: break-all;

@@ -1708,6 +1708,10 @@ msgstr "Această tranzacție a fost creată în acest moment"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Această tranzacție a fost inclusă pe blockchain la această înălțime a blocului"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Creata in timp"
@@ -1943,7 +1947,7 @@ msgstr "Nu este necesar să fii sincronizat sau conectat la o Parcelă. Atenție
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Ai {0}% din spațiul din retea, așadar cultivarea unui bloc va dura apriximativ {expectedTimeToWin}."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr ""
 

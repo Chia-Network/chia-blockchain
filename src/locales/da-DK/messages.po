@@ -1708,6 +1708,10 @@ msgstr "Dette handel er lavet på dette tidspunkt"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Denne handel blev inkluderet i blokkæden i denne blok"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Tid Oprettet"
@@ -1943,7 +1947,7 @@ msgstr "Du behøver ikke at være i synk eller forbundet for at plotte. Midletid
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Du har {0}% af den samlede plads på netværket, så at farme en gevinst vil tage {expectedTimeToWin} estimeret."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr ""
 

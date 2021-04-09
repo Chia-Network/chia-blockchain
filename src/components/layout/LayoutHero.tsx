@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex, DarkModeToggle, LocaleToggle } from '@chia/core';
+import AppTimeBombAlert from '../app/AppTimeBombAlert';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -40,7 +41,12 @@ export default function LayoutHero(props: Props) {
           <DarkModeToggle />
         </Toolbar>
       </AppBar>
-      <StyledBody>{children}</StyledBody>
+      <StyledBody>
+        <Flex flexDirection="column" gap={2} alignItems="center">
+          <AppTimeBombAlert />
+          {children}
+        </Flex>
+      </StyledBody>
     </StyledWrapper>
   );
 }

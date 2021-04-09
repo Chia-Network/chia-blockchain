@@ -1708,6 +1708,10 @@ msgstr "本交易创建于"
 msgid "This trade was included on blockchain at this block height"
 msgstr "该交易在链上的区块高度"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "创建时间"
@@ -1943,7 +1947,7 @@ msgstr "不需要同步或者连接到网络节点就可以拓荒, 注意在拓�
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "在整个网络中, 你的农地的空间占比是{0}%, 所以预计收获下一个区块的话, 要花费的时间是 {expectedTimeToWin}."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr ""
 

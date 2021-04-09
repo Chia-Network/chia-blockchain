@@ -15,6 +15,7 @@ import {
   service_farmer,
   service_harvester,
 } from '../util/service_names';
+import config from '../config/config';
 
 const crypto = require('crypto');
 
@@ -25,7 +26,6 @@ if (isElectron()) {
   var WS = window.require('ws');
 }
 
-const config = require('../config/config');
 
 const outgoing_message = (command, data, destination) => ({
   command,

@@ -1708,6 +1708,10 @@ msgstr "この注文の作成日時です"
 msgid "This trade was included on blockchain at this block height"
 msgstr "このトレードはこのブロック高でブロックチェーンに取り込まれました。"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "作成日時"
@@ -1943,7 +1947,7 @@ msgstr "耕地作成には同期も接続も必要ありません。耕し中に
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "あなたはネットワークの {0}% の容量を所有しているので、ブロック収穫には推定 {expectedTimeToWin} かかります。"
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr ""
 
