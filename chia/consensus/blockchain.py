@@ -323,9 +323,9 @@ class Blockchain(BlockchainInterface):
                         fetched_block_record.height
                     ] = fetched_block_record.sub_epoch_summary_included
 
-                # Changes the peak to be the new peak
-                await self.block_store.set_peak(block_record.header_hash)
-                self._peak_height = block_record.height
+            # Changes the peak to be the new peak
+            await self.block_store.set_peak(block_record.header_hash)
+            self._peak_height = block_record.height
 
             return uint32(max(fork_height, 0))
 
