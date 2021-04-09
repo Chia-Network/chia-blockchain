@@ -240,7 +240,7 @@ class Blockchain(BlockchainInterface):
                 self.add_block_record(block_record)
                 fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
                 await self.block_store.db_wrapper.commit_transaction()
-            except:
+            except Exception:
                 await self.block_store.db_wrapper.rollback_transaction()
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
