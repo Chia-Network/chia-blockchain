@@ -237,6 +237,7 @@ class Blockchain(BlockchainInterface):
         fork_height = None
         async with self.block_store.db_wrapper.lock:
             try:
+                await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(block, block_record)
                 self.add_block_record(block_record)
                 fork_height = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
