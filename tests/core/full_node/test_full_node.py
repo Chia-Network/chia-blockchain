@@ -19,7 +19,7 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
@@ -468,6 +468,11 @@ class TestFullNodeProtocol:
             log.warning(f"Cost result: {cost_result.cost}")
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+        for _ in range(mempool_size + 1):
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            puzzle_hashes.append(receiver_puzzlehash)
+            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
             msg = await full_node_1.new_transaction(new_transaction)
             assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
@@ -905,7 +910,7 @@ class TestFullNodeProtocol:
         conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+        output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
         conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         spend_bundle: SpendBundle = wallet_a.generate_signed_transaction(
