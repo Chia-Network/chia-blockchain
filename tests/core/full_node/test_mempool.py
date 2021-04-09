@@ -513,11 +513,11 @@ class TestMempool:
 
         announce = Announcement(coin_2.name(), bytes("test", "utf-8"))
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
 
         dic = {cvp.opcode: [cvp]}
         # Wrong message
-        cvp2 = ConditionVarPair(
+        cvp2 = ConditionWithArgs(
             ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
             [bytes("wrong test", "utf-8")],
         )
