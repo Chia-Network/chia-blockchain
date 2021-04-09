@@ -6,7 +6,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, get_type_hints
+from typing import Any, BinaryIO, Dict, List, Tuple, Type
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -182,7 +182,7 @@ class Streamable:
         if f_type == bytes:
             list_size_bytes = f.read(4)
             assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-            list_size = uint32(int.from_bytes(list_size_bytes, "big"))
+            list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
             bytes_read = f.read(list_size)
             assert bytes_read is not None and len(bytes_read) == list_size
             return bytes_read
@@ -192,7 +192,7 @@ class Streamable:
             # wjb assert inner_type != get_args(List)[0]  # type: ignore
             list_size_bytes = f.read(4)
             assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-            list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
+            list_size = uint32(int.from_bytes(list_size_bytes, "big"))
             for list_index in range(list_size):
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
             return full_list
@@ -219,7 +219,7 @@ class Streamable:
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         values = []
-        for _, f_type in get_type_hints(cls).items():
+        for _, f_type in cls.__annotations__.items():
             values.append(cls.parse_one_item(f_type, f))  # type: ignore
         return cls(*values)
 
@@ -262,7 +262,7 @@ class Streamable:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
     def stream(self, f: BinaryIO) -> None:
-        for f_name, f_type in get_type_hints(self).items():  # type: ignore
+        for f_name, f_type in self.__annotations__.items():  # type: ignore
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:

@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from typing import Any, List, Optional, Tuple, Type, Union, get_type_hints
+from typing import Any, List, Optional, Tuple, Type, Union
 
 if sys.version_info < (3, 8):
 
@@ -85,7 +85,12 @@ def strictdataclass(cls: Any):
             for (f_name, f_type) in fields.items():
                 if f_name not in data:
                     raise ValueError(f"Field {f_name} not present")
-                object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
+                try:
+                    if not isinstance(data[f_name], f_type):
+                        raise ValueError(f"Field {f_name} has the incorrect type")
+                except TypeError:
+                    # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
+                    object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
 
     class NoTypeChecking:
         __no_type_check__ = True
