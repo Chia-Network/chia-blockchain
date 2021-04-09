@@ -244,6 +244,7 @@ class Blockchain(BlockchainInterface):
                 await self.block_store.db_wrapper.commit_transaction()
             except Exception:
                 await self.block_store.db_wrapper.rollback_transaction()
+                raise
         if fork_height is not None:
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:
