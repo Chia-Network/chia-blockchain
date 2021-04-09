@@ -295,11 +295,16 @@ class FullNodeDiscovery:
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
     async def _periodically_serialize(self, random: Random):
+        serialize_counter = 0
         while not self.is_closed:
             if self.address_manager is None:
                 await asyncio.sleep(10)
                 continue
-            serialize_interval = random.randint(15 * 60, 30 * 60)
+            serialize_counter += 1
+            if serialize_counter > 6:
+                serialize_interval = random.randint(15 * 60, 30 * 60)
+            else:
+                serialize_interval = 300
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
                 await self.address_manager_store.serialize(self.address_manager)
