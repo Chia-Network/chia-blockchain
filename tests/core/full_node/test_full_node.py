@@ -59,7 +59,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 4000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -444,11 +444,11 @@ class TestFullNodeProtocol:
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
 
-        block_buffer_count = bt.constants.MEMPOOL_BLOCK_BUFFER
-        mempool_size = int(bt.constants.MAX_BLOCK_COST_CLVM * block_buffer_count)
+        block_buffer_count = full_node_1.full_node.constants.MEMPOOL_BLOCK_BUFFER
+        mempool_size = int(full_node_1.full_node.constants.MAX_BLOCK_COST_CLVM * block_buffer_count)
 
         # Makes a bunch of coin
-        for i in range(50):
+        for i in range(5):
             conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
             # This should fit in one transaction
             for _ in range(100):
@@ -487,24 +487,42 @@ class TestFullNodeProtocol:
             msg = await full_node_1.new_transaction(new_transaction)
             assert msg is None
 
-        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 50)
+        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 5)
 
         spend_bundles = []
+
+        included_tx = 0
+        not_included_tx = 0
+
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
             coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-            fee = random.randint(2, 499)
+            if puzzle_hash == puzzle_hashes[-1]:
+                force_high_fee = True
+                fee = 1000
+            else:
+                force_high_fee = False
+                fee = random.randint(2, 499)
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
-            await full_node_1.respond_transaction(respond_transaction, peer)
+            res = await full_node_1.respond_transaction(respond_transaction, peer)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
-            if req.data == bytes(fnp.RespondTransaction(spend_bundle)):
+
+            if req is not None and req.data == bytes(fnp.RespondTransaction(spend_bundle)):
+                included_tx += 1
                 spend_bundles.append(spend_bundle)
+            else:
+                assert not force_high_fee
+                not_included_tx += 1
+        log.warning(f"Included: {included_tx}, not included: {not_included_tx}")
+
+        assert included_tx > 0
+        assert not_included_tx > 0
 
         # Mempool is full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
@@ -514,7 +532,7 @@ class TestFullNodeProtocol:
         agg_bundle: SpendBundle = SpendBundle.aggregate(spend_bundles)
         blocks_new = bt.get_consecutive_blocks(
             1,
-            block_list_input=blocks_new,
+            block_list_input=blocks,
             transaction_data=agg_bundle,
             guarantee_transaction_block=True,
         )
