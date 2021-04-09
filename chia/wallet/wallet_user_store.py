@@ -58,18 +58,20 @@ class WalletUserStore:
     async def create_wallet(
         self, name: str, wallet_type: int, data: str, id: Optional[int] = None
     ) -> Optional[WalletInfo]:
-        cursor = await self.db_connection.execute(
-            "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-            (id, name, wallet_type, data),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.lock:
+            cursor = await self.db_connection.execute(
+                "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
+                (id, name, wallet_type, data),
+            )
+            await cursor.close()
+            await self.db_connection.commit()
         return await self.get_last_wallet()
 
     async def delete_wallet(self, id: int):
-        cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.lock:
+            cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
+            await cursor.close()
+            await self.db_connection.commit()
 
     async def update_wallet(self, wallet_info: WalletInfo, in_transaction):
         if not in_transaction:
