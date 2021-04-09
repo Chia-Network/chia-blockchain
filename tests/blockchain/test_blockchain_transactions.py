@@ -580,7 +580,7 @@ class TestBlockchainTransactions:
 
         # This condition requires block1 coinbase to be spent
         block2_cvp = ConditionWithArgs(
-            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
+            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
             [bytes("test", "utf-8")],
         )
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
@@ -664,7 +664,7 @@ class TestBlockchainTransactions:
 
         # This condition requires block1 coinbase to be spent
         block2_cvp = ConditionWithArgs(
-            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
+            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH,
             [bytes("test", "utf-8")],
         )
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
