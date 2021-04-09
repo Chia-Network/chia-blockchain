@@ -301,9 +301,7 @@ export const login_and_skip_action = (fingerprint) => (dispatch) => {
 
 export const login_action = (fingerprint) => (dispatch) => {
   dispatch(selectFingerprint(fingerprint));
-  console.log('log_in(fingerprint)', log_in(fingerprint));
   return async_api(dispatch, log_in(fingerprint), true).then((response) => {
-    console.log(response.data);
     if (response.data.success) {
       // Go to wallet
       dispatch(refreshAllState());
