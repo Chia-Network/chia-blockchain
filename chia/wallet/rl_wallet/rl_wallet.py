@@ -214,7 +214,7 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(self.id(), self.wallet_info.name, self.type(), data_str)
-        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info, False)
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
@@ -291,7 +291,7 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(self.id(), self.wallet_info.name, self.type(), data_str)
-        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info, False)
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info

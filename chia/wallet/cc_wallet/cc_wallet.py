@@ -269,7 +269,7 @@ class CCWallet:
     async def set_name(self, new_name: str):
         new_info = replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
-        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
 
     def get_colour(self) -> str:
         assert self.cc_info.my_genesis_checker is not None
