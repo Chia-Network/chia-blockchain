@@ -29,12 +29,20 @@ def make_reserve_fee_condition(fee):
     return [ConditionOpcode.RESERVE_FEE, fee]
 
 
-def make_assert_announcement(announcement_hash):
+def make_assert_coin_announcement(announcement_hash):
     return [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, announcement_hash]
 
 
-def make_create_announcement_with_id(message):
+def make_assert_puzzle_announcement(announcement_hash):
+    return [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, announcement_hash]
+
+
+def make_create_coin_announcement(message):
     return [ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, message]
+
+
+def make_create_puzzle_announcement(message):
+    return [ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH, message]
 
 
 def make_assert_my_parent_id(parent_id):
