@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 03:49\n"
+"PO-Revision-Date: 2021-04-10 21:28\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "128 nhóm được khuyến nghị"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot  . Một \bfarmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
+msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot  . Một farmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
 
 #: src/electron/main.ts:331
 #: src/electron/main.ts:413
@@ -769,7 +769,7 @@ msgstr "Chiều cao"
 msgid "Help"
 msgstr "Hỗ trợ"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Hỗ trợ dịch thuật"
 
@@ -869,7 +869,7 @@ msgstr "Đang xử lý..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr "Các plot hiện tại"
+msgstr "Harvester Plots hiện có"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -1058,7 +1058,7 @@ msgstr "Đầu ra"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr "Chiều cao \bchóp"
+msgstr "Chiều cao chóp"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1485,7 +1485,7 @@ msgstr "Đăng nhập"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr "Bỏ qua việc thêm thư mục cuối cùng vào máy gặt để trồng trọt"
+msgstr "Bỏ qua việc thêm thư mục cuối cùng vào harvester để farm"
 
 #: src/electron/main.ts:379
 msgid "Speech"
@@ -1682,7 +1682,7 @@ msgstr "Đây là thời gian khối được tạo ra bởi farmer, trước kh
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "Đây là tổng lượng \bXCH trong chuỗi khối ở khối phụ cao nhất hiện tại được kiểm soát bởi các khóa riêng của bạn. Nó bao gồm phần thưởng farm bị đóng băng, nhưng không phải là các giao dịch đến và đi đang chờ xử lý."
+msgstr "Đây là tổng lượng XCH trong chuỗi khối ở khối phụ cao nhất hiện tại được kiểm soát bởi các khóa riêng của bạn. Nó bao gồm phần thưởng farm bị đóng băng, nhưng không phải là các giao dịch đến và đi đang chờ xử lý."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -1945,7 +1945,7 @@ msgstr "Bạn có {0}% dung lượng trên mạng, vì vậy, việc farm một 
 
 #: src/components/app/AppTimeBomb.tsx:16
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
-msgstr ""
+msgstr "Bạn cần nâng cấp ứng dụng Chia vì phiên bản này sẽ sớm ngừng hoạt động!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
@@ -1957,7 +1957,7 @@ msgstr "Kết nối nút đầy đủ của bạn"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr "Mạng lưới máy gặt của bạn"
+msgstr "Mạng lưới Harvester của bạn"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
@@ -2007,3 +2007,4 @@ msgstr "{currencyCode} Tổng số Chia thu được"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Phí giao dịch của người dùng"
+
