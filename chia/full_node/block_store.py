@@ -67,7 +67,11 @@ class BlockStore:
         return self
 
     async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
-        self.block_cache.put(block.header_hash, block)
+        cached = self.block_cache.get(block.header_hash)
+        if cached is not None:
+            # Since write to db can fail, we remove from cache here to avoid potential inconsistency
+            # Adding to cache only from reading
+            self.block_cache.put(block.header_hash, None)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
@@ -133,7 +137,9 @@ class BlockStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return FullBlock.from_bytes(row[0])
+            block = FullBlock.from_bytes(row[0])
+            self.block_cache.put(block.header_hash, block)
+            return block
         return None
 
     async def get_full_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:

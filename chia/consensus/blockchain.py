@@ -234,14 +234,15 @@ class Blockchain(BlockchainInterface):
             None,
         )
         # Always add the block to the database
-        fork_height = None
         async with self.block_store.db_wrapper.lock:
             try:
                 await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(block, block_record)
-                self.add_block_record(block_record)
-                fork_height = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+                fork_height, peak_height = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
                 await self.block_store.db_wrapper.commit_transaction()
+                self.add_block_record(block_record)
+                if peak_height is not None:
+                    self._peak_height = peak_height
             except Exception:
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
@@ -252,7 +253,7 @@ class Blockchain(BlockchainInterface):
 
     async def _reconsider_peak(
         self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
-    ) -> Optional[uint32]:
+    ) -> Tuple[Optional[uint32], Optional[uint32]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -271,8 +272,8 @@ class Blockchain(BlockchainInterface):
                 self.__height_to_hash[uint32(0)] = block.header_hash
                 self._peak_height = uint32(0)
                 await self.block_store.set_peak(block.header_hash)
-                return uint32(0)
-            return None
+                return uint32(0), uint32(0)
+            return None, None
 
         assert peak is not None
         if block_record.weight > peak.weight:
@@ -327,12 +328,10 @@ class Blockchain(BlockchainInterface):
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
-            self._peak_height = block_record.height
-
-            return uint32(max(fork_height, 0))
+            return uint32(max(fork_height, 0)), block_record.height
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-        return None
+        return None, None
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_block(header_hash)
