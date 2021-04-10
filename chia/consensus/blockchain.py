@@ -238,9 +238,17 @@ class Blockchain(BlockchainInterface):
             try:
                 await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(block, block_record)
-                fork_height, peak_height = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+                fork_height, peak_height, records = await self._reconsider_peak(
+                    block_record, genesis, fork_point_with_peak
+                )
                 await self.block_store.db_wrapper.commit_transaction()
                 self.add_block_record(block_record)
+                for fetched_block_record in records:
+                    self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
+                    if fetched_block_record.sub_epoch_summary_included is not None:
+                        self.__sub_epoch_summaries[
+                            fetched_block_record.height
+                        ] = fetched_block_record.sub_epoch_summary_included
                 if peak_height is not None:
                     self._peak_height = peak_height
             except Exception:
@@ -253,7 +261,7 @@ class Blockchain(BlockchainInterface):
 
     async def _reconsider_peak(
         self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
-    ) -> Tuple[Optional[uint32], Optional[uint32]]:
+    ) -> Tuple[Optional[uint32], Optional[uint32], List[BlockRecord]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -269,11 +277,9 @@ class Blockchain(BlockchainInterface):
                 # Begins a transaction, because we want to ensure that the coin store and block store are only updated
                 # in sync.
                 await self.coin_store.new_block(block)
-                self.__height_to_hash[uint32(0)] = block.header_hash
-                self._peak_height = uint32(0)
                 await self.block_store.set_peak(block.header_hash)
-                return uint32(0), uint32(0)
-            return None, None
+                return uint32(0), uint32(0), [block_record]
+            return None, None, []
 
         assert peak is not None
         if block_record.weight > peak.weight:
@@ -316,22 +322,18 @@ class Blockchain(BlockchainInterface):
                     # Doing a full reorg, starting at height 0
                     break
                 curr = fetched_block_record.prev_hash
-
+            records_to_add = []
             for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
-                self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
+                records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
                     await self.coin_store.new_block(fetched_full_block)
-                if fetched_block_record.sub_epoch_summary_included is not None:
-                    self.__sub_epoch_summaries[
-                        fetched_block_record.height
-                    ] = fetched_block_record.sub_epoch_summary_included
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
-            return uint32(max(fork_height, 0)), block_record.height
+            return uint32(max(fork_height, 0)), block_record.height, records_to_add
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-        return None, None
+        return None, None, []
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_block(header_hash)
