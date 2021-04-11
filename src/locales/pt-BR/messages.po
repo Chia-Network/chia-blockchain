@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 09:50\n"
+"PO-Revision-Date: 2021-04-11 03:31\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -80,15 +80,15 @@ msgstr "Adicionar Carteira"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "Adicionar uma Parcela"
+msgstr "Adicionar Lote"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr "Adicionar uma parcela"
+msgstr "Adicionar um lote"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "Adicionar diretório de parcelas"
+msgstr "Adicionar diretório de lotes"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -121,7 +121,7 @@ msgstr "Quantidade Para Moeda Inicial"
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "Tem certeza que deseja deletar a parcela? A parcela não poderá ser recuperada."
+msgstr "Tem certeza que deseja deletar o lote? O lote não poderá ser recuperado."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -452,11 +452,11 @@ msgstr "Crie uma nova moeda colorida"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr "Criar carteira de utilizador"
+msgstr "Criar uma carteira nova"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr "Crie carteira para cores"
+msgstr "Criar carteira para cor"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
@@ -472,7 +472,7 @@ msgstr "Criado em:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr "Criado por nós:"
+msgstr "Criado por:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -507,7 +507,7 @@ msgstr "Atraso"
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
-msgstr "Eliminar"
+msgstr "Apagar"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
@@ -711,12 +711,12 @@ msgstr "Nome do arquivo"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr "Localização final da pasta"
+msgstr "Local da pasta final"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
-msgstr "Finalizado"
+msgstr "Concluído"
 
 #: src/electron/main.ts:317
 msgid "Follow on Twitter"
@@ -733,7 +733,7 @@ msgstr "Nó Completo"
 
 #: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
-msgstr "Status de nó completo"
+msgstr "Estado do nó completo"
 
 #: src/electron/main.ts:252
 msgid "Full Screen"
@@ -769,7 +769,7 @@ msgstr "Altura"
 msgid "Help"
 msgstr "Ajuda"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Ajude a traduzir"
 
@@ -1016,7 +1016,7 @@ msgstr "Não sincronizado"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr "Ainda não aceite"
+msgstr "Ainda não aceito"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
@@ -1298,7 +1298,7 @@ msgstr "Nome da fila"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
-msgstr "Em fila"
+msgstr "Na fila"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
@@ -1373,12 +1373,12 @@ msgstr "Restaurar Metadados para Moedas Coloridas e outras Carteiras Inteligente
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr "Seguro para pular"
+msgstr "Pular com segurança"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr "Guardar"
+msgstr "Salvar"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -1817,12 +1817,12 @@ msgstr "VDF Sub Slot Iterações"
 
 #: src/electron/main.ts:216
 msgid "View"
-msgstr "Vista"
+msgstr "Exibir"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
-msgstr "Ver Registo"
+msgstr "Ver log de tarefas"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
@@ -2007,3 +2007,4 @@ msgstr "{currencyCode} Total de Chia cultivada"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Taxas de transação do usuário"
+
