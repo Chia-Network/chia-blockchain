@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 03:49\n"
+"PO-Revision-Date: 2021-04-11 23:43\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -769,7 +769,7 @@ msgstr "Высота"
 msgid "Help"
 msgstr "Помощь"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
@@ -1708,6 +1708,10 @@ msgstr "Сделка была создана в это время"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Сделка была включена в блокчейн на указанной высоте блока"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "Эта версия Chia больше не совместима с блокчейном и не может безопасно фармить."
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Время создания"
@@ -1943,7 +1947,7 @@ msgstr "Вам не нужно синхронизировать узел или 
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Вы владеете {0}% пространства в сети, поэтому для обработки блока потребуется {expectedTimeToWin}."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Вам необходимо обновить приложение Chia, так как эта версия скоро перестанет работать!"
 
@@ -2007,3 +2011,4 @@ msgstr "{currencyCode} Всего Чиа выращено"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Комиссия за транзакции пользователей"
+
