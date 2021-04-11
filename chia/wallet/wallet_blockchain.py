@@ -234,7 +234,7 @@ class WalletBlockchain(BlockchainInterface):
 
                 fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
                 await self.block_store.db_wrapper.commit_transaction()
-            except Exception as e:
+            except BaseException as e:
                 self.log.error(f"Error during db transaction: {e}")
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
