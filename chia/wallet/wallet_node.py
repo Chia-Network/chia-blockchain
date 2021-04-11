@@ -538,7 +538,6 @@ class WalletNode:
             self.log.info("No peers to sync to")
             return
 
-
         await self.wallet_state_manager.blockchain.lock.acquire()
         try:
             fork_height = None
