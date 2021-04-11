@@ -1,4 +1,5 @@
 # RLWallet is subclass of Wallet
+import asyncio
 import json
 import time
 from dataclasses import dataclass
@@ -214,7 +215,7 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(self.id(), self.wallet_info.name, self.type(), data_str)
-        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info, False)
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
@@ -291,7 +292,7 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(self.id(), self.wallet_info.name, self.type(), data_str)
-        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info, False)
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
@@ -321,7 +322,7 @@ class RLWallet:
             name=spend_bundle.name(),
         )
 
-        await self.push_transaction(tx_record)
+        asyncio.create_task(self.push_transaction(tx_record))
 
     async def rl_available_balance(self) -> uint64:
         self.rl_coin_record = await self._get_rl_coin_record()
