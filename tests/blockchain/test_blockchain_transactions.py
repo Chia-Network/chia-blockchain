@@ -655,7 +655,7 @@ class TestBlockchainTransactions:
         # This condition requires block2 coinbase to be spent
         block1_cvp = ConditionWithArgs(
             ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
-            [Announcement(spend_coin_block_2.name(), bytes("test", "utf-8")).name()],
+            [Announcement(spend_coin_block_2.puzzle_hash, bytes("test", "utf-8")).name()],
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
