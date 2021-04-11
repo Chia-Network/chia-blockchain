@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 03:49\n"
+"PO-Revision-Date: 2021-04-11 23:43\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -1708,6 +1708,10 @@ msgstr ""
 msgid "This trade was included on blockchain at this block height"
 msgstr ""
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr ""
@@ -1943,7 +1947,7 @@ msgstr ""
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr ""
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr ""
 
