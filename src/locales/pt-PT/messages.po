@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 03:50\n"
+"PO-Revision-Date: 2021-04-11 23:43\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -769,7 +769,7 @@ msgstr "Altura"
 msgid "Help"
 msgstr "Ajuda"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Ajude a traduzir"
 
@@ -1708,6 +1708,10 @@ msgstr "Esta operação foi criada nesta hora"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Esta operação foi incluída na blockchain nesta altura do bloco"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "Esta versão do Chia já não é mais compatível com a blockchain e não pode fazer farming com segurança."
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Hora de Criação"
@@ -1943,7 +1947,7 @@ msgstr "Você não precisa estar sincronizado ou conectado para plotar. Os fiche
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Você tem {0}% do espaço na rede, portanto, cultivar um bloco levará aproximadamente {expectedTimeToWin}."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Precisa de atualizar a aplicação Chia, pois esta versão deixará de funcionar em breve!"
 
@@ -2007,3 +2011,4 @@ msgstr "{currencyCode} Total de Chia cultivada"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Taxas de transação do utilizador"
+
