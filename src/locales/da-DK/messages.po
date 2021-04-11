@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 03:49\n"
+"PO-Revision-Date: 2021-04-11 23:43\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -769,7 +769,7 @@ msgstr "Højde"
 msgid "Help"
 msgstr "Hjælp"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
 msgid "Help translate"
 msgstr "Hjælp med oversættelse"
 
@@ -1075,7 +1075,7 @@ msgstr "Afventende"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr "Afventende Balance"
+msgstr "Afventende Saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
@@ -1085,7 +1085,7 @@ msgstr "Afventende Ændring"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr "Afventende Total Balance"
+msgstr "Afventende Total Saldo"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1235,7 +1235,7 @@ msgstr "Pool Gevinst Addresse"
 
 #: src/components/block/Block.jsx:283
 msgid "Pool Reward Amount"
-msgstr "Pool Belønning Beløb"
+msgstr "Pool Belønnings Beløb"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1503,7 +1503,7 @@ msgstr "Brugbart Beløb Per Interval"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr "Brugbar Saldo"
+msgstr "Disponibel Saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
@@ -1682,11 +1682,11 @@ msgstr "Dette er tidstemplet fra blokken da den blev farmet af farmeren, hvilket
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "Dette er det tottale beløb af chia i blokkæden ved den nuværende sidste blok, som er kontrolleret af din privat nøgle. Dette inkluderer frosne farmer gevinster, men ikke afventende indkommende og udgående transaktioner."
+msgstr "Dette er det totale beløb af chia i blokkæden ved den nuværende sidste blok, som er kontrolleret af din private nøgle. Dette inkluderer frosne farmer gevinster, men ikke afventende indkommende og udgående transaktioner."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "Dette er den totalle + afventende balance: det er hvad din balance vil være når alle afventende transaktioner er bevist."
+msgstr "Dette er den totalle + afventende saldo: det er hvad din balance vil være når alle afventende transaktioner er bekræftet."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
@@ -1708,6 +1708,10 @@ msgstr "Dette handel er lavet på dette tidspunkt"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Denne handel blev inkluderet i blokkæden i denne blok"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "Denne version af Chia er ikke længere kompatibel med netværket og kan ikke farme."
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Tid Oprettet"
@@ -1728,7 +1732,7 @@ msgstr "Til"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
-msgstr "Total Balance"
+msgstr "Total Saldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -1831,11 +1835,11 @@ msgstr "Vis Handel"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr "Vis afventende balance"
+msgstr "Vis afventende saldo"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr "Vis afventende balance..."
+msgstr "Vis afventende saldo..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1943,7 +1947,7 @@ msgstr "Du behøver ikke at være i synk eller forbundet for at plotte. Midletid
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Du har {0}% af den samlede plads på netværket, så at farme en gevinst vil tage {expectedTimeToWin} estimeret."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Du skal opdaterer Chia programmet før denne version stopper med at fungerer!"
 
@@ -2007,3 +2011,4 @@ msgstr "{currencyCode} Total Chia Farmet"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Bruger Transaktionsgebyrer"
+
