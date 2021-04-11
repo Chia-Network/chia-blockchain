@@ -26,6 +26,7 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
@@ -82,6 +83,7 @@ class WalletStateManager:
     puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
     db_connection: aiosqlite.Connection
+    db_wrapper: DBWrapper
 
     main_wallet: Wallet
     wallets: Dict[uint32, Any]
@@ -120,15 +122,16 @@ class WalletStateManager:
 
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
-        self.coin_store = await WalletCoinStore.create(self.db_connection)
-        self.tx_store = await WalletTransactionStore.create(self.db_connection)
-        self.puzzle_store = await WalletPuzzleStore.create(self.db_connection)
-        self.user_store = await WalletUserStore.create(self.db_connection)
-        self.action_store = await WalletActionStore.create(self.db_connection)
-        self.basic_store = await KeyValStore.create(self.db_connection)
-        self.trade_manager = await TradeManager.create(self, self.db_connection)
+        self.db_wrapper = DBWrapper(self.db_connection)
+        self.coin_store = await WalletCoinStore.create(self.db_wrapper)
+        self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
+        self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
+        self.user_store = await WalletUserStore.create(self.db_wrapper)
+        self.action_store = await WalletActionStore.create(self.db_wrapper)
+        self.basic_store = await KeyValStore.create(self.db_wrapper)
+        self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
-        self.block_store = await WalletBlockStore.create(self.db_connection)
+        self.block_store = await WalletBlockStore.create(self.db_wrapper)
 
         self.blockchain = await WalletBlockchain.create(
             self.block_store,
@@ -668,7 +671,7 @@ class WalletStateManager:
                 type=uint32(tx_type),
                 name=coin.name(),
             )
-            await self.tx_store.add_transaction_record(tx_record)
+            await self.tx_store.add_transaction_record(tx_record, True)
         else:
             records = await self.tx_store.tx_with_addition_coin(coin.name(), wallet_id)
 
@@ -697,7 +700,7 @@ class WalletStateManager:
                     name=coin.name(),
                 )
                 if coin.amount > 0:
-                    await self.tx_store.add_transaction_record(tx_record)
+                    await self.tx_store.add_transaction_record(tx_record, True)
 
         coin_record: WalletCoinRecord = WalletCoinRecord(
             coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
@@ -721,7 +724,7 @@ class WalletStateManager:
         if self.peak is None or self.peak.height <= self.constants.INITIAL_FREEZE_PERIOD:
             raise ValueError("Initial Freeze Period")
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-        await self.tx_store.add_transaction_record(tx_record)
+        await self.tx_store.add_transaction_record(tx_record, False)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
@@ -729,7 +732,7 @@ class WalletStateManager:
         """
         Called from wallet to add transaction that is not being set to full_node
         """
-        await self.tx_store.add_transaction_record(tx_record)
+        await self.tx_store.add_transaction_record(tx_record, False)
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def remove_from_queue(
@@ -1063,15 +1066,9 @@ class WalletStateManager:
         return filtered
 
     async def create_action(
-        self,
-        name: str,
-        wallet_id: int,
-        wallet_type: int,
-        callback: str,
-        done: bool,
-        data: str,
+        self, name: str, wallet_id: int, wallet_type: int, callback: str, done: bool, data: str, in_transaction: bool
     ):
-        await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data)
+        await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data, in_transaction)
         self.tx_pending_changed()
 
     async def set_action_done(self, action_id: int):

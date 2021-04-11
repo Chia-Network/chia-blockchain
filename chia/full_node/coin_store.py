@@ -6,6 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 
 
@@ -18,13 +19,15 @@ class CoinStore:
     coin_record_db: aiosqlite.Connection
     coin_record_cache: Dict[str, CoinRecord]
     cache_size: uint32
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(60000)):
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(60000)):
         self = cls()
 
         self.cache_size = cache_size
-        self.coin_record_db = connection
+        self.db_wrapper = db_wrapper
+        self.coin_record_db = db_wrapper.db
         await self.coin_record_db.execute("pragma journal_mode=wal")
         await self.coin_record_db.execute("pragma synchronous=2")
         await self.coin_record_db.execute(

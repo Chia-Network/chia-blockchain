@@ -10,6 +10,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
 
@@ -19,13 +20,15 @@ log = logging.getLogger(__name__)
 class BlockStore:
     db: aiosqlite.Connection
     block_cache: LRUCache
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db = connection
+        self.db_wrapper = db_wrapper
+        self.db = db_wrapper.db
         await self.db.execute("pragma journal_mode=wal")
         await self.db.execute("pragma synchronous=2")
         await self.db.execute(
@@ -63,21 +66,12 @@ class BlockStore:
         self.block_cache = LRUCache(1000)
         return self
 
-    async def begin_transaction(self) -> None:
-        # Also locks the coin store, since both stores must be updated at once
-        cursor = await self.db.execute("BEGIN TRANSACTION")
-        await cursor.close()
-
-    async def commit_transaction(self) -> None:
-        await self.db.commit()
-
-    async def rollback_transaction(self) -> None:
-        # Also rolls back the coin store, since both stores must be updated at once
-        cursor = await self.db.execute("ROLLBACK")
-        await cursor.close()
-
     async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
-        self.block_cache.put(block.header_hash, block)
+        cached = self.block_cache.get(block.header_hash)
+        if cached is not None:
+            # Since write to db can fail, we remove from cache here to avoid potential inconsistency
+            # Adding to cache only from reading
+            self.block_cache.put(block.header_hash, None)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
@@ -106,17 +100,17 @@ class BlockStore:
             ),
         )
         await cursor_2.close()
-        await self.db.commit()
 
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ) -> None:
-        cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO sub_epoch_segments_v2 VALUES(?, ?)",
-            (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
-        )
-        await cursor_1.close()
-        await self.db.commit()
+        async with self.db_wrapper.lock:
+            cursor_1 = await self.db.execute(
+                "INSERT OR REPLACE INTO sub_epoch_segments_v2 VALUES(?, ?)",
+                (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
+            )
+            await cursor_1.close()
+            await self.db.commit()
 
     async def get_sub_epoch_challenge_segments(
         self,
@@ -143,7 +137,9 @@ class BlockStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return FullBlock.from_bytes(row[0])
+            block = FullBlock.from_bytes(row[0])
+            self.block_cache.put(block.header_hash, block)
+            return block
         return None
 
     async def get_full_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:

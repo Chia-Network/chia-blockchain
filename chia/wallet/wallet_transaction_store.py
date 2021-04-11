@@ -4,6 +4,7 @@ import aiosqlite
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
@@ -16,17 +17,19 @@ class WalletTransactionStore:
     """
 
     db_connection: aiosqlite.Connection
+    db_wrapper: DBWrapper
     cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
     tx_wallet_cache: Dict[int, Dict[Any, Set[bytes32]]]
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
+        self.db_wrapper = db_wrapper
+        self.db_connection = self.db_wrapper.db
 
-        self.db_connection = connection
         await self.db_connection.execute("pragma journal_mode=wal")
         await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
@@ -86,30 +89,35 @@ class WalletTransactionStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def add_transaction_record(self, record: TransactionRecord) -> None:
+    async def add_transaction_record(self, record: TransactionRecord, in_transaction: bool) -> None:
         """
         Store TransactionRecord in DB and Cache.
         """
-
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                bytes(record),
-                record.name,  # NOTE: bundle_id is being stored as bytes, not hex
-                record.confirmed_at_height,
-                record.created_at_time,
-                record.to_puzzle_hash.hex(),
-                bytes(record.amount),
-                bytes(record.fee_amount),
-                int(record.confirmed),
-                record.sent,
-                record.wallet_id,
-                record.trade_id,
-                record.type,
-            ),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    bytes(record),
+                    record.name,
+                    record.confirmed_at_height,
+                    record.created_at_time,
+                    record.to_puzzle_hash.hex(),
+                    bytes(record.amount),
+                    bytes(record.fee_amount),
+                    int(record.confirmed),
+                    record.sent,
+                    record.wallet_id,
+                    record.trade_id,
+                    record.type,
+                ),
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
         self.tx_record_cache[record.name] = record
 
         if record.wallet_id in self.tx_wallet_cache:
@@ -147,7 +155,7 @@ class WalletTransactionStore:
             type=current.type,
             name=current.name,
         )
-        await self.add_transaction_record(tx)
+        await self.add_transaction_record(tx, True)
 
     async def unconfirmed_with_removal_coin(self, removal_id: bytes32) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
@@ -221,7 +229,7 @@ class WalletTransactionStore:
             name=current.name,
         )
 
-        await self.add_transaction_record(tx)
+        await self.add_transaction_record(tx, False)
         return True
 
     async def tx_reorged(self, tx_id: bytes32):
@@ -249,7 +257,7 @@ class WalletTransactionStore:
             type=current.type,
             name=current.name,
         )
-        await self.add_transaction_record(tx)
+        await self.add_transaction_record(tx, True)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -434,4 +442,3 @@ class WalletTransactionStore:
         self.tx_wallet_cache = {}
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
-        await self.db_connection.commit()
