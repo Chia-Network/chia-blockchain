@@ -8,7 +8,7 @@ msgstr ""
 "Language: tr_TR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 03:49\n"
+"PO-Revision-Date: 2021-04-11 09:32\n"
 "Last-Translator: \n"
 "Language-Team: Turkish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -73,7 +73,7 @@ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Cüzdan Ekle"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -129,7 +129,7 @@ msgstr "Bağlantıyı Sonlandırmak İstediğinden Emin Misin?"
 
 #: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "Çıkmak istediğinizden emin misiniz? GUI Dizini ve madenciliği duracak."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
