@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-10 21:28\n"
+"PO-Revision-Date: 2021-04-11 23:42\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1708,6 +1708,10 @@ msgstr "Giao dịch này đã được tạo vào lúc này"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Giao dịch này đã được đưa vào blockchain ở chiều cao khối này"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Tạo vào"
@@ -1943,7 +1947,7 @@ msgstr "Bạn không cần phải được đồng bộ hóa hoặc kết nối 
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Bạn có {0}% dung lượng trên mạng, vì vậy, việc farm một khối sẽ chiếm {{expectedTimeToWin} trong dự kiến ."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Bạn cần nâng cấp ứng dụng Chia vì phiên bản này sẽ sớm ngừng hoạt động!"
 
