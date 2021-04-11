@@ -543,8 +543,11 @@ class WalletNode:
             self.log.info("No peers to sync to")
             return
 
-        async with self.wallet_state_manager.blockchain.lock:
-            fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
+        await self.wallet_state_manager.blockchain.lock.acquire()
+        try:
+            fork_height = None
+            if peak is not None:
+                fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
             if fork_height is None:
                 fork_height = 0
             await self.wallet_state_manager.blockchain.warmup(fork_height)
@@ -577,6 +580,8 @@ class WalletNode:
                         peak.height - self.constants.BLOCKS_CACHE_SIZE,
                     )
                 )
+        finally:
+            self.wallet_state_manager.blockchain.lock.release()
 
     async def fetch_blocks_and_validate(
         self,

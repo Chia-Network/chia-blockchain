@@ -6,6 +6,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.wallet.block_record import HeaderBlockRecord
 
@@ -16,14 +17,17 @@ class WalletBlockStore:
     """
 
     db: aiosqlite.Connection
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
 
-        self.db = connection
+        self.db_wrapper = db_wrapper
+        self.db = db_wrapper.db
         await self.db.execute("pragma journal_mode=wal")
         await self.db.execute("pragma synchronous=2")
+
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS header_blocks(header_hash text PRIMARY KEY, height int,"
             " timestamp int, block blob)"
@@ -47,8 +51,6 @@ class WalletBlockStore:
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
-        await self.db.commit()
-
         await self.db.commit()
         return self
 
@@ -94,7 +96,6 @@ class WalletBlockStore:
         )
 
         await cursor_2.close()
-        await self.db.commit()
 
     async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
         """Gets a block record from the database, if present"""
@@ -169,7 +170,6 @@ class WalletBlockStore:
             (header_hash.hex(),),
         )
         await cursor_2.close()
-        await self.db.commit()
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int
