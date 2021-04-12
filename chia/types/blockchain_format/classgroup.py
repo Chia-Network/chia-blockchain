@@ -20,7 +20,7 @@ class ClassgroupElement(Streamable):
     def from_bytes(data) -> "ClassgroupElement":
         if len(data) < 100:
             data += b"\x00" * (100 - len(data))
-        return ClassgroupElement(bytes(data))
+        return ClassgroupElement(bytes100(data))
 
     @staticmethod
     def get_default_element() -> "ClassgroupElement":

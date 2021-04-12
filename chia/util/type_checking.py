@@ -87,7 +87,7 @@ def strictdataclass(cls: Any):
                     raise ValueError(f"Field {f_name} not present")
                 try:
                     if not isinstance(data[f_name], f_type):
-                        raise ValueError(f"Field {f_name} has the incorrect type")
+                        object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
                 except TypeError:
                     # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
                     object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
