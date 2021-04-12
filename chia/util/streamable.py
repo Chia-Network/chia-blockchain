@@ -156,6 +156,11 @@ def streamable(cls: Any):
 
 
 class Streamable:
+    __annotations__: Dict = {}
+
+    def __init__(self):
+        self.__annotations__ = {}
+
     @classmethod
     def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
         inner_type: Type
