@@ -282,12 +282,14 @@ def load_plots(
     if match_str is not None:
         log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
 
+    failed_to_open_filenames_copy = failed_to_open_filenames.copy()
+
     with ThreadPoolExecutor() as executor:
         future_to_filename: Dict[Future, Path] = {
             executor.submit(
                 load_one_plot,
                 filename,
-                failed_to_open_filenames,
+                failed_to_open_filenames_copy,
                 provers,
                 match_str,
                 show_memo,
