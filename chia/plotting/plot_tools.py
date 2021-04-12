@@ -174,6 +174,9 @@ def load_plots(
                     log.error(f"Failed to open file {filename}. {e}")
                     continue
                 if stat_info.st_mtime == provers[filename].time_modified:
+                    if provers[filename].prover.get_id() in plot_ids:
+                        log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                        continue
                     total_size += stat_info.st_size
                     new_provers[filename] = provers[filename]
                     plot_ids.add(provers[filename].prover.get_id())

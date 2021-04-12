@@ -179,21 +179,21 @@ class TestDos:
         # Remove outbound rate limiter to test inbound limits
         ws_con.outbound_rate_limiter = RateLimiter(percentage_of_limit=10000)
 
-        for i in range(6000):
+        for i in range(10000):
             await ws_con._send_message(new_tx_message)
         await asyncio.sleep(1)
 
         def is_closed():
             return ws_con.closed
 
-        await time_out_assert(15, is_closed)
+        await time_out_assert(30, is_closed)
 
         assert ws_con.closed
 
         def is_banned():
             return "1.2.3.4" in server_2.banned_peers
 
-        await time_out_assert(15, is_banned)
+        await time_out_assert(30, is_banned)
 
     @pytest.mark.asyncio
     async def test_spam_message_non_tx(self, setup_two_nodes):
