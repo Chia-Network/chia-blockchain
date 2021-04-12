@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-11 23:43\n"
+"PO-Revision-Date: 2021-04-12 23:54\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "Сложность"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "Отключайте битовое поле при засевании участков, когда ваш временный каталог расположен на быстром хранилище, таком как SSD, или вам нужны более низкие требования к ОЗУ при засевании для каждого процесса. При засевании с включенным битовым полем общее количество операций записи сокращается примерно на 20%."
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -1217,6 +1217,10 @@ msgstr "Засеивание"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Параллельное засеивание позволяет сэкономить время. Также вы можете создать очередь засеивания участков."
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+msgstr "Засеивание с включенным битовым полем имеет примерно на 30% меньше операций записи и теперь почти всегда выполняется быстрее. Вы можете увидеть снижение требований к памяти с отключенном битовым полем. Если ваш процессор разработан до 2010 года, вам возможно придется отключить битовое поле."
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Ключ пула"
@@ -1613,6 +1617,10 @@ msgstr "Синхронизация {progress}/{tip}"
 msgid "Temporary folder location"
 msgstr "Расположение временной папки"
 
+#: src/components/app/AppTimeBomb.tsx:28
+msgid "The application will stop working at block height 193536."
+msgstr "Приложение перестанет работать при высоте блока 193536."
+
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "Полный узел, к которому подключен ваш фермер, указан ниже. <0>Подробнее</0>"
@@ -1948,8 +1956,8 @@ msgid "You have {0}% of the space on the network, so farming a block will take {
 msgstr "Вы владеете {0}% пространства в сети, поэтому для обработки блока потребуется {expectedTimeToWin}."
 
 #: src/components/app/AppTimeBomb.tsx:28
-msgid "You need to upgrade the Chia application as this version will stop working soon!"
-msgstr "Вам необходимо обновить приложение Chia, так как эта версия скоро перестанет работать!"
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
