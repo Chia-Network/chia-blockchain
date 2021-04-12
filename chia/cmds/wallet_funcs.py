@@ -50,8 +50,9 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     if len(txs) == 0:
         print("There are no transactions to this address")
 
+    offset = args["offset"]
     num_per_screen = 5
-    for i in range(0, len(txs), num_per_screen):
+    for i in range(offset, len(txs), num_per_screen):
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
