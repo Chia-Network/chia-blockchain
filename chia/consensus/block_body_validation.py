@@ -185,7 +185,7 @@ async def validate_block_body(
             if block.transactions_info.generator_refs_root != generator_refs_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
             if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-                return Err.PRE_SOFT_FORK_MAX_GENERATOR_REF_LIST_SIZE, None
+                return Err.PRE_SOFT_FORK_TOO_MANY_GENERATOR_REFS, None
 
         if block.transactions_generator is not None:
             # The generator must be less than MAX_GENERATOR_SIZE bytes in length
