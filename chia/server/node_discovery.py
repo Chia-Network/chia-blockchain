@@ -55,6 +55,9 @@ class FullNodeDiscovery:
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
         self.lock = asyncio.Lock()
+        self.connect_peers_task: Optional[asyncio.Task] = None
+        self.serialize_task: Optional[asyncio.Task] = None
+        self.cleanup_task: Optional[asyncio.Task] = None
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
