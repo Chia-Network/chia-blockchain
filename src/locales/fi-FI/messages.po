@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-10 15:31\n"
+"PO-Revision-Date: 2021-04-12 05:44\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -402,7 +402,7 @@ msgstr "Luo"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "Luo Hajautetetun Identiteetin lompakko"
+msgstr "Luo Digitaalisen Identiteetin lompakko"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -1708,6 +1708,10 @@ msgstr "Kaupan luotihetki"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Kauppa on sisällytetty lohkoketjuun tässä lohkokorkeudessa"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "Tämä Chian versio ei ole enää yhteensopiva lohkoketjun kanssa."
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Luontiaika"
@@ -1943,7 +1947,7 @@ msgstr "Noodin ei tarvitse olla synkronissa tai yhteydessä plotataksesi. Plotta
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Sinulla on {0}% verkon tila-avaruudesta, joten yhden lohkon farmaroinnin odotusarvo on {expectedTimeToWin}."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Päivitä sovellusversio viimeisimpään. Tämä versio vanhenee pian eikä toimi sen jälkeen!"
 
