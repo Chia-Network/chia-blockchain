@@ -447,14 +447,15 @@ class TestFullNodeProtocol:
         block_buffer_count = full_node_1.full_node.constants.MEMPOOL_BLOCK_BUFFER
         mempool_size = int(full_node_1.full_node.constants.MAX_BLOCK_COST_CLVM * block_buffer_count)
 
-        # Makes a bunch of coin
+        # Makes a bunch of coins
         for i in range(5):
             conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
             # This should fit in one transaction
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
-                output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
             spend_bundle = wallet_a.generate_signed_transaction(

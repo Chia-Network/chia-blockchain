@@ -4,6 +4,7 @@ import aiosqlite
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.trade_record import TradeRecord
@@ -17,14 +18,16 @@ class TradeStore:
 
     db_connection: aiosqlite.Connection
     cache_size: uint32
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
+        self.db_wrapper = db_wrapper
+        self.db_connection = db_wrapper.db
 
-        self.db_connection = connection
         await self.db_connection.execute("pragma journal_mode=wal")
         await self.db_connection.execute("pragma synchronous=2")
         await self.db_connection.execute(
@@ -53,26 +56,31 @@ class TradeStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def add_trade_record(self, record: TradeRecord) -> None:
+    async def add_trade_record(self, record: TradeRecord, in_transaction) -> None:
         """
         Store TradeRecord into DB
         """
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO trade_records VALUES(?, ?, ?, ?, ?, ?)",
+                (
+                    bytes(record),
+                    record.trade_id.hex(),
+                    record.status,
+                    record.confirmed_at_index,
+                    record.created_at_time,
+                    record.sent,
+                ),
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO trade_records VALUES(?, ?, ?, ?, ?, ?)",
-            (
-                bytes(record),
-                record.trade_id.hex(),
-                record.status,
-                record.confirmed_at_index,
-                record.created_at_time,
-                record.sent,
-            ),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
-
-    async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)):
+    async def set_status(self, trade_id: bytes32, status: TradeStatus, in_transaction: bool, index: uint32 = uint32(0)):
         """
         Updates the status of the trade
         """
@@ -96,7 +104,7 @@ class TradeStore:
             status=uint32(status.value),
             sent_to=current.sent_to,
         )
-        await self.add_trade_record(tx)
+        await self.add_trade_record(tx, in_transaction)
 
     async def increment_sent(
         self,
@@ -139,7 +147,7 @@ class TradeStore:
             sent_to=sent_to,
         )
 
-        await self.add_trade_record(tx)
+        await self.add_trade_record(tx, False)
         return True
 
     async def set_not_sent(self, id: bytes32):
@@ -166,7 +174,7 @@ class TradeStore:
             sent_to=[],
         )
 
-        await self.add_trade_record(tx)
+        await self.add_trade_record(tx, False)
 
     async def get_trade_record(self, trade_id: bytes32) -> Optional[TradeRecord]:
         """

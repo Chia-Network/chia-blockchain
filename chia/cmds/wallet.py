@@ -36,9 +36,18 @@ def get_transaction_cmd(wallet_rpc_port: int, fingerprint: int, id: int, tx_id: 
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option(
+    "-o",
+    "--offset",
+    help="Skip transactions from the beginning of the list",
+    type=int,
+    default=0,
+    show_default=True,
+    required=True,
+)
 @click.option("--verbose", "-v", count=True, type=int)
-def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, verbose: bool) -> None:
-    extra_params = {"id": id, "verbose": verbose}
+def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset: int, verbose: bool) -> None:
+    extra_params = {"id": id, "verbose": verbose, "offset": offset}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 

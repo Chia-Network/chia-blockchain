@@ -5,6 +5,7 @@ import aiosqlite
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -19,14 +20,17 @@ class WalletCoinStore:
     coin_record_cache: Dict[bytes32, WalletCoinRecord]
     coin_wallet_record_cache: Dict[int, Dict[bytes32, WalletCoinRecord]]
     wallet_cache_lock: asyncio.Lock
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, wrapper: DBWrapper):
         self = cls()
 
-        self.db_connection = connection
+        self.db_connection = wrapper.db
+        self.db_wrapper = wrapper
         await self.db_connection.execute("pragma journal_mode=wal")
         await self.db_connection.execute("pragma synchronous=2")
+
         await self.db_connection.execute(
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("
@@ -74,7 +78,9 @@ class WalletCoinStore:
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord) -> None:
         # update wallet cache
-        async with self.wallet_cache_lock:
+
+        await self.wallet_cache_lock.acquire()
+        try:
             if record.wallet_id in self.coin_wallet_record_cache:
                 cache_dict = self.coin_wallet_record_cache[record.wallet_id]
                 if record.coin.name() in cache_dict and record.spent:
@@ -98,9 +104,9 @@ class WalletCoinStore:
                 ),
             )
             await cursor.close()
-            await self.db_connection.commit()
-
             self.coin_record_cache[record.coin.name()] = record
+        finally:
+            self.wallet_cache_lock.release()
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32):
@@ -233,6 +239,7 @@ class WalletCoinStore:
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
         """
         # Update memory cache
+
         delete_queue: List[WalletCoinRecord] = []
         for coin_name, coin_record in self.coin_record_cache.items():
             if coin_record.spent_block_height > height:
