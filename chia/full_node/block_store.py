@@ -153,17 +153,29 @@ class BlockStore:
         await cursor.close()
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
-        if len(heights) == 0:
+    async def get_block_records_by_hash(self, header_hashes: List[bytes32]):
+        """
+        Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
+        Throws an exception if the blocks are not present
+        """
+        if len(header_hashes) == 0:
             return []
-        heights_db = tuple(heights)
-        formatted_str = (
-            f'SELECT block from block_records WHERE height in ({"?," * (len(heights_db) - 1)}?) ORDER BY height ASC;'
-        )
-        cursor = await self.db.execute(formatted_str, heights_db)
+
+        header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+        formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        cursor = await self.db.execute(formatted_str, header_hashes_db)
         rows = await cursor.fetchall()
         await cursor.close()
-        return [BlockRecord.from_bytes(row[0]) for row in rows]
+        all_blocks: Dict[bytes32, BlockRecord] = {}
+        for row in rows:
+            block_rec: BlockRecord = BlockRecord.from_bytes(row[0])
+            all_blocks[block_rec.header_hash] = block_rec
+        ret: List[BlockRecord] = []
+        for hh in header_hashes:
+            if hh not in all_blocks:
+                raise ValueError(f"Header hash {hh} not in the blockchain")
+            ret.append(all_blocks[hh])
+        return ret
 
     async def get_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[FullBlock]:
         """
