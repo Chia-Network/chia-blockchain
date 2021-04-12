@@ -130,6 +130,7 @@
     "foreman": "^3.0.1",
     "html-webpack-plugin": "^5.3.1",
     "image-webpack-loader": "^7.0.1",
+    "imagemin-gifsicle": "^7.0.0",
     "imagemin-mozjpeg": "^9.0.0",
     "imagemin-optipng": "^8.0.0",
     "imagemin-svgo": "^9.0.0",
