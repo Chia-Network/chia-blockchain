@@ -4,7 +4,7 @@ import { t } from '@lingui/macro';
 import { RootState } from '../../modules/rootReducer';
 
 const RESET_TIMEOUT = 4 * 60 * 60 * 1000; // 4 hours
-const INFO_HEIGHT = 4608 * 32; // 32 days
+const INFO_HEIGHT = 166000; // 32 days
 
 export default function AppTimeBomb() {
   const [showed, setShowed] = useState<boolean>(false);
@@ -24,7 +24,7 @@ export default function AppTimeBomb() {
     // @ts-ignore
     await window.remote.dialog.showMessageBox(window.remote.getCurrentWindow(), {
       type: 'warning',
-      message: t`You need to upgrade the Chia application as this version will stop working soon!`,
+      message: t`The application will stop working at block height 193536.`,
     });
 
     const newTimeoutId = setTimeout(() => {
