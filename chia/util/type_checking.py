@@ -80,7 +80,10 @@ def strictdataclass(cls: Any):
             return item
 
         def __post_init__(self):
-            fields = self.__annotations__  # pylint: disable=no-member
+            try:
+                fields = self.__annotations__  # pylint: disable=no-member
+            except Exception:
+                fields = {}
             data = self.__dict__
             for (f_name, f_type) in fields.items():
                 if f_name not in data:

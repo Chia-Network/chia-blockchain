@@ -156,11 +156,6 @@ def streamable(cls: Any):
 
 
 class Streamable:
-    __annotations__: Dict = {}
-
-    def __init__(self):
-        self.__annotations__ = {}
-
     @classmethod
     def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
         inner_type: Type
@@ -225,7 +220,11 @@ class Streamable:
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         values = []
-        for _, f_type in cls.__annotations__.items():  # pylint: disable=no-member
+        try:
+            fields = cls.__annotations__  # pylint: disable=no-member
+        except Exception:
+            fields = {}
+        for _, f_type in fields.items():
             values.append(cls.parse_one_item(f_type, f))  # type: ignore
         return cls(*values)
 
@@ -268,7 +267,11 @@ class Streamable:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
     def stream(self, f: BinaryIO) -> None:
-        for f_name, f_type in self.__annotations__.items():  # pylint: disable=no-member
+        try:
+            fields = self.__annotations__  # pylint: disable=no-member
+        except Exception:
+            fields = {}
+        for f_name, f_type in fields.items():
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:
