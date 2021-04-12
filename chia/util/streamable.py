@@ -1,4 +1,5 @@
 # flake8: noqa
+# pylint: disable
 from __future__ import annotations
 
 import dataclasses
@@ -219,7 +220,7 @@ class Streamable:
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         values = []
-        for _, f_type in cls.__annotations__.items():  # type: ignore
+        for _, f_type in cls.__annotations__.items():  # pylint: disable=no-member
             values.append(cls.parse_one_item(f_type, f))  # type: ignore
         return cls(*values)
 
@@ -262,7 +263,7 @@ class Streamable:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
     def stream(self, f: BinaryIO) -> None:
-        for f_name, f_type in self.__annotations__.items():  # type: ignore
+        for f_name, f_type in self.__annotations__.items():  # pylint: disable=no-member
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:

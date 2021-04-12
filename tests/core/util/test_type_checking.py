@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from chia.util.ints import uint8
-from chia.util.streamable import streamable
 from chia.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
 
 
