@@ -55,6 +55,9 @@ class FullNodeDiscovery:
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
         self.lock = asyncio.Lock()
+        self.connect_peers_task: Optional[asyncio.Task] = None
+        self.serialize_task: Optional[asyncio.Task] = None
+        self.cleanup_task: Optional[asyncio.Task] = None
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -75,10 +78,17 @@ class FullNodeDiscovery:
 
     async def _close_common(self) -> None:
         self.is_closed = True
-        self.connect_peers_task.cancel()
-        self.serialize_task.cancel()
-        self.cleanup_task.cancel()
+        self.cancel_task_safe(self.connect_peers_task)
+        self.cancel_task_safe(self.serialize_task)
+        self.cancel_task_safe(self.cleanup_task)
         await self.connection.close()
+
+    def cancel_task_safe(self, task: Optional[asyncio.Task]):
+        if task is not None:
+            try:
+                task.cancel()
+            except Exception as e:
+                self.log.error(f"Error while canceling task.{e} {task}")
 
     def add_message(self, message, data):
         self.message_queue.put_nowait((message, data))

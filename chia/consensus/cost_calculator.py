@@ -26,7 +26,7 @@ def calculate_cost_of_program(
     """
     total_clvm_cost = 0
     error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode)
-    if error:
+    if error or cost is None or npc_list is None:
         raise Exception("get_name_puzzle_conditions raised error:" + str(error))
     total_clvm_cost += cost
 
@@ -62,4 +62,4 @@ def calculate_cost_of_program(
 
     total_clvm_cost += total_vbyte_cost * clvm_cost_ratio_constant
 
-    return CostResult(error, npc_list, uint64(total_clvm_cost))
+    return CostResult(None, npc_list, uint64(total_clvm_cost))

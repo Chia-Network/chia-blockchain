@@ -38,7 +38,7 @@ class Program(SExp):
     """
 
     @classmethod
-    def parse(cls, f):
+    def parse(cls, f) -> "Program":
         return sexp_from_stream(f, cls.to)
 
     def stream(self, f):
@@ -68,11 +68,12 @@ class Program(SExp):
 
     def run_with_cost(self, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
-        return run_program(self, prog_args)
+        cost, r = run_program(self, prog_args)
+        return cost, Program.to(r)
 
     def run(self, args) -> "Program":
         cost, r = self.run_with_cost(args)
-        return Program.to(r)
+        return r
 
     def curry(self, *args) -> "Program":
         cost, r = curry(self, list(args))
@@ -83,6 +84,28 @@ class Program(SExp):
 
     def as_int(self) -> int:
         return int_from_bytes(self.as_atom())
+
+    def as_atom_list(self) -> List[bytes]:
+        """
+        Pretend `self` is a list of atoms. Return the corresponding
+        python list of atoms.
+
+        At each step, we always assume a node to be an atom or a pair.
+        If the assumption is wrong, we exit early. This way we never fail
+        and always return SOMETHING.
+        """
+        items = []
+        obj = self
+        while True:
+            pair = obj.pair
+            if pair is None:
+                break
+            atom = pair[0].atom
+            if atom is None:
+                break
+            items.append(atom)
+            obj = pair[1]
+        return items
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))
@@ -161,13 +184,13 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
-    def run_safe_with_cost(self, *args) -> Tuple[int, SExp]:
+    def run_safe_with_cost(self, *args) -> Tuple[int, Program]:
         return self._run(STRICT_MODE, *args)
 
-    def run_with_cost(self, *args) -> Tuple[int, SExp]:
+    def run_with_cost(self, *args) -> Tuple[int, Program]:
         return self._run(0, *args)
 
-    def _run(self, flags, *args) -> Tuple[int, SExp]:
+    def _run(self, flags, *args) -> Tuple[int, Program]:
         # when multiple arguments are passed, concatenate them into a serialized
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
@@ -197,4 +220,4 @@ class SerializedProgram:
             flags,
         )
         # TODO this could be parsed lazily
-        return cost, sexp_from_stream(io.BytesIO(ret), SExp.to)
+        return cost, Program.to(sexp_from_stream(io.BytesIO(ret), SExp.to))

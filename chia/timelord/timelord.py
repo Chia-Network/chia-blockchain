@@ -237,6 +237,8 @@ class Timelord:
                 new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
                 # Does not add duplicates, or blocks that we cannot infuse
                 if new_block_iters and new_block_iters not in self.iters_to_submit[Chain.CHALLENGE_CHAIN]:
+                    if block not in self.unfinished_blocks:
+                        self.total_unfinished += 1
                     new_unfinished_blocks.append(block)
                     for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
                         self.iters_to_submit[chain].append(new_block_iters)
@@ -289,6 +291,8 @@ class Timelord:
             for block in remove_unfinished:
                 if block in self.unfinished_blocks:
                     self.unfinished_blocks.remove(block)
+                if block in self.overflow_blocks:
+                    self.overflow_blocks.remove(block)
             infusion_rate = round(self.total_infused / self.total_unfinished * 100.0, 2)
             log.info(
                 f"Total unfinished blocks: {self.total_unfinished}. "
@@ -793,9 +797,6 @@ class Timelord:
                     # We've got a new peak, process it.
                     if self.new_peak is not None:
                         await self._handle_new_peak()
-                    # A subslot ended, process it.
-                    if self.new_subslot_end is not None:
-                        await self._handle_subslot_end()
                 # Map free vdf_clients to unspawned chains.
                 await self._map_chains_with_vdf_clients()
                 async with self.lock:

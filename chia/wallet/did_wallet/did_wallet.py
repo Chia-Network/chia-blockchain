@@ -299,7 +299,7 @@ class DIDWallet:
             None,
             None,
         )
-        await self.save_info(new_info)
+        await self.save_info(new_info, True)
 
         future_parent = CCParent(
             coin.parent_coin_info,
@@ -307,7 +307,7 @@ class DIDWallet:
             coin.amount,
         )
 
-        await self.add_parent(coin.name(), future_parent)
+        await self.add_parent(coin.name(), future_parent, True)
 
     def create_backup(self, filename: str):
         assert self.did_info.current_inner is not None
@@ -349,7 +349,7 @@ class DIDWallet:
                 None,
                 None,
             )
-            await self.save_info(did_info)
+            await self.save_info(did_info, False)
             full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
             full_puzzle_hash = full_puz.get_tree_hash()
             (
@@ -391,7 +391,7 @@ class DIDWallet:
                             innerpuz.get_tree_hash(),
                             coin.amount,
                         )
-                        await self.add_parent(coin.name(), future_parent)
+                        await self.add_parent(coin.name(), future_parent, False)
                         if coin.name() in all_parents:
                             continue
                         did_info = DIDInfo(
@@ -404,7 +404,7 @@ class DIDWallet:
                             new_puzhash,
                             new_pubkey,
                         )
-                        await self.save_info(did_info)
+                        await self.save_info(did_info, False)
 
             await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
             return
@@ -763,8 +763,8 @@ class DIDWallet:
             origin.puzzle_hash,
             origin.amount,
         )
-        await self.add_parent(eve_coin.parent_coin_info, eve_parent)
-        await self.add_parent(eve_coin.name(), future_parent)
+        await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
+        await self.add_parent(eve_coin.name(), future_parent, False)
 
         if tx_record is None or tx_record.spend_bundle is None:
             return None
@@ -780,7 +780,7 @@ class DIDWallet:
             None,
             None,
         )
-        await self.save_info(did_info)
+        await self.save_info(did_info, False)
         eve_spend = await self.generate_eve_spend(eve_coin, did_puz, origin_id, did_inner)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
@@ -816,7 +816,7 @@ class DIDWallet:
 
         return max_send_amount
 
-    async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
+    async def add_parent(self, name: bytes32, parent: Optional[CCParent], in_transaction: bool):
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.did_info.parent_info.copy()
         current_list.append((name, parent))
@@ -830,7 +830,7 @@ class DIDWallet:
             self.did_info.temp_puzhash,
             self.did_info.temp_pubkey,
         )
-        await self.save_info(did_info)
+        await self.save_info(did_info, in_transaction)
 
     async def update_recovery_list(self, recover_list: List[bytes], num_of_backup_ids_needed: uint64):
         if num_of_backup_ids_needed > len(recover_list):
@@ -845,14 +845,14 @@ class DIDWallet:
             self.did_info.temp_puzhash,
             self.did_info.temp_pubkey,
         )
-        await self.save_info(did_info)
+        await self.save_info(did_info, False)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return True
 
-    async def save_info(self, did_info: DIDInfo):
+    async def save_info(self, did_info: DIDInfo, in_transaction: bool):
         self.did_info = did_info
         current_info = self.wallet_info
         data_str = json.dumps(did_info.to_json_dict())
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
-        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)

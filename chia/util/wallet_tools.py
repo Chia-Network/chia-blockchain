@@ -7,7 +7,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_var_pair import ConditionVarPair
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.clvm import int_from_bytes, int_to_bytes
 from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
@@ -91,7 +91,7 @@ class WalletTool:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
         return AugSchemeMPL.sign(privatekey, value)
 
-    def make_solution(self, condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]]) -> Program:
+    def make_solution(self, condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]]) -> Program:
         ret = []
 
         for con_list in condition_dic.values():
@@ -127,7 +127,7 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coin: Coin,
-        condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]],
+        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
         fee: int = 0,
         secret_key: Optional[PrivateKey] = None,
     ) -> List[CoinSolution]:
@@ -141,13 +141,13 @@ class WalletTool:
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
 
-        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [new_puzzle_hash, int_to_bytes(amount)])
+        output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [new_puzzle_hash, int_to_bytes(amount)])
         condition_dic[output.opcode].append(output)
         amount_total = sum(int_from_bytes(cvp.vars[1]) for cvp in condition_dic[ConditionOpcode.CREATE_COIN])
         change = spend_value - amount_total - fee
         if change > 0:
             change_puzzle_hash = self.get_new_puzzlehash()
-            change_output = ConditionVarPair(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
+            change_output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
             condition_dic[output.opcode].append(change_output)
             solution = self.make_solution(condition_dic)
         else:
@@ -180,7 +180,7 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coin: Coin,
-        condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]] = None,
+        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
         fee: int = 0,
     ) -> SpendBundle:
         if condition_dic is None:
