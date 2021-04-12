@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-11 23:43\n"
+"PO-Revision-Date: 2021-04-12 11:40\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1708,6 +1708,10 @@ msgstr "This trade been made at this time"
 msgid "This trade was included on blockchain at this block height"
 msgstr "This trade was added t' the blockchain at this booty number"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "T'is version o' Chia is no longer workin' wit' the blockchain 'n no good fer plunderin'."
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Time o' Boardin'"
@@ -1943,7 +1947,7 @@ msgstr "Ye nah need t' be synched or connected t' recruit. Temporary files are c
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Ye have {0}% o' th' manpower o' all pirates, so takin' a ship will take about {expectedTimeToWin} dependin' on yer luck."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Ye needs t' get yer Chia program updated! T'is 'ere 's soon gonna be useless like a priest!"
 
