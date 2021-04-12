@@ -35,9 +35,9 @@ mkdir dist
 
 # See https://github.com/imagemin/gifsicle-bin/issues/113
 echo "\nPLATFORM is $PLATFORM\n"
-if [ $PLATFORM="aarch64" ]; then
-  echo "\nInstalling dh-autoreconf to work around gifsicle issue.\n"
-  apt-get install dh-autoreconf
+if [ $PLATFORM = "arm64" ]; then
+  echo "Installing dh-autoreconf to work around gifsicle issue.\n"
+  apt-get install -y dh-autoreconf
 fi
 
 echo "Create executables with pyinstaller"
