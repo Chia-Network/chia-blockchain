@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 17:58\n"
+"PO-Revision-Date: 2021-04-12 23:53\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "難度"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "若你的暫存目錄位於高速儲存設備如固態硬碟 SSD ，或你需要降低每個執行序的記憶體需求，禁用 bitfield 耕地。啟用 bitfield 耕地可以減少約 20％總寫入量。"
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -1217,6 +1217,10 @@ msgstr "規劃耕地中"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "平行規劃耕地可節省時間。若不，新增耕地至隊列。"
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+msgstr "以 bitfield 規劃耕地可以減少約 30％ 的總寫入量，而現在也都幾乎比較快。 Bitfield 規劃耕地禁用的話有可能降低記憶體需求。如果你的 CPU 設計是2010年以前的話很有可能需要禁用 bitfield 耕地。"
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "池金鑰"
@@ -1613,6 +1617,10 @@ msgstr "同步中 {progress}／{tip}"
 msgid "Temporary folder location"
 msgstr "暫存資料夾位置"
 
+#: src/components/app/AppTimeBomb.tsx:28
+msgid "The application will stop working at block height 193536."
+msgstr "這個應用程式會在區塊高度 193536 時停止運作。"
+
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "你的農夫已連接的完整節點在下面。<0>了解更多</0>"
@@ -1927,7 +1935,7 @@ msgstr "視窗"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
-msgstr "不用費用"
+msgstr "未計雜費"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
@@ -1945,11 +1953,11 @@ msgstr "你不需要同步或連線後才能規劃耕地。規劃耕地時所產
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-msgstr "你擁有網路 {0}%的空間，因此耕種一區塊將預期使用 {expectedTimeToWin} 的時間。"
+msgstr "你擁有網路上{0}％的空間，因此耕種一區塊將預期使用{expectedTimeToWin}的時間。"
 
 #: src/components/app/AppTimeBomb.tsx:28
-msgid "You need to upgrade the Chia application as this version will stop working soon!"
-msgstr "你需要升級 Chia 應用程式，此版本近期內將停止工作！"
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
