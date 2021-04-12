@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-11 23:43\n"
+"PO-Revision-Date: 2021-04-12 23:54\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "Sværhed"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "Deaktiver bitfield plotning når din midletidige folder er på hurtig disk såsom SSD eller du skal bruge mindrer RAM per process. Plotning med bitfield aktiveret bruger ca. 20% mindrer writes."
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -1217,6 +1217,10 @@ msgstr "Plotter"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Plotte i parallel can spare tid. Ellers tilføj plot til kø."
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+msgstr "Plotning med bitfield aktiveret har omkring 30% mindre skrivning og er næsten altid hurtigere. Du kan opleve mindre hukkomelsesforbrug med bitfiel plotning deaktiveret. Hvis din CPU er fra før 2010 er det muligvis nødvendigt at deaktiverer bitfield plotning."
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Pool Nøgle"
@@ -1613,6 +1617,10 @@ msgstr "Synkroniserer {progress}/{tip}"
 msgid "Temporary folder location"
 msgstr "Midlertidig folder placering"
 
+#: src/components/app/AppTimeBomb.tsx:28
+msgid "The application will stop working at block height 193536."
+msgstr "Programmet vil stoppe med at virke fra blok højde 193536."
+
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "Den fulder node som din farmer er forbundet til herunder. <0>Lær mere</0>"
@@ -1948,8 +1956,8 @@ msgid "You have {0}% of the space on the network, so farming a block will take {
 msgstr "Du har {0}% af den samlede plads på netværket, så at farme en gevinst vil tage {expectedTimeToWin} estimeret."
 
 #: src/components/app/AppTimeBomb.tsx:28
-msgid "You need to upgrade the Chia application as this version will stop working soon!"
-msgstr "Du skal opdaterer Chia programmet før denne version stopper med at fungerer!"
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
