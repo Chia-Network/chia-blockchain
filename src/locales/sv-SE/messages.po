@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-08 15:46\n"
+"PO-Revision-Date: 2021-04-12 17:57\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1708,6 +1708,10 @@ msgstr "Denna handelstransaktion skapades vid denna tidpunkt"
 msgid "This trade was included on blockchain at this block height"
 msgstr "Denna affärstransaktion lades till i blockkedjan vid denna blockhöjd"
 
+#: src/components/app/AppTimeBombAlert.tsx:11
+msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
+msgstr "Denna version av Chia är inte längre kompatibel med blockkedjan och kan därför inte användas för odling."
+
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
 msgstr "Skapad"
@@ -1944,7 +1948,7 @@ msgstr "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr "Du har {0}% av utrymmet på nätverket, så det tar i genomsnitt {expectedTimeToWin} att odla ett block."
 
-#: src/components/app/AppTimeBomb.tsx:16
+#: src/components/app/AppTimeBomb.tsx:28
 msgid "You need to upgrade the Chia application as this version will stop working soon!"
 msgstr "Du måste uppgradera Chia-programmet eftersom denna version snart kommer att sluta fungera!"
 
