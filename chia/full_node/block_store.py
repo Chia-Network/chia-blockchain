@@ -155,7 +155,7 @@ class BlockStore:
 
     async def get_block_records_by_hash(self, header_hashes: List[bytes32]):
         """
-        Returns a list of Full Blocks blocks, ordered by the same order in which header_hashes are passed in.
+        Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
         """
         if len(header_hashes) == 0:
