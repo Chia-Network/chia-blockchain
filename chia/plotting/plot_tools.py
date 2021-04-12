@@ -24,7 +24,7 @@ class PlotInfo:
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     file_size: int
-    time_modified: int
+    time_modified: float
 
 
 def _get_filenames(directory: Path) -> List[Path]:
