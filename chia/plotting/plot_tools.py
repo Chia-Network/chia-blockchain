@@ -183,7 +183,7 @@ def load_one_plot(
         no_key: bool = False  # This gets set when when we don't have the pool or farmer keys on this machine
         prover: DiskProver = DiskProver(str(filename))
 
-        expected_size: int = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+        expected_size: int = int(_expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR)
         stat_info = filename.stat()
 
         # TODO: consider checking if the file was just written to (which would mean that the file is still being copied)
