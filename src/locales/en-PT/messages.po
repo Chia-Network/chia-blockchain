@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 11:40\n"
+"PO-Revision-Date: 2021-04-12 23:54\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "Pirate Hunters"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "Disable bitfield recruitin' when yer temporary folder be on fast storage like SSD or ye needs lower per process RAM. Recruitin' wit' bitfield enabled has about 20% less overall writes."
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -1217,6 +1217,10 @@ msgstr "Recruitin'"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Recruitin' in parallel can save time. Otherwise, add crewdog(s) to the queue."
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+msgstr ""
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Clan Treasure Map"
@@ -1613,6 +1617,10 @@ msgstr "Catchin' up {progress}/{tip}"
 msgid "Temporary folder location"
 msgstr "Temporary folder"
 
+#: src/components/app/AppTimeBomb.tsx:28
+msgid "The application will stop working at block height 193536."
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "The Cap'n that yer Plunderer be connected t' be below. <0>Look fer more</0>"
@@ -1948,8 +1956,8 @@ msgid "You have {0}% of the space on the network, so farming a block will take {
 msgstr "Ye have {0}% o' th' manpower o' all pirates, so takin' a ship will take about {expectedTimeToWin} dependin' on yer luck."
 
 #: src/components/app/AppTimeBomb.tsx:28
-msgid "You need to upgrade the Chia application as this version will stop working soon!"
-msgstr "Ye needs t' get yer Chia program updated! T'is 'ere 's soon gonna be useless like a priest!"
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
