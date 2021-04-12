@@ -80,7 +80,7 @@ def strictdataclass(cls: Any):
             return item
 
         def __post_init__(self):
-            fields = self.__annotations__
+            fields = get_type_hints(self)
             data = self.__dict__
             for (f_name, f_type) in fields.items():
                 if f_name not in data:

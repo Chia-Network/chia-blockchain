@@ -73,7 +73,6 @@ class TestMempool:
             pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
