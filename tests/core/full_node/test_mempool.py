@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from time import time
 from typing import Dict, List
 
@@ -26,6 +27,8 @@ BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
 
 WALLET_A = bt.get_pool_wallet_tool()
+
+log = logging.getLogger(__name__)
 
 
 def generate_test_spend_bundle(
@@ -72,12 +75,12 @@ class TestMempool:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        full_node_1, _, server_1, _ = two_nodes
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
+        await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
         max_mempool_cost = 40000000 * 5
         mempool = Mempool(max_mempool_cost)
@@ -92,10 +95,10 @@ class TestMempool:
 
 class TestMempoolManager:
     @pytest.mark.asyncio
-    async def test_basic_mempool(self, two_nodes):
+    async def test_basic_mempool_manager(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3,
+            5,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
@@ -106,12 +109,13 @@ class TestMempoolManager:
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
+        await time_out_assert(60, node_height_at_least, True, full_node_2, blocks[-1].height)
 
         spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        await full_node_1.respond_transaction(tx, peer)
+        res = await full_node_1.respond_transaction(tx, peer)
+        log.info(f"Res {res}")
 
         await time_out_assert(
             10,
