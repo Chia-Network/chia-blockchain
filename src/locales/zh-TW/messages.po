@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 11:40\n"
+"PO-Revision-Date: 2021-04-12 17:58\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1710,7 +1710,7 @@ msgstr "此貿易已包含在區塊鏈中的這個區塊高度"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr "此版本的 Chia 不再與區塊鏈兼容，因此無法安全地進行耕種。"
+msgstr "此版本的 Chia 不再與區塊鏈相容，因此無法安全地進行耕種。"
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
