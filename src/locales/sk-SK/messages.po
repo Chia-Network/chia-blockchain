@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-11 23:43\n"
+"PO-Revision-Date: 2021-04-12 23:54\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -34,8 +34,8 @@ msgstr ""
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Kombajn je služba bežiaca na stroji, kde sú uložené polia. Farmár a kombajn komunikujú s plným uzlom, aby zistili stav reťaze. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr ""
 
@@ -127,7 +127,7 @@ msgstr "Naozaj chcete odstrániť pole? Pole nie je možné obnoviť."
 msgid "Are you sure you want to disconnect?"
 msgstr "Naozaj sa chcete odpojiť?"
 
-#: src/electron/main.tsx:164
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr ""
 
@@ -259,15 +259,15 @@ msgstr "Výzva"
 msgid "Challenge Hash"
 msgstr "Hash výzvy"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron/main.tsx:363
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
@@ -321,7 +321,7 @@ msgstr "Farebná minca"
 msgid "Coloured Coin Options"
 msgstr "Možnosti farebných mincí"
 
-#: src/electron/main.tsx:162
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Potvrdiť"
 
@@ -372,7 +372,7 @@ msgstr "Typ pripojenia"
 msgid "Connections"
 msgstr "Pripojenia"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -531,11 +531,11 @@ msgstr "Po stlačení tlačidla zmazať odstránite natrvalo všetký kľúče z
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
 
-#: src/electron/main.tsx:260
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Vývojár"
 
-#: src/electron/main.tsx:263
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Nástroje pre vývojárov"
 
@@ -582,7 +582,7 @@ msgstr "Súbor s ponukami presuňte tu"
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron/main.tsx:219
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Upraviť"
 
@@ -604,11 +604,6 @@ msgstr "Chyba"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chyba: Prosím zadajte platnú adresu."
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Estimated Time to Win"
-msgstr ""
-
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Odhadovaná velkosť siete"
@@ -623,8 +618,8 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "Expected Time to Win"
-#~ msgstr "Očakávaný čas na výhru"
+msgid "Expected Time to Win"
+msgstr "Očakávaný čas na výhru"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -703,8 +698,8 @@ msgstr "Množstvo odmeny"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "Súbor"
 
@@ -723,11 +718,11 @@ msgstr "Cieľový adresár"
 msgid "Finished"
 msgstr "Dokončené"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Sledujte na twitteri"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Často kladené otázky (FAQ)"
 
@@ -740,7 +735,7 @@ msgstr "Domov"
 msgid "Full Node Status"
 msgstr "Stav siete"
 
-#: src/electron/main.tsx:287
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr ""
 
@@ -770,7 +765,7 @@ msgstr "Poradie hlavičky"
 msgid "Height"
 msgstr "Poradie"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr ""
 
@@ -978,7 +973,7 @@ msgid "Nickname"
 msgstr "Prezývka"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:159
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Nie"
 
@@ -1355,7 +1350,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr "Obnoviť polia"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr ""
 
@@ -1363,7 +1358,7 @@ msgstr ""
 msgid "Rename"
 msgstr "Premenovať"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1496,7 +1491,7 @@ msgstr "Prihlásiť sa"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.tsx:410
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr ""
 
@@ -1832,7 +1827,7 @@ msgstr "Používateľov verejný kľúč"
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron/main.tsx:251
+#: src/electron/main.ts:216
 msgid "View"
 msgstr ""
 
@@ -1934,7 +1929,7 @@ msgstr "Vitajte! Pre zálohovanie vašej peňaženky sa používajú nasledujúc
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.tsx:295
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr ""
 
@@ -1944,7 +1939,7 @@ msgstr "Bez poplatkov"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:160
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Áno"
 
@@ -1957,24 +1952,12 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
-#~ msgstr ""
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
-#~ msgstr ""
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
