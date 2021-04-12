@@ -91,8 +91,13 @@ class MempoolManager:
         spend_bundles: List[SpendBundle] = []
         removals = []
         additions = []
+        broke_from_inner_loop = False
+        log.info(f"Starting to make block, max cost: {self.constants.MAX_BLOCK_COST_CLVM}")
         for dic in self.mempool.sorted_spends.values():
+            if broke_from_inner_loop:
+                break
             for item in dic.values():
+                log.info(f"Cumulative cost: {cost_sum}")
                 if (
                     item.cost_result.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
@@ -103,6 +108,7 @@ class MempoolManager:
                     removals.extend(item.removals)
                     additions.extend(item.additions)
                 else:
+                    broke_from_inner_loop = True
                     break
         if len(spend_bundles) > 0:
             return SpendBundle.aggregate(spend_bundles), additions, removals

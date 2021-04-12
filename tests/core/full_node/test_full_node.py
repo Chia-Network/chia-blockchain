@@ -15,6 +15,7 @@ from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
@@ -425,13 +426,13 @@ class TestFullNodeProtocol:
 
         wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3,
+            10,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_ph,
             pool_reward_puzzle_hash=wallet_ph,
         )
-        for block in blocks[-3:]:
+        for block in blocks:
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
         start_height = (
@@ -445,7 +446,6 @@ class TestFullNodeProtocol:
         puzzle_hashes = []
 
         block_buffer_count = full_node_1.full_node.constants.MEMPOOL_BLOCK_BUFFER
-        mempool_size = int(full_node_1.full_node.constants.MAX_BLOCK_COST_CLVM * block_buffer_count)
 
         # Makes a bunch of coins
         for i in range(5):
@@ -454,7 +454,7 @@ class TestFullNodeProtocol:
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
-                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
+                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000)])
 
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -466,14 +466,9 @@ class TestFullNodeProtocol:
             )
             assert spend_bundle is not None
             cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
-            log.warning(f"Cost result: {cost_result.cost}")
+            log.info(f"Cost result: {cost_result.cost}")
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
-        for _ in range(mempool_size + 1):
-            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-            puzzle_hashes.append(receiver_puzzlehash)
-            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
-            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
             msg = await full_node_1.new_transaction(new_transaction)
             assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
@@ -499,6 +494,7 @@ class TestFullNodeProtocol:
 
         included_tx = 0
         not_included_tx = 0
+        seen_bigger_transaction_has_high_fee = False
 
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
@@ -506,44 +502,51 @@ class TestFullNodeProtocol:
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             if puzzle_hash == puzzle_hashes[-1]:
                 force_high_fee = True
-                fee = 1000
+                fee = 10000000  # 10 million
             else:
                 force_high_fee = False
-                fee = random.randint(2, 499)
+                fee = random.randint(1, 10000000)
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
-            res = await full_node_1.respond_transaction(respond_transaction, peer)
+            await full_node_1.respond_transaction(respond_transaction, peer)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
 
+            fee_rate_for_small = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10)
+            fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000)
+            fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(500000)
+            log.info(f"Min fee rate (10): {fee_rate_for_small}")
+            log.info(f"Min fee rate (50000): {fee_rate_for_med}")
+            log.info(f"Min fee rate (500000): {fee_rate_for_large}")
+            if fee_rate_for_large > fee_rate_for_med:
+                seen_bigger_transaction_has_high_fee = True
+
             if req is not None and req.data == bytes(fnp.RespondTransaction(spend_bundle)):
                 included_tx += 1
                 spend_bundles.append(spend_bundle)
+                assert not full_node_1.full_node.mempool_manager.mempool.at_full_capacity(0)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(0) == 0
             else:
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(133000)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(133000) > 0
                 assert not force_high_fee
                 not_included_tx += 1
-        log.warning(f"Included: {included_tx}, not included: {not_included_tx}")
+        log.info(f"Included: {included_tx}, not included: {not_included_tx}")
 
         assert included_tx > 0
         assert not_included_tx > 0
+        assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
         msg = await full_node_1.new_transaction(new_transaction)
         assert msg is None
 
-        agg_bundle: SpendBundle = SpendBundle.aggregate(spend_bundles)
-        blocks_new = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            transaction_data=agg_bundle,
-            guarantee_transaction_block=True,
-        )
         # Farm one block to clear mempool
-        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-1]), peer)
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
         # No longer full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
