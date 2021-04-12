@@ -33,6 +33,13 @@ echo "Create dist/"
 rm -rf dist
 mkdir dist
 
+# See https://github.com/imagemin/gifsicle-bin/issues/113
+echo "\nPLATFORM is $PLATFORM\n"
+if [ $PLATFORM="aarch64" ]; then
+  echo "\nInstalling dh-autoreconf to work around gifsicle issue.\n"
+  apt-get install dh-autoreconf
+fi
+
 echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
