@@ -8,7 +8,7 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-11 23:43\n"
+"PO-Revision-Date: 2021-04-12 23:54\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -34,8 +34,8 @@ msgstr "Eine Größe von 128 buckets ist empfohlen"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Ein harvester ist ein Dienst auf einer Machine auf der Plot(s) gespeichert sind. Ein farmer und harvester kommunizieren mit einem full node um den Status der Chain zu ermitteln. Betrachte unten dein Netzwerk an verbundenen harvestern Lerne mehr"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.ts:331
+#: src/electron/main.ts:413
 msgid "About Chia Blockchain"
 msgstr "Mehr über die Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Bist du sicher, dass du den Plot löschen möchtest? Der Plot kann nicht
 msgid "Are you sure you want to disconnect?"
 msgstr "Bist du sicher, dass du die Verbindung beenden möchtest?"
 
-#: src/electron/main.tsx:164
+#: src/electron/main.ts:128
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Bist du sicher, dass du beenden willst? GUI Plotting und farming werden gestoppt."
 
@@ -259,15 +259,15 @@ msgstr "Herausforderung"
 msgid "Challenge Hash"
 msgstr "Herausforderungs Hash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.ts:311
 msgid "Chat on KeyBase"
 msgstr "Chatte auf KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.ts:328
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Farbiger Coin"
 msgid "Coloured Coin Options"
 msgstr "Optionen für farbigen Coin"
 
-#: src/electron/main.tsx:162
+#: src/electron/main.ts:126
 msgid "Confirm"
 msgstr "Bestätigen"
 
@@ -372,7 +372,7 @@ msgstr "Verbindungsart"
 msgid "Connections"
 msgstr "Verbindungen"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.ts:296
 msgid "Contribute on GitHub"
 msgstr "Wirke auf GitHub mit"
 
@@ -535,11 +535,11 @@ msgstr "Diesen Schlüssel löschen entfernt diesen Schlüssel unwiederbringlich 
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
-#: src/electron/main.tsx:260
+#: src/electron/main.ts:225
 msgid "Developer"
 msgstr "Entwickler"
 
-#: src/electron/main.tsx:263
+#: src/electron/main.ts:228
 msgid "Developer Tools"
 msgstr "Entwickler Werkzeuge"
 
@@ -550,7 +550,7 @@ msgstr "Schwierigkeit"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-#~ msgstr "Deaktiviere bitfield plotting, wenn dein temporäres Verzeichnis auf schnellem Speicher wie z.B. SSDs ist oder weniger RAM-Anforderungen pro Prozess benötigt wird. Beim Plotten mit aktiviertem Bitfeld werden insgesamt etwa 20% weniger Schreibvorgänge ausgeführt."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -586,7 +586,7 @@ msgstr "\"Drag and drop\" Angebots Datei"
 msgid "Drag and drop your backup file"
 msgstr "Drag and drop deine Backup Datei"
 
-#: src/electron/main.tsx:219
+#: src/electron/main.ts:184
 msgid "Edit"
 msgstr "Ändern"
 
@@ -608,11 +608,6 @@ msgstr "Fehler"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Fehler: Chia kann nicht zu der farbigen Adresse geschickt werden. Bitte gib eine Chia Adresse ein."
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Estimated Time to Win"
-msgstr ""
-
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Geschätzte Netzwerkgröße"
@@ -627,8 +622,8 @@ msgstr "Finales Verzeichnis ausschließen"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "Expected Time to Win"
-#~ msgstr "Geschätzte Zeit bis Gewinn"
+msgid "Expected Time to Win"
+msgstr "Geschätzte Zeit bis Gewinn"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -707,8 +702,8 @@ msgstr "Höhe der Gebühr"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.ts:176
+#: src/electron/main.ts:368
 msgid "File"
 msgstr "Datei"
 
@@ -727,11 +722,11 @@ msgstr "Finaler Speicherort"
 msgid "Finished"
 msgstr "Beendet"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.ts:317
 msgid "Follow on Twitter"
 msgstr "Folge auf Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.ts:284
 msgid "Frequently Asked Questions"
 msgstr "Häufig gestellte Fragen"
 
@@ -744,7 +739,7 @@ msgstr "Full Node"
 msgid "Full Node Status"
 msgstr "Full Node Status"
 
-#: src/electron/main.tsx:287
+#: src/electron/main.ts:252
 msgid "Full Screen"
 msgstr "Vollbild"
 
@@ -774,7 +769,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Höhe"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.ts:274
 msgid "Help"
 msgstr "Hilfe"
 
@@ -982,7 +977,7 @@ msgid "Nickname"
 msgstr "Spitzname"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:159
+#: src/electron/main.ts:123
 msgid "No"
 msgstr "Nein"
 
@@ -1228,7 +1223,7 @@ msgstr "Paralleles plotten kann Zeit sparen. Andernfalls kannst du Plots der War
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "Plotten mit Bitfield aktiviert verursacht etwa 30% weniger Schreiboperationen und ist nun fast immer schneller. Möglicherweise entsteht reduzierter Speicherbedarf bei deaktiviertem Bitfield-Plotting. Wenn dein CPU-Design von vor 2010 stammt, ist es eventuell ratsam Bitfield-Plotten zu deaktivieren."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1359,7 +1354,7 @@ msgstr "DID Wallet wiederherstellen"
 msgid "Refresh Plots"
 msgstr "Plots aktualisieren"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.ts:290
 msgid "Release Notes"
 msgstr "Versionshinweise"
 
@@ -1367,7 +1362,7 @@ msgstr "Versionshinweise"
 msgid "Rename"
 msgstr "Umbenennen"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.ts:305
 msgid "Report an Issue..."
 msgstr "Ein Problem melden..."
 
@@ -1500,7 +1495,7 @@ msgstr "Anmelden"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Überspringt das Hinzufügen eines endgültigen Verzeichnisses zum Harvester für das Farmen"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.ts:379
 msgid "Speech"
 msgstr "Sprache"
 
@@ -1628,7 +1623,7 @@ msgstr "Temporärer Verzeichnisort"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Die Anwendung wird in Blockhöhe 193536 aufhören zu arbeiten."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1727,7 +1722,7 @@ msgstr "Dieser Handel wurde auf der Blockchain in dieser Blockhöhe aufgenommen"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Diese Version von Chia ist nicht mehr kompatibel mit der Blockchain und kann nicht sicher farmen."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1836,7 +1831,7 @@ msgstr "Benutzer Pubkey"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterationen"
 
-#: src/electron/main.tsx:251
+#: src/electron/main.ts:216
 msgid "View"
 msgstr "Ansicht"
 
@@ -1938,7 +1933,7 @@ msgstr "Willkommen! Die folgenden Wörter werden zum Wiederherstellen deines Wal
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Wenn du das Setup-Informationspaket von deinem Administrator erhalten hast, gebe Ihn unten ein, um das Setup für das Rate Limited Wallet abzuschließen:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.ts:260
 msgid "Window"
 msgstr "Fenster"
 
@@ -1948,7 +1943,7 @@ msgstr "Ohne Gebühren"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.tsx:160
+#: src/electron/main.ts:124
 msgid "Yes"
 msgstr "Ja"
 
@@ -1961,24 +1956,12 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr "Um zu plotten musst du nicht synchronisiert oder verbunden sein. Während des Plotvorgangs werden temporäre Dateien erstellt, die die Größe der endgültigen Plotdateien überschreiten. Stelle sicher, dass genügend Platz vorhanden ist. <0> Erfahre mehr </ 0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-#~ msgstr "Du hast {0}% von dem Speicher des Netzwerks, also einen Block farmen wird voraussichtlich {expectedTimeToWin} dauern."
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
-#~ msgstr ""
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+msgstr "Du hast {0}% von dem Speicher des Netzwerks, also einen Block farmen wird voraussichtlich {expectedTimeToWin} dauern."
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
-#~ msgstr ""
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
