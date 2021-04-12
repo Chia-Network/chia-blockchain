@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-11 23:43\n"
+"PO-Revision-Date: 2021-04-12 23:54\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -545,8 +545,8 @@ msgid "Difficulty"
 msgstr "難易度"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-msgstr "ビットフィールドを有効にすると書き込み量が 20% ほど減少します。一時ディレクトリが SSD などの速いストレージ上にある場合、または RAM の使用量を抑えたい場合は、ビットフィールドを使わずに耕すことをおすすめします。"
+#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
@@ -1217,6 +1217,10 @@ msgstr "耕し中"
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "並行で耕すと時間の節約になる場合があります。スペックが足りない場合はキューに追加してください。"
 
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+msgstr "ビットフィールドを有効にして耕すと、書き込み量が30%ほと減少し、現状ではほとんどの場合速く完了します。ビットフィールドを無効にするとRAMの必要量が減る可能性があります。ご使用のCPUが2010年以前の物ですと、ビットフィールド無効しか使えない可能性があります。"
+
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "プール鍵"
@@ -1613,6 +1617,10 @@ msgstr "同期中 {progress}/{tip}"
 msgid "Temporary folder location"
 msgstr "一時フォルダの場所"
 
+#: src/components/app/AppTimeBomb.tsx:28
+msgid "The application will stop working at block height 193536."
+msgstr "当アプリはブロック高 193536 で正常に機能しなくなります。"
+
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "以下が農家の接続先のフルノードです。<0>詳しく</0>"
@@ -1948,8 +1956,8 @@ msgid "You have {0}% of the space on the network, so farming a block will take {
 msgstr "あなたはネットワークの {0}% の容量を所有しているので、ブロック収穫には推定 {expectedTimeToWin} かかります。"
 
 #: src/components/app/AppTimeBomb.tsx:28
-msgid "You need to upgrade the Chia application as this version will stop working soon!"
-msgstr "このバージョンは間もなく動作しなくなるため、チアアプリケーションをアップグレードしてください！"
+#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
+#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
