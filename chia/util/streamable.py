@@ -219,7 +219,7 @@ class Streamable:
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         values = []
-        for _, f_type in cls.__annotations__.items():
+        for _, f_type in cls.__annotations__.items():  # type: ignore
             values.append(cls.parse_one_item(f_type, f))  # type: ignore
         return cls(*values)
 
