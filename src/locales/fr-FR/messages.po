@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-13 11:57\n"
+"PO-Revision-Date: 2021-04-13 23:51\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -180,7 +180,7 @@ msgstr "Test de bloc"
 
 #: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "Itération du bloc VDF"
 
 #: src/components/block/Block.jsx:308
 msgid "Block at height {0} in the Chia blockchain"
@@ -224,7 +224,7 @@ msgstr "Acheter"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "Porte-monnaie CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -1219,7 +1219,7 @@ msgstr "Traçer en parallèle peut faire gagner du temps. Sinon, ajouter parcell
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "Le plotting avec bitfield activé produit environ 30% d'écriture en moins et est maintenant presque toujours plus rapide. Vous pouvez avoir besoin de moins de mémoire avec le tracé en bitfield désactivé. Le bitfield peut être incompatible avec les processeurs d'ancienne génération (avant 2010)."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1619,7 +1619,7 @@ msgstr "Emplacement du dossier temporaire"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "L'application cessera de fonctionner à hauteur du bloc 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1718,7 +1718,7 @@ msgstr "Cette transaction a été incluse sur la blockchain à cette hauteur de 
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Cette version de Chia n'est plus compatible avec la blockchain et ne peut pas farmer de façon sûr."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1804,7 +1804,7 @@ msgstr "Historique d'échange"
 
 #: src/components/block/Block.jsx:276
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Hash du filtre de transactions"
 
 #: src/components/wallet/WalletHistory.tsx:21
 msgid "Type"
@@ -1825,7 +1825,7 @@ msgstr "Clé publique utilisateur"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "Itération du sous emplacement VDF"
 
 #: src/electron/main.ts:216
 msgid "View"
@@ -1915,7 +1915,7 @@ msgstr "Poids"
 
 #: src/components/block/Block.jsx:198
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Le poids est la difficulté totale de tous les sous-blocs, celui-ci inclus"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
