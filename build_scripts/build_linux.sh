@@ -53,7 +53,7 @@ echo "PLATFORM is $PLATFORM"
 echo ""
 if [ "$PLATFORM" = "arm64" ]; then
   echo "Installing dh-autoreconf to work around gifsicle issue."
-  apt-get install -y dh-autoreconf cmake autoconf automake libtool nasm pkg-config
+  apt-get install -y dh-autoreconf cmake autoconf automake libtool nasm pkg-config libpng-dev
   echo "npm install imagemin-mozjpeg"
   npm install imagemin-mozjpeg
   echo "npm install imagemin-gifsicle"
