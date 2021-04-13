@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:53\n"
+"PO-Revision-Date: 2021-04-13 05:54\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "＊想更進一步探索 Chia 區塊鍵？看看開源開發者打造的 <0>Chia Explorer</0>。"
+msgstr "＊想更進一步探索 Chia 區塊鍵？看看開源開發者打造的 <0>Chia Explorer</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -121,7 +121,7 @@ msgstr "初始代幣數量"
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "你確認要刪除這個耕地嗎？這個耕地將不可恢復。"
+msgstr "你確要刪除這個耕地嗎？此耕地將無法尋回。"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -137,7 +137,7 @@ msgstr "你確定要退出？耕地規劃和耕種將會停止。"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "你確定 k 的大小為 {plotSize}？"
+msgstr "你確定 k 的大小為 {plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -156,7 +156,7 @@ msgstr "餘額"
 
 #: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
-msgstr "基礎農夫獎勵數量"
+msgstr "基礎塊農獎勵數量"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -410,7 +410,7 @@ msgstr "建立提案"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
-msgstr "新增耕地"
+msgstr "新建耕地"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
@@ -637,17 +637,17 @@ msgstr "農夫拼圖雜湊值"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr "農夫獎勵地址"
+msgstr "塊農獎勵地址"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "農夫未有連線"
+msgstr "塊農目前未連線"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "農夫沒在運行"
+msgstr "塊農未運作"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -869,7 +869,7 @@ msgstr "載入中..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr "本地耕地收割機"
+msgstr "本地端收割機用耕地"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -1038,7 +1038,7 @@ msgstr "桶數量"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr "執行緒數"
+msgstr "執行緒數："
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
@@ -1080,7 +1080,7 @@ msgstr "待確認中餘額"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr "待確認中更動"
+msgstr "未結更動"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
@@ -1348,7 +1348,7 @@ msgstr "恢復 DID 錢包"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr "重新整理耕地"
+msgstr "刷新耕地"
 
 #: src/electron/main.ts:290
 msgid "Release Notes"
@@ -1623,7 +1623,7 @@ msgstr "這個應用程式會在區塊高度 193536 時停止運作。"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "你的農夫已連接的完整節點在下面。<0>了解更多</0>"
+msgstr "你的塊農連接上的完整節點列在下方。<0>了解更多</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1652,7 +1652,7 @@ msgstr "VDF（可驗證的延遲函數）數量或此區塊上的時間疊代證
 
 #: src/components/block/Block.jsx:294
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr "在這個區塊的總交易費用。是獎勵給農夫的。"
+msgstr "在這個區塊的總交易費用。是獎勵給塊農的。"
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
@@ -1686,7 +1686,7 @@ msgstr "這是最後的峰值子區塊的時間。"
 
 #: src/components/block/Block.jsx:184
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr "這是農夫建立區塊的時間，這是在用時間證明最終確定之前的時間"
+msgstr "這是塊農建立區塊的時間，這是在用時間證明最終確定之前的時間"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -1764,11 +1764,11 @@ msgstr "總耕地大小"
 
 #: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
-msgstr "總 VDF 疊代"
+msgstr "總 VDF 疊代次數"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr "從起始區塊鏈後的總疊代次數"
+msgstr "從區塊鏈開始後的總疊代次數"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
