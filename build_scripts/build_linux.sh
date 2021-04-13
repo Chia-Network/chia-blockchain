@@ -47,21 +47,6 @@ cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
 cd chia-blockchain-gui || exit
 
-# See https://github.com/imagemin/gifsicle-bin/issues/113
-echo ""
-echo "PLATFORM is $PLATFORM"
-echo ""
-if [ "$PLATFORM" = "arm64" ]; then
-  echo "Installing dh-autoreconf to work around gifsicle issue."
-  apt-get install -y dh-autoreconf cmake autoconf automake libtool nasm pkg-config libpng-dev optipng
-  echo "npm install imagemin-mozjpeg"
-  export CPPFLAGS="-DPNG_ARM_NEON_OPT=0"
-  npm install imagemin-mozjpeg
-  echo "npm install imagemin-gifsicle"
-  npm install imagemin-gifsicle
-  npm rebuild
-fi
-
 echo ""
 echo "npm build"
 npm install
