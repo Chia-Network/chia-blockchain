@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:53\n"
+"PO-Revision-Date: 2021-04-13 05:54\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -550,7 +550,7 @@ msgstr "Dificuldade"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr "Desativar o loteamento de bifield"
+msgstr "Desativar o loteamento com campo de bit"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -1219,7 +1219,7 @@ msgstr "Lotear em paralelo pode economizar tempo. Caso contrário, adicione lote
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr "O loteamento com bitfield habilitada tem cerca de 30% de publicações globais a menos e atualmente é quase sempre mais rápida. Você pode ver os requisitos de memória reduzidos com o loteamento de bitfield desabilitado. Se o seu CPU for de antes de 2010, talvez você tenha que desfazer o loteamento do bitfield."
+msgstr "O loteamento com campo de bit habilitado tem cerca de 30% a menos de escritas globais e agora é quase sempre mais rápido. Você pode ver os requisitos de memória reduzidos loteando com o campo de bit desabilitado. Se o seu CPU for de antes de 2010, talvez você tenha que desativar o loteamento com campo de bit."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
