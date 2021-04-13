@@ -11,7 +11,6 @@ from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.lowlevel_generator import get_generator
