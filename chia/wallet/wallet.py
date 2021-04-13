@@ -210,14 +210,14 @@ class Wallet:
         if coin_announcements:
             for announcement in coin_announcements:
                 condition_list.append(make_create_coin_announcement(announcement))
-        if coin_announcements_to_consume:
-            for announcement_hash in coin_announcements_to_consume:
+        if coin_announcements_to_assert:
+            for announcement_hash in coin_announcements_to_assert:
                 condition_list.append(make_assert_coin_announcement(announcement_hash))
         if puzzle_announcements:
             for announcement in puzzle_announcements:
                 condition_list.append(make_create_puzzle_announcement(announcement))
-        if puzzle_announcements_to_consume:
-            for announcement_hash in puzzle_announcements_to_consume:
+        if puzzle_announcements_to_assert:
+            for announcement_hash in puzzle_announcements_to_assert:
                 condition_list.append(make_assert_puzzle_announcement(announcement_hash))
         return solution_for_conditions(condition_list)
 
