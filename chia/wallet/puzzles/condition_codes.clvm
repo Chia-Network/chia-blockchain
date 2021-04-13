@@ -4,21 +4,35 @@
     (defconstant AGG_SIG 49)
     (defconstant AGG_SIG_ME 50)
 
+    ; the conditions below reserve coin amounts and have to be accounted for in output totals
+
     (defconstant CREATE_COIN 51)
-    (defconstant CREATE_ANNOUNCEMENT 52)
+    (defconstant RESERVE_FEE 52)
 
-    (defconstant ASSERT_ANNOUNCEMENT 53)
-    (defconstant ASSERT_MY_COIN_ID 54)
+    ; the conditions below deal with announcements, for inter-coin communication
 
-    (defconstant ASSERT_SECONDS_AGE_EXCEEDS 55)
-    (defconstant ASSERT_SECONDS_NOW_EXCEEDS 56)
+    ; coin announcements
+    (defconstant CREATE_COIN_ANNOUNCEMENT 60)
+    (defconstant ASSERT_COIN_ANNOUNCEMENT 61)
 
-    (defconstant ASSERT_HEIGHT_AGE_EXCEEDS 57)
-    (defconstant ASSERT_HEIGHT_NOW_EXCEEDS 58)
+    ; puzzle announcements
+    (defconstant CREATE_PUZZLE_ANNOUNCEMENT 62)
+    (defconstant ASSERT_PUZZLE_ANNOUNCEMENT 63)
 
-    (defconstant RESERVE_FEE 59)
+    ; the conditions below let coins inquire about themselves
 
-    (defconstant ASSERT_MY_PARENT_ID 60)
-    (defconstant ASSERT_MY_PUZZLEHASH 61)
-    (defconstant ASSERT_MY_AMOUNT 62)
+    (defconstant ASSERT_MY_COIN_ID 70)
+    (defconstant ASSERT_MY_PARENT_ID 71)
+    (defconstant ASSERT_MY_PUZZLEHASH 72)
+    (defconstant ASSERT_MY_AMOUNT 73)
+
+    ; the conditions below ensure that we're "far enough" in the future
+
+    ; wall-clock time
+    (defconstant ASSERT_SECONDS_AGE_EXCEEDS 80)
+    (defconstant ASSERT_SECONDS_NOW_EXCEEDS 81)
+
+    ; block index
+    (defconstant ASSERT_HEIGHT_AGE_EXCEEDS 82)
+    (defconstant ASSERT_HEIGHT_NOW_EXCEEDS 83)
 )
