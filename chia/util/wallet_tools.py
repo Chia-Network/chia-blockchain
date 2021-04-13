@@ -100,9 +100,9 @@ class WalletTool:
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN:
                     ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
-                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
+                if cvp.opcode == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
                     ret.append(make_create_coin_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH:
+                if cvp.opcode == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
                     ret.append(make_create_puzzle_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))

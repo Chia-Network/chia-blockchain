@@ -473,7 +473,7 @@ class TestMempool:
 
         dic = {cvp.opcode: [cvp]}
 
-        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, [bytes("test", "utf-8")])
+        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [bytes("test", "utf-8")])
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
 
@@ -518,7 +518,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
         # Wrong message
         cvp2 = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
+            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
             [bytes("wrong test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
@@ -565,7 +565,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         cvp2 = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
+            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
             [bytes("test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
@@ -612,7 +612,7 @@ class TestMempool:
 
         dic = {cvp.opcode: [cvp]}
 
-        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH, [bytes(0x80)])
+        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [bytes(0x80)])
         dic2 = {cvp.opcode: [cvp2]}
         spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
 
@@ -657,7 +657,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         cvp2 = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH,
+            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
             [bytes("wrong test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}
@@ -704,7 +704,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
         # Wrong type of Create_announcement
         cvp2 = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID,
+            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
             [bytes("test", "utf-8")],
         )
         dic2 = {cvp.opcode: [cvp2]}

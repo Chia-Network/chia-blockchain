@@ -15,8 +15,8 @@ class ConditionOpcode(bytes, enum.Enum):
 
     # creation opcodes
     CREATE_COIN = bytes([51])
-    CREATE_ANNOUNCEMENT_WITH_ID = bytes([52])
-    CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH = bytes([63])
+    CREATE_COIN_ANNOUNCEMENT = bytes([52])
+    CREATE_PUZZLE_ANNOUNCEMENT = bytes([63])
 
     # assertions: coins & announcements
     ASSERT_COIN_ANNOUNCEMENT = bytes([53])

@@ -38,11 +38,11 @@ def make_assert_puzzle_announcement(announcement_hash):
 
 
 def make_create_coin_announcement(message):
-    return [ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, message]
+    return [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message]
 
 
 def make_create_puzzle_announcement(message):
-    return [ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH, message]
+    return [ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, message]
 
 
 def make_assert_my_parent_id(parent_id):
