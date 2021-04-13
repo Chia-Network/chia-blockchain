@@ -151,23 +151,8 @@ export default {
       use: ['@svgr/webpack', 'url-loader'],
     }, {
       test: /\.(gif|png|jpe?g)$/i,
-      use: ['file-loader', {
-        loader: 'image-webpack-loader',
-        options: {
-          mozjpeg: {
-            progressive: true,
-          },
-          gifsicle: {
-            interlaced: false,
-          },
-          optipng: {
-            optimizationLevel: 4,
-          },
-          pngquant: {
-            quality: [0.75, 0.9],
-            speed: 3,
-          },
-        },
+      use: [{
+        loader: 'file-loader',
       }],
     }],
   },
