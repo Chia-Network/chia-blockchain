@@ -127,7 +127,7 @@ def create_foliage(
 
         # Calculate the cost of transactions
         if solution_program is not None:
-            result: CostResult = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
+            result: CostResult = calculate_cost_of_program(solution_program, constants.COST_PER_BYTE)
             cost = result.cost
             removal_amount = 0
             addition_amount = 0
