@@ -13,9 +13,17 @@ from src.full_node.coin_store import CoinStore
 from src.protocols import full_node_protocol, introducer_protocol
 from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-
+from ipaddress import ip_address, IPv4Address
 from src.util.path import mkdir, path_from_root
 
+try:
+    from dnslib import *
+except ImportError:
+    print("Missing dependency dnslib: <https://pypi.python.org/pypi/dnslib>. Please install it with `pip`.")
+    sys.exit(2)
+
+log = logging.getLogger(__name__)
+global_crawl_store = None
 
 class Crawler:
     sync_store: Any
@@ -44,10 +52,7 @@ class Crawler:
         self.state_changed_callback: Optional[Callable] = None
         self.introducer_info = PeerInfo(self.config["introducer_peer"]["host"], self.config["introducer_peer"]["port"])
         self.crawl_store = None
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = log
 
         db_path_replaced: str = "crawler.db"
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -65,8 +70,9 @@ class Crawler:
     async def crawl(self):
         self.connection = await aiosqlite.connect(self.db_path)
         self.crawl_store = await CrawlStore.create(self.connection)
+        global_crawl_store = self.crawl_store
+        self.log.info("Started")
         while True:
-            print("Started")
             await asyncio.sleep(2)
             async def introducer_action(peer: ws.WSChiaConnection):
                 # Ask introducer for peers
@@ -80,12 +86,14 @@ class Crawler:
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
                                                   False, 0, 0, 0, utc_timestamp())
                             # self.log.info(f"Adding {new_peer.ip_address}")
-                            await self.crawl_store.add_peer(new_peer)
+                            new_peer_reliability = PeerReliability(response_peer.host)
+                            await self.crawl_store.add_peer(new_peer, new_peer_reliability)
                 # disconnect
                 await peer.close()
 
             await self.create_client(self.introducer_info, introducer_action)
-            not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
+            # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
+            peers_to_crawl = await self.get_peers_to_crawl(500)
             connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
 
             async def peer_action(peer: ws.WSChiaConnection):
@@ -100,11 +108,11 @@ class Crawler:
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
                                                   False, 0, 0, 0, utc_timestamp())
                             # self.log.info(f"Adding {new_peer.ip_address}")
-                            await self.crawl_store.add_peer(new_peer)
+                            new_peer_reliability = PeerReliability(response_peer.host)
+                            await self.crawl_store.add_peer(new_peer, new_peer_reliability)
 
                 await peer.close()
 
-            self.log.info(f"Current not_connected_peers count = {len(not_connected_peers)}")
             self.log.info(f"Current connected_peers count = {len(connected_peers)}")
 
             tasks = []
@@ -113,16 +121,17 @@ class Crawler:
                 try:
                     now = utc_timestamp()
                     connected = False
-                    tried = False
-                    if peer.try_count == 0:
+                    """if peer.try_count == 0:
                         connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
                     elif peer.try_count > 0 and peer.try_count < 24 and peer.last_try_timestamp - 3600 > now:
                         connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
                     elif peer.last_try_timestamp - 3600 * 24 > now:
                         connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
+                    """
+                    connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
                     if connected:
                         await self.crawl_store.peer_connected(peer)
-                    elif tried:
+                    else:
                         await self.crawl_store.peer_tried_to_connect(peer)
                 except Exception as e:
                     self.log.info(f"Error: {e}")
@@ -135,7 +144,7 @@ class Crawler:
                     yield iterable[ndx:min(ndx + n, l)]
 
             batch_count = 0
-            for peers in batch(not_connected_peers,100):
+            for peers in batch(peers_to_crawl, 100):
                 self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                 batch_count += 1
                 tasks = []
@@ -143,9 +152,9 @@ class Crawler:
                     task = asyncio.create_task(connect_task(self, peer))
                     tasks.append(task)
                 await asyncio.wait(tasks)
-                stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
+                # stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
                 stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
-                self.log.info(f"Current not_connected_peers count = {len(stat_not_connected_peers)}")
+                # self.log.info(f"Current not_connected_peers count = {len(stat_not_connected_peers)}")
                 self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
 
             self.server.banned_peers = {}
@@ -168,3 +177,106 @@ class Crawler:
 
     async def _await_closed(self):
         await self.connection.close()
+
+# https://gist.github.com/pklaus/b5a7876d4d2cf7271873
+
+# TODO: Figure out proper values.
+D = DomainName('example.com.')
+IP = '127.0.0.1'
+TTL = 60 * 5
+
+class DomainName(str):
+    def __getattr__(self, item):
+        return DomainName(item + '.' + self)
+
+async def dns_response(data):
+    request = DNSRecord.parse(data)
+    log.debug(request)
+    IPs = [MX(D.mail), soa_record] + ns_records
+    # TODO: Balance for IPv4 and IPv6.
+    if global_crawl_store is None:
+        peers = await global_crawl_store.get_cached_peers(16)
+    else:
+        peers = []
+    for peer in peers:
+        ipv4 = True
+        try:
+            ip = ipaddress.IPv4Address(peer.host)
+        except ValueError:
+            ipv4 = False
+        if ipv4:
+            IPs.append(A(peer.host))
+        else:
+            IPs.append(AAAA(peer.host))
+    reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=len(peers), ra=1), q=request.q)
+    
+    records = {
+        D: IPs,
+        D.ns1: [A(IP)],  # MX and NS records must never point to a CNAME alias (RFC 2181 section 10.3)
+        D.ns2: [A(IP)],
+        D.mail: [A(IP)],
+        D.andrei: [CNAME(D)],
+    }
+
+    qname = request.q.qname
+    qn = str(qname)
+    qtype = request.q.qtype
+    qt = QTYPE[qtype]
+
+    if qn == D or qn.endswith('.' + D):
+        for name, rrs in records.items():
+            if name == qn:
+                for rdata in rrs:
+                    rqt = rdata.__class__.__name__
+                    if qt in ['*', rqt]:
+                        reply.add_answer(RR(rname=qname, rtype=getattr(QTYPE, rqt), rclass=1, ttl=TTL, rdata=rdata))
+
+        for rdata in ns_records:
+            reply.add_ar(RR(rname=D, rtype=QTYPE.NS, rclass=1, ttl=TTL, rdata=rdata))
+
+        reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
+
+    log.debug("---- Reply:\n", reply)
+
+    return reply.pack()
+
+class BaseRequestHandler(socketserver.BaseRequestHandler):
+    def get_data(self):
+        raise NotImplementedError
+
+    def send_data(self, data):
+        raise NotImplementedError
+
+    async def handle(self):
+        now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
+        log.debug("\n\n%s request %s (%s %s):" % (self.__class__.__name__[:3], now, self.client_address[0],
+                                               self.client_address[1]))
+        try:
+            data = self.get_data()
+            log.debug(len(data), data)  # repr(data).replace('\\x', '')[1:-1]
+            self.send_data(await dns_response(data))
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+
+
+class TCPRequestHandler(BaseRequestHandler):
+    def get_data(self):
+        data = self.request.recv(8192).strip()
+        sz = struct.unpack('>H', data[:2])[0]
+        if sz < len(data) - 2:
+            raise Exception("Wrong size of TCP packet")
+        elif sz > len(data) - 2:
+            raise Exception("Too big TCP packet")
+        return data[2:]
+
+    def send_data(self, data):
+        sz = struct.pack('>H', len(data))
+        return self.request.sendall(sz + data)
+
+
+class UDPRequestHandler(BaseRequestHandler):
+    def get_data(self):
+        return self.request[0].strip()
+
+    def send_data(self, data):
+        return self.request[1].sendto(data, self.client_address)
