@@ -1,4 +1,4 @@
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from blspy import G1Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
