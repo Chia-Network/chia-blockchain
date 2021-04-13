@@ -8,7 +8,7 @@ msgstr ""
 "Language: it_IT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:54\n"
+"PO-Revision-Date: 2021-04-13 17:53\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -614,7 +614,7 @@ msgstr "Stima della somma di tutto lo spazio disco plottato da tutti i farmer ne
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "Escludi directory finale"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -1219,7 +1219,7 @@ msgstr "Plottare in parallelo può far risparmiare tempo. In alternativa, aggiun
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "Il grafico con bitfield abilitato ha circa il 30% in meno di scritture complessive ed è ora quasi sempre più veloce. Potresti vedere requisiti di memoria ridotti con il bitfield disabilitato. Se l'architettura della tua CPU è precedente al 2010 potresti dover disattivare il bitfield."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1489,7 +1489,7 @@ msgstr "Registrati"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Salta l'aggiunta di una cartella finale all'harvester per il farming"
 
 #: src/electron/main.ts:379
 msgid "Speech"
@@ -1619,7 +1619,7 @@ msgstr "Posizione cartella temporanea"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "L'applicazione smetterà di funzionare al blocco con altezza 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1718,7 +1718,7 @@ msgstr "Questo commercio è stato incluso sulla blockchain a questa altezza di b
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Questa versione di Chia non è più compatibile con la blockchain e non può coltivare in modo sicuro."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
