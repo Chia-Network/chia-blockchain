@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-13 11:57\n"
+"PO-Revision-Date: 2021-04-13 23:51\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -32,7 +32,7 @@ msgstr "128 buckets be good fer many"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "A tender be a vessel where crewdogs are actually at. A plunderer 'n tender coordinate wit' a cap'n t' see the state o' the chain. View yer connected tenders below Learn more"
+msgstr "A tender be a vessel where crewdogs are actually at. A plunderer 'n tender coordinate wit' a capt'n t' see the state o' the chain. View yer connected tenders below Learn more"
 
 #: src/electron/main.ts:331
 #: src/electron/main.ts:413
@@ -161,7 +161,7 @@ msgstr "Base Plunderer Reward Amount"
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "Below are the current challenges. Ye may or may nah 'ave action at these challenges. These booty do nah currently contain a proof o' time."
+msgstr "Below are the current victims. Ye may or may nah 'ave action at these. These booty do nah currently contain a proof o' time."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 5 hours"
@@ -253,11 +253,11 @@ msgstr "YO, maroonin' these crewdogs will let 'em be gone forever. Check that th
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr "Challenge"
+msgstr "Victim"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr "Challenge Hash"
+msgstr "Victim"
 
 #: src/electron/main.ts:311
 msgid "Chat on KeyBase"
@@ -290,7 +290,7 @@ msgstr "Close"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "Cap'n 'n server gettin' mighty drunk right now"
+msgstr "Capt'n 'n server gettin' mighty drunk right now"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -729,11 +729,11 @@ msgstr "Oftentimes Asked Questions"
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
-msgstr "Captain"
+msgstr "Capt'n"
 
 #: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
-msgstr "Report o' yer Cap'n"
+msgstr "Report o' yer Capt'n"
 
 #: src/electron/main.ts:252
 msgid "Full Screen"
@@ -1340,7 +1340,7 @@ msgstr "Rate Limited Scallywag Treasure Chest Setup"
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
-msgstr "Receive Coordinates"
+msgstr "Yer Treasure's Coordinates (give t'is to scallywags who owe you)"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
@@ -1537,11 +1537,11 @@ msgstr "State"
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:93
 msgid "Status"
-msgstr "State o' things"
+msgstr "State o' t'ings"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr "State o' things:"
+msgstr "State o' t'ings:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1583,7 +1583,7 @@ msgstr "Everythin' lookin' jolly"
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr "Catchin' up wit' other Captains"
+msgstr "Catchin' up wit' other Capt'ns"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
@@ -1623,7 +1623,7 @@ msgstr "T'is version o' Chia will stop workin' at booty 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr "The Cap'n that yer Plunderer be connected t' be below. <0>Look fer more</0>"
+msgstr "The Capt'n that yer Plunderer be connected t' be below. <0>Look fer more</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1632,11 +1632,11 @@ msgstr "Minimum size fer mainnet be k=32"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr "The Cap'n be three sheets to the wind"
+msgstr "The Capt'n be three sheets to the wind"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr "The cap'n be collectin' reports, which means he's gettin' information o' other captains' boarded ships"
+msgstr "The capt'n be collectin' reports, which means he's gettin' information o' other capt'ns' boarded ships"
 
 #: src/components/block/Block.jsx:268
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -1965,11 +1965,11 @@ msgstr "State o' yer lootin'"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr "Connection t' yer Cap'n"
+msgstr "Connection t' yer Capt'n"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr "State o' yer tenders"
+msgstr "State o' yer Tenders"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:119
@@ -1988,7 +1988,7 @@ msgstr "not there yet"
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:98
 msgid "status:"
-msgstr "state o' things:"
+msgstr "state o' t'ings:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:105
