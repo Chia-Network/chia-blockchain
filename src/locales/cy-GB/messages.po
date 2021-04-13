@@ -8,7 +8,7 @@ msgstr ""
 "Language: cy_GB\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:54\n"
+"PO-Revision-Date: 2021-04-13 17:53\n"
 "Last-Translator: \n"
 "Language-Team: Welsh\n"
 "Plural-Forms: nplurals=6; plural=(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n == 3) ? 3 : ((n == 6) ? 4 : 5))));\n"
@@ -41,11 +41,11 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Derbyn"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Derbynir ar amser:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -61,40 +61,40 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Ychwanegu"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Ychwanegu Cyfeiriadur Llain"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr ""
+msgstr "Ychwanegu Llain i’r Ciw"
 
 #: src/components/wallet/Wallets.tsx:81
 msgid "Add Wallet"
-msgstr ""
+msgstr "Ychwanegu Waled"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Ychwanegu Llain"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr ""
+msgstr "Ychwanegu llain"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr ""
+msgstr "Ychwanegu cyfeiriadur llain"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
 #: src/components/wallet/standard/WalletStandard.tsx:373
 msgid "Address"
-msgstr ""
+msgstr "Cyfeiriad"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
@@ -108,11 +108,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:331
 msgid "Amount"
-msgstr ""
+msgstr "Nifer"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Nifer ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
@@ -142,7 +142,7 @@ msgstr ""
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Yn ôl"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
@@ -152,7 +152,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Balance"
-msgstr ""
+msgstr "Gweddill"
 
 #: src/components/block/Block.jsx:287
 msgid "Base Farmer Reward Amount"
@@ -172,11 +172,11 @@ msgstr ""
 #: src/components/block/Block.jsx:148
 #: src/components/block/Block.jsx:303
 msgid "Block"
-msgstr ""
+msgstr "Bloc"
 
 #: src/components/block/Block.jsx:121
 msgid "Block Test"
-msgstr ""
+msgstr "Prawf Bloc"
 
 #: src/components/block/Block.jsx:227
 msgid "Block VDF Iterations"
@@ -200,7 +200,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
-msgstr ""
+msgstr "Blociau"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -210,7 +210,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Pori"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
@@ -220,11 +220,11 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Prynu"
 
 #: src/components/wallet/Wallets.tsx:34
 msgid "CC Wallet"
-msgstr ""
+msgstr "Waled CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -241,11 +241,11 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Canslo"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Canslo a Gwario"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -253,7 +253,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Herio"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
@@ -265,7 +265,7 @@ msgstr ""
 
 #: src/electron/main.ts:328
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron/main.ts:278
 msgid "Chia Blockchain Wiki"
