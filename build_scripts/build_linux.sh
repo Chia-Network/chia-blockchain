@@ -28,7 +28,6 @@ echo "Installing npm and electron packagers"
 npm install electron-packager -g
 npm install electron-installer-debian -g
 npm install electron-installer-redhat -g
-npm install imagemin-gifsicle
 
 echo "Create dist/"
 rm -rf dist
@@ -53,6 +52,7 @@ echo "\nPLATFORM is $PLATFORM\n"
 if [ $PLATFORM = "arm64" ]; then
   echo "Installing dh-autoreconf to work around gifsicle issue.\n"
   apt-get install -y dh-autoreconf
+  npm install imagemin-gifsicle
 fi
 
 echo "npm build"
