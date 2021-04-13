@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:54\n"
+"PO-Revision-Date: 2021-04-13 11:57\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1219,7 +1219,7 @@ msgstr "Plotting em paralelo pode economizar tempo. Caso contrário, adicione pl
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "Efetuar Plotting com bitfield habilitado irá efetuar menos de 30% de escritas globais e agora é quase sempre mais rápido. Você pode ver os requisitos de memória reduzidos desabilitando o bitfield ploting. Se o seu CPU for anteceder 2010, talvez você tenha que desativar o bitfield ploting."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
