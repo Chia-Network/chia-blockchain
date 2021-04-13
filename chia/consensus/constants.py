@@ -43,12 +43,6 @@ class ConsensusConstants:
     MEMPOOL_BLOCK_BUFFER: int
     # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
     MAX_COIN_AMOUNT: int
-    # Raw size per block target = 1,000,000 bytes
-    # Rax TX (single in, single out) = 219 bytes (not compressed)
-    # TX = 457 vBytes
-    # floor(1,000,000 / 219) * 457 = 2086662 (size in vBytes)
-    # Max block cost in virtual bytes
-    MAX_BLOCK_COST: int
     # MAX block cost in clvm cost units = MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT
     # 1 vByte = 108 clvm cost units
     CLVM_COST_RATIO_CONSTANT: int
