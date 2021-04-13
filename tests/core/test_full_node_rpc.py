@@ -109,8 +109,8 @@ class TestRpc:
             additions, removals = await client.get_additions_and_removals(blocks[-1].header_hash)
             assert len(additions) >= 2 and len(removals) == 0
 
-            wallet = WalletTool()
-            wallet_receiver = WalletTool(AugSchemeMPL.key_gen(std_hash(b"123123")))
+            wallet = WalletTool(full_node_api_1.full_node.constants)
+            wallet_receiver = WalletTool(full_node_api_1.full_node.constants, AugSchemeMPL.key_gen(std_hash(b"123123")))
             ph = wallet.get_new_puzzlehash()
             ph_2 = wallet.get_new_puzzlehash()
             ph_receiver = wallet_receiver.get_new_puzzlehash()

@@ -83,7 +83,7 @@ def do_test_spend(
     # make sure we can actually sign the solution
     signatures = []
     for coin_solution in spend_bundle.coin_solutions:
-        signature = key_lookup.signature_for_solution(coin_solution)
+        signature = key_lookup.signature_for_solution(coin_solution, bytes([2] * 32))
         signatures.append(signature)
     return SpendBundle(spend_bundle.coin_solutions, AugSchemeMPL.aggregate(signatures))
 

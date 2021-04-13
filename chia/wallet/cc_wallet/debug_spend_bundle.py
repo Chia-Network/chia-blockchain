@@ -68,7 +68,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
-            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name):
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, bytes([3] * 32)):
                 pks.append(pk)
                 msgs.append(m)
             print()

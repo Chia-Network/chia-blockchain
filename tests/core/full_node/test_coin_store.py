@@ -18,8 +18,6 @@ from chia.util.ints import uint64
 from chia.util.wallet_tools import WalletTool
 from tests.setup_nodes import bt, test_constants
 
-WALLET_A = WalletTool()
-
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -28,6 +26,8 @@ def event_loop():
 
 
 constants = test_constants
+
+WALLET_A = WalletTool(constants)
 
 
 def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:

@@ -4,6 +4,7 @@ from secrets import token_bytes
 from blspy import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     Naive way to calculate cost ratio between vByte and CLVM cost unit.
     AggSig has assigned cost of 20vBytes, simple CLVM program is benchmarked against it.
     """
-    wallet_tool = WalletTool()
+    wallet_tool = WalletTool(DEFAULT_CONSTANTS)
     benchmark_all_operators()
     secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
     puzzles = []
