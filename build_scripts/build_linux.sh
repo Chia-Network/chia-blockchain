@@ -59,6 +59,7 @@ if [ "$PLATFORM" = "arm64" ]; then
   npm install imagemin-mozjpeg
   echo "npm install imagemin-gifsicle"
   npm install imagemin-gifsicle
+  npm rebuild
 fi
 
 echo ""
