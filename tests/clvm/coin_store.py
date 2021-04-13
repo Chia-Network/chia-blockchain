@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, Set
 
 from chia.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from chia.types.blockchain_format.coin import Coin
@@ -43,8 +43,8 @@ class CoinStore:
     ) -> int:
         # this should use blockchain consensus code
 
-        coin_announcements: List[bytes32] = []
-        puzzle_announcements: List[bytes32] = []
+        coin_announcements: Set[bytes32] = set()
+        puzzle_announcements: Set[bytes32] = set()
 
         conditions_dicts = []
         for coin_solution in spend_bundle.coin_solutions:
@@ -54,10 +54,10 @@ class CoinStore:
             if conditions_dict is None:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
             conditions_dicts.append(conditions_dict)
-            coin_announcements.extend(
+            coin_announcements.update(
                 coin_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin.name())
             )
-            puzzle_announcements.extend(
+            puzzle_announcements.update(
                 puzzle_announcement_names_for_conditions_dict(conditions_dict, coin_solution.coin.puzzle_hash)
             )
 
