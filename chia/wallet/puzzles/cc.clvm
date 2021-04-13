@@ -36,7 +36,7 @@
 ; So S_{k+1} is correct iff S_k is correct.
 ;
 ; Coins also receive proofs that their neighbors are ccs, ensuring the announcements aren't forgeries, as
-; inner puzzles are not allowed to use `CREATE_ANNOUNCEMENT`.
+; inner puzzles are not allowed to use `CREATE_COIN_ANNOUNCEMENT`.
 ;
 ; In summary, I_k generates an announcement Y_k (for "yell") as follows:
 ;
@@ -58,16 +58,16 @@
 ;
 ; Three output conditions are prepended to the list of conditions for each I_k:
 ;  (ASSERT_MY_ID I_k) to ensure that the passed in value for I_k is correct
-;  (CREATE_ANNOUNCEMENT I_{k-1} S_k) to create this coin's announcement
-;  (ASSERT_ANNOUNCEMENT hashed_announcement(Y_{k+1})) to ensure the next coin really is next and
+;  (CREATE_COIN_ANNOUNCEMENT I_{k-1} S_k) to create this coin's announcement
+;  (ASSERT_COIN_ANNOUNCEMENT hashed_announcement(Y_{k+1})) to ensure the next coin really is next and
 ;     the relative values of S_k and S_{k+1} are correct
 ;
 ; This is all we need to do to ensure ccs exactly balance in the inputs and outputs.
 ;
 ; Proof:
 ;   Consider n, k, I_k values, O_k values, S_k and A_k as above.
-;   For the (CREATE_ANNOUNCEMENT Y_{k+1}) (created by the next coin)
-;   and (ASSERT_ANNOUNCEMENT hashed(Y_{k+1})) to match,
+;   For the (CREATE_COIN_ANNOUNCEMENT Y_{k+1}) (created by the next coin)
+;   and (ASSERT_COIN_ANNOUNCEMENT hashed(Y_{k+1})) to match,
 ;   we see that I_k can ensure that is has the correct value for S_{k+1}.
 ;
 ;   By induction, we see that S_{m+1} = sum(i, 1, m) [O_i - A_i] = sum(i, 1, m) O_i - sum(i, 1, m) A_i
@@ -93,17 +93,17 @@
 ;; coin-info: `(parent_id puzzle_hash amount)`. This defines the coin id used with ASSERT_MY_COIN_ID
 ;; coin-bundle: the cons box `(coin-info . lineage_proof)`
 ;;
-;; and automatically hashed in to the announcement generated with CREATE_ANNOUNCEMENT.
+;; and automatically hashed in to the announcement generated with CREATE_COIN_ANNOUNCEMENT.
 ;;
 
 (mod (mod-hash                ;; curried into puzzle
       genesis-coin-checker    ;; curried into puzzle
       inner-puzzle            ;; curried into puzzle
       inner-puzzle-solution   ;; if invalid, inner-puzzle will fail
-      prev-coin-bundle        ;; used in this coin's announcement, prev-coin ASSERT_ANNOUNCEMENT will fail if wrong
+      prev-coin-bundle        ;; used in this coin's announcement, prev-coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
       this-coin-bundle        ;; verified with ASSERT_MY_COIN_ID
-      next-coin-bundle        ;; used to generate ASSERT_ANNOUNCEMENT
-      prev-subtotal           ;; included in announcement, prev-coin ASSERT_ANNOUNCEMENT will fail if wrong
+      next-coin-bundle        ;; used to generate ASSERT_COIN_ANNOUNCEMENT
+      prev-subtotal           ;; included in announcement, prev-coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
     )
 
      ;;;;; start library code
@@ -181,14 +181,14 @@
      )
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
-     ;; prohibit CREATE_ANNOUNCEMENT
+     ;; prohibit CREATE_COIN_ANNOUNCEMENT
      (defun-inline morph-condition (condition lineage-proof-parameters)
        (if (= (f condition) CREATE_COIN)
          (list CREATE_COIN
                (cc-puzzle-hash lineage-proof-parameters (f (r condition)))
                (f (r (r condition)))
          )
-         (if (= (f condition) CREATE_ANNOUNCEMENT)
+         (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
            (x)
            condition
          )
@@ -222,9 +222,9 @@
        (sha256 (coin-id-for-coin next-coin-info) (sha256tree1 (list this-coin-info this-subtotal)))
      )
 
-     ;; create the `ASSERT_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
+     ;; create the `ASSERT_COIN_ANNOUNCEMENT` condition that ensures the next coin's announcement is correct
      (defun-inline create-assert-next-announcement-condition (this-coin-info this-subtotal next-coin-info)
-       (list ASSERT_ANNOUNCEMENT
+       (list ASSERT_COIN_ANNOUNCEMENT
              (calculate-annoucement-id this-coin-info
                                             this-subtotal
                                             next-coin-info
@@ -234,7 +234,7 @@
 
      ;; here we commit to I_{k-1} and S_k
      (defun-inline create-announcement-condition (prev-coin-info prev-subtotal)
-       (list CREATE_ANNOUNCEMENT
+       (list CREATE_COIN_ANNOUNCEMENT
              (sha256tree1 (list prev-coin-info prev-subtotal))
        )
       )
@@ -268,8 +268,8 @@
 
      ;; add three conditions to the list of morphed conditions:
      ;; ASSERT_MY_COIN_ID for `this-coin-info`
-     ;; CREATE_ANNOUNCEMENT for my announcement
-     ;; ASSERT_ANNOUNCEMENT for the next coin's announcement
+     ;; CREATE_COIN_ANNOUNCEMENT for my announcement
+     ;; ASSERT_COIN_ANNOUNCEMENT for the next coin's announcement
      (defun-inline generate-final-output-conditions
        (
          prev-subtotal

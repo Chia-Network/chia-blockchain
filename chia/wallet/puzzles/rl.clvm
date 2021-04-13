@@ -36,7 +36,7 @@
             0))
 
     (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
-        (list CREATE_ANNOUNCEMENT
+        (list CREATE_COIN_ANNOUNCEMENT
               (sha256 consolidating_primary_input
                       consolidating_coin_puzzle_hash
                       outgoing_amount))

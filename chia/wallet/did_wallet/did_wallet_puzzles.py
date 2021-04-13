@@ -95,7 +95,7 @@ def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey)
     return coinsol
 
 
-# inspect puzzle and check it is a CC puzzle
+# inspect puzzle and check it is a DID puzzle
 def check_is_did_puzzle(puzzle: Program):
     r = puzzle.uncurry()
     if r is None:

@@ -19,7 +19,7 @@
         (sha256 wallet-coin-primary-input wallet_puzzle wallet-coin-amount))
 
     (defun-inline input-of-lock ()
-        (list ASSERT_ANNOUNCEMENT (sha256 (parent-coin-id) my-id)))
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 (parent-coin-id) my-id)))
 
     (list (create-my-id-condition)
           (input-of-lock))
