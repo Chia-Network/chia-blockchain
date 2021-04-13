@@ -48,11 +48,14 @@ cd .. || exit
 cd chia-blockchain-gui || exit
 
 # See https://github.com/imagemin/gifsicle-bin/issues/113
-echo "\nPLATFORM is $PLATFORM\n"
-if [ $PLATFORM = "arm64" ]; then
-  echo "Installing dh-autoreconf to work around gifsicle issue.\n"
+echo ""
+echo "PLATFORM is $PLATFORM"
+echo ""
+if [ "$PLATFORM" = "arm64" ]; then
+  echo "Installing dh-autoreconf to work around gifsicle issue."
   apt-get install -y dh-autoreconf
   npm install imagemin-gifsicle
+  npm install imagemin-mozjpeg
 fi
 
 echo "npm build"
