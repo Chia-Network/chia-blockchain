@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import G1Element
 
@@ -112,48 +112,48 @@ def created_outputs_for_conditions_dict(
 def coin_announcements_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     input_coin: Coin,
-) -> List[Announcement]:
+) -> Set[Announcement]:
     output_announcements = []
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID, []):
         message = cvp.vars[0]
         announcement = Announcement(input_coin.name(), message)
-        output_announcements.append(announcement)
+        output_announcements.add(announcement)
     return output_announcements
 
 
 def puzzle_announcements_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     input_coin: Coin,
-) -> List[Announcement]:
+) -> Set[Announcement]:
     output_announcements = []
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH, []):
         message = cvp.vars[0]
         announcement = Announcement(input_coin.puzzle_hash, message)
-        output_announcements.append(announcement)
+        output_announcements.add(announcement)
     return output_announcements
 
 
-def coin_announcements_names_for_npc(npc_list) -> List[bytes32]:
-    output_announcements = []
+def coin_announcements_names_for_npc(npc_list) -> Set[bytes32]:
+    output_announcements = set()
     for npc in npc_list:
         for condition, cvp_list in npc.conditions:
             if condition == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_ID:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
                     announcement = Announcement(npc.coin_name, message)
-                    output_announcements.append(announcement.name())
+                    output_announcements.add(announcement.name())
     return output_announcements
 
 
-def puzzle_announcements_names_for_npc(npc_list) -> List[bytes32]:
-    output_announcements = []
+def puzzle_announcements_names_for_npc(npc_list) -> Set[bytes32]:
+    output_announcements = set()
     for npc in npc_list:
         for condition, cvp_list in npc.conditions:
             if condition == ConditionOpcode.CREATE_ANNOUNCEMENT_WITH_PUZZLEHASH:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
                     announcement = Announcement(npc.puzzle_hash, message)
-                    output_announcements.append(announcement.name())
+                    output_announcements.add(announcement.name())
     return output_announcements
 
 

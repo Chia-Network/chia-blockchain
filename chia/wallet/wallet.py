@@ -191,9 +191,9 @@ class Wallet:
         min_time=0,
         me=None,
         coin_announcements=None,
-        coin_announcements_to_consume=None,
+        coin_announcements_to_assert=None,
         puzzle_announcements=None,
-        puzzle_announcements_to_consume=None,
+        puzzle_announcements_to_assert=None,
         fee=0,
     ) -> Program:
         assert fee >= 0

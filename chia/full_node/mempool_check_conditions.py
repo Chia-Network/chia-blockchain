@@ -1,6 +1,6 @@
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -18,7 +18,7 @@ from chia.wallet.puzzles.lowlevel_generator import get_generator
 GENERATOR_MOD = get_generator()
 
 
-def mempool_assert_announcement(condition: ConditionWithArgs, announcements: List[bytes32]) -> Optional[Err]:
+def mempool_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes32]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
@@ -182,8 +182,8 @@ def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name
 
 def mempool_check_conditions_dict(
     unspent: CoinRecord,
-    coin_announcement_names: List[bytes32],
-    puzzle_announcement_names: List[bytes32],
+    coin_announcement_names: Set[bytes32],
+    puzzle_announcement_names: Set[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
 ) -> Optional[Err]:

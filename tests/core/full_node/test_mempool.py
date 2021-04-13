@@ -489,7 +489,7 @@ class TestMempool:
         assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
-    async def test_invalid_coin_announcement_consumed(self, two_nodes):
+    async def test_invalid_coin_announcement_rejected(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
@@ -536,7 +536,7 @@ class TestMempool:
         assert mempool_bundle is None
 
     @pytest.mark.asyncio
-    async def test_invalid_coin_announcement_consumed_two(self, two_nodes):
+    async def test_invalid_coin_announcement_rejected_two(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
@@ -628,7 +628,7 @@ class TestMempool:
         assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
-    async def test_invalid_puzzle_announcement_consumed(self, two_nodes):
+    async def test_invalid_puzzle_announcement_rejected(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
@@ -675,7 +675,7 @@ class TestMempool:
         assert mempool_bundle is None
 
     @pytest.mark.asyncio
-    async def test_invalid_puzzle_announcement_consumed_two(self, two_nodes):
+    async def test_invalid_puzzle_announcement_rejected(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()

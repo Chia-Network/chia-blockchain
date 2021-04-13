@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.clvm import int_from_bytes
@@ -79,7 +79,7 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionWithArgs, unspen
     return None
 
 
-def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: List[bytes32]) -> Optional[Err]:
+def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes32]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
@@ -92,8 +92,8 @@ def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: 
 
 def blockchain_check_conditions_dict(
     unspent: CoinRecord,
-    coin_announcement_names: List[bytes32],
-    puzzle_announcement_names: List[bytes32],
+    coin_announcement_names: Set[bytes32],
+    puzzle_announcement_names: Set[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
     timestamp: uint64,

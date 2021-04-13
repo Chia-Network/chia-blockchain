@@ -310,8 +310,8 @@ class MempoolManager:
         pks: List[G1Element] = []
         msgs: List[bytes32] = []
         error: Optional[Err] = None
-        coin_announcements_in_spend: List[bytes32] = coin_announcements_names_for_npc(npc_list)
-        puzzle_announcements_in_spend: List[bytes32] = puzzle_announcements_names_for_npc(npc_list)
+        coin_announcements_in_spend: Set[bytes32] = coin_announcements_names_for_npc(npc_list)
+        puzzle_announcements_in_spend: Set[bytes32] = puzzle_announcements_names_for_npc(npc_list)
         for npc in npc_list:
             coin_record: CoinRecord = removal_record_dict[npc.coin_name]
             # Check that the revealed removal puzzles actually match the puzzle hash

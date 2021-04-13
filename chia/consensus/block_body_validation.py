@@ -146,8 +146,8 @@ async def validate_block_body(
     removals: List[bytes32] = []
     coinbase_additions: List[Coin] = list(expected_reward_coins)
     additions: List[Coin] = []
-    coin_announcement_names: List[bytes32] = []
-    puzzle_announcement_names: List[bytes32]
+    coin_announcement_names: Set[bytes32] = set()
+    puzzle_announcement_names: Set[bytes32] = set()
     npc_list: List[NPC] = []
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
