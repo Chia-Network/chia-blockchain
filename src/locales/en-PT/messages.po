@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:54\n"
+"PO-Revision-Date: 2021-04-13 11:57\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1219,7 +1219,7 @@ msgstr "Recruitin' in parallel can save time. Otherwise, add crewdog(s) to the q
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "Recruitin' wit' bitfield on makes about 30% less overall writes 'n be now well-nigh always faster. Ye may see less memory used wit' bitfield off. If yer CPU design be from afore 2010 ye may 'ave t' turn bitfield off."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1619,7 +1619,7 @@ msgstr "Temporary folder"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "T'is version o' Chia will stop workin' at booty 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
