@@ -28,17 +28,11 @@ echo "Installing npm and electron packagers"
 npm install electron-packager -g
 npm install electron-installer-debian -g
 npm install electron-installer-redhat -g
+npm install imagemin-gifsicle
 
 echo "Create dist/"
 rm -rf dist
 mkdir dist
-
-# See https://github.com/imagemin/gifsicle-bin/issues/113
-echo "\nPLATFORM is $PLATFORM\n"
-if [ $PLATFORM = "arm64" ]; then
-  echo "Installing dh-autoreconf to work around gifsicle issue.\n"
-  apt-get install -y dh-autoreconf
-fi
 
 echo "Create executables with pyinstaller"
 pip install pyinstaller==4.2
@@ -53,6 +47,13 @@ fi
 cp -r dist/daemon ../chia-blockchain-gui
 cd .. || exit
 cd chia-blockchain-gui || exit
+
+# See https://github.com/imagemin/gifsicle-bin/issues/113
+echo "\nPLATFORM is $PLATFORM\n"
+if [ $PLATFORM = "arm64" ]; then
+  echo "Installing dh-autoreconf to work around gifsicle issue.\n"
+  apt-get install -y dh-autoreconf
+fi
 
 echo "npm build"
 npm install
