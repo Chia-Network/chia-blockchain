@@ -68,7 +68,7 @@ def conditions_by_opcode(
 
 
 def pkm_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]], coin_name: bytes32, genesis_challenge: bytes32
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]], coin_name: bytes32, additional_data: bytes
 ) -> List[Tuple[G1Element, bytes]]:
     assert coin_name is not None
     ret: List[Tuple[G1Element, bytes]] = []
@@ -81,7 +81,7 @@ def pkm_pairs_for_conditions_dict(
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
         assert len(cwa.vars) == 2
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
-        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + genesis_challenge))
+        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
     return ret
 
 

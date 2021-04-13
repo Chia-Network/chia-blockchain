@@ -331,7 +331,7 @@ class Wallet:
         return await sign_coin_solutions(
             coin_solutions,
             self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
 
     async def generate_signed_transaction(
@@ -360,7 +360,7 @@ class Wallet:
         spend_bundle: SpendBundle = await sign_coin_solutions(
             transaction,
             self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
 
         now = uint64(int(time.time()))
@@ -423,6 +423,6 @@ class Wallet:
         spend_bundle = await sign_coin_solutions(
             list_of_solutions,
             self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
         )
         return spend_bundle

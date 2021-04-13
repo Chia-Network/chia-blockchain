@@ -538,7 +538,7 @@ class CCWallet:
         error, conditions, cost = conditions_dict_for_solution(innerpuz, innersol)
         if conditions is not None:
             for _, msg in pkm_pairs_for_conditions_dict(
-                conditions, coin_name, self.wallet_state_manager.constants.GENESIS_CHALLENGE
+                conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)

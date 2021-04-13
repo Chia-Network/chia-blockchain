@@ -3,7 +3,6 @@ from typing import Callable, List, Optional
 import blspy
 from blspy import AugSchemeMPL, PrivateKey
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -12,7 +11,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 async def sign_coin_solutions(
     coin_solutions: List[CoinSolution],
     secret_key_for_public_key_f: Callable[[blspy.G1Element], Optional[PrivateKey]],
-    genesis_challenge: bytes32,
+    additional_data: bytes,
 ) -> SpendBundle:
     signatures: List[blspy.G2Element] = []
     pk_list: List[blspy.G1Element] = []
@@ -26,7 +25,7 @@ async def sign_coin_solutions(
 
         # Create signature
         for pk, msg in pkm_pairs_for_conditions_dict(
-            conditions_dict, bytes(coin_solution.coin.name()), genesis_challenge
+            conditions_dict, bytes(coin_solution.coin.name()), additional_data
         ):
             pk_list.append(pk)
             msg_list.append(msg)
