@@ -13,6 +13,29 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 - Performance of streamable has been increased, which should help the full node use less CPU
 
+## 1.0.4 Chia Blockchain 2021-04-12
+
+### Added
+
+- Starting approximately April 21, 2021, the GUI will notify you that this version will stop working at block height 193,536 and will persistently warn you from that block on that you can not use this version (or any earlier version) to farm. This is to support the upgrade to the transaction fork.
+- We now have translations for Brazilian Portuguese, Australian English, and Pirate. Thanks to @fsavaget, @darkflare, @maahhh, @harold_257, @kontin, and @Gulli. Yarr - don't be losing your 24 word treasure map...
+
+### Changed
+
+- The plotter in bitfield mode is much improved in plotting speed (~15% faster than in 1.0.3), now requires 28% less temporary space (238.3 GiB/256 GB), and now uses its maximum memory in phase 1 and only needs 3389MiB for optimal sorting of a k32. Total writes should also be down by about 20%. On almost all machines we expect bitfield to be as fast or faster. For CPUs that predate the [Nahalem architecture](https://en.wikipedia.org/wiki/Nehalem_(microarchitecture)), bitfield plotting will not work and you will need to use no bitfield. Those CPUs were generally designed before 2010.
+- The `src` directory in chia-blockchain has been changed to `chia` to avoid namespace collisions.
+- GUI install builds have been simplified to rely on one `.spec` file in `chia/`
+- The weight proof timeout can now be configured in config.yaml.
+- Peer discovery is now retried more often after you receive initial peers.
+
+### Fixed
+
+- We have made significant improvements and bug fixes to stop blockchain and wallet database corruption issues.
+- We now pass the environment into the Daemon and this should solve some Windows and MacOS startup bugs.
+- The ARM64 .deb installer will now work well on Raspberry Pi OS 64 bit and Ubuntu 18.04 LTS or newer.
+- We have made improvements in weight proof generation and saving.
+- Wallet start up would have a race condition that output a harmless error on startup.
+- Thanks for a typo fix from @alfonsoperez.
 
 ## 1.0.3 Chia Blockchain 2021-03-30
 
