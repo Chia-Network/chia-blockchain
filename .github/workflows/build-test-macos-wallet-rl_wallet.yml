@@ -90,4 +90,4 @@ jobs:
     - name: Test wallet-rl_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_wallet.py tests/wallet/rl_wallet/test_rl_rpc.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py -s -v --durations 0 

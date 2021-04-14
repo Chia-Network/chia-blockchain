@@ -90,4 +90,4 @@ jobs:
     - name: Test wallet-cc_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/cc_wallet/test_trades.py tests/wallet/cc_wallet/test_cc_wallet.py -s -v --durations 0 
+        ./venv/bin/py.test tests/wallet/cc_wallet/test_cc_wallet.py tests/wallet/cc_wallet/test_trades.py -s -v --durations 0 
