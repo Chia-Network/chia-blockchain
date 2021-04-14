@@ -26,6 +26,11 @@ wallet_program_files = set(
         "chia/wallet/puzzles/sha256tree_module.clvm",
         "chia/wallet/puzzles/singleton_top_layer.clvm",
         "chia/wallet/puzzles/did_innerpuz.clvm",
+        "chia/wallet/puzzles/decompress_puzzle.clvm",
+        "chia/wallet/puzzles/decompress_coin_solution_entry_with_prefix.clvm",
+        "chia/wallet/puzzles/decompress_coin_solution_entry.clvm",
+        "chia/wallet/puzzles/block_program_zero.clvm",
+        "chia/wallet/puzzles/test_generator_deserialize.clvm",
     ]
 )
 
