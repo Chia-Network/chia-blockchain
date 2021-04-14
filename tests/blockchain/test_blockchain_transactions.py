@@ -622,7 +622,7 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_block_index_exceeds(self, two_nodes):
+    async def test_assert_height_now_exceeds(self, two_nodes):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -689,7 +689,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_block_age_exceeds(self, two_nodes):
+    async def test_assert_height_age_exceeds(self, two_nodes):
         num_blocks = 11
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -758,7 +758,67 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_time_exceeds(self, two_nodes):
+    async def test_assert_seconds_age_exceeds(self, two_nodes):
+
+        num_blocks = 10
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = BURN_PUZZLE_HASH
+
+        # Farm blocks
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
+        )
+        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+        full_node_1 = full_node_api_1.full_node
+
+        for block in blocks:
+            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        # Coinbase that gets spent
+        block1 = blocks[2]
+        spend_coin_block_1 = None
+        for coin in list(block1.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin_block_1 = coin
+
+        # This condition requires block1 coinbase to be spent after 30 seconds from now
+        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS, [int_to_bytes(300)])
+        block1_dic = {block1_cvp.opcode: [block1_cvp]}
+        block1_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
+        )
+
+        # program that will be sent to early
+        assert block1_spend_bundle is not None
+        invalid_new_blocks = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=block1_spend_bundle,
+            time_per_block=20,
+            guarantee_transaction_block=True,
+        )
+
+        # Try to validate that block before 30 sec
+        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
+        assert res == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.ASSERT_SECONDS_AGE_EXCEEDS_FAILED
+
+        valid_new_blocks = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=block1_spend_bundle,
+            guarantee_transaction_block=True,
+            time_per_block=301,
+        )
+        res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
+        assert err is None
+        assert res == ReceiveBlockResult.NEW_PEAK
+
+    @pytest.mark.asyncio
+    async def test_assert_seconds_now_exceeds(self, two_nodes):
 
         num_blocks = 10
         wallet_a = WALLET_A

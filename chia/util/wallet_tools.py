@@ -27,6 +27,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_assert_height_now_exceeds_condition,
     make_assert_my_coin_id_condition,
     make_assert_seconds_now_exceeds_condition,
+    make_assert_seconds_age_exceeds_condition,
     make_create_announcement,
     make_create_coin_condition,
     make_reserve_fee_condition,
@@ -108,6 +109,8 @@ class WalletTool:
                     ret.append(make_assert_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
                     ret.append(make_assert_seconds_now_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:
+                    ret.append(make_assert_seconds_age_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
                     ret.append(make_assert_my_coin_id_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:

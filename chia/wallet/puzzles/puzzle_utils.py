@@ -25,6 +25,10 @@ def make_assert_seconds_now_exceeds_condition(time):
     return [ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS, time]
 
 
+def make_assert_seconds_age_exceeds_condition(time):
+    return [ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS, time]
+
+
 def make_reserve_fee_condition(fee):
     return [ConditionOpcode.RESERVE_FEE, fee]
 
