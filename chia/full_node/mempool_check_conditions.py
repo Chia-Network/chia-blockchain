@@ -1,7 +1,8 @@
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -10,7 +11,6 @@ from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.lowlevel_generator import get_generator
@@ -138,31 +138,31 @@ def get_name_puzzle_conditions(
             cost, result = GENERATOR_MOD.run_safe_with_cost(block_program, block_program_args)
         else:
             cost, result = GENERATOR_MOD.run_with_cost(block_program, block_program_args)
-        npc_list = []
-        opcodes = set(item.value for item in ConditionOpcode)
+        npc_list: List[NPC] = []
+        opcodes: Set[bytes] = set(item.value for item in ConditionOpcode)
+
         for res in result.as_iter():
-            conditions_list = []
-            name = std_hash(
-                bytes(
-                    res.first().first().as_atom()
-                    + res.first().rest().first().as_atom()
-                    + res.first().rest().rest().first().as_atom()
-                )
-            )
-            puzzle_hash = bytes32(res.first().rest().first().as_atom())
+            conditions_list: List[ConditionWithArgs] = []
+
+            spent_coin_parent_id: bytes32 = res.first().first().as_atom()
+            spent_coin_puzzle_hash: bytes32 = res.first().rest().first().as_atom()
+            spent_coin_amount: uint64 = uint64(res.first().rest().rest().first().as_int())
+            spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
+
             for cond in res.rest().first().as_iter():
                 if cond.first().as_atom() in opcodes:
-                    opcode = ConditionOpcode(cond.first().as_atom())
+                    opcode: ConditionOpcode = ConditionOpcode(cond.first().as_atom())
                 elif not safe_mode:
                     opcode = ConditionOpcode.UNKNOWN
                 else:
                     return "Unknown operator in safe mode.", None, None
-                cvl = ConditionWithArgs(opcode, cond.rest().as_atom_list())
-                conditions_list.append(cvl)
+                conditions_list.append(ConditionWithArgs(opcode, cond.rest().as_atom_list()))
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
                 conditions_dict = {}
-            npc_list.append(NPC(name, puzzle_hash, [(a, b) for a, b in conditions_dict.items()]))
+            npc_list.append(
+                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()])
+            )
         return None, npc_list, uint64(cost)
     except Exception:
         tb = traceback.format_exc()
