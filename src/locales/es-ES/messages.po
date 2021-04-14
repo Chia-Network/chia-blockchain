@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:54\n"
+"PO-Revision-Date: 2021-04-14 06:00\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1219,7 +1219,7 @@ msgstr "Sembrar en paralelo puede ahorrar tiempo. De lo contrario, agregue la(s)
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "Sembrar con bitfield habilitado tiene aproximadamente 30% menos escrituras y ahora es casi siempre más rápido. Puede llegar a notar una reducción de los requerimientos de memoria con bitfield deshabilitado. Si el diseño de su CPU es anterior al 2010 pudiera ser necesario que deshabilite sembrar con bitfield."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1489,7 +1489,7 @@ msgstr "Iniciar Sesión"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Se salta el paso de añadir el directorio final al cosechador para cultivar"
 
 #: src/electron/main.ts:379
 msgid "Speech"
@@ -1619,7 +1619,7 @@ msgstr "Ubicación de la carpeta temporal"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "La aplicación dejará de funcionar en la altura de bloque 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1718,7 +1718,7 @@ msgstr "Esta operación fue incluida en la cadena de bloques a esta altura de bl
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Esta versión de Chia ya no es compatible con la cadena de bloques y no puede cultivar de manera segura."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
