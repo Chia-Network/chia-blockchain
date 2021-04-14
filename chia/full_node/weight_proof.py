@@ -222,6 +222,49 @@ class WeightProofHandler:
         log.debug("sub_epoch_segments done")
         return
 
+    async def create_sub_epoch_segments(self):
+        log.debug("create prev create_sub_epoch_segments")
+        """
+        Creates a weight proof object
+         """
+        assert self.blockchain is not None
+        peak_height = self.blockchain.get_peak_height()
+        if peak_height is None:
+            log.error("no peak yet")
+            return None
+
+        summary_heights = self.blockchain.get_ses_heights()
+        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        if prev_ses_block is None:
+            return None
+
+        ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
+        if ses_blocks is None:
+            return None
+
+        for sub_epoch_n, ses_height in enumerate(summary_heights):
+            log.debug(f"create_sub_epoch_segments sub epoch {sub_epoch_n}")
+            if ses_height > peak_height:
+                break
+            ses_block = ses_blocks[sub_epoch_n]
+            if ses_block is None or ses_block.sub_epoch_summary_included is None:
+                log.error("error while building proof")
+                return None
+            await self.__create_persist_segment(prev_ses_block, ses_block, ses_height, sub_epoch_n)
+            prev_ses_block = ses_block
+            await asyncio.sleep(2)
+        log.debug("create_sub_epoch_segments done")
+        return
+
+    async def __create_persist_segment(self, prev_ses_block, ses_block, ses_height, sub_epoch_n):
+        segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.height)
+        if segments is None:
+            segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
+            if segments is None:
+                log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
+                return
+            await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.height, segments)
+
     async def __create_sub_epoch_segments(
         self, ses_block: BlockRecord, se_start: BlockRecord, sub_epoch_n: uint32
     ) -> Optional[List[SubEpochChallengeSegment]]:
