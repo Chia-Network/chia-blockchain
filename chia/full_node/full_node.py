@@ -219,7 +219,7 @@ class FullNode:
                 return False
 
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
-        if self._segment_task is not None:
+        if self._segment_task is not None and (not self._segment_task.done()):
             try:
                 self._segment_task.cancel()
             except Exception as e:
