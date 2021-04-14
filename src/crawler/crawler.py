@@ -77,7 +77,7 @@ class Crawler:
                     for response_peer in response.peer_list:
                         current = await self.crawl_store.get_peer_by_ip(response_peer.host)
                         timestamp = response_peer.timestamp
-                        if current is None:
+                        if current is None or (current is not None and current.peer_timestamp < response_peer.timestamp):
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
                                                   False, 0, 0, 0, utc_timestamp(), timestamp)
                             # self.log.info(f"Adding {new_peer.ip_address}")
@@ -97,8 +97,8 @@ class Crawler:
                 if isinstance(response, full_node_protocol.RespondPeers):
                     self.log.info(f"{peer.peer_host} sent us {len(response.peer_list)}")
                     for response_peer in response.peer_list:
-                        current = await self.crawl_store.get_peer_by_ip(response_peer.host)
-                        if current is None:
+                        current: Optional[PeerRecord] = await self.crawl_store.get_peer_by_ip(response_peer.host)
+                        if current is None or (current is not None and current.peer_timestamp < response_peer.timestamp):
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
                                                   False, 0, 0, 0, utc_timestamp(), response_peer.timestamp)
                             # self.log.info(f"Adding {new_peer.ip_address}")
