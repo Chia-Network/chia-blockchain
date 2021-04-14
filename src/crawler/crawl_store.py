@@ -93,7 +93,6 @@ class CrawlStore:
             ),
         )
         await cursor.close()
-        await cursor.commit()
 
     async def delete_by_ip(self, ip):
         # Delete from storage
