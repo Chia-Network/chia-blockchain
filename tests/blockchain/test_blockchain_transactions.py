@@ -538,7 +538,7 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_announcement_consumed(self, two_nodes):
+    async def test_assert_coin_announcement_consumed(self, two_nodes):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -570,8 +570,8 @@ class TestBlockchainTransactions:
 
         # This condition requires block2 coinbase to be spent
         block1_cvp = ConditionWithArgs(
-            ConditionOpcode.ASSERT_ANNOUNCEMENT,
-            [Announcement(spend_coin_block_2.name(), bytes("test", "utf-8")).name()],
+            ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
+            [Announcement(spend_coin_block_2.name(), b"test").name()],
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
@@ -580,8 +580,92 @@ class TestBlockchainTransactions:
 
         # This condition requires block1 coinbase to be spent
         block2_cvp = ConditionWithArgs(
-            ConditionOpcode.CREATE_ANNOUNCEMENT,
-            [bytes("test", "utf-8")],
+            ConditionOpcode.CREATE_COIN_ANNOUNCEMENT,
+            [b"test"],
+        )
+        block2_dic = {block2_cvp.opcode: [block2_cvp]}
+        block2_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin_block_2, block2_dic
+        )
+
+        # Invalid block bundle
+        assert block1_spend_bundle is not None
+        # Create another block that includes our transaction
+        invalid_new_blocks = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=block1_spend_bundle,
+            guarantee_transaction_block=True,
+        )
+
+        # Try to validate that block
+        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
+        assert res == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+
+        # bundle_together contains both transactions
+        bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
+
+        # Create another block that includes our transaction
+        new_blocks = bt.get_consecutive_blocks(
+            1,
+            blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=bundle_together,
+            guarantee_transaction_block=True,
+        )
+
+        # Try to validate newly created block
+        res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
+        assert res == ReceiveBlockResult.NEW_PEAK
+        assert err is None
+
+    @pytest.mark.asyncio
+    async def test_assert_puzzle_announcement_consumed(self, two_nodes):
+
+        num_blocks = 10
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = BURN_PUZZLE_HASH
+
+        # Farm blocks
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
+        )
+        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+        full_node_1 = full_node_api_1.full_node
+
+        for block in blocks:
+            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        # Coinbase that gets spent
+        block1 = blocks[2]
+        block2 = blocks[3]
+
+        spend_coin_block_1 = None
+        spend_coin_block_2 = None
+        for coin in list(block1.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin_block_1 = coin
+        for coin in list(block2.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin_block_2 = coin
+
+        # This condition requires block2 coinbase to be spent
+        block1_cvp = ConditionWithArgs(
+            ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
+            [Announcement(spend_coin_block_2.puzzle_hash, b"test").name()],
+        )
+        block1_dic = {block1_cvp.opcode: [block1_cvp]}
+        block1_spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
+        )
+
+        # This condition requires block1 coinbase to be spent
+        block2_cvp = ConditionWithArgs(
+            ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
+            [b"test"],
         )
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(

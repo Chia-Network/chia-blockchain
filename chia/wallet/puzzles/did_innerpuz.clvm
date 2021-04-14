@@ -76,11 +76,11 @@
   ;recovery message module - gets values curried in to make the puzzle
   ;TODO - this should probably be imported
   (defun make_message_puzzle (recovering_coin newpuz pubkey)
-    (qq (q . (((unquote CREATE_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG) (unquote pubkey) (unquote newpuz)))))
+    (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG) (unquote pubkey) (unquote newpuz)))))
   )
 
   (defun create_consume_message (coin_id my_id new_innerpuz pubkey)
-    (list ASSERT_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
+    (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`

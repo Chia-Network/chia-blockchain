@@ -18,16 +18,19 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.network_type import NetworkType
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.full_block import FullBlock, additions_for_npc, announcements_for_npc
+from chia.types.full_block import FullBlock, additions_for_npc
 from chia.types.name_puzzle_condition import NPC
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.condition_tools import pkm_pairs_for_conditions_dict
+from chia.util.condition_tools import (
+    pkm_pairs_for_conditions_dict,
+    coin_announcements_names_for_npc,
+    puzzle_announcements_names_for_npc,
+)
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -143,7 +146,8 @@ async def validate_block_body(
     removals: List[bytes32] = []
     coinbase_additions: List[Coin] = list(expected_reward_coins)
     additions: List[Coin] = []
-    announcements: List[Announcement] = []
+    coin_announcement_names: Set[bytes32] = set()
+    puzzle_announcement_names: Set[bytes32] = set()
     npc_list: List[NPC] = []
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
@@ -187,7 +191,8 @@ async def validate_block_body(
                 removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
 
             additions = additions_for_npc(npc_list)
-            announcements = announcements_for_npc(npc_list)
+            coin_announcement_names = coin_announcements_names_for_npc(npc_list)
+            puzzle_announcement_names = puzzle_announcements_names_for_npc(npc_list)
         else:
             result = None
 
@@ -373,7 +378,8 @@ async def validate_block_body(
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
                 unspent,
-                announcements,
+                coin_announcement_names,
+                puzzle_announcement_names,
                 npc.condition_dict,
                 prev_transaction_block_height,
                 block.foliage_transaction_block.timestamp,

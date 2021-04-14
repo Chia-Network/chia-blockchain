@@ -1,12 +1,11 @@
 from typing import Dict, List, Optional, Set
-
-from chia.types.announcement import Announcement
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 def blockchain_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
@@ -80,7 +79,7 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionWithArgs, unspen
     return None
 
 
-def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes]) -> Optional[Err]:
+def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: Set[bytes32]) -> Optional[Err]:
     """
     Check if an announcement is included in the list of announcements
     """
@@ -93,7 +92,8 @@ def blockchain_assert_announcement(condition: ConditionWithArgs, announcements: 
 
 def blockchain_check_conditions_dict(
     unspent: CoinRecord,
-    announcements: List[Announcement],
+    coin_announcement_names: Set[bytes32],
+    puzzle_announcement_names: Set[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
     timestamp: uint64,
@@ -101,15 +101,16 @@ def blockchain_check_conditions_dict(
     """
     Check all conditions against current state.
     """
-    announcement_names = set([a.name() for a in announcements])
     for con_list in conditions_dict.values():
         cvp: ConditionWithArgs
         for cvp in con_list:
             error = None
             if cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = blockchain_assert_my_coin_id(cvp, unspent)
-            elif cvp.opcode is ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                error = blockchain_assert_announcement(cvp, announcement_names)
+            elif cvp.opcode is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
+                error = blockchain_assert_announcement(cvp, coin_announcement_names)
+            elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
+                error = blockchain_assert_announcement(cvp, puzzle_announcement_names)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
                 error = blockchain_assert_block_index_exceeds(cvp, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:

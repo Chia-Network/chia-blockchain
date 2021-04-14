@@ -113,7 +113,8 @@ class FullNodeRpcApi:
 
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
-            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 1000)))
+            # Average over the last day
+            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
             assert header_hash is not None
             older_block_hex = header_hash.hex()
             space = await self.get_network_space(

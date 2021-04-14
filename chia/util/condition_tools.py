@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import G1Element
 
@@ -102,37 +102,67 @@ def created_outputs_for_conditions_dict(
     return output_coins
 
 
-def created_announcements_for_conditions_dict(
+def coin_announcements_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin_name: bytes32,
-) -> List[Announcement]:
-    output_announcements = []
-    for cvp in conditions_dict.get(ConditionOpcode.CREATE_ANNOUNCEMENT, []):
-        # TODO: check condition very carefully
-        # (ensure there are the correct number and type of parameters)
-        # maybe write a type-checking framework for conditions
-        # and don't just fail with asserts
+    input_coin: Coin,
+) -> Set[Announcement]:
+    output_announcements: Set[Announcement] = set()
+    for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, []):
         message = cvp.vars[0]
-        announcement = Announcement(input_coin_name, message)
-        output_announcements.append(announcement)
+        announcement = Announcement(input_coin.name(), message)
+        output_announcements.add(announcement)
     return output_announcements
 
 
-def announcements_names_for_npc(npc_list) -> List[bytes32]:
-    announcement_names: List[bytes32] = []
-
-    for npc in npc_list:
-        for coin in created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name):
-            announcement_names.append(coin.name())
-
-    return announcement_names
-
-
-def created_announcement_names_for_conditions_dict(
+def puzzle_announcements_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    input_coin_name: bytes32,
+    input_coin: Coin,
+) -> Set[Announcement]:
+    output_announcements: Set[Announcement] = set()
+    for cvp in conditions_dict.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, []):
+        message = cvp.vars[0]
+        announcement = Announcement(input_coin.puzzle_hash, message)
+        output_announcements.add(announcement)
+    return output_announcements
+
+
+def coin_announcements_names_for_npc(npc_list) -> Set[bytes32]:
+    output_announcements: Set[bytes32] = set()
+    for npc in npc_list:
+        for condition, cvp_list in npc.conditions:
+            if condition == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+                for cvp in cvp_list:
+                    message = cvp.vars[0]
+                    announcement = Announcement(npc.coin_name, message)
+                    output_announcements.add(announcement.name())
+    return output_announcements
+
+
+def puzzle_announcements_names_for_npc(npc_list) -> Set[bytes32]:
+    output_announcements: Set[bytes32] = set()
+    for npc in npc_list:
+        for condition, cvp_list in npc.conditions:
+            if condition == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
+                for cvp in cvp_list:
+                    message = cvp.vars[0]
+                    announcement = Announcement(npc.puzzle_hash, message)
+                    output_announcements.add(announcement.name())
+    return output_announcements
+
+
+def coin_announcement_names_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
+    input_coin: Coin,
 ) -> List[bytes32]:
-    output = [an.name() for an in created_announcements_for_conditions_dict(conditions_dict, input_coin_name)]
+    output = [an.name() for an in coin_announcements_for_conditions_dict(conditions_dict, input_coin)]
+    return output
+
+
+def puzzle_announcement_names_for_conditions_dict(
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
+    input_coin: Coin,
+) -> List[bytes32]:
+    output = [an.name() for an in puzzle_announcements_for_conditions_dict(conditions_dict, input_coin)]
     return output
 
 

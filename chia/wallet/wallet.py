@@ -20,10 +20,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_announcement,
+    make_assert_coin_announcement,
+    make_assert_puzzle_announcement,
     make_assert_my_coin_id_condition,
     make_assert_seconds_now_exceeds_condition,
-    make_create_announcement,
+    make_create_coin_announcement,
+    make_create_puzzle_announcement,
     make_create_coin_condition,
     make_reserve_fee_condition,
 )
@@ -188,8 +190,10 @@ class Wallet:
         primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,
-        announcements=None,
-        announcements_to_consume=None,
+        coin_announcements=None,
+        coin_announcements_to_assert=None,
+        puzzle_announcements=None,
+        puzzle_announcements_to_assert=None,
         fee=0,
     ) -> Program:
         assert fee >= 0
@@ -203,12 +207,18 @@ class Wallet:
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
-        if announcements:
-            for announcement in announcements:
-                condition_list.append(make_create_announcement(announcement))
-        if announcements_to_consume:
-            for announcement_hash in announcements_to_consume:
-                condition_list.append(make_assert_announcement(announcement_hash))
+        if coin_announcements:
+            for announcement in coin_announcements:
+                condition_list.append(make_create_coin_announcement(announcement))
+        if coin_announcements_to_assert:
+            for announcement_hash in coin_announcements_to_assert:
+                condition_list.append(make_assert_coin_announcement(announcement_hash))
+        if puzzle_announcements:
+            for announcement in puzzle_announcements:
+                condition_list.append(make_create_puzzle_announcement(announcement))
+        if puzzle_announcements_to_assert:
+            for announcement_hash in puzzle_announcements_to_assert:
+                condition_list.append(make_assert_puzzle_announcement(announcement_hash))
         return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:

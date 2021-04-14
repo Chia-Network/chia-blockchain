@@ -22,13 +22,15 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_aggsig_condition,
-    make_assert_announcement,
+    make_assert_coin_announcement,
+    make_assert_puzzle_announcement,
     make_assert_height_age_exceeds_condition,
     make_assert_height_now_exceeds_condition,
     make_assert_my_coin_id_condition,
     make_assert_seconds_now_exceeds_condition,
     make_assert_seconds_age_exceeds_condition,
-    make_create_announcement,
+    make_create_coin_announcement,
+    make_create_puzzle_announcement,
     make_create_coin_condition,
     make_reserve_fee_condition,
     make_assert_my_parent_id,
@@ -101,12 +103,16 @@ class WalletTool:
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN:
                     ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
-                if cvp.opcode == ConditionOpcode.CREATE_ANNOUNCEMENT:
-                    ret.append(make_create_announcement(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+                    ret.append(make_create_coin_announcement(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
+                    ret.append(make_create_puzzle_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                    ret.append(make_assert_announcement(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
+                    ret.append(make_assert_coin_announcement(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
+                    ret.append(make_assert_puzzle_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
                     ret.append(make_assert_seconds_now_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:

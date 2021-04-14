@@ -44,11 +44,11 @@ class BlockStore:
         )
 
         # todo remove in v1.2
-        await self.db.execute("DROP TABLE IF EXISTS sub_epoch_segments")
+        await self.db.execute("DROP TABLE IF EXISTS sub_epoch_segments_v2")
 
         # Sub epoch segments for weight proofs
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v2(ses_height bigint PRIMARY KEY, challenge_segments blob)"
+            "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
         )
 
         # Height index so we can look up in order of height for sync purposes
@@ -102,32 +102,28 @@ class BlockStore:
         await cursor_2.close()
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
+        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ) -> None:
         async with self.db_wrapper.lock:
             cursor_1 = await self.db.execute(
-                "INSERT OR REPLACE INTO sub_epoch_segments_v2 VALUES(?, ?)",
-                (sub_epoch_summary_height, bytes(SubEpochSegments(segments))),
+                "INSERT OR REPLACE INTO sub_epoch_segments_v3 VALUES(?, ?)",
+                (ses_block_hash.hex(), bytes(SubEpochSegments(segments))),
             )
             await cursor_1.close()
             await self.db.commit()
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_height: uint32,
+        ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         cursor = await self.db.execute(
-            "SELECT challenge_segments from sub_epoch_segments_v2 WHERE ses_height=?", (sub_epoch_summary_height,)
+            "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?", (ses_block_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
             return SubEpochSegments.from_bytes(row[0]).challenge_segments
         return None
-
-    async def delete_sub_epoch_challenge_segments(self, fork_height: uint32) -> None:
-        cursor = await self.db.execute("delete from sub_epoch_segments_v2 WHERE ses_height>?", (fork_height,))
-        await cursor.close()
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)

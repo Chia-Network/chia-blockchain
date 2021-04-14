@@ -90,4 +90,4 @@ jobs:
     - name: Test core code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/test_filter.py tests/core/test_cost_calculation.py tests/core/test_farmer_harvester_rpc.py tests/core/test_setproctitle.py tests/core/test_full_node_rpc.py tests/core/test_merkle_set.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/test_cost_calculation.py tests/core/test_farmer_harvester_rpc.py tests/core/test_filter.py tests/core/test_full_node_rpc.py tests/core/test_merkle_set.py tests/core/test_setproctitle.py -s -v --durations 0 
