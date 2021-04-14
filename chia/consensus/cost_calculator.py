@@ -49,10 +49,14 @@ def calculate_cost_of_program(
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.RESERVE_FEE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.RESERVE_FEE.value
-            elif condition is ConditionOpcode.CREATE_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_ANNOUNCEMENT.value
-            elif condition is ConditionOpcode.ASSERT_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_ANNOUNCEMENT.value
+            elif condition is ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN_ANNOUNCEMENT.value
+            elif condition is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_ANNOUNCEMENT.value
+            elif condition is ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_PUZZLE_ANNOUNCEMENT.value
+            elif condition is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_PUZZLE_ANNOUNCEMENT.value
             else:
                 # We ignore unknown conditions in order to allow for future soft forks
                 pass

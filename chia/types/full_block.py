@@ -4,7 +4,6 @@ from typing import List, Optional, Set, Tuple
 from chiabip158 import PyBIP158
 
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
@@ -14,7 +13,7 @@ from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.types.name_puzzle_condition import NPC
-from chia.util.condition_tools import created_announcements_for_conditions_dict, created_outputs_for_conditions_dict
+from chia.util.condition_tools import created_outputs_for_conditions_dict
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
@@ -166,12 +165,3 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
             additions.append(coin)
 
     return additions
-
-
-def announcements_for_npc(npc_list: List[NPC]) -> List[Announcement]:
-    announcements: List[Announcement] = []
-
-    for npc in npc_list:
-        announcements.extend(created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name))
-
-    return announcements
