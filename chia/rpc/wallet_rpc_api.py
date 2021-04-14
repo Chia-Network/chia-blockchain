@@ -832,17 +832,13 @@ class WalletRpcApi:
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = did_wallet.get_my_DID()
         coin_name = did_wallet.did_info.temp_coin.name().hex()
-        newpuzhash = (await did_wallet.get_new_puzzle()).get_tree_hash().hex()
-        pubkey = bytes(
-            (await self.service.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        ).hex()
         return {
             "success": True,
             "wallet_id": wallet_id,
             "my_did": my_did,
             "coin_name": coin_name,
-            "newpuzhash": newpuzhash,
-            "pubkey": pubkey,
+            "newpuzhash": did_wallet.did_info.temp_puzhash,
+            "pubkey": did_wallet.did_info.temp_pubkey,
             "backup_dids": did_wallet.did_info.backup_ids,
         }
 
@@ -851,9 +847,15 @@ class WalletRpcApi:
             wallet_id = int(request["wallet_id"])
             did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
             did_wallet.create_backup(request["filename"])
-            return {"success": True}
+            return {
+                "wallet_id": wallet_id,
+                "success": True
+            }
         except Exception:
-            return {"success": False}
+            return {
+                "wallet_id": wallet_id,
+                "success": False
+            }
 
     ##########################################################################################
     # Rate Limited Wallet
