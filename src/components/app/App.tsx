@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
+import moment from 'moment';
 import { deDE, enUS, zhCN, esES, frFR, fiFI, itIT, jaJP, nlNL, ptBR, ptPT, plPL, roRO, ruRU, skSK, svSE } from '@material-ui/core/locale';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
@@ -95,6 +96,7 @@ export default function App() {
     } else {
       setTheme(lightTheme(localeToMaterialLocale(locale)));
     }
+    moment.locale([locale, 'en']);
   }, [locale, darkMode]);
 
   useEffect(() => {
