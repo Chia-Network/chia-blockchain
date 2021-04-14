@@ -222,8 +222,8 @@ class FullNode:
         if self._segment_task is not None:
             try:
                 self._segment_task.cancel()
-            except:
-                self.log.warning("failed to cancel segment task")
+            except Exception as e:
+                self.log.warning(f"failed to cancel segment task {e}")
             self._segment_task = None
 
         try:
