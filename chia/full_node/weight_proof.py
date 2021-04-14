@@ -257,13 +257,13 @@ class WeightProofHandler:
         return
 
     async def __create_persist_segment(self, prev_ses_block, ses_block, ses_height, sub_epoch_n):
-        segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.height)
+        segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
         if segments is None:
             segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
             if segments is None:
                 log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
                 return
-            await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.height, segments)
+            await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
 
     async def __create_sub_epoch_segments(
         self, ses_block: BlockRecord, se_start: BlockRecord, sub_epoch_n: uint32

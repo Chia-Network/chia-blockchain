@@ -107,7 +107,7 @@ class BlockStore:
         async with self.db_wrapper.lock:
             cursor_1 = await self.db.execute(
                 "INSERT OR REPLACE INTO sub_epoch_segments_v3 VALUES(?, ?)",
-                (ses_block_hash, bytes(SubEpochSegments(segments))),
+                (ses_block_hash.hex(), bytes(SubEpochSegments(segments))),
             )
             await cursor_1.close()
             await self.db.commit()
@@ -117,7 +117,7 @@ class BlockStore:
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         cursor = await self.db.execute(
-            "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?", (ses_block_hash,)
+            "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?", (ses_block_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
