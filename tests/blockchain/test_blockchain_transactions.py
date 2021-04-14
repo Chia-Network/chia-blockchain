@@ -18,7 +18,7 @@ from tests.setup_nodes import bt, setup_two_nodes, test_constants
 
 BURN_PUZZLE_HASH = b"0" * 32
 
-WALLET_A = WalletTool()
+WALLET_A = WalletTool(test_constants)
 WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
 log = logging.getLogger(__name__)

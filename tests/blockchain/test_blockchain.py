@@ -1621,7 +1621,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
         b = empty_blockchain
-        WALLET_A = WalletTool()
+        WALLET_A = WalletTool(b.constants)
         WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
         blocks = bt.get_consecutive_blocks(15)
@@ -1660,7 +1660,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_transaction(self, empty_blockchain):
         b = empty_blockchain
-        wallet_a = WalletTool()
+        wallet_a = WalletTool(b.constants)
         WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]

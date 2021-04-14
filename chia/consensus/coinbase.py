@@ -1,4 +1,4 @@
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from blspy import G1Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -7,18 +7,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_
 
 
 def create_puzzlehash_for_pk(pub_key: G1Element) -> bytes32:
-    return puzzle_for_pk(bytes(pub_key)).get_tree_hash()
-
-
-def signature_for_coinbase(coin: Coin, pool_private_key: PrivateKey):
-    # noinspection PyTypeChecker
-    return G2Element.from_bytes(bytes(AugSchemeMPL.sign(pool_private_key, bytes(coin))))
-
-
-def sign_coinbase_coin(coin: Coin, private_key: PrivateKey):
-    if private_key is None:
-        raise ValueError("unknown private key")
-    return signature_for_coinbase(coin, private_key)
+    return puzzle_for_pk(pub_key).get_tree_hash()
 
 
 def pool_parent_id(block_height: uint32, genesis_challenge: bytes32) -> uint32:

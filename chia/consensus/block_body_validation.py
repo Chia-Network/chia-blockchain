@@ -380,7 +380,9 @@ async def validate_block_body(
             )
             if error:
                 return error, None
-            for pk, m in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+            for pk, m in pkm_pairs_for_conditions_dict(
+                npc.condition_dict, npc.coin_name, constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)
 

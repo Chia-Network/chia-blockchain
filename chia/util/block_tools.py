@@ -251,10 +251,10 @@ class BlockTools:
         raise ValueError(f"Do not have key {pool_pk}")
 
     def get_farmer_wallet_tool(self) -> WalletTool:
-        return WalletTool(self.farmer_master_sk)
+        return WalletTool(self.constants, self.farmer_master_sk)
 
     def get_pool_wallet_tool(self) -> WalletTool:
-        return WalletTool(self.pool_master_sk)
+        return WalletTool(self.constants, self.pool_master_sk)
 
     def get_consecutive_blocks(
         self,

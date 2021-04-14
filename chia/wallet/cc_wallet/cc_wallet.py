@@ -530,14 +530,16 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name) -> List[G2Element]:
+    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name: bytes32) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         sigs: List[G2Element] = []
         error, conditions, cost = conditions_dict_for_solution(innerpuz, innersol)
         if conditions is not None:
-            for _, msg in pkm_pairs_for_conditions_dict(conditions, coin_name):
+            for _, msg in pkm_pairs_for_conditions_dict(
+                conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
         return sigs

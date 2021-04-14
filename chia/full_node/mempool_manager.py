@@ -333,7 +333,9 @@ class MempoolManager:
                 break
 
             if validate_signature:
-                for pk, message in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+                for pk, message in pkm_pairs_for_conditions_dict(
+                    npc.condition_dict, npc.coin_name, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                ):
                     pks.append(pk)
                     msgs.append(message)
         if error:

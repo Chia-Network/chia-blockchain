@@ -67,7 +67,7 @@ async def wallet_nodes():
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool()
+    wallet_receiver = WalletTool(full_node_1.full_node.constants)
     yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
 
     async for _ in async_gen:
@@ -95,7 +95,7 @@ async def wallet_nodes_mainnet():
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool()
+    wallet_receiver = WalletTool(full_node_1.full_node.constants)
     yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
 
     async for _ in async_gen:

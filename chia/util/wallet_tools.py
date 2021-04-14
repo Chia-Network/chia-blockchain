@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
+from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,7 +43,8 @@ class WalletTool:
     next_address = 0
     pubkey_num_lookup: Dict[bytes, uint32] = {}
 
-    def __init__(self, sk: Optional[PrivateKey] = None):
+    def __init__(self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None):
+        self.constants = constants
         self.current_balance = 0
         self.my_utxos: set = set()
         if sk is not None:
@@ -168,7 +170,9 @@ class WalletTool:
                 raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)
 
-            for _, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_solution.coin.name())):
+            for _, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, bytes(coin_solution.coin.name()), self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
         aggsig = AugSchemeMPL.aggregate(signatures)

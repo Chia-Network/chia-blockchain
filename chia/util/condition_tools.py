@@ -68,28 +68,21 @@ def conditions_by_opcode(
 
 
 def pkm_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
-    coin_name: bytes32,
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]], coin_name: bytes32, additional_data: bytes
 ) -> List[Tuple[G1Element, bytes]]:
+    assert coin_name is not None
     ret: List[Tuple[G1Element, bytes]] = []
-    for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
-        # TODO: check types
-        # assert len(_) == 3
-        assert cvp.vars[1] is not None
-        ret.append((G1Element.from_bytes(cvp.vars[0]), cvp.vars[1]))
-    if coin_name is not None:
-        for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-            ret.append((G1Element.from_bytes(cvp.vars[0]), cvp.vars[1] + coin_name))
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
+        assert len(cwa.vars) == 2
+        assert cwa.vars[0] is not None and cwa.vars[1] is not None
+        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1]))
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
+        assert len(cwa.vars) == 2
+        assert cwa.vars[0] is not None and cwa.vars[1] is not None
+        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
     return ret
-
-
-def aggsig_in_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]]
-) -> List[ConditionWithArgs]:
-    agg_sig_conditions = []
-    for _ in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
-        agg_sig_conditions.append(_)
-    return agg_sig_conditions
 
 
 def created_outputs_for_conditions_dict(

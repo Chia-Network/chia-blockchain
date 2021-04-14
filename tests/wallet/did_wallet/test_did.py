@@ -579,7 +579,7 @@ class TestDIDWallet:
 
         list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
-        message = bytes(coin.puzzle_hash) + bytes(coin.name())
+        message = coin.puzzle_hash + coin.name() + did_wallet.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(did_wallet.wallet_state_manager.private_key, index)
