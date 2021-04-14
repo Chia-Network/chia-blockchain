@@ -82,7 +82,7 @@ class Crawler:
                                                   False, 0, 0, 0, utc_timestamp(), timestamp)
                             # self.log.info(f"Adding {new_peer.ip_address}")
                             await self.crawl_store.add_peer(new_peer)
-                    await self.crawl_store.db.commit()
+                    await self.crawl_store.crawl_db.commit()
                 # disconnect
                 await peer.close()
 
@@ -104,7 +104,7 @@ class Crawler:
                                                   False, 0, 0, 0, utc_timestamp(), response_peer.timestamp)
                             # self.log.info(f"Adding {new_peer.ip_address}")
                             await self.crawl_store.add_peer(new_peer)
-                    await self.crawl_store.db.commit()
+                    await self.crawl_store.crawl_db.commit()
                 await peer.close()
 
             self.log.info(f"Current not_connected_peers count = {len(not_connected_peers)}")
