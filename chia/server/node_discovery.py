@@ -77,11 +77,14 @@ class FullNodeDiscovery:
         self.cleanup_task = asyncio.create_task(self._periodically_cleanup())
 
     async def _close_common(self):
-        self.is_closed = True
-        self.cancel_task_safe(self.connect_peers_task)
-        self.cancel_task_safe(self.serialize_task)
-        self.cancel_task_safe(self.cleanup_task)
-        await self.connection.close()
+        try:
+            self.is_closed = True
+            self.cancel_task_safe(self.connect_peers_task)
+            self.cancel_task_safe(self.serialize_task)
+            self.cancel_task_safe(self.cleanup_task)
+            await self.connection.close()
+        except Exception:
+            pass
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:

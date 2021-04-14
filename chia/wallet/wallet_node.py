@@ -310,7 +310,8 @@ class WalletNode:
             self.config["peer_connect_interval"],
             self.log,
         )
-        asyncio.create_task(self.wallet_peers.start())
+        if not "full_node_peer" in self.config:
+            asyncio.create_task(self.wallet_peers.start())
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
@@ -320,7 +321,7 @@ class WalletNode:
             if peer.peer_node_id in peer_ids:
                 continue
             await peer.send_message(msg)
-        if not self.has_full_node() and self.wallet_peers is not None:
+        if not "full_node_peer" in self.config and not self.has_full_node() and self.wallet_peers is not None:
             asyncio.create_task(self.wallet_peers.on_connect(peer))
 
     async def _periodically_check_full_node(self):
