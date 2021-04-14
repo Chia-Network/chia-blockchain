@@ -25,9 +25,11 @@ class KeyTool(dict):
         return AugSchemeMPL.sign(bls_private_key, message_hash)
 
     def signature_for_solution(self, coin_solution: CoinSolution, additional_data: bytes) -> AugSchemeMPL:
-        signatures = []
+        signatures: List[G2Element] = []
         err, conditions, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution)
-        assert conditions is not None
+        if conditions is None:
+            return G2Element()
+        # assert conditions is not None
         conditions_dict = conditions_by_opcode(conditions)
         for public_key, message_hash in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_solution.coin.name(), additional_data

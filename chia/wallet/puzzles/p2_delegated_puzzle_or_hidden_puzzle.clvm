@@ -1,6 +1,7 @@
 ; build a pay-to delegated puzzle or hidden puzzle
-; coins can be unliked by signing a delegated puzzle and its solution
+; coins can be unliked by signing a delegated puzzle
 ; OR by revealing the hidden puzzle and the underlying original key
+; Note that the solution is not signed, only the delegated puzzle, so the puzzle should contain the payee information
 
 ; glossary of parameter names:
 
@@ -19,14 +20,14 @@
 ; delegated_puzzle: a delegated puzzle, as in "graftroot", which should return the
 ;   desired conditions.
 ;
-; solution: the solution to the delegated puzzle
+; solution: the solution to the delegated puzzle (not signed / authenticated)
 
 
 (mod
     ; A puzzle should commit to `synthetic_public_key`
     ;
     ; The solution should pass in 0 for `original_public_key` if it wants to use
-    ; an arbitrary `delegated_puzzle` (and `solution`) signed by the
+    ; an arbitrary `delegated_puzzle` (and `solution`) where the `delegated_puzzle` is signed by the
     ; `synthetic_public_key` (whose corresponding private key can be calculated
     ; if you know the private key for `original_public_key`)
     ;

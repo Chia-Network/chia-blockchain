@@ -27,7 +27,9 @@ from .p2_conditions import puzzle_for_conditions
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
-DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
+# This puzzle `(=)` always fails. This was intended to be `(x)` but due to a renumbering, `(=)` was mistakenly used.
+# Luckily = requires two arguments, so is guaranteed to fail if called with no arguments.
+DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()
 
 MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
