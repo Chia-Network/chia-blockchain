@@ -34,8 +34,8 @@ msgstr "128 este recomandat"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un 'cultivator' este un serviciu care rulează pe o mașină care deține fișiere tip parcelă. Un 'fermier' și un 'cultivator' comunică cu un 'nod principal' pentru a vedea starea lanțului. Vezi mai jos rețeaua ta de cultivatoare conectate Află mai multe"
 
-#: src/electron/main.ts:331
-#: src/electron/main.ts:413
+#: src/electron/main.tsx:366
+#: src/electron/main.tsx:444
 msgid "About Chia Blockchain"
 msgstr "Despre blockchain-ul Chia"
 
@@ -127,7 +127,7 @@ msgstr "Ești absolut sigur(ă) că vrei să stergi parcela? Aceasta nu va mai p
 msgid "Are you sure you want to disconnect?"
 msgstr "Sigur vrei să deconectezi?"
 
-#: src/electron/main.ts:128
+#: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Sigur vrei să închizi? Parcelarea și cultivarea se vor opri."
 
@@ -259,15 +259,15 @@ msgstr "Provocare"
 msgid "Challenge Hash"
 msgstr "Hash-ul provocării"
 
-#: src/electron/main.ts:311
+#: src/electron/main.tsx:346
 msgid "Chat on KeyBase"
 msgstr "Discută pe KeyBase"
 
-#: src/electron/main.ts:328
+#: src/electron/main.tsx:363
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:278
+#: src/electron/main.tsx:313
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchain Chia"
 
@@ -321,7 +321,7 @@ msgstr "Monedă colorată"
 msgid "Coloured Coin Options"
 msgstr "Opțiuni monede colorate"
 
-#: src/electron/main.ts:126
+#: src/electron/main.tsx:162
 msgid "Confirm"
 msgstr "Confirmare"
 
@@ -372,7 +372,7 @@ msgstr "Tipul conexiunii"
 msgid "Connections"
 msgstr "Conexiuni"
 
-#: src/electron/main.ts:296
+#: src/electron/main.tsx:331
 msgid "Contribute on GitHub"
 msgstr "Contribuie pe GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Ștergerea tuturor cheilor va elimina definitiv cheile de pe computer, a
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Ștergerea tuturor cheilor va elimina definitiv cheile de pe computer, asigurați-vă că aveți copii de rezervă. Esti sigur ca vrei sa continui?"
 
-#: src/electron/main.ts:225
+#: src/electron/main.tsx:260
 msgid "Developer"
 msgstr "Dezvoltator"
 
-#: src/electron/main.ts:228
+#: src/electron/main.tsx:263
 msgid "Developer Tools"
 msgstr "Unelte Dezvoltator"
 
@@ -582,7 +582,7 @@ msgstr "Drag and drop fisierul cu oferta"
 msgid "Drag and drop your backup file"
 msgstr "Drag and drop fisierul backup"
 
-#: src/electron/main.ts:184
+#: src/electron/main.tsx:219
 msgid "Edit"
 msgstr "Editare"
 
@@ -698,8 +698,8 @@ msgstr "Suma taxe"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:176
-#: src/electron/main.ts:368
+#: src/electron/main.tsx:211
+#: src/electron/main.tsx:399
 msgid "File"
 msgstr "Filă"
 
@@ -718,11 +718,11 @@ msgstr "Locatia folderului final"
 msgid "Finished"
 msgstr "Terminat"
 
-#: src/electron/main.ts:317
+#: src/electron/main.tsx:352
 msgid "Follow on Twitter"
 msgstr "Urmărește pe Twitter"
 
-#: src/electron/main.ts:284
+#: src/electron/main.tsx:319
 msgid "Frequently Asked Questions"
 msgstr "Întrebări frecvente"
 
@@ -735,7 +735,7 @@ msgstr "Nod complet"
 msgid "Full Node Status"
 msgstr "Stare nod complet"
 
-#: src/electron/main.ts:252
+#: src/electron/main.tsx:287
 msgid "Full Screen"
 msgstr "Ecran Complet"
 
@@ -765,7 +765,7 @@ msgstr "Hash-ul Antetului"
 msgid "Height"
 msgstr "Înălțime"
 
-#: src/electron/main.ts:274
+#: src/electron/main.tsx:309
 msgid "Help"
 msgstr "Ajutor"
 
@@ -973,7 +973,7 @@ msgid "Nickname"
 msgstr "Apelativ"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:123
+#: src/electron/main.tsx:159
 msgid "No"
 msgstr "Nu"
 
@@ -1350,7 +1350,7 @@ msgstr "Recuperare portofel DID"
 msgid "Refresh Plots"
 msgstr "Re-scanează parcele"
 
-#: src/electron/main.ts:290
+#: src/electron/main.tsx:325
 msgid "Release Notes"
 msgstr "Note de lansare"
 
@@ -1358,7 +1358,7 @@ msgstr "Note de lansare"
 msgid "Rename"
 msgstr "Redenumește"
 
-#: src/electron/main.ts:305
+#: src/electron/main.tsx:340
 msgid "Report an Issue..."
 msgstr "Semnalează o problemă..."
 
@@ -1491,7 +1491,7 @@ msgstr "Loghează-te"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.ts:379
+#: src/electron/main.tsx:410
 msgid "Speech"
 msgstr "Vorbire"
 
@@ -1827,7 +1827,7 @@ msgstr "Pubkey Utilizator"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteratii sub slot VDF"
 
-#: src/electron/main.ts:216
+#: src/electron/main.tsx:251
 msgid "View"
 msgstr "Afișare"
 
@@ -1929,7 +1929,7 @@ msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portof
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cand primiti pachetul de informatii despre configurare de la administratorul dvs., introduceti-l mai jos pentru a finaliza configurarea portofelului dvs. limitat:"
 
-#: src/electron/main.ts:260
+#: src/electron/main.tsx:295
 msgid "Window"
 msgstr "Fereastră"
 
@@ -1939,7 +1939,7 @@ msgstr "Fara taxe"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:124
+#: src/electron/main.tsx:160
 msgid "Yes"
 msgstr "Da"
 

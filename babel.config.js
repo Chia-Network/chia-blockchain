@@ -19,7 +19,7 @@ module.exports = function babel(api) {
     plugins: [
       'macros',
       '@loadable/babel-plugin',
-      'babel-plugin-styled-components',
+      ['babel-plugin-styled-components'],
       ['@babel/plugin-proposal-class-properties', { loose: LOOSE }],
       '@babel/plugin-proposal-export-default-from',
     ],

@@ -26,7 +26,6 @@ if (isElectron()) {
   var WS = window.require('ws');
 }
 
-
 const outgoing_message = (command, data, destination) => ({
   command,
   data,

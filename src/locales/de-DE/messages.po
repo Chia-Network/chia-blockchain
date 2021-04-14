@@ -34,8 +34,8 @@ msgstr "Eine Größe von 128 buckets ist empfohlen"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Ein harvester ist ein Dienst auf einer Machine auf der Plot(s) gespeichert sind. Ein farmer und harvester kommunizieren mit einem full node um den Status der Chain zu ermitteln. Betrachte unten dein Netzwerk an verbundenen harvestern Lerne mehr"
 
-#: src/electron/main.ts:331
-#: src/electron/main.ts:413
+#: src/electron/main.tsx:366
+#: src/electron/main.tsx:444
 msgid "About Chia Blockchain"
 msgstr "Mehr über die Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Bist du sicher, dass du den Plot löschen möchtest? Der Plot kann nicht
 msgid "Are you sure you want to disconnect?"
 msgstr "Bist du sicher, dass du die Verbindung beenden möchtest?"
 
-#: src/electron/main.ts:128
+#: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Bist du sicher, dass du beenden willst? GUI Plotting und farming werden gestoppt."
 
@@ -259,15 +259,15 @@ msgstr "Herausforderung"
 msgid "Challenge Hash"
 msgstr "Herausforderungs Hash"
 
-#: src/electron/main.ts:311
+#: src/electron/main.tsx:346
 msgid "Chat on KeyBase"
 msgstr "Chatte auf KeyBase"
 
-#: src/electron/main.ts:328
+#: src/electron/main.tsx:363
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:278
+#: src/electron/main.tsx:313
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr "Farbiger Coin"
 msgid "Coloured Coin Options"
 msgstr "Optionen für farbigen Coin"
 
-#: src/electron/main.ts:126
+#: src/electron/main.tsx:162
 msgid "Confirm"
 msgstr "Bestätigen"
 
@@ -372,7 +372,7 @@ msgstr "Verbindungsart"
 msgid "Connections"
 msgstr "Verbindungen"
 
-#: src/electron/main.ts:296
+#: src/electron/main.tsx:331
 msgid "Contribute on GitHub"
 msgstr "Wirke auf GitHub mit"
 
@@ -537,11 +537,11 @@ msgstr ""
 "Das Erstellen einer Sicherungskopie wird empfohlen!\n"
 "Bist du sicher, dass du mit dem Löschen fortfahren möchtest?"
 
-#: src/electron/main.ts:225
+#: src/electron/main.tsx:260
 msgid "Developer"
 msgstr "Entwickler"
 
-#: src/electron/main.ts:228
+#: src/electron/main.tsx:263
 msgid "Developer Tools"
 msgstr "Entwickler Werkzeuge"
 
@@ -588,7 +588,7 @@ msgstr "\"Drag and drop\" Angebots Datei"
 msgid "Drag and drop your backup file"
 msgstr "Drag and drop deine Backup Datei"
 
-#: src/electron/main.ts:184
+#: src/electron/main.tsx:219
 msgid "Edit"
 msgstr "Ändern"
 
@@ -704,8 +704,8 @@ msgstr "Höhe der Gebühr"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:176
-#: src/electron/main.ts:368
+#: src/electron/main.tsx:211
+#: src/electron/main.tsx:399
 msgid "File"
 msgstr "Datei"
 
@@ -724,11 +724,11 @@ msgstr "Finaler Speicherort"
 msgid "Finished"
 msgstr "Beendet"
 
-#: src/electron/main.ts:317
+#: src/electron/main.tsx:352
 msgid "Follow on Twitter"
 msgstr "Folge auf Twitter"
 
-#: src/electron/main.ts:284
+#: src/electron/main.tsx:319
 msgid "Frequently Asked Questions"
 msgstr "Häufig gestellte Fragen"
 
@@ -741,7 +741,7 @@ msgstr "Full Node"
 msgid "Full Node Status"
 msgstr "Full Node Status"
 
-#: src/electron/main.ts:252
+#: src/electron/main.tsx:287
 msgid "Full Screen"
 msgstr "Vollbild"
 
@@ -771,7 +771,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Höhe"
 
-#: src/electron/main.ts:274
+#: src/electron/main.tsx:309
 msgid "Help"
 msgstr "Hilfe"
 
@@ -979,7 +979,7 @@ msgid "Nickname"
 msgstr "Spitzname"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:123
+#: src/electron/main.tsx:159
 msgid "No"
 msgstr "Nein"
 
@@ -1356,7 +1356,7 @@ msgstr "DID Wallet wiederherstellen"
 msgid "Refresh Plots"
 msgstr "Plots aktualisieren"
 
-#: src/electron/main.ts:290
+#: src/electron/main.tsx:325
 msgid "Release Notes"
 msgstr "Versionshinweise"
 
@@ -1364,7 +1364,7 @@ msgstr "Versionshinweise"
 msgid "Rename"
 msgstr "Umbenennen"
 
-#: src/electron/main.ts:305
+#: src/electron/main.tsx:340
 msgid "Report an Issue..."
 msgstr "Ein Problem melden..."
 
@@ -1497,7 +1497,7 @@ msgstr "Anmelden"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Überspringt das Hinzufügen eines endgültigen Verzeichnisses zum Harvester für das Farmen"
 
-#: src/electron/main.ts:379
+#: src/electron/main.tsx:410
 msgid "Speech"
 msgstr "Sprache"
 
@@ -1833,7 +1833,7 @@ msgstr "Benutzer Pubkey"
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterationen"
 
-#: src/electron/main.ts:216
+#: src/electron/main.tsx:251
 msgid "View"
 msgstr "Ansicht"
 
@@ -1935,7 +1935,7 @@ msgstr "Willkommen! Die folgenden Wörter werden zum Wiederherstellen deines Wal
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Wenn du das Setup-Informationspaket von deinem Administrator erhalten hast, gebe Ihn unten ein, um das Setup für das Rate Limited Wallet abzuschließen:"
 
-#: src/electron/main.ts:260
+#: src/electron/main.tsx:295
 msgid "Window"
 msgstr "Fenster"
 
@@ -1945,7 +1945,7 @@ msgstr "Ohne Gebühren"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:124
+#: src/electron/main.tsx:160
 msgid "Yes"
 msgstr "Ja"
 

@@ -6,7 +6,7 @@ export default {
     extensions: ['.tsx', '.ts', '.js'],
   },
   devtool: 'source-map',
-  entry: './src/electron/main.ts',
+  entry: './src/electron/main.tsx',
   target: 'electron-main',
   stats: 'errors-only',
   module: {
@@ -16,6 +16,9 @@ export default {
       use: {
         loader: 'babel-loader',
       },
+    }, {
+      test: /\.svg$/,
+      use: ['@svgr/webpack', 'url-loader'],
     }, {
       test: /\.(gif|png|jpe?g)$/i,
       use: [{

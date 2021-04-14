@@ -1,9 +1,11 @@
 import { app, dialog, shell, ipcMain, BrowserWindow, Menu } from 'electron';
 import path from 'path';
+import React from 'react';
 import url from 'url';
 import os from 'os';
-import openAboutWindow from 'about-window';
-//handle setupevents as quickly as possible
+import ReactDOMServer from 'react-dom/server';
+import { ServerStyleSheet, StyleSheetManager } from 'styled-components';
+// handle setupevents as quickly as possible
 import '../config/env';
 import handleSquirrelEvent from './handleSquirrelEvent';
 import config from '../config/config';
@@ -11,7 +13,61 @@ import dev_config from '../dev_config';
 import chiaEnvironment from '../util/chiaEnvironment';
 import chiaConfig from '../util/config';
 import i18n from '../config/locales';
-import icon from '../assets/img/chia_circle.png';
+import About from '../components/about/About';
+import packageJson from '../../package.json';
+
+function renderAbout(): string {
+  const sheet = new ServerStyleSheet();
+  const about = ReactDOMServer.renderToStaticMarkup(
+    <StyleSheetManager sheet={sheet.instance}>
+      <About
+        packageJson={packageJson}
+        versions={process.versions}
+        version={app.getVersion()}
+      />
+    </StyleSheetManager>,
+  );
+
+  const tags = sheet.getStyleTags();
+  const result = about.replace('{{CSS}}', tags); // .replaceAll('/*!sc*/', ' ');
+
+  sheet.seal();
+
+  return result;
+}
+
+const openedWindows = new Set<BrowserWindow>();
+
+function openAbout() {
+  const about = renderAbout();
+
+  const aboutWindow = new BrowserWindow({
+    width: 400,
+    height: 460,
+    useContentSize: true,
+    titleBarStyle: 'hiddenInset',
+  });
+  aboutWindow.loadURL(`data:text/html;charset=utf-8,${about}`);
+
+  aboutWindow.webContents.on('will-navigate', (e, url) => {
+    e.preventDefault();
+    shell.openExternal(url);
+  });
+  aboutWindow.webContents.on('new-window', (e, url) => {
+    e.preventDefault();
+    shell.openExternal(url);
+  });
+
+  aboutWindow.once('closed', () => {
+    openedWindows.delete(aboutWindow);
+  });
+
+  aboutWindow.setMenu(null);
+
+  openedWindows.add(aboutWindow);
+
+  // aboutWindow.webContents.openDevTools({ mode: 'detach' });
+}
 
 const { local_test } = config;
 
@@ -24,7 +80,7 @@ if (!handleSquirrelEvent()) {
       console.log('Second instance. Quitting.');
       app.quit();
       return false;
-    } else {
+    } 
       app.on('second-instance', (event, commandLine, workingDirectory) => {
         // Someone tried to run a second instance, we should focus our window.
         if (mainWindow) {
@@ -34,7 +90,7 @@ if (!handleSquirrelEvent()) {
           mainWindow.focus();
         }
       });
-    }
+    
 
     return true;
   };
@@ -56,15 +112,15 @@ if (!handleSquirrelEvent()) {
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
     // this needs to happen early in startup so all processes share the same global config
     chiaConfig.loadConfig(chiaEnvironment.getChiaVersion());
-    global.sharedObj = { local_test: local_test };
+    global.sharedObj = { local_test };
 
     const exitPyProc = (e) => {};
 
     app.on('will-quit', exitPyProc);
 
-    /*************************************************************
+    /** ***********************************************************
      * window management
-     *************************************************************/
+     ************************************************************ */
     let decidedToClose = false;
     let isClosing = false;
 
@@ -78,7 +134,7 @@ if (!handleSquirrelEvent()) {
         backgroundColor: '#ffffff',
         show: false,
         webPreferences: {
-          preload: __dirname + '/preload.js',
+          preload: `${__dirname  }/preload.js`,
           nodeIntegration: true,
           enableRemoteModule: true,
         },
@@ -96,7 +152,7 @@ if (!handleSquirrelEvent()) {
         );
       }
 
-      var startUrl =
+      const startUrl =
         process.env.NODE_ENV === 'development'
           ? 'http://localhost:3000'
           : url.format({
@@ -109,7 +165,7 @@ if (!handleSquirrelEvent()) {
 
       mainWindow.loadURL(startUrl);
 
-      mainWindow.once('ready-to-show', function () {
+      mainWindow.once('ready-to-show', () => {
         mainWindow.show();
       });
 
@@ -131,15 +187,15 @@ if (!handleSquirrelEvent()) {
         e.preventDefault();
         if (!isClosing) {
           isClosing = true;
-          var choice = dialog.showMessageBoxSync({
+          const choice = dialog.showMessageBoxSync({
             type: 'question',
             buttons: [
-              i18n._(/*i18n*/ { id: 'No' }),
-              i18n._(/*i18n*/ { id: 'Yes' }),
+              i18n._(/* i18n */ { id: 'No' }),
+              i18n._(/* i18n */ { id: 'Yes' }),
             ],
-            title: i18n._(/*i18n*/ { id: 'Confirm' }),
+            title: i18n._(/* i18n */ { id: 'Confirm' }),
             message: i18n._(
-              /*i18n*/ {
+              /* i18n */ {
                 id:
                   'Are you sure you want to quit? GUI Plotting and farming will stop.',
               },
@@ -155,14 +211,14 @@ if (!handleSquirrelEvent()) {
           mainWindow.setBounds({ height: 500, width: 500 });
           ipcMain.on('daemon-exited', (event, args) => {
             mainWindow.close();
+
+            openedWindows.forEach((win) => win.close());
           });
         }
       });
     };
 
-    const createMenu = () => {
-      return Menu.buildFromTemplate(getMenuTemplate());
-    };
+    const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
 
     const appReady = async () => {
       createWindow();
@@ -189,7 +245,7 @@ if (!handleSquirrelEvent()) {
       );
     });
 
-    ipcMain.on('set-locale', (_, locale: string = 'en-US') => {
+    ipcMain.on('set-locale', (_, locale = 'en-US') => {
       i18n.activate(locale);
       app.applicationMenu = createMenu();
     });
@@ -198,7 +254,7 @@ if (!handleSquirrelEvent()) {
   const getMenuTemplate = () => {
     const template = [
       {
-        label: i18n._(/*i18n*/ { id: 'File' }),
+        label: i18n._(/* i18n */ { id: 'File' }),
         submenu: [
           {
             role: 'quit',
@@ -206,7 +262,7 @@ if (!handleSquirrelEvent()) {
         ],
       },
       {
-        label: i18n._(/*i18n*/ { id: 'Edit' }),
+        label: i18n._(/* i18n */ { id: 'Edit' }),
         submenu: [
           {
             role: 'undo',
@@ -238,7 +294,7 @@ if (!handleSquirrelEvent()) {
         ],
       },
       {
-        label: i18n._(/*i18n*/ { id: 'View' }),
+        label: i18n._(/* i18n */ { id: 'View' }),
         submenu: [
           {
             role: 'reload',
@@ -247,10 +303,10 @@ if (!handleSquirrelEvent()) {
             role: 'forcereload',
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Developer' }),
+            label: i18n._(/* i18n */ { id: 'Developer' }),
             submenu: [
               {
-                label: i18n._(/*i18n*/ { id: 'Developer Tools' }),
+                label: i18n._(/* i18n */ { id: 'Developer Tools' }),
                 accelerator:
                   process.platform === 'darwin'
                     ? 'Alt+Command+I'
@@ -275,7 +331,7 @@ if (!handleSquirrelEvent()) {
             type: 'separator',
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Full Screen' }),
+            label: i18n._(/* i18n */ { id: 'Full Screen' }),
             type: 'checkbox',
             accelerator:
               process.platform === 'darwin' ? 'Ctrl+Command+F' : 'F11',
@@ -284,7 +340,7 @@ if (!handleSquirrelEvent()) {
         ],
       },
       {
-        label: i18n._(/*i18n*/ { id: 'Window' }),
+        label: i18n._(/* i18n */ { id: 'Window' }),
         submenu: [
           {
             role: 'minimize',
@@ -298,11 +354,11 @@ if (!handleSquirrelEvent()) {
         ],
       },
       {
-        label: i18n._(/*i18n*/ { id: 'Help' }),
+        label: i18n._(/* i18n */ { id: 'Help' }),
         role: 'help',
         submenu: [
           {
-            label: i18n._(/*i18n*/ { id: 'Chia Blockchain Wiki' }),
+            label: i18n._(/* i18n */ { id: 'Chia Blockchain Wiki' }),
             click: () => {
               openExternal(
                 'https://github.com/Chia-Network/chia-blockchain/wiki',
@@ -310,7 +366,7 @@ if (!handleSquirrelEvent()) {
             },
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Frequently Asked Questions' }),
+            label: i18n._(/* i18n */ { id: 'Frequently Asked Questions' }),
             click: () => {
               openExternal(
                 'https://github.com/Chia-Network/chia-blockchain/wiki/FAQ',
@@ -318,7 +374,7 @@ if (!handleSquirrelEvent()) {
             },
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Release Notes' }),
+            label: i18n._(/* i18n */ { id: 'Release Notes' }),
             click: () => {
               openExternal(
                 'https://github.com/Chia-Network/chia-blockchain/releases',
@@ -326,7 +382,7 @@ if (!handleSquirrelEvent()) {
             },
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Contribute on GitHub' }),
+            label: i18n._(/* i18n */ { id: 'Contribute on GitHub' }),
             click: () => {
               openExternal(
                 'https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md',
@@ -337,7 +393,7 @@ if (!handleSquirrelEvent()) {
             type: 'separator',
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Report an Issue...' }),
+            label: i18n._(/* i18n */ { id: 'Report an Issue...' }),
             click: () => {
               openExternal(
                 'https://github.com/Chia-Network/chia-blockchain/issues',
@@ -345,13 +401,13 @@ if (!handleSquirrelEvent()) {
             },
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Chat on KeyBase' }),
+            label: i18n._(/* i18n */ { id: 'Chat on KeyBase' }),
             click: () => {
               openExternal('https://keybase.io/team/chia_network.public');
             },
           },
           {
-            label: i18n._(/*i18n*/ { id: 'Follow on Twitter' }),
+            label: i18n._(/* i18n */ { id: 'Follow on Twitter' }),
             click: () => {
               openExternal('https://twitter.com/chia_project');
             },
@@ -363,19 +419,13 @@ if (!handleSquirrelEvent()) {
     if (process.platform === 'darwin') {
       // Chia Blockchain menu (Mac)
       template.unshift({
-        label: i18n._(/*i18n*/ { id: 'Chia' }),
+        label: i18n._(/* i18n */ { id: 'Chia' }),
         submenu: [
           {
-            label: i18n._(/*i18n*/ { id: 'About Chia Blockchain' }),
-            click: () =>
-              openAboutWindow({
-                homepage: 'https://www.chia.net/',
-                bug_report_url:
-                  'https://github.com/Chia-Network/chia-blockchain/issues',
-                icon_path: path.join(__dirname, icon),
-                copyright: 'Copyright (c) 2021 Chia Network',
-                license: 'Apache 2.0',
-              }),
+            label: i18n._(/* i18n */ { id: 'About Chia Blockchain' }),
+            click: () => {
+              openAbout();
+            },
           },
           {
             type: 'separator',
@@ -406,7 +456,7 @@ if (!handleSquirrelEvent()) {
 
       // File menu (MacOS)
       template.splice(1, 1, {
-        label: i18n._(/*i18n*/ { id: 'File' }),
+        label: i18n._(/* i18n */ { id: 'File' }),
         submenu: [
           {
             role: 'close',
@@ -420,7 +470,7 @@ if (!handleSquirrelEvent()) {
           type: 'separator',
         },
         {
-          label: i18n._(/*i18n*/ { id: 'Speech' }),
+          label: i18n._(/* i18n */ { id: 'Speech' }),
           submenu: [
             {
               role: 'startspeaking',
@@ -459,16 +509,10 @@ if (!handleSquirrelEvent()) {
           type: 'separator',
         },
         {
-          label: i18n._(/*i18n*/ { id: 'About Chia Blockchain' }),
-          click: () =>
-            openAboutWindow({
-              homepage: 'https://www.chia.net/',
-              bug_report_url:
-                'https://github.com/Chia-Network/chia-blockchain/issues',
-              icon_path: path.join(__dirname, icon),
-              copyright: 'Copyright (c) 2021 Chia Network',
-              license: 'Apache 2.0',
-            }),
+          label: i18n._(/* i18n */ { id: 'About Chia Blockchain' }),
+          click() {
+            openAbout();
+          },
         },
       );
     }

@@ -17,7 +17,7 @@ export default function handleSquirrelEvent() {
 
     try {
       spawnedProcess = ChildProcess.spawn(command, args, { detached: true });
-    } catch (error) {}
+    } catch {}
 
     return spawnedProcess;
   }
