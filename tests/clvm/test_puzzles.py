@@ -10,6 +10,7 @@ from clvm_tools import binutils
 
 from chia.consensus.blockchain import ReceiveBlockResult, Blockchain
 from chia.consensus.cost_calculator import calculate_cost_of_program
+from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -17,6 +18,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_solution import CoinSolution
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.hash import std_hash
@@ -68,6 +70,7 @@ async def do_test_spend(
     payments: Iterable[Tuple[bytes32, int]],
     key_lookup: KeyTool,
     expected_conditions: List[ConditionWithArgs],
+    skip_mempool_check=False,
 ) -> None:
     """
     This method will farm a coin paid to the hash of `puzzle_reveal`, then try to spend it
@@ -110,6 +113,16 @@ async def do_test_spend(
         signatures.append(signature)
     spend_bundle: SpendBundle = SpendBundle(unsigned_spend_bundle.coin_solutions, AugSchemeMPL.aggregate(signatures))
 
+    # Make sure the spend bundle can be included in the mempool
+    if not skip_mempool_check:
+        mempool_manager: MempoolManager = MempoolManager(blockchain.coin_store, blockchain.constants)
+        await mempool_manager.new_peak(blockchain.get_peak())
+        cost_result = await mempool_manager.pre_validate_spendbundle(spend_bundle)
+        assert cost_result.error is None
+        res = await mempool_manager.add_spendbundle(spend_bundle, cost_result, spend_bundle.name())
+        assert res[1] == MempoolInclusionStatus.SUCCESS
+
+    # Spend the spend bundle and add the block where it's spent
     blocks = bt.get_consecutive_blocks(1, blocks, guarantee_transaction_block=True, transaction_data=spend_bundle)
     result = await blockchain.receive_block(blocks[-1])
     assert result[1] is None
@@ -336,8 +349,16 @@ class TestPuzzles:
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
             hidden_public_key, hidden_puzzle, Program.to(0)
         )
+        # Test rejection in mempool validation
         try:
             await do_test_spend(empty_blockchain, puzzle, solution, payments, key_lookup, cwa)
+            assert False
+        except Exception as e:
+            assert "EvalError: = takes exactly 2 arguments" in str(e)
+
+        # Test rejection in block creation
+        try:
+            await do_test_spend(empty_blockchain, puzzle, solution, payments, key_lookup, cwa, True)
             assert False
         except Exception as e:
             assert "EvalError: = takes exactly 2 arguments" in str(e)
