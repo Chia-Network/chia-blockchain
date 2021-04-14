@@ -119,6 +119,7 @@ class FullNode:
         self.weight_proof_handler = None
         asyncio.create_task(self.initialize_weight_proof())
         self._sync_task = None
+        self._segment_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
@@ -156,7 +157,7 @@ class FullNode:
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
         peak = self.blockchain.get_peak()
         if peak is not None:
-            await self.weight_proof_handler.get_proof_of_weight(self.blockchain.get_peak().header_hash)
+            await self.weight_proof_handler.create_sub_epoch_segments()
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -220,6 +221,12 @@ class FullNode:
                 return False
 
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        if self._segment_task is not None and (not self._segment_task.done()):
+            try:
+                self._segment_task.cancel()
+            except Exception as e:
+                self.log.warning(f"failed to cancel segment task {e}")
+            self._segment_task = None
 
         try:
             for height in range(start_height, target_height, batch_size):
@@ -1008,6 +1015,10 @@ class FullNode:
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
         self._state_changed("block")
+        record = self.blockchain.block_record(block.header_hash)
+        if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
+            if self._segment_task is None or self._segment_task.done():
+                self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
     async def respond_unfinished_block(
