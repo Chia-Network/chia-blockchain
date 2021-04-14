@@ -8,7 +8,7 @@ msgstr ""
 "Language: de_DE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:54\n"
+"PO-Revision-Date: 2021-04-14 12:28\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -808,7 +808,7 @@ msgstr "Wallet aus Mnemonics importieren"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr "Importiere von Mnemonics (14 Worte)"
+msgstr "Import aus Mnemonics (24 Wörter)"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
@@ -865,7 +865,7 @@ msgstr "Letzte gefarmte Höhe"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr "Neueste Blockherausforderungen"
+msgstr "Neueste Block Herausforderungen"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
