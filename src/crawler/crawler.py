@@ -76,9 +76,10 @@ class Crawler:
                     self.log.info(f"Introduced sent us {len(response.peer_list)} peers")
                     for response_peer in response.peer_list:
                         current = await self.crawl_store.get_peer_by_ip(response_peer.host)
+                        timestamp = response_peer.timestamp
                         if current is None:
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
-                                                  False, 0, 0, 0, utc_timestamp())
+                                                  False, 0, 0, 0, utc_timestamp(), timestamp)
                             # self.log.info(f"Adding {new_peer.ip_address}")
                             await self.crawl_store.add_peer(new_peer)
                 # disconnect
@@ -87,6 +88,7 @@ class Crawler:
             await self.create_client(self.introducer_info, introducer_action)
             not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
             connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
+            last_five_days: List[PeerRecord] = await self.crawl_store.get_peers_last_five_days_online()
 
             async def peer_action(peer: ws.WSChiaConnection):
                 # Ask peer for peers
@@ -98,7 +100,7 @@ class Crawler:
                         current = await self.crawl_store.get_peer_by_ip(response_peer.host)
                         if current is None:
                             new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
-                                                  False, 0, 0, 0, utc_timestamp())
+                                                  False, 0, 0, 0, utc_timestamp(), response_peer.timestamp)
                             # self.log.info(f"Adding {new_peer.ip_address}")
                             await self.crawl_store.add_peer(new_peer)
 
@@ -106,6 +108,7 @@ class Crawler:
 
             self.log.info(f"Current not_connected_peers count = {len(not_connected_peers)}")
             self.log.info(f"Current connected_peers count = {len(connected_peers)}")
+            self.log.info(f"Current last five days count = {len(last_five_days)}")
 
             tasks = []
 
@@ -145,8 +148,10 @@ class Crawler:
                 await asyncio.wait(tasks)
                 stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
                 stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
+                last_five_days: List[PeerRecord] = await self.crawl_store.get_peers_last_five_days_online()
                 self.log.info(f"Current not_connected_peers count = {len(stat_not_connected_peers)}")
                 self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
+                self.log.info(f"Current last five days count = {len(last_five_days)}")
 
             self.server.banned_peers = {}
 

@@ -14,3 +14,4 @@ class PeerRecord(Streamable):
     try_count: uint32
     connected_timestamp: uint64
     added_timestamp: uint64
+    peer_timestamp: uint64

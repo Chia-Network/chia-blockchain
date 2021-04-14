@@ -56,7 +56,8 @@ class CrawlStore:
                 " last_try_timestamp bigint,"
                 " try_count bigint,"
                 " connected_timestamp bigint,"
-                " added_timestamp bigint)"
+                " added_timestamp bigint,"
+                " peer_timestamp bigint)"
             )
         )
 
@@ -69,6 +70,7 @@ class CrawlStore:
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS connected on peer_records(connected)")
 
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS added_timestamp on peer_records(added_timestamp)")
+        await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS peer_timestamp on peer_records(peer_timestamp)")
 
         await self.crawl_db.commit()
         self.coin_record_cache = dict()
@@ -77,7 +79,7 @@ class CrawlStore:
     async def add_peer(self, peer_record: PeerRecord):
         added_timestamp = utc_timestamp()
         cursor = await self.crawl_db.execute(
-            "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_record.peer_id,
                 peer_record.ip_address,
@@ -86,7 +88,8 @@ class CrawlStore:
                 peer_record.last_try_timestamp,
                 peer_record.try_count,
                 peer_record.connected_timestamp,
-                added_timestamp
+                added_timestamp,
+                peer_record.peer_timestamp
             ),
         )
         await cursor.close()
@@ -120,7 +123,7 @@ class CrawlStore:
         peers = []
         await cursor.close()
         for row in rows:
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8])
             peers.append(peer)
         return peers
 
@@ -132,7 +135,7 @@ class CrawlStore:
         row = await cursor.fetchone()
 
         if row is not None:
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8])
             return peer
         else:
             return None
@@ -151,7 +154,7 @@ class CrawlStore:
         peers = []
         await cursor.close()
         for row in rows:
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8])
             peers.append(peer)
         return peers
 
@@ -169,6 +172,24 @@ class CrawlStore:
         peers = []
         await cursor.close()
         for row in rows:
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8])
+            peers.append(peer)
+        return peers
+
+    async def get_peers_last_five_days_online(self):
+        now = utc_timestamp()
+        start = utc_timestamp_to_eastern(now)
+        start = start - timedelta(days=5)
+        start = start.replace(hour=23, minute=59, second=59)
+        start_timestamp = int(start.timestamp())
+        cursor = await self.crawl_db.execute(
+            f"SELECT * from peer_records WHERE peer_timestamp>?",
+            (start_timestamp,),
+        )
+        rows = await cursor.fetchall()
+        peers = []
+        await cursor.close()
+        for row in rows:
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8])
             peers.append(peer)
         return peers
