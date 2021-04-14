@@ -12,6 +12,7 @@ def main():
         windows = False
 
     scm_full_version = get_version(root="..", relative_to=__file__)
+    #    scm_full_version = "1.0.5.dev22"
     os.environ["SCM_VERSION"] = scm_full_version
     left_full_version = scm_full_version.split("+")
 
@@ -19,15 +20,19 @@ def main():
 
     scm_major_version = version[0]
     scm_minor_version = version[1]
-    if len(version) > 2:
+    if len(version) == 3:  # if the length of the version array is more than 2
+        patch_release_number = version[2]
+        smc_patch_version = patch_release_number
+        dev_release_number = ""
+    elif len(version) == 4:
         smc_patch_version = version[2]
-        patch_release_number = smc_patch_version
+        dev_release_number = "." + version[3]
     else:
         smc_patch_version = ""
+        dev_release_number = ""
 
     major_release_number = scm_major_version
     minor_release_number = scm_minor_version
-    dev_release_number = ""
 
     # If this is a beta dev release - get which beta it is
     if "0b" in scm_minor_version:
@@ -45,9 +50,9 @@ def main():
         if smc_patch_version and "dev" in smc_patch_version:
             dev_release_number = "." + smc_patch_version
     elif len(version) == 2:
-        major_release_number = scm_major_version
-        minor_release_number = scm_minor_version
         patch_release_number = "0"
+    elif len(version) == 4:  # for 1.0.5.dev2
+        patch_release_number = smc_patch_version
     else:
         major_release_number = scm_major_version
         minor_release_number = scm_minor_version
