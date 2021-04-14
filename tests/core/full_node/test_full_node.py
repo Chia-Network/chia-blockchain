@@ -15,6 +15,7 @@ from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
@@ -59,7 +60,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 4000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -425,13 +426,13 @@ class TestFullNodeProtocol:
 
         wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3,
+            10,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_ph,
             pool_reward_puzzle_hash=wallet_ph,
         )
-        for block in blocks[-3:]:
+        for block in blocks:
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
 
         start_height = (
@@ -439,61 +440,72 @@ class TestFullNodeProtocol:
             if full_node_1.full_node.blockchain.get_peak() is not None
             else -1
         )
-        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
         peer = await connect_and_get_peer(server_1, server_2)
 
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
 
-        tx_per_sec = bt.constants.TX_PER_SEC
-        sec_per_block = bt.constants.SUB_SLOT_TIME_TARGET // bt.constants.SLOT_BLOCKS_TARGET
-        block_buffer_count = bt.constants.MEMPOOL_BLOCK_BUFFER
-        mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
+        block_buffer_count = full_node_1.full_node.constants.MEMPOOL_BLOCK_BUFFER
 
-        for _ in range(mempool_size + 1):
-            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-            puzzle_hashes.append(receiver_puzzlehash)
-            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(1000)])
-            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
+        # Makes a bunch of coins
+        for i in range(5):
+            conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+            # This should fit in one transaction
+            for _ in range(100):
+                receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+                puzzle_hashes.append(receiver_puzzlehash)
+                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000)])
 
-        spend_bundle = wallet_a.generate_signed_transaction(
-            100,
-            puzzle_hashes[0],
-            get_future_reward_coins(blocks[1])[0],
-            condition_dic=conditions_dict,
-        )
-        assert spend_bundle is not None
+                conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
-        new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+            spend_bundle = wallet_a.generate_signed_transaction(
+                100,
+                puzzle_hashes[0],
+                get_future_reward_coins(blocks[1 + i])[0],
+                condition_dic=conditions_dict,
+            )
+            assert spend_bundle is not None
+            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
+            log.info(f"Cost result: {cost_result.cost}")
 
-        msg = await full_node_1.new_transaction(new_transaction)
-        assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
+            new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
-        respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
-        await full_node_1.respond_transaction(respond_transaction_2, peer)
+            msg = await full_node_1.new_transaction(new_transaction)
+            assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
 
-        blocks_new = bt.get_consecutive_blocks(
-            2,
-            block_list_input=blocks,
-            guarantee_transaction_block=True,
-            transaction_data=spend_bundle,
-        )
+            respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
+            await full_node_1.respond_transaction(respond_transaction_2, peer)
 
-        # Already seen
-        msg = await full_node_1.new_transaction(new_transaction)
-        assert msg is None
-        # Farm one block
-        for block in blocks_new[-2:]:
-            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
+            blocks = bt.get_consecutive_blocks(
+                1,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                transaction_data=spend_bundle,
+            )
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
 
-        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 2)
+            # Already seen
+            msg = await full_node_1.new_transaction(new_transaction)
+            assert msg is None
+
+        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 5)
 
         spend_bundles = []
+
+        included_tx = 0
+        not_included_tx = 0
+        seen_bigger_transaction_has_high_fee = False
+
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
             coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-            fee = random.randint(2, 499)
+            if puzzle_hash == puzzle_hashes[-1]:
+                force_high_fee = True
+                fee = 10000000  # 10 million
+            else:
+                force_high_fee = False
+                fee = random.randint(1, 10000000)
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
@@ -502,23 +514,39 @@ class TestFullNodeProtocol:
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
-            if req.data == bytes(fnp.RespondTransaction(spend_bundle)):
+
+            fee_rate_for_small = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10)
+            fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000)
+            fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(500000)
+            log.info(f"Min fee rate (10): {fee_rate_for_small}")
+            log.info(f"Min fee rate (50000): {fee_rate_for_med}")
+            log.info(f"Min fee rate (500000): {fee_rate_for_large}")
+            if fee_rate_for_large > fee_rate_for_med:
+                seen_bigger_transaction_has_high_fee = True
+
+            if req is not None and req.data == bytes(fnp.RespondTransaction(spend_bundle)):
+                included_tx += 1
                 spend_bundles.append(spend_bundle)
+                assert not full_node_1.full_node.mempool_manager.mempool.at_full_capacity(0)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(0) == 0
+            else:
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(133000)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(133000) > 0
+                assert not force_high_fee
+                not_included_tx += 1
+        log.info(f"Included: {included_tx}, not included: {not_included_tx}")
+
+        assert included_tx > 0
+        assert not_included_tx > 0
+        assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
         msg = await full_node_1.new_transaction(new_transaction)
         assert msg is None
 
-        agg_bundle: SpendBundle = SpendBundle.aggregate(spend_bundles)
-        blocks_new = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks_new,
-            transaction_data=agg_bundle,
-            guarantee_transaction_block=True,
-        )
         # Farm one block to clear mempool
-        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-1]), peer)
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
         # No longer full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
@@ -1267,729 +1295,3 @@ class TestFullNodeProtocol:
             if block.challenge_chain_sp_proof is not None:
                 assert not block.challenge_chain_sp_proof.normalized_to_identity
             assert not block.challenge_chain_ip_proof.normalized_to_identity
-
-    #
-    # async def test_new_unfinished(self, two_nodes, wallet_nodes):
-    #     full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-    #     wallet_a, wallet_receiver, blocks = wallet_blocks
-    #
-    #     blocks_list = await get_block_path(full_node_1.full_node)
-    #
-    #     blocks_new = bt.get_consecutive_blocks(
-    #         1,
-    #         block_list_input=blocks_list,
-    #         seed=b"another seed 2",
-    #     )
-    #     block = blocks_new[-1].
-    #     assert blocks_new[-1].proof_of_time is not None
-    #     assert blocks_new[-2].proof_of_time is not None
-    #     already_have = fnp.NewUnfinishedBlock(
-    #         blocks_new[-2].prev_header_hash,
-    #         blocks_new[-2].proof_of_time.number_of_iterations,
-    #         blocks_new[-2].header_hash,
-    #     )
-    #     res = await full_node_1.new_unfinished_block(already_have)
-    #     assert res is None
-    #
-    #     bad_prev = fnp.NewUnfinishedBlock(
-    #         blocks_new[-1].header_hash,
-    #         blocks_new[-1].proof_of_time.number_of_iterations,
-    #         blocks_new[-1].header_hash,
-    #     )
-    #
-    #     res = await full_node_1.new_unfinished_block(bad_prev)
-    #     assert res is None
-    #     good = fnp.NewUnfinishedBlock(
-    #         blocks_new[-1].prev_header_hash,
-    #         blocks_new[-1].proof_of_time.number_of_iterations,
-    #         blocks_new[-1].header_hash,
-    #     )
-    #     res = full_node_1.new_unfinished_block(good)
-    #     assert res is not None
-    #
-    #     unf_block = FullBlock(
-    #         blocks_new[-1].proof_of_space,
-    #         None,
-    #         blocks_new[-1].header,
-    #         blocks_new[-1].transactions_generator,
-    #         blocks_new[-1].transactions_filter,
-    #     )
-    #     unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
-    #     await full_node_1.respond_unfinished_block(unf_block_req)
-    #
-    #     res = await full_node_1.new_unfinished_block(good)
-    #     assert res is None
-
-
-#
-#     @pytest.mark.asyncio
-#     async def test_request_unfinished(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             2,
-#             blocks_list,
-#             10,
-#             seed=b"another seed 3",
-#         )
-#         # Add one block
-#         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-2]))
-#
-#         unf_block = FullBlock(
-#             blocks_new[-1].proof_of_space,
-#             None,
-#             blocks_new[-1].header,
-#             blocks_new[-1].transactions_generator,
-#             blocks_new[-1].transactions_filter,
-#         )
-#         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
-#
-#         # Don't have
-#         req = fnp.RequestUnfinishedBlock(unf_block.header_hash)
-#         res = await full_node_1.request_unfinished_block(req)
-#         assert res is not None
-#         assert res.data == fnp.RejectUnfinishedBlockRequest(unf_block.header_hash)
-#         # Have unfinished block
-#         await full_node_1.respond_unfinished_block(unf_block_req)
-#         res = await full_node_1.request_unfinished_block(req)
-#         assert res is not None
-#         assert res.data == fnp.RespondUnfinishedBlock(unf_block)
-#
-#         # Have full block (genesis in this case)
-#         req = fnp.RequestUnfinishedBlock(blocks_new[0].header_hash)
-#         res = await full_node_1.request_unfinished_block(req)
-#         assert res is not None
-#         assert res.data.block.header_hash == blocks_new[0].header_hash
-#
-#     @pytest.mark.asyncio
-#     async def test_respond_unfinished(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             1,
-#             blocks_list[:],
-#             4,
-#             seed=b"Another seed 4",
-#         )
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         candidates = []
-#         for i in range(50):
-#             blocks_new_2 = bt.get_consecutive_blocks(
-#                 1,
-#                 blocks_new[:],
-#                 4,
-#                 seed=i.to_bytes(4, "big") + b"Another seed",
-#             )
-#             candidates.append(blocks_new_2[-1])
-#
-#         unf_block_not_child = FullBlock(
-#             blocks_new[-7].proof_of_space,
-#             None,
-#             blocks_new[-7].header,
-#             blocks_new[-7].transactions_generator,
-#             blocks_new[-7].transactions_filter,
-#         )
-#
-#         unf_block_req_bad = fnp.RespondUnfinishedBlock(unf_block_not_child)
-#         res = await full_node_1.respond_unfinished_block(unf_block_req_bad)
-#         assert res is None
-#
-#         candidates = sorted(candidates, key=lambda c: c.proof_of_time.number_of_iterations)  # type: ignore
-#
-#         def get_cand(index: int):
-#             unf_block = FullBlock(
-#                 candidates[index].proof_of_space,
-#                 None,
-#                 candidates[index].header,
-#                 candidates[index].transactions_generator,
-#                 candidates[index].transactions_filter,
-#             )
-#             return fnp.RespondUnfinishedBlock(unf_block)
-#
-#         # Highest height should propagate
-#         # Slow block should delay prop
-#         start = time.time()
-#         await full_node_1.respond_unfinished_block(get_cand(20))
-#
-#         # Already seen
-#         res = await full_node_1.respond_unfinished_block(get_cand(20))
-#         assert res is None
-#
-#         # Slow equal height should not propagate
-#         res = await full_node_1.respond_unfinished_block(get_cand(49))
-#         assert res is None
-#
-#         # Fastest equal height should propagate
-#         start = time.time()
-#         await full_node_1.respond_unfinished_block(get_cand(0))
-#         assert time.time() - start < 3
-#
-#         # Equal height (fast) should propagate
-#         for i in range(1, 5):
-#             # Checks a few blocks in case they have the same PoS
-#             if candidates[i].proof_of_space.get_hash() != candidates[0].proof_of_space.get_hash():
-#                 start = time.time()
-#                 await full_node_1.respond_unfinished_block(get_cand(i))
-#                 assert time.time() - start < 3
-#                 break
-#
-#         await full_node_1.respond_unfinished_block(get_cand(40))
-#
-#         # Don't propagate at old height
-#         await full_node_1.full_node.respond_block(fnp.RespondBlock(candidates[0]))
-#         blocks_new_3 = bt.get_consecutive_blocks(
-#             1,
-#             blocks_new[:] + [candidates[0]],
-#             10,
-#         )
-#         unf_block_new = FullBlock(
-#             blocks_new_3[-1].proof_of_space,
-#             None,
-#             blocks_new_3[-1].header,
-#             blocks_new_3[-1].transactions_generator,
-#             blocks_new_3[-1].transactions_filter,
-#         )
-#
-#         unf_block_new_req = fnp.RespondUnfinishedBlock(unf_block_new)
-#         await full_node_1.respond_unfinished_block(unf_block_new_req)
-#         await full_node_1.respond_unfinished_block(get_cand(10))
-#
-#     @pytest.mark.asyncio
-#     async def test_request_all_header_hashes(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#         tips = full_node_1.full_node.blockchain.get_current_tips()
-#         request = fnp.RequestAllHeaderHashes(tips[0].header_hash)
-#         res = await full_node_1.request_all_header_hashes(request)
-#         assert res is not None
-#         assert len(res.data.header_hashes) > 0
-#
-#     @pytest.mark.asyncio
-#     async def test_request_block(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         res = await full_node_1.request_header_block(fnp.RequestHeaderBlock(uint32(1), blocks[1].header_hash))
-#         assert res is not None
-#         assert res.data.header_block.header_hash == blocks[1].header_hash
-#
-#         res = await full_node_1.request_header_block(fnp.RequestHeaderBlock(uint32(1), blocks[2].header_hash))
-#         assert res is not None
-#         assert res.data == fnp.RejectHeaderBlockRequest(uint32(1), blocks[2].header_hash)
-#
-#         res = await full_node_1.request_header_block(fnp.RequestHeaderBlock(uint32(1), bytes([0] * 32)))
-#         assert res is not None
-#         assert res.data == fnp.RejectHeaderBlockRequest(uint32(1), bytes([0] * 32))
-#
-#         # Full blocks
-#         res = await full_node_1.request_block(fnp.RequestBlock(uint32(1), blocks[1].header_hash))
-#         assert res is not None
-#         assert res.data.block.header_hash == blocks[1].header_hash
-#
-#         res = await full_node_1.request_block(fnp.RequestHeaderBlock(uint32(1), bytes([0] * 32)))
-#         assert res is not None
-#         assert res.data == fnp.RejectBlockRequest(uint32(1), bytes([0] * 32))
-#
-#     @pytest.mark.asyncio
-#     async def testrespond_block(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         # Already seen
-#         res = await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[0]))
-#         assert res is None
-#
-#         tip_hashes = set([t.header_hash for t in full_node_1.full_node.blockchain.get_current_tips()])
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             5,
-#             blocks_list[:],
-#             10,
-#             seed=b"Another seed 5",
-#         )
-#
-#         # In sync mode
-#         full_node_1.full_node.sync_store.set_sync_mode(True)
-#         res = await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-5]))
-#         assert res is None
-#         full_node_1.full_node.sync_store.set_sync_mode(False)
-#
-#         # If invalid, do nothing
-#         block_invalid = FullBlock(
-#             ProofOfSpace(
-#                 blocks_new[-5].proof_of_space.challenge,
-#                 blocks_new[-5].proof_of_space.pool_public_key,
-#                 blocks_new[-5].proof_of_space.plot_public_key,
-#                 uint8(blocks_new[-5].proof_of_space.size + 1),
-#                 blocks_new[-5].proof_of_space.proof,
-#             ),
-#             blocks_new[-5].proof_of_time,
-#             blocks_new[-5].header,
-#             blocks_new[-5].transactions_generator,
-#             blocks_new[-5].transactions_filter,
-#         )
-#         threw = False
-#         try:
-#             res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_invalid))
-#         except ConsensusError:
-#             threw = True
-#         assert threw
-#
-#         # If a few blocks behind, request short sync
-#         res = await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-3]))
-#
-#         # Updates full nodes, farmers, and timelords
-#         tip_hashes_again = set([t.header_hash for t in full_node_1.full_node.blockchain.get_current_tips()])
-#         assert tip_hashes_again == tip_hashes
-#         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-5]))
-#         # TODO test propagation
-#         """
-#         msgs = [
-#             _ async for _ in full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-5]))
-#         ]
-#         assert len(msgs) == 5 or len(msgs) == 6
-#         """
-#         # Updates blockchain tips
-#         tip_hashes_again = set([t.header_hash for t in full_node_1.full_node.blockchain.get_current_tips()])
-#         assert tip_hashes_again != tip_hashes
-#
-#         # If orphan, don't send anything
-#         blocks_orphan = bt.get_consecutive_blocks(
-#             1,
-#             blocks_list[:-5],
-#             10,
-#             seed=b"Another seed 6",
-#         )
-#         res = full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_orphan[-1]))
-#
-#
-# class TestWalletProtocol:
-#     @pytest.mark.asyncio
-#     async def test_send_transaction(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             1,
-#             block_list_input=blocks_list,
-#             seed=b"test_request_additions",
-#         )
-#         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-1]))
-#
-#         spend_bundle = wallet_a.generate_signed_transaction(
-#             100,
-#             wallet_a.get_new_puzzlehash(),
-#             blocks_new[-1].get_coinbase(),
-#         )
-#         spend_bundle_bad = wallet_a.generate_signed_transaction(
-#             test_constants.MAX_COIN_AMOUNT,
-#             wallet_a.get_new_puzzlehash(),
-#             blocks_new[-1].get_coinbase(),
-#         )
-#
-#         res = await full_node_1.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
-#
-#         assert res is not None
-#         assert res.data == wallet_protocol.TransactionAck(spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None)
-#
-#         res = await full_node_1.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
-#
-#         assert res is not None
-#         assert res.data == wallet_protocol.TransactionAck(spend_bundle.name(), MempoolInclusionStatus.SUCCESS, None)
-#
-#         res = await full_node_1.send_transaction(wallet_protocol.SendTransaction(spend_bundle_bad))
-#         assert res is not None
-#         assert res.data == wallet_protocol.TransactionAck(
-#             spend_bundle_bad.name(),
-#             MempoolInclusionStatus.FAILED,
-#             Err.COIN_AMOUNT_EXCEEDS_MAXIMUM.name,
-#         )
-#
-#     @pytest.mark.asyncio
-#     async def test_request_all_proof_hashes(self, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         res = await full_node_1.request_all_proof_hashes(wallet_protocol.RequestAllProofHashes())
-#         hashes = res.data.hashes
-#         assert len(hashes) >= len(blocks_list) - 2
-#         for i in range(len(hashes)):
-#             if i % test_constants.DIFFICULTY_EPOCH == test_constants.DIFFICULTY_DELAY:
-#                 assert hashes[i][1] is not None
-#             elif i > 0:
-#                 assert hashes[i][1] is None
-#             if i % test_constants.DIFFICULTY_EPOCH == test_constants.DIFFICULTY_EPOCH - 1:
-#                 assert hashes[i][2] is not None
-#             else:
-#                 assert hashes[i][2] is None
-#             assert hashes[i][0] == std_hash(
-#                 blocks_list[i].proof_of_space.get_hash() + blocks_list[i].proof_of_time.output.get_hash()
-#             )
-#
-#     @pytest.mark.asyncio
-#     async def test_request_all_header_hashes_after(self, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         res = await full_node_1.request_all_header_hashes_after(
-#             wallet_protocol.RequestAllHeaderHashesAfter(uint32(5), blocks_list[5].proof_of_space.challenge_hash)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondAllHeaderHashesAfter)
-#         assert res.data.starting_height == 5
-#         assert res.data.previous_challenge_hash == blocks_list[5].proof_of_space.challenge_hash
-#         assert res.data.hashes[:3] == [b.header_hash for b in blocks_list[5:8]]
-#
-#         # Wrong prev challenge
-#         res = await full_node_1.request_all_header_hashes_after(
-#             wallet_protocol.RequestAllHeaderHashesAfter(uint32(5), blocks_list[4].proof_of_space.challenge_hash)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RejectAllHeaderHashesAfterRequest)
-#         assert res.data.starting_height == 5
-#         assert res.data.previous_challenge_hash == blocks_list[4].proof_of_space.challenge_hash
-#
-#     @pytest.mark.asyncio
-#     async def test_request_header(self, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         num_blocks = 2
-#         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, seed=b"test_request_header")
-#         for block in blocks[:2]:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         res = await full_node_1.request_header(wallet_protocol.RequestHeader(uint32(1), blocks[1].header_hash))
-#         assert isinstance(res.data, wallet_protocol.RespondHeader)
-#         assert res.data.header_block.header == blocks[1].header
-#         assert res.data.transactions_filter == blocks[1].transactions_filter
-#
-#         # Don't have
-#         res = await full_node_1.request_header(wallet_protocol.RequestHeader(uint32(2), blocks[2].header_hash))
-#         assert isinstance(res.data, wallet_protocol.RejectHeaderRequest)
-#         assert res.data.height == 2
-#         assert res.data.header_hash == blocks[2].header_hash
-#
-#     @pytest.mark.asyncio
-#     async def test_request_removals(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#         blocks_new = bt.get_consecutive_blocks(test_constants, 5, seed=b"test_request_removals")
-#
-#         # Request removals for nonexisting block fails
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(blocks_new[-1].height, blocks_new[-1].header_hash, None)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RejectRemovalsRequest)
-#
-#         # Request removals for orphaned block fails
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(blocks_new[-1].height, blocks_new[-1].header_hash, None)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RejectRemovalsRequest)
-#
-#         # If there are no transactions, empty proof and coins
-#         blocks_new = bt.get_consecutive_blocks(
-#             test_constants,
-#             10,
-#             block_list_input=blocks_list,
-#         )
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(blocks_new[-4].height, blocks_new[-4].header_hash, None)
-#         )
-#
-#         assert isinstance(res.data, wallet_protocol.RespondRemovals)
-#         assert len(res.data.coins) == 0
-#         assert res.data.proofs is None
-#
-#         # Add a block with transactions
-#         spend_bundles = []
-#         for i in range(5):
-#             spend_bundles.append(
-#                 wallet_a.generate_signed_transaction(
-#                     100,
-#                     wallet_a.get_new_puzzlehash(),
-#                     blocks_new[i - 8].get_coinbase(),
-#                 )
-#             )
-#         height_with_transactions = len(blocks_new) + 1
-#         agg = SpendBundle.aggregate(spend_bundles)
-#         dic_h = {
-#             height_with_transactions: (
-#                 best_solution_program(agg),
-#                 agg.aggregated_signature,
-#             )
-#         }
-#         blocks_new = bt.get_consecutive_blocks(
-#             test_constants, 5, block_list_input=blocks_new, transaction_data_at_height=dic_h
-#         )
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         # If no coins requested, respond all coins and NO proof
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 None,
-#             )
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondRemovals)
-#         assert len(res.data.coins) == 5
-#         assert res.data.proofs is None
-#
-#         removals_merkle_set = MerkleSet()
-#         for sb in spend_bundles:
-#             for coin in sb.removals():
-#                 if coin is not None:
-#                     removals_merkle_set.add_already_hashed(coin.name())
-#
-#         # Ask for one coin and check PoI
-#         coin_list = [spend_bundles[0].removals()[0].name()]
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 coin_list,
-#             )
-#         )
-#
-#         assert isinstance(res.data, wallet_protocol.RespondRemovals)
-#         assert len(res.data.coins) == 1
-#         assert res.data.proofs is not None
-#         assert len(res.data.proofs) == 1
-#         assert confirm_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.removals_root,
-#             coin_list[0],
-#             res.data.proofs[0][1],
-#         )
-#
-#         # Ask for one coin and check PoE
-#         coin_list = [token_bytes(32)]
-#
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 coin_list,
-#             )
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondRemovals)
-#         assert len(res.data.coins) == 1
-#         assert res.data.coins[0][1] is None
-#         assert res.data.proofs is not None
-#         assert len(res.data.proofs) == 1
-#         assert confirm_not_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.removals_root,
-#             coin_list[0],
-#             res.data.proofs[0][1],
-#         )
-#
-#         # Ask for two coins
-#         coin_list = [spend_bundles[0].removals()[0].name(), token_bytes(32)]
-#
-#         res = await full_node_1.request_removals(
-#             wallet_protocol.RequestRemovals(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 coin_list,
-#             )
-#         )
-#
-#         assert isinstance(res.data, wallet_protocol.RespondRemovals)
-#         assert len(res.data.coins) == 2
-#         assert res.data.coins[0][1] is not None
-#         assert res.data.coins[1][1] is None
-#         assert res.data.proofs is not None
-#         assert len(res.data.proofs) == 2
-#         assert confirm_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.removals_root,
-#             coin_list[0],
-#             res.data.proofs[0][1],
-#         )
-#         assert confirm_not_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.removals_root,
-#             coin_list[1],
-#             res.data.proofs[1][1],
-#         )
-#
-#     @pytest.mark.asyncio
-#     async def test_request_additions(self, two_nodes, wallet_nodes):
-#         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#         blocks_new = bt.get_consecutive_blocks(test_constants, 5, seed=b"test_request_additions")
-#
-#         # Request additinos for nonexisting block fails
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(blocks_new[-1].height, blocks_new[-1].header_hash, None)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RejectAdditionsRequest)
-#
-#         # Request additions for orphaned block fails
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(blocks_new[-1].height, blocks_new[-1].header_hash, None)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RejectAdditionsRequest)
-#
-#         # If there are no transactions, only cb and fees additions
-#         blocks_new = bt.get_consecutive_blocks(
-#             test_constants,
-#             10,
-#             block_list_input=blocks_list,
-#         )
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(blocks_new[-4].height, blocks_new[-4].header_hash, None)
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondAdditions)
-#         assert len(res.data.coins) == 2
-#         assert res.data.proofs is None
-#
-#         # Add a block with transactions
-#         spend_bundles = []
-#         puzzle_hashes = [wallet_a.get_new_puzzlehash(), wallet_a.get_new_puzzlehash()]
-#         for i in range(5):
-#             spend_bundles.append(
-#                 wallet_a.generate_signed_transaction(
-#                     100,
-#                     puzzle_hashes[i % 2],
-#                     blocks_new[i - 8].get_coinbase(),
-#                 )
-#             )
-#         height_with_transactions = len(blocks_new) + 1
-#         agg = SpendBundle.aggregate(spend_bundles)
-#         dic_h = {
-#             height_with_transactions: (
-#                 best_solution_program(agg),
-#                 agg.aggregated_signature,
-#             )
-#         }
-#         blocks_new = bt.get_consecutive_blocks(
-#             test_constants, 5, block_list_input=blocks_new, transaction_data_at_height=dic_h
-#         )
-#         for block in blocks_new:
-#             await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
-#
-#         # If no puzzle hashes requested, respond all coins and NO proof
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 None,
-#             )
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondAdditions)
-#         # One puzzle hash with change and fee (x3) = 9, minus two repeated ph = 7 + coinbase and fees = 9
-#         assert len(res.data.coins) == 9
-#         assert res.data.proofs is None
-#
-#         additions_merkle_set = MerkleSet()
-#         for sb in spend_bundles:
-#             for coin in sb.additions():
-#                 if coin is not None:
-#                     additions_merkle_set.add_already_hashed(coin.name())
-#
-#         # Ask for one coin and check both PoI
-#         ph_list = [puzzle_hashes[0]]
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 ph_list,
-#             )
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondAdditions)
-#         assert len(res.data.coins) == 1
-#         assert len(res.data.coins[0][1]) == 3
-#         assert res.data.proofs is not None
-#         assert len(res.data.proofs) == 1
-#         assert confirm_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.additions_root,
-#             ph_list[0],
-#             res.data.proofs[0][1],
-#         )
-#         coin_list_for_ph = [
-#             coin for coin in blocks_new[height_with_transactions].additions() if coin.puzzle_hash == ph_list[0]
-#         ]
-#         assert confirm_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.additions_root,
-#             hash_coin_list(coin_list_for_ph),
-#             res.data.proofs[0][2],
-#         )
-#
-#         # Ask for one ph and check PoE
-#         ph_list = [token_bytes(32)]
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 ph_list,
-#             )
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondAdditions)
-#         assert len(res.data.coins) == 1
-#         assert len(res.data.coins[0][1]) == 0
-#         assert res.data.proofs is not None
-#         assert len(res.data.proofs) == 1
-#         assert confirm_not_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.additions_root,
-#             ph_list[0],
-#             res.data.proofs[0][1],
-#         )
-#         assert res.data.proofs[0][2] is None
-#
-#         # Ask for two puzzle_hashes
-#         ph_list = [puzzle_hashes[0], token_bytes(32)]
-#         res = await full_node_1.request_additions(
-#             wallet_protocol.RequestAdditions(
-#                 blocks_new[height_with_transactions].height,
-#                 blocks_new[height_with_transactions].header_hash,
-#                 ph_list,
-#             )
-#         )
-#         assert isinstance(res.data, wallet_protocol.RespondAdditions)
-#         assert len(res.data.coins) == 2
-#         assert len(res.data.coins[0][1]) == 3
-#         assert res.data.proofs is not None
-#         assert len(res.data.proofs) == 2
-#         assert confirm_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.additions_root,
-#             ph_list[0],
-#             res.data.proofs[0][1],
-#         )
-#         assert confirm_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.additions_root,
-#             hash_coin_list(coin_list_for_ph),
-#             res.data.proofs[0][2],
-#         )
-#         assert confirm_not_included_already_hashed(
-#             blocks_new[height_with_transactions].header.data.additions_root,
-#             ph_list[1],
-#             res.data.proofs[1][1],
-#         )
-#         assert res.data.proofs[1][2] is None

@@ -88,7 +88,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "TX_PER_SEC": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
         "INITIAL_FREEZE_PERIOD": 0,
         "NETWORK_TYPE": 1,

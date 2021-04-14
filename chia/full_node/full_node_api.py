@@ -494,6 +494,7 @@ class FullNodeAPI:
                     f"{self.full_node.constants.NUM_SPS_SUB_SLOT}: "
                     f"{request.challenge_chain_vdf.output.get_hash()} "
                 )
+                self.full_node.signage_point_times[request.index_from_challenge] = time.time()
                 sub_slot_tuple = self.full_node.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
                 if sub_slot_tuple is not None:
                     prev_challenge = sub_slot_tuple[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge

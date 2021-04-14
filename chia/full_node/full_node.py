@@ -44,6 +44,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -88,6 +89,7 @@ class FullNode:
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers = None
         self.sync_store = None
+        self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
 
         if name:
             self.log = logging.getLogger(name)
@@ -1095,9 +1097,16 @@ class FullNode:
 
         self.full_node_store.add_unfinished_block(height, block, validate_result)
         if farmed_block is True:
-            self.log.info(f"🍀 ️Farmed unfinished_block {block_hash}")
+            self.log.info(
+                f"🍀 ️Farmed unfinished_block {block_hash}, SP: {block.reward_chain_block.signage_point_index}"
+            )
         else:
-            self.log.info(f"Added unfinished_block {block_hash}, not farmed")
+            self.log.info(
+                f"Added unfinished_block {block_hash}, not farmed by us,"
+                f" SP: {block.reward_chain_block.signage_point_index} time: "
+                f"{time.time() - self.signage_point_times[block.reward_chain_block.signage_point_index]}"
+                f"Pool pk {encode_puzzle_hash(block.foliage.foliage_block_data.pool_target.puzzle_hash, 'xch')}"
+            )
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants,

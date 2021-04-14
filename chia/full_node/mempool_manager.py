@@ -57,19 +57,17 @@ class MempoolManager:
 
         self.coin_store = coin_store
 
-        tx_per_sec = self.constants.TX_PER_SEC
-        sec_per_block = self.constants.SUB_SLOT_TIME_TARGET // self.constants.SLOT_BLOCKS_TARGET
-        block_buffer_count = self.constants.MEMPOOL_BLOCK_BUFFER
-
-        # MEMPOOL_SIZE = 60000
-        self.mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
-        self.potential_cache_size = 300
+        self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
+        self.potential_cache_max_total_cost = int(
+            self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER
+        )
+        self.potential_cache_cost: int = 0
         self.seen_cache_size = 10000
         self.pool = ProcessPoolExecutor(max_workers=1)
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
-        self.mempool: Mempool = Mempool.create(self.mempool_size)
+        self.mempool: Mempool = Mempool(self.mempool_max_total_cost)
 
     def shut_down(self):
         self.pool.shutdown(wait=True)
@@ -93,8 +91,13 @@ class MempoolManager:
         spend_bundles: List[SpendBundle] = []
         removals = []
         additions = []
+        broke_from_inner_loop = False
+        log.info(f"Starting to make block, max cost: {self.constants.MAX_BLOCK_COST_CLVM}")
         for dic in self.mempool.sorted_spends.values():
+            if broke_from_inner_loop:
+                break
             for item in dic.values():
+                log.info(f"Cumulative cost: {cost_sum}")
                 if (
                     item.cost_result.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
@@ -105,6 +108,7 @@ class MempoolManager:
                     removals.extend(item.removals)
                     additions.extend(item.additions)
                 else:
+                    broke_from_inner_loop = True
                     break
         if len(spend_bundles) > 0:
             return SpendBundle.aggregate(spend_bundles), additions, removals
@@ -130,7 +134,7 @@ class MempoolManager:
         if cost == 0:
             return False
         fees_per_cost = fees / cost
-        if not self.mempool.at_full_capacity() or fees_per_cost >= self.mempool.get_min_fee_rate():
+        if not self.mempool.at_full_capacity(cost) or fees_per_cost > self.mempool.get_min_fee_rate(cost):
             return True
         return False
 
@@ -272,10 +276,10 @@ class MempoolManager:
 
         fees_per_cost: float = fees / cost
         # If pool is at capacity check the fee, if not then accept even without the fee
-        if self.mempool.at_full_capacity():
+        if self.mempool.at_full_capacity(cost):
             if fees == 0:
                 return None, MempoolInclusionStatus.FAILED, Err.INVALID_FEE_LOW_FEE
-            if fees_per_cost < self.mempool.get_min_fee_rate():
+            if fees_per_cost <= self.mempool.get_min_fee_rate(cost):
                 return None, MempoolInclusionStatus.FAILED, Err.INVALID_FEE_LOW_FEE
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
@@ -344,7 +348,7 @@ class MempoolManager:
         if fail_reason:
             mempool_item: MempoolItem
             for mempool_item in conflicting_pool_items.values():
-                self.mempool.remove_spend(mempool_item)
+                self.mempool.remove_from_pool(mempool_item)
 
         removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
         new_item = MempoolItem(new_spend, uint64(fees), cost_result, spend_name, additions, removals)
@@ -381,10 +385,15 @@ class MempoolManager:
         Adds SpendBundles that have failed to be added to the pool in potential tx set.
         This is later used to retry to add them.
         """
-        self.potential_txs[spend_name] = spend, cost_result, spend_name
+        if spend_name in self.potential_txs:
+            return
 
-        while len(self.potential_txs) > self.potential_cache_size:
+        self.potential_txs[spend_name] = spend, cost_result, spend_name
+        self.potential_cache_cost += cost_result.cost
+
+        while self.potential_cache_cost > self.potential_cache_max_total_cost:
             first_in = list(self.potential_txs.keys())[0]
+            self.potential_cache_max_total_cost -= self.potential_txs[first_in][1].cost
             self.potential_txs.pop(first_in)
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
@@ -413,7 +422,7 @@ class MempoolManager:
         self.peak = new_peak
 
         old_pool = self.mempool
-        self.mempool = Mempool.create(self.mempool_size)
+        self.mempool = Mempool(self.mempool_max_total_cost)
 
         for item in old_pool.spends.values():
             await self.add_spendbundle(item.spend_bundle, item.cost_result, item.spend_bundle_name, False)
@@ -426,7 +435,8 @@ class MempoolManager:
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((tx, cached_result, cached_name))
         log.debug(
-            f"Size of mempool: {len(self.mempool.spends)}, minimum fee to get in: {self.mempool.get_min_fee_rate()}"
+            f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
+            f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"
         )
         return txs_added
 

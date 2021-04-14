@@ -36,24 +36,13 @@ testnet_kwargs = {
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Target tx count per sec
-    "TX_PER_SEC": 20,
-    # Size of mempool = 10x the size of block
-    "MEMPOOL_BLOCK_BUFFER": 10,
+    # Size of mempool = 150x the size of block
+    "MEMPOOL_BLOCK_BUFFER": 150,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
-    # Targeting twice bitcoin's block size of 1.3MB per block
-    # Raw size per block target = 1,300,000 * 600 / 47 = approx 100 KB
-    # Rax TX (single in, single out) = 219 bytes (not compressed)
-    # TX = 457 vBytes
-    # floor(100 * 1024 / 219) * 457 = 213684 (size in vBytes)
-    # Max block cost in virtual bytes
-    "MAX_BLOCK_COST": 213684,
-    # MAX block cost in clvm cost units = MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT
     # 1 vByte = 108 clvm cost units
     "CLVM_COST_RATIO_CONSTANT": 108,
-    # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
-    # "MAX_BLOCK_COST_CLVM": 23077872,
+    # Max block cost in clvm cost units
     "MAX_BLOCK_COST_CLVM": 40000000,  # Based on arvid analysis
     "WEIGHT_PROOF_THRESHOLD": 2,
     "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
