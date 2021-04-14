@@ -223,7 +223,7 @@ class WeightProofHandler:
         return
 
     async def create_sub_epoch_segments(self):
-        log.debug("check segments in cache")
+        log.debug("check segments in db")
         """
         Creates a weight proof object
          """
@@ -243,7 +243,7 @@ class WeightProofHandler:
             return None
 
         for sub_epoch_n, ses_height in enumerate(summary_heights):
-            log.debug(f"check sub epoch {sub_epoch_n}")
+            log.debug(f"check db for sub epoch {sub_epoch_n}")
             if ses_height > peak_height:
                 break
             ses_block = ses_blocks[sub_epoch_n]
