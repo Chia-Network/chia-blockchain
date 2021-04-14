@@ -195,10 +195,6 @@ def load_plots(
                     )
                     return 0, new_provers
 
-                if prover.get_id() in plot_ids:
-                    log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
-                    return 0, new_provers
-
                 (
                     pool_public_key_or_puzzle_hash,
                     farmer_public_key,
@@ -233,6 +229,13 @@ def load_plots(
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
                 plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
+
+                if prover.get_id() in plot_ids:
+                    log.warning(f"Have multiple copies of the plot {filename}, not adding it.")
+                    return 0, new_provers
+
+                plot_ids.add(prover.get_id())
+
                 new_provers[filename] = PlotInfo(
                     prover,
                     pool_public_key,
@@ -241,7 +244,7 @@ def load_plots(
                     stat_info.st_size,
                     stat_info.st_mtime,
                 )
-                plot_ids.add(prover.get_id())
+
                 changed = True
             except Exception as e:
                 tb = traceback.format_exc()
@@ -268,7 +271,8 @@ def load_plots(
         return total_size1 + total_size2, {**new_provers1, **new_provers2}
 
     with ThreadPoolExecutor() as executor:
-        total_size, new_provers = reduce(reduce_function, executor.map(process_file, all_filenames))
+        initial_value: Tuple[int, Dict[Path, PlotInfo]] = (0, {})
+        total_size, new_provers = reduce(reduce_function, executor.map(process_file, all_filenames), initial_value)
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
