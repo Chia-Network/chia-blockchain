@@ -303,11 +303,6 @@ class Blockchain(BlockchainInterface):
                 log.info(f"delete ses at height {height}")
                 del self.__sub_epoch_summaries[height]
 
-            if len(heights_to_delete) > 0:
-                # remove segments from prev fork
-                log.info(f"remove segments for se above {fork_height}")
-                await self.block_store.delete_sub_epoch_challenge_segments(uint32(fork_height))
-
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
             curr = block_record.header_hash
@@ -615,16 +610,16 @@ class Blockchain(BlockchainInterface):
         return block.get_block_header()
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
+        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
-        return await self.block_store.persist_sub_epoch_challenge_segments(sub_epoch_summary_height, segments)
+        return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_height: uint32,
+        ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         segments: Optional[List[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
-            sub_epoch_summary_height
+            ses_block_hash
         )
         if segments is None:
             return None

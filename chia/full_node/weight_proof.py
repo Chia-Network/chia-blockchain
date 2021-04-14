@@ -137,7 +137,7 @@ class WeightProofHandler:
 
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 sample_n += 1
-                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.height)
+                segments = await self.blockchain.get_sub_epoch_challenge_segments(ses_block.header_hash)
                 if segments is None:
                     segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
                     if segments is None:
@@ -145,7 +145,7 @@ class WeightProofHandler:
                             f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} "
                         )
                         return None
-                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.height, segments)
+                    await self.blockchain.persist_sub_epoch_challenge_segments(ses_block.header_hash, segments)
                 log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block
@@ -218,7 +218,7 @@ class WeightProofHandler:
         assert prev_ses_sub_block.sub_epoch_summary_included is not None
         segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
         assert segments is not None
-        await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.height, segments)
+        await self.blockchain.persist_sub_epoch_challenge_segments(ses_sub_block.header_hash, segments)
         log.debug("sub_epoch_segments done")
         return
 
