@@ -2,11 +2,13 @@ import time
 from typing import Dict, List, Optional, Set
 
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.generator import create_generator_args
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.program import NIL, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
@@ -132,10 +134,12 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
     return None
 
 
-def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool, prev_generators=None) -> NPCResult:
-    # TODO: allow generator mod to take something (future)
-    # TODO: write more tests
-    block_program_args = SerializedProgram.from_bytes(b"\x80")
+def get_name_puzzle_conditions(generator: BlockGenerator, safe_mode: bool) -> NPCResult:
+    block_program = generator.program
+    if not generator.generator_args:
+        block_program_args = NIL
+    else:
+        block_program_args = Program.from_bytes(bytes(create_generator_args(generator.generator_refs())))
 
     try:
         if safe_mode:
@@ -173,9 +177,14 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
 
 
-def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):
+def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes):
     try:
-        block_program_args = SerializedProgram.from_bytes(b"\x80")
+        block_program = generator.program
+        if not generator.generator_args:
+            block_program_args = NIL
+        else:
+            block_program_args = Program.from_bytes(bytes(create_generator_args(generator.generator_refs())))
+
         cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, block_program_args, coin_name)
         puzzle = result.first()
         solution = result.rest().first()

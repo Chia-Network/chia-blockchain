@@ -24,9 +24,9 @@ def create_block_generator(
     return BlockGenerator(generator, generator_arg_list)
 
 
-def make_generator_args(generator_ref_list: List[SerializedProgram]) -> SerializedProgram:
+def create_generator_args(generator_ref_list: List[SerializedProgram]) -> SerializedProgram:
     """
-    `make_generator_args`: The format and contents of these arguments affect consensus.
+    `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [Program.from_bytes(bytes(g)) for g in generator_ref_list]
     return SerializedProgram.from_bytes(bytes(Program.to([DESERIALIZE_MOD, gen_ref_list])))

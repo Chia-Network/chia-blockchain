@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union, Callable
 
 from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
@@ -25,6 +25,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.condition_tools import (
@@ -52,7 +53,8 @@ async def validate_block_body(
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     npc_result: Optional[NPCResult],
-    fork_point_with_peak: Optional[uint32] = None,
+    fork_point_with_peak: Optional[uint32],
+    get_block_generator: Callable,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
     This assumes the header block has been completely validated.
@@ -89,13 +91,6 @@ async def validate_block_body(
     # 3. The transaction info hash in the Foliage block must match the transaction info
     if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
         return Err.INVALID_TRANSACTIONS_INFO_HASH, None
-
-    # 4. The foliage block hash in the foliage block must match the foliage block
-    if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
-        return Err.INVALID_FOLIAGE_BLOCK_HASH, None
-
-    # 5. The prev generators root must be valid
-    # TODO(straya): implement prev generators
 
     # 4. The foliage block hash in the foliage block must match the foliage block
     if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
@@ -185,7 +180,7 @@ async def validate_block_body(
 
             # The generator_refs_root must be the hash of the concatenation of the List[uint32]
             generator_refs_hash = std_hash(
-                b"".join([(i).to_bytes(4, byteorder="big") for i in block.transactions_generator_ref_list])
+                b"".join([i.to_bytes(4, byteorder="big") for i in block.transactions_generator_ref_list])
             )
             if block.transactions_info.generator_refs_root != generator_refs_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
@@ -303,9 +298,10 @@ async def validate_block_body(
             assert curr is not None
             while curr.height > fork_h:
                 # Coin store doesn't contain coins from fork, we have to run generator for each block in fork
-                # TODO pass previous generators into get_name_puzzle_conditions
                 if curr.transactions_generator is not None:
-                    npc_result = get_name_puzzle_conditions(curr.transactions_generator, False)
+                    curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
+                    assert curr_block_generator is not None
+                    npc_result = get_name_puzzle_conditions(curr_block_generator, False)
                     removals_in_curr, additions_in_curr = tx_removals_and_additions(npc_result.npc_list)
                 else:
                     removals_in_curr = []

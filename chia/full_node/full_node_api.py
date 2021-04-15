@@ -10,6 +10,7 @@ import chia.server.ws_connection as ws
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_program
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
@@ -25,10 +26,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required
 from chia.util.generator_tools import get_block_header
@@ -621,22 +622,25 @@ class FullNodeAPI:
             assert quality_string is not None and len(quality_string) == 32
 
             # Grab best transactions from Mempool for given tip target
+            aggregate_signature: G2Element = G2Element()
+            block_generator: Optional[BlockGenerator] = None
+            additions: Optional[List[Coin]] = []
+            removals: Optional[List[Coin]] = []
             async with self.full_node.blockchain.lock:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
-                if peak is None:
-                    spend_bundle: Optional[SpendBundle] = None
-                    additions = None
-                    removals = None
-                else:
+                if peak is not None:
                     mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
-                    if mempool_bundle is None:
-                        spend_bundle = None
-                        additions = None
-                        removals = None
-                    else:
+                    if mempool_bundle is not None:
                         spend_bundle = mempool_bundle[0]
                         additions = mempool_bundle[1]
                         removals = mempool_bundle[2]
+                        aggregate_signature = spend_bundle.aggregated_signature
+                        if self.full_node.full_node_store.previous_generator is not None:
+                            block_generator = best_solution_generator_from_template(
+                                spend_bundle, self.full_node.full_node_store.previous_generator
+                            )
+                        else:
+                            block_generator = simple_solution_program(spend_bundle)
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -773,7 +777,8 @@ class FullNodeAPI:
                 timestamp,
                 self.full_node.blockchain,
                 b"",
-                spend_bundle,
+                block_generator,
+                aggregate_signature,
                 additions,
                 removals,
                 prev_b,
@@ -1057,7 +1062,9 @@ class FullNodeAPI:
         if block is None or block.transactions_generator is None:
             return reject_msg
 
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block.transactions_generator, coin_name)
+        block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
+        assert block_generator is not None
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_name)
 
         if error is not None:
             return reject_msg
