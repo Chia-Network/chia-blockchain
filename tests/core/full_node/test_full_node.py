@@ -32,6 +32,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.util.wallet_tools import WalletTool
+from chia.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
@@ -130,7 +131,14 @@ class TestFullNodeBlockCompression:
         log.warning(full_node_1.full_node.blockchain.get_peak().height)
 
         # Send a a trasaction to mempool
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            10000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr.spend_bundle)
+
         # Farm a block
+
         # Confirm generator is not compressed
         # Send another tx
         # Farm a block
