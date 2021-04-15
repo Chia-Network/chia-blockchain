@@ -8,7 +8,7 @@ msgstr ""
 "Language: hi_IN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:53\n"
+"PO-Revision-Date: 2021-04-15 01:46\n"
 "Last-Translator: \n"
 "Language-Team: Hindi\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -34,8 +34,8 @@ msgstr ""
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr ""
 
-#: src/electron/main.ts:331
-#: src/electron/main.ts:413
+#: src/electron/main.tsx:366
+#: src/electron/main.tsx:444
 msgid "About Chia Blockchain"
 msgstr ""
 
@@ -127,7 +127,7 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr ""
 
-#: src/electron/main.ts:128
+#: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr ""
 
@@ -259,15 +259,15 @@ msgstr ""
 msgid "Challenge Hash"
 msgstr ""
 
-#: src/electron/main.ts:311
+#: src/electron/main.tsx:346
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron/main.ts:328
+#: src/electron/main.tsx:363
 msgid "Chia"
 msgstr ""
 
-#: src/electron/main.ts:278
+#: src/electron/main.tsx:313
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
@@ -321,7 +321,7 @@ msgstr ""
 msgid "Coloured Coin Options"
 msgstr ""
 
-#: src/electron/main.ts:126
+#: src/electron/main.tsx:162
 msgid "Confirm"
 msgstr ""
 
@@ -372,7 +372,7 @@ msgstr ""
 msgid "Connections"
 msgstr ""
 
-#: src/electron/main.ts:296
+#: src/electron/main.tsx:331
 msgid "Contribute on GitHub"
 msgstr ""
 
@@ -531,11 +531,11 @@ msgstr ""
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 
-#: src/electron/main.ts:225
+#: src/electron/main.tsx:260
 msgid "Developer"
 msgstr ""
 
-#: src/electron/main.ts:228
+#: src/electron/main.tsx:263
 msgid "Developer Tools"
 msgstr ""
 
@@ -582,7 +582,7 @@ msgstr ""
 msgid "Drag and drop your backup file"
 msgstr ""
 
-#: src/electron/main.ts:184
+#: src/electron/main.tsx:219
 msgid "Edit"
 msgstr ""
 
@@ -604,6 +604,11 @@ msgstr ""
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "Estimated Time to Win"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr ""
@@ -618,8 +623,8 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Expected Time to Win"
-msgstr ""
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -698,8 +703,8 @@ msgstr ""
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:176
-#: src/electron/main.ts:368
+#: src/electron/main.tsx:211
+#: src/electron/main.tsx:399
 msgid "File"
 msgstr ""
 
@@ -718,11 +723,11 @@ msgstr ""
 msgid "Finished"
 msgstr ""
 
-#: src/electron/main.ts:317
+#: src/electron/main.tsx:352
 msgid "Follow on Twitter"
 msgstr ""
 
-#: src/electron/main.ts:284
+#: src/electron/main.tsx:319
 msgid "Frequently Asked Questions"
 msgstr ""
 
@@ -735,7 +740,7 @@ msgstr ""
 msgid "Full Node Status"
 msgstr ""
 
-#: src/electron/main.ts:252
+#: src/electron/main.tsx:287
 msgid "Full Screen"
 msgstr ""
 
@@ -765,7 +770,7 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
-#: src/electron/main.ts:274
+#: src/electron/main.tsx:309
 msgid "Help"
 msgstr ""
 
@@ -973,7 +978,7 @@ msgid "Nickname"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:123
+#: src/electron/main.tsx:159
 msgid "No"
 msgstr ""
 
@@ -1350,7 +1355,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron/main.ts:290
+#: src/electron/main.tsx:325
 msgid "Release Notes"
 msgstr ""
 
@@ -1358,7 +1363,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron/main.ts:305
+#: src/electron/main.tsx:340
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1491,7 +1496,7 @@ msgstr ""
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.ts:379
+#: src/electron/main.tsx:410
 msgid "Speech"
 msgstr ""
 
@@ -1827,7 +1832,7 @@ msgstr ""
 msgid "VDF Sub Slot Iterations"
 msgstr ""
 
-#: src/electron/main.ts:216
+#: src/electron/main.tsx:251
 msgid "View"
 msgstr ""
 
@@ -1929,7 +1934,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.ts:260
+#: src/electron/main.tsx:295
 msgid "Window"
 msgstr ""
 
@@ -1939,7 +1944,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:124
+#: src/electron/main.tsx:160
 msgid "Yes"
 msgstr ""
 
@@ -1952,8 +1957,20 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
 msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
