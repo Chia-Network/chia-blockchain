@@ -37,7 +37,7 @@ const catalogRo = require('../locales/ro-RO/messages');
 const catalogRu = require('../locales/ru-RU/messages');
 const catalogSk = require('../locales/sk-SK/messages');
 const catalogSv = require('../locales/sv-SE/messages');
-const catalogViVn = require('../locales/vi-VN/messages');
+// const catalogViVn = require('../locales/vi-VN/messages');
 const catalogZh = require('../locales/zh-TW/messages');
 const catalogZhCN = require('../locales/zh-CN/messages');
 
@@ -80,7 +80,7 @@ i18n.load('ro-RO', catalogRo.messages);
 i18n.load('ru-RU', catalogRu.messages);
 i18n.load('sk-SK', catalogSk.messages);
 i18n.load('sv-SE', catalogSv.messages);
-i18n.load('vi-VN', catalogViVn.messages);
+// i18n.load('vi-VN', catalogViVn.messages);
 i18n.load('zh-TW', catalogZh.messages);
 i18n.load('zh-CN', catalogZhCN.messages);
 

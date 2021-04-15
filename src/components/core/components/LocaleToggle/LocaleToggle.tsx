@@ -26,7 +26,7 @@ const locales: { [char: string]: string } = {
   'sk-SK': 'Slovenčina',
   'fi-FI': 'Suomi',
   'sv-SE': 'Svenska',
-  'vi-VN': 'Tiếng Việt',
+  // 'vi-VN': 'Tiếng Việt',
   'zh-TW': '中文',
   'zh-CN': '中文 (中国)',
 };

@@ -774,7 +774,7 @@ msgstr "Booty Number"
 msgid "Help"
 msgstr "Help"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
 msgstr "Help translate"
 
@@ -2036,4 +2036,3 @@ msgstr "{currencyCode} Total Prize Claimed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Scallywag Transaction Fees"
-

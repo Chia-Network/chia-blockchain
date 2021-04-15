@@ -774,7 +774,7 @@ msgstr "Hauteur"
 msgid "Help"
 msgstr "Aider"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
 msgstr "Aider à traduire"
 
@@ -2036,4 +2036,3 @@ msgstr "{currencyCode} Total de Chia récoltés"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Frais de transaction utilisateur"
-
