@@ -158,24 +158,49 @@ async def validate_block_body(
     if height > constants.INITIAL_FREEZE_PERIOD and constants.NETWORK_TYPE == NetworkType.MAINNET:
         return Err.INITIAL_TRANSACTION_FREEZE, None
     else:
-        # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
+        # 6a. The generator root must be the hash of the serialized bytes of
+        #     the generator for this block (or zeroes if no generator)
         if block.transactions_generator is not None:
-            if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
+            if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
         else:
             if block.transactions_info.generator_root != bytes([0] * 32):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
 
-        if block.transactions_generator_ref_list is not None:
-            if len(bytes(block.transactions_generator_ref_list)) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-                return Err.PRE_SOFT_FORK_MAX_GENERATOR_REF_LIST_SIZE, None
+        # 6b. The generator_ref_list must be the hash of the serialized bytes of
+        #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
+        # 6c. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
+        if block.transactions_generator_ref_list in (None, []):
+            if block.transactions_info.generator_refs_root != bytes([1] * 32):
+                return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
+        else:
+            # If we have a generator reference list, we must have a generator
+            if block.transactions_generator is None:
+                return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
+
+            # The generator_refs_root must be the hash of the concatenation of the List[uint32]
+            generator_refs_hash = std_hash(
+                b"".join([(i).to_bytes(4, byteorder="big") for i in block.transactions_generator_ref_list])
+            )
+            if block.transactions_info.generator_refs_root != generator_refs_hash:
+                return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
+            if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
+                return Err.PRE_SOFT_FORK_TOO_MANY_GENERATOR_REFS, None
 
         if block.transactions_generator is not None:
-            # Get List of names removed, puzzles hashes for removed coins and conditions crated
+            # The generator must be less than MAX_GENERATOR_SIZE bytes in length
+            if len(bytes(block.transactions_generator)) > constants.MAX_GENERATOR_SIZE:
+                return Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE, None
+
+            # Get List of names removed, puzzles hashes for removed coins and conditions created
             if cached_cost_result is not None:
                 result: Optional[CostResult] = cached_cost_result
             else:
-                result = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
+                result = calculate_cost_of_program(block.transactions_generator, constants.COST_PER_BYTE)
+            # The call to calculate cost runs the generator program
+            if result is None:
+                return Err.INVALID_COST_RESULT, None
+
             assert result is not None
             cost = result.cost
             npc_list = result.npc_list

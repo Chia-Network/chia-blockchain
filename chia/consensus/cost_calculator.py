@@ -18,21 +18,18 @@ class CostResult(Streamable):
     cost: uint64
 
 
-def calculate_cost_of_program(
-    program: SerializedProgram, clvm_cost_ratio_constant: int, strict_mode: bool = False
-) -> CostResult:
+def calculate_cost_of_program(program: SerializedProgram, cost_per_byte: int, strict_mode: bool = False) -> CostResult:
     """
     This function calculates the total cost of either a block or a spendbundle
     """
-    total_clvm_cost = 0
+    total_cost = 0
     error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode)
     if error or cost is None or npc_list is None:
         raise Exception("get_name_puzzle_conditions raised error:" + str(error))
-    total_clvm_cost += cost
+    total_cost += cost
 
     # Add cost of conditions
     npc: NPC
-    total_vbyte_cost = 0
     for npc in npc_list:
         for condition, cvp_list in npc.condition_dict.items():
             if condition is ConditionOpcode.AGG_SIG_UNSAFE or condition is ConditionOpcode.AGG_SIG_ME:
@@ -48,24 +45,22 @@ def calculate_cost_of_program(
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_MY_COIN_ID:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.RESERVE_FEE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.RESERVE_FEE.value
+                total_cost += len(cvp_list) * ConditionCost.RESERVE_FEE.value
             elif condition is ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * ConditionCost.CREATE_COIN_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_PUZZLE_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * ConditionCost.CREATE_PUZZLE_ANNOUNCEMENT.value
             elif condition is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_PUZZLE_ANNOUNCEMENT.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_PUZZLE_ANNOUNCEMENT.value
             else:
                 # We ignore unknown conditions in order to allow for future soft forks
                 pass
 
     # Add raw size of the program
-    total_vbyte_cost += len(bytes(program))
+    total_cost += len(bytes(program)) * cost_per_byte
 
-    total_clvm_cost += total_vbyte_cost * clvm_cost_ratio_constant
-
-    return CostResult(None, npc_list, uint64(total_clvm_cost))
+    return CostResult(None, npc_list, uint64(total_cost))

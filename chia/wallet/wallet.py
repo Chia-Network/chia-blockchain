@@ -77,7 +77,7 @@ class Wallet:
             program = best_solution_program(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             cost_result: CostResult = calculate_cost_of_program(
-                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+                program, self.wallet_state_manager.constants.COST_PER_BYTE, True
             )
             self.cost_of_single_tx = cost_result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
