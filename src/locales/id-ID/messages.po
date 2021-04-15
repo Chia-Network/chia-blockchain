@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:53\n"
+"PO-Revision-Date: 2021-04-15 01:45\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -34,8 +34,8 @@ msgstr "Baiknya gunakan 128 buckets"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvester adalah layanan yang berjalan pada komputer dimana plot disimpan. Farmer dan Harvester terhubung dengan jaringan untuk memeriksa status rantai. Tampilkan jaringan Harvester terhubung anda di bawah ini Pelajari lebih lanjut"
 
-#: src/electron/main.ts:331
-#: src/electron/main.ts:413
+#: src/electron/main.tsx:366
+#: src/electron/main.tsx:444
 msgid "About Chia Blockchain"
 msgstr "Tentang Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Anda yakin ingin menghapus plot ini? Plot ini tidak akan dapat dipulihka
 msgid "Are you sure you want to disconnect?"
 msgstr "Anda yakin ingin memutus koneksi?"
 
-#: src/electron/main.ts:128
+#: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Anda yakin ingin menutup program? Plotting dan Farming di GUI akan berhenti."
 
@@ -259,15 +259,15 @@ msgstr "Challenge"
 msgid "Challenge Hash"
 msgstr "Challenge Hash"
 
-#: src/electron/main.ts:311
+#: src/electron/main.tsx:346
 msgid "Chat on KeyBase"
 msgstr "Chat di KeyBase"
 
-#: src/electron/main.ts:328
+#: src/electron/main.tsx:363
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:278
+#: src/electron/main.tsx:313
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Chia Blockchain"
 
@@ -321,7 +321,7 @@ msgstr "Koin Berwarna"
 msgid "Coloured Coin Options"
 msgstr "Pilihan Koin Berwarna"
 
-#: src/electron/main.ts:126
+#: src/electron/main.tsx:162
 msgid "Confirm"
 msgstr "Konfirmasi"
 
@@ -372,7 +372,7 @@ msgstr "Jenis koneksi"
 msgid "Connections"
 msgstr "Koneksi"
 
-#: src/electron/main.ts:296
+#: src/electron/main.tsx:331
 msgid "Contribute on GitHub"
 msgstr "Berkontribusi di GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Menghapus semua kunci akan menghilangkan kunci-kunci tersebut dari kompu
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Menghapus semua kunci akan menghilangkan kunci-kunci tersebut dari komputer anda, pastikan anda telah memiliki cadangan. Apa anda yakin ingin melanjutkan?"
 
-#: src/electron/main.ts:225
+#: src/electron/main.tsx:260
 msgid "Developer"
 msgstr "Developer"
 
-#: src/electron/main.ts:228
+#: src/electron/main.tsx:263
 msgid "Developer Tools"
 msgstr "Developer Tools"
 
@@ -582,7 +582,7 @@ msgstr "Seret dan lepas berkas penawaran"
 msgid "Drag and drop your backup file"
 msgstr "Seret dan lepas berkas cadangan anda"
 
-#: src/electron/main.ts:184
+#: src/electron/main.tsx:219
 msgid "Edit"
 msgstr "Ubah"
 
@@ -604,6 +604,11 @@ msgstr "Error"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Error: Tidak dapat mengirim Chia ke alamat berwarna. Mohon masukkan sebuah alamat Chia."
 
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "Estimated Time to Win"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Estimasi besar network"
@@ -618,8 +623,8 @@ msgstr "Kecualikan direktori akhir"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Expected Time to Win"
-msgstr "Perkiraan Waktu Untuk Menang"
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -698,8 +703,8 @@ msgstr "Jumlah Biaya"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:176
-#: src/electron/main.ts:368
+#: src/electron/main.tsx:211
+#: src/electron/main.tsx:399
 msgid "File"
 msgstr "File"
 
@@ -718,11 +723,11 @@ msgstr "Lokasi folder akhir"
 msgid "Finished"
 msgstr "Selesai"
 
-#: src/electron/main.ts:317
+#: src/electron/main.tsx:352
 msgid "Follow on Twitter"
 msgstr "Follow di Twitter"
 
-#: src/electron/main.ts:284
+#: src/electron/main.tsx:319
 msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
@@ -735,7 +740,7 @@ msgstr "Full Node"
 msgid "Full Node Status"
 msgstr "Status Full Node"
 
-#: src/electron/main.ts:252
+#: src/electron/main.tsx:287
 msgid "Full Screen"
 msgstr "Layar Penuh"
 
@@ -765,7 +770,7 @@ msgstr ""
 msgid "Height"
 msgstr "Tinggi"
 
-#: src/electron/main.ts:274
+#: src/electron/main.tsx:309
 msgid "Help"
 msgstr "Bantuan"
 
@@ -973,7 +978,7 @@ msgid "Nickname"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:123
+#: src/electron/main.tsx:159
 msgid "No"
 msgstr "Tidak"
 
@@ -1350,7 +1355,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr ""
 
-#: src/electron/main.ts:290
+#: src/electron/main.tsx:325
 msgid "Release Notes"
 msgstr ""
 
@@ -1358,7 +1363,7 @@ msgstr ""
 msgid "Rename"
 msgstr ""
 
-#: src/electron/main.ts:305
+#: src/electron/main.tsx:340
 msgid "Report an Issue..."
 msgstr ""
 
@@ -1491,7 +1496,7 @@ msgstr ""
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.ts:379
+#: src/electron/main.tsx:410
 msgid "Speech"
 msgstr ""
 
@@ -1827,7 +1832,7 @@ msgstr "Pubkey User"
 msgid "VDF Sub Slot Iterations"
 msgstr "Iterasi VDF Sub Slot"
 
-#: src/electron/main.ts:216
+#: src/electron/main.tsx:251
 msgid "View"
 msgstr "Lihat"
 
@@ -1929,7 +1934,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.ts:260
+#: src/electron/main.tsx:295
 msgid "Window"
 msgstr "Jendela"
 
@@ -1939,7 +1944,7 @@ msgstr "Tanpa biaya"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:124
+#: src/electron/main.tsx:160
 msgid "Yes"
 msgstr "Ya"
 
@@ -1952,8 +1957,20 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
 msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
