@@ -856,6 +856,11 @@ msgstr "K的大小"
 msgid "Keys"
 msgstr "密钥"
 
+#: src/components/farm/FarmFullNodeConnections.tsx:40
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+msgid "KiB Up/Down"
+msgstr ""
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
 msgstr "最近尝试过的证明"
@@ -928,8 +933,6 @@ msgstr "管理耕种奖励"
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "管理你的耕种奖励目标地址"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
 msgstr "MiB 上传/下载"

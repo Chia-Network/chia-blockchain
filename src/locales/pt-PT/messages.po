@@ -856,6 +856,11 @@ msgstr "Tamanho-K"
 msgid "Keys"
 msgstr "Chaves"
 
+#: src/components/farm/FarmFullNodeConnections.tsx:40
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+msgid "KiB Up/Down"
+msgstr ""
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
 msgstr "Última tentativa de verificação"
@@ -928,8 +933,6 @@ msgstr "Gerenciar Recompensas de Farming"
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Gerenciar seus endereços-alvo de recompensas de Farming"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
 msgstr "MiB Enviados/Recebidos"

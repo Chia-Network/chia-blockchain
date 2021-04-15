@@ -856,6 +856,11 @@ msgstr "K 値"
 msgid "Keys"
 msgstr "鍵"
 
+#: src/components/farm/FarmFullNodeConnections.tsx:40
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+msgid "KiB Up/Down"
+msgstr ""
+
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
 msgstr "最後に試みた証明"
@@ -928,8 +933,6 @@ msgstr "耕作報酬の管理"
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "あなたの耕作報酬の宛先アドレスを管理"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
 msgstr "アップロード・ダウンロード [MiB]"
