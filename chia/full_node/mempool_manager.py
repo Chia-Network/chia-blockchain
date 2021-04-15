@@ -52,7 +52,7 @@ class MempoolManager:
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
-        self.potential_txs: Dict[bytes32, Tuple[SpendBundle, NPCResult, bytes32]] = {}
+        self.potential_txs: Dict[bytes32, MempoolItem] = {}
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
@@ -250,6 +250,9 @@ class MempoolManager:
             removal_amount = uint64(removal_amount + removal_record.coin.amount)
             removal_record_dict[name] = removal_record
             removal_coin_dict[name] = removal_record.coin
+
+        removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
+
         if unknown_unspent_error:
             return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
@@ -295,7 +298,8 @@ class MempoolManager:
                 conflicting_pool_items[sb.name] = sb
             for item in conflicting_pool_items.values():
                 if item.fee_per_cost >= fees_per_cost:
-                    self.add_to_potential_tx_set(new_spend, spend_name, npc_result)
+                    potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+                    self.add_to_potential_tx_set(potential)
                     return (
                         uint64(cost),
                         MempoolInclusionStatus.PENDING,
@@ -334,13 +338,9 @@ class MempoolManager:
             )
 
             if error:
-<<<<<<< HEAD
                 if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
-                    self.add_to_potential_tx_set(new_spend, spend_name, cost_result)
-=======
-                if error is Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED or error is Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED:
-                    self.add_to_potential_tx_set(new_spend, spend_name, npc_result)
->>>>>>> squash
+                    potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+                    self.add_to_potential_tx_set(potential)
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break
 
@@ -364,7 +364,6 @@ class MempoolManager:
             for mempool_item in conflicting_pool_items.values():
                 self.mempool.remove_from_pool(mempool_item)
 
-        removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
         log.info(f"add_spendbundle took {time.time() - start_time} seconds")
@@ -394,20 +393,20 @@ class MempoolManager:
         # 5. If coins can be spent return list of unspents as we see them in local storage
         return None, []
 
-    def add_to_potential_tx_set(self, spend: SpendBundle, spend_name: bytes32, npc_result: NPCResult):
+    def add_to_potential_tx_set(self, item: MempoolItem):
         """
         Adds SpendBundles that have failed to be added to the pool in potential tx set.
         This is later used to retry to add them.
         """
-        if spend_name in self.potential_txs:
+        if item.spend_bundle_name in self.potential_txs:
             return
 
-        self.potential_txs[spend_name] = spend, npc_result, spend_name
-        self.potential_cache_cost += cost_result.cost
+        self.potential_txs[item.spend_bundle_name] = item
+        self.potential_cache_cost += item.cost
 
         while self.potential_cache_cost > self.potential_cache_max_total_cost:
             first_in = list(self.potential_txs.keys())[0]
-            self.potential_cache_max_total_cost -= self.potential_txs[first_in][1].cost
+            self.potential_cache_max_total_cost -= self.potential_txs[first_in].cost
             self.potential_txs.pop(first_in)
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
@@ -444,10 +443,10 @@ class MempoolManager:
         potential_txs_copy = self.potential_txs.copy()
         self.potential_txs = {}
         txs_added = []
-        for tx, cached_result, cached_name in potential_txs_copy.values():
-            cost, status, error = await self.add_spendbundle(tx, cached_result, cached_name)
+        for item in potential_txs_copy.values():
+            cost, status, error = await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
             if status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append((tx, cached_result, cached_name))
+                txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.debug(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee to get in: {self.mempool.get_min_fee_rate(100000)}"

@@ -2,13 +2,12 @@ from typing import List, Tuple
 from chiabip158 import PyBIP158
 
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.types.name_puzzle_condition import NPC
-from chia.util.condition_tools import created_announcements_for_conditions_dict, created_outputs_for_conditions_dict
+from chia.util.condition_tools import created_outputs_for_conditions_dict
 
 
 def get_block_header(block: FullBlock, addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
@@ -46,15 +45,6 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
             additions.append(coin)
 
     return additions
-
-
-def announcements_for_npc(npc_list: List[NPC]) -> List[Announcement]:
-    announcements: List[Announcement] = []
-
-    for npc in npc_list:
-        announcements.extend(created_announcements_for_conditions_dict(npc.condition_dict, npc.coin_name))
-
-    return announcements
 
 
 def tx_removals_and_additions(npc_list: List[NPC]) -> Tuple[List[bytes32], List[Coin]]:

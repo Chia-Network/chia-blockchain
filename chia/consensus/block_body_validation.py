@@ -19,7 +19,6 @@ from chia.consensus.network_type import NetworkType
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -36,7 +35,6 @@ from chia.util.condition_tools import (
 from chia.util.errors import Err
 from chia.util.generator_tools import (
     additions_for_npc,
-    announcements_for_npc,
     tx_removals_and_additions,
 )
 from chia.util.hash import std_hash
