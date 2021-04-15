@@ -191,7 +191,6 @@ async def validate_block_body(
             # The generator must be less than MAX_GENERATOR_SIZE bytes in length
             if len(bytes(block.transactions_generator)) > constants.MAX_GENERATOR_SIZE:
 
-
                 return Err.PRE_SOFT_FORK_MAX_GENERATOR_SIZE, None
 
             # Get List of names removed, puzzles hashes for removed coins and conditions created
