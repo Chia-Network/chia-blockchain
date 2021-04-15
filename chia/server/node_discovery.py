@@ -58,6 +58,7 @@ class FullNodeDiscovery:
         self.connect_peers_task: Optional[asyncio.Task] = None
         self.serialize_task: Optional[asyncio.Task] = None
         self.cleanup_task: Optional[asyncio.Task] = None
+        self.initial_wait: int = 0
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
@@ -170,6 +171,8 @@ class FullNodeDiscovery:
         empty_tables = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        if self.initial_wait > 0:
+            await asyncio.sleep(self.initial_wait)
         while not self.is_closed:
             try:
                 # We don't know any address, connect to the introducer to get some.
@@ -569,6 +572,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self):
+        self.initial_wait = 60
         await self.initialize_address_manager()
         await self.start_tasks()
 
