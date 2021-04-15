@@ -33,17 +33,17 @@ def calculate_cost_of_program(program: SerializedProgram, cost_per_byte: int, st
     for npc in npc_list:
         for condition, cvp_list in npc.condition_dict.items():
             if condition is ConditionOpcode.AGG_SIG_UNSAFE or condition is ConditionOpcode.AGG_SIG_ME:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.AGG_SIG.value
+                total_cost += len(cvp_list) * ConditionCost.AGG_SIG.value
             elif condition is ConditionOpcode.CREATE_COIN:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
+                total_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
             elif condition is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_ABSOLUTE.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_MY_COIN_ID:
                 total_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.RESERVE_FEE:
