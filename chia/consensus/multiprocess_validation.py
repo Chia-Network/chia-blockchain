@@ -9,19 +9,22 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
-from chia.util.ints import uint16, uint64
+from chia.util.generator_tools import get_block_header, block_removals_and_additions
+from chia.util.ints import uint16, uint64, uint32
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)
@@ -32,53 +35,89 @@ log = logging.getLogger(__name__)
 class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
-    cost_result: Optional[CostResult]  # Iff error is None and block is a transaction block
+    npc_result: Optional[NPCResult]  # Iff error is None and block is a transaction block
 
 
 def batch_pre_validate_blocks(
     constants_dict: Dict,
     blocks_pickled: Dict[bytes, bytes],
-    header_blocks_pickled: List[bytes],
-    transaction_generators: List[Optional[bytes]],
+    full_blocks_pickled: Optional[List[bytes]],
+    header_blocks_pickled: Optional[List[bytes]],
+    prev_transaction_generators: List[List[Optional[bytes]]],
+    npc_results: Dict[uint32, bytes],
     check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
-    validate_transactions: bool,
 ) -> List[bytes]:
-    assert len(header_blocks_pickled) == len(transaction_generators)
     blocks = {}
     for k, v in blocks_pickled.items():
         blocks[k] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
-    for i in range(len(header_blocks_pickled)):
-        try:
-            header_block: HeaderBlock = HeaderBlock.from_bytes(header_blocks_pickled[i])
-            generator: Optional[bytes] = transaction_generators[i]
-            required_iters, error = validate_finished_header_block(
-                constants,
-                BlockCache(blocks),
-                header_block,
-                check_filter,
-                expected_difficulty[i],
-                expected_sub_slot_iters[i],
-            )
-            cost_result: Optional[CostResult] = None
-            error_int: Optional[uint16] = None
-            if error is not None:
-                error_int = uint16(error.code.value)
-            if constants_dict["NETWORK_TYPE"] == NetworkType.MAINNET.value:
-                cost_result = None
-            else:
-                if not error and generator is not None and validate_transactions:
-                    cost_result = calculate_cost_of_program(
-                        SerializedProgram.from_bytes(generator), constants.COST_PER_BYTE
-                    )
-            results.append(PreValidationResult(error_int, required_iters, cost_result))
-        except Exception:
-            error_stack = traceback.format_exc()
-            log.error(f"Exception: {error_stack}")
-            results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+    if full_blocks_pickled is not None and header_blocks_pickled is not None:
+        assert ValueError("Only one should be passed here")
+    if full_blocks_pickled is not None:
+        for i in range(len(full_blocks_pickled)):
+            try:
+                block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
+                generator: Optional[SerializedProgram] = block.transactions_generator
+                additions: List[Coin] = list(block.get_included_reward_coins())
+                removals: List[bytes32] = []
+                npc_result: Optional[NPCResult] = None
+                if block.height in npc_results:
+                    npc_result = NPCResult.from_bytes(npc_results[block.height])
+                    assert npc_result is not None
+                    if npc_result.npc_list is not None:
+                        removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+                    else:
+                        removals, additions = block_removals_and_additions(block, [])
+
+                if (
+                    constants_dict["NETWORK_TYPE"] != NetworkType.MAINNET.value
+                    and generator is not None
+                    and npc_result is None
+                ):
+                    npc_result = get_name_puzzle_conditions(generator, True, prev_transaction_generators)
+                    removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+
+                header_block = get_block_header(block, additions, removals)
+                required_iters, error = validate_finished_header_block(
+                    constants,
+                    BlockCache(blocks),
+                    header_block,
+                    check_filter,
+                    expected_difficulty[i],
+                    expected_sub_slot_iters[i],
+                )
+                error_int: Optional[uint16] = None
+                if error is not None:
+                    error_int = uint16(error.code.value)
+
+                results.append(PreValidationResult(error_int, required_iters, npc_result))
+            except Exception:
+                error_stack = traceback.format_exc()
+                log.error(f"Exception: {error_stack}")
+                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+    elif header_blocks_pickled is not None:
+        for i in range(len(header_blocks_pickled)):
+            try:
+                header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
+                required_iters, error = validate_finished_header_block(
+                    constants,
+                    BlockCache(blocks),
+                    header_block,
+                    check_filter,
+                    expected_difficulty[i],
+                    expected_sub_slot_iters[i],
+                )
+                error_int = None
+                if error is not None:
+                    error_int = uint16(error.code.value)
+                results.append(PreValidationResult(error_int, required_iters, None))
+            except Exception:
+                error_stack = traceback.format_exc()
+                log.error(f"Exception: {error_stack}")
+                results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
     return [bytes(r) for r in results]
 
 
@@ -88,8 +127,8 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlockchainInterface,
     blocks: Sequence[Union[FullBlock, HeaderBlock]],
     pool: ProcessPoolExecutor,
-    validate_transactions: bool,
     check_filter: bool,
+    npc_results: Dict[uint32, NPCResult],
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -98,7 +137,6 @@ async def pre_validate_blocks_multiprocessing(
 
     Args:
         check_filter:
-        validate_transactions:
         constants_json:
         pool:
         constants:
@@ -195,7 +233,9 @@ async def pre_validate_blocks_multiprocessing(
             block_records.remove_block_record(block.header_hash)
 
     recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
-
+    npc_results_pickled = {}
+    for k, v in npc_results.items():
+        npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
     for i in range(0, len(blocks), batch_size):
@@ -205,17 +245,19 @@ async def pre_validate_blocks_multiprocessing(
             final_pickled = {bytes(k): bytes(v) for k, v in recent_blocks.items()}
         else:
             final_pickled = recent_sb_compressed_pickled
-        hb_pickled: List[bytes] = []
-        generators: List[Optional[bytes]] = []
+        b_pickled: Optional[List[bytes]] = None
+        hb_pickled: Optional[List[bytes]] = None
+        previous_generators: List[List[Optional[bytes]]] = []
         for block in blocks_to_validate:
             if isinstance(block, FullBlock):
-                hb_pickled.append(bytes(block.get_block_header()))
-                generators.append(
-                    bytes(block.transactions_generator) if block.transactions_generator is not None else None
-                )
+                if b_pickled is None:
+                    b_pickled = []
+                b_pickled.append(bytes(block))
+                # TODO collect previous generators
             else:
+                if hb_pickled is None:
+                    hb_pickled = []
                 hb_pickled.append(bytes(block))
-                generators.append(None)
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -223,12 +265,13 @@ async def pre_validate_blocks_multiprocessing(
                 batch_pre_validate_blocks,
                 constants_json,
                 final_pickled,
+                b_pickled,
                 hb_pickled,
-                generators,
+                previous_generators,
+                npc_results_pickled,
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
-                validate_transactions,
             )
         )
     # Collect all results into one flat list

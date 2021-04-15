@@ -22,15 +22,16 @@ from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required
+from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
 
@@ -904,7 +905,8 @@ class FullNodeAPI:
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            header_block: HeaderBlock = block.get_block_header()
+            removals, additions = await self.full_node.blockchain.get_removals_and_additions(block)
+            header_block = get_block_header(block, additions, removals)
             msg = make_msg(
                 ProtocolMessageTypes.respond_block_header,
                 wallet_protocol.RespondBlockHeader(header_block),
@@ -926,13 +928,13 @@ class FullNodeAPI:
             return msg
 
         assert block is not None and block.foliage_transaction_block is not None
-        _, additions = block.tx_removals_and_additions()
+        additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
-        for coin in additions + list(block.get_included_reward_coins()):
-            if coin.puzzle_hash in puzzlehash_coins_map:
-                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+        for coin_record in additions:
+            if coin_record.coin.puzzle_hash in puzzlehash_coins_map:
+                puzzlehash_coins_map[coin_record.coin.puzzle_hash].append(coin_record.coin)
             else:
-                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+                puzzlehash_coins_map[coin_record.coin.puzzle_hash] = [coin_record.coin]
 
         coins_map: List[Tuple[bytes32, List[Coin]]] = []
         proofs_map: List[Tuple[bytes32, bytes, Optional[bytes]]] = []
@@ -982,7 +984,10 @@ class FullNodeAPI:
             return msg
 
         assert block is not None and block.foliage_transaction_block is not None
-        all_removals, _ = block.tx_removals_and_additions()
+        all_removals: List[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+        all_removals_dict: Dict[bytes32, Coin] = {}
+        for coin_record in all_removals:
+            all_removals_dict[coin_record.coin.name()] = coin_record.coin
 
         coins_map: List[Tuple[bytes32, Optional[Coin]]] = []
         proofs_map: List[Tuple[bytes32, bytes]] = []
@@ -996,24 +1001,21 @@ class FullNodeAPI:
                 proofs = []
             response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
         elif request.coin_names is None or len(request.coin_names) == 0:
-            for removal in all_removals:
-                cr = await self.full_node.coin_store.get_coin_record(removal)
-                assert cr is not None
-                coins_map.append((cr.coin.name(), cr.coin))
+            for removed_name, removed_coin in all_removals_dict.items():
+                coins_map.append((removed_name, removed_coin))
             response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
         else:
             assert block.transactions_generator
             removal_merkle_set = MerkleSet()
-            for coin_name in all_removals:
-                removal_merkle_set.add_already_hashed(coin_name)
+            for removed_name, removed_coin in all_removals_dict.items():
+                removal_merkle_set.add_already_hashed(removed_name)
             assert removal_merkle_set.get_root() == block.foliage_transaction_block.removals_root
             for coin_name in request.coin_names:
                 result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
                 proofs_map.append((coin_name, proof))
-                if coin_name in all_removals:
-                    cr = await self.full_node.coin_store.get_coin_record(coin_name)
-                    assert cr is not None
-                    coins_map.append((coin_name, cr.coin))
+                if coin_name in all_removals_dict:
+                    removed_coin = all_removals_dict[coin_name]
+                    coins_map.append((coin_name, removed_coin))
                     assert result
                 else:
                     coins_map.append((coin_name, None))
@@ -1084,11 +1086,11 @@ class FullNodeAPI:
         blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
         header_blocks = []
         for block in blocks:
-            added_coins_records = await self.full_node.coin_store.get_tx_coins_added_at_height(block.height)
+            added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
             removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
             added_coins = [record.coin for record in added_coins_records]
             removal_names = [record.coin.name() for record in removed_coins_records]
-            header_block = block.get_block_header(added_coins, removal_names)
+            header_block = get_block_header(block, added_coins, removal_names)
             header_blocks.append(header_block)
 
         msg = make_msg(

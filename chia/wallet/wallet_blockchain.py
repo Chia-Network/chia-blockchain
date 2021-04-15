@@ -343,7 +343,7 @@ class WalletBlockchain(BlockchainInterface):
         blocks: List[HeaderBlock],
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
-            self.constants, self.constants_json, self, blocks, self.pool, True, True
+            self.constants, self.constants_json, self, blocks, self.pool, True, {}
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:
