@@ -7,6 +7,7 @@ from chia.full_node.generator import create_block_generator, make_generator_args
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 
+from clvm_tools import binutils
 
 gen0 = SerializedProgram.from_bytes(
     hexstr_to_bytes(
@@ -60,3 +61,11 @@ class TestGeneratorTypes(TestCase):
         arg2 = gen_args_as_program.rest().first().first()
         print(arg2)
         assert bytes(arg2) == bytes(gen1)
+
+    def test_generator_arg_is_list(self):
+        generator_ref_list = [Program.to(b"gen1"), Program.to(b"gen2")]
+        gen_args = make_generator_args(generator_ref_list)
+        gen_args_as_program = Program.from_bytes(bytes(gen_args))
+        arg2 = gen_args_as_program.rest().first()
+        assert arg2 == binutils.assemble("('gen1' 'gen2')")
+        print(arg2)
