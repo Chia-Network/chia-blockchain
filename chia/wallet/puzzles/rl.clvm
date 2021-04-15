@@ -65,7 +65,7 @@
     (defun generate-block-age-condition (min_block_time outgoing_amount rate_amount interval_time)
         (assert (>= (* min_block_time rate_amount)
                     (* outgoing_amount interval_time))
-            (list ASSERT_HEIGHT_AGE_EXCEEDS min_block_time)))
+            (list ASSERT_HEIGHT_RELATIVE min_block_time)))
 
     (defun create-change (my_puzzlehash my_amount outgoing_amount fee)
         (list CREATE_COIN my_puzzlehash (- my_amount (+ outgoing_amount fee))))
