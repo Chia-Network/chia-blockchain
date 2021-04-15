@@ -11,6 +11,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
+from chia.util.generator_tools import run_and_get_removals_and_additions
 from chia.util.ints import uint64
 from chia.util.wallet_tools import WalletTool
 from tests.core.full_node.test_full_node import connect_and_get_peer
@@ -325,7 +326,7 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_2 = None
-        for coin in new_blocks[-1].additions():
+        for coin in run_and_get_removals_and_additions(new_blocks[-1])[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
                 break
@@ -344,7 +345,7 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_3 = None
-        for coin in new_blocks[-1].additions():
+        for coin in run_and_get_removals_and_additions(new_blocks[-1])[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
                 break
@@ -362,13 +363,6 @@ class TestBlockchainTransactions:
         )
 
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
-
-        coin_4 = None
-        for coin in new_blocks[-1].additions():
-            if coin.puzzle_hash == receiver_3_puzzlehash:
-                coin_4 = coin
-                break
-        assert coin_4 is not None
 
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes):
@@ -412,12 +406,6 @@ class TestBlockchainTransactions:
         )
 
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
-
-        coins_created = []
-        for coin in new_blocks[-1].additions():
-            if coin.puzzle_hash == receiver_1_puzzlehash:
-                coins_created.append(coin)
-        assert len(coins_created) == 1
 
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes):

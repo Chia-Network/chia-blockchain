@@ -6,7 +6,7 @@ import time
 import pytest
 from clvm_tools import binutils
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from chia.full_node.bundle_tools import best_solution_program
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -74,18 +74,17 @@ class TestCostCalculation:
         program = best_solution_program(spend_bundle)
 
         ratio = test_constants.CLVM_COST_RATIO_CONSTANT
+        npc_result: NPCResult = get_name_puzzle_conditions(program, False)
 
-        result: CostResult = calculate_cost_of_program(program, ratio)
-        clvm_cost = result.cost
+        cost = calculate_cost_of_program(program, npc_result, ratio)
 
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
-        assert error is None
-        coin_name = npc_list[0].coin_name
+        assert npc_result.error is None
+        coin_name = npc_result.npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
         assert error is None
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        assert clvm_cost == 200 * ratio + 92 * ratio + len(bytes(program)) * ratio + cost
+        assert cost == 200 * ratio + 92 * ratio + len(bytes(program)) * ratio + npc_result.clvm_cost
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):
@@ -121,12 +120,12 @@ class TestCostCalculation:
                 f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
             ).as_bin()
         )
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
-        assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
-        assert error is None
+        npc_result: NPCResult = get_name_puzzle_conditions(program, True)
+        assert npc_result.error is not None
+        npc_result: NPCResult = get_name_puzzle_conditions(program, False)
+        assert npc_result.error is None
 
-        coin_name = npc_list[0].coin_name
+        coin_name = npc_result.npc_list[0].coin_name
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
         assert error is None
 
@@ -139,10 +138,10 @@ class TestCostCalculation:
         # ("0xfe"). In strict mode, this should fail, but in non-strict
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
-        assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
-        assert error is None
+        npc_result: NPCResult = get_name_puzzle_conditions(program, True)
+        assert npc_result.error is not None
+        npc_result: NPCResult = get_name_puzzle_conditions(program, False)
+        assert npc_result.error is None
 
     @pytest.mark.asyncio
     async def test_tx_generator_speed(self):
@@ -151,11 +150,11 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(generator)
 
         start_time = time.time()
-        err, npc, cost = get_name_puzzle_conditions(program, False)
+        npc_result = get_name_puzzle_conditions(program, False)
         end_time = time.time()
         duration = end_time - start_time
-        assert err is None
-        assert len(npc) == LARGE_BLOCK_COIN_CONSUMED_COUNT
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
         assert duration < 3

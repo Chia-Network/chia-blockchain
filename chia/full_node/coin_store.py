@@ -60,14 +60,13 @@ class CoinStore:
         self.coin_record_cache = dict()
         return self
 
-    async def new_block(self, block: FullBlock):
+    async def new_block(self, block: FullBlock, additions: List[Coin], removals: List[bytes32]):
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
         if block.is_transaction_block() is False:
             return
         assert block.foliage_transaction_block is not None
-        removals, additions = block.tx_removals_and_additions()
 
         for coin in additions:
             record: CoinRecord = CoinRecord(
@@ -112,10 +111,8 @@ class CoinStore:
             return CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
         return None
 
-    async def get_tx_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
-        cursor = await self.coin_record_db.execute(
-            "SELECT * from coin_record WHERE confirmed_index=? and coinbase=0", (height,)
-        )
+    async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
+        cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE confirmed_index=?", (height,))
         rows = await cursor.fetchall()
         await cursor.close()
         coins = []
