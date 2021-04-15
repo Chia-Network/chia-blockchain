@@ -21,6 +21,7 @@ from chia.util.block_cache import BlockCache
 from chia.util.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.generator_tools import get_block_header
 from tests.setup_nodes import bt
 
 try:
@@ -124,7 +125,7 @@ async def load_blocks_dont_validate(
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
-        header_cache[block.header_hash] = block.get_block_header()
+        header_cache[block.header_hash] = get_block_header(block, list(block.get_included_reward_coins()), [])
         if sub_block.sub_epoch_summary_included is not None:
             sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
         prev_block = block

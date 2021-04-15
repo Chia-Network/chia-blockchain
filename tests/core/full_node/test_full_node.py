@@ -355,7 +355,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
         result = full_node_1.full_node.full_node_store.get_unfinished_block_result(unf.partial_hash)
         assert result is not None
-        assert result.cost_result is not None and result.cost_result.cost > 0
+        assert result.npc_result is not None and result.npc_result.clvm_cost > 0
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
