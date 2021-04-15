@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:45\n"
+"PO-Revision-Date: 2021-04-15 08:00\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -607,7 +607,7 @@ msgstr "错误: 无法发送奇亚到上色的地址. 请输入一个奇亚钱�
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "预计爆块时间"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -1168,15 +1168,15 @@ msgstr "耕地"
 #: src/components/farm/card/FarmCardPlotCount.tsx:7
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
-msgstr "绘图数"
+msgstr "农田数"
 
 #: src/components/block/Block.jsx:265
 msgid "Plot Id"
-msgstr "绘图ID"
+msgstr "农田ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr "绘图密钥"
+msgstr "农田密钥"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
@@ -1184,7 +1184,7 @@ msgstr "绘图密钥"
 
 #: src/components/block/Block.jsx:241
 msgid "Plot Public Key"
-msgstr "绘图公钥"
+msgstr "农田公钥"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1192,7 +1192,7 @@ msgstr "绘图公钥"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
-msgstr "绘图大小"
+msgstr "农田大小"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
@@ -1200,15 +1200,15 @@ msgstr "并发拓荒"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
-msgstr "绘图与 {0} 重复"
+msgstr "农田与 {0} 重复"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr "绘图"
+msgstr "农田"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr "通过初筛的绘图"
+msgstr "通过初筛的农田"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
@@ -1216,7 +1216,7 @@ msgstr "农地就是在你的硬盘上分配的一块空间,用来收获Chia.<0>
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
-msgstr "正在绘图"
+msgstr "正在耕地"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
@@ -1224,7 +1224,7 @@ msgstr "并发拓荒可以有效节省拓荒时间但对系统资源要求很高
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+msgstr "在耕地时启用bitfield会减少约30%的磁盘写入，而且几乎总是更快。但如果您在耕地时禁用bitfield，所需内存则可能会减少。如果您的CPU是2010年以前的老款，您可能必须禁用bitfield耕地。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1353,7 +1353,7 @@ msgstr "恢复DID钱包"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr "刷新绘图"
+msgstr "刷新农田列表"
 
 #: src/electron/main.tsx:325
 msgid "Release Notes"
@@ -1624,7 +1624,7 @@ msgstr "临时文件夹位置"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "这个版本会在区块高度达到193536时停止工作。"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1723,7 +1723,7 @@ msgstr "该交易在链上的区块高度"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "此版本的Chia与区块链已经不再兼容，因此无法安全地收割。"
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1761,11 +1761,11 @@ msgstr "全网大小"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr "总绘图大小："
+msgstr "总农田大小："
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr "总绘图大小："
+msgstr "总农田大小："
 
 #: src/components/block/Block.jsx:217
 msgid "Total VDF Iterations"
@@ -1962,7 +1962,7 @@ msgstr "不需要同步或者连接到网络节点就可以拓荒, 注意在拓�
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "您在网络上拥有{0}%的空间，因此收割一个区块所花费的时间在数学期望上是{expectedTimeToWin}。实际耗时可能比这个期望值长3到4倍。"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
