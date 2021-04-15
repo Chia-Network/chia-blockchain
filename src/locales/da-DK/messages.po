@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-15 08:00\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -607,7 +607,7 @@ msgstr "Fejl: Kan ikke sende chia til en farvet addresse. Venligst indtast en ch
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Estimeret Tid til Gevinst"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -1962,7 +1962,7 @@ msgstr "Du behøver ikke at være i synk eller forbundet for at plotte. Midletid
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Du har {0}% af den totale mængde plads på netværket, så farmning af en blok vil tage {expectedTimeToWin} forventet. Faktisk resultat kan varierer med 3 til 4 gange mere end dette estimat."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
