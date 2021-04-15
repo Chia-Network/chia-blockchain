@@ -1400,7 +1400,10 @@ class FullNode:
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.debug(f"Added transaction to mempool: {spend_name}")
+                    self.log.debug(
+                        f"Added transaction to mempool: {spend_name} mempool size: "
+                        f"{self.mempool_manager.mempool.total_mempool_cost}"
+                    )
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     mempool_item = self.mempool_manager.get_mempool_item(spend_name)

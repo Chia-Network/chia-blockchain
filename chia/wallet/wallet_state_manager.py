@@ -806,6 +806,8 @@ class WalletStateManager:
                 header_block_record = await self.block_store.get_header_block_record(curr.header_hash)
                 assert header_block_record is not None
                 reorg_blocks.append(header_block_record)
+                if curr.height == 0:
+                    break
                 curr = self.blockchain.block_record(curr.prev_hash)
             reorg_blocks.reverse()
 
