@@ -17,7 +17,7 @@ def blockchain_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinReco
     return None
 
 
-def blockchain_assert_block_index_exceeds(
+def blockchain_assert_absolute_block_height_exceeds(
     condition: ConditionWithArgs, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
@@ -29,11 +29,11 @@ def blockchain_assert_block_index_exceeds(
         return Err.INVALID_CONDITION
 
     if prev_transaction_block_height < expected_block_index:
-        return Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED
+        return Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
     return None
 
 
-def blockchain_assert_block_age_exceeds(
+def blockchain_assert_relative_block_height_exceeds(
     condition: ConditionWithArgs, unspent: CoinRecord, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
@@ -45,11 +45,11 @@ def blockchain_assert_block_age_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     if prev_transaction_block_height < expected_block_index:
-        return Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED
+        return Err.ASSERT_HEIGHT_RELATIVE_FAILED
     return None
 
 
-def blockchain_assert_time_exceeds(condition: ConditionWithArgs, timestamp):
+def blockchain_assert_absolute_time_exceeds(condition: ConditionWithArgs, timestamp):
     """
     Checks if current time in millis exceeds the time specified in condition
     """
@@ -60,7 +60,7 @@ def blockchain_assert_time_exceeds(condition: ConditionWithArgs, timestamp):
 
     current_time = timestamp
     if current_time <= expected_mili_time:
-        return Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
+        return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
 
@@ -75,7 +75,7 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionWithArgs, unspen
 
     current_time = timestamp
     if current_time <= expected_mili_time + unspent.timestamp:
-        return Err.ASSERT_SECONDS_AGE_EXCEEDS_FAILED
+        return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None
 
 
@@ -111,13 +111,13 @@ def blockchain_check_conditions_dict(
                 error = blockchain_assert_announcement(cvp, coin_announcement_names)
             elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
                 error = blockchain_assert_announcement(cvp, puzzle_announcement_names)
-            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
-                error = blockchain_assert_block_index_exceeds(cvp, prev_transaction_block_height)
-            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
-                error = blockchain_assert_block_age_exceeds(cvp, unspent, prev_transaction_block_height)
-            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
-                error = blockchain_assert_time_exceeds(cvp, timestamp)
-            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:
+            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                error = blockchain_assert_absolute_block_height_exceeds(cvp, prev_transaction_block_height)
+            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                error = blockchain_assert_relative_block_height_exceeds(cvp, unspent, prev_transaction_block_height)
+            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                error = blockchain_assert_absolute_time_exceeds(cvp, timestamp)
+            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 error = blockchain_assert_relative_time_exceeds(cvp, unspent, timestamp)
             if error:
                 return error

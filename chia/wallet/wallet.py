@@ -23,7 +23,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_assert_coin_announcement,
     make_assert_puzzle_announcement,
     make_assert_my_coin_id_condition,
-    make_assert_seconds_now_exceeds_condition,
+    make_assert_absolute_seconds_exceeds_condition,
     make_create_coin_announcement,
     make_create_puzzle_announcement,
     make_create_coin_condition,
@@ -202,7 +202,7 @@ class Wallet:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"]))
         if min_time > 0:
-            condition_list.append(make_assert_seconds_now_exceeds_condition(min_time))
+            condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
         if me:
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:

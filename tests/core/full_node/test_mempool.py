@@ -222,10 +222,10 @@ class TestMempoolManager:
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         cvp = ConditionWithArgs(
-            ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS,
+            ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE,
             [uint64(start_height + 5).to_bytes(4, "big")],
         )
-        dic = {ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS: [cvp]}
+        dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
 
@@ -256,8 +256,8 @@ class TestMempoolManager:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS, [uint64(1).to_bytes(4, "big")])
-        dic = {ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS: [cvp]}
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [uint64(1).to_bytes(4, "big")])
+        dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
 
@@ -286,7 +286,7 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS, [uint64(5).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [uint64(5).to_bytes(4, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -318,7 +318,7 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 4)
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS, [uint64(1).to_bytes(4, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [uint64(1).to_bytes(4, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-2].get_included_reward_coins())[0], dic)
@@ -423,7 +423,7 @@ class TestMempoolManager:
 
         time_now = uint64(int(time() * 1000))
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS, [time_now.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
@@ -459,7 +459,7 @@ class TestMempoolManager:
         time_now = uint64(int(time() * 1000))
         time_now_plus_3 = time_now + 3000
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS, [time_now_plus_3.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now_plus_3.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)

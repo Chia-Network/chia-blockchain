@@ -706,7 +706,7 @@ class TestBlockchainTransactions:
         assert err is None
 
     @pytest.mark.asyncio
-    async def test_assert_height_now_exceeds(self, two_nodes):
+    async def test_assert_height_absolute(self, two_nodes):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -730,7 +730,7 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires block1 coinbase to be spent after index 10
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS, [int_to_bytes(10)])
+        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(10)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -749,7 +749,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 10
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED
+        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -773,7 +773,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_height_age_exceeds(self, two_nodes):
+    async def test_assert_height_relative(self, two_nodes):
         num_blocks = 11
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -799,7 +799,7 @@ class TestBlockchainTransactions:
         # This condition requires block1 coinbase to be spent after index 11
         # This condition requires block1 coinbase to be spent more than 10 block after it was farmed
         # block index has to be greater than (2 + 9 = 11)
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS, [int_to_bytes(9)])
+        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(9)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -818,7 +818,7 @@ class TestBlockchainTransactions:
         # Try to validate that block at index 11
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED
+        assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -867,7 +867,7 @@ class TestBlockchainTransactions:
                 spend_coin_block_1 = coin
 
         # This condition requires block1 coinbase to be spent 300 seconds after coin creation
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS, [int_to_bytes(300)])
+        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(300)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -887,7 +887,7 @@ class TestBlockchainTransactions:
         # Try to validate that block before 300 sec
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_SECONDS_AGE_EXCEEDS_FAILED
+        assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
         valid_new_blocks = bt.get_consecutive_blocks(
             1,
@@ -928,7 +928,7 @@ class TestBlockchainTransactions:
 
         # This condition requires block1 coinbase to be spent after 30 seconds from now
         current_time_plus3 = uint64(blocks[-1].foliage_transaction_block.timestamp + 30)
-        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS, [int_to_bytes(current_time_plus3)])
+        block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(current_time_plus3)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
             1000, receiver_puzzlehash, spend_coin_block_1, block1_dic
@@ -948,7 +948,7 @@ class TestBlockchainTransactions:
         # Try to validate that block before 30 sec
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
+        assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
         valid_new_blocks = bt.get_consecutive_blocks(
             1,

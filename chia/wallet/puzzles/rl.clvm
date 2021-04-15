@@ -18,7 +18,7 @@
             (sha256 1 tree)))
 
     (defun-inline aggsig-solution-with-key (key)
-        (list AGG_SIG key (sha256tree (c mode args)))
+        (list AGG_SIG_UNSAFE key (sha256tree (c mode args)))
     )
 
     (defmacro assert items

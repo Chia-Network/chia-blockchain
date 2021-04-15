@@ -42,7 +42,7 @@ def calculate_cost_of_program(
             elif condition is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATVIE.value
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:

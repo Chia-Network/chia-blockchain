@@ -76,7 +76,7 @@
   ;recovery message module - gets values curried in to make the puzzle
   ;TODO - this should probably be imported
   (defun make_message_puzzle (recovering_coin newpuz pubkey)
-    (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG) (unquote pubkey) (unquote newpuz)))))
+    (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG_UNSAFE) (unquote pubkey) (unquote newpuz)))))
   )
 
   (defun create_consume_message (coin_id my_id new_innerpuz pubkey)
@@ -146,9 +146,9 @@
       )
       ;if we're out of identites to check for, return our output
       (if (> num_verifications num_verifications_required)
-        (c (list AGG_SIG pubkey new_puz) output)
+        (c (list AGG_SIG_UNSAFE pubkey new_puz) output)
         (if (= num_verifications num_verifications_required)
-          (c (list AGG_SIG pubkey new_puz) output)
+          (c (list AGG_SIG_UNSAFE pubkey new_puz) output)
           (x "not enough verifications")
         )
       )

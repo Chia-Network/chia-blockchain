@@ -54,7 +54,7 @@
 
     (defun add_aggsig (public_key_list hash delegated_puzzle solution)
         (if public_key_list
-            (c (list AGG_SIG (f public_key_list) hash)
+            (c (list AGG_SIG_UNSAFE (f public_key_list) hash)
                (add_aggsig (r public_key_list) hash delegated_puzzle solution)
             )
             (a delegated_puzzle solution)

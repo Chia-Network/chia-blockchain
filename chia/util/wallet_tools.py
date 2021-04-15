@@ -24,11 +24,11 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_assert_aggsig_condition,
     make_assert_coin_announcement,
     make_assert_puzzle_announcement,
-    make_assert_height_age_exceeds_condition,
-    make_assert_height_now_exceeds_condition,
+    make_assert_relative_height_exceeds_condition,
+    make_assert_absolute_height_exceeds_condition,
     make_assert_my_coin_id_condition,
-    make_assert_seconds_now_exceeds_condition,
-    make_assert_seconds_age_exceeds_condition,
+    make_assert_absolute_seconds_exceeds_condition,
+    make_assert_relative_seconds_exceeds_condition,
     make_create_coin_announcement,
     make_create_puzzle_announcement,
     make_create_coin_condition,
@@ -107,22 +107,22 @@ class WalletTool:
                     ret.append(make_create_coin_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
                     ret.append(make_create_puzzle_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.AGG_SIG:
+                if cvp.opcode == ConditionOpcode.AGG_SIG_UNSAFE:
                     ret.append(make_assert_aggsig_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
                     ret.append(make_assert_coin_announcement(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
                     ret.append(make_assert_puzzle_announcement(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
-                    ret.append(make_assert_seconds_now_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:
-                    ret.append(make_assert_seconds_age_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                    ret.append(make_assert_absolute_seconds_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+                    ret.append(make_assert_relative_seconds_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
                     ret.append(make_assert_my_coin_id_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
-                    ret.append(make_assert_height_now_exceeds_condition(cvp.vars[0]))
-                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
-                    ret.append(make_assert_height_age_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                    ret.append(make_assert_absolute_height_exceeds_condition(cvp.vars[0]))
+                if cvp.opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                    ret.append(make_assert_relative_height_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.RESERVE_FEE:
                     ret.append(make_reserve_fee_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_PARENT_ID:
