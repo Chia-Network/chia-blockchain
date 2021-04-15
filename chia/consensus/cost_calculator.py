@@ -17,9 +17,7 @@ class NPCResult(Streamable):
     clvm_cost: uint64  # CLVM cost only, cost of conditions and tx size is not included
 
 
-def calculate_cost_of_program(
-    program: SerializedProgram, npc_result: NPCResult, cost_per_byte: int
-) -> uint64:
+def calculate_cost_of_program(program: SerializedProgram, npc_result: NPCResult, cost_per_byte: int) -> uint64:
     """
     This function calculates the total cost of either a block or a spendbundle
     """
