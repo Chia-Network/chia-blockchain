@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable, Coroutine
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -13,14 +13,14 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
-from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
+from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, block_removals_and_additions
@@ -43,7 +43,7 @@ def batch_pre_validate_blocks(
     blocks_pickled: Dict[bytes, bytes],
     full_blocks_pickled: Optional[List[bytes]],
     header_blocks_pickled: Optional[List[bytes]],
-    prev_transaction_generators: List[List[Optional[bytes]]],
+    prev_transaction_generators: List[Optional[bytes]],
     npc_results: Dict[uint32, bytes],
     check_filter: bool,
     expected_difficulty: List[uint64],
@@ -61,7 +61,6 @@ def batch_pre_validate_blocks(
         for i in range(len(full_blocks_pickled)):
             try:
                 block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
-                generator: Optional[SerializedProgram] = block.transactions_generator
                 additions: List[Coin] = list(block.get_included_reward_coins())
                 removals: List[bytes32] = []
                 npc_result: Optional[NPCResult] = None
@@ -73,12 +72,12 @@ def batch_pre_validate_blocks(
                     else:
                         removals, additions = block_removals_and_additions(block, [])
 
-                if (
-                    constants_dict["NETWORK_TYPE"] != NetworkType.MAINNET.value
-                    and generator is not None
-                    and npc_result is None
-                ):
-                    npc_result = get_name_puzzle_conditions(generator, True, prev_transaction_generators)
+                if block.transactions_generator is not None and npc_result is None:
+                    prev_generator_bytes = prev_transaction_generators[i]
+                    assert prev_generator_bytes is not None
+                    block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
+                    assert block_generator.program == block.transactions_generator
+                    npc_result = get_name_puzzle_conditions(block_generator, True)
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
 
                 header_block = get_block_header(block, additions, removals)
@@ -130,6 +129,7 @@ async def pre_validate_blocks_multiprocessing(
     pool: ProcessPoolExecutor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
+    get_block_generator: Optional[Callable[[Union[FullBlock, UnfinishedBlock]], Coroutine]],
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -143,6 +143,8 @@ async def pre_validate_blocks_multiprocessing(
         constants:
         block_records:
         blocks: list of full blocks to validate (must be connected to current chain)
+        npc_results
+        get_block_generator
     """
     batch_size = 4
     prev_b: Optional[BlockRecord] = None
@@ -248,13 +250,18 @@ async def pre_validate_blocks_multiprocessing(
             final_pickled = recent_sb_compressed_pickled
         b_pickled: Optional[List[bytes]] = None
         hb_pickled: Optional[List[bytes]] = None
-        previous_generators: List[List[Optional[bytes]]] = []
+        previous_generators: List[Optional[bytes]] = []
         for block in blocks_to_validate:
             if isinstance(block, FullBlock):
+                assert get_block_generator is not None
                 if b_pickled is None:
                     b_pickled = []
                 b_pickled.append(bytes(block))
-                # TODO collect previous generators
+                block_generator: Optional[BlockGenerator] = await get_block_generator(block)
+                if block_generator is not None:
+                    previous_generators.append(bytes(block_generator))
+                else:
+                    previous_generators.append(None)
             else:
                 if hb_pickled is None:
                     hb_pickled = []

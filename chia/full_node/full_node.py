@@ -21,6 +21,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
+from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore
 from chia.full_node.mempool_manager import MempoolManager
@@ -40,6 +41,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import GeneratorArg
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
@@ -917,6 +919,11 @@ class FullNode:
             ),
         )
         await self.server.send_to_all([msg], NodeType.WALLET)
+
+        # Check if we detected a spent transaction, to load up our generator cache
+        if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
+            if detect_potential_template_generator(block.transactions_generator):
+                self.full_node_store.previous_generator = GeneratorArg(block.height, block.transactions_generator)
 
         self._state_changed("new_peak")
 
