@@ -270,6 +270,7 @@ class WeightProofHandler:
     ) -> Optional[List[SubEpochChallengeSegment]]:
         segments: List[SubEpochChallengeSegment] = []
         start_height = await self.get_prev_two_slots_height(se_start)
+
         blocks = await self.blockchain.get_block_records_in_range(
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )

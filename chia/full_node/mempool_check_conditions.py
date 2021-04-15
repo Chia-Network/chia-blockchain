@@ -1,8 +1,7 @@
 import time
-import traceback
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional
 
-from chia.types.blockchain_format.coin import Coin
+from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -11,7 +10,8 @@ from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
+from chia.util.hash import std_hash
+from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.lowlevel_generator import get_generator
 
@@ -132,9 +132,7 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
     return None
 
 
-def get_name_puzzle_conditions(
-    block_program: SerializedProgram, safe_mode: bool
-) -> Tuple[Optional[str], Optional[List[NPC]], Optional[uint64]]:
+def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool, prev_generators=None) -> NPCResult:
     # TODO: allow generator mod to take something (future)
     # TODO: write more tests
     block_program_args = SerializedProgram.from_bytes(b"\x80")
@@ -161,18 +159,16 @@ def get_name_puzzle_conditions(
                 elif not safe_mode:
                     opcode = ConditionOpcode.UNKNOWN
                 else:
-                    return "Unknown operator in safe mode.", None, None
-                conditions_list.append(ConditionWithArgs(opcode, cond.rest().as_atom_list()))
+                    return NPCResult(Err.GENERATOR_RUNTIME_ERROR.value, [], uint64(0))
+                cvl = ConditionWithArgs(opcode, cond.rest().as_atom_list())
+                conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
                 conditions_dict = {}
-            npc_list.append(
-                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()])
-            )
-        return None, npc_list, uint64(cost)
+            npc_list.append(NPC(name, puzzle_hash, [(a, b) for a, b in conditions_dict.items()]))
+        return NPCResult(None, npc_list, uint64(cost))
     except Exception:
-        tb = traceback.format_exc()
-        return tb, None, None
+        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
 
 
 def get_puzzle_and_solution_for_coin(block_program: SerializedProgram, coin_name: bytes):

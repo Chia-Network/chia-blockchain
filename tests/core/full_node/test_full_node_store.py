@@ -132,7 +132,7 @@ class TestFullNodeStore:
         # Test adding genesis peak
         await blockchain.receive_block(blocks[0])
         peak = blockchain.get_peak()
-        peak_full_block = blockchain.get_full_peak()
+        peak_full_block = await blockchain.get_full_peak()
         if peak.overflow:
             store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], False, {})
         else:
