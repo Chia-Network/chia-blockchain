@@ -116,7 +116,6 @@ def create_foliage(
         assert prev_block is not None
         prev_block_hash = prev_block.header_hash
 
-    solution_program: Optional[SerializedProgram] = None
     generator_block_heights_list: List[uint32] = []
 
     if is_transaction_block:
@@ -214,14 +213,12 @@ def create_foliage(
         removals_root = removal_merkle_set.get_root()
 
         generator_hash = bytes32([0] * 32)
-        if solution_program is not None:
-            generator_hash = std_hash(solution_program)
+        if block_generator is not None:
+            generator_hash = std_hash(block_generator.program)
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join(
-                [(i).to_bytes(4, byteorder="big") for i in generator_block_heights_list]
-            )
+            generator_ref_list_bytes = b"".join([i.to_bytes(4, byteorder="big") for i in generator_block_heights_list])
             generator_refs_hash = std_hash(generator_ref_list_bytes)
 
         filter_hash: bytes32 = std_hash(encoded)
