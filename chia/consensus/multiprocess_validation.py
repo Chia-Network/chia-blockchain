@@ -117,6 +117,7 @@ def batch_pre_validate_blocks(
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
                 results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+
     return [bytes(r) for r in results]
 
 

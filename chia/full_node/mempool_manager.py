@@ -38,9 +38,7 @@ from chia.util.streamable import recurse_jsonify
 log = logging.getLogger(__name__)
 
 
-def get_npc_multiprocess(
-    spend_bundle_bytes: bytes,
-) -> bytes:
+def get_npc_multiprocess(spend_bundle_bytes: bytes) -> bytes:
     program = simple_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
     return bytes(get_name_puzzle_conditions(program, True))
@@ -183,7 +181,7 @@ class MempoolManager:
 
         npc_list = npc_result.npc_list
         program = simple_solution_program(new_spend).program
-        cost = calculate_cost_of_program(program, npc_result, self.constants.CLVM_COST_RATIO_CONSTANT)
+        cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
 
         log.debug(f"Cost: {cost}")
 

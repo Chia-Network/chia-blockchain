@@ -8,6 +8,7 @@ from clvm_tools import binutils
 
 from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from chia.full_node.bundle_tools import simple_solution_program
+from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
@@ -74,10 +75,9 @@ class TestCostCalculation:
         assert spend_bundle is not None
         program: BlockGenerator = simple_solution_program(spend_bundle)
 
-        ratio = test_constants.CLVM_COST_RATIO_CONSTANT
         npc_result: NPCResult = get_name_puzzle_conditions(program, False)
 
-        cost = calculate_cost_of_program(program.program, npc_result, ratio)
+        cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
 
         assert npc_result.error is None
         coin_name = npc_result.npc_list[0].coin_name
@@ -85,7 +85,13 @@ class TestCostCalculation:
         assert error is None
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        assert cost == 200 * ratio + 92 * ratio + len(bytes(program.program)) * ratio + npc_result.clvm_cost
+        assert (
+            cost
+            == ConditionCost.CREATE_COIN.value
+            + ConditionCost.AGG_SIG.value
+            + len(bytes(program)) * test_constants.COST_PER_BYTE
+            + cost
+        )
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):

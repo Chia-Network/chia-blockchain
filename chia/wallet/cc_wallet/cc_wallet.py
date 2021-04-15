@@ -247,7 +247,7 @@ class CCWallet:
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(program, True)
             cost_result: uint64 = calculate_cost_of_program(
-                program.program, result, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT
+                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
             )
             self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
