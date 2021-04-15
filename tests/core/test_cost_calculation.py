@@ -89,8 +89,8 @@ class TestCostCalculation:
             cost
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
-            + len(bytes(program)) * test_constants.COST_PER_BYTE
-            + cost
+            + len(bytes(program.program)) * test_constants.COST_PER_BYTE
+            + npc_result.clvm_cost
         )
 
     @pytest.mark.asyncio
