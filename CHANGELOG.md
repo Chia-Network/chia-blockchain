@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.0.5 Chia Blockchain 2021-04-14
+
+### Added
+
+- This is a maintenance release for 1.0.4 to fix a few mostly cosmetic issues. Please refer to the 1.0.4 notes for the substantive plotting changes - for example - in that release.
+
+### Changed
+
+- The GUI now calls it an Estimated Time to Win and has enhanced explanations in the tool tip that the estimated time is often not be the actual time. We have some additional improvements we plan to make here in future releases.
+- Development installers now handle semver development versions correctly.
+
+### Fixed
+
+- Temp space sizes needed for k = 33 and higher were accidentally under-reported. The values we have placed into the GUI may be conservative in being too large and appreciate feedback from the community on the new optimal temp space needed and RAM choices.
+- The GUI plotting progress bar was reaching 100% too early. Thanks to @davidbb for the PR.
+- Help -> About was blank.
+- Our estimate for k=32 was about 0.4GiB too low in some cases.
+- Building the GUI in especially ARM64 Linux was painful enough to be considered broken.
+
 ## 1.0.4 Chia Blockchain 2021-04-12
 
 ### Added
