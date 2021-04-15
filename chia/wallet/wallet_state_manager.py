@@ -798,28 +798,29 @@ class WalletStateManager:
             if coin.confirmed_block_height <= fork_h:
                 unspent_coin_names.add(coin.name())
 
-        # Get all blocks after fork point up to but not including this block
-        if new_block.height > 0:
-            curr: BlockRecord = self.blockchain.block_record(new_block.prev_hash)
-            reorg_blocks: List[HeaderBlockRecord] = []
-            while curr.height > fork_h:
-                header_block_record = await self.block_store.get_header_block_record(curr.header_hash)
-                assert header_block_record is not None
-                reorg_blocks.append(header_block_record)
-                if curr.height == 0 or not self.blockchain.contains_block(curr.prev_hash):
-                    break
-                curr = self.blockchain.block_record(curr.prev_hash)
-            reorg_blocks.reverse()
-
-            # For each block, process additions to get all Coins, then process removals to get unspent coins
-            for reorg_block in reorg_blocks:
-                for addition in reorg_block.additions:
-                    unspent_coin_names.add(addition.name())
-                for removal in reorg_block.removals:
-                    record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(removal.puzzle_hash)
-                    if record is None:
-                        continue
-                    unspent_coin_names.remove(removal)
+        # # Get all blocks after fork point up to but not including this block
+        # self.log.info("Fork")
+        # if new_block.height > 0:
+        #     curr: BlockRecord = self.blockchain.block_record(new_block.prev_hash)
+        #     reorg_blocks: List[HeaderBlockRecord] = []
+        #     while curr.height > fork_h:
+        #         header_block_record = await self.block_store.get_header_block_record(curr.header_hash)
+        #         assert header_block_record is not None
+        #         reorg_blocks.append(header_block_record)
+        #         if curr.height == 0:
+        #             break
+        #         curr = self.blockchain.block_record(curr.prev_hash)
+        #     reorg_blocks.reverse()
+        #
+        #     # For each block, process additions to get all Coins, then process removals to get unspent coins
+        #     for reorg_block in reorg_blocks:
+        #         for addition in reorg_block.additions:
+        #             unspent_coin_names.add(addition.name())
+        #         for removal in reorg_block.removals:
+        #             record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(removal.puzzle_hash)
+        #             if record is None:
+        #                 continue
+        #             unspent_coin_names.remove(removal)
 
         my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
