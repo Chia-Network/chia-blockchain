@@ -55,7 +55,7 @@ def add_cmd(ctx: click.Context, filename: str):
     check_keys(ctx.obj["root_path"])
 
 
-@keys_cmd.command("delete", short_help="Delete a key by it's pk fingerprint in hex form")
+@keys_cmd.command("delete", short_help="Delete a key by its pk fingerprint in hex form")
 @click.option(
     "--fingerprint",
     "-f",
