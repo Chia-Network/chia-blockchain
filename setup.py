@@ -5,8 +5,8 @@ dependencies = [
     "chiavdf==1.0.1",  # timelord and vdf verification
     "chiabip158==1.0",  # bip158-style wallet filters
     "chiapos==1.0.1",  # proof of space
-    "clvm==0.9.5",
-    "clvm_rs==0.1.5",
+    "clvm==0.9.6",
+    "clvm_rs==0.1.6",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -34,7 +34,7 @@ dev_dependencies = [
     "flake8",
     "mypy",
     "black",
-    "aiotthp_cors",  # For blackd
+    "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
 ]
 

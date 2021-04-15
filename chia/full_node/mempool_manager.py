@@ -46,7 +46,7 @@ def validate_transaction_multiprocess(
     # Calculate the cost and fees
     program = best_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(calculate_cost_of_program(program, constants.CLVM_COST_RATIO_CONSTANT, True))
+    return bytes(calculate_cost_of_program(program, constants.COST_PER_BYTE, True))
 
 
 class MempoolManager:

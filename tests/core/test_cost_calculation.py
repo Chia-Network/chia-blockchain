@@ -6,6 +6,7 @@ import time
 import pytest
 from clvm_tools import binutils
 
+from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
 from chia.full_node.bundle_tools import best_solution_program
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
@@ -73,9 +74,7 @@ class TestCostCalculation:
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)
 
-        ratio = test_constants.CLVM_COST_RATIO_CONSTANT
-
-        result: CostResult = calculate_cost_of_program(program, ratio)
+        result: CostResult = calculate_cost_of_program(program, test_constants.COST_PER_BYTE)
         clvm_cost = result.cost
 
         error, npc_list, cost = get_name_puzzle_conditions(program, False)
@@ -85,7 +84,13 @@ class TestCostCalculation:
         assert error is None
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        assert clvm_cost == 200 * ratio + 92 * ratio + len(bytes(program)) * ratio + cost
+        assert (
+            clvm_cost
+            == ConditionCost.CREATE_COIN.value
+            + ConditionCost.AGG_SIG.value
+            + len(bytes(program)) * test_constants.COST_PER_BYTE
+            + cost
+        )
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):

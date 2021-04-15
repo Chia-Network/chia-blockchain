@@ -72,7 +72,7 @@ def batch_pre_validate_blocks(
             else:
                 if not error and generator is not None and validate_transactions:
                     cost_result = calculate_cost_of_program(
-                        SerializedProgram.from_bytes(generator), constants.CLVM_COST_RATIO_CONSTANT
+                        SerializedProgram.from_bytes(generator), constants.COST_PER_BYTE
                     )
             results.append(PreValidationResult(error_int, required_iters, cost_result))
         except Exception:

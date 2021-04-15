@@ -42,10 +42,10 @@ testnet_kwargs = {
     "MEMPOOL_BLOCK_BUFFER": 150,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
-    # 1 vByte = 108 clvm cost units
-    "CLVM_COST_RATIO_CONSTANT": 108,
     # Max block cost in clvm cost units
-    "MAX_BLOCK_COST_CLVM": 40000000,  # Based on arvid analysis
+    "MAX_BLOCK_COST_CLVM": 11000000000,
+    # The cost per byte of generator program
+    "COST_PER_BYTE": 12000,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,

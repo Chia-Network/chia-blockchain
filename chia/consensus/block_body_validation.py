@@ -196,7 +196,7 @@ async def validate_block_body(
             if cached_cost_result is not None:
                 result: Optional[CostResult] = cached_cost_result
             else:
-                result = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
+                result = calculate_cost_of_program(block.transactions_generator, constants.COST_PER_BYTE)
             # The call to calculate cost runs the generator program
             if result is None:
                 return Err.INVALID_COST_RESULT, None

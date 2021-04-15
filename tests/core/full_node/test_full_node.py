@@ -60,7 +60,7 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 4000000})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -420,7 +420,7 @@ class TestFullNodeProtocol:
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.asyncio
-    async def test_new_transaction(self, wallet_nodes):
+    async def test_new_transaction_and_mempool(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -467,7 +467,6 @@ class TestFullNodeProtocol:
             assert spend_bundle is not None
             cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
             log.info(f"Cost result: {cost_result.cost}")
-
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
             msg = await full_node_1.new_transaction(new_transaction)
@@ -510,17 +509,19 @@ class TestFullNodeProtocol:
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
+            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
+
             await full_node_1.respond_transaction(respond_transaction, peer)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
 
             fee_rate_for_small = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10)
-            fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000)
-            fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(500000)
+            fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000)
+            fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000000)
             log.info(f"Min fee rate (10): {fee_rate_for_small}")
-            log.info(f"Min fee rate (50000): {fee_rate_for_med}")
-            log.info(f"Min fee rate (500000): {fee_rate_for_large}")
+            log.info(f"Min fee rate (5000000): {fee_rate_for_med}")
+            log.info(f"Min fee rate (50000000): {fee_rate_for_large}")
             if fee_rate_for_large > fee_rate_for_med:
                 seen_bigger_transaction_has_high_fee = True
 
@@ -530,8 +531,8 @@ class TestFullNodeProtocol:
                 assert not full_node_1.full_node.mempool_manager.mempool.at_full_capacity(0)
                 assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(0) == 0
             else:
-                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(133000)
-                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(133000) > 0
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(cost_result.cost)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(cost_result.cost) > 0
                 assert not force_high_fee
                 not_included_tx += 1
         log.info(f"Included: {included_tx}, not included: {not_included_tx}")
@@ -541,7 +542,7 @@ class TestFullNodeProtocol:
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
-        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
+        new_transaction = fnp.NewTransaction(token_bytes(32), cost_result.cost, uint64(1))
         msg = await full_node_1.new_transaction(new_transaction)
         assert msg is None
 
