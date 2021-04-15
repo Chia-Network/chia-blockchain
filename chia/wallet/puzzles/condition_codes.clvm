@@ -1,7 +1,7 @@
 ; See chia/types/condition_opcodes.py
 
 (
-    (defconstant AGG_SIG 49)
+    (defconstant AGG_SIG_UNSAFE 49)
     (defconstant AGG_SIG_ME 50)
 
     ; the conditions below reserve coin amounts and have to be accounted for in output totals
@@ -29,10 +29,10 @@
     ; the conditions below ensure that we're "far enough" in the future
 
     ; wall-clock time
-    (defconstant ASSERT_SECONDS_AGE_EXCEEDS 80)
-    (defconstant ASSERT_SECONDS_NOW_EXCEEDS 81)
+    (defconstant ASSERT_SECONDS_RELATIVE 80)
+    (defconstant ASSERT_SECONDS_ABSOLUTE 81)
 
     ; block index
-    (defconstant ASSERT_HEIGHT_AGE_EXCEEDS 82)
-    (defconstant ASSERT_HEIGHT_NOW_EXCEEDS 83)
+    (defconstant ASSERT_HEIGHT_RELATIVE 82)
+    (defconstant ASSERT_HEIGHT_ABSOLUTE 83)
 )

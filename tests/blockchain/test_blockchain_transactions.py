@@ -842,7 +842,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_seconds_age_exceeds(self, two_nodes):
+    async def test_assert_seconds_relative(self, two_nodes):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -866,7 +866,7 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin_block_1 = coin
 
-        # This condition requires block1 coinbase to be spent after 30 seconds from now
+        # This condition requires block1 coinbase to be spent 300 seconds after coin creation
         block1_cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS, [int_to_bytes(300)])
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
@@ -884,7 +884,7 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        # Try to validate that block before 30 sec
+        # Try to validate that block before 300 sec
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_SECONDS_AGE_EXCEEDS_FAILED
@@ -902,7 +902,7 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_assert_seconds_now_exceeds(self, two_nodes):
+    async def test_assert_seconds_absolute(self, two_nodes):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -945,7 +945,7 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        # Try to validate that block before 3 sec
+        # Try to validate that block before 30 sec
         res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
