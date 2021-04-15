@@ -105,7 +105,7 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 current_time=self.use_current_time,
             )
-            rr = RespondBlock(more[-1])
+            rr: RespondBlock = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
 
     @api_request
