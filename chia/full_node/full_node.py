@@ -923,6 +923,7 @@ class FullNode:
         # Check if we detected a spent transaction, to load up our generator cache
         if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
             if detect_potential_template_generator(block.transactions_generator):
+                self.log.info(f"Saving previous generator for height {block.height}")
                 self.full_node_store.previous_generator = GeneratorArg(block.height, block.transactions_generator)
 
         self._state_changed("new_peak")
