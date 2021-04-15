@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-15 08:00\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -335,7 +335,7 @@ msgstr "Let through at booty:"
 
 #: src/components/wallet/WalletHistory.tsx:39
 msgid "Confirmed at height {0}"
-msgstr "Let through at booty number {0}"
+msgstr "Confirmed at booty {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -349,7 +349,7 @@ msgstr "Say ahoy to other peers"
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
-msgstr "Nattered wit' me hearties jus' now"
+msgstr "Natter'd wit' me hearties jus' now"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
@@ -607,7 +607,7 @@ msgstr "Arrgh: Can nah send chia 't jinxed coordinates. Give chia coordinates."
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Fortune Teller's Next Prize Prophecy"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -784,7 +784,7 @@ msgstr "Hide Voodoo"
 
 #: src/components/wallet/WalletHistory.tsx:60
 msgid "History"
-msgstr "Olde treasure maps"
+msgstr "Yer Treasure Log"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
@@ -1962,7 +1962,7 @@ msgstr "Ye nah need t' be synched or connected t' recruit. Temporary files are c
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Ye 'ave {0}% o' all pirates' strength, so getting' booty will take {expectedTimeToWin} in expectation. Plunderin' depends on luck so it can take 3 to 4 times more as t'is."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
