@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:45\n"
+"PO-Revision-Date: 2021-04-15 08:00\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -607,7 +607,7 @@ msgstr "錯誤：不能發送 Chia 到有色地址。請輸入 Chia 地址。"
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "估計贏取時間"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
