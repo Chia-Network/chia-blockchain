@@ -27,7 +27,7 @@ class Mempool:
             # Iterates through all spends in increasing fee per cost
             for fee_per_cost, spends_with_fpc in self.sorted_spends.items():
                 for spend_name, item in spends_with_fpc.items():
-                    current_cost -= item.cost_result.cost
+                    current_cost -= item.cost
                     # Removing one at a time, until our transaction of size cost fits
                     if current_cost + cost <= self.max_size_in_cost:
                         return fee_per_cost
@@ -52,7 +52,7 @@ class Mempool:
         dic = self.sorted_spends[item.fee_per_cost]
         if len(dic.values()) == 0:
             del self.sorted_spends[item.fee_per_cost]
-        self.total_mempool_cost -= item.cost_result.cost
+        self.total_mempool_cost -= item.cost
         assert self.total_mempool_cost >= 0
 
     def add_to_pool(
@@ -65,7 +65,7 @@ class Mempool:
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
 
-        while self.at_full_capacity(item.cost_result.cost):
+        while self.at_full_capacity(item.cost):
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
             to_remove = list(val.values())[0]
@@ -83,7 +83,7 @@ class Mempool:
             self.additions[add.name()] = item
         for key in removals_dic.keys():
             self.removals[key] = item
-        self.total_mempool_cost += item.cost_result.cost
+        self.total_mempool_cost += item.cost
 
     def at_full_capacity(self, cost: int) -> bool:
         """

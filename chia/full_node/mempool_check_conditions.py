@@ -1,7 +1,8 @@
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from chia.consensus.cost_calculator import NPCResult
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -10,7 +11,6 @@ from chia.types.name_puzzle_condition import NPC
 from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from chia.util.errors import Err
-from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.lowlevel_generator import get_generator
@@ -159,13 +159,15 @@ def get_name_puzzle_conditions(block_program: SerializedProgram, safe_mode: bool
                 elif not safe_mode:
                     opcode = ConditionOpcode.UNKNOWN
                 else:
-                    return NPCResult(Err.GENERATOR_RUNTIME_ERROR.value, [], uint64(0))
+                    return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
                 cvl = ConditionWithArgs(opcode, cond.rest().as_atom_list())
                 conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
                 conditions_dict = {}
-            npc_list.append(NPC(name, puzzle_hash, [(a, b) for a, b in conditions_dict.items()]))
+            npc_list.append(
+                NPC(spent_coin.name(), spent_coin.puzzle_hash, [(a, b) for a, b in conditions_dict.items()])
+            )
         return NPCResult(None, npc_list, uint64(cost))
     except Exception:
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
