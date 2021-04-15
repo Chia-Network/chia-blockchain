@@ -12,7 +12,6 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
@@ -25,7 +24,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
+from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -37,7 +36,8 @@ from chia.util.recursive_replace import recursive_replace
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
-    spend_bundle: Optional[SpendBundle],
+    block_generator: Optional[BlockGenerator],
+    aggregate_sig: G2Element,
     additions: List[Coin],
     removals: List[Coin],
     prev_block: Optional[BlockRecord],
@@ -49,7 +49,7 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     seed: bytes32 = b"",
-) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
+) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -58,7 +58,8 @@ def create_foliage(
     Args:
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
-        spend_bundle: the spend bundle including all transactions
+        block_generator: transactions to add to the foliage block, if created
+        aggregate_sig: aggregate of all transctions (or infinity element)
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -119,18 +120,14 @@ def create_foliage(
     generator_block_heights_list: List[uint32] = []
 
     if is_transaction_block:
-        aggregate_sig: G2Element = G2Element()
         cost = uint64(0)
 
-        if spend_bundle is not None:
-            solution_program = best_solution_program(spend_bundle)
-            aggregate_sig = spend_bundle.aggregated_signature
-
         # Calculate the cost of transactions
-        if solution_program is not None:
-
-            result: NPCResult = get_name_puzzle_conditions(solution_program, True)
-            cost = calculate_cost_of_program(solution_program, result, constants.COST_PER_BYTE)
+        if block_generator is not None:
+            generator_block_heights_list = block_generator.block_height_list()
+            assert block_generator is not None
+            result: NPCResult = get_name_puzzle_conditions(block_generator, True)
+            cost = calculate_cost_of_program(block_generator.program, result, constants.CLVM_COST_RATIO_CONSTANT)
             removal_amount = 0
             addition_amount = 0
             for coin in removals:
@@ -274,7 +271,7 @@ def create_foliage(
         foliage_transaction_block_signature,
     )
 
-    return foliage, foliage_transaction_block, transactions_info, solution_program
+    return foliage, foliage_transaction_block, transactions_info
 
 
 def create_unfinished_block(
@@ -294,7 +291,8 @@ def create_unfinished_block(
     timestamp: uint64,
     blocks: BlockchainInterface,
     seed: bytes32 = b"",
-    spend_bundle: Optional[SpendBundle] = None,
+    block_generator: Optional[BlockGenerator] = None,
+    aggregate_sig: G2Element = G2Element(),
     additions: Optional[List[Coin]] = None,
     removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
@@ -320,7 +318,8 @@ def create_unfinished_block(
         signage_point: signage point information (VDFs)
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
-        spend_bundle: transactions to add to the foliage block, if created
+        block_generator: transactions to add to the foliage block, if created
+        aggregate_sig: aggregate of all transctions (or infinity element)
         additions: Coins added in spend_bundle
         removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point
@@ -385,10 +384,11 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info, solution_program,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info,) = create_foliage(
         constants,
         rc_block,
-        spend_bundle,
+        block_generator,
+        aggregate_sig,
         additions,
         removals,
         prev_block,
@@ -410,8 +410,8 @@ def create_unfinished_block(
         foliage,
         foliage_transaction_block,
         transactions_info,
-        solution_program,
-        [],
+        block_generator.program if block_generator else None,
+        block_generator.block_height_list() if block_generator else [],
     )
 
 
