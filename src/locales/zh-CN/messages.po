@@ -604,6 +604,11 @@ msgstr "错误"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "错误: 无法发送奇亚到上色的地址. 请输入一个奇亚钱包地址."
 
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "Estimated Time to Win"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "预估网络大小"
@@ -618,8 +623,8 @@ msgstr "排除最终目录"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Expected Time to Win"
-msgstr "预计收割到的时间"
+#~ msgid "Expected Time to Win"
+#~ msgstr "预计收割到的时间"
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -1952,8 +1957,20 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr "不需要同步或者连接到网络节点就可以拓荒, 注意在拓荒过程中产生的临时文件尺寸会大于最终的农田大小, 请确认你有足够的存储空间. <0>了解更多</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-msgstr "在整个网络中, 你的农地的空间占比是{0}%, 所以预计收获下一个区块的话, 要花费的时间是 {expectedTimeToWin}."
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr "在整个网络中, 你的农地的空间占比是{0}%, 所以预计收获下一个区块的话, 要花费的时间是 {expectedTimeToWin}."
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr ""
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"

@@ -30,12 +30,12 @@ export default function FarmCardExpectedTimeToWin() {
     return plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
   }, [plots]);
 
-  const proportion = totalNetworkSpace 
-    ? farmerSpace / totalNetworkSpace 
+  const proportion = totalNetworkSpace
+    ? farmerSpace / totalNetworkSpace
     : 0;
 
-  const minutes = proportion 
-    ? MINUTES_PER_BLOCK / proportion 
+  const minutes = proportion
+    ? MINUTES_PER_BLOCK / proportion
     : 0;
 
   const expectedTimeToWin = moment.duration({ minutes }).humanize();
@@ -48,7 +48,7 @@ export default function FarmCardExpectedTimeToWin() {
     return (
       <FarmCardNotAvailable
         title={
-          <Trans>Expected Time to Win</Trans>
+          <Trans>Estimated Time to Win</Trans>
         }
         state={state}
       />
@@ -58,13 +58,14 @@ export default function FarmCardExpectedTimeToWin() {
   return (
     <FarmCard
       title={
-        <Trans>Expected Time to Win</Trans>
+        <Trans>Estimated Time to Win</Trans>
       }
       value={`${expectedTimeToWin}`}
       tooltip={
         <Trans>
           You have {(proportion * 100).toFixed(4)}% of the space on the network,
           so farming a block will take {expectedTimeToWin} in expectation.
+          Actual results may take 3 to 4 times longer than this estimate.
         </Trans>
       }
     />
