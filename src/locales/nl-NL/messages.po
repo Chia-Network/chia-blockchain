@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl_NL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-15 08:00\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -607,7 +607,7 @@ msgstr "Fout: Kan Chia niet naar gekleurd adres verzenden. Gelieve een Chia adre
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Verwachte tijd om te winnen"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -1962,7 +1962,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Je hebt {0}% van de netwerk grootte, dus een blok farmen zal {expectedTimeToWin} duren. Dit kan in realiteit soms 3 tot 4 maal zo lang duren, aangezien dit om een gemiddelde gaat."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
