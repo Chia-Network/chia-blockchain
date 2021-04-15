@@ -38,7 +38,7 @@ def mempool_assert_my_coin_id(condition: ConditionWithArgs, unspent: CoinRecord)
     return None
 
 
-def mempool_assert_block_index_exceeds(
+def mempool_assert_absolute_block_height_exceeds(
     condition: ConditionWithArgs, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
@@ -49,11 +49,11 @@ def mempool_assert_block_index_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     if prev_transaction_block_height < block_index_exceeds_this:
-        return Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED
+        return Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
     return None
 
 
-def mempool_assert_block_age_exceeds(
+def mempool_assert_relative_block_height_exceeds(
     condition: ConditionWithArgs, unspent: CoinRecord, prev_transaction_block_height: uint32
 ) -> Optional[Err]:
     """
@@ -65,11 +65,11 @@ def mempool_assert_block_age_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     if prev_transaction_block_height < block_index_exceeds_this:
-        return Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED
+        return Err.ASSERT_HEIGHT_RELATIVE_FAILED
     return None
 
 
-def mempool_assert_time_exceeds(condition: ConditionWithArgs) -> Optional[Err]:
+def mempool_assert_absolute_time_exceeds(condition: ConditionWithArgs) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -80,7 +80,7 @@ def mempool_assert_time_exceeds(condition: ConditionWithArgs) -> Optional[Err]:
 
     current_time = uint64(int(time.time() * 1000))
     if current_time <= expected_mili_time:
-        return Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
+        return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
 
@@ -95,7 +95,7 @@ def mempool_assert_relative_time_exceeds(condition: ConditionWithArgs, unspent: 
 
     current_time = uint64(int(time.time() * 1000))
     if current_time <= expected_mili_time + unspent.timestamp:
-        return Err.ASSERT_SECONDS_NOW_EXCEEDS_FAILED
+        return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
 
@@ -200,13 +200,13 @@ def mempool_check_conditions_dict(
                 error = mempool_assert_announcement(cvp, coin_announcement_names)
             elif cvp.opcode is ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT:
                 error = mempool_assert_announcement(cvp, puzzle_announcement_names)
-            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_NOW_EXCEEDS:
-                error = mempool_assert_block_index_exceeds(cvp, prev_transaction_block_height)
-            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_AGE_EXCEEDS:
-                error = mempool_assert_block_age_exceeds(cvp, unspent, prev_transaction_block_height)
-            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_NOW_EXCEEDS:
-                error = mempool_assert_time_exceeds(cvp)
-            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_AGE_EXCEEDS:
+            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                error = mempool_assert_absolute_block_height_exceeds(cvp, prev_transaction_block_height)
+            elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                error = mempool_assert_relative_block_height_exceeds(cvp, unspent, prev_transaction_block_height)
+            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                error = mempool_assert_absolute_time_exceeds(cvp)
+            elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 error = mempool_assert_relative_time_exceeds(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
                 error = mempool_assert_my_parent_id(cvp, unspent)

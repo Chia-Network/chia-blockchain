@@ -11,7 +11,7 @@ class ConditionOpcode(bytes, enum.Enum):
 
     # the conditions below require bls12-381 signatures
 
-    AGG_SIG = bytes([49])
+    AGG_SIG_UNSAFE = bytes([49])
     AGG_SIG_ME = bytes([50])
 
     # the conditions below reserve coin amounts and have to be accounted for in output totals
@@ -36,12 +36,12 @@ class ConditionOpcode(bytes, enum.Enum):
     # the conditions below ensure that we're "far enough" in the future
 
     # wall-clock time
-    ASSERT_SECONDS_AGE_EXCEEDS = bytes([80])
-    ASSERT_SECONDS_NOW_EXCEEDS = bytes([81])
+    ASSERT_SECONDS_RELATIVE = bytes([80])
+    ASSERT_SECONDS_ABSOLUTE = bytes([81])
 
     # block index
-    ASSERT_HEIGHT_AGE_EXCEEDS = bytes([82])
-    ASSERT_HEIGHT_NOW_EXCEEDS = bytes([83])
+    ASSERT_HEIGHT_RELATIVE = bytes([82])
+    ASSERT_HEIGHT_ABSOLUTE = bytes([83])
 
     def __bytes__(self) -> bytes:
         return bytes(self.value)

@@ -336,7 +336,7 @@ class MempoolManager:
             )
 
             if error:
-                if error is Err.ASSERT_HEIGHT_NOW_EXCEEDS_FAILED or error is Err.ASSERT_HEIGHT_AGE_EXCEEDS_FAILED:
+                if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
                     self.add_to_potential_tx_set(new_spend, spend_name, cost_result)
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break

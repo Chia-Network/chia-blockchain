@@ -73,7 +73,7 @@ def pkm_pairs_for_conditions_dict(
     assert coin_name is not None
     ret: List[Tuple[G1Element, bytes]] = []
 
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
         assert len(cwa.vars) == 2
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
         ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1]))
