@@ -76,13 +76,19 @@ async def wallet_nodes():
 
 @pytest.fixture(scope="function")
 async def setup_four_nodes():
-    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=61000):
+    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=51000):
         yield _
 
 
 @pytest.fixture(scope="function")
 async def setup_two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=51100):
+        yield _
+
+
+@pytest.fixture(scope="function")
+async def setup_two_nodes_and_wallet():
+    async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200):
         yield _
 
 
@@ -100,6 +106,38 @@ async def wallet_nodes_mainnet():
 
     async for _ in async_gen:
         yield _
+
+
+class TestFullNodeBlockCompression:
+    @pytest.mark.asyncio
+    async def test_block_compression(self, setup_two_nodes_and_wallet):
+        nodes, wallets = setup_two_nodes_and_wallet
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        server_3 = wallets[0][1]
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+        wallet_node_1 = wallets[0][0]
+        wallet = wallet_node_1.wallet_state_manager.main_wallet
+        peer = await connect_and_get_peer(server_1, server_2)
+        peer_2 = await connect_and_get_peer(server_1, server_3)
+
+        ph = await wallet.get_new_puzzlehash()
+        log.warning(f"PH: {ph}")
+
+        for i in range(5):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        log.warning(full_node_1.full_node.blockchain.get_peak().height)
+
+        # Send a a trasaction to mempool
+        # Farm a block
+        # Confirm generator is not compressed
+        # Send another tx
+        # Farm a block
+        # Confirm generator is compressed
+        # Send another 2 tx
+        # Farm a block
+        # Confirm generator is compressed
 
 
 class TestFullNodeProtocol:
@@ -531,8 +569,8 @@ class TestFullNodeProtocol:
                 assert not full_node_1.full_node.mempool_manager.mempool.at_full_capacity(0)
                 assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(0) == 0
             else:
-                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(cost_result.cost)
-                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(cost_result.cost) > 0
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10000000) > 0
                 assert not force_high_fee
                 not_included_tx += 1
         log.info(f"Included: {included_tx}, not included: {not_included_tx}")
@@ -542,15 +580,16 @@ class TestFullNodeProtocol:
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
-        new_transaction = fnp.NewTransaction(token_bytes(32), cost_result.cost, uint64(1))
+        new_transaction = fnp.NewTransaction(token_bytes(32), 10000000, uint64(1))
         msg = await full_node_1.new_transaction(new_transaction)
+        log.warning(f"MSG: {msg} {cost_result.clvm_cost}")
         assert msg is None
 
         # Farm one block to clear mempool
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
         # No longer full
-        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
+        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(10000000), uint64(1))
         msg = await full_node_1.new_transaction(new_transaction)
         assert msg is not None
 
