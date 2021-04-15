@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-12 23:53\n"
+"PO-Revision-Date: 2021-04-15 01:46\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -34,8 +34,8 @@ msgstr "128 nhóm được khuyến nghị"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot  . Một farmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
 
-#: src/electron/main.ts:331
-#: src/electron/main.ts:413
+#: src/electron/main.tsx:366
+#: src/electron/main.tsx:444
 msgid "About Chia Blockchain"
 msgstr "Về Chia Blockchain"
 
@@ -127,7 +127,7 @@ msgstr "Bạn có muốn xoá plot ? Plot sẽ không thể khôi phục."
 msgid "Are you sure you want to disconnect?"
 msgstr "Bạn có muốn ngắt kết nối?"
 
-#: src/electron/main.ts:128
+#: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
 msgstr "Bạn có muốn thoát? GUI Plotting và farming sẽ dừng."
 
@@ -259,15 +259,15 @@ msgstr "Challenge"
 msgid "Challenge Hash"
 msgstr "Challenge Hash"
 
-#: src/electron/main.ts:311
+#: src/electron/main.tsx:346
 msgid "Chat on KeyBase"
 msgstr "Chat trên Keybase"
 
-#: src/electron/main.ts:328
+#: src/electron/main.tsx:363
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.ts:278
+#: src/electron/main.tsx:313
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -321,7 +321,7 @@ msgstr " Coin sắc tố"
 msgid "Coloured Coin Options"
 msgstr "Tuỳ chọn coin sắc tố"
 
-#: src/electron/main.ts:126
+#: src/electron/main.tsx:162
 msgid "Confirm"
 msgstr "Xác nhận"
 
@@ -372,7 +372,7 @@ msgstr "Kiểu kết nối"
 msgid "Connections"
 msgstr "Các kết nối"
 
-#: src/electron/main.ts:296
+#: src/electron/main.tsx:331
 msgid "Contribute on GitHub"
 msgstr "Đóng góp qua GitHub"
 
@@ -531,11 +531,11 @@ msgstr "Xóa tất cả các khóa sẽ xóa vĩnh viễn các khóa khỏi máy
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Xóa khóa sẽ xóa vĩnh viễn khóa khỏi máy tính của bạn, hãy đảm bảo rằng bạn có các bản sao lưu. Bạn có chắc chắn muốn tiếp tục không?"
 
-#: src/electron/main.ts:225
+#: src/electron/main.tsx:260
 msgid "Developer"
 msgstr "Nhà phát triển"
 
-#: src/electron/main.ts:228
+#: src/electron/main.tsx:263
 msgid "Developer Tools"
 msgstr "Công cụ nhà phát triển"
 
@@ -582,7 +582,7 @@ msgstr "Kéo và thả tệp đề nghị"
 msgid "Drag and drop your backup file"
 msgstr "Kéo và thả tệp sao lưu của bạn"
 
-#: src/electron/main.ts:184
+#: src/electron/main.tsx:219
 msgid "Edit"
 msgstr "Chỉnh sửa"
 
@@ -604,6 +604,11 @@ msgstr "Lỗi"
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Lỗi: Không thể gửi chia đến địa chỉ coloured. Vui lòng nhập địa chỉ chia."
 
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "Estimated Time to Win"
+msgstr ""
+
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
 msgstr "Không gian mạng ước tính"
@@ -618,8 +623,8 @@ msgstr "Loại trừ thư mục cuối cùng"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "Expected Time to Win"
-msgstr "Thời gian giành phần thưởng dự kiến"
+#~ msgid "Expected Time to Win"
+#~ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
@@ -698,8 +703,8 @@ msgstr "Số lượng phí"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.ts:176
-#: src/electron/main.ts:368
+#: src/electron/main.tsx:211
+#: src/electron/main.tsx:399
 msgid "File"
 msgstr "Tệp"
 
@@ -718,11 +723,11 @@ msgstr "Thư mục cuối"
 msgid "Finished"
 msgstr "Hoàn thành"
 
-#: src/electron/main.ts:317
+#: src/electron/main.tsx:352
 msgid "Follow on Twitter"
 msgstr "Theo dõi trên Twitter"
 
-#: src/electron/main.ts:284
+#: src/electron/main.tsx:319
 msgid "Frequently Asked Questions"
 msgstr "Câu hỏi thường gặp"
 
@@ -735,7 +740,7 @@ msgstr "Node hoàn thiện"
 msgid "Full Node Status"
 msgstr "Tình trạng Node mạng"
 
-#: src/electron/main.ts:252
+#: src/electron/main.tsx:287
 msgid "Full Screen"
 msgstr "Toàn màn hình"
 
@@ -765,7 +770,7 @@ msgstr "Băm tiêu đề"
 msgid "Height"
 msgstr "Chiều cao"
 
-#: src/electron/main.ts:274
+#: src/electron/main.tsx:309
 msgid "Help"
 msgstr "Hỗ trợ"
 
@@ -973,7 +978,7 @@ msgid "Nickname"
 msgstr "Biệt danh"
 
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:123
+#: src/electron/main.tsx:159
 msgid "No"
 msgstr "Không"
 
@@ -1350,7 +1355,7 @@ msgstr "Khôi phục ví DID"
 msgid "Refresh Plots"
 msgstr "Làm mới plot"
 
-#: src/electron/main.ts:290
+#: src/electron/main.tsx:325
 msgid "Release Notes"
 msgstr "Ghi chú phát hành"
 
@@ -1358,7 +1363,7 @@ msgstr "Ghi chú phát hành"
 msgid "Rename"
 msgstr "Đổi tên"
 
-#: src/electron/main.ts:305
+#: src/electron/main.tsx:340
 msgid "Report an Issue..."
 msgstr "Báo cáo vấn đề..."
 
@@ -1491,7 +1496,7 @@ msgstr "Đăng nhập"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Bỏ qua việc thêm thư mục cuối cùng vào harvester để farm"
 
-#: src/electron/main.ts:379
+#: src/electron/main.tsx:410
 msgid "Speech"
 msgstr "Phát biểu"
 
@@ -1827,7 +1832,7 @@ msgstr "Khoá công khai"
 msgid "VDF Sub Slot Iterations"
 msgstr "Lặp lại vùng phụ VDF"
 
-#: src/electron/main.ts:216
+#: src/electron/main.tsx:251
 msgid "View"
 msgstr "Xem"
 
@@ -1929,7 +1934,7 @@ msgstr "Chào mừng! Các từ sau được sử dụng để sao lưu ví củ
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Khi bạn nhận được gói thông tin thiết lập từ quản trị viên của mình, hãy nhập gói này vào bên dưới để hoàn tất quá trình thiết lập Ví giới hạn giá của bạn:"
 
-#: src/electron/main.ts:260
+#: src/electron/main.tsx:295
 msgid "Window"
 msgstr "Cửa sổ"
 
@@ -1939,7 +1944,7 @@ msgstr "Không mất phí"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
-#: src/electron/main.ts:124
+#: src/electron/main.tsx:160
 msgid "Yes"
 msgstr "Đồng ý"
 
@@ -1952,8 +1957,20 @@ msgid "You do not need to be synched or connected to plot. Temporary files are c
 msgstr "Bạn không cần phải được đồng bộ hóa hoặc kết nối với plot. Các tệp tạm thời được tạo trong quá trình ploting vượt quá kích thước của tệp plot cuối cùng. Đảm bảo rằng bạn có đủ không gian. <0> Tìm hiểu thêm </0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-msgstr "Bạn có {0}% dung lượng trên mạng, vì vậy, việc farm một khối sẽ chiếm {{expectedTimeToWin} trong dự kiến ."
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
+#~ msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
+msgstr ""
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
+#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
+#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
