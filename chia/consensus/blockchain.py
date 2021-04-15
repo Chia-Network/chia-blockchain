@@ -670,12 +670,15 @@ class Blockchain(BlockchainInterface):
         hashes = []
         for height in range(start, stop + 1):
             if self.contains_height(uint32(height)):
-                hash = self.height_to_hash(uint32(height))
-                hashes.append(hash)
+                header_hash: bytes32 = self.height_to_hash(uint32(height))
+                hashes.append(header_hash)
+
         blocks: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
         header_blocks: Dict[bytes32, HeaderBlock] = {}
 
         for block in blocks:
+            if self.height_to_hash(block.height) != block.header_hash:
+                raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             additions: List[CoinRecord] = await self.coin_store.get_coins_added_at_height(block.height)
             removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
             header = get_block_header(

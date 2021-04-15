@@ -926,18 +926,23 @@ class FullNodeAPI:
     @api_request
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
-        if (
-            block is None
-            or block.is_transaction_block() is False
-            or self.full_node.blockchain.height_to_hash(block.height) is None
-        ):
-            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
 
-            msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
-            return msg
+        # We lock so that the coin store does not get modified
+        async with self.full_node.blockchain.lock:
+            if (
+                block is None
+                or block.is_transaction_block() is False
+                or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
+            ):
+                reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
 
-        assert block is not None and block.foliage_transaction_block is not None
-        additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
+                msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
+                return msg
+
+            assert block is not None and block.foliage_transaction_block is not None
+
+            additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
+
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
         for coin_record in additions:
             if coin_record.coin.puzzle_hash in puzzlehash_coins_map:
@@ -981,19 +986,23 @@ class FullNodeAPI:
     @api_request
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
-        if (
-            block is None
-            or block.is_transaction_block() is False
-            or block.height != request.height
-            or block.height > self.full_node.blockchain.get_peak_height()
-            or self.full_node.blockchain.height_to_hash(block.height) != block.header_hash
-        ):
-            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
-            msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
-            return msg
 
-        assert block is not None and block.foliage_transaction_block is not None
-        all_removals: List[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+        # We lock so that the coin store does not get modified
+        async with self.full_node.blockchain.lock:
+            if (
+                block is None
+                or block.is_transaction_block() is False
+                or block.height != request.height
+                or block.height > self.full_node.blockchain.get_peak_height()
+                or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
+            ):
+                reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+                msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
+                return msg
+
+            assert block is not None and block.foliage_transaction_block is not None
+            all_removals: List[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+
         all_removals_dict: Dict[bytes32, Coin] = {}
         for coin_record in all_removals:
             all_removals_dict[coin_record.coin.name()] = coin_record.coin
