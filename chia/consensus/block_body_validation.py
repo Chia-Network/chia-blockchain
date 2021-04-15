@@ -13,11 +13,12 @@ from chia.consensus.blockchain_check_conditions import blockchain_check_conditio
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import CostResult, calculate_cost_of_generator
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.network_type import NetworkType
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.types.generator_types import BlockGenerator
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -175,7 +176,8 @@ async def validate_block_body(
             if cached_cost_result is not None:
                 result: Optional[CostResult] = cached_cost_result
             else:
-                result = calculate_cost_of_program(block.transactions_generator, constants.CLVM_COST_RATIO_CONSTANT)
+                generator = BlockGenerator(block.transactions_generator, [])  # TODO: Use create_block_generator
+                result = calculate_cost_of_generator(generator, constants.CLVM_COST_RATIO_CONSTANT)
             assert result is not None
             cost = result.cost
             npc_list = result.npc_list

@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import CostResult, calculate_cost_of_generator
+from chia.full_node.bundle_tools import best_solution_generator
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -241,9 +241,9 @@ class CCWallet:
             tx = await self.generate_signed_transaction(
                 [coin.amount], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
-            program = best_solution_program(tx.spend_bundle)
+            program = best_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            cost_result: CostResult = calculate_cost_of_program(
+            cost_result: CostResult = calculate_cost_of_generator(
                 program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
             )
             self.cost_of_single_tx = cost_result.cost

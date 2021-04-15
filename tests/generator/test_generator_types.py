@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import GeneratorBlockCacheInterface
-from chia.full_node.generator import create_block_generator, make_generator_args
+from chia.full_node.generator import create_block_generator, create_generator_args
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 
@@ -41,9 +41,9 @@ class TestGeneratorTypes(TestCase):
         gen = create_block_generator(gen2, [1], block_dict)
         print(gen)
 
-    def test_make_generator_args(self):
+    def test_create_generator_args(self):
         generator_ref_list = [gen1]
-        gen_args = make_generator_args(generator_ref_list)
+        gen_args = create_generator_args(generator_ref_list)
         gen_args_as_program = Program.from_bytes(bytes(gen_args))
 
         d = gen_args_as_program.first()

@@ -221,3 +221,6 @@ class SerializedProgram:
         )
         # TODO this could be parsed lazily
         return cost, Program.to(sexp_from_stream(io.BytesIO(ret), SExp.to))
+
+
+NIL = Program.from_bytes(b"\x80")

@@ -11,8 +11,8 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import CostResult, calculate_cost_of_generator
+from chia.full_node.bundle_tools import best_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
@@ -44,9 +44,9 @@ def validate_transaction_multiprocess(
 ) -> bytes:
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     # Calculate the cost and fees
-    program = best_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
+    generator = best_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(calculate_cost_of_program(program, constants.CLVM_COST_RATIO_CONSTANT, True))
+    return bytes(calculate_cost_of_generator(generator, constants.CLVM_COST_RATIO_CONSTANT, True))
 
 
 class MempoolManager:

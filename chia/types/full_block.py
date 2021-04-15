@@ -11,6 +11,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.name_puzzle_condition import NPC
 from chia.util.condition_tools import created_outputs_for_conditions_dict
@@ -105,7 +106,8 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator, False)
+            generator = BlockGenerator(self.transactions_generator, [])  # TODO: Use create_block_generator
+            err, npc_list, cost = get_name_puzzle_conditions(generator, False)
             # created coins
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
@@ -125,7 +127,8 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator, False)
+            generator = BlockGenerator(self.transactions_generator, [])  # TODO: use create_block_generator
+            err, npc_list, cost = get_name_puzzle_conditions(generator, False)
             # build removals list
             if npc_list is None:
                 return [], []

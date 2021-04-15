@@ -24,6 +24,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
@@ -1055,7 +1056,8 @@ class FullNodeAPI:
         if block is None or block.transactions_generator is None:
             return reject_msg
 
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block.transactions_generator, coin_name)
+        generator = BlockGenerator(block.transactions_generator, [])  # TODO: Use create_block_generator
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_name)
 
         if error is not None:
             return reject_msg

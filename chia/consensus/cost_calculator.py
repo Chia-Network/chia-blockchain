@@ -3,8 +3,8 @@ from typing import List, Optional
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
@@ -18,14 +18,14 @@ class CostResult(Streamable):
     cost: uint64
 
 
-def calculate_cost_of_program(
-    program: SerializedProgram, clvm_cost_ratio_constant: int, strict_mode: bool = False
+def calculate_cost_of_generator(
+    generator: BlockGenerator, clvm_cost_ratio_constant: int, strict_mode: bool = False
 ) -> CostResult:
     """
     This function calculates the total cost of either a block or a spendbundle
     """
     total_clvm_cost = 0
-    error, npc_list, cost = get_name_puzzle_conditions(program, strict_mode)
+    error, npc_list, cost = get_name_puzzle_conditions(generator, strict_mode)
     if error or cost is None or npc_list is None:
         raise Exception("get_name_puzzle_conditions raised error:" + str(error))
     total_clvm_cost += cost
@@ -62,7 +62,7 @@ def calculate_cost_of_program(
                 pass
 
     # Add raw size of the program
-    total_vbyte_cost += len(bytes(program))
+    total_vbyte_cost += len(bytes(generator.program))
 
     total_clvm_cost += total_vbyte_cost * clvm_cost_ratio_constant
 

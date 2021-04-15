@@ -21,7 +21,7 @@ class GeneratorArg:
 
 @dataclass(frozen=True)
 class BlockGenerator:
-    generator: SerializedProgram
+    program: SerializedProgram
     generator_args: List[GeneratorArg]
 
     def make_generator_args(self) -> SerializedProgram:
@@ -29,3 +29,9 @@ class BlockGenerator:
 
     def run(self) -> Tuple[int, SerializedProgram]:
         pass
+
+    def block_height_list(self) -> List[uint32]:
+        return [a.block_height for a in self.generator_args]
+
+    def generator_refs(self) -> List[SerializedProgram]:
+        return [a.generator for a in self.generator_args]

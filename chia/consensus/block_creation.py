@@ -11,8 +11,8 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import CostResult, calculate_cost_of_generator
+from chia.full_node.bundle_tools import best_solution_generator
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -48,7 +48,9 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     seed: bytes32 = b"",
-) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram]]:
+) -> Tuple[
+    Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo], Optional[SerializedProgram], List[uint32]
+]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -115,17 +117,22 @@ def create_foliage(
         prev_block_hash = prev_block.header_hash
 
     solution_program: Optional[SerializedProgram] = None
+    solution_generator_refs = []
     if is_transaction_block:
         aggregate_sig: G2Element = G2Element()
         cost = uint64(0)
 
         if spend_bundle is not None:
-            solution_program = best_solution_program(spend_bundle)
+            # TODO: best_solution_program needs the previous generator as an argument
+            solution_generator = best_solution_generator(spend_bundle)
+            if solution_generator:
+                solution_program = solution_generator.program
+                solution_generator_refs = solution_generator.block_height_list()
             aggregate_sig = spend_bundle.aggregated_signature
 
         # Calculate the cost of transactions
         if solution_program is not None:
-            result: CostResult = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
+            result: CostResult = calculate_cost_of_generator(solution_generator, constants.CLVM_COST_RATIO_CONSTANT)
             cost = result.cost
             removal_amount = 0
             addition_amount = 0
@@ -137,7 +144,6 @@ def create_foliage(
         else:
             spend_bundle_fees = 0
 
-        # TODO: prev generators root
         reward_claims_incorporated = []
         if height > 0:
             assert prev_transaction_block is not None
@@ -213,6 +219,7 @@ def create_foliage(
         additions_root = addition_merkle_set.get_root()
         removals_root = removal_merkle_set.get_root()
 
+        # I thought I did this already
         generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
         generator_refs_hash = bytes32([1] * 32)
         filter_hash: bytes32 = std_hash(encoded)
@@ -262,7 +269,7 @@ def create_foliage(
         foliage_transaction_block_signature,
     )
 
-    return foliage, foliage_transaction_block, transactions_info, solution_program
+    return foliage, foliage_transaction_block, transactions_info, solution_program, solution_generator_refs
 
 
 def create_unfinished_block(
@@ -373,7 +380,7 @@ def create_unfinished_block(
         additions = []
     if removals is None:
         removals = []
-    (foliage, foliage_transaction_block, transactions_info, solution_program,) = create_foliage(
+    (foliage, foliage_transaction_block, transactions_info, solution_program, generator_refs) = create_foliage(
         constants,
         rc_block,
         spend_bundle,
@@ -399,7 +406,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         solution_program,
-        [],
+        generator_refs,
     )
 
 

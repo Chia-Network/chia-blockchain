@@ -6,10 +6,11 @@ import time
 import pytest
 from clvm_tools import binutils
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import CostResult, calculate_cost_of_generator
+from chia.full_node.bundle_tools import best_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import bt, test_constants
 
@@ -33,7 +34,7 @@ def large_block_generator(size):
     # the idea is, if the algorithm for building the big block changes,
     # the name of the cache file will also change
 
-    name = SMALL_BLOCK_GENERATOR.get_tree_hash().hex()[:16]
+    name = SMALL_BLOCK_GENERATOR.program.get_tree_hash().hex()[:16]
 
     my_dir = pathlib.Path(__file__).absolute().parent
     hex_path = my_dir / f"large-block-{name}-{size}.hex"
@@ -43,7 +44,7 @@ def large_block_generator(size):
             return bytes.fromhex(hex_str)
     except FileNotFoundError:
         generator = make_block_generator(size)
-        blob = bytes(generator)
+        blob = bytes(generator.program)
         #  TODO: Re-enable large-block*.hex but cache in ~/.chia/subdir
         #  with open(hex_path, "w") as f:
         #      f.write(blob.hex())
@@ -71,21 +72,20 @@ class TestCostCalculation:
             coinbase,
         )
         assert spend_bundle is not None
-        program = best_solution_program(spend_bundle)
-
+        generator = best_solution_generator(spend_bundle)
         ratio = test_constants.CLVM_COST_RATIO_CONSTANT
 
-        result: CostResult = calculate_cost_of_program(program, ratio)
+        result: CostResult = calculate_cost_of_generator(generator, ratio)
         clvm_cost = result.cost
 
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(generator, False)
         assert error is None
         coin_name = npc_list[0].coin_name
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_name)
         assert error is None
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        assert clvm_cost == 200 * ratio + 92 * ratio + len(bytes(program)) * ratio + cost
+        assert clvm_cost == 200 * ratio + 92 * ratio + len(bytes(generator.program)) * ratio + cost
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):
@@ -121,37 +121,40 @@ class TestCostCalculation:
                 f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
             ).as_bin()
         )
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+
+        generator = BlockGenerator(program, [])
+        error, npc_list, cost = get_name_puzzle_conditions(generator, True)
         assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(generator, False)
         assert error is None
 
         coin_name = npc_list[0].coin_name
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_name)
         assert error is None
 
     @pytest.mark.asyncio
     async def test_clvm_strict_mode(self):
-        block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR))
+        block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
         disassembly = binutils.disassemble(block)
         # this is a valid generator program except the first clvm
         # if-condition, that depends on executing an unknown operator
         # ("0xfe"). In strict mode, this should fail, but in non-strict
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
+        generator = BlockGenerator(program, [])
+        error, npc_list, cost = get_name_puzzle_conditions(generator, True)
         assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
+        error, npc_list, cost = get_name_puzzle_conditions(generator, False)
         assert error is None
 
     @pytest.mark.asyncio
     async def test_tx_generator_speed(self):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
-        generator = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
-        program = SerializedProgram.from_bytes(generator)
-
+        program_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
+        program = SerializedProgram.from_bytes(program_bytes)
+        generator = BlockGenerator(program, [])
         start_time = time.time()
-        err, npc, cost = get_name_puzzle_conditions(program, False)
+        err, npc, cost = get_name_puzzle_conditions(generator, False)
         end_time = time.time()
         duration = end_time - start_time
         assert err is None
