@@ -185,7 +185,7 @@ class MempoolManager:
 
         npc_list = npc_result.npc_list
         program = simple_solution_program(new_spend).program
-        cost = calculate_cost_of_program(program, npc_result, self.constants.CLVM_COST_RATIO_CONSTANT)
+        cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
 
         log.debug(f"Cost: {cost}")
 

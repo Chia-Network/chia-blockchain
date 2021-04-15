@@ -48,6 +48,7 @@ def match_standard_transaction_exactly_and_return_pubkey(transaction: bytes) -> 
     m = STANDARD_TRANSACTION_PUZZLE_PATTERN.fullmatch(transaction.hex())
     return None if m is None else hexstr_to_bytes(m.group(1))
 
+
 def best_solution_generator_from_template(bundle: SpendBundle, previous_generator: GeneratorArg) -> BlockGenerator:
     """
     Creates a compressed block generator, taking in a block that passes the checks below

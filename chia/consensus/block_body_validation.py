@@ -191,9 +191,7 @@ async def validate_block_body(
             # Get List of names removed, puzzles hashes for removed coins and conditions crated
 
             assert npc_result is not None
-            cost = calculate_cost_of_program(
-                block.transactions_generator, npc_result, constants.CLVM_COST_RATIO_CONSTANT
-            )
+            cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)
             npc_list = npc_result.npc_list
 
             # 8. Check that cost <= MAX_BLOCK_COST_CLVM

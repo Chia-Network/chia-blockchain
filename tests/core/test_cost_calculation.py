@@ -87,7 +87,7 @@ class TestCostCalculation:
 
         # Create condition + agg_sig_condition + length + cpu_cost
         assert (
-            clvm_cost
+            cost
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
             + len(bytes(program.program)) * test_constants.COST_PER_BYTE

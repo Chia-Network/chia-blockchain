@@ -125,7 +125,7 @@ def create_foliage(
             generator_block_heights_list = block_generator.block_height_list()
             assert block_generator is not None
             result: NPCResult = get_name_puzzle_conditions(block_generator, True)
-            cost = calculate_cost_of_program(block_generator.program, result, constants.CLVM_COST_RATIO_CONSTANT)
+            cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
             removal_amount = 0
             addition_amount = 0
             for coin in removals:
