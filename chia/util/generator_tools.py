@@ -5,6 +5,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.name_puzzle_condition import NPC
 from chia.util.condition_tools import created_outputs_for_conditions_dict
@@ -96,7 +97,7 @@ def run_and_get_removals_and_additions(block: FullBlock, safe_mode=False) -> Tup
         return [], []
 
     if block.transactions_generator is not None:
-        npc_result = get_name_puzzle_conditions(block.transactions_generator, safe_mode)
+        npc_result = get_name_puzzle_conditions(BlockGenerator(block.transactions_generator, []), safe_mode)
         # build removals list
         for npc in npc_result.npc_list:
             removals.append(npc.coin_name)
