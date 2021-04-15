@@ -59,9 +59,7 @@ class MempoolManager:
         self.coin_store = coin_store
 
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
-        self.potential_cache_max_total_cost = int(
-            self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER
-        )
+        self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.potential_cache_cost: int = 0
         self.seen_cache_size = 10000
         self.pool = ProcessPoolExecutor(max_workers=1)
@@ -112,6 +110,10 @@ class MempoolManager:
                     broke_from_inner_loop = True
                     break
         if len(spend_bundles) > 0:
+            log.info(
+                f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
+                f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
+            )
             return SpendBundle.aggregate(spend_bundles), additions, removals
         else:
             return None
