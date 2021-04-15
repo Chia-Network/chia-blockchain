@@ -127,9 +127,18 @@ class TestFullNodeBlockCompression:
 
         for i in range(5):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        log.warning(full_node_1.full_node.blockchain.get_peak().height)
 
-        # Send a a trasaction to mempool
+        # await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
+        # log.warning(full_node_1.full_node.blockchain.get_peak().height)
+        #
+        # # Send a a trasaction to mempool
+        # tr: TransactionRecord = await wallet.generate_signed_transaction(
+        #     10000,
+        #     ph,
+        # )
+        # await wallet.push_transaction(tx=tr.spend_bundle)
+
+
         # Farm a block
         # Confirm generator is not compressed
         # Send another tx
