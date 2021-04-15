@@ -636,6 +636,10 @@ class FullNodeAPI:
                         removals = mempool_bundle[2]
                         aggregate_signature = spend_bundle.aggregated_signature
                         if self.full_node.full_node_store.previous_generator is not None:
+                            self.log.info(
+                                f"Using previous generator for height "
+                                f"{self.full_node.full_node_store.previous_generator}"
+                            )
                             block_generator = best_solution_generator_from_template(
                                 spend_bundle, self.full_node.full_node_store.previous_generator
                             )
