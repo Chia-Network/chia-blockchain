@@ -20,11 +20,11 @@ network_overrides: &network_overrides
       NETWORK_TYPE: 1
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
-    testnet1:
+    testnet2:
       MIN_PLOT_SIZE: 18
-      GENESIS_CHALLENGE: d73afd21f46dd34015a4aeb67eb36c3dddb85d1ec619c7f47818bb3dda56651a
+      GENESIS_CHALLENGE: ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
       NETWORK_TYPE: 1
-      INITIAL_FREEZE_PERIOD: 2000
+      INITIAL_FREEZE_PERIOD: 100
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
@@ -36,7 +36,7 @@ network_overrides: &network_overrides
     testnet1:
       address_prefix: "txch"
 
-selected_network: &selected_network "testnet1"
+selected_network: &selected_network "testnet2"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
 CHIA_ALERTS_PUBKEY: 89b7fd87cb56e926ecefb879a29aae308be01f31980569f6a75a69d2a9a69daefd71fb778d865f7c50d6c967e3025937
 
@@ -241,7 +241,7 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: beta1_introduer.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: beta1_introducer.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 58444
   wallet_peer:
     host: *self_hostname
@@ -323,7 +323,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: beta1_introduer.chia.net # Chia AWS introducer IPv4/IPv6
+    host: beta1_introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 58444
 
   ssl:
