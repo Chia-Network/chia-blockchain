@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Set
 from blspy import AugSchemeMPL, G2Element
 
 from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
-from chia.full_node.bundle_tools import simple_solution_program
+from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse
 from chia.types.blockchain_format.coin import Coin
@@ -243,7 +243,7 @@ class CCWallet:
             tx = await self.generate_signed_transaction(
                 [coin.amount], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
-            program: BlockGenerator = simple_solution_program(tx.spend_bundle)
+            program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(program, True)
             cost_result: uint64 = calculate_cost_of_program(

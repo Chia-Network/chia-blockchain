@@ -2,12 +2,21 @@
 from pathlib import Path
 from unittest import TestCase
 
+from chia.full_node.bundle_tools import (
+    bundle_suitable_for_compression,
+    simple_solution_generator,
+    compressed_spend_bundle_solution,
+    match_standard_transaction_at_any_index,
+)
+from chia.full_node.generator import run_generator
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.generator_types import BlockGenerator, GeneratorArg
+from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm
 
-from tests.core.make_block_generator import make_block_generator
+from tests.core.make_block_generator import make_block_generator, make_spend_bundle
 
 from clvm import SExp
 from clvm_tools import binutils
@@ -31,31 +40,37 @@ original_generator = hexstr_to_bytes(
 )  # noqa
 
 
-def compress_clvm_spend_bundle(sb):
-    # print(sb)
-    compressed_cses = []
-    for cse in sb.as_iter():
-        a = cse.first()
-        b = cse.rest().first().first()
-        c = cse.rest().first().rest()
-        s = b.rest().rest().first().rest().first().rest()
-        p = SExp.to([a, [bytes(s), c.first()]])
-        compressed_cses.append(p)
-        # print(p)
-    return SExp.to([compressed_cses])
-
-
 class TestCompression(TestCase):
+    def test_spend_bundle_suitable(self):
+        sb: SpendBundle = make_spend_bundle(1)
+        assert bundle_suitable_for_compression(sb)
+
+    def test_compress_spend_bundle(self):
+        pass
+
+    def test_compressed_block_results(self):
+        sb: SpendBundle = make_spend_bundle(1)
+        start, end = match_standard_transaction_at_any_index(original_generator)
+        ga = GeneratorArg(0, SerializedProgram.from_bytes(original_generator), start, end)
+        c = compressed_spend_bundle_solution(ga, sb)
+        s = simple_solution_generator(sb)
+        cost_c, result_c = run_generator(c)
+        cost_s, result_s = run_generator(s)
+        print(result_c)
+        assert result_c is not None
+        assert result_s is not None
+        assert result_c == result_s
+        assert cost_c == cost_s
+
+
+class TestDecompression(TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestCompression, self).__init__(*args, **kwargs)
+        super(TestDecompression, self).__init__(*args, **kwargs)
         self.maxDiff = None
 
     def test_deserialization(self):
         self.maxDiff = None
         cost, out = DESERIALIZE_MOD.run_with_cost([bytes(Program.to("hello"))])
-        # print(bytes(Program.to("hello")))
-        # print()
-        # print(out)
         assert out == Program.to("hello")
 
     def test_deserialization_as_argument(self):
@@ -80,7 +95,7 @@ class TestCompression(TestCase):
     #    print(out)
 
     def test_decompress_cse(self):
-        " Decompress a single CSE / CoinSolutionEntry "
+        """ Decompress a single CSE / CoinSolutionEntry """
         cse0 = binutils.assemble(
             "((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ())))"
         )  # noqa

@@ -8,7 +8,7 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import simple_solution_program
+from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
@@ -73,7 +73,7 @@ class TestCostCalculation:
             coinbase,
         )
         assert spend_bundle is not None
-        program: BlockGenerator = simple_solution_program(spend_bundle)
+        program: BlockGenerator = simple_solution_generator(spend_bundle)
 
         ratio = test_constants.COST_PER_BYTE
         npc_result: NPCResult = get_name_puzzle_conditions(program, False)

@@ -2,7 +2,7 @@ import time
 from typing import Dict, List, Optional, Set
 
 from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.generator import create_generator_args
+from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import NIL, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -135,11 +135,7 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
 
 
 def get_name_puzzle_conditions(generator: BlockGenerator, safe_mode: bool) -> NPCResult:
-    block_program = generator.program
-    if not generator.generator_args:
-        block_program_args = NIL
-    else:
-        block_program_args = Program.from_bytes(bytes(create_generator_args(generator.generator_refs())))
+    block_program, block_program_args = setup_generator_args(generator)
 
     try:
         if safe_mode:

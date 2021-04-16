@@ -12,7 +12,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import simple_solution_program
+from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 def get_npc_multiprocess(
     spend_bundle_bytes: bytes,
 ) -> bytes:
-    program = simple_solution_program(SpendBundle.from_bytes(spend_bundle_bytes))
+    program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
     return bytes(get_name_puzzle_conditions(program, True))
 
@@ -211,7 +211,7 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
 
         npc_list = npc_result.npc_list
-        program = simple_solution_program(new_spend).program
+        program = simple_solution_generator(new_spend).program
         cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
 
         log.debug(f"Cost: {cost}")
