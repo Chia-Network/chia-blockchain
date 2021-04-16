@@ -64,9 +64,6 @@ class FullNodeSimulator(FullNodeAPI):
 
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash
-            self.full_node.log.warning(
-                f"Making farmed block: {self.full_node.full_node_store.previous_generator is None}"
-            )
             more = self.bt.get_consecutive_blocks(
                 1,
                 transaction_data=spend_bundle,

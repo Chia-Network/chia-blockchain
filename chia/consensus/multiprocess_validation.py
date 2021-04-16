@@ -128,6 +128,7 @@ async def pre_validate_blocks_multiprocessing(
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
     get_block_generator: Optional[Callable],
+    batch_size: int,
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -144,7 +145,6 @@ async def pre_validate_blocks_multiprocessing(
         npc_results
         get_block_generator
     """
-    batch_size = 4
     prev_b: Optional[BlockRecord] = None
     # Collects all the recent blocks (up to the previous sub-epoch)
     recent_blocks: Dict[bytes32, BlockRecord] = {}

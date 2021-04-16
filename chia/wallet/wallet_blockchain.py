@@ -339,11 +339,10 @@ class WalletBlockchain(BlockchainInterface):
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
 
     async def pre_validate_blocks_multiprocessing(
-        self,
-        blocks: List[HeaderBlock],
+        self, blocks: List[HeaderBlock], batch_size: int = 4
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
-            self.constants, self.constants_json, self, blocks, self.pool, True, {}, None
+            self.constants, self.constants_json, self, blocks, self.pool, True, {}, None, batch_size
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:

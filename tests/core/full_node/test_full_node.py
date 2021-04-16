@@ -40,6 +40,7 @@ from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
@@ -114,7 +115,7 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def test_block_compression(self, setup_two_nodes_and_wallet):
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -296,6 +297,18 @@ class TestFullNodeBlockCompression:
         assert program is not None
         assert detect_potential_template_generator(uint32(11), program) is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
+
+        height = full_node_1.full_node.blockchain.get_peak().height
+
+        blockchain = empty_blockchain
+        all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+        assert height == len(all_blocks) - 1
+        for i in range(1, height):
+            for batch_size in range(1, height):
+                results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                assert results is not None
+                for result in results:
+                    assert result.error is None
 
 
 class TestFullNodeProtocol:
