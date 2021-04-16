@@ -42,7 +42,7 @@
   (defun-inline get_bitcount (input_bits input_file)
     (if (>s input_bits MAX_TWO_BYTE)
       (if (>s input_bits MAX_THREE_BYTE)
-              (x "bad encoding")
+              (x)
         ;three byte length prefix
         (list (concat (logand (quote 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1))
       )
