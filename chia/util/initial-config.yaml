@@ -35,6 +35,8 @@ network_overrides: &network_overrides
       address_prefix: "txch"
     testnet1:
       address_prefix: "txch"
+    testnet2:
+      address_prefix: "txch"
 
 selected_network: &selected_network "testnet2"
 ALERTS_URL: https://download.chia.net/notify/mainnet_alert.txt
