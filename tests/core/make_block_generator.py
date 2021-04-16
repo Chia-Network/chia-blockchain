@@ -2,7 +2,7 @@ from typing import Dict
 
 import blspy
 
-from chia.full_node.bundle_tools import simple_solution_program
+from chia.full_node.bundle_tools import simple_solution_generator
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_solution import CoinSolution
@@ -46,7 +46,7 @@ def conditions_for_payment(coin) -> Program:
     return Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])
 
 
-def make_block_generator(count: int) -> BlockGenerator:
+def make_spend_bundle(count: int) -> SpendBundle:
     puzzle_hash_db: Dict = dict()
     coins = [make_fake_coin(_, puzzle_hash_db) for _ in range(count)]
 
@@ -59,4 +59,9 @@ def make_block_generator(count: int) -> BlockGenerator:
         coin_solutions.append(coin_solution)
 
     spend_bundle = SpendBundle(coin_solutions, blspy.G2Element())
-    return simple_solution_program(spend_bundle)
+    return spend_bundle
+
+
+def make_block_generator(count: int) -> BlockGenerator:
+    spend_bundle = make_spend_bundle(count)
+    return simple_solution_generator(spend_bundle)

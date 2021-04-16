@@ -10,7 +10,7 @@ import chia.server.ws_connection as ws
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_program
+from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
@@ -641,10 +641,10 @@ class FullNodeAPI:
                                 f"{self.full_node.full_node_store.previous_generator}"
                             )
                             block_generator = best_solution_generator_from_template(
-                                spend_bundle, self.full_node.full_node_store.previous_generator
+                                self.full_node.full_node_store.previous_generator, spend_bundle
                             )
                         else:
-                            block_generator = simple_solution_program(spend_bundle)
+                            block_generator = simple_solution_generator(spend_bundle)
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
