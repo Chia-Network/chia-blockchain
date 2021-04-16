@@ -129,9 +129,8 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
 
 
 def get_name_puzzle_conditions(generator: BlockGenerator, safe_mode: bool) -> NPCResult:
-    block_program, block_program_args = setup_generator_args(generator)
-
     try:
+        block_program, block_program_args = setup_generator_args(generator)
         if safe_mode:
             cost, result = GENERATOR_MOD.run_safe_with_cost(block_program, block_program_args)
         else:

@@ -41,7 +41,7 @@ class TestGeneratorTypes(TestCase):
         block_dict = BlockDict({uint32(1): gen1})
         start = 0
         end = 10
-        gen = create_block_generator(gen2, [1], block_dict, start, end)
+        gen = create_block_generator(gen2, [uint32(1)], block_dict, start, end)
         print(gen)
 
     def test_make_generator_args(self):

@@ -6,7 +6,7 @@ from chia.util.streamable import Streamable, streamable
 
 
 class GeneratorBlockCacheInterface:
-    def get_generator_for_block_height(self, uint32) -> SerializedProgram:
+    def get_generator_for_block_height(self, height: uint32) -> SerializedProgram:
         # Requested block must be a transaction block
         pass
 
@@ -14,8 +14,15 @@ class GeneratorBlockCacheInterface:
 @dataclass(frozen=True)
 @streamable
 class GeneratorArg(Streamable):
-    """`GeneratorArg` is used as input to the Block Compressor"""
+    """`GeneratorArg` contains data from already-buried blocks in the blockchain"""
+    block_height: uint32
+    generator: SerializedProgram
 
+
+@dataclass(frozen=True)
+@streamable
+class CompressorArg(Streamable):
+    """`CompressorArg` is used as input to the Block Compressor"""
     block_height: uint32
     generator: SerializedProgram
     start: int
