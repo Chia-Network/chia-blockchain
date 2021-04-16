@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Dict, Iterator, Set
 
-from chia.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
+from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -65,7 +65,7 @@ class CoinStore:
             prev_transaction_block_height = now.height
             timestamp = now.seconds
             coin_record = self._db[coin_solution.coin.name()]
-            err = blockchain_check_conditions_dict(
+            err = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements,
                 puzzle_announcements,
