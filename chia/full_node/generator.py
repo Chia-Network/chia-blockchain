@@ -41,7 +41,7 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Serial
     """
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
-    gen_ref_list = [Program.from_bytes(bytes(g)) for g in generator_ref_list]
+    gen_ref_list = [bytes(g) for g in generator_ref_list]
     return SerializedProgram.from_bytes(bytes(Program.to([DESERIALIZE_MOD, gen_ref_list])))
 
 
@@ -55,11 +55,6 @@ def create_compressed_generator(
     """
     start = original_generator.start
     end = original_generator.end
-    print(compressed_cse_list)
-    breakpoint()
-    # vs.
-    #     block_program = SerializedProgram.from_bytes(SExp.to((binutils.assemble("#q"), cse_list)).as_bin())
-    #     generator = BlockGenerator(block_program, [])
     program = DECOMPRESS_BLOCK.curry(
         DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
@@ -83,7 +78,3 @@ def run_generator_unsafe(self: BlockGenerator) -> Tuple[int, SerializedProgram]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     program, args = setup_generator_args(self)
     return GENERATOR_MOD.run_with_cost(program, args)
-
-
-def execute_generator():  # See BlockGenerator.run()
-    pass
