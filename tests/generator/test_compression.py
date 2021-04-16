@@ -1,5 +1,4 @@
 # flake8: noqa: F501
-from pathlib import Path
 from unittest import TestCase
 
 from chia.full_node.bundle_tools import (
@@ -10,15 +9,13 @@ from chia.full_node.bundle_tools import (
 )
 from chia.full_node.generator import run_generator
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.generator_types import BlockGenerator, GeneratorArg
+from chia.types.generator_types import CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm
 
-from tests.core.make_block_generator import make_block_generator, make_spend_bundle
+from tests.core.make_block_generator import make_spend_bundle
 
-from clvm import SExp
 from clvm_tools import binutils
 
 TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -51,8 +48,8 @@ class TestCompression(TestCase):
     def test_compressed_block_results(self):
         sb: SpendBundle = make_spend_bundle(1)
         start, end = match_standard_transaction_at_any_index(original_generator)
-        ga = GeneratorArg(0, SerializedProgram.from_bytes(original_generator), start, end)
-        c = compressed_spend_bundle_solution(ga, sb)
+        ca = CompressorArg(0, SerializedProgram.from_bytes(original_generator), start, end)
+        c = compressed_spend_bundle_solution(ca, sb)
         s = simple_solution_generator(sb)
         assert c != s
         cost_c, result_c = run_generator(c)
