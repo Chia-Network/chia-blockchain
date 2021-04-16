@@ -54,6 +54,7 @@ class TestCompression(TestCase):
         ga = GeneratorArg(0, SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ga, sb)
         s = simple_solution_generator(sb)
+        assert c != s
         cost_c, result_c = run_generator(c)
         cost_s, result_s = run_generator(s)
         print(result_c)
