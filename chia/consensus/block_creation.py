@@ -1,4 +1,3 @@
-import logging
 import random
 from dataclasses import replace
 from typing import Callable, Dict, List, Optional, Tuple
@@ -31,8 +30,6 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.recursive_replace import recursive_replace
-
-log = logging.getLogger(__name__)
 
 
 def create_foliage(
@@ -135,7 +132,6 @@ def create_foliage(
                 removal_amount += coin.amount
             for coin in additions:
                 addition_amount += coin.amount
-            log.warning(f"Add Rem3: {len(additions)} {len(removals)}")
             spend_bundle_fees = removal_amount - addition_amount
         else:
             spend_bundle_fees = 0
@@ -401,7 +397,6 @@ def create_unfinished_block(
         get_pool_signature,
         seed,
     )
-
     return UnfinishedBlock(
         finished_sub_slots,
         rc_block,
@@ -457,6 +452,7 @@ def unfinished_block_to_full_block(
         new_foliage_transaction_block = unfinished_block.foliage_transaction_block
         new_tx_info = unfinished_block.transactions_info
         new_generator = unfinished_block.transactions_generator
+        new_generator_ref_list = unfinished_block.transactions_generator_ref_list
     else:
         is_transaction_block, _ = get_prev_transaction_block(prev_block, blocks, total_iters_sp)
         new_weight = uint128(prev_block.weight + difficulty)
@@ -467,12 +463,14 @@ def unfinished_block_to_full_block(
             new_foliage_transaction_block = unfinished_block.foliage_transaction_block
             new_tx_info = unfinished_block.transactions_info
             new_generator = unfinished_block.transactions_generator
+            new_generator_ref_list = unfinished_block.transactions_generator_ref_list
         else:
             new_fbh = None
             new_fbs = None
             new_foliage_transaction_block = None
             new_tx_info = None
             new_generator = None
+            new_generator_ref_list = []
         assert (new_fbh is None) == (new_fbs is None)
         new_foliage = replace(
             unfinished_block.foliage,
@@ -507,7 +505,7 @@ def unfinished_block_to_full_block(
         new_foliage_transaction_block,
         new_tx_info,
         new_generator,
-        [],
+        new_generator_ref_list,
     )
     return recursive_replace(
         ret,

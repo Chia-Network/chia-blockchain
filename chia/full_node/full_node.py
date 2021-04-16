@@ -958,7 +958,11 @@ class FullNode:
             if unf_block is not None and unf_block.transactions_generator is not None:
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
-                block = dataclasses.replace(block, transactions_generator=unf_block.transactions_generator)
+                block = dataclasses.replace(
+                    block,
+                    transactions_generator=unf_block.transactions_generator,
+                    transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
+                )
 
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it

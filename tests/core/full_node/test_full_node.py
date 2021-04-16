@@ -234,9 +234,9 @@ class TestFullNodeBlockCompression:
         tr = tx_queue[0]
         await time_out_assert(
             10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
+            full_node_1.full_node.mempool_manager.get_spendbundle,
             tr.spend_bundle,
-            tr.name,
+            tr.spend_bundle.name(),
         )
 
         tr: TransactionRecord = await wallet.generate_signed_transaction(

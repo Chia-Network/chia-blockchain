@@ -45,7 +45,7 @@ def match_standard_transaction_at_any_index(generator_body: bytes) -> Optional[T
     m = STANDARD_TRANSACTION_PUZZLE_PATTERN.search(generator_body.hex())
     if m:
         assert m.start() % 2 == 0 and m.end() % 2 == 0
-        return (m.start() // 2, m.end() // 2)
+        return m.start() // 2, m.end() // 2
     else:
         return None
 

@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from typing import List, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -63,6 +64,9 @@ class FullNodeSimulator(FullNodeAPI):
 
             current_blocks = await self.get_all_full_blocks()
             target = request.puzzle_hash
+            self.full_node.log.warning(
+                f"Making farmed block: {self.full_node.full_node_store.previous_generator is None}"
+            )
             more = self.bt.get_consecutive_blocks(
                 1,
                 transaction_data=spend_bundle,
@@ -76,7 +80,8 @@ class FullNodeSimulator(FullNodeAPI):
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
         except Exception as e:
-            self.log.error(f"Error while farming block: {e}")
+            error_stack = traceback.format_exc()
+            self.log.error(f"Error while farming block: {error_stack} {e}")
         finally:
             self.lock.release()
 

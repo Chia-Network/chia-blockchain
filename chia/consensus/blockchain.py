@@ -167,7 +167,11 @@ class Blockchain(BlockchainInterface):
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
-    async def get_block_generator(self, block: Union[FullBlock, UnfinishedBlock]) -> Optional[BlockGenerator]:
+    async def get_block_generator(
+        self, block: Union[FullBlock, UnfinishedBlock], additional_blocks=None
+    ) -> Optional[BlockGenerator]:
+        if additional_blocks is None:
+            additional_blocks = {}
         ref_list = block.transactions_generator_ref_list
         if block.transactions_generator is None:
             assert len(ref_list) == 0
@@ -187,21 +191,30 @@ class Blockchain(BlockchainInterface):
         else:
             peak = self.get_peak()
             assert peak is not None
-            prev_block_record = await self.block_store.get_block_record(previous_block_hash)
-            prev_block = await self.block_store.get_full_block(previous_block_hash)
-            assert prev_block is not None
-            assert prev_block_record is not None
-            fork = find_fork_point_in_chain(self, peak, prev_block_record)
-            assert fork != -1
-            curr: Optional[FullBlock] = prev_block
-            assert curr is not None
-            reorg_chain = {prev_block.height: prev_block}
-            while curr.height > fork:
-                if curr.height == 0:
-                    break
-                curr = await self.block_store.get_full_block(curr.prev_header_hash)
-                assert curr is not None
-                reorg_chain[curr.height] = curr
+            reorg_chain: Dict[uint32, FullBlock] = {}
+            curr: Union[FullBlock, UnfinishedBlock] = block
+            while curr.prev_header_hash in additional_blocks:
+                prev: FullBlock = reorg_chain[curr.prev_header_hash]
+                if isinstance(curr, FullBlock):
+                    assert curr.height == prev.height + 1
+                reorg_chain[prev.height] = prev
+                curr = prev
+
+            if self.contains_block(curr.prev_header_hash):
+                previous_block_hash = curr.prev_header_hash
+                prev_block_record = await self.block_store.get_block_record(previous_block_hash)
+                prev_block = await self.block_store.get_full_block(previous_block_hash)
+                assert prev_block is not None
+                assert prev_block_record is not None
+                fork = find_fork_point_in_chain(self, peak, prev_block_record)
+                assert fork != -1
+                curr_2: Optional[FullBlock] = prev_block
+                assert curr_2 is not None and isinstance(curr_2, FullBlock)
+                reorg_chain[prev_block.height] = prev_block
+                while curr_2.height > fork and curr_2.height > 0:
+                    curr_2 = await self.block_store.get_full_block(curr_2.prev_header_hash)
+                    assert curr_2 is not None
+                    reorg_chain[curr_2.height] = curr_2
 
             for ref_height in block.transactions_generator_ref_list:
                 if ref_height in reorg_chain:

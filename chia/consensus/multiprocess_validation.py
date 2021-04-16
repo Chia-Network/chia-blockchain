@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable, Coroutine
+from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -20,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, block_removals_and_additions
@@ -128,7 +127,7 @@ async def pre_validate_blocks_multiprocessing(
     pool: ProcessPoolExecutor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Optional[Callable[[Union[FullBlock, UnfinishedBlock]], Coroutine]],
+    get_block_generator: Optional[Callable],
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -251,12 +250,13 @@ async def pre_validate_blocks_multiprocessing(
         hb_pickled: Optional[List[bytes]] = None
         previous_generators: List[Optional[bytes]] = []
         for block in blocks_to_validate:
+            blocks_dict = {b.header_hash: b for b in blocks}
             if isinstance(block, FullBlock):
                 assert get_block_generator is not None
                 if b_pickled is None:
                     b_pickled = []
                 b_pickled.append(bytes(block))
-                block_generator: Optional[BlockGenerator] = await get_block_generator(block)
+                block_generator: Optional[BlockGenerator] = await get_block_generator(block, blocks_dict)
                 if block_generator is not None:
                     previous_generators.append(bytes(block_generator))
                 else:
