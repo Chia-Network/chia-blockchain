@@ -63,13 +63,15 @@ class TestGeneratorTypes(TestCase):
         print(arg2)
         assert bytes(arg2) == bytes(gen1)
 
-    def test_generator_arg_is_list(self):
-        generator_ref_list = [Program.to(b"gen1"), Program.to(b"gen2")]
-        gen_args = create_generator_args(generator_ref_list)
-        gen_args_as_program = Program.from_bytes(bytes(gen_args))
-        arg2 = gen_args_as_program.rest().first()
-        assert arg2 == binutils.assemble("('gen1' 'gen2')")
-        print(arg2)
+    # It's not a list anymore.
+    # TODO: Test the first three arg positions passed through here.
+    #def test_generator_arg_is_list(self):
+    #    generator_ref_list = [Program.to(b"gen1"), Program.to(b"gen2")]
+    #    gen_args = create_generator_args(generator_ref_list)
+    #    gen_args_as_program = Program.from_bytes(bytes(gen_args))
+    #    arg2 = gen_args_as_program.rest().first()
+    #    assert arg2 == binutils.assemble("('gen1' 'gen2')")
+    #    print(arg2)
 
     def test_list_to_tree(self):
         self.assertEqual([], list_to_tree([]))

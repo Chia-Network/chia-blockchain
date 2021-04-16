@@ -178,7 +178,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes
         if not generator.generator_args:
             block_program_args = NIL
         else:
-            block_program_args = Program.from_bytes(bytes(create_generator_args(generator.generator_refs())))
+            block_program_args = create_generator_args(generator.generator_refs())
 
         cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, block_program_args, coin_name)
         puzzle = result.first()

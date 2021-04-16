@@ -7,11 +7,12 @@ from chia.full_node.bundle_tools import (
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
 )
-from chia.full_node.generator import run_generator
+from chia.full_node.generator import run_generator, create_generator_args
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
@@ -48,7 +49,7 @@ class TestCompression(TestCase):
     def test_compressed_block_results(self):
         sb: SpendBundle = make_spend_bundle(1)
         start, end = match_standard_transaction_at_any_index(original_generator)
-        ca = CompressorArg(0, SerializedProgram.from_bytes(original_generator), start, end)
+        ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
         s = simple_solution_generator(sb)
         assert c != s
@@ -150,7 +151,7 @@ class TestDecompression(TestCase):
                 Program.to(end),
                 cse2,
                 DESERIALIZE_MOD,
-                [bytes(original_generator)],
+                bytes(original_generator),
             ]
         )
 
@@ -184,7 +185,7 @@ class TestDecompression(TestCase):
         # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost([DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
         p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
-        cost, out = p.run_with_cost([cse2, DESERIALIZE_MOD, [bytes(original_generator)]])
+        cost, out = p.run_with_cost([cse2, DESERIALIZE_MOD, bytes(original_generator)])
 
         print()
         print(p)
@@ -193,7 +194,8 @@ class TestDecompression(TestCase):
         p_with_cses = DECOMPRESS_BLOCK.curry(
             DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end), cse2
         )
-        cost, out = p_with_cses.run_with_cost([DESERIALIZE_MOD, [bytes(original_generator)]])
+        generator_args = create_generator_args([SerializedProgram.from_bytes(original_generator)])
+        cost, out = p_with_cses.run_with_cost(generator_args)
 
         print()
         print(p_with_cses)

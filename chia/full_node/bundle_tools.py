@@ -5,9 +5,9 @@ from clvm import SExp
 from clvm_tools import binutils
 
 from chia.full_node.generator import create_compressed_generator
-from chia.types.blockchain_format.program import SerializedProgram, Program
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.coin_solution import CoinSolution
-from chia.types.generator_types import BlockGenerator, CompressorArg
+from chia.types.generator_types import BlockGenerator, GeneratorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -55,28 +55,27 @@ def match_standard_transaction_exactly_and_return_pubkey(transaction: bytes) -> 
     return None if m is None else hexstr_to_bytes(m.group(1))
 
 
-def compress_cse_puzzle(puzzle: bytes) -> Program:
-    return Program.to(match_standard_transaction_exactly_and_return_pubkey(bytes(puzzle)))
+def compress_cse_puzzle(puzzle: bytes):
+    return match_standard_transaction_exactly_and_return_pubkey(puzzle)
 
 
-def compress_coin_solution(coin_solution: CoinSolution) -> List:
-    compressed_puzzle = compress_cse_puzzle(bytes(coin_solution.puzzle_reveal))
+def compress_coin_solution(coin_solution: CoinSolution):
+    compressed_puzzle = compress_cse_puzzle(coin_solution.puzzle_reveal)
     return [
         [coin_solution.coin.parent_coin_info, coin_solution.coin.amount],
         [compressed_puzzle, coin_solution.solution],
     ]
 
 
-def is_puzzle_suitable_for_compression(puzzle: bytes) -> bool:
+def puzzle_suitable_for_compression(puzzle: bytes):
     return True if match_standard_transaction_exactly_and_return_pubkey(puzzle) else False
 
 
-def bundle_suitable_for_compression(bundle: SpendBundle) -> bool:
+def bundle_suitable_for_compression(bundle: SpendBundle):
     ok = []
     for coin_solution in bundle.coin_solutions:
-        ok.append(is_puzzle_suitable_for_compression(bytes(coin_solution.puzzle_reveal)))
+        ok.append(puzzle_suitable_for_compression(coin_solution.puzzle_reveal))
     return all(ok)
-
 
 def compressed_coin_solution_entry_list(bundle: SpendBundle) -> List:
     compressed_cse_list = []
@@ -84,13 +83,12 @@ def compressed_coin_solution_entry_list(bundle: SpendBundle) -> List:
         compressed_cse_list.append(compress_coin_solution(coin_solution))
     return compressed_cse_list
 
-
-def compressed_spend_bundle_solution(original_generator_params: CompressorArg, bundle: SpendBundle) -> BlockGenerator:
+def compressed_spend_bundle_solution(original_generator_params: GeneratorArg, bundle: SpendBundle) -> BlockGenerator:
     compressed_cse_list = compressed_coin_solution_entry_list(bundle)
     return create_compressed_generator(original_generator_params, compressed_cse_list)
 
 
-def best_solution_generator_from_template(previous_generator: CompressorArg, bundle: SpendBundle) -> BlockGenerator:
+def best_solution_generator_from_template(previous_generator: GeneratorArg, bundle: SpendBundle) -> BlockGenerator:
     """
     Creates a compressed block generator, taking in a block that passes the checks below
     """
@@ -100,7 +98,7 @@ def best_solution_generator_from_template(previous_generator: CompressorArg, bun
         return simple_solution_generator(bundle)
 
 
-def detect_potential_template_generator(block_height: uint32, program: SerializedProgram) -> Optional[CompressorArg]:
+def detect_potential_template_generator(block_height: uint32, program: SerializedProgram) -> Optional[GeneratorArg]:
     """
     If this returns a GeneratorArg, that means that the input, `program`, has a standard transaction
     that is not compressed that we can use as a template for future blocks.
@@ -114,6 +112,6 @@ def detect_potential_template_generator(block_height: uint32, program: Serialize
         return None
     start, end = m
     if start and end and end > start >= 0:
-        return CompressorArg(block_height, program, start, end)
+        return GeneratorArg(block_height, program, start, end)
     else:
         return None

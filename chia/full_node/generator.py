@@ -37,13 +37,13 @@ def create_block_generator(
     return BlockGenerator(generator, generator_arg_list)
 
 
-def create_generator_args(generator_ref_list: List[SerializedProgram]) -> SerializedProgram:
+def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Program:
     """
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
     gen_ref_tree = list_to_tree(gen_ref_list)
-    return SerializedProgram.from_bytes(bytes(Program.to([DESERIALIZE_MOD, gen_ref_tree])))
+    return Program.to([DESERIALIZE_MOD, gen_ref_tree])
 
 
 def create_compressed_generator(
@@ -67,7 +67,7 @@ def setup_generator_args(self: BlockGenerator):
     if not self.generator_args:
         args = NIL
     else:
-        args = Program.from_bytes(bytes(create_generator_args(self.generator_refs())))
+        args = create_generator_args(self.generator_refs())
     return self.program, args
 
 
