@@ -16,7 +16,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
 from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
-    simple_solution_program,
+    simple_solution_generator,
     detect_potential_template_generator,
 )
 from chia.plotting.create_plots import create_plots
@@ -426,10 +426,10 @@ class BlockTools:
                         if transaction_data is not None:
                             if previous_generator is not None:
                                 block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
-                                    transaction_data, previous_generator
+                                    previous_generator, transaction_data
                                 )
                             else:
-                                block_generator = simple_solution_program(transaction_data)
+                                block_generator = simple_solution_generator(transaction_data)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -474,10 +474,10 @@ class BlockTools:
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
-                        if full_block.transactions_generator is not None and detect_potential_template_generator(
-                            full_block.transactions_generator
-                        ):
-                            previous_generator = GeneratorArg(full_block.height, full_block.transactions_generator)
+                        if full_block.transactions_generator is not None:
+                            previous_generator = detect_potential_template_generator(
+                                full_block.height, full_block.transactions_generator
+                            )
 
                         blocks_added_this_sub_slot += 1
 
@@ -687,10 +687,10 @@ class BlockTools:
                         if transaction_data is not None:
                             if previous_generator is not None:
                                 block_generator = best_solution_generator_from_template(
-                                    transaction_data, previous_generator
+                                    previous_generator, transaction_data
                                 )
                             else:
-                                block_generator = simple_solution_program(transaction_data)
+                                block_generator = simple_solution_generator(transaction_data)
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -735,10 +735,10 @@ class BlockTools:
                             pending_ses = False
 
                         block_list.append(full_block)
-                        if full_block.transactions_generator is not None and detect_potential_template_generator(
-                            full_block.transactions_generator
-                        ):
-                            previous_generator = GeneratorArg(full_block.height, full_block.transactions_generator)
+                        if full_block.transactions_generator is not None:
+                            previous_generator = detect_potential_template_generator(
+                                full_block.height, full_block.transactions_generator
+                            )
 
                         blocks_added_this_sub_slot += 1
                         log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
