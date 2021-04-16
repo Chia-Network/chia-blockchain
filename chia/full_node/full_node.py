@@ -823,7 +823,11 @@ class FullNode:
             f"overflow: {record.overflow}, "
             f"deficit: {record.deficit}, "
             f"difficulty: {difficulty}, "
-            f"sub slot iters: {sub_slot_iters}"
+            f"sub slot iters: {sub_slot_iters}, "
+            f"Generator size: "
+            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
+            f"Generator ref list size: "
+            f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)

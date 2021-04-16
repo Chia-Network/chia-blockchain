@@ -5,11 +5,12 @@ import logging
 import random
 import time
 from secrets import token_bytes
-from typing import Dict
+from typing import Dict, Optional, List
 
 import pytest
 
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol
@@ -32,9 +33,12 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.util.wallet_tools import WalletTool
+from chia.wallet.cc_wallet.cc_wallet import CCWallet
+from chia.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
+from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
@@ -119,33 +123,179 @@ class TestFullNodeBlockCompression:
         full_node_2 = nodes[1]
         wallet_node_1 = wallets[0][0]
         wallet = wallet_node_1.wallet_state_manager.main_wallet
-        peer = await connect_and_get_peer(server_1, server_2)
-        peer_2 = await connect_and_get_peer(server_1, server_3)
+        _ = await connect_and_get_peer(server_1, server_2)
+        _ = await connect_and_get_peer(server_1, server_3)
 
         ph = await wallet.get_new_puzzlehash()
-        log.warning(f"PH: {ph}")
 
         for i in range(5):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        # await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
-        # log.warning(full_node_1.full_node.blockchain.get_peak().height)
-        #
-        # # Send a a trasaction to mempool
-        # tr: TransactionRecord = await wallet.generate_signed_transaction(
-        #     10000,
-        #     ph,
-        # )
-        # await wallet.push_transaction(tx=tr.spend_bundle)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
+
+        # # Send a a transaction to mempool
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            10000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
 
         # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 5)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 5)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 5)
+
         # Confirm generator is not compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(5), program) is not None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
+
         # Send another tx
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            20000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
         # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 6)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 6)
+
         # Confirm generator is compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(6), program) is None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+
+        # Farm two empty blocks
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 8)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 8)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 8)
+
         # Send another 2 tx
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            30000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            40000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
         # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 9)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 9)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 9)
+
         # Confirm generator is compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(9), program) is None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+
+        # Creates a cc wallet
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node_1.wallet_state_manager, wallet, uint64(100))
+        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.get_send_queue()
+        tr = tx_queue[0]
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            30000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 10)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 10)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 10)
+
+        # Confirm generator is compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(10), program) is None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+
+        # Make a cc transaction
+        tr: TransactionRecord = await cc_wallet.generate_signed_transaction([uint64(60)], [ph])
+        await wallet.wallet_state_manager.add_pending_transaction(tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+        # Make a standard transaction
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            30000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        # Farm a block
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 11)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, 11)
+        await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 11)
+
+        # Confirm generator is not compressed
+        program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
+        assert program is not None
+        assert detect_potential_template_generator(uint32(11), program) is not None
+        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
 
 class TestFullNodeProtocol:
