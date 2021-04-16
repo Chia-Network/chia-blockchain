@@ -82,7 +82,7 @@ def mempool_assert_absolute_time_exceeds(
 
     if timestamp is None:
         timestamp = uint64(int(time.time() * 1000))
-    if timestamp <= expected_mili_time:
+    if timestamp < expected_mili_time:
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
@@ -100,7 +100,7 @@ def mempool_assert_relative_time_exceeds(
 
     if timestamp is None:
         timestamp = uint64(int(time.time() * 1000))
-    if timestamp <= expected_mili_time + unspent.timestamp:
+    if timestamp < expected_mili_time + unspent.timestamp:
         return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None
 
