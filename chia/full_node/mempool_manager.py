@@ -114,7 +114,10 @@ class MempoolManager:
                 f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
                 f"full: {cost_sum / self.constants.MAX_BLOCK_COST_CLVM}"
             )
-            return SpendBundle.aggregate(spend_bundles), additions, removals
+            agg = SpendBundle.aggregate(spend_bundles)
+            assert set(agg.additions()) == set(additions)
+            assert set(agg.removals()) == set(removals)
+            return agg, additions, removals
         else:
             return None
 

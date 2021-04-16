@@ -15,6 +15,7 @@ class GeneratorBlockCacheInterface:
 @streamable
 class GeneratorArg(Streamable):
     """`GeneratorArg` contains data from already-buried blocks in the blockchain"""
+
     block_height: uint32
     generator: SerializedProgram
 
@@ -23,6 +24,7 @@ class GeneratorArg(Streamable):
 @streamable
 class CompressorArg(Streamable):
     """`CompressorArg` is used as input to the Block Compressor"""
+
     block_height: uint32
     generator: SerializedProgram
     start: int

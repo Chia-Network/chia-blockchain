@@ -54,7 +54,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, GeneratorArg
+from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
@@ -279,6 +279,7 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
+        previous_generator: CompressorArg = None,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -336,7 +337,6 @@ class BlockTools:
         sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(constants)
         sub_slots_finished = 0
         pending_ses: bool = False
-        previous_generator: Optional[GeneratorArg] = None
 
         # Start at the last block in block list
         # Get the challenge for that slot
@@ -410,6 +410,7 @@ class BlockTools:
                         if transaction_data is not None and not transaction_data_included:
                             additions = transaction_data.additions()
                             removals = transaction_data.removals()
+                            log.warning(f"Add Rem: {len(additions)} {len(removals)}")
                         assert start_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
@@ -426,7 +427,7 @@ class BlockTools:
                         if transaction_data is not None:
                             if previous_generator is not None:
                                 block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
-                                    transaction_data, previous_generator
+                                    previous_generator, transaction_data
                                 )
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
@@ -474,10 +475,12 @@ class BlockTools:
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
-                        if full_block.transactions_generator is not None and detect_potential_template_generator(
-                            full_block.height, full_block.transactions_generator
-                        ):
-                            previous_generator = GeneratorArg(full_block.height, full_block.transactions_generator)
+                        if full_block.transactions_generator is not None:
+                            compressor_arg = detect_potential_template_generator(
+                                full_block.height, full_block.transactions_generator
+                            )
+                            if compressor_arg is not None:
+                                previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
 
@@ -628,6 +631,7 @@ class BlockTools:
             if transaction_data is not None and not transaction_data_included:
                 additions = transaction_data.additions()
                 removals = transaction_data.removals()
+                log.warning(f"Add Rem2: {len(additions)} {len(removals)}")
             sub_slots_finished += 1
             log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
@@ -687,7 +691,7 @@ class BlockTools:
                         if transaction_data is not None:
                             if previous_generator is not None:
                                 block_generator = best_solution_generator_from_template(
-                                    transaction_data, previous_generator
+                                    previous_generator, transaction_data
                                 )
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
@@ -735,10 +739,12 @@ class BlockTools:
                             pending_ses = False
 
                         block_list.append(full_block)
-                        if full_block.transactions_generator is not None and detect_potential_template_generator(
-                            full_block.height, full_block.transactions_generator
-                        ):
-                            previous_generator = GeneratorArg(full_block.height, full_block.transactions_generator)
+                        if full_block.transactions_generator is not None:
+                            compressor_arg = detect_potential_template_generator(
+                                full_block.height, full_block.transactions_generator
+                            )
+                            if compressor_arg is not None:
+                                previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
                         log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")

@@ -128,7 +128,7 @@ class TestFullNodeBlockCompression:
 
         ph = await wallet.get_new_puzzlehash()
 
-        for i in range(5):
+        for i in range(4):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(10, wallet_height_at_least, True, wallet_node_1, 4)

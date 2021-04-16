@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Set
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.generator import create_generator_args, setup_generator_args
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import NIL, Program
+from chia.types.blockchain_format.program import NIL
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_with_args import ConditionWithArgs

@@ -71,6 +71,7 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
                 current_time=self.use_current_time,
+                previous_generator=self.full_node.full_node_store.previous_generator,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)

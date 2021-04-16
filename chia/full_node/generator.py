@@ -33,7 +33,7 @@ def create_block_generator(
         if previous_generator is None:
             log.error(f"Failed to look up generator for block {i}. Ref List: {block_heights_list}")
             return None
-        generator_arg_list.append(GeneratorArg(i, previous_generator, start, end))
+        generator_arg_list.append(GeneratorArg(i, previous_generator))
     return BlockGenerator(generator, generator_arg_list)
 
 
