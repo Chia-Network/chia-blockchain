@@ -21,7 +21,7 @@ from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
@@ -985,7 +985,7 @@ class TestMempoolManager:
         assert len(unsigned) == 1
         coin_solution: CoinSolution = unsigned[0]
 
-        err, con, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution)
+        err, con, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution, INFINITE_COST)
         assert con is not None
 
         # TODO(straya): fix this test

@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Tuple
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -50,7 +50,7 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle: Program, solution: Program) -> int:
-    error, conditions, cost = conditions_dict_for_solution(puzzle, solution)
+    error, conditions, cost = conditions_dict_for_solution(puzzle, solution, INFINITE_COST)
     total = 0
     if conditions:
         for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):

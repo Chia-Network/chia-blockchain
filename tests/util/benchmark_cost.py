@@ -5,7 +5,7 @@ from blspy import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.ints import uint32
@@ -40,7 +40,7 @@ def run_and_return_cost_time(chialisp):
     clvm_loop_solution = f"(1000 {chialisp})"
     solution_program = Program.to(binutils.assemble(clvm_loop_solution))
 
-    cost, sexp = loop_program.run_with_cost(solution_program)
+    cost, sexp = loop_program.run_with_cost(solution_program, INFINITE_COST)
 
     end = time.time()
     total_time = end - start
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     puzzle_start = time.time()
     clvm_cost = 0
     for i in range(0, 1000):
-        cost_run, sexp = puzzles[i].run_with_cost(solutions[i])
+        cost_run, sexp = puzzles[i].run_with_cost(solutions[i], INFINITE_COST)
         clvm_cost += cost_run
 
     puzzle_end = time.time()

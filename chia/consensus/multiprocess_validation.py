@@ -75,7 +75,7 @@ def batch_pre_validate_blocks(
                     assert prev_generator_bytes is not None
                     block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
-                    npc_result = get_name_puzzle_conditions(block_generator, True)
+                    npc_result = get_name_puzzle_conditions(block_generator, constants.MAX_BLOCK_COST_CLVM, True)
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
 
                 header_block = get_block_header(block, additions, removals)

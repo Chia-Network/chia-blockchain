@@ -245,7 +245,9 @@ class CCWallet:
             )
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            result: NPCResult = get_name_puzzle_conditions(program, True)
+            result: NPCResult = get_name_puzzle_conditions(
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+            )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
             )
@@ -538,7 +540,9 @@ class CCWallet:
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         sigs: List[G2Element] = []
-        error, conditions, cost = conditions_dict_for_solution(innerpuz, innersol)
+        error, conditions, cost = conditions_dict_for_solution(
+            innerpuz, innersol, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
+        )
         if conditions is not None:
             for _, msg in pkm_pairs_for_conditions_dict(
                 conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA

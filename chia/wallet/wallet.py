@@ -78,7 +78,9 @@ class Wallet:
             )
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            result: NPCResult = get_name_puzzle_conditions(program, True)
+            result: NPCResult = get_name_puzzle_conditions(
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+            )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
             )
@@ -345,6 +347,7 @@ class Wallet:
             coin_solutions,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
     async def generate_signed_transaction(
@@ -374,6 +377,7 @@ class Wallet:
             transaction,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
         now = uint64(int(time.time()))
@@ -437,5 +441,6 @@ class Wallet:
             list_of_solutions,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
         return spend_bundle

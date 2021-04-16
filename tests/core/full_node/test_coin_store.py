@@ -95,7 +95,7 @@ class TestCoinStore:
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
             if block.is_transaction_block():
-                removals, additions = run_and_get_removals_and_additions(block)
+                removals, additions = run_and_get_removals_and_additions(block, constants.MAX_BLOCK_COST_CLVM)
 
                 assert block.get_included_reward_coins() == should_be_included_prev
 
@@ -137,7 +137,7 @@ class TestCoinStore:
         # Save/get block
         for block in blocks:
             if block.is_transaction_block():
-                removals, additions = run_and_get_removals_and_additions(block)
+                removals, additions = run_and_get_removals_and_additions(block, constants.MAX_BLOCK_COST_CLVM)
                 await coin_store.new_block(block, additions, removals)
                 coins = block.get_included_reward_coins()
                 records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -166,7 +166,7 @@ class TestCoinStore:
 
         for block in blocks:
             if block.is_transaction_block():
-                removals, additions = run_and_get_removals_and_additions(block)
+                removals, additions = run_and_get_removals_and_additions(block, constants.MAX_BLOCK_COST_CLVM)
                 await coin_store.new_block(block, additions, removals)
                 coins = block.get_included_reward_coins()
                 records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]

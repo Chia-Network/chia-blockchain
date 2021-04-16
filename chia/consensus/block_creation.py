@@ -123,7 +123,7 @@ def create_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list()
-            result: NPCResult = get_name_puzzle_conditions(block_generator, True)
+            result: NPCResult = get_name_puzzle_conditions(block_generator, constants.MAX_BLOCK_COST_CLVM, True)
             cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
 
             removal_amount = 0

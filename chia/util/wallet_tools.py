@@ -174,7 +174,9 @@ class WalletTool:
         for coin_solution in coin_solutions:  # type: ignore # noqa
             secret_key = self.get_private_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-            err, con, cost = conditions_for_solution(coin_solution.puzzle_reveal, coin_solution.solution)
+            err, con, cost = conditions_for_solution(
+                coin_solution.puzzle_reveal, coin_solution.solution, self.constants.MAX_BLOCK_COST_CLVM
+            )
             if not con:
                 raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)
