@@ -9,7 +9,7 @@ from clvm.casts import int_from_bytes
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.block_root_validation import validate_block_merkle_roots
-from chia.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
+from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
@@ -401,7 +401,7 @@ async def validate_block_body(
         for npc in npc_list:
             assert height is not None
             unspent = removal_coin_records[npc.coin_name]
-            error = blockchain_check_conditions_dict(
+            error = mempool_check_conditions_dict(
                 unspent,
                 coin_announcement_names,
                 puzzle_announcement_names,

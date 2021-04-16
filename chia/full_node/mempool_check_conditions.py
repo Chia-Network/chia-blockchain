@@ -69,7 +69,9 @@ def mempool_assert_relative_block_height_exceeds(
     return None
 
 
-def mempool_assert_absolute_time_exceeds(condition: ConditionWithArgs) -> Optional[Err]:
+def mempool_assert_absolute_time_exceeds(
+    condition: ConditionWithArgs, timestamp: Optional[uint64] = None
+) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -78,13 +80,16 @@ def mempool_assert_absolute_time_exceeds(condition: ConditionWithArgs) -> Option
     except ValueError:
         return Err.INVALID_CONDITION
 
-    current_time = uint64(int(time.time() * 1000))
-    if current_time <= expected_mili_time:
+    if timestamp is None:
+        timestamp = uint64(int(time.time() * 1000))
+    if timestamp < expected_mili_time:
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
 
-def mempool_assert_relative_time_exceeds(condition: ConditionWithArgs, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_relative_time_exceeds(
+    condition: ConditionWithArgs, unspent: CoinRecord, timestamp: Optional[uint64] = None
+) -> Optional[Err]:
     """
     Check if the current time in millis exceeds the time specified by condition
     """
@@ -93,9 +98,10 @@ def mempool_assert_relative_time_exceeds(condition: ConditionWithArgs, unspent: 
     except ValueError:
         return Err.INVALID_CONDITION
 
-    current_time = uint64(int(time.time() * 1000))
-    if current_time <= expected_mili_time + unspent.timestamp:
-        return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
+    if timestamp is None:
+        timestamp = uint64(int(time.time() * 1000))
+    if timestamp < expected_mili_time + unspent.timestamp:
+        return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None
 
 
@@ -186,6 +192,7 @@ def mempool_check_conditions_dict(
     puzzle_announcement_names: Set[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
+    timestamp: Optional[uint64] = None,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
@@ -205,9 +212,9 @@ def mempool_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
                 error = mempool_assert_relative_block_height_exceeds(cvp, unspent, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
-                error = mempool_assert_absolute_time_exceeds(cvp)
+                error = mempool_assert_absolute_time_exceeds(cvp, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
-                error = mempool_assert_relative_time_exceeds(cvp, unspent)
+                error = mempool_assert_relative_time_exceeds(cvp, unspent, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
                 error = mempool_assert_my_parent_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
