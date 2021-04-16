@@ -48,7 +48,7 @@ def mempool_assert_absolute_block_height_exceeds(
         block_index_exceeds_this = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
-    if prev_transaction_block_height <= block_index_exceeds_this:
+    if prev_transaction_block_height < block_index_exceeds_this:
         return Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
     return None
 
@@ -64,7 +64,7 @@ def mempool_assert_relative_block_height_exceeds(
         block_index_exceeds_this = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if prev_transaction_block_height <= block_index_exceeds_this:
+    if prev_transaction_block_height < block_index_exceeds_this:
         return Err.ASSERT_HEIGHT_RELATIVE_FAILED
     return None
 
