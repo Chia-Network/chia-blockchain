@@ -42,7 +42,8 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Serial
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
-    return SerializedProgram.from_bytes(bytes(Program.to([DESERIALIZE_MOD, gen_ref_list])))
+    gen_ref_tree = list_to_tree(gen_ref_list)
+    return SerializedProgram.from_bytes(bytes(Program.to([DESERIALIZE_MOD, gen_ref_tree])))
 
 
 def create_compressed_generator(
@@ -79,3 +80,21 @@ def run_generator_unsafe(self: BlockGenerator) -> Tuple[int, SerializedProgram]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     program, args = setup_generator_args(self)
     return GENERATOR_MOD.run_with_cost(program, args)
+
+
+def list_to_tree(items):
+    """
+    This recursively turns a python list into a minimal depth tree.
+    [] => []
+    [a] => a (a leaf node)
+    [a_1, ..., a_n] => (list_to_tree(B_0), list_to_tree(B_1)) where len(B_0) - len(B_1) is 0 or 1
+      and B_0 + B_1 is the original list
+    [1, 2, 3, 4] => ((1, 2), (3, 4))
+    """
+    size = len(items)
+    if size == 0:
+        return []
+    if size == 1:
+        return items[0]
+    halfway = (size + 1) // 2
+    return (list_to_tree(items[:halfway]), list_to_tree(items[halfway:]))
