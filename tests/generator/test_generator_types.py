@@ -64,7 +64,7 @@ class TestGeneratorTypes(TestCase):
 
     def test_generator_arg_is_list(self):
         generator_ref_list = [Program.to(b"gen1"), Program.to(b"gen2")]
-        gen_args = make_generator_args(generator_ref_list)
+        gen_args = create_generator_args(generator_ref_list)
         gen_args_as_program = Program.from_bytes(bytes(gen_args))
         arg2 = gen_args_as_program.rest().first()
         assert arg2 == binutils.assemble("('gen1' 'gen2')")
