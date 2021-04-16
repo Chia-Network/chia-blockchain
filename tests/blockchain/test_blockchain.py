@@ -183,7 +183,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_unfinished_blocks(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2)
+        blocks = bt.get_consecutive_blocks(3)
         for block in blocks[:-1]:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK

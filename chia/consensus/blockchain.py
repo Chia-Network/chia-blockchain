@@ -723,7 +723,11 @@ class Blockchain(BlockchainInterface):
 
         result: List[GeneratorArg] = []
         previous_block_hash = block.prev_header_hash
-        if previous_block_hash in self.__block_records:
+        if (
+            self.try_block_record(previous_block_hash)
+            and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
+        ):
+            # We are not in a reorg, no need to look up alternate header hashes (we can get them from height_to_hash)
             for ref_height in block.transactions_generator_ref_list:
                 header_hash = self.height_to_hash(ref_height)
                 ref_block = await self.get_full_block(header_hash)
@@ -731,6 +735,7 @@ class Blockchain(BlockchainInterface):
                 assert ref_block.transactions_generator is not None
                 result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
         else:
+            # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
             curr: Union[FullBlock, UnfinishedBlock] = block
             while curr.prev_header_hash in additional_blocks:
@@ -742,16 +747,16 @@ class Blockchain(BlockchainInterface):
 
             peak: Optional[BlockRecord] = self.get_peak()
             if self.contains_block(curr.prev_header_hash) and peak is not None:
+                # Then we look up blocks up to fork point one at a time, backtracking
                 previous_block_hash = curr.prev_header_hash
                 prev_block_record = await self.block_store.get_block_record(previous_block_hash)
                 prev_block = await self.block_store.get_full_block(previous_block_hash)
                 assert prev_block is not None
                 assert prev_block_record is not None
                 fork = find_fork_point_in_chain(self, peak, prev_block_record)
-                assert fork != -1
                 curr_2: Optional[FullBlock] = prev_block
                 assert curr_2 is not None and isinstance(curr_2, FullBlock)
-                reorg_chain[prev_block.height] = prev_block
+                reorg_chain[curr_2.height] = curr_2
                 while curr_2.height > fork and curr_2.height > 0:
                     curr_2 = await self.block_store.get_full_block(curr_2.prev_header_hash)
                     assert curr_2 is not None

@@ -303,12 +303,27 @@ class TestFullNodeBlockCompression:
         blockchain = empty_blockchain
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
-        for i in range(1, height):
-            for batch_size in range(1, height):
-                results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
-                assert results is not None
-                for result in results:
-                    assert result.error is None
+
+        reog_blocks = bt.get_consecutive_blocks(14)
+        for r in range(0, len(reog_blocks), 3):
+            for reorg_block in reog_blocks[:r]:
+                assert (await blockchain.receive_block(reorg_block))[1] is None
+            for i in range(1, height):
+                for batch_size in range(1, height):
+                    results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                    assert results is not None
+                    for result in results:
+                        assert result.error is None
+
+        for r in range(0, len(all_blocks), 3):
+            for block in all_blocks[:r]:
+                assert (await blockchain.receive_block(block))[1] is None
+            for i in range(1, height):
+                for batch_size in range(1, height):
+                    results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                    assert results is not None
+                    for result in results:
+                        assert result.error is None
 
 
 class TestFullNodeProtocol:
