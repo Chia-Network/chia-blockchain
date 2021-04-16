@@ -28,7 +28,13 @@ from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
-from chia.protocols.full_node_protocol import RejectBlocks, RequestBlocks, RespondBlock, RespondBlocks
+from chia.protocols.full_node_protocol import (
+    RejectBlocks,
+    RequestBlocks,
+    RespondBlock,
+    RespondBlocks,
+    RespondSignagePoint,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -804,6 +810,61 @@ class FullNode:
                 return False
         return True
 
+    async def signage_point_post_processing(
+        self,
+        request: full_node_protocol.RespondSignagePoint,
+        peer: ws.WSChiaConnection,
+        ip_sub_slot: Optional[EndOfSubSlotBundle],
+    ):
+        self.log.info(
+            f"⏲️  Finished signage point {request.index_from_challenge}/"
+            f"{self.constants.NUM_SPS_SUB_SLOT}: "
+            f"{request.challenge_chain_vdf.output.get_hash()} "
+        )
+        self.signage_point_times[request.index_from_challenge] = time.time()
+        sub_slot_tuple = self.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
+        if sub_slot_tuple is not None:
+            prev_challenge = sub_slot_tuple[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+        else:
+            prev_challenge = None
+
+        # Notify nodes of the new signage point
+        broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+            prev_challenge,
+            request.challenge_chain_vdf.challenge,
+            request.index_from_challenge,
+            request.reward_chain_vdf.challenge,
+        )
+        msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
+        await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
+        peak = await self.blockchain.get_peak()
+        if peak is not None and peak.height > self.constants.MAX_SUB_SLOT_BLOCKS:
+            sub_slot_iters = peak.sub_slot_iters
+            difficulty = uint64(peak.weight - self.blockchain.block_record(peak.prev_hash).weight)
+            # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
+            assert ip_sub_slot is not None
+            if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
+                next_difficulty = self.blockchain.get_next_difficulty(peak.header_hash, True)
+                next_sub_slot_iters = self.blockchain.get_next_slot_iters(peak.header_hash, True)
+                difficulty = next_difficulty
+                sub_slot_iters = next_sub_slot_iters
+        else:
+            difficulty = self.constants.DIFFICULTY_STARTING
+            sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
+
+        # Notify farmers of the new signage point
+        broadcast_farmer = farmer_protocol.NewSignagePoint(
+            request.challenge_chain_vdf.challenge,
+            request.challenge_chain_vdf.output.get_hash(),
+            request.reward_chain_vdf.output.get_hash(),
+            difficulty,
+            sub_slot_iters,
+            request.index_from_challenge,
+        )
+        msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
+        await self.server.send_to_all([msg], NodeType.FARMER)
+
     async def peak_post_processing(
         self, block: FullBlock, record: BlockRecord, fork_height: uint32, peer: Optional[ws.WSChiaConnection]
     ):
@@ -883,10 +944,20 @@ class FullNode:
             msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        # TODO: maybe add and broadcast new SP/IPs as well?
+        if new_sps is not None:
+            for sp in new_sps:
+                index = uint8(sp.cc_vdf.number_of_iterations // record.sub_slot_iters)
+                await self.signage_point_post_processing(
+                    RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
+                )
+
+        # TODO: maybe add and broadcast new IPs as well
+
         if record.height % 1000 == 0:
-            # Occasionally clear the seen list to keep it small
+            # Occasionally clear data in full node store to keep memory usage small
             self.full_node_store.clear_seen_unfinished_blocks()
+            self.full_node_store.clear_old_cache_entries()
+
         if self.sync_store.get_sync_mode() is False:
             await self.send_peak_to_timelords(block)
 
