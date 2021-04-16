@@ -60,7 +60,6 @@ class TestCompression(TestCase):
         assert result_c is not None
         assert result_s is not None
         assert result_c == result_s
-        assert cost_c == cost_s
 
 
 class TestDecompression(TestCase):
