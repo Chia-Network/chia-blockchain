@@ -493,8 +493,8 @@ class WalletRpcApi:
         }
 
     async def get_initial_freeze_period(self):
-        freeze_period = self.service.constants.INITIAL_FREEZE_PERIOD
-        return {"INITIAL_FREEZE_PERIOD": freeze_period}
+        freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
+        return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
 
     async def get_next_address(self, request: Dict) -> Dict:
         """
@@ -531,10 +531,10 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
         if (
-            self.service.wallet_state_manager.blockchain.get_peak_height()
-            < self.service.constants.INITIAL_FREEZE_PERIOD
+            int(time.time())
+            < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
         ):
-            raise ValueError(f"No transactions before block height: {self.service.constants.INITIAL_FREEZE_PERIOD}")
+            raise ValueError(f"No transactions before timestamp: {self.service.constants.INITIAL_FREEZE_END_TIMESTAMP}")
 
         if self.service.constants.NETWORK_TYPE is NetworkType.MAINNET:
             raise ValueError("Sending transactions not supported, please update your client.")
