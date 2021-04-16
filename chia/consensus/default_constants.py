@@ -53,7 +53,7 @@ testnet_kwargs = {
     "INITIAL_FREEZE_PERIOD": 42 * 4608,
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
-    "MAX_GENERATOR_REF_LIST_SIZE": 1024,  # Number of references allowed in the block generator ref list
+    "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
 }
 
 
