@@ -212,15 +212,9 @@ def mempool_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
                 error = mempool_assert_relative_block_height_exceeds(cvp, unspent, prev_transaction_block_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
-                if timestamp is not None:
-                    error = mempool_assert_absolute_time_exceeds(cvp, timestamp)
-                else:
-                    error = mempool_assert_absolute_time_exceeds(cvp)
+                error = mempool_assert_absolute_time_exceeds(cvp, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
-                if timestamp is not None:
-                    error = mempool_assert_relative_time_exceeds(cvp, unspent, timestamp)
-                else:
-                    error = mempool_assert_relative_time_exceeds(cvp, unspent)
+                error = mempool_assert_relative_time_exceeds(cvp, unspent, timestamp)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PARENT_ID:
                 error = mempool_assert_my_parent_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_PUZZLEHASH:
