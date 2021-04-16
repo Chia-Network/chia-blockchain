@@ -18,6 +18,7 @@ from chia.wallet.puzzles import (
     p2_puzzle_hash,
 )
 from tests.util.key_tool import KeyTool
+from chia.util.block_tools import test_constants
 
 from ..core.make_block_generator import int_to_public_key
 from .coin_store import CoinStore, CoinTimestamp
@@ -70,7 +71,7 @@ def do_test_spend(
     coin_solution = CoinSolution(coin, puzzle_reveal, solution)
 
     spend_bundle = SpendBundle([coin_solution], G2Element())
-    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time)
+    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, test_constants.MAX_BLOCK_COST_CLVM)
 
     # ensure all outputs are there
     for puzzle_hash, amount in payments:

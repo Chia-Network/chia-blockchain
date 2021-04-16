@@ -1,7 +1,7 @@
 from typing import Dict
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.generator_types import GeneratorBlockCacheInterface
 from chia.full_node.generator import create_block_generator, create_generator_args, list_to_tree
 from chia.util.ints import uint32
@@ -49,7 +49,7 @@ class TestGeneratorTypes(TestCase):
         # First argument: clvm deserializer
 
         b = bytes.fromhex("ff8568656c6c6fff86667269656e6480")  # ("hello" "friend")
-        cost, output = d.run_with_cost([b])
+        cost, output = d.run_with_cost(INFINITE_COST, [b])
         # print(cost, output)
         out = Program.to(output)
         assert out == Program.from_bytes(b)

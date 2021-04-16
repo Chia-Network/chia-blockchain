@@ -1078,7 +1078,9 @@ class FullNodeAPI:
 
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_name)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(
+            block_generator, coin_name, self.full_node.constants.MAX_BLOCK_COST_CLVM
+        )
 
         if error is not None:
             return reject_msg

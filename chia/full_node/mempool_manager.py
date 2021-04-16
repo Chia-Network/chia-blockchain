@@ -38,12 +38,10 @@ from chia.util.streamable import recurse_jsonify
 log = logging.getLogger(__name__)
 
 
-def get_npc_multiprocess(
-    spend_bundle_bytes: bytes,
-) -> bytes:
+def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int) -> bytes:
     program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(get_name_puzzle_conditions(program, True))
+    return bytes(get_name_puzzle_conditions(program, max_cost, True))
 
 
 class MempoolManager:
@@ -199,7 +197,7 @@ class MempoolManager:
         """
         start_time = time.time()
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
-            self.pool, get_npc_multiprocess, bytes(new_spend)
+            self.pool, get_npc_multiprocess, bytes(new_spend), self.constants.MAX_BLOCK_COST_CLVM
         )
         end_time = time.time()
         log.info(f"It took {end_time - start_time} to pre validate transaction")

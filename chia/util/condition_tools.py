@@ -169,8 +169,9 @@ def puzzle_announcement_names_for_conditions_dict(
 def conditions_dict_for_solution(
     puzzle_reveal: Program,
     solution: Program,
+    max_cost: int,
 ) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionWithArgs]]], uint64]:
-    error, result, cost = conditions_for_solution(puzzle_reveal, solution)
+    error, result, cost = conditions_for_solution(puzzle_reveal, solution, max_cost)
     if error or result is None:
         return error, None, uint64(0)
     return None, conditions_by_opcode(result), cost
@@ -179,10 +180,11 @@ def conditions_dict_for_solution(
 def conditions_for_solution(
     puzzle_reveal: Program,
     solution: Program,
+    max_cost: int,
 ) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
-        cost, r = puzzle_reveal.run_with_cost(solution)
+        cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
         error, result = parse_sexp_to_conditions(r)
         return error, result, uint64(cost)
     except Program.EvalError:

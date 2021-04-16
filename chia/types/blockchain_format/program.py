@@ -19,8 +19,8 @@ from .tree_hash import sha256_treehash
 def run_program(
     program,
     args,
+    max_cost,
     operator_lookup=OPERATOR_LOOKUP,
-    max_cost=None,
     pre_eval_f=None,
 ):
     return default_run_program(
@@ -30,6 +30,9 @@ def run_program(
         max_cost,
         pre_eval_f=pre_eval_f,
     )
+
+
+INFINITE_COST = 0x7FFFFFFFFFFFFFFF
 
 
 class Program(SExp):
@@ -66,13 +69,13 @@ class Program(SExp):
         """
         return sha256_treehash(self, set(args))
 
-    def run_with_cost(self, args) -> Tuple[int, "Program"]:
+    def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
-        cost, r = run_program(self, prog_args)
+        cost, r = run_program(self, prog_args, max_cost)
         return cost, Program.to(r)
 
     def run(self, args) -> "Program":
-        cost, r = self.run_with_cost(args)
+        cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
     def curry(self, *args) -> "Program":
@@ -184,13 +187,13 @@ class SerializedProgram:
         tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
         return _tree_hash(tmp, set(args))
 
-    def run_safe_with_cost(self, *args) -> Tuple[int, Program]:
-        return self._run(STRICT_MODE, *args)
+    def run_safe_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+        return self._run(max_cost, STRICT_MODE, *args)
 
-    def run_with_cost(self, *args) -> Tuple[int, Program]:
-        return self._run(0, *args)
+    def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+        return self._run(max_cost, 0, *args)
 
-    def _run(self, flags, *args) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:
         # when multiple arguments are passed, concatenate them into a serialized
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
@@ -205,7 +208,6 @@ class SerializedProgram:
         else:
             serialized_args += _serialize(args[0])
 
-        max_cost = 0
         # TODO: move this ugly magic into `clvm` "dialects"
         native_opcode_names_by_opcode = dict(
             ("op_%s" % OP_REWRITE.get(k, k), op) for op, k in KEYWORD_FROM_ATOM.items() if k not in "qa."

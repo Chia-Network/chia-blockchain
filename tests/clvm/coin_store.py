@@ -40,6 +40,7 @@ class CoinStore:
         self,
         spend_bundle: SpendBundle,
         now: CoinTimestamp,
+        max_cost: int,
     ) -> int:
         # this should use blockchain consensus code
 
@@ -49,7 +50,7 @@ class CoinStore:
         conditions_dicts = []
         for coin_solution in spend_bundle.coin_solutions:
             err, conditions_dict, cost = conditions_dict_for_solution(
-                coin_solution.puzzle_reveal, coin_solution.solution
+                coin_solution.puzzle_reveal, coin_solution.solution, max_cost
             )
             if conditions_dict is None:
                 raise BadSpendBundleError(f"clvm validation failure {err}")
@@ -78,8 +79,8 @@ class CoinStore:
 
         return 0
 
-    def update_coin_store_for_spend_bundle(self, spend_bundle: SpendBundle, now: CoinTimestamp):
-        err = self.validate_spend_bundle(spend_bundle, now)
+    def update_coin_store_for_spend_bundle(self, spend_bundle: SpendBundle, now: CoinTimestamp, max_cost: int):
+        err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
         for spent_coin in spend_bundle.removals():
