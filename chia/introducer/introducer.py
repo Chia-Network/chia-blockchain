@@ -1,22 +1,20 @@
 import asyncio
 import logging
 import time
-from typing import Callable, Dict, Optional
+from typing import Optional
 
 from chia.server.server import ChiaServer
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.server.introducer_peers import VettedPeer
+from chia.util.ints import uint64
 
 
 class Introducer:
     def __init__(self, max_peers_to_send: int, recent_peer_threshold: int):
-        self.vetted: Dict[bytes32, bool] = {}
-        self.vetted_timestamps: Dict[bytes32, int] = {}
         self.max_peers_to_send = max_peers_to_send
         self.recent_peer_threshold = recent_peer_threshold
         self._shut_down = False
         self.server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
-        self.state_changed_callback: Optional[Callable] = None
 
     async def _start(self):
         self._vetting_task = asyncio.create_task(self._vetting_loop())
@@ -49,28 +47,45 @@ class Introducer:
                 if len(raw_peers) == 0:
                     continue
 
+                peer: VettedPeer
                 for peer in raw_peers:
                     if self._shut_down:
                         return
-                    if peer.get_hash() in self.vetted_timestamps:
-                        if time.time() > self.vetted_timestamps[peer.get_hash()] + 3600:
-                            if peer.get_hash() in self.vetted:
-                                self.vetted[peer.get_hash()] = False
-                    if peer.get_hash() not in self.vetted or not self.vetted[peer.get_hash()]:
-                        try:
-                            self.log.info(f"Vetting peer {peer.host} {peer.port}")
-                            r, w = await asyncio.wait_for(
-                                asyncio.open_connection(peer.host, int(peer.port)),
-                                timeout=3,
-                            )
-                            w.close()
-                        except Exception as e:
-                            self.log.warning(f"Could not vet {peer}. {type(e)}{str(e)}")
-                            self.vetted[peer.get_hash()] = False
-                            continue
 
-                        self.log.info(f"Have vetted {peer} successfully!")
-                        self.vetted[peer.get_hash()] = True
-                        self.vetted_timestamps[peer.get_hash()] = int(time.time())
+                    now = time.time()
+
+                    # if it was too long ago we checked this peer, check it
+                    # again
+                    if peer.vetted > 0 and now > peer.vetted_timestamp + 3600:
+                        peer.vetted = 0
+
+                    if peer.vetted > 0:
+                        continue
+
+                    # don't re-vet peers too frequently
+                    if now < peer.last_attempt + 500:
+                        continue
+
+                    try:
+                        peer.last_attempt = uint64(time.time())
+
+                        self.log.info(f"Vetting peer {peer.host} {peer.port}")
+                        r, w = await asyncio.wait_for(
+                            asyncio.open_connection(peer.host, int(peer.port)),
+                            timeout=3,
+                        )
+                        w.close()
+                    except Exception as e:
+                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{str(e)}")
+                        peer.vetted = min(peer.vetted - 1, -1)
+
+                        # if we have failed 6 times in a row, remove the peer
+                        if peer.vetted < -6:
+                            self.server.introducer_peers.remove(peer)
+                        continue
+
+                    self.log.info(f"Have vetted {peer} successfully!")
+                    peer.vetted_timestamp = uint64(time.time())
+                    peer.vetted = max(peer.vetted + 1, 1)
             except Exception as e:
                 self.log.error(e)
