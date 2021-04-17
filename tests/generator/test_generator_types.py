@@ -54,10 +54,10 @@ class TestGeneratorTypes(TestCase):
         out = Program.to(output)
         assert out == Program.from_bytes(b)
 
-        # Second Argument
+        # Second Argument to the block generator is the first template generator
         arg2 = gen_args_as_program.rest().first()
         print(arg2)
-        assert bytes(arg2) == bytes(gen1)
+        assert arg2 == bytes(gen1)
 
     # It's not a list anymore.
     # TODO: Test the first three arg positions passed through here.
