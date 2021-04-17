@@ -4,6 +4,7 @@ import time
 from typing import Callable, Dict, Optional
 
 from chia.server.server import ChiaServer
+from chia.server.introducer_peers import VettedPeer
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
@@ -49,28 +50,33 @@ class Introducer:
                 if len(raw_peers) == 0:
                     continue
 
+                peer: VettedPeer
                 for peer in raw_peers:
                     if self._shut_down:
                         return
-                    if peer.get_hash() in self.vetted_timestamps:
-                        if time.time() > self.vetted_timestamps[peer.get_hash()] + 3600:
-                            if peer.get_hash() in self.vetted:
-                                self.vetted[peer.get_hash()] = False
-                    if peer.get_hash() not in self.vetted or not self.vetted[peer.get_hash()]:
-                        try:
-                            self.log.info(f"Vetting peer {peer.host} {peer.port}")
-                            r, w = await asyncio.wait_for(
-                                asyncio.open_connection(peer.host, int(peer.port)),
-                                timeout=3,
-                            )
-                            w.close()
-                        except Exception as e:
-                            self.log.warning(f"Could not vet {peer}. {type(e)}{str(e)}")
-                            self.vetted[peer.get_hash()] = False
-                            continue
 
-                        self.log.info(f"Have vetted {peer} successfully!")
-                        self.vetted[peer.get_hash()] = True
-                        self.vetted_timestamps[peer.get_hash()] = int(time.time())
+                    # if it was too long ago we checked this peer, check it
+                    # again
+                    if peer.vetted and time.time() > peer.vetted_timestamp + 3600:
+                        peer.vetted = False
+
+                    if peer.vetted:
+                        continue
+
+                    try:
+                        self.log.info(f"Vetting peer {peer.host} {peer.port}")
+                        r, w = await asyncio.wait_for(
+                            asyncio.open_connection(peer.host, int(peer.port)),
+                            timeout=3,
+                        )
+                        w.close()
+                    except Exception as e:
+                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{str(e)}")
+                        self.server.introducer_peers.remove(peer)
+                        continue
+
+                    self.log.info(f"Have vetted {peer} successfully!")
+                    peer.vetted = True
+                    peer.vetted_timestamps = int(time.time())
             except Exception as e:
                 self.log.error(e)
