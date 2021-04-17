@@ -1,23 +1,22 @@
 # flake8: noqa: F501
 from unittest import TestCase
 
+from clvm_tools import binutils
+
 from chia.full_node.bundle_tools import (
     bundle_suitable_for_compression,
-    simple_solution_generator,
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
+    simple_solution_generator,
 )
-from chia.full_node.generator import run_generator, create_generator_args
-from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
+from chia.full_node.generator import create_generator_args, run_generator
+from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
 from chia.types.generator_types import CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
-
 from tests.core.make_block_generator import make_spend_bundle
-
-from clvm_tools import binutils
 
 TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clvm", package_or_requirement="chia.wallet.puzzles")
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")

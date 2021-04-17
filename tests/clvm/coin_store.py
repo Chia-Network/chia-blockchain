@@ -8,8 +8,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import (
-    conditions_dict_for_solution,
     coin_announcement_names_for_conditions_dict,
+    conditions_dict_for_solution,
     puzzle_announcement_names_for_conditions_dict,
 )
 from chia.util.ints import uint32, uint64

@@ -1,5 +1,5 @@
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.types.blockchain_format.program import Program, INFINITE_COST
 
 DID_CORE_MOD = load_clvm("singleton_top_layer.clvm")
 

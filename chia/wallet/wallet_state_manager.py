@@ -14,11 +14,12 @@ from cryptography.fernet import Fernet
 
 from chia import __version__
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
+from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution
+from chia.server.server import ChiaServer
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -34,6 +35,7 @@ from chia.wallet.block_record import HeaderBlockRecord
 from chia.wallet.cc_wallet.cc_wallet import CCWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_backup_sk, master_sk_to_wallet_sk
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -54,8 +56,6 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.server.server import ChiaServer
-from chia.wallet.did_wallet.did_wallet import DIDWallet
 
 
 class WalletStateManager:

@@ -14,12 +14,6 @@ from typing import Callable, Dict, List, Optional, Tuple
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    detect_potential_template_generator,
-    simple_solution_generator,
-)
-from chia.plotting.create_plots import create_plots
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -37,7 +31,13 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.full_node.bundle_tools import (
+    best_solution_generator_from_template,
+    detect_potential_template_generator,
+    simple_solution_generator,
+)
 from chia.full_node.signage_point import SignagePoint
+from chia.plotting.create_plots import create_plots
 from chia.plotting.plot_tools import PlotInfo, load_plots, parse_plot_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin

@@ -19,8 +19,8 @@ from chia.server.upnp import upnp_remap_port
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
+from chia.util.setproctitle import setproctitle
 
 from .reconnect_task import start_reconnect_task
 

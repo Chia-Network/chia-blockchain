@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
+from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus

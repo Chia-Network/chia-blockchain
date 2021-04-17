@@ -32,7 +32,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, block_removals_and_additions
+from chia.util.generator_tools import block_removals_and_additions, get_block_header
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
 

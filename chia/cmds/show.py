@@ -13,12 +13,13 @@ async def show_async(
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
-    import aiohttp
     import time
     import traceback
-
     from time import localtime, struct_time
     from typing import List, Optional
+
+    import aiohttp
+
     from chia.consensus.block_record import BlockRecord
     from chia.rpc.full_node_rpc_client import FullNodeRpcClient
     from chia.server.outbound_message import NodeType

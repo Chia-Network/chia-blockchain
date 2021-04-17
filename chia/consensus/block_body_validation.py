@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union, Callable
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
@@ -9,7 +9,6 @@ from clvm.casts import int_from_bytes
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.block_root_validation import validate_block_merkle_roots
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
@@ -18,7 +17,7 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.network_type import NetworkType
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -29,15 +28,12 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.condition_tools import (
-    pkm_pairs_for_conditions_dict,
     coin_announcements_names_for_npc,
+    pkm_pairs_for_conditions_dict,
     puzzle_announcements_names_for_npc,
 )
 from chia.util.errors import Err
-from chia.util.generator_tools import (
-    additions_for_npc,
-    tx_removals_and_additions,
-)
+from chia.util.generator_tools import additions_for_npc, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 

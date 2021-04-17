@@ -48,8 +48,9 @@ def farm_cmd() -> None:
     show_default=True,
 )
 def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> None:
-    from .farm_funcs import summary
     import asyncio
+
+    from .farm_funcs import summary
 
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
@@ -72,7 +73,8 @@ def summary_cmd(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, fa
     show_default=True,
 )
 def challenges_cmd(farmer_rpc_port: int, limit: int) -> None:
-    from .farm_funcs import challenges
     import asyncio
+
+    from .farm_funcs import challenges
 
     asyncio.run(challenges(farmer_rpc_port, limit))

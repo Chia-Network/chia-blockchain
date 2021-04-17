@@ -7,6 +7,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.spend_bundle import SpendBundle
+from chia.util.block_tools import test_constants
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.wallet.puzzles import (
@@ -18,7 +19,6 @@ from chia.wallet.puzzles import (
     p2_puzzle_hash,
 )
 from tests.util.key_tool import KeyTool
-from chia.util.block_tools import test_constants
 
 from ..core.make_block_generator import int_to_public_key
 from .coin_store import CoinStore, CoinTimestamp

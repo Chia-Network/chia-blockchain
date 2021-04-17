@@ -1,4 +1,5 @@
 import pytest
+
 from chia.util.misc import format_minutes
 
 

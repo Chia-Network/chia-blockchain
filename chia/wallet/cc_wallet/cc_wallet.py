@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse

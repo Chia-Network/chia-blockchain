@@ -13,10 +13,10 @@ from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.generator_tools import run_and_get_removals_and_additions
 from chia.util.ints import uint64
 from chia.util.wallet_tools import WalletTool
-from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
 
 

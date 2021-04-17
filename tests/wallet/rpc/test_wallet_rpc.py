@@ -16,7 +16,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)

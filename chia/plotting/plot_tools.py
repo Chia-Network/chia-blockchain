@@ -1,11 +1,11 @@
 import logging
 import time
 import traceback
+from concurrent.futures.thread import ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
-from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
