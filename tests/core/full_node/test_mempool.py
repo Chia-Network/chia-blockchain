@@ -163,6 +163,23 @@ class TestMempoolManager:
         assert sb1 == spend_bundle1
         assert sb2 is None
 
+    async def send_sb(self, node, peer, sb):
+        tx = full_node_protocol.RespondTransaction(sb)
+        await node.respond_transaction(tx, peer)
+
+    async def gen_and_send_sb(self, node, peer, *args, **kwargs):
+        sb = generate_test_spend_bundle(*args, **kwargs)
+        assert sb is not None
+
+        await self.send_sb(node, peer, sb)
+        return sb
+
+    def assert_sb_in_pool(self, node, sb):
+        assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
+
+    def assert_sb_not_in_pool(self, node, sb):
+        assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
+
     @pytest.mark.asyncio
     async def test_double_spend_with_higher_fee(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
@@ -183,24 +200,43 @@ class TestMempoolManager:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
-        assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
+        coins = iter(blocks[-1].get_included_reward_coins())
+        coin1, coin2 = next(coins), next(coins)
+        coins = iter(blocks[-2].get_included_reward_coins())
+        coin3 = next(coins)
 
-        await full_node_1.respond_transaction(tx1, peer)
+        sb1_1 = await self.gen_and_send_sb(full_node_1, peer, coin1)
+        sb1_2 = await self.gen_and_send_sb(full_node_1, peer, coin1, fee=uint64(1))
 
-        spend_bundle2 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], fee=uint64(1))
+        # Fee increase is insufficient, the old spendbundle must stay
+        self.assert_sb_in_pool(full_node_1, sb1_1)
+        self.assert_sb_not_in_pool(full_node_1, sb1_2)
 
-        assert spend_bundle2 is not None
-        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
+        min_fee_increase = full_node_1.full_node.mempool_manager.get_min_fee_increase()
 
-        await full_node_1.respond_transaction(tx2, peer)
+        sb1_3 = await self.gen_and_send_sb(full_node_1, peer, coin1, fee=uint64(min_fee_increase))
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-        sb2 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle2.name())
+        # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
+        self.assert_sb_not_in_pool(full_node_1, sb1_1)
+        self.assert_sb_in_pool(full_node_1, sb1_3)
 
-        assert sb1 is None
-        assert sb2 == spend_bundle2
+        sb2 = generate_test_spend_bundle(coin2, fee=uint64(min_fee_increase))
+        sb12 = SpendBundle.aggregate((sb2, sb1_3))
+        await self.send_sb(full_node_1, peer, sb12)
+
+        # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
+        # of coins spent in sb1_3
+        self.assert_sb_in_pool(full_node_1, sb12)
+        self.assert_sb_not_in_pool(full_node_1, sb1_3)
+
+        sb3 = generate_test_spend_bundle(coin3, fee=uint64(min_fee_increase * 2))
+        sb23 = SpendBundle.aggregate((sb2, sb3))
+        await self.send_sb(full_node_1, peer, sb23)
+
+        # sb23 must not replace existing sb12 as the former does not spend all
+        # coins that are spent in the latter (specifically, coin1)
+        self.assert_sb_in_pool(full_node_1, sb12)
+        self.assert_sb_not_in_pool(full_node_1, sb23)
 
     @pytest.mark.asyncio
     async def test_invalid_block_index(self, two_nodes):

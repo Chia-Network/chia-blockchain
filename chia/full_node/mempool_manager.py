@@ -156,6 +156,33 @@ class MempoolManager:
         if bundle_hash in self.seen_bundle_hashes:
             self.seen_bundle_hashes.pop(bundle_hash)
 
+    def get_min_fee_increase(self):
+        # 0.00001 XCH
+        return 10000000
+
+    def can_replace(self, conflicting_items, removals, fees, fees_per_cost):
+        conflicting_fees = 0
+        conflicting_cost = 0
+        for item in conflicting_items.values():
+            conflicting_fees += item.fee
+            conflicting_cost += item.cost_result.cost
+
+            # All coins spent in all conflicting items must also be spent in
+            # the new item
+            for coin in item.removals:
+                if coin.name() not in removals:
+                    return False
+
+        # New item must have higher fee per cost
+        if fees_per_cost <= conflicting_fees / conflicting_cost:
+            return False
+
+        # New item must increase the total fee at least by a certain amount
+        if fees < conflicting_fees + self.get_min_fee_increase():
+            return False
+
+        return True
+
     async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> CostResult:
         """
         Errors are included within the cached_result.
@@ -295,14 +322,13 @@ class MempoolManager:
             for conflicting in conflicts:
                 sb: MempoolItem = self.mempool.removals[conflicting.name()]
                 conflicting_pool_items[sb.name] = sb
-            for item in conflicting_pool_items.values():
-                if item.fee_per_cost >= fees_per_cost:
-                    self.add_to_potential_tx_set(new_spend, spend_name, cost_result)
-                    return (
-                        uint64(cost),
-                        MempoolInclusionStatus.PENDING,
-                        Err.MEMPOOL_CONFLICT,
-                    )
+            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+                self.add_to_potential_tx_set(new_spend, spend_name, cost_result)
+                return (
+                    uint64(cost),
+                    MempoolInclusionStatus.PENDING,
+                    Err.MEMPOOL_CONFLICT,
+                )
 
         elif fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
