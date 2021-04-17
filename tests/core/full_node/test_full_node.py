@@ -115,7 +115,7 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
+    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -136,9 +136,9 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
 
-        # # Send a transaction to mempool
+        # Send a transaction to mempool
         tr: TransactionRecord = await wallet.generate_signed_transaction(
-            10000,
+            tx_size,
             ph,
         )
         await wallet.push_transaction(tx=tr)
@@ -324,6 +324,11 @@ class TestFullNodeBlockCompression:
                     assert results is not None
                     for result in results:
                         assert result.error is None
+
+    @pytest.mark.asyncio
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
+        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000)
+        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000)
 
 
 class TestFullNodeProtocol:
