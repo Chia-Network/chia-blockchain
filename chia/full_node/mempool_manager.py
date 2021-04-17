@@ -159,7 +159,7 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     @staticmethod
-    def get_min_fee_increase(self) -> int:
+    def get_min_fee_increase() -> int:
         # 0.00001 XCH
         return 10000000
 
