@@ -179,9 +179,7 @@ async def validate_block_body(
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
 
             # The generator_refs_root must be the hash of the concatenation of the List[uint32]
-            generator_refs_hash = std_hash(
-                b"".join([i.to_bytes(4, byteorder="big") for i in block.transactions_generator_ref_list])
-            )
+            generator_refs_hash = std_hash(b"".join([bytes(i) for i in block.transactions_generator_ref_list]))
             if block.transactions_info.generator_refs_root != generator_refs_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
             if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
@@ -195,6 +193,7 @@ async def validate_block_body(
             npc_list = npc_result.npc_list
 
             # 8. Check that cost <= MAX_BLOCK_COST_CLVM
+            log.warning(f"Cost: {cost} max: {constants.MAX_BLOCK_COST_CLVM}")
             if cost > constants.MAX_BLOCK_COST_CLVM:
                 return Err.BLOCK_COST_EXCEEDS_MAX, None
             if npc_result.error is not None:
@@ -208,7 +207,7 @@ async def validate_block_body(
             coin_announcement_names = coin_announcements_names_for_npc(npc_list)
             puzzle_announcement_names = puzzle_announcements_names_for_npc(npc_list)
         else:
-            npc_result = None
+            assert npc_result is None
 
         # 9. Check that the correct cost is in the transactions info
         if block.transactions_info.cost != cost:

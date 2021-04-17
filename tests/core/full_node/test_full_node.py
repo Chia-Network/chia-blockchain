@@ -325,10 +325,10 @@ class TestFullNodeBlockCompression:
                     for result in results:
                         assert result.error is None
 
-    @pytest.mark.asyncio
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000)
-        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000)
+    # @pytest.mark.asyncio
+    # async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
+    #     self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000)
+    #     self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000)
 
 
 class TestFullNodeProtocol:
@@ -781,7 +781,7 @@ class TestFullNodeProtocol:
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
         # No longer full
-        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(10000000), uint64(1))
+        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
         msg = await full_node_1.new_transaction(new_transaction)
         assert msg is not None
 
@@ -806,6 +806,9 @@ class TestFullNodeProtocol:
         for block in blocks[-3:]:
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
             await full_node_2.full_node.respond_block(fnp.RespondBlock(block), peer)
+
+        # Farm another block to clear mempool
+        await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(wallet_ph))
 
         tx_id = token_bytes(32)
         request_transaction = fnp.RequestTransaction(tx_id)
