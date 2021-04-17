@@ -950,8 +950,7 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         if new_sps is not None:
-            for sp in new_sps:
-                index = uint8(sp.cc_vdf.number_of_iterations // record.sub_slot_iters)
+            for index, sp in new_sps:
                 await self.signage_point_post_processing(
                     RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
                 )
