@@ -11,6 +11,7 @@ import pytest
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -32,6 +33,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.util.wallet_tools import WalletTool
+from tests.core.fixtures import empty_blockchain  # noqa: F401
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
@@ -863,6 +865,52 @@ class TestFullNodeProtocol:
             return len(full_node_2.full_node.full_node_store.finished_sub_slots) >= num_slots
 
         await time_out_assert(20, caught_up_slots)
+
+    @pytest.mark.asyncio
+    async def test_new_signage_point_caching(self, wallet_nodes, empty_blockchain):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+
+        peer = await connect_and_get_peer(server_1, server_2)
+        blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-3]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-2]))
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]))
+
+        blockchain = full_node_1.full_node.blockchain
+
+        # Submit the sub slot, but not the last block
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
+        for ss in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(ss), peer)
+
+        second_blockchain = empty_blockchain
+        for block in blocks:
+            await second_blockchain.receive_block(block)
+
+        # Creates a signage point based on the last block
+        peak_2 = second_blockchain.get_peak()
+        sp: SignagePoint = get_signage_point(
+            test_constants,
+            blockchain,
+            peak_2,
+            peak_2.ip_sub_slot_total_iters(test_constants),
+            uint8(4),
+            [],
+            peak_2.sub_slot_iters,
+        )
+
+        # Submits the signage point, cannot add because don't have block
+        await full_node_1.respond_signage_point(
+            fnp.RespondSignagePoint(4, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
+        )
+        assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is None
+
+        # Add block
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
+
+        # Now signage point should be added
+        assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
 
     @pytest.mark.asyncio
     async def test_slot_catch_up_genesis(self, setup_two_nodes):
