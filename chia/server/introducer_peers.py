@@ -12,10 +12,16 @@ class VettedPeer:
     host: str
     port: uint16
 
-    # True means we have vetted and it was alive
-    # False means we have not vetted this peer (recent enough)
-    vetted: bool = False
+    # 0 means we have not attempted to vet this peer yet
+    # a negative number means we have failed that many vetting attempts in a row
+    # a positive number means we have successfully vetted the peer this many
+    # times in a row
+    vetted: int = 0
+    # the timestamp of the last *successful* vetting of this peer
     vetted_timestamp: uint64 = uint64(0)
+    # the last time we attempted to vet this peer, or 0 if we haven't tried yet
+    # we set this regardless of whether the vetting is successful or not
+    last_attempt: uint64 = uint64(0)
     time_added: uint64 = uint64(0)
 
     def __init__(self, h: str, p: uint16):
