@@ -36,7 +36,7 @@ def get_generator():
 
     # Bootstrap the execution by passing functions in as parameters before the actual data arguments
     get_coinsols = eval(args(0), args(1))
-    core = eval(quote(execute_generate_npc_pair), make_list(quote(generate_npc_pair_list), get_coinsols))
+    core = cons(eval(quote(execute_generate_npc_pair), make_list(quote(generate_npc_pair_list), get_coinsols)), 0)
 
     # The below string is exactly the same as the value of 'core' above, except '(r 5)' is replaced with '13'
     # test = "(a (q . (a 2 (c 2 (c 5 (c () ()))))) (c (q . (a (i 5 (q . (a 2 (c 2 (c 13 (c (c (c 17 (c (a (q . (a 2 (c 2 (c 3 0)))) (c (q . (a (i (l 5) (q . (sha256 (q . 2) (a 2 (c 2 (c 9 0))) (a 2 (c 2 (c 13 0))))) (q . (sha256 (q . 1) 5))) 1)) 73)) (c (a 73 169) ()))) 11) ()))))) (q . 11)) 1)) (c (a 2 5) ())))"  # noqa
