@@ -328,25 +328,14 @@ class MempoolManager:
             for conflicting in conflicts:
                 sb: MempoolItem = self.mempool.removals[conflicting.name()]
                 conflicting_pool_items[sb.name] = sb
-<<<<<<< HEAD
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
-                self.add_to_potential_tx_set(new_spend, spend_name, cost_result)
+                potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+                self.add_to_potential_tx_set(potential)
                 return (
                     uint64(cost),
                     MempoolInclusionStatus.PENDING,
                     Err.MEMPOOL_CONFLICT,
                 )
-=======
-            for item in conflicting_pool_items.values():
-                if item.fee_per_cost >= fees_per_cost:
-                    potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
-                    self.add_to_potential_tx_set(potential)
-                    return (
-                        uint64(cost),
-                        MempoolInclusionStatus.PENDING,
-                        Err.MEMPOOL_CONFLICT,
-                    )
->>>>>>> squash
 
         elif fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
