@@ -8,7 +8,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.crawler.crawler import Crawler
 from src.crawler.crawler_api import CrawlerAPI
-from src.crawler import TCPRequestHandler, UDPRequestHandler
+# from src.crawler import TCPRequestHandler, UDPRequestHandler
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
@@ -57,7 +57,7 @@ def main():
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
-    servers = []
+    """servers = []
     servers.append(socketserver.ThreadingUDPServer(('', 5053), UDPRequestHandler))
     servers.append(socketserver.ThreadingTCPServer(('', 5053), TCPRequestHandler))
     for s in servers:
@@ -67,7 +67,8 @@ def main():
         print("%s server loop running in thread: %s" % (s.RequestHandlerClass.__name__[:3], thread.name))
     # TODO: close
     return run_service(**kwargs)
-
+    """
+    return run_service(**kwargs)
 
 if __name__ == "__main__":
     freeze_support()

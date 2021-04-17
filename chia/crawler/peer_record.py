@@ -5,6 +5,7 @@ import math
 import time
 from datetime import timedelta
 from datetime import datetime
+from pytz import timezone
 
 
 @dataclass(frozen=True)
@@ -24,16 +25,16 @@ class PeerStat:
     count: float
     reliability: float
 
-    def __init__(self):
-        weight = 0.0
-        count = 0.0
-        reliability = 0.0
+    def __init__(self, weight, count, reliability):
+        self.weight = weight
+        self.count = count
+        self.reliability = reliability
 
     def update(self, is_reachable: bool, age: int, tau: int):
         f = math.exp(-age / tau)
-        reliability = reliability * f + (1.0 - f if is_reachable else 0)
-        count = count * f + 1
-        weight = weight * f + 1.0 - f
+        self.reliability = self.reliability * f + (1.0 - f if is_reachable else 0)
+        self.count = self.count * f + 1
+        self.weight = self.weight * f + 1.0 - f
 
 
 class PeerReliability:
@@ -45,14 +46,33 @@ class PeerReliability:
     stat_1w: PeerStat
     stat_1m: PeerStat
 
-    def __init__(self, peer_id: str):
+    def __init__(
+        self,
+        peer_id: str,
+        ignore_till: int = 0,
+        stat_2h_weight: float = 0,
+        stat_2h_count: float = 0,
+        stat_2h_reliability: float = 0,
+        stat_8h_weight: float = 0,
+        stat_8h_count: float = 0,
+        stat_8h_reliability: float = 0,
+        stat_1d_weight: float = 0,
+        stat_1d_count: float = 0,
+        stat_1d_reliability: float = 0,
+        stat_1w_weight: float = 0,
+        stat_1w_count: float = 0,
+        stat_1w_reliability: float = 0,
+        stat_1m_weight: float = 0,
+        stat_1m_count: float = 0,
+        stat_1m_reliability: float = 0,
+    ):
         self.peer_id = peer_id
-        self.ignore_till = 0
-        self.stat_2h = PeerStat()
-        self.stat_8h = PeerStat()
-        self.stat_1d = PeerStat()
-        self.stat_1w = PeerStat()
-        self.stat_1m = PeerStat()
+        self.ignore_till = ignore_till
+        self.stat_2h = PeerStat(stat_2h_weight, stat_2h_count, stat_2h_reliability)
+        self.stat_8h = PeerStat(stat_8h_weight, stat_8h_count, stat_8h_reliability)
+        self.stat_1d = PeerStat(stat_1d_weight, stat_1d_count, stat_1d_reliability)
+        self.stat_1w = PeerStat(stat_1w_weight, stat_1w_count, stat_1w_reliability)
+        self.stat_1m = PeerStat(stat_1m_weight, stat_1m_count, stat_1m_reliability)
 
     def is_reliable(self) -> bool:
         if self.stat_2h.reliability > 0.85 and self.stat_2h.count > 2:
