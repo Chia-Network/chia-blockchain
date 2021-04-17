@@ -162,12 +162,18 @@ class MempoolManager:
         # 0.00001 XCH
         return 10000000
 
-    def can_replace(self, conflicting_items, removals, fees, fees_per_cost):
+    def can_replace(
+        self,
+        conflicting_items: Dict[bytes32, MempoolItem],
+        removals: Dict[bytes32, CoinRecord],
+        fees: uint64,
+        fees_per_cost: float,
+    ) -> bool:
         conflicting_fees = 0
         conflicting_cost = 0
         for item in conflicting_items.values():
             conflicting_fees += item.fee
-            conflicting_cost += item.cost_result.cost
+            conflicting_cost += item.cost
 
             # All coins spent in all conflicting items must also be spent in
             # the new item
@@ -292,7 +298,7 @@ class MempoolManager:
             print(addition_amount, removal_amount)
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
-        fees = removal_amount - addition_amount
+        fees = uint64(removal_amount - addition_amount)
         assert_fee_sum: uint64 = uint64(0)
 
         for npc in npc_list:
