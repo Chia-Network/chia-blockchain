@@ -1,10 +1,32 @@
 import random
 import time
-from typing import Dict, List, Optional
+from typing import Set, List, Optional
+from dataclasses import dataclass
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint16
+
+
+@dataclass(frozen=False)
+class VettedPeer:
+    host: str
+    port: uint16
+
+    # True means we have vetted and it was alive
+    # False means we have not vetted this peer (recent enough)
+    vetted: bool = False
+    vetted_timestamp: uint64 = uint64(0)
+    time_added: uint64 = uint64(0)
+
+    def __init__(self, h: str, p: uint16):
+        self.host = h
+        self.port = p
+
+    def __eq__(self, rhs):
+        return self.host == rhs.host and self.port == rhs.port
+
+    def __hash__(self):
+        return hash((self.host, self.port))
 
 
 class IntroducerPeers:
@@ -14,18 +36,22 @@ class IntroducerPeers:
     """
 
     def __init__(self) -> None:
-        self._peers: List[PeerInfo] = []
-        self.time_added: Dict[bytes32, uint64] = {}
+        self._peers: Set[VettedPeer] = set()
 
     def add(self, peer: Optional[PeerInfo]) -> bool:
         if peer is None or not peer.port:
             return False
-        if peer not in self._peers:
-            self._peers.append(peer)
-        self.time_added[peer.get_hash()] = uint64(int(time.time()))
+
+        p = VettedPeer(peer.host, peer.port)
+        p.time_added = uint64(int(time.time()))
+
+        if p in self._peers:
+            return True
+
+        self._peers.add(p)
         return True
 
-    def remove(self, peer: Optional[PeerInfo]) -> bool:
+    def remove(self, peer: Optional[VettedPeer]) -> bool:
         if peer is None or not peer.port:
             return False
         try:
@@ -34,12 +60,11 @@ class IntroducerPeers:
         except ValueError:
             return False
 
-    def get_peers(self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999) -> List[PeerInfo]:
-        target_peers = [
-            peer for peer in self._peers if time.time() - self.time_added[peer.get_hash()] < recent_threshold
-        ]
+    def get_peers(self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999) -> List[VettedPeer]:
+        target_peers = [peer for peer in self._peers if time.time() - peer.time_added < recent_threshold]
         if not max_peers or max_peers > len(target_peers):
             max_peers = len(target_peers)
         if randomize:
-            random.shuffle(target_peers)
-        return target_peers[:max_peers]
+            return random.sample(target_peers, max_peers)
+        else:
+            return target_peers[:max_peers]
