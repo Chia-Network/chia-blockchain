@@ -838,7 +838,7 @@ class FullNode:
         msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
         await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-        peak = await self.blockchain.get_peak()
+        peak = self.blockchain.get_peak()
         if peak is not None and peak.height > self.constants.MAX_SUB_SLOT_BLOCKS:
             sub_slot_iters = peak.sub_slot_iters
             difficulty = uint64(peak.weight - self.blockchain.block_record(peak.prev_hash).weight)
