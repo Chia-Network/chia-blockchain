@@ -188,7 +188,7 @@ async def validate_block_body(
                 return Err.PRE_SOFT_FORK_TOO_MANY_GENERATOR_REFS, None
 
         if block.transactions_generator is not None:
-            # Get List of names removed, puzzles hashes for removed coins and conditions crated
+            # Get List of names removed, puzzles hashes for removed coins and conditions created
 
             assert npc_result is not None
             cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)

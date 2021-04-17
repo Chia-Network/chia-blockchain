@@ -136,7 +136,7 @@ class TestFullNodeBlockCompression:
         await time_out_assert(10, node_height_at_least, True, full_node_1, 4)
         await time_out_assert(10, node_height_at_least, True, full_node_2, 4)
 
-        # # Send a a transaction to mempool
+        # # Send a transaction to mempool
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             10000,
             ph,
