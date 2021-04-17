@@ -4,12 +4,14 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
@@ -74,12 +76,13 @@ class Wallet:
             tx = await self.generate_signed_transaction(
                 coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
-            program = best_solution_program(tx.spend_bundle)
+            program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            cost_result: CostResult = calculate_cost_of_program(
-                program, self.wallet_state_manager.constants.COST_PER_BYTE, True
+            result: NPCResult = get_name_puzzle_conditions(program, True)
+            cost_result: uint64 = calculate_cost_of_program(
+                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
             )
-            self.cost_of_single_tx = cost_result.cost
+            self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs

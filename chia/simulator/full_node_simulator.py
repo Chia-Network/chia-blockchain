@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from typing import List, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -71,11 +72,13 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
                 current_time=self.use_current_time,
+                previous_generator=self.full_node.full_node_store.previous_generator,
             )
             rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
         except Exception as e:
-            self.log.error(f"Error while farming block: {e}")
+            error_stack = traceback.format_exc()
+            self.log.error(f"Error while farming block: {error_stack} {e}")
         finally:
             self.lock.release()
 
@@ -105,7 +108,7 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 current_time=self.use_current_time,
             )
-            rr = RespondBlock(more[-1])
+            rr: RespondBlock = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
 
     @api_request

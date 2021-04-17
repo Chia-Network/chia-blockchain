@@ -21,6 +21,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
+from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore
 from chia.full_node.mempool_manager import MempoolManager
@@ -734,7 +735,7 @@ class FullNode:
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
@@ -822,7 +823,11 @@ class FullNode:
             f"overflow: {record.overflow}, "
             f"deficit: {record.deficit}, "
             f"difficulty: {difficulty}, "
-            f"sub slot iters: {sub_slot_iters}"
+            f"sub slot iters: {sub_slot_iters}, "
+            f"Generator size: "
+            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
+            f"Generator ref list size: "
+            f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
@@ -863,10 +868,10 @@ class FullNode:
             assert mempool_item is not None
             fees = mempool_item.fee
             assert fees >= 0
-            assert result.cost is not None
+            assert mempool_item.cost is not None
             new_tx = full_node_protocol.NewTransaction(
                 spend_name,
-                result.cost,
+                mempool_item.cost,
                 uint64(bundle.fees()),
             )
             msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
@@ -918,6 +923,13 @@ class FullNode:
         )
         await self.server.send_to_all([msg], NodeType.WALLET)
 
+        # Check if we detected a spent transaction, to load up our generator cache
+        if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
+            generator_arg = detect_potential_template_generator(block.height, block.transactions_generator)
+            if generator_arg:
+                self.log.info(f"Saving previous generator for height {block.height}")
+                self.full_node_store.previous_generator = generator_arg
+
         self._state_changed("new_peak")
 
     async def respond_block(
@@ -946,7 +958,11 @@ class FullNode:
             if unf_block is not None and unf_block.transactions_generator is not None:
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
-                block = dataclasses.replace(block, transactions_generator=unf_block.transactions_generator)
+                block = dataclasses.replace(
+                    block,
+                    transactions_generator=unf_block.transactions_generator,
+                    transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
+                )
 
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
@@ -954,9 +970,12 @@ class FullNode:
                 return None
             validation_start = time.time()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
+            npc_results = {}
+            if pre_validation_result is not None and pre_validation_result.npc_result is not None:
+                npc_results[block.height] = pre_validation_result.npc_result
             pre_validation_results: Optional[
                 List[PreValidationResult]
-            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], pre_validation_result is None)
+            ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
@@ -1389,7 +1408,10 @@ class FullNode:
                     return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.debug(f"Added transaction to mempool: {spend_name}")
+                    self.log.debug(
+                        f"Added transaction to mempool: {spend_name} mempool size: "
+                        f"{self.mempool_manager.mempool.total_mempool_cost}"
+                    )
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     mempool_item = self.mempool_manager.get_mempool_item(spend_name)
@@ -1653,12 +1675,15 @@ class FullNode:
                     min_height = max(0, max_height - 1000)
                 batches_finished = 0
                 self.log.info("Scanning the blockchain for uncompact blocks.")
+                assert max_height is not None
+                assert min_height is not None
                 for h in range(min_height, max_height, 100):
                     # Got 10 times the target header count, sampling the target headers should contain
                     # enough randomness to split the work between blueboxes.
                     if len(broadcast_list) > target_uncompact_proofs * 10:
                         break
                     stop_height = min(h + 99, max_height)
+                    assert min_height is not None
                     headers = await self.blockchain.get_header_blocks_in_range(min_height, stop_height)
                     records: Dict[bytes32, BlockRecord] = {}
                     if sanitize_weight_proof_only:
