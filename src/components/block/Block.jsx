@@ -26,7 +26,9 @@ import useCurrencyCode from '../../hooks/useCurrencyCode';
 
 async function computeNewPlotId(block) {
   const { pool_public_key, plot_public_key } = block.reward_chain_block.proof_of_space;
-
+  if (!pool_public_key) {
+    return undefined;
+  }
   let buf = hex_to_array(pool_public_key);
   buf = buf.concat(hex_to_array(plot_public_key));
   const bufHash = await sha256(buf);
@@ -74,6 +76,7 @@ export default function Block() {
         setPrevBlockRecord(prevBlockRecord);
       }
     } catch (e) {
+      console.log('e', e);
       setError(e);
     } finally {
       setLoading(false);
