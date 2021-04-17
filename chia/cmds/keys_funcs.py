@@ -76,7 +76,7 @@ def show_all_keys():
         print("Master public key (m):", sk.get_g1())
         print("Master private key (m):", bytes(sk).hex())
         print(
-            "Farmer public key (m/12381/8444/0/0)::",
+            "Farmer public key (m/12381/8444/0/0):",
             master_sk_to_farmer_sk(sk).get_g1(),
         )
         print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
