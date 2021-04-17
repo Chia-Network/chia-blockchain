@@ -98,7 +98,7 @@ class MempoolManager:
             for item in dic.values():
                 log.info(f"Cumulative cost: {cost_sum}")
                 if (
-                    item.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM
+                    item.cost + cost_sum <= 0.5 * self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
                 ):
                     spend_bundles.append(item.spend_bundle)
