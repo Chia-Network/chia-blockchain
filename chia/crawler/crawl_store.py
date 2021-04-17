@@ -1,5 +1,7 @@
 import dataclasses
 import time
+import asyncio
+import random
 from datetime import timedelta
 from datetime import datetime
 from typing import List, Optional
@@ -107,7 +109,7 @@ class CrawlStore:
                 peer_record.last_try_timestamp,
                 peer_record.try_count,
                 peer_record.connected_timestamp,
-                added_timestamp
+                added_timestamp,
             ),
         )
         await cursor.close()
@@ -128,7 +130,7 @@ class CrawlStore:
     async def get_peer_reliability(self, peer_id: str) -> PeerReliability:
         cursor = await self.crawl_db.execute(
             f"SELECT * from peer_reliability WHERE peer_id=?",
-            (peer_id),
+            (peer_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -148,6 +150,7 @@ class CrawlStore:
         now = utc_timestamp()
         replaced = dataclasses.replace(peer, try_count=peer.try_count+1, last_try_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
+        assert reliability is not None
         reliability.update(False, now - peer.last_try_timestamp)
         await self.add_peer(replaced, reliability)
 
@@ -155,6 +158,7 @@ class CrawlStore:
         now = utc_timestamp()
         replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
+        assert reliability is not None
         reliability.update(False, now - peer.last_try_timestamp)
         await self.add_peer(replaced, reliability)
 
@@ -226,13 +230,13 @@ class CrawlStore:
         return peers
 
     async def get_cached_peers(self, peer_count: int) -> List[PeerInfo]:
-        now = utc_timestamp()
+        now = int(utc_timestamp())
         peers = []
         async with self.lock:
             if now - self.last_timestamp > 180:
                 cursor = await self.crawl_db.execute(
                     f"SELECT ip_address, port from peer_records WHERE connected=?",
-                    (True),
+                    (True,),
                 )
                 rows = await cursor.fetchall()
                 peers = []
@@ -251,10 +255,10 @@ class CrawlStore:
 
     async def get_peers_to_crawl(self, batch_size) -> List[PeerRecord]:
         peer_id = []
-        now = utc_timestamp()
+        now = int(utc_timestamp())
         cursor = await self.crawl_db.execute(
             f"SELECT * from peer_reliability WHERE ignore_till<?",
-            (now),
+            (now,),
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -263,26 +267,27 @@ class CrawlStore:
                 row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7],
                 row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16],
             )
-            if peer.is_reliable():
-                peer_id.add(peer.peer_id)
+            if peer.get_ban_time() < now:
+                peer_id.append(peer.peer_id)
         cursor = await self.crawl_db.execute(
-            f"SELECT peer_id from peer_records WHERE last_try_timestamp=0",
+            f"SELECT peer_id from peer_records WHERE last_try_timestamp=0 AND connected_timestamp=0",
         )
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            peer_id.add(row[0])
+            peer_id.append(row[0])
         if len(peer_id) > batch_size:
-            peer_id.shuffle()
+            random.shuffle(peer_id)
             peer_id = peer_id[:batch_size]
         peers = []
         for id in peer_id:
             cursor = await self.crawl_db.execute(
                 f"SELECT * from peer_records WHERE peer_id=?",
-                (id),
+                (id,),
             )
             rows = await cursor.fetchall()
             await cursor.close()
-            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
-            peer.append(peers)
+            for row in rows:
+                peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+                peers.append(peer)
         return peers

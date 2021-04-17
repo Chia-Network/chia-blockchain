@@ -8,7 +8,7 @@ import aiosqlite
 import src.server.ws_connection as ws
 from src.consensus.constants import ConsensusConstants
 from src.crawler.crawl_store import CrawlStore, utc_timestamp
-from src.crawler.peer_record import PeerRecord
+from src.crawler.peer_record import PeerRecord, PeerReliability
 from src.full_node.coin_store import CoinStore
 from src.protocols import full_node_protocol, introducer_protocol
 from src.server.server import ChiaServer
@@ -16,11 +16,12 @@ from src.types.peer_info import PeerInfo
 from ipaddress import ip_address, IPv4Address
 from src.util.path import mkdir, path_from_root
 
-try:
+"""try:
     from dnslib import *
 except ImportError:
     print("Missing dependency dnslib: <https://pypi.python.org/pypi/dnslib>. Please install it with `pip`.")
     sys.exit(2)
+"""
 
 log = logging.getLogger(__name__)
 global_crawl_store = None
@@ -93,7 +94,7 @@ class Crawler:
 
             await self.create_client(self.introducer_info, introducer_action)
             # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
-            peers_to_crawl = await self.get_peers_to_crawl(500)
+            peers_to_crawl = await self.crawl_store.get_peers_to_crawl(500)
             connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
 
             async def peer_action(peer: ws.WSChiaConnection):
@@ -134,7 +135,7 @@ class Crawler:
                     else:
                         await self.crawl_store.peer_tried_to_connect(peer)
                 except Exception as e:
-                    self.log.info(f"Error: {e}")
+                    self.log.info(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
             start = 0
 
@@ -178,6 +179,7 @@ class Crawler:
     async def _await_closed(self):
         await self.connection.close()
 
+"""
 # https://gist.github.com/pklaus/b5a7876d4d2cf7271873
 
 # TODO: Figure out proper values.
@@ -280,3 +282,4 @@ class UDPRequestHandler(BaseRequestHandler):
 
     def send_data(self, data):
         return self.request[1].sendto(data, self.client_address)
+"""
