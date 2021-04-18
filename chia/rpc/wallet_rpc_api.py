@@ -535,9 +535,6 @@ class WalletRpcApi:
             end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
             raise ValueError(f"No transactions before: {end_date}")
 
-        if self.service.constants.NETWORK_TYPE is NetworkType.MAINNET:
-            raise ValueError("Sending transactions not supported, please update your client.")
-
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
