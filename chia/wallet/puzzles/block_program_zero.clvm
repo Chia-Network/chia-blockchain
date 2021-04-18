@@ -9,6 +9,6 @@
          (decompress_cses decompress_puzzle decompress_coin_solution_entry (r cses) deserialize puzzle_prefix ))
       ()) )
 
-  (decompress_cses decompress_puzzle decompress_coin_solution_entry compressed_cses deserialize (substr gen_list start end))
+      (decompress_cses decompress_puzzle decompress_coin_solution_entry compressed_cses deserialize (substr (f gen_list) start end))
 
 )
