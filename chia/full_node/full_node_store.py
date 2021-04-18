@@ -169,6 +169,13 @@ class FullNodeStore:
 
     def add_to_future_sp(self, signage_point: SignagePoint, index: uint8):
         # We are missing a block here
+        if (
+            signage_point.cc_vdf is None
+            or signage_point.rc_vdf is None
+            or signage_point.cc_proof is None
+            or signage_point.rc_proof is None
+        ):
+            return
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             self.future_sp_cache[signage_point.rc_vdf.challenge] = []
         self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
@@ -415,7 +422,6 @@ class FullNodeStore:
         """
         Returns true if sp successfully added
         """
-        log.warning(f"Trying to add index {index}")
         assert len(self.finished_sub_slots) >= 1
 
         if peak is None or peak.height < 2:
@@ -425,7 +431,6 @@ class FullNodeStore:
 
         # If we don't have this slot, return False
         if index == 0 or index >= self.constants.NUM_SPS_SUB_SLOT:
-            log.warning(f"False 1 {index}")
             return False
         assert (
             signage_point.cc_vdf is not None
@@ -667,7 +672,6 @@ class FullNodeStore:
             peak.reward_infusion_new_challenge, []
         ).copy()
         for index, sp in future_sps:
-            log.warning("HERE")
             assert sp.cc_vdf is not None
             if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
                 new_sps.append((index, sp))

@@ -949,8 +949,14 @@ class FullNode:
             msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        if new_sps is not None:
+        if new_sps is not None and peer is not None:
             for index, sp in new_sps:
+                assert (
+                    sp.cc_vdf is not None
+                    and sp.cc_proof is not None
+                    and sp.rc_vdf is not None
+                    and sp.rc_proof is not None
+                )
                 await self.signage_point_post_processing(
                     RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
                 )
