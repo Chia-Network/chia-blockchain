@@ -18,7 +18,7 @@ from chia.protocols import farmer_protocol, full_node_protocol, introducer_proto
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RejectHeaderBlocks, RejectHeaderRequest
-from chia.server.outbound_message import Message, NodeType, make_msg
+from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import Program
