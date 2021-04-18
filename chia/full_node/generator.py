@@ -60,10 +60,7 @@ def create_compressed_generator(
 
 
 def setup_generator_args(self: BlockGenerator):
-    if not self.generator_args:
-        args = NIL
-    else:
-        args = create_generator_args(self.generator_refs())
+    args = create_generator_args(self.generator_refs())
     return self.program, args
 
 
