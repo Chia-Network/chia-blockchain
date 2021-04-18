@@ -44,8 +44,9 @@ network_overrides: &network_overrides
       INITIAL_FREEZE_END_TIMESTAMP: 1618770600  # Sun Apr 18 2021 14:30:00 GMT-0400 (Eastern Daylight Time)
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
-      MEMPOOL_BLOCK_BUFFER: 30
+      MEMPOOL_BLOCK_BUFFER: 10
       EPOCH_BLOCKS: 768
+      DIFFICULTY_STARTING: 30
   config:
     mainnet:
       address_prefix: "xch"
