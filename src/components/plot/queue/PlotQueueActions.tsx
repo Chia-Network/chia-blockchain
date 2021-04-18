@@ -70,9 +70,9 @@ export default function PlotQueueAction(props: Props) {
               </MenuItem>
               <Divider />
             </>
-
           )}
 
+          {/* 
           <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
             <ListItemIcon>
               <DeleteForeverIcon fontSize="small" />
@@ -81,6 +81,7 @@ export default function PlotQueueAction(props: Props) {
               <Trans>Delete</Trans>
             </Typography>
           </MenuItem>
+          */}
         </Box>
       )}
     </More>

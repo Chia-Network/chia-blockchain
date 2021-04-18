@@ -45,6 +45,9 @@ export default function PlotAction(props: Props) {
     }
   }
 
+  return null;
+
+  /*
   return (
     <More>
       {({ onClose }) => (
@@ -63,4 +66,5 @@ export default function PlotAction(props: Props) {
       )}
     </More>
   );
+  */
 }
