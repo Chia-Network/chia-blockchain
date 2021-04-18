@@ -150,14 +150,13 @@ class TestDecompression(TestCase):
         end = start + 238
 
         # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
-        # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
+        # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, cse0, DESERIALIZE_MOD, bytes(original_generator)])
         cost, out = DECOMPRESS_BLOCK.run_with_cost(
             INFINITE_COST,
             [
                 DECOMPRESS_PUZZLE,
                 DECOMPRESS_CSE_WITH_PREFIX,
                 start,
-                Program.to(end),
                 cse2,
                 DESERIALIZE_MOD,
                 bytes(original_generator),
@@ -192,8 +191,8 @@ class TestDecompression(TestCase):
         end = start + 238
 
         # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
-        # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
-        p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
+        # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, cse0, DESERIALIZE_MOD, bytes(original_generator)])
+        p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start)
         cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, bytes(original_generator)])
 
         print()
@@ -201,7 +200,11 @@ class TestDecompression(TestCase):
         print(out)
 
         p_with_cses = DECOMPRESS_BLOCK.curry(
-            DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end), cse2
+            DECOMPRESS_PUZZLE,
+            DECOMPRESS_CSE_WITH_PREFIX,
+            start,
+            cse2,
+            DESERIALIZE_MOD,
         )
         generator_args = create_generator_args([SerializedProgram.from_bytes(original_generator)])
         cost, out = p_with_cses.run_with_cost(INFINITE_COST, generator_args)
