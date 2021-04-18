@@ -9,7 +9,7 @@ from chia.full_node.bundle_tools import (
 )
 from chia.full_node.generator import run_generator, create_generator_args
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
-from chia.types.generator_types import CompressorArg
+from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -151,18 +151,13 @@ class TestDecompression(TestCase):
 
         # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
-        cost, out = DECOMPRESS_BLOCK.run_with_cost(
-            INFINITE_COST,
-            [
-                DECOMPRESS_PUZZLE,
-                DECOMPRESS_CSE_WITH_PREFIX,
-                start,
-                Program.to(end),
-                cse2,
-                DESERIALIZE_MOD,
-                bytes(original_generator),
-            ],
-        )
+
+        curried_program = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, end, cse2)
+        curried_program = SerializedProgram.from_bytes(bytes(curried_program))
+        FAKE_BLOCK_HEIGHT = 100
+        gen_arg_0 = GeneratorArg(FAKE_BLOCK_HEIGHT, original_generator)
+        block_generator = BlockGenerator(curried_program, [gen_arg_0])
+        cost, out = run_generator(block_generator, INFINITE_COST)
 
         print()
         print(out)
