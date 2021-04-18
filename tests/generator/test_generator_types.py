@@ -1,9 +1,9 @@
 from typing import Dict
 from unittest import TestCase
 
-from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
-from chia.types.generator_types import GeneratorBlockCacheInterface
 from chia.full_node.generator import create_block_generator, create_generator_args, list_to_tree
+from chia.types.blockchain_format.program import INFINITE_COST, Program, SerializedProgram
+from chia.types.generator_types import GeneratorBlockCacheInterface
 from chia.util.ints import uint32
 
 gen0 = SerializedProgram.from_bytes(

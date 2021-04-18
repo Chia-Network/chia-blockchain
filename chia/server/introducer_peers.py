@@ -1,10 +1,10 @@
 import random
 import time
-from typing import Set, List, Optional
 from dataclasses import dataclass
+from typing import List, Optional, Set
 
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64, uint16
+from chia.util.ints import uint16, uint64
 
 
 @dataclass(frozen=False)

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.util.chain_utils import additions_for_solution
 from chia.util.streamable import Streamable, streamable
 

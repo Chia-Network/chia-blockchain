@@ -3,6 +3,7 @@ import json
 
 import aiohttp
 import pytest
+
 from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_server
 from chia.types.peer_info import PeerInfo
@@ -10,7 +11,7 @@ from chia.util.block_tools import BlockTools
 from chia.util.ints import uint16
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
+from tests.setup_nodes import self_hostname, setup_daemon, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 

@@ -3,8 +3,8 @@ import logging
 import time
 from typing import Optional
 
-from chia.server.server import ChiaServer
 from chia.server.introducer_peers import VettedPeer
+from chia.server.server import ChiaServer
 from chia.util.ints import uint64
 
 

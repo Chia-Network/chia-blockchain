@@ -24,13 +24,15 @@ def init_cmd(ctx: click.Context, create_certs: str):
       https://github.com/Chia-Network/chia-blockchain/wiki/Farming-on-many-machines
     """
     from pathlib import Path
+
     from .init_funcs import init
 
     init(Path(create_certs) if create_certs is not None else None, ctx.obj["root_path"])
 
 
 if __name__ == "__main__":
-    from .init_funcs import chia_init
     from chia.util.default_root import DEFAULT_ROOT_PATH
+
+    from .init_funcs import chia_init
 
     chia_init(DEFAULT_ROOT_PATH)

@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Tuple
 
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution

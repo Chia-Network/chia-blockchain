@@ -11,7 +11,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint32, uint16
+from chia.util.ints import uint16, uint32
 
 
 async def main() -> None:

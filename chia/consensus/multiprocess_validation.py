@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union, Callable
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -22,8 +22,8 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, block_removals_and_additions
-from chia.util.ints import uint16, uint64, uint32
+from chia.util.generator_tools import block_removals_and_additions, get_block_header
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
 log = logging.getLogger(__name__)

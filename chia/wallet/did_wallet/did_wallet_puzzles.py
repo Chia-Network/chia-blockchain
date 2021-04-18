@@ -1,13 +1,15 @@
-from clvm_tools import binutils
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
 from typing import List, Optional, Tuple
+
 from blspy import G1Element
+from clvm_tools import binutils
+
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.types.condition_opcodes import ConditionOpcode
 
 DID_CORE_MOD = load_clvm("singleton_top_layer.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")

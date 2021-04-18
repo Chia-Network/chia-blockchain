@@ -44,6 +44,7 @@ def add_cmd(ctx: click.Context, filename: str):
 
     if filename:
         from pathlib import Path
+
         from .keys_funcs import add_private_key_seed
 
         mnemonic = Path(filename).read_text().rstrip()

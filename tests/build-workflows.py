@@ -3,11 +3,12 @@
 # Run from the current directory.
 
 import argparse
-import testconfig
 import logging
 import subprocess
 from pathlib import Path
 from typing import List
+
+import testconfig
 
 
 def subdirs(root_dirs: List[str]) -> List[Path]:

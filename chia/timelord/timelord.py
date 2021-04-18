@@ -5,7 +5,7 @@ import logging
 import random
 import time
 import traceback
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from chiavdf import create_discriminant
 
