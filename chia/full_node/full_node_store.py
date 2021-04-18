@@ -28,6 +28,7 @@ class FullNodeStore:
 
     # Blocks which we have created, but don't have plot signatures yet, so not yet "unfinished blocks"
     candidate_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
+    candidate_backup_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
 
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
@@ -60,6 +61,7 @@ class FullNodeStore:
 
     def __init__(self):
         self.candidate_blocks = {}
+        self.candidate_backup_blocks = {}
         self.seen_unfinished_blocks = set()
         self.unfinished_blocks = {}
         self.finished_sub_slots = []
@@ -78,18 +80,20 @@ class FullNodeStore:
         return self
 
     def add_candidate_block(
-        self,
-        quality_string: bytes32,
-        height: uint32,
-        unfinished_block: UnfinishedBlock,
+        self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
     ):
-        self.candidate_blocks[quality_string] = (height, unfinished_block)
+        if backup:
+            self.candidate_backup_blocks[quality_string] = (height, unfinished_block)
+        else:
+            self.candidate_blocks[quality_string] = (height, unfinished_block)
 
-    def get_candidate_block(self, quality_string: bytes32) -> Optional[UnfinishedBlock]:
-        result = self.candidate_blocks.get(quality_string, None)
-        if result is None:
-            return None
-        return result[1]
+    def get_candidate_block(
+        self, quality_string: bytes32, backup: bool = False
+    ) -> Optional[Tuple[uint32, UnfinishedBlock]]:
+        if backup:
+            return self.candidate_backup_blocks.get(quality_string, None)
+        else:
+            return self.candidate_blocks.get(quality_string, None)
 
     def clear_candidate_blocks_below(self, height: uint32) -> None:
         del_keys = []
@@ -99,6 +103,15 @@ class FullNodeStore:
         for key in del_keys:
             try:
                 del self.candidate_blocks[key]
+            except KeyError:
+                pass
+        del_keys = []
+        for key, value in self.candidate_backup_blocks.items():
+            if value[0] < height:
+                del_keys.append(key)
+        for key in del_keys:
+            try:
+                del self.candidate_backup_blocks[key]
             except KeyError:
                 pass
 

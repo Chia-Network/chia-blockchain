@@ -66,7 +66,7 @@ class TestFullNodeStore:
         for height, unf_block in enumerate(unfinished_blocks):
             store.add_candidate_block(unf_block.get_hash(), height, unf_block)
 
-        assert store.get_candidate_block(unfinished_blocks[4].get_hash()) == unfinished_blocks[4]
+        assert store.get_candidate_block(unfinished_blocks[4].get_hash())[1] == unfinished_blocks[4]
         store.clear_candidate_blocks_below(uint32(8))
         assert store.get_candidate_block(unfinished_blocks[5].get_hash()) is None
         assert store.get_candidate_block(unfinished_blocks[8].get_hash()) is not None

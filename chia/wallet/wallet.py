@@ -85,7 +85,7 @@ class Wallet:
             self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
-        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
+        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
         current_cost = 0
         total_amount = 0
         total_coin_count = 0
