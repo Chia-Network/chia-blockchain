@@ -916,7 +916,7 @@ class WalletStateManager:
                 TransactionType.OUTGOING_TRADE,
                 TransactionType.INCOMING_TRADE,
             ]:
-                await self.tx_store.tx_reorged(record.name())
+                await self.tx_store.tx_reorged(record.name)
 
         self.tx_pending_changed()
 
