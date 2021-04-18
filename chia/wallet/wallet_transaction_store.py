@@ -157,29 +157,6 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx, True)
 
-    async def unconfirmed_with_removal_coin(self, removal_id: bytes32) -> List[TransactionRecord]:
-        """ Returns a record containing removed coin with id: removal_id"""
-        result = []
-        all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
-        for record in all_unconfirmed:
-            for coin in record.removals:
-                if coin.name() == removal_id:
-                    result.append(record)
-
-        return result
-
-    async def tx_with_addition_coin(self, removal_id: bytes32, wallet_id: int) -> List[TransactionRecord]:
-        """ Returns a record containing removed coin with id: removal_id"""
-        result = []
-        all_records = await self.get_all_transactions(wallet_id, TransactionType.OUTGOING_TX.value)
-
-        for record in all_records:
-            for coin in record.additions:
-                if coin.name() == removal_id:
-                    result.append(record)
-
-        return result
-
     async def increment_sent(
         self,
         tx_id: bytes32,
