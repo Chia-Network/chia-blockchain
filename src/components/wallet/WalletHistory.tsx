@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
+import { orderBy } from 'lodash';
 import { Box, Tooltip, Typography } from '@material-ui/core';
 import { useSelector } from 'react-redux';
 import { Card, CopyToClipboard, Flex, Table } from '@chia/core';
@@ -78,17 +79,18 @@ export default function WalletHistory(props: Props) {
   const transactions = useSelector(
     (state: RootState) => state.wallet_state.wallets[walletId].transactions,
   );
-
   const cols = useMemo(() => getCols(type), [type]);
+
+  const sortedTransactions = transactions && orderBy(transactions, (row) => row.created_at_time, 'desc');
 
   return (
     <Card
       title={<Trans>History</Trans>}
     >
-      {transactions?.length ? (
+      {sortedTransactions?.length ? (
         <Table
           cols={cols}
-          rows={transactions}
+          rows={sortedTransactions}
           rowsPerPageOptions={[10, 25, 100]}
           rowsPerPage={10}
           pages
