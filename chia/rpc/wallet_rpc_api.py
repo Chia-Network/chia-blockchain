@@ -492,7 +492,7 @@ class WalletRpcApi:
             "wallet_id": wallet_id,
         }
 
-    async def get_initial_freeze_period(self):
+    async def get_initial_freeze_period(self, _: Dict):
         freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
         return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
 

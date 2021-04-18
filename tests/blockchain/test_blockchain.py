@@ -5,6 +5,7 @@ import multiprocessing
 import time
 from dataclasses import replace
 from secrets import token_bytes
+from typing import Optional
 
 import pytest
 from blspy import AugSchemeMPL, G2Element
@@ -12,6 +13,8 @@ from blspy import AugSchemeMPL, G2Element
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.foliage import TransactionsInfo, FoliageTransactionBlock
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -1539,9 +1542,58 @@ class TestBlockHeaderValidation:
 
 class TestBodyValidation:
     @pytest.mark.asyncio
-    async def test_not_block_but_has_data(self, empty_blockchain):
-        # TODO
-        pass
+    async def test_not_tx_block_but_has_data(self, empty_blockchain):
+        # 1
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(1)
+        while blocks[-1].foliage_transaction_block is not None:
+            assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        original_block: FullBlock = blocks[-1]
+
+        block = recursive_replace(original_block, "transactions_generator", SerializedProgram())
+        assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
+        h = std_hash(b"")
+        i = uint64(1)
+        block = recursive_replace(
+            original_block,
+            "transactions_info",
+            TransactionsInfo(h, h, G2Element(), uint64(1), uint64(1), []),
+        )
+        assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
+
+        block = recursive_replace(original_block, "transactions_generator_ref_list", [i])
+        assert (await b.receive_block(block))[1] == Err.NOT_BLOCK_BUT_HAS_DATA
+
+    @pytest.mark.asyncio
+    async def test_tx_block_missing_data(self, empty_blockchain):
+        # 2
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block = recursive_replace(
+            blocks[-1],
+            "foliage_transaction_block",
+            None,
+        )
+        err = (await b.receive_block(block))[1]
+        assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+
+        block = recursive_replace(
+            blocks[-1],
+            "foliage_transaction_block.filter_hash",
+            None,
+        )
+        err = (await b.receive_block(block))[1]
+        assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+
+        block = recursive_replace(
+            blocks[-1],
+            "transactions_info",
+            None,
+        )
+        err = (await b.receive_block(block))[1]
+        assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
 
 class TestReorgs:

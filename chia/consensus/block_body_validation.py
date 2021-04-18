@@ -2,7 +2,7 @@ import collections
 import logging
 from typing import Dict, List, Optional, Set, Tuple, Union, Callable
 
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -72,10 +72,12 @@ async def validate_block_body(
             block.foliage_transaction_block is not None
             or block.transactions_info is not None
             or block.transactions_generator is not None
+            or len(block.transactions_generator_ref_list) > 0
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
         return None, None  # This means the block is valid
 
+    # All checks below this point correspond to transaction blocks
     # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
     if (
         block.foliage_transaction_block is None
@@ -83,6 +85,7 @@ async def validate_block_body(
         or block.transactions_info is None
     ):
         return Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, None
+    assert block.foliage_transaction_block is not None
 
     # keeps track of the reward coins that need to be incorporated
     expected_reward_coins: Set[Coin] = set()
@@ -95,7 +98,7 @@ async def validate_block_body(
     if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
         return Err.INVALID_FOLIAGE_BLOCK_HASH, None
 
-    # 7. The reward claims must be valid for the previous blocks, and current block fees
+    # 5. The reward claims must be valid for the previous blocks, and current block fees
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
@@ -153,13 +156,12 @@ async def validate_block_body(
 
     # We check in header validation that timestamp is not more that 10 minutes into the future
     if (
-        block.foliage_transaction_block is not None
-        and block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
+        block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
         and block.transactions_generator is not None
     ):
         return Err.INITIAL_TRANSACTION_FREEZE, None
     else:
-        # 6a. The generator root must be the hash of the serialized bytes of
+        # 5a. The generator root must be the hash of the serialized bytes of
         #     the generator for this block (or zeroes if no generator)
         if block.transactions_generator is not None:
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
@@ -168,9 +170,9 @@ async def validate_block_body(
             if block.transactions_info.generator_root != bytes([0] * 32):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
 
-        # 6b. The generator_ref_list must be the hash of the serialized bytes of
+        # 6a. The generator_ref_list must be the hash of the serialized bytes of
         #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
-        # 6c. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
+        # 6b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
         if block.transactions_generator_ref_list in (None, []):
             if block.transactions_info.generator_refs_root != bytes([1] * 32):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
@@ -193,15 +195,17 @@ async def validate_block_body(
             cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)
             npc_list = npc_result.npc_list
 
-            # 8. Check that cost <= MAX_BLOCK_COST_CLVM
+            # 7. Check that cost <= MAX_BLOCK_COST_CLVM
             log.debug(
                 f"Cost: {cost} max: {constants.MAX_BLOCK_COST_CLVM} "
                 f"percent full: {cost / constants.MAX_BLOCK_COST_CLVM}"
             )
             if cost > constants.MAX_BLOCK_COST_CLVM:
                 return Err.BLOCK_COST_EXCEEDS_MAX, None
+
+            # 8. The CLVM program must not return any errors
             if npc_result.error is not None:
-                return Err.GENERATOR_RUNTIME_ERROR, None
+                return Err(npc_result.error), None
 
             for npc in npc_list:
                 removals.append(npc.coin_name)
@@ -408,8 +412,8 @@ async def validate_block_body(
 
         # 21. Verify conditions
         # create hash_key list for aggsig check
-        pairs_pks = []
-        pairs_msgs = []
+        pairs_pks: List[G1Element] = []
+        pairs_msgs: List[bytes] = []
         for npc in npc_list:
             assert height is not None
             unspent = removal_coin_records[npc.coin_name]
@@ -434,7 +438,7 @@ async def validate_block_body(
         if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE, None
 
-            # noinspection PyTypeChecker
+        # noinspection PyTypeChecker
         if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
             return Err.BAD_AGGREGATE_SIGNATURE, None
 
