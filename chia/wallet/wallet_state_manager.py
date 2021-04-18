@@ -577,6 +577,17 @@ class WalletStateManager:
             if prev.is_transaction_block:
                 break
             prev = await self.blockchain.get_block_record_from_db(prev.prev_hash)
+        wallet_ids: Set[int] = set()
+        for coin in coins:
+            info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
+            if info is not None:
+                wallet_ids.add(info[0])
+
+        all_outgoing_tx: Dict[int, List[TransactionRecord]] = {}
+        for wallet_id in wallet_ids:
+            all_outgoing_tx[wallet_id] = await self.tx_store.get_all_transactions(
+                wallet_id, TransactionType.OUTGOING_TX
+            )
 
         for coin in coins:
             if coin.name() in trade_additions:
@@ -592,7 +603,9 @@ class WalletStateManager:
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
             if info is not None:
                 wallet_id, wallet_type = info
-                await self.coin_added(coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, height)
+                await self.coin_added(
+                    coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, height, all_outgoing_tx[wallet_id]
+                )
 
         return trade_adds
 
@@ -606,32 +619,22 @@ class WalletStateManager:
         # Keep track of trade coins that are removed
         trade_coin_removed: List[Coin] = []
 
+        all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         for coin in coins:
-            self.log.info(f"Coin removed: {coin.name()}")
             record = await self.coin_store.get_coin_record_by_coin_id(coin.name())
             if coin.name() in trade_removals:
-                self.log.info(f"Coin:{coin.name()} is part of trade")
                 trade_coin_removed.append(coin)
             if record is None:
-                self.log.info(f"Coin:{coin.name()} NO RECORD")
                 continue
-            self.log.info(f"Coin:{coin.name()} Setting removed")
-            await self.coin_removed(coin, height, record.wallet_id)
+            await self.coin_store.set_spent(coin.name(), height)
+            for unconfirmed_record in all_unconfirmed:
+                for rem_coin in unconfirmed_record.removals:
+                    if rem_coin.name() == coin.name():
+                        await self.tx_store.set_confirmed(unconfirmed_record.name, height)
+
+            self.state_changed("coin_removed", record.wallet_id)
 
         return trade_coin_removed
-
-    async def coin_removed(self, coin: Coin, height: uint32, wallet_id: int):
-        """
-        Called when coin gets spent
-        """
-
-        await self.coin_store.set_spent(coin.name(), height)
-
-        unconfirmed_record: List[TransactionRecord] = await self.tx_store.unconfirmed_with_removal_coin(coin.name())
-        for unconfirmed in unconfirmed_record:
-            await self.tx_store.set_confirmed(unconfirmed.name, height)
-
-        self.state_changed("coin_removed", wallet_id)
 
     async def coin_added(
         self,
@@ -641,11 +644,11 @@ class WalletStateManager:
         wallet_id: uint32,
         wallet_type: WalletType,
         height: uint32,
+        all_outgoing_transaction_records: List[TransactionRecord],
     ):
         """
         Adding coin to DB
         """
-        self.log.info(f"Adding coin: {coin} at {height}")
         farm_reward = False
         if coinbase or fee_reward:
             farm_reward = True
@@ -673,7 +676,11 @@ class WalletStateManager:
             )
             await self.tx_store.add_transaction_record(tx_record, True)
         else:
-            records = await self.tx_store.tx_with_addition_coin(coin.name(), wallet_id)
+            records: List[TransactionRecord] = []
+            for record in all_outgoing_transaction_records:
+                for add_coin in record.additions:
+                    if add_coin.name() == coin.name():
+                        records.append(record)
 
             if len(records) > 0:
                 # This is the change from this transaction
