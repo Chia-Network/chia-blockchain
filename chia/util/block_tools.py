@@ -95,7 +95,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "INITIAL_FREEZE_PERIOD": 0,
+        "INITIAL_FREEZE_END_TIMESTAMP": int(time.time()) - 1,
         "NETWORK_TYPE": 1,
     }
 )
@@ -1313,7 +1313,10 @@ def get_full_block_and_block_record(
     current_time: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
     if current_time is True:
-        timestamp = uint64(int(time.time()))
+        if prev_block.timestamp is not None:
+            timestamp = uint64(max(int(time.time()), prev_block.timestamp + int(time_per_block)))
+        else:
+            timestamp = uint64(int(time.time()))
     else:
         timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)

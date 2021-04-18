@@ -18,6 +18,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.full_node = full_node
         self.lock = asyncio.Lock()
         self.config = full_node.config
+        self.time_per_block = None
         if "simulation" in self.config and self.config["simulation"] is True:
             self.use_current_time = True
         else:
@@ -66,6 +67,7 @@ class FullNodeSimulator(FullNodeAPI):
             target = request.puzzle_hash
             more = self.bt.get_consecutive_blocks(
                 1,
+                time_per_block=self.time_per_block,
                 transaction_data=spend_bundle,
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,

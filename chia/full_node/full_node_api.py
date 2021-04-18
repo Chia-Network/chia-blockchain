@@ -110,8 +110,8 @@ class FullNodeAPI:
             return None
         if not (await self.full_node.synced()):
             return None
-        peak_height = self.full_node.blockchain.get_peak_height()
-        if peak_height is None or peak_height <= self.full_node.constants.INITIAL_FREEZE_PERIOD:
+
+        if int(time.time()) <= self.full_node.constants.INITIAL_FREEZE_END_TIMESTAMP:
             return None
 
         # Ignore if already seen

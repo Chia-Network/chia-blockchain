@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -530,11 +531,9 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        if (
-            int(time.time())
-            < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
-        ):
-            raise ValueError(f"No transactions before timestamp: {self.service.constants.INITIAL_FREEZE_END_TIMESTAMP}")
+        if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
+            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
+            raise ValueError(f"No transactions before: {end_date}")
 
         if self.service.constants.NETWORK_TYPE is NetworkType.MAINNET:
             raise ValueError("Sending transactions not supported, please update your client.")

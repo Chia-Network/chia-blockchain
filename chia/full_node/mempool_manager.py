@@ -465,7 +465,7 @@ class MempoolManager:
             return []
         if self.peak == new_peak:
             return []
-        if new_peak.height <= self.constants.INITIAL_FREEZE_PERIOD:
+        if int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
             return []
 
         self.peak = new_peak
