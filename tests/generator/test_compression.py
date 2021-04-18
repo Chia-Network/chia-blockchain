@@ -53,12 +53,14 @@ class TestCompression(TestCase):
         c = compressed_spend_bundle_solution(ca, sb)
         s = simple_solution_generator(sb)
         assert c != s
-        cost_c, result_c = run_generator(c, INFINITE_COST)
-        cost_s, result_s = run_generator(s, INFINITE_COST)
-        print(result_c)
-        assert result_c is not None
-        assert result_s is not None
-        assert result_c == result_s
+
+        compressed_cost, compressed_result = run_generator(c, INFINITE_COST)
+        simple_cost, simple_result = run_generator(s, INFINITE_COST)
+
+        print(compressed_result)
+        assert compressed_result is not None
+        assert simple_result is not None
+        assert compressed_result == simple_result
 
 
 class TestDecompression(TestCase):
@@ -160,7 +162,7 @@ class TestDecompression(TestCase):
                 Program.to(end),
                 cse2,
                 DESERIALIZE_MOD,
-                bytes(original_generator),
+                [bytes(original_generator)],
             ],
         )
 
@@ -194,7 +196,7 @@ class TestDecompression(TestCase):
         # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
         p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
-        cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, bytes(original_generator)])
+        cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, [bytes(original_generator)]])
 
         print()
         print(p)

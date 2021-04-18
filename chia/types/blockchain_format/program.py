@@ -191,6 +191,7 @@ class SerializedProgram:
         return self._run(max_cost, STRICT_MODE, *args)
 
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
+        # breakpoint()
         return self._run(max_cost, 0, *args)
 
     def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:

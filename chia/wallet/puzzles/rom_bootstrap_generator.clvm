@@ -29,5 +29,18 @@
         )
     )
 
-    (recurse (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree)))
+;(c
+;   (recurse (f (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree))))
+;0)
+   ;;
+    (defun process_coin_solutions_and_reserved_argument ((coin_solutions . reserved_output))
+        (c
+            (recurse coin_solutions)
+            reserved_output
+        )
+    )
+
+    ; pass `reserved_output` through to enable future extensions to generator output format
+    (process_coin_solutions_and_reserved_argument
+        (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree)))
 )
