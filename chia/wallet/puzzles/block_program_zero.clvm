@@ -1,7 +1,7 @@
 
 ; TODO convert generators arg to list of generators
 
-(mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize gen_list reserved_arg)
+(mod (decompress_puzzle decompress_coin_solution_entry start compressed_cses deserialize gen_list reserved_arg)
 
   (defun decompress_cses (decompress_puzzle decompress_coin_solution_entry cses deserialize puzzle_prefix)
     (if cses
@@ -9,6 +9,6 @@
          (decompress_cses decompress_puzzle decompress_coin_solution_entry (r cses) deserialize puzzle_prefix ))
       ()) )
 
-  (decompress_cses decompress_puzzle decompress_coin_solution_entry compressed_cses deserialize (substr gen_list start end))
+  (decompress_cses decompress_puzzle decompress_coin_solution_entry compressed_cses deserialize (substr gen_list start))
 
 )
