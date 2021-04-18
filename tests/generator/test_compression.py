@@ -160,7 +160,7 @@ class TestDecompression(TestCase):
                 Program.to(end),
                 cse2,
                 DESERIALIZE_MOD,
-                bytes(original_generator),
+                [bytes(original_generator)],
             ],
         )
 
@@ -194,7 +194,7 @@ class TestDecompression(TestCase):
         # (mod (decompress_puzzle decompress_coin_solution_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
         p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
-        cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, bytes(original_generator)])
+        cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, [bytes(original_generator)]])
 
         print()
         print(p)
