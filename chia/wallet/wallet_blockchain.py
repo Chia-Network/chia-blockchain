@@ -138,19 +138,6 @@ class WalletBlockchain(BlockchainInterface):
             return None
         return self.height_to_block_record(self._peak_height)
 
-    def is_child_of_peak(self, block: UnfinishedBlock) -> bool:
-        """
-        True iff the block is the direct ancestor of the peak
-        """
-        peak = self.get_peak()
-        if peak is None:
-            return False
-
-        return block.prev_header_hash == peak.header_hash
-
-    async def get_full_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
-        return await self.block_store.get_header_block(header_hash)
-
     async def receive_block(
         self,
         header_block_record: HeaderBlockRecord,
@@ -447,6 +434,3 @@ class WalletBlockchain(BlockchainInterface):
         if block_record.height not in self.__heights_in_cache.keys():
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
-
-    async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
-        return await self.block_store.get_header_block(header_hash)

@@ -217,7 +217,7 @@ def create_foliage(
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join([i.to_bytes(4, byteorder="big") for i in generator_block_heights_list])
+            generator_ref_list_bytes = b"".join([bytes(i) for i in generator_block_heights_list])
             generator_refs_hash = std_hash(generator_ref_list_bytes)
 
         filter_hash: bytes32 = std_hash(encoded)
