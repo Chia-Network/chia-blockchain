@@ -12,6 +12,9 @@ import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
 import { stopPlotting } from '../../../modules/plotter_messages';
 import PlotQueueLogDialog from './PlotQueueLogDialog';
+import config from '../../../config/config';
+
+const localTest = config.local_test;
 
 type Props = {
   queueItem: PlotQueueItem;
@@ -72,16 +75,16 @@ export default function PlotQueueAction(props: Props) {
             </>
           )}
 
-          {/* 
-          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
-            <ListItemIcon>
-              <DeleteForeverIcon fontSize="small" />
-            </ListItemIcon>
-            <Typography variant="inherit" noWrap>
-              <Trans>Delete</Trans>
-            </Typography>
-          </MenuItem>
-          */}
+          {localTest && (
+            <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
+              <ListItemIcon>
+                <DeleteForeverIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography variant="inherit" noWrap>
+                <Trans>Delete</Trans>
+              </Typography>
+            </MenuItem>
+          )}
         </Box>
       )}
     </More>

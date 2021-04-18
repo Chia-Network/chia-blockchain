@@ -11,6 +11,9 @@ import {
 } from '../../modules/harvesterMessages';
 import type Plot from '../../types/Plot';
 import useOpenDialog from '../../hooks/useOpenDialog';
+import config from '../../config/config';
+
+const localTest = config.local_test;
 
 type Props = {
   plot: Plot;
@@ -45,26 +48,24 @@ export default function PlotAction(props: Props) {
     }
   }
 
-  return null;
-
-  /*
-  return (
-    <More>
-      {({ onClose }) => (
-        <Box>
-          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
-            <ListItemIcon>
-              <DeleteForeverIcon fontSize="small" />
-            </ListItemIcon>
-            <Typography variant="inherit" noWrap>
-              <Trans>
-                Delete
-              </Trans>
-            </Typography>
-          </MenuItem>
-        </Box>
-      )}
-    </More>
-  );
-  */
+  return localTest
+    ? (
+      <More>
+        {({ onClose }) => (
+          <Box>
+            <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
+              <ListItemIcon>
+                <DeleteForeverIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography variant="inherit" noWrap>
+                <Trans>
+                  Delete
+                </Trans>
+              </Typography>
+            </MenuItem>
+          </Box>
+        )}
+      </More>
+    )
+    : null;
 }
