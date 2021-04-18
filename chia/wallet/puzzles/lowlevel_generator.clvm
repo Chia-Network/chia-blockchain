@@ -1,0 +1,23 @@
+(mod (coin_solutions extra_info)
+
+    (defun sha256tree
+           (TREE)
+           (if (l TREE)
+               (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+               (sha256 1 TREE)
+           )
+    )
+
+    (defun process_coin_solution (((parent amount) (puzzle solution)))
+        (list (list parent (sha256tree puzzle) amount) (a puzzle solution))
+    )
+
+    (defun recurse (coin_solutions)
+        (if coin_solutions
+            (c (process_coin_solution (f coin_solutions)) (recurse (r coin_solutions)))
+            0
+        )
+    )
+
+    (recurse (a coin_solutions extra_info))
+)
