@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -8,7 +9,6 @@ from blspy import PrivateKey, G1Element
 
 from chia.cmds.init_funcs import check_keys
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.network_type import NetworkType
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -493,8 +493,8 @@ class WalletRpcApi:
         }
 
     async def get_initial_freeze_period(self):
-        freeze_period = self.service.constants.INITIAL_FREEZE_PERIOD
-        return {"INITIAL_FREEZE_PERIOD": freeze_period}
+        freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
+        return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
 
     async def get_next_address(self, request: Dict) -> Dict:
         """
@@ -530,14 +530,9 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        if (
-            self.service.wallet_state_manager.blockchain.get_peak_height()
-            < self.service.constants.INITIAL_FREEZE_PERIOD
-        ):
-            raise ValueError(f"No transactions before block height: {self.service.constants.INITIAL_FREEZE_PERIOD}")
-
-        if self.service.constants.NETWORK_TYPE is NetworkType.MAINNET:
-            raise ValueError("Sending transactions not supported, please update your client.")
+        if int(time.time()) < self.service.constants.INITIAL_FREEZE_END_TIMESTAMP:
+            end_date = datetime.fromtimestamp(float(self.service.constants.INITIAL_FREEZE_END_TIMESTAMP))
+            raise ValueError(f"No transactions before: {end_date}")
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]

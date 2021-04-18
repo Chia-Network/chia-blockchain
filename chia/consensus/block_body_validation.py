@@ -15,7 +15,6 @@ from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
 from chia.consensus.find_fork_point import find_fork_point_in_chain
-from chia.consensus.network_type import NetworkType
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -152,10 +151,12 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    if height <= constants.INITIAL_FREEZE_PERIOD and block.transactions_generator is not None:
-        return Err.INITIAL_TRANSACTION_FREEZE, None
-
-    if height > constants.INITIAL_FREEZE_PERIOD and constants.NETWORK_TYPE == NetworkType.MAINNET:
+    # We check in header validation that timestamp is not more that 10 minutes into the future
+    if (
+        block.foliage_transaction_block is not None
+        and block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
+        and block.transactions_generator is not None
+    ):
         return Err.INITIAL_TRANSACTION_FREEZE, None
     else:
         # 6a. The generator root must be the hash of the serialized bytes of
