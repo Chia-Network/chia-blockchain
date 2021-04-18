@@ -75,11 +75,13 @@ def pkm_pairs_for_conditions_dict(
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
         assert len(cwa.vars) == 2
+        assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
         ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1]))
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
         assert len(cwa.vars) == 2
+        assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
         ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
     return ret

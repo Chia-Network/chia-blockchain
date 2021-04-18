@@ -5,7 +5,6 @@ import logging
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
-
 from blspy import AugSchemeMPL, G1Element
 from chiabip158 import PyBIP158
 
@@ -56,6 +55,7 @@ class MempoolManager:
 
         self.coin_store = coin_store
 
+        self.limit_factor = 0.5
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
         self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.potential_cache_cost: int = 0
@@ -96,7 +96,7 @@ class MempoolManager:
             for item in dic.values():
                 log.info(f"Cumulative cost: {cost_sum}")
                 if (
-                    item.cost + cost_sum <= 0.5 * self.constants.MAX_BLOCK_COST_CLVM
+                    item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
                 ):
                     spend_bundles.append(item.spend_bundle)
@@ -224,7 +224,7 @@ class MempoolManager:
 
         log.debug(f"Cost: {cost}")
 
-        if cost > self.constants.MAX_BLOCK_COST_CLVM:
+        if cost > int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM):
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
         if npc_result.error is not None:

@@ -567,7 +567,10 @@ class FullNodeAPI:
 
     # FARMER PROTOCOL
     @api_request
-    async def declare_proof_of_space(self, request: farmer_protocol.DeclareProofOfSpace) -> Optional[Message]:
+    @peer_required
+    async def declare_proof_of_space(
+        self, request: farmer_protocol.DeclareProofOfSpace, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         """
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
@@ -629,7 +632,13 @@ class FullNodeAPI:
             async with self.full_node.blockchain.lock:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
-                    mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                    try:
+                        mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                            peak.header_hash
+                        )
+                    except Exception as e:
+                        self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
+                        mempool_bundle = None
                     if mempool_bundle is not None:
                         spend_bundle = mempool_bundle[0]
                         additions = mempool_bundle[1]
@@ -807,22 +816,58 @@ class FullNodeAPI:
                 foliage_sb_data_hash,
                 foliage_transaction_block_hash,
             )
-            return make_msg(ProtocolMessageTypes.request_signed_values, message)
+            await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
+
+            # Adds backup in case the first one fails
+            if unfinished_block.is_transaction_block() and unfinished_block.transactions_generator is not None:
+                unfinished_block_backup = create_unfinished_block(
+                    self.full_node.constants,
+                    total_iters_pos_slot,
+                    sub_slot_iters,
+                    request.signage_point_index,
+                    sp_iters,
+                    ip_iters,
+                    request.proof_of_space,
+                    cc_challenge_hash,
+                    farmer_ph,
+                    pool_target,
+                    get_plot_sig,
+                    get_pool_sig,
+                    sp_vdfs,
+                    timestamp,
+                    self.full_node.blockchain,
+                    b"",
+                    None,
+                    G2Element(),
+                    None,
+                    None,
+                    prev_b,
+                    finished_sub_slots,
+                )
+
+                self.full_node.full_node_store.add_candidate_block(
+                    quality_string, height, unfinished_block_backup, backup=True
+                )
+        return None
 
     @api_request
-    async def signed_values(self, farmer_request: farmer_protocol.SignedValues) -> Optional[Message]:
+    @peer_required
+    async def signed_values(
+        self, farmer_request: farmer_protocol.SignedValues, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         """
         Signature of header hash, by the harvester. This is enough to create an unfinished
         block, which only needs a Proof of Time to be finished. If the signature is valid,
         we call the unfinished_block routine.
         """
-        candidate: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_candidate_block(
+        candidate_tuple: Optional[Tuple[uint32, UnfinishedBlock]] = self.full_node.full_node_store.get_candidate_block(
             farmer_request.quality_string
         )
 
-        if candidate is None:
+        if candidate_tuple is None:
             self.log.warning(f"Quality string {farmer_request.quality_string} not found in database")
             return None
+        height, candidate = candidate_tuple
 
         if not AugSchemeMPL.verify(
             candidate.reward_chain_block.proof_of_space.plot_public_key,
@@ -848,8 +893,25 @@ class FullNodeAPI:
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
-
-        await self.full_node.respond_unfinished_block(request, None, True)
+        try:
+            await self.full_node.respond_unfinished_block(request, None, True)
+        except Exception as e:
+            # If we have an error with this block, try making an empty block
+            self.full_node.log.error(f"Error farming block {e} {request}")
+            candidate_tuple = self.full_node.full_node_store.get_candidate_block(
+                farmer_request.quality_string, backup=True
+            )
+            if candidate_tuple is not None:
+                height, unfinished_block = candidate_tuple
+                self.full_node.full_node_store.add_candidate_block(
+                    farmer_request.quality_string, height, unfinished_block, False
+                )
+                message = farmer_protocol.RequestSignedValues(
+                    farmer_request.quality_string,
+                    unfinished_block.foliage.foliage_block_data.get_hash(),
+                    unfinished_block.foliage.foliage_transaction_block_hash,
+                )
+                await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
         return None
 
     # TIMELORD PROTOCOL

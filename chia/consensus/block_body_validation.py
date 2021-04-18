@@ -193,7 +193,10 @@ async def validate_block_body(
             npc_list = npc_result.npc_list
 
             # 8. Check that cost <= MAX_BLOCK_COST_CLVM
-            log.warning(f"Cost: {cost} max: {constants.MAX_BLOCK_COST_CLVM}")
+            log.debug(
+                f"Cost: {cost} max: {constants.MAX_BLOCK_COST_CLVM} "
+                f"percent full: {cost / constants.MAX_BLOCK_COST_CLVM}"
+            )
             if cost > constants.MAX_BLOCK_COST_CLVM:
                 return Err.BLOCK_COST_EXCEEDS_MAX, None
             if npc_result.error is not None:
