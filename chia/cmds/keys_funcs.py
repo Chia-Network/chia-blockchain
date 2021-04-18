@@ -57,7 +57,7 @@ def add_private_key_seed(mnemonic: str):
         return
 
 
-def show_all_keys():
+def show_all_keys(show_mnemonic: bool):
     """
     Prints all keys and mnemonics (if available).
     """
@@ -89,9 +89,10 @@ def show_all_keys():
             encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
         )
         assert seed is not None
-        mnemonic = bytes_to_mnemonic(seed)
-        print("  Mnemonic seed (24 secret words):")
-        print(mnemonic)
+        if show_mnemonic:
+            mnemonic = bytes_to_mnemonic(seed)
+            print("  Mnemonic seed (24 secret words):")
+            print(mnemonic)
 
 
 def delete(fingerprint: int):
