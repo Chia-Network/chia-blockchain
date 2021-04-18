@@ -28,6 +28,7 @@ def generate_cmd(ctx: click.Context):
 )
 def show_cmd(show_mnemonic_seed):
     from .keys_funcs import show_all_keys
+
     show_all_keys(show_mnemonic_seed)
 
 
