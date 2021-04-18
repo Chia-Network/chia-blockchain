@@ -154,16 +154,6 @@ class Blockchain(BlockchainInterface):
         assert block is not None
         return block
 
-    def is_child_of_peak(self, block: UnfinishedBlock) -> bool:
-        """
-        True if the block is the direct ancestor of the peak
-        """
-        peak = self.get_peak()
-        if peak is None:
-            return False
-
-        return block.prev_header_hash == peak.header_hash
-
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 

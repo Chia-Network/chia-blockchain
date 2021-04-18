@@ -17,7 +17,6 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
@@ -137,19 +136,6 @@ class WalletBlockchain(BlockchainInterface):
         if self._peak_height is None:
             return None
         return self.height_to_block_record(self._peak_height)
-
-    def is_child_of_peak(self, block: UnfinishedBlock) -> bool:
-        """
-        True iff the block is the direct ancestor of the peak
-        """
-        peak = self.get_peak()
-        if peak is None:
-            return False
-
-        return block.prev_header_hash == peak.header_hash
-
-    async def get_full_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
-        return await self.block_store.get_header_block(header_hash)
 
     async def receive_block(
         self,
@@ -447,6 +433,3 @@ class WalletBlockchain(BlockchainInterface):
         if block_record.height not in self.__heights_in_cache.keys():
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
-
-    async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
-        return await self.block_store.get_header_block(header_hash)

@@ -117,7 +117,7 @@ async def wallet_nodes_mainnet():
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size):
+    async def do_test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, test_reorgs):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -219,6 +219,30 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            50000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
+        tr: TransactionRecord = await wallet.generate_signed_transaction(
+            3000000000000,
+            ph,
+        )
+        await wallet.push_transaction(tx=tr)
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
+        )
+
         # Farm a block
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await time_out_assert(10, node_height_at_least, True, full_node_1, 9)
@@ -306,31 +330,32 @@ class TestFullNodeBlockCompression:
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
-        reog_blocks = bt.get_consecutive_blocks(14)
-        for r in range(0, len(reog_blocks), 3):
-            for reorg_block in reog_blocks[:r]:
-                assert (await blockchain.receive_block(reorg_block))[1] is None
-            for i in range(1, height):
-                for batch_size in range(1, height):
-                    results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
-                    assert results is not None
-                    for result in results:
-                        assert result.error is None
+        if test_reorgs:
+            reog_blocks = bt.get_consecutive_blocks(14)
+            for r in range(0, len(reog_blocks), 3):
+                for reorg_block in reog_blocks[:r]:
+                    assert (await blockchain.receive_block(reorg_block))[1] is None
+                for i in range(1, height):
+                    for batch_size in range(1, height):
+                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        assert results is not None
+                        for result in results:
+                            assert result.error is None
 
-        for r in range(0, len(all_blocks), 3):
-            for block in all_blocks[:r]:
-                assert (await blockchain.receive_block(block))[1] is None
-            for i in range(1, height):
-                for batch_size in range(1, height):
-                    results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
-                    assert results is not None
-                    for result in results:
-                        assert result.error is None
+            for r in range(0, len(all_blocks), 3):
+                for block in all_blocks[:r]:
+                    assert (await blockchain.receive_block(block))[1] is None
+                for i in range(1, height):
+                    for batch_size in range(1, height):
+                        results = await blockchain.pre_validate_blocks_multiprocessing(all_blocks[:i], {}, batch_size)
+                        assert results is not None
+                        for result in results:
+                            assert result.error is None
 
-    # @pytest.mark.asyncio
-    # async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-    #     self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000)
-    #     self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000)
+    @pytest.mark.asyncio
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
+        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
+        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
 class TestFullNodeProtocol:
