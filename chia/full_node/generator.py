@@ -1,10 +1,10 @@
 import logging
 from typing import List, Optional, Union, Tuple
-from chia.types.blockchain_format.program import Program, SerializedProgram, NIL
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator, GeneratorArg, GeneratorBlockCacheInterface, CompressorArg
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.lowlevel_generator import get_generator
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
