@@ -1,4 +1,4 @@
-(mod (block_decompresser_program (historical_blocks_tree))
+(mod (serialized_block_decompresser_program (historical_blocks_tree))
 
     (defconstant local_deserialize_mod
         ;; this monstrosity is the assembly output of `chialisp_deserialisation.clvm`
@@ -29,5 +29,6 @@
         )
     )
 
-    (recurse (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree)))
+    (recurse (a (a local_deserialize_mod (list serialized_block_decompresser_program))
+                (list local_deserialize_mod historical_blocks_tree)))
 )

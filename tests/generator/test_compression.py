@@ -200,7 +200,11 @@ class TestDecompression(TestCase):
         print(out)
 
         p_with_cses = DECOMPRESS_BLOCK.curry(
-            DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, cse2, DESERIALIZE_MOD,
+            DECOMPRESS_PUZZLE,
+            DECOMPRESS_CSE_WITH_PREFIX,
+            start,
+            cse2,
+            DESERIALIZE_MOD,
         )
         generator_args = create_generator_args([SerializedProgram.from_bytes(original_generator)])
         cost, out = p_with_cses.run_with_cost(INFINITE_COST, generator_args)

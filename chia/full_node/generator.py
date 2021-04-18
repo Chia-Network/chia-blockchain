@@ -59,7 +59,14 @@ def create_compressed_generator(
 
 def setup_generator_args(self: BlockGenerator):
     args = create_generator_args(self.generator_refs())
-    return self.program, args
+
+    # serialize the program so it can be deserialized in clvm
+    wrapped_program = Program.to(bytes(self.program)).as_bin()
+
+    # We will likely be able to optimize this further by making `SerializedProgram`
+    # smarter (or eliminating it).
+
+    return SerializedProgram.from_bytes(wrapped_program), args
 
 
 def run_generator(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
