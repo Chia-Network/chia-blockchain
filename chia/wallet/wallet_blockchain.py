@@ -17,7 +17,6 @@ from chia.consensus.multiprocess_validation import PreValidationResult, pre_vali
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint32, uint64
