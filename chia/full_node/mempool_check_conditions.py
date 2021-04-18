@@ -15,7 +15,7 @@ from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
-from chia.wallet.puzzles.lowlevel_generator import get_generator
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
