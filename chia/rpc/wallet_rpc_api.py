@@ -378,54 +378,51 @@ class WalletRpcApi:
                     "pubkey": rl_user.rl_info.user_pubkey.hex(),
                 }
         elif request["wallet_type"] == "did_wallet":
-            try:
-                if request["did_type"] == "new":
-                    backup_dids = []
-                    num_needed = 0
-                    for d in request["backup_dids"]:
-                        backup_dids.append(hexstr_to_bytes(d))
-                    if len(backup_dids) > 0:
-                        num_needed = uint64(request["num_of_backup_ids_needed"])
-                    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                        wallet_state_manager,
-                        main_wallet,
-                        int(request["amount"]),
-                        backup_dids,
-                        uint64(num_needed),
-                    )
-                    my_did = did_wallet.get_my_DID()
-                    return {
-                        "success": True,
-                        "type": did_wallet.type(),
-                        "my_did": my_did,
-                        "wallet_id": did_wallet.id(),
-                    }
-                elif request["did_type"] == "recovery":
-                    did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
-                        wallet_state_manager, main_wallet, request["filename"]
-                    )
-                    assert did_wallet.did_info.temp_coin is not None
-                    assert did_wallet.did_info.temp_puzhash is not None
-                    assert did_wallet.did_info.temp_pubkey is not None
-                    my_did = did_wallet.get_my_DID()
-                    coin_name = did_wallet.did_info.temp_coin.name().hex()
-                    coin_list = did_wallet.did_info.temp_coin.as_list()
-                    newpuzhash = did_wallet.did_info.temp_puzhash
-                    pubkey = did_wallet.did_info.temp_pubkey
-                    return {
-                        "success": True,
-                        "type": did_wallet.type(),
-                        "my_did": my_did,
-                        "wallet_id": did_wallet.id(),
-                        "coin_name": coin_name,
-                        "coin_list": coin_list,
-                        "newpuzhash": newpuzhash.hex(),
-                        "pubkey": pubkey.hex(),
-                        "backup_dids": did_wallet.did_info.backup_ids,
-                        "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
-                    }
-            except Exception as e:
-                return {"success": False, "reason": e}
+            if request["did_type"] == "new":
+                backup_dids = []
+                num_needed = 0
+                for d in request["backup_dids"]:
+                    backup_dids.append(hexstr_to_bytes(d))
+                if len(backup_dids) > 0:
+                    num_needed = uint64(request["num_of_backup_ids_needed"])
+                did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                    wallet_state_manager,
+                    main_wallet,
+                    int(request["amount"]),
+                    backup_dids,
+                    uint64(num_needed),
+                )
+                my_did = did_wallet.get_my_DID()
+                return {
+                    "success": True,
+                    "type": did_wallet.type(),
+                    "my_did": my_did,
+                    "wallet_id": did_wallet.id(),
+                }
+            elif request["did_type"] == "recovery":
+                did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
+                    wallet_state_manager, main_wallet, request["filename"]
+                )
+                assert did_wallet.did_info.temp_coin is not None
+                assert did_wallet.did_info.temp_puzhash is not None
+                assert did_wallet.did_info.temp_pubkey is not None
+                my_did = did_wallet.get_my_DID()
+                coin_name = did_wallet.did_info.temp_coin.name().hex()
+                coin_list = did_wallet.did_info.temp_coin.as_list()
+                newpuzhash = did_wallet.did_info.temp_puzhash
+                pubkey = did_wallet.did_info.temp_pubkey
+                return {
+                    "success": True,
+                    "type": did_wallet.type(),
+                    "my_did": my_did,
+                    "wallet_id": did_wallet.id(),
+                    "coin_name": coin_name,
+                    "coin_list": coin_list,
+                    "newpuzhash": newpuzhash.hex(),
+                    "pubkey": pubkey.hex(),
+                    "backup_dids": did_wallet.did_info.backup_ids,
+                    "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
+                }
 
     ##########################################################################################
     # Wallet
@@ -830,16 +827,13 @@ class WalletRpcApi:
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = did_wallet.get_my_DID()
         coin_name = did_wallet.did_info.temp_coin.name().hex()
-        newpuzhash = (await did_wallet.get_new_puzzle()).get_tree_hash().hex()
-        pubkey = bytes(
-            (await self.service.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        ).hex()
         return {
             "success": True,
+            "wallet_id": wallet_id,
             "my_did": my_did,
             "coin_name": coin_name,
-            "newpuzhash": newpuzhash,
-            "pubkey": pubkey,
+            "newpuzhash": did_wallet.did_info.temp_puzhash,
+            "pubkey": did_wallet.did_info.temp_pubkey,
             "backup_dids": did_wallet.did_info.backup_ids,
         }
 
@@ -848,9 +842,9 @@ class WalletRpcApi:
             wallet_id = int(request["wallet_id"])
             did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
             did_wallet.create_backup(request["filename"])
-            return {"success": True}
+            return {"wallet_id": wallet_id, "success": True}
         except Exception:
-            return {"success": False}
+            return {"wallet_id": wallet_id, "success": False}
 
     ##########################################################################################
     # Rate Limited Wallet

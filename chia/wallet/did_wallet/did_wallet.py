@@ -49,8 +49,6 @@ class DIDWallet:
         num_of_backup_ids_needed: uint64 = None,
         name: str = None,
     ):
-        if amount & 1 == 0:
-            raise ValueError("DID amount must be odd number")
         self = DIDWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
@@ -59,7 +57,8 @@ class DIDWallet:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
-
+        if amount & 1 == 0:
+            raise ValueError("DID amount must be odd number")
         self.wallet_state_manager = wallet_state_manager
         if num_of_backup_ids_needed is None:
             num_of_backup_ids_needed = uint64(len(backups_ids))
@@ -350,6 +349,7 @@ class DIDWallet:
                 None,
             )
             await self.save_info(did_info, False)
+            await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
             full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
             full_puzzle_hash = full_puz.get_tree_hash()
             (
@@ -406,7 +406,6 @@ class DIDWallet:
                         )
                         await self.save_info(did_info, False)
 
-            await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
             return
         except Exception as e:
             raise e
