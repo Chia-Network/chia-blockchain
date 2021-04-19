@@ -847,15 +847,9 @@ class WalletRpcApi:
             wallet_id = int(request["wallet_id"])
             did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
             did_wallet.create_backup(request["filename"])
-            return {
-                "wallet_id": wallet_id,
-                "success": True
-            }
+            return {"wallet_id": wallet_id, "success": True}
         except Exception:
-            return {
-                "wallet_id": wallet_id,
-                "success": False
-            }
+            return {"wallet_id": wallet_id, "success": False}
 
     ##########################################################################################
     # Rate Limited Wallet
