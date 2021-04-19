@@ -3,7 +3,6 @@ import { Box, Container, Drawer, Toolbar } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import AppTimeBombAlert from '../app/AppTimeBombAlert';
 
 const StyledSideBarContainer = styled(Box)`
   min-width: 180px;
@@ -57,7 +56,6 @@ export default function LayoutSidebar(props: Props) {
           <StyledInnerContainer>
             <StyledContainer maxWidth="lg">
               <Flex flexDirection="column" gap={2}>
-                <AppTimeBombAlert />
                 {children}
               </Flex>
             </StyledContainer>

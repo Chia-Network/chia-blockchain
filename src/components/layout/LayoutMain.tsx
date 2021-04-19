@@ -3,7 +3,6 @@ import { Box, Container } from '@material-ui/core';
 import styled from 'styled-components';
 import { Flex } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import AppTimeBombAlert from '../app/AppTimeBombAlert';
 
 const StyledContainer = styled(Container)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -30,7 +29,6 @@ export default function LayoutMain(props: Props) {
         {children && (
           <StyledContainer maxWidth="lg">
             <Flex flexDirection="column" gap={2}>
-              <AppTimeBombAlert />
               {children}
             </Flex>
           </StyledContainer>
