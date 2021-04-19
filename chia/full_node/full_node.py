@@ -611,8 +611,12 @@ class FullNode:
             if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
                 raise ValueError("Not performing sync, already caught up.")
 
+            wp_timeout = 180
+            if "weight_proof_timeout" in self.config:
+                wp_timeout = self.config["weight_proof_timeout"]
+            self.log.debug(f"weight proof timeout is {wp_timeout} sec")
             request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
-            response = await weight_proof_peer.request_proof_of_weight(request, timeout=180)
+            response = await weight_proof_peer.request_proof_of_weight(request, timeout=wp_timeout)
 
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
