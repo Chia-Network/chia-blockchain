@@ -2,6 +2,7 @@ import asyncio
 import logging
 import ipaddress
 import traceback
+import random
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, List
 
@@ -183,6 +184,9 @@ class Crawler:
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
             self.peer_count = 0
+            total_nodes = 0
+            self.seen_nodes = set()
+            tried_nodes = set()
             while True:
                 await asyncio.sleep(2)
                 async def introducer_action(peer: ws.WSChiaConnection):
@@ -200,7 +204,7 @@ class Crawler:
                                 new_peer_reliability = PeerReliability(response_peer.host)
                                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
                     self.peer_count += len(response.peer_list)
-                    self.log.error(f"Peer count: {self.peer_count}.")
+                    # self.log.error(f"Peer count: {self.peer_count}.")
                     # disconnect
                     await peer.close()
 
@@ -209,7 +213,7 @@ class Crawler:
                 # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(1000)
                 # connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
-                good_peers = await self.crawl_store.get_cached_peers(99999999)
+                # good_peers = await self.crawl_store.get_cached_peers(99999999)
 
                 async def peer_action(peer: ws.WSChiaConnection):
                     # Ask peer for peers
@@ -218,8 +222,9 @@ class Crawler:
                     if isinstance(response, full_node_protocol.RespondPeers):
                         self.log.info(f"{peer.peer_host} sent us {len(response.peer_list)}")
                         for response_peer in response.peer_list:
-                            current = await self.crawl_store.get_peer_by_ip(response_peer.host)
-                            if current is None:
+                            # current = await self.crawl_store.get_peer_by_ip(response_peer.host)
+                            if response_peer.host not in self.seen_nodes:
+                                self.seen_nodes.add(response_peer.host)
                                 new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
                                                     False, 0, 0, 0, utc_timestamp())
                                 # self.log.info(f"Adding {new_peer.ip_address}")
@@ -228,9 +233,7 @@ class Crawler:
 
                     await peer.close()
 
-                self.log.error(f"Reliable peers available: {len(good_peers)}.")
                 tasks = []
-
                 async def connect_task(self, peer):
                     try:
                         now = utc_timestamp()
@@ -258,14 +261,17 @@ class Crawler:
                         yield iterable[ndx:min(ndx + n, l)]
 
                 batch_count = 0
-                for peers in batch(peers_to_crawl, 100):
-                    self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
+                for peers in batch(peers_to_crawl, 250):
+                    # self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                     batch_count += 1
                     tasks = []
                     for peer in peers:
                         if peer.port == 8444:
                             task = asyncio.create_task(connect_task(self, peer))
                             tasks.append(task)
+                            total_nodes += 1
+                            if peer.ip_address not in tried_nodes:
+                                tried_nodes.add(peer.ip_address)
                     await asyncio.wait(tasks)
                     # stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
                     # stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
@@ -273,6 +279,13 @@ class Crawler:
                     # self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
 
                 self.server.banned_peers = {}
+                self.log.error(f"Total connections attempted: {total_nodes}")
+                self.log.error(f"Total unique nodes attempted: {len(tried_nodes)}.")
+                if random.randrange(0, 10) == 0:
+                    good_peers = await self.crawl_store.get_cached_peers(99999999)
+                    self.log.error(f"Reliable nodes: {len(good_peers)}")
+                    stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
+                    self.log.error(f"Peers reachable today: {len(stat_connected_peers)}.")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
