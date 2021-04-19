@@ -1064,7 +1064,8 @@ class FullNode:
                 assert new_block.transactions_generator is not None
 
                 self.log.debug(
-                    f"Going recursively into respond block due to wrong info in the cache, {new_block.header_hash}"
+                    f"Wrong info in the cache for bh {new_block.header_hash}, there might be multiple blocks from the "
+                    f"same farmer with the same pospace."
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
