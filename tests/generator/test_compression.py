@@ -53,12 +53,14 @@ class TestCompression(TestCase):
         c = compressed_spend_bundle_solution(ca, sb)
         s = simple_solution_generator(sb)
         assert c != s
-        cost_c, result_c = run_generator(c, INFINITE_COST)
-        cost_s, result_s = run_generator(s, INFINITE_COST)
-        print(result_c)
-        assert result_c is not None
-        assert result_s is not None
-        assert result_c == result_s
+
+        compressed_cost, compressed_result = run_generator(c, INFINITE_COST)
+        simple_cost, simple_result = run_generator(s, INFINITE_COST)
+
+        print(compressed_result)
+        assert compressed_result is not None
+        assert simple_result is not None
+        assert compressed_result == simple_result
 
 
 class TestDecompression(TestCase):
