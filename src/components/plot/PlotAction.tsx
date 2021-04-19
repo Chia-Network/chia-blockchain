@@ -11,9 +11,7 @@ import {
 } from '../../modules/harvesterMessages';
 import type Plot from '../../types/Plot';
 import useOpenDialog from '../../hooks/useOpenDialog';
-import config from '../../config/config';
-
-const localTest = config.local_test;
+import isWindows from '../../util/isWindows';
 
 type Props = {
   plot: Plot;
@@ -28,9 +26,14 @@ export default function PlotAction(props: Props) {
 
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
+  const canDelete = !isWindows;
 
   async function handleDeletePlot() {
-    const canDelete = await openDialog((
+    if (!canDelete) {
+      return;
+    }
+
+    const deleteConfirmed = await openDialog((
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
@@ -43,29 +46,27 @@ export default function PlotAction(props: Props) {
     ));
 
     // @ts-ignore
-    if (canDelete) {
+    if (deleteConfirmed) {
       dispatch(deletePlot(filename));
     }
   }
 
-  return localTest
-    ? (
-      <More>
-        {({ onClose }) => (
-          <Box>
-            <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
-              <ListItemIcon>
-                <DeleteForeverIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography variant="inherit" noWrap>
-                <Trans>
-                  Delete
-                </Trans>
-              </Typography>
-            </MenuItem>
-          </Box>
-        )}
-      </More>
-    )
-    : null;
+  return (
+    <More>
+      {({ onClose }) => (
+        <Box>
+          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }} disabled={!canDelete}>
+            <ListItemIcon>
+              <DeleteForeverIcon fontSize="small" />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>
+                Delete
+              </Trans>
+            </Typography>
+          </MenuItem>
+        </Box>
+      )}
+    </More>
+  );
 }

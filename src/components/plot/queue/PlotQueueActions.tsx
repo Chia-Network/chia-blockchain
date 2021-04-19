@@ -12,9 +12,7 @@ import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
 import { stopPlotting } from '../../../modules/plotter_messages';
 import PlotQueueLogDialog from './PlotQueueLogDialog';
-import config from '../../../config/config';
-
-const localTest = config.local_test;
+import isWindows from '../../../util/isWindows';
 
 type Props = {
   queueItem: PlotQueueItem;
@@ -30,9 +28,14 @@ export default function PlotQueueAction(props: Props) {
 
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
+  const canDelete = !isWindows;
 
   async function handleDeletePlot() {
-    const canDelete = await openDialog((
+    if (!canDelete) {
+      return;
+    }
+
+    const deleteConfirmed = await openDialog((
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
@@ -46,7 +49,7 @@ export default function PlotQueueAction(props: Props) {
     ));
 
     // @ts-ignore
-    if (canDelete) {
+    if (deleteConfirmed) {
       dispatch(stopPlotting(id));
     }
   }
@@ -75,16 +78,14 @@ export default function PlotQueueAction(props: Props) {
             </>
           )}
 
-          {localTest && (
-            <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
-              <ListItemIcon>
-                <DeleteForeverIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography variant="inherit" noWrap>
-                <Trans>Delete</Trans>
-              </Typography>
-            </MenuItem>
-          )}
+          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }} disabled={!canDelete}>
+            <ListItemIcon>
+              <DeleteForeverIcon fontSize="small" />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>Delete</Trans>
+            </Typography>
+          </MenuItem>
         </Box>
       )}
     </More>
