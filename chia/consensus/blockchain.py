@@ -613,7 +613,7 @@ class Blockchain(BlockchainInterface):
     async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
         hashes = []
         for height in range(start, stop + 1):
-            hashes.append(self.height_to_hash(height))
+            hashes.append(self.height_to_hash(uint32(height)))
         return await self.block_store.get_block_records_by_hash(hashes)
 
     async def get_header_blocks_in_range(self, start: int, stop: int) -> Dict[bytes32, HeaderBlock]:
