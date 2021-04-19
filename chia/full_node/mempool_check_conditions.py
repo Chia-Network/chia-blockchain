@@ -144,7 +144,7 @@ def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mo
         npc_list: List[NPC] = []
         opcodes: Set[bytes] = set(item.value for item in ConditionOpcode)
 
-        for res in result.as_iter():
+        for res in result.first().as_iter():
             conditions_list: List[ConditionWithArgs] = []
 
             spent_coin_parent_id: bytes32 = res.first().as_atom()
