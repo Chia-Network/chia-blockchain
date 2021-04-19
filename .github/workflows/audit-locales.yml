@@ -33,7 +33,7 @@ jobs:
         fetch-depth: 0
 
     - name: Cache npm
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       env:
         cache-name: cache-node-modules
       with:
