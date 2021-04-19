@@ -74,7 +74,7 @@ class CrawlStore:
                 " stat_8h_w real, stat_8h_c real, stat_8h_r real,"
                 " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
                 " stat_1w_w real, stat_1w_c real, stat_1w_r real,"
-                " stat_1m_w real, stat_1m_c real, stat_1m_r real)"
+                " stat_1m_w real, stat_1m_c real, stat_1m_r real, is_reliable int)"
             )
         )
 
@@ -89,6 +89,8 @@ class CrawlStore:
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS added_timestamp on peer_records(added_timestamp)")
 
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS peer_id on peer_reliability(peer_id)")
+        await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS ignore_till on peer_reliability(ignore_till)")
+        await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS is_reliable on peer_reliability(is_reliable)")
 
         await self.crawl_db.commit()
         self.coin_record_cache = dict()
@@ -114,7 +116,7 @@ class CrawlStore:
         )
         await cursor.close()
         cursor = await self.crawl_db.execute(
-            "INSERT OR REPLACE INTO peer_reliability VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO peer_reliability VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 peer_reliability.peer_id,
                 peer_reliability.ignore_till,
@@ -122,7 +124,8 @@ class CrawlStore:
                 peer_reliability.stat_8h.weight, peer_reliability.stat_8h.count, peer_reliability.stat_8h.reliability,
                 peer_reliability.stat_1d.weight, peer_reliability.stat_1d.count, peer_reliability.stat_1d.reliability,
                 peer_reliability.stat_1w.weight, peer_reliability.stat_1w.count, peer_reliability.stat_1w.reliability,
-                peer_reliability.stat_1m.weight, peer_reliability.stat_1m.count, peer_reliability.stat_1m.reliability,  
+                peer_reliability.stat_1m.weight, peer_reliability.stat_1m.count, peer_reliability.stat_1m.reliability,
+                int(peer_reliability.is_reliable()),
             ),
         )
         await cursor.close()
@@ -233,16 +236,16 @@ class CrawlStore:
         now = int(utc_timestamp())
         peers = []
         async with self.lock:
-            if now - self.last_timestamp > 180:
+            if now - self.last_timestamp > 300:
                 cursor = await self.crawl_db.execute(
-                    f"SELECT ip_address, port from peer_records WHERE connected=?",
-                    (True,),
+                    f"SELECT peer_id from peer_reliability WHERE is_reliable=?",
+                    (1,),
                 )
                 rows = await cursor.fetchall()
                 peers = []
                 await cursor.close()
                 for row in rows:
-                    peer = PeerInfo(row[0], row[1])
+                    peer = PeerInfo(row[0], 8444)
                     peers.append(peer)
                 self.cached_peers = peers
                 self.last_timestamp = utc_timestamp()
