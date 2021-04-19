@@ -34,6 +34,7 @@ from chia.protocols.full_node_protocol import (
     RespondBlock,
     RespondBlocks,
     RespondSignagePoint,
+    RequestBlock,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.node_discovery import FullNodePeers
@@ -301,7 +302,7 @@ class FullNode:
                 curr_height -= 1
             if found_fork_point:
                 for response in reversed(responses):
-                    await self.respond_block(response)
+                    await self.respond_block(response, peer)
         except Exception as e:
             self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
             raise e
@@ -1031,7 +1032,11 @@ class FullNode:
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
             unf_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(unfinished_rh)
-            if unf_block is not None and unf_block.transactions_generator is not None:
+            if (
+                unf_block is not None
+                and unf_block.transactions_generator is not None
+                and unf_block.foliage_transaction_block == block.foliage_transaction_block
+            ):
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1039,6 +1044,27 @@ class FullNode:
                     transactions_generator=unf_block.transactions_generator,
                     transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
                 )
+            if block.transactions_generator is None:
+                # We still do not have the correct information for this block, perhaps there is a duplicate block
+                # with the same unfinished block hash in the cache, so we need to fetch the correct one
+                if peer is not None:
+                    block_response: Optional[Any] = await peer.request_block(RequestBlock(block.height, True))
+                    if block_response is None or not isinstance(block_response, full_node_protocol.RespondBlock):
+                        self.log.warning(
+                            f"Was not able to fetch the correct block for height {block.height} {block_response}"
+                        )
+                        return None
+                    new_block: FullBlock = block_response.block
+                    if new_block.foliage_transaction_block != block.foliage_transaction_block:
+                        self.log.warning(f"Received the wrong block for height {block.height} {new_block.header_hash}")
+                        return None
+                    assert new_block.transactions_generator is not None
+
+                    self.log.debug(
+                        f"Going recursively into respond block due to wrong info in the cache, {new_block.header_hash}"
+                    )
+                    # This recursion ends here, we cannot recurse again because transactions_generator is not None
+                    return await self.respond_block(block_response, peer)
 
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
