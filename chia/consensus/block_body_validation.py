@@ -78,12 +78,8 @@ async def validate_block_body(
         return None, None  # This means the block is valid
 
     # All checks below this point correspond to transaction blocks
-    # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
-    if (
-        block.foliage_transaction_block is None
-        or block.foliage_transaction_block.filter_hash is None
-        or block.transactions_info is None
-    ):
+    # 2. For blocks, foliage block, transactions info must not be empty
+    if block.foliage_transaction_block is None or block.transactions_info is None:
         return Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, None
     assert block.foliage_transaction_block is not None
 
@@ -99,7 +95,10 @@ async def validate_block_body(
         return Err.INVALID_FOLIAGE_BLOCK_HASH, None
 
     # 5. The reward claims must be valid for the previous blocks, and current block fees
-    if height > 0:
+    if height == 0:
+        # if block.foliage_transaction_block.re
+        pass
+    else:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
         prev_transaction_block_height = prev_transaction_block.height

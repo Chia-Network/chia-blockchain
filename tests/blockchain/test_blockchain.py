@@ -1581,19 +1581,51 @@ class TestBodyValidation:
 
         block = recursive_replace(
             blocks[-1],
-            "foliage_transaction_block.filter_hash",
-            None,
-        )
-        err = (await b.receive_block(block))[1]
-        assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
-
-        block = recursive_replace(
-            blocks[-1],
             "transactions_info",
             None,
         )
-        err = (await b.receive_block(block))[1]
+        try:
+            err = (await b.receive_block(block))[1]
+        except AssertionError:
+            return
         assert err == Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA or err == Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+
+    @pytest.mark.asyncio
+    async def test_invalid_transactions_info_hash(self, empty_blockchain):
+        # 3
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        h = std_hash(b"")
+        block = recursive_replace(
+            blocks[-1],
+            "foliage_transaction_block.transactions_info_hash",
+            h,
+        )
+        block = recursive_replace(
+            block, "foliage.foliage_transaction_block_hash", std_hash(block.foliage_transaction_block)
+        )
+        new_m = block.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block = recursive_replace(block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block))[1]
+        assert err == Err.INVALID_TRANSACTIONS_INFO_HASH
+
+    @pytest.mark.asyncio
+    async def test_invalid_transactions_block_hash(self, empty_blockchain):
+        # 4
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        h = std_hash(b"")
+        block = recursive_replace(blocks[-1], "foliage.foliage_transaction_block_hash", h)
+        new_m = block.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block = recursive_replace(block, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block))[1]
+        assert err == Err.INVALID_FOLIAGE_BLOCK_HASH
 
 
 class TestReorgs:
