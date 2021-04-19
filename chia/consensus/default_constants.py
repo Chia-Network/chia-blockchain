@@ -29,6 +29,8 @@ testnet_kwargs = {
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     # Default used for tests is std_hash(b'')
     "GENESIS_CHALLENGE": bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+    # Forks of chia should change this value to provide replay attack protection. This is set to mainnet genesis chall
+    "AGG_SIG_ME_ADDITIONAL_DATA": bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
@@ -36,25 +38,14 @@ testnet_kwargs = {
         "3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af"
     ),
     "MAX_VDF_WITNESS_SIZE": 64,
-    # Target tx count per sec
-    "TX_PER_SEC": 20,
-    # Size of mempool = 10x the size of block
-    "MEMPOOL_BLOCK_BUFFER": 10,
+    # Size of mempool = 150x the size of block
+    "MEMPOOL_BLOCK_BUFFER": 150,
     # Max coin amount, fits into 64 bits
     "MAX_COIN_AMOUNT": uint64((1 << 64) - 1),
-    # Targeting twice bitcoin's block size of 1.3MB per block
-    # Raw size per block target = 1,300,000 * 600 / 47 = approx 100 KB
-    # Rax TX (single in, single out) = 219 bytes (not compressed)
-    # TX = 457 vBytes
-    # floor(100 * 1024 / 219) * 457 = 213684 (size in vBytes)
-    # Max block cost in virtual bytes
-    "MAX_BLOCK_COST": 213684,
-    # MAX block cost in clvm cost units = MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT
-    # 1 vByte = 108 clvm cost units
-    "CLVM_COST_RATIO_CONSTANT": 108,
-    # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
-    # "MAX_BLOCK_COST_CLVM": 23077872,
-    "MAX_BLOCK_COST_CLVM": 40000000,  # Based on arvid analysis
+    # Max block cost in clvm cost units
+    "MAX_BLOCK_COST_CLVM": 11000000000,
+    # The cost per byte of generator program
+    "COST_PER_BYTE": 12000,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
     "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
@@ -62,7 +53,7 @@ testnet_kwargs = {
     "INITIAL_FREEZE_PERIOD": 42 * 4608,
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,
-    "MAX_GENERATOR_REF_LIST_SIZE": 10000,  # Number of references allowed in the block generator ref list
+    "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
 }
 
 

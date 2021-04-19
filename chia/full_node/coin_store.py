@@ -6,6 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 
 
@@ -18,13 +19,17 @@ class CoinStore:
     coin_record_db: aiosqlite.Connection
     coin_record_cache: Dict[str, CoinRecord]
     cache_size: uint32
+    db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(60000)):
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(60000)):
         self = cls()
 
         self.cache_size = cache_size
-        self.coin_record_db = connection
+        self.db_wrapper = db_wrapper
+        self.coin_record_db = db_wrapper.db
+        await self.coin_record_db.execute("pragma journal_mode=wal")
+        await self.coin_record_db.execute("pragma synchronous=2")
         await self.coin_record_db.execute(
             (
                 "CREATE TABLE IF NOT EXISTS coin_record("
@@ -55,14 +60,13 @@ class CoinStore:
         self.coin_record_cache = dict()
         return self
 
-    async def new_block(self, block: FullBlock):
+    async def new_block(self, block: FullBlock, additions: List[Coin], removals: List[bytes32]):
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
         if block.is_transaction_block() is False:
             return
         assert block.foliage_transaction_block is not None
-        removals, additions = block.tx_removals_and_additions()
 
         for coin in additions:
             record: CoinRecord = CoinRecord(
@@ -107,10 +111,8 @@ class CoinStore:
             return CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
         return None
 
-    async def get_tx_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
-        cursor = await self.coin_record_db.execute(
-            "SELECT * from coin_record WHERE confirmed_index=? and coinbase=0", (height,)
-        )
+    async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
+        cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE confirmed_index=?", (height,))
         rows = await cursor.fetchall()
         await cursor.close()
         coins = []

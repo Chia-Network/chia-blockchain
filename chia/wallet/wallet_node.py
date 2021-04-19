@@ -69,6 +69,7 @@ class WalletNode:
     syncing: bool
     full_node_peer: Optional[PeerInfo]
     peer_task: Optional[asyncio.Task]
+    logged_in: bool
 
     def __init__(
         self,
@@ -107,6 +108,7 @@ class WalletNode:
         self.new_peak_lock: Optional[asyncio.Lock] = None
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
+        self.logged_in = False
 
     def get_key_for_fingerprint(self, fingerprint: Optional[int]):
         private_keys = self.keychain.get_all_private_keys()
@@ -133,6 +135,7 @@ class WalletNode:
     ) -> bool:
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
+            self.logged_in = False
             return False
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
@@ -166,6 +169,7 @@ class WalletNode:
                 self.backup_initialized = False
                 await self.wallet_state_manager.close_all_stores()
                 self.wallet_state_manager = None
+                self.logged_in = False
                 return False
 
         self.backup_initialized = True
@@ -188,8 +192,8 @@ class WalletNode:
         self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
-        self.log.info("self.sync_job")
         self.logged_in_fingerprint = fingerprint
+        self.logged_in = True
         return True
 
     def _close(self):
@@ -210,6 +214,7 @@ class WalletNode:
         if self.peer_task is not None:
             self.peer_task.cancel()
             self.peer_task = None
+        self.logged_in = False
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -544,7 +549,8 @@ class WalletNode:
             self.log.info("No peers to sync to")
             return
 
-        async with self.wallet_state_manager.blockchain.lock:
+        await self.wallet_state_manager.blockchain.lock.acquire()
+        try:
             fork_height = None
             if peak is not None:
                 fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
@@ -580,6 +586,8 @@ class WalletNode:
                         peak.height - self.constants.BLOCKS_CACHE_SIZE,
                     )
                 )
+        finally:
+            self.wallet_state_manager.blockchain.lock.release()
 
     async def fetch_blocks_and_validate(
         self,

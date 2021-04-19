@@ -6,6 +6,58 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased
+
+### Added
+
+### Fixed
+
+### Changed
+
+- Performance of streamable has been increased, which should help the full node use less CPU - especially when syncing.
+
+## 1.0.5 Chia Blockchain 2021-04-14
+
+### Added
+
+- This is a maintenance release for 1.0.4 to fix a few mostly cosmetic issues. Please refer to the 1.0.4 notes for the substantive plotting changes - for example - in that release.
+
+### Changed
+
+- The GUI now calls it an Estimated Time to Win and has enhanced explanations in the tool tip that the estimated time is often not be the actual time. We have some additional improvements we plan to make here in future releases.
+- Development installers now handle semver development versions correctly.
+
+### Fixed
+
+- Temp space sizes needed for k = 33 and higher were accidentally under-reported. The values we have placed into the GUI may be conservative in being too large and appreciate feedback from the community on the new optimal temp space needed and RAM choices.
+- The GUI plotting progress bar was reaching 100% too early. Thanks to @davidbb for the PR.
+- Help -> About was blank.
+- Our estimate for k=32 was about 0.4GiB too low in some cases.
+- Building the GUI in especially ARM64 Linux was painful enough to be considered broken.
+## 1.0.4 Chia Blockchain 2021-04-12
+
+### Added
+
+- Starting approximately April 21, 2021, the GUI will notify you that this version will stop working at block height 193,536 and will persistently warn you from that block on that you can not use this version (or any earlier version) to farm. This is to support the upgrade to the transaction fork.
+- We now have translations for Brazilian Portuguese, Australian English, and Pirate. Thanks to @fsavaget, @darkflare, @maahhh, @harold_257, @kontin, and @GunnlaugurCalvi. Yarr - don't be losing your 24 word treasure map...
+
+### Changed
+
+- The plotter in bitfield mode is much improved in plotting speed (~15% faster than in 1.0.3), now requires 28% less temporary space (238.3 GiB/256 GB), and now uses its maximum memory in phase 1 and only needs 3389MiB for optimal sorting of a k32. Total writes should also be down by about 20%. On almost all machines we expect bitfield to be as fast or faster. For CPUs that predate the [Nehalem architecture](https://en.wikipedia.org/wiki/Nehalem_(microarchitecture)), bitfield plotting will not work and you will need to use no bitfield. Those CPUs were generally designed before 2010.
+- The `src` directory in chia-blockchain has been changed to `chia` to avoid namespace collisions.
+- GUI install builds have been simplified to rely on one `.spec` file in `chia/`
+- The weight proof timeout can now be configured in config.yaml.
+- Peer discovery is now retried more often after you receive initial peers.
+
+### Fixed
+
+- We have made significant improvements and bug fixes to stop blockchain and wallet database corruption issues.
+- We now pass the environment into the Daemon and this should solve some Windows and MacOS startup bugs.
+- The ARM64 .deb installer will now work well on Raspberry Pi OS 64 bit and Ubuntu 18.04 LTS or newer.
+- We have made improvements in weight proof generation and saving.
+- Wallet start up would have a race condition that output a harmless error on startup.
+- Thanks for a typo fix from @alfonsoperez.
+
 ## 1.0.3 Chia Blockchain 2021-03-30
 
 ### Added
@@ -16,7 +68,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 
 - An incorrect merge brought in unreleased features and broke `chia keys`.
-- Omitted from the 1.0.2 changelog, we fixed one crash in harvester with the release of chaipos 1.0.0 as well.
+- Omitted from the 1.0.2 changelog, we fixed one crash in harvester with the release of chiapos 1.0.0 as well.
 
 ## 1.0.2 Chia Blockchain 2021-03-30
 

@@ -16,6 +16,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import CompressorArg
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -53,7 +54,9 @@ class FullNodeStore:
     future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]]
 
     # Partial hashes of unfinished blocks we are requesting
-    requesting_unfinished_blocks: Set[bytes32] = set()
+    requesting_unfinished_blocks: Set[bytes32]
+
+    previous_generator: Optional[CompressorArg]
 
     def __init__(self):
         self.candidate_blocks = {}
@@ -64,6 +67,7 @@ class FullNodeStore:
         self.future_sp_cache = {}
         self.future_ip_cache = {}
         self.requesting_unfinished_blocks = set()
+        self.previous_generator = None
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):

@@ -183,7 +183,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_unfinished_blocks(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2)
+        blocks = bt.get_consecutive_blocks(3)
         for block in blocks[:-1]:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -1621,7 +1621,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
         b = empty_blockchain
-        WALLET_A = WalletTool()
+        WALLET_A = WalletTool(b.constants)
         WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
         blocks = bt.get_consecutive_blocks(15)
@@ -1660,7 +1660,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_transaction(self, empty_blockchain):
         b = empty_blockchain
-        wallet_a = WalletTool()
+        wallet_a = WalletTool(b.constants)
         WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
@@ -1714,7 +1714,7 @@ class TestPreValidation:
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_block.total_iters", blocks[-1].reward_chain_block.total_iters + 1
         )
-        res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad])
+        res = await empty_blockchain.pre_validate_blocks_multiprocessing([blocks[0], block_bad], {})
         assert res[0].error is None
         assert res[1].error is not None
 
@@ -1729,7 +1729,7 @@ class TestPreValidation:
             end_i = min(i + n_at_a_time, len(blocks))
             blocks_to_validate = blocks[i:end_i]
             start_pv = time.time()
-            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
+            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
             end_pv = time.time()
             times_pv.append(end_pv - start_pv)
             assert res is not None

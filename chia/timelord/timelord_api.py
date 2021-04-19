@@ -62,6 +62,7 @@ class TimelordAPI:
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
                 self.timelord.overflow_blocks.append(new_unfinished_block)
+                log.warning(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
             elif ip_iters > last_ip_iters:
                 new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
                 if new_block_iters:
@@ -72,6 +73,7 @@ class TimelordAPI:
                         self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                     self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
                     self.timelord.total_unfinished += 1
+                    log.warning(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @api_request
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):

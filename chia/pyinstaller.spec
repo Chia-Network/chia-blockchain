@@ -5,52 +5,43 @@ import platform
 
 from pkg_resources import get_distribution
 
-from os import listdir
-from os.path import isfile, join
 from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 THIS_IS_WINDOWS = platform.system().lower().startswith("win")
 
+ROOT = pathlib.Path(importlib.import_module("chia").__file__).absolute().parent.parent
 
-def dir_for_module(mod_name):
+
+def solve_name_collision_problem(analysis):
     """
-    This returns a path to a directory
+    There is a collision between the `chia` file name (which is the executable)
+    and the `chia` directory, which contains non-code resources like `english.txt`.
+    We move all the resources in the zipped area so there is no
+    need to create the `chia` directory, since the names collide.
+
+    Fetching data now requires going into a zip file, so it will be slower.
+    It's best if files that are used frequently are cached.
+
+    A sample large compressible file (1 MB of `/dev/zero`), seems to be
+    about eight times slower.
+
+    Note that this hack isn't documented, but seems to work.
     """
-    mod = importlib.import_module(mod_name)
-    return pathlib.Path(mod.__file__).parent
 
+    zipped = []
+    datas = []
+    for data in analysis.datas:
+        if str(data[0]).startswith("chia/"):
+            zipped.append(data)
+        else:
+            datas.append(data)
 
-def path_for_file(mod_name, filename=None):
-    """
-    This returns a path to a file (__init__.py by default)
-    """
-    mod = importlib.import_module(mod_name)
+    # items in this field are included in the binary
+    analysis.zipped_data = zipped
 
-    # some modules, like `chia.ssl` don't set mod.__file__ because there isn't actually
-    # any code in there. We have to look at mod.__path__ instead, which is a list.
-    # for now, we just take the first item, since this function isn't expected to
-    # return a list of paths, just one path.
-    # BRAIN DAMAGE
+    # these items will be dropped in the root folder uncompressed
+    analysis.datas = datas
 
-    if mod.__file__ is None:
-        path = pathlib.Path(mod.__path__._path[0])
-        if filename is None:
-            raise ValueError("no file __init__.py in this module")
-        return path / filename
-
-    path = pathlib.Path(mod.__file__)
-    if filename is not None:
-        path = path.parent / filename
-    return path
-
-
-# Include all files that end with clvm.hex
-puzzles_path = dir_for_module("chia.wallet.puzzles")
-
-puzzle_dist_path = "./data/chia/wallet/puzzles"
-onlyfiles = [f for f in listdir(puzzles_path) if isfile(join(puzzles_path, f))]
-
-root = pathlib.Path().absolute()
 
 keyring_imports = collect_submodules("keyring.backends")
 
@@ -61,8 +52,6 @@ version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
 block_cipher = None
 
-other = ["pkg_resources.py2_warn"]
-
 SERVERS = [
     "wallet",
     "full_node",
@@ -72,28 +61,31 @@ SERVERS = [
     "timelord",
 ]
 
-if THIS_IS_WINDOWS:
-    other.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
-
 # TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter
 
 entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
 
-
-if THIS_IS_WINDOWS:
-    # this probably isn't necessary
-    entry_points.extend(["aiohttp", "chia.util.bip39"])
-
 hiddenimports = []
-hiddenimports.extend(other)
 hiddenimports.extend(entry_points)
 hiddenimports.extend(keyring_imports)
 
 binaries = []
+
+
 if THIS_IS_WINDOWS:
+    hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
+
+# this probably isn't necessary
+if THIS_IS_WINDOWS:
+    entry_points.extend(["aiohttp", "chia.util.bip39"])
+
+if THIS_IS_WINDOWS:
+    chia_mod = importlib.import_module("chia")
+    dll_paths = ROOT / "*.dll"
+
     binaries = [
         (
-            dir_for_module("chia").parent / "*.dll",
+            dll_paths,
             ".",
         ),
         (
@@ -107,58 +99,21 @@ if THIS_IS_WINDOWS:
     ]
 
 
-datas = [
-    (puzzles_path, puzzle_dist_path),
-    (path_for_file("mozilla-ca", "cacert.pem"), f"./mozilla-ca/"),
-    (path_for_file("chia.ssl", "dst_root_ca.pem"), f"./data/chia/ssl/"),
-    (path_for_file("chia.ssl", "chia_ca.key"), f"./data/chia/ssl/"),
-    (path_for_file("chia.ssl", "chia_ca.crt"), f"./data/chia/ssl/"),
-    (path_for_file("chia.util", "english.txt"), f"./data/chia/util/"),
-    version_data,
-]
+datas = []
+
+datas.append((f"{ROOT}/chia/util/english.txt", "chia/util"))
+datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia/util"))
+datas.append((f"{ROOT}/chia/wallet/puzzles/*.hex", "chia/wallet/puzzles"))
+datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
+datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
+datas.append(version_data)
+
+pathex = []
 
 
-pathex = [root]
-
-chia = Analysis(
-    [path_for_file("chia.cmds.chia")],
-    pathex=pathex,
-    binaries=binaries,
-    datas=datas,
-    hiddenimports=hiddenimports,
-    hookspath=[],
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-chia_pyz = PYZ(chia.pure, chia.zipped_data, cipher=block_cipher)
-
-chia_exe = EXE(
-    chia_pyz,
-    chia.scripts,
-    [],
-    exclude_binaries=True,
-    name="chia",
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-)
-
-
-COLLECT_ARGS = [
-    chia_exe,
-    chia.binaries,
-    chia.zipfiles,
-    chia.datas,
-]
-
-for server in SERVERS:
+def add_binary(name, path_to_script, collect_args):
     analysis = Analysis(
-        [path_for_file(f"chia.server.start_{server}")],
+        [path_to_script],
         pathex=pathex,
         binaries=binaries,
         datas=datas,
@@ -172,20 +127,38 @@ for server in SERVERS:
         noarchive=False,
     )
 
-    pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=block_cipher)
+    solve_name_collision_problem(analysis)
 
-    exe = EXE(
-        pyz,
+    binary_pyz = PYZ(analysis.pure, analysis.zipped_data, cipher=block_cipher)
+
+    binary_exe = EXE(
+        binary_pyz,
         analysis.scripts,
         [],
         exclude_binaries=True,
-        name=f"start_{server}",
+        name=name,
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
     )
 
-    COLLECT_ARGS.extend([exe, analysis.binaries, analysis.zipfiles, analysis.datas])
+    collect_args.extend(
+        [
+            binary_exe,
+            analysis.binaries,
+            analysis.zipfiles,
+            analysis.datas,
+        ]
+    )
+
+
+COLLECT_ARGS = []
+
+add_binary("chia", f"{ROOT}/chia/cmds/chia.py", COLLECT_ARGS)
+add_binary("daemon", f"{ROOT}/chia/daemon/server.py", COLLECT_ARGS)
+
+for server in SERVERS:
+    add_binary(f"start_{server}", f"{ROOT}/chia/server/start_{server}.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,

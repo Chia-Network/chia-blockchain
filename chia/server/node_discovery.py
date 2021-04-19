@@ -55,6 +55,10 @@ class FullNodeDiscovery:
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
         self.lock = asyncio.Lock()
+        self.connect_peers_task: Optional[asyncio.Task] = None
+        self.serialize_task: Optional[asyncio.Task] = None
+        self.cleanup_task: Optional[asyncio.Task] = None
+        self.initial_wait: int = 0
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -75,10 +79,17 @@ class FullNodeDiscovery:
 
     async def _close_common(self) -> None:
         self.is_closed = True
-        self.connect_peers_task.cancel()
-        self.serialize_task.cancel()
-        self.cleanup_task.cancel()
+        self.cancel_task_safe(self.connect_peers_task)
+        self.cancel_task_safe(self.serialize_task)
+        self.cancel_task_safe(self.cleanup_task)
         await self.connection.close()
+
+    def cancel_task_safe(self, task: Optional[asyncio.Task]):
+        if task is not None:
+            try:
+                task.cancel()
+            except Exception as e:
+                self.log.error(f"Error while canceling task.{e} {task}")
 
     def add_message(self, message, data):
         self.message_queue.put_nowait((message, data))
@@ -160,6 +171,8 @@ class FullNodeDiscovery:
         empty_tables = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        if self.initial_wait > 0:
+            await asyncio.sleep(self.initial_wait)
         while not self.is_closed:
             try:
                 assert self.address_manager is not None
@@ -558,6 +571,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self) -> None:
+        self.initial_wait = 60
         await self.initialize_address_manager()
         await self.start_tasks()
 

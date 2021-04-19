@@ -386,11 +386,15 @@ class WSChiaConnection:
             full_message_loaded: Message = Message.from_bytes(data)
             self.bytes_read += len(data)
             self.last_message_time = time.time()
+            try:
+                message_type = ProtocolMessageTypes(full_message_loaded.type).name
+            except Exception:
+                message_type = "Unknown"
             if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_host):
                     self.log.error(
                         f"Peer has been rate limited and will be disconnected: {self.peer_host}, "
-                        f"message: {message.type}"
+                        f"message: {message_type}"
                     )
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
                     asyncio.create_task(self.close(300))
@@ -398,8 +402,8 @@ class WSChiaConnection:
                     return None
                 else:
                     self.log.warning(
-                        f"Peer surpassed rate limit {self.peer_host}, message: {message.type}, "
-                        f"{self.peer_port} but not disconnecting"
+                        f"Peer surpassed rate limit {self.peer_host}, message: {message_type}, "
+                        f"port {self.peer_port} but not disconnecting"
                     )
                     return full_message_loaded
             return full_message_loaded

@@ -113,7 +113,8 @@ class FullNodeRpcApi:
 
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
-            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 1000)))
+            # Average over the last day
+            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
             assert header_hash is not None
             older_block_hex = header_hash.hex()
             space = await self.get_network_space(
@@ -375,17 +376,14 @@ class FullNodeRpcApi:
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
-        reward_additions = block.get_included_reward_coins()
 
-        # TODO: optimize
-        tx_removals, tx_additions = block.tx_removals_and_additions()
-        removal_records = []
-        addition_records = []
-        for tx_removal in tx_removals:
-            removal_records.append(await self.service.coin_store.get_coin_record(tx_removal))
-        for tx_addition in tx_additions + list(reward_additions):
-            addition_records.append(await self.service.coin_store.get_coin_record(tx_addition.name()))
-        return {"additions": addition_records, "removals": removal_records}
+        async with self.service.blockchain.lock:
+            if self.service.blockchain.height_to_hash(block.height) != header_hash:
+                raise ValueError(f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)")
+            additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
+            removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
+
+        return {"additions": additions, "removals": removals}
 
     async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
         ids = list(self.service.mempool_manager.mempool.spends.keys())

@@ -164,6 +164,7 @@ class WalletBlockchain(BlockchainInterface):
         Returns a header if block is added to head. Returns an error if the block is
         invalid. Also returns the fork height, in the case of a new peak.
         """
+
         block = header_block_record.header
         genesis: bool = block.height == 0
 
@@ -224,11 +225,19 @@ class WalletBlockchain(BlockchainInterface):
         )
 
         # Always add the block to the database
-        await self.block_store.add_block_record(header_block_record, block_record)
-        self.add_block_record(block_record)
-        self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
+        async with self.block_store.db_wrapper.lock:
+            try:
+                await self.block_store.db_wrapper.begin_transaction()
+                await self.block_store.add_block_record(header_block_record, block_record)
+                self.add_block_record(block_record)
+                self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
 
-        fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+                fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
+                await self.block_store.db_wrapper.commit_transaction()
+            except BaseException as e:
+                self.log.error(f"Error during db transaction: {e}")
+                await self.block_store.db_wrapper.rollback_transaction()
+                raise
         if fork_height is not None:
             self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
             return ReceiveBlockResult.NEW_PEAK, None, fork_height
@@ -330,11 +339,10 @@ class WalletBlockchain(BlockchainInterface):
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
 
     async def pre_validate_blocks_multiprocessing(
-        self,
-        blocks: List[HeaderBlock],
+        self, blocks: List[HeaderBlock], batch_size: int = 4
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
-            self.constants, self.constants_json, self, blocks, self.pool, True, True
+            self.constants, self.constants_json, self, blocks, self.pool, True, {}, None, batch_size
         )
 
     def contains_block(self, header_hash: bytes32) -> bool:

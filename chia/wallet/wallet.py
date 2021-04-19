@@ -4,12 +4,14 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
@@ -20,10 +22,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_announcement,
+    make_assert_coin_announcement,
+    make_assert_puzzle_announcement,
     make_assert_my_coin_id_condition,
-    make_assert_seconds_now_exceeds_condition,
-    make_create_announcement,
+    make_assert_absolute_seconds_exceeds_condition,
+    make_create_coin_announcement,
+    make_create_puzzle_announcement,
     make_create_coin_condition,
     make_reserve_fee_condition,
 )
@@ -72,12 +76,15 @@ class Wallet:
             tx = await self.generate_signed_transaction(
                 coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
-            program = best_solution_program(tx.spend_bundle)
+            program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            cost_result: CostResult = calculate_cost_of_program(
-                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+            result: NPCResult = get_name_puzzle_conditions(
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
             )
-            self.cost_of_single_tx = cost_result.cost
+            cost_result: uint64 = calculate_cost_of_program(
+                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
+            )
+            self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
@@ -188,8 +195,10 @@ class Wallet:
         primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,
-        announcements=None,
-        announcements_to_consume=None,
+        coin_announcements=None,
+        coin_announcements_to_assert=None,
+        puzzle_announcements=None,
+        puzzle_announcements_to_assert=None,
         fee=0,
     ) -> Program:
         assert fee >= 0
@@ -198,17 +207,23 @@ class Wallet:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"]))
         if min_time > 0:
-            condition_list.append(make_assert_seconds_now_exceeds_condition(min_time))
+            condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
         if me:
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
-        if announcements:
-            for announcement in announcements:
-                condition_list.append(make_create_announcement(announcement))
-        if announcements_to_consume:
-            for announcement_hash in announcements_to_consume:
-                condition_list.append(make_assert_announcement(announcement_hash))
+        if coin_announcements:
+            for announcement in coin_announcements:
+                condition_list.append(make_create_coin_announcement(announcement))
+        if coin_announcements_to_assert:
+            for announcement_hash in coin_announcements_to_assert:
+                condition_list.append(make_assert_coin_announcement(announcement_hash))
+        if puzzle_announcements:
+            for announcement in puzzle_announcements:
+                condition_list.append(make_create_puzzle_announcement(announcement))
+        if puzzle_announcements_to_assert:
+            for announcement_hash in puzzle_announcements_to_assert:
+                condition_list.append(make_assert_puzzle_announcement(announcement_hash))
         return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
@@ -328,7 +343,12 @@ class Wallet:
         return spends
 
     async def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
-        return await sign_coin_solutions(coin_solutions, self.secret_key_store.secret_key_for_public_key)
+        return await sign_coin_solutions(
+            coin_solutions,
+            self.secret_key_store.secret_key_for_public_key,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+        )
 
     async def generate_signed_transaction(
         self,
@@ -354,7 +374,10 @@ class Wallet:
         self.log.info("About to sign a transaction")
         await self.hack_populate_secret_keys_for_coin_solutions(transaction)
         spend_bundle: SpendBundle = await sign_coin_solutions(
-            transaction, self.secret_key_store.secret_key_for_public_key
+            transaction,
+            self.secret_key_store.secret_key_for_public_key,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
         now = uint64(int(time.time()))
@@ -414,5 +437,10 @@ class Wallet:
             list_of_solutions.append(CoinSolution(coin, puzzle, solution))
 
         await self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
-        spend_bundle = await sign_coin_solutions(list_of_solutions, self.secret_key_store.secret_key_for_public_key)
+        spend_bundle = await sign_coin_solutions(
+            list_of_solutions,
+            self.secret_key_store.secret_key_for_public_key,
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+        )
         return spend_bundle
