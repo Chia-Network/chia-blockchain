@@ -18,7 +18,7 @@
            )
     )
 
-    (defun process_coin_solution (((parent amount) (puzzle solution)))
+    (defun process_coin_solution ((parent puzzle amount solution . *spend_level_extras*))
         (list (list parent (sha256tree puzzle) amount) (a puzzle solution))
     )
 
