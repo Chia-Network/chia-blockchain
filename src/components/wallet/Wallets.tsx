@@ -28,9 +28,6 @@ import DistributedWallet from './did/DIDWallet';
 import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
 import LayoutSidebar from '../layout/LayoutSidebar';
-import config from '../../config/config';
-
-const localTest = config.local_test;
 
 const StyledList = styled(List)`
   width: 100%;
@@ -188,9 +185,7 @@ export default function Wallets() {
               ))}
             </StyledList>
           </Flex>
-          {localTest && (
-            <CreateWallet />
-          )}
+          <CreateWallet />
         </Flex>
       }
     >
