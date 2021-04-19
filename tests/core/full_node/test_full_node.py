@@ -32,6 +32,7 @@ from chia.util.clvm import int_to_bytes
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.util.wallet_tools import WalletTool
 from tests.core.fixtures import empty_blockchain  # noqa: F401
@@ -1039,6 +1040,55 @@ class TestFullNodeProtocol:
         # Have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is None
+
+    @pytest.mark.asyncio
+    async def test_double_blocks_same_pospace(self, wallet_nodes):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12315)
+        dummy_peer = server_1.all_connections[dummy_node_id]
+        _ = await connect_and_get_peer(server_1, server_2)
+
+        ph = wallet_a.get_new_puzzlehash()
+
+        for i in range(2):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+
+        coin = list(blocks[-1].get_included_reward_coins())[0]
+        tx: SpendBundle = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
+
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+
+        block: FullBlock = blocks[-1]
+        overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+        unf: UnfinishedBlock = UnfinishedBlock(
+            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
+            block.reward_chain_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage,
+            block.foliage_transaction_block,
+            block.transactions_info,
+            block.transactions_generator,
+            [],
+        )
+        await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), dummy_peer)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash)
+
+        block_2 = recursive_replace(
+            blocks[-1], "foliage_transaction_block.timestamp", unf.foliage_transaction_block.timestamp + 1
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fbh_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
+        block_2 = recursive_replace(block_2, "transactions_generator", None)
+
+        await full_node_2.full_node.respond_block(fnp.RespondBlock(block_2), dummy_peer)
+
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.asyncio
     async def test_request_unfinished_block(self, wallet_nodes):
