@@ -1026,7 +1026,12 @@ class FullNode:
             return None
 
         pre_validation_result: Optional[PreValidationResult] = None
-        if block.is_transaction_block() and block.transactions_generator is None:
+        if (
+            block.is_transaction_block()
+            and block.transactions_info is not None
+            and block.transactions_info.generator_root != bytes([0] * 32)
+            and block.transactions_generator is None
+        ):
             # This is the case where we already had the unfinished block, and asked for this block without
             # the transactions (since we already had them). Therefore, here we add the transactions.
             unfinished_rh: bytes32 = block.reward_chain_block.get_unfinished().get_hash()
