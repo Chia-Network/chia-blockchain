@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import ipaddress
+import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, List
 
@@ -84,6 +85,7 @@ class Crawler:
     constants: ConsensusConstants
     _shut_down: bool
     root_path: Path
+    peer_count: int
 
     def __init__(
             self,
@@ -102,10 +104,11 @@ class Crawler:
         self.introducer_info = PeerInfo(self.config["introducer_peer"]["host"], self.config["introducer_peer"]["port"])
         self.crawl_store = None
         self.log = log
+        self.peer_count = 0
 
         db_path_replaced: str = "crawler.db"
         self.db_path = path_from_root(root_path, db_path_replaced)
-        # mkdir(self.db_path.parent)
+        mkdir(self.db_path.parent)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -178,9 +181,8 @@ class Crawler:
         try:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
-            global_crawl_store = self.crawl_store
             self.log.info("Started")
-            good_peers_cnt = 0
+            self.peer_count = 0
             while True:
                 await asyncio.sleep(2)
                 async def introducer_action(peer: ws.WSChiaConnection):
@@ -197,16 +199,17 @@ class Crawler:
                                 # self.log.info(f"Adding {new_peer.ip_address}")
                                 new_peer_reliability = PeerReliability(response_peer.host)
                                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+                    self.peer_count += len(response.peer_list)
+                    self.log.error(f"Peer count: {self.peer_count}.")
                     # disconnect
                     await peer.close()
 
-                if good_peers_cnt == 0:
+                if self.peer_count == 0:
                     await self.create_client(self.introducer_info, introducer_action)
                 # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(500)
-                connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
-                good_peers = await self.crawl_store.get_cached_peers(16)
-                good_peers_cnt = len(connected_peers)
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(1000)
+                # connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
+                good_peers = await self.crawl_store.get_cached_peers(99999999)
 
                 async def peer_action(peer: ws.WSChiaConnection):
                     # Ask peer for peers
@@ -225,8 +228,7 @@ class Crawler:
 
                     await peer.close()
 
-                self.log.error(f"Current connected_peers count = {len(connected_peers)}")
-                self.log.error(f"Good peers: {good_peers}.")
+                self.log.error(f"Reliable peers available: {len(good_peers)}.")
                 tasks = []
 
                 async def connect_task(self, peer):
@@ -261,13 +263,14 @@ class Crawler:
                     batch_count += 1
                     tasks = []
                     for peer in peers:
-                        task = asyncio.create_task(connect_task(self, peer))
-                        tasks.append(task)
+                        if peer.port == 8444:
+                            task = asyncio.create_task(connect_task(self, peer))
+                            tasks.append(task)
                     await asyncio.wait(tasks)
                     # stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
-                    stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
+                    # stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
                     # self.log.info(f"Current not_connected_peers count = {len(stat_not_connected_peers)}")
-                    self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
+                    # self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
 
                 self.server.banned_peers = {}
         except Exception as e:
