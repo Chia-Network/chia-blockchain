@@ -302,8 +302,10 @@ async def validate_block_body(
                 if curr.transactions_generator is not None:
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
                     assert curr_block_generator is not None
-                    npc_result = get_name_puzzle_conditions(curr_block_generator, constants.MAX_BLOCK_COST_CLVM, False)
-                    removals_in_curr, additions_in_curr = tx_removals_and_additions(npc_result.npc_list)
+                    curr_npc_result = get_name_puzzle_conditions(
+                        curr_block_generator, constants.MAX_BLOCK_COST_CLVM, False
+                    )
+                    removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
                 else:
                     removals_in_curr = []
                     additions_in_curr = []
