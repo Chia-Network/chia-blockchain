@@ -147,12 +147,12 @@ def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mo
         for res in result.as_iter():
             conditions_list: List[ConditionWithArgs] = []
 
-            spent_coin_parent_id: bytes32 = res.first().first().as_atom()
-            spent_coin_puzzle_hash: bytes32 = res.first().rest().first().as_atom()
-            spent_coin_amount: uint64 = uint64(res.first().rest().rest().first().as_int())
+            spent_coin_parent_id: bytes32 = res.first().as_atom()
+            spent_coin_puzzle_hash: bytes32 = res.rest().first().as_atom()
+            spent_coin_amount: uint64 = uint64(res.rest().rest().first().as_int())
             spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
 
-            for cond in res.rest().first().as_iter():
+            for cond in res.rest().rest().rest().first().as_iter():
                 if cond.first().as_atom() in opcodes:
                     opcode: ConditionOpcode = ConditionOpcode(cond.first().as_atom())
                 elif not safe_mode:
