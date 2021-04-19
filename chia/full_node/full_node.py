@@ -34,7 +34,6 @@ from chia.protocols.full_node_protocol import (
     RespondBlock,
     RespondBlocks,
     RespondSignagePoint,
-    RequestBlock,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.node_discovery import FullNodePeers
@@ -1044,27 +1043,31 @@ class FullNode:
                     transactions_generator=unf_block.transactions_generator,
                     transactions_generator_ref_list=unf_block.transactions_generator_ref_list,
                 )
-            if block.transactions_generator is None:
+            else:
                 # We still do not have the correct information for this block, perhaps there is a duplicate block
                 # with the same unfinished block hash in the cache, so we need to fetch the correct one
-                if peer is not None:
-                    block_response: Optional[Any] = await peer.request_block(RequestBlock(block.height, True))
-                    if block_response is None or not isinstance(block_response, full_node_protocol.RespondBlock):
-                        self.log.warning(
-                            f"Was not able to fetch the correct block for height {block.height} {block_response}"
-                        )
-                        return None
-                    new_block: FullBlock = block_response.block
-                    if new_block.foliage_transaction_block != block.foliage_transaction_block:
-                        self.log.warning(f"Received the wrong block for height {block.height} {new_block.header_hash}")
-                        return None
-                    assert new_block.transactions_generator is not None
+                if peer is None:
+                    return None
 
-                    self.log.debug(
-                        f"Going recursively into respond block due to wrong info in the cache, {new_block.header_hash}"
+                block_response: Optional[Any] = await peer.request_block(
+                    full_node_protocol.RequestBlock(block.height, True)
+                )
+                if block_response is None or not isinstance(block_response, full_node_protocol.RespondBlock):
+                    self.log.warning(
+                        f"Was not able to fetch the correct block for height {block.height} {block_response}"
                     )
-                    # This recursion ends here, we cannot recurse again because transactions_generator is not None
-                    return await self.respond_block(block_response, peer)
+                    return None
+                new_block: FullBlock = block_response.block
+                if new_block.foliage_transaction_block != block.foliage_transaction_block:
+                    self.log.warning(f"Received the wrong block for height {block.height} {new_block.header_hash}")
+                    return None
+                assert new_block.transactions_generator is not None
+
+                self.log.debug(
+                    f"Going recursively into respond block due to wrong info in the cache, {new_block.header_hash}"
+                )
+                # This recursion ends here, we cannot recurse again because transactions_generator is not None
+                return await self.respond_block(block_response, peer)
 
         async with self.blockchain.lock:
             # After acquiring the lock, check again, because another asyncio thread might have added it
