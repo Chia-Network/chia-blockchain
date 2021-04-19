@@ -342,7 +342,10 @@ class Blockchain(BlockchainInterface):
             for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
                 records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
-                    removals, additions = await self.get_removals_and_additions(fetched_full_block)
+                    if fetched_block_record.header_hash == block_record.header_hash:
+                        removals, additions = await self.get_removals_and_additions(fetched_full_block, npc_result)
+                    else:
+                        removals, additions = await self.get_removals_and_additions(fetched_full_block, None)
                     await self.coin_store.new_block(fetched_full_block, additions, removals)
 
             # Changes the peak to be the new peak
@@ -352,12 +355,15 @@ class Blockchain(BlockchainInterface):
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None, None, []
 
-    async def get_removals_and_additions(self, block: FullBlock) -> Tuple[List[bytes32], List[Coin]]:
+    async def get_removals_and_additions(
+        self, block: FullBlock, npc_result: Optional[NPCResult] = None
+    ) -> Tuple[List[bytes32], List[Coin]]:
         if block.is_transaction_block():
             if block.transactions_generator is not None:
-                block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-                assert block_generator is not None
-                npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
+                if npc_result is None:
+                    block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+                    assert block_generator is not None
+                    npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
                 removals, additions = block_removals_and_additions(block, npc_result.npc_list)
                 return removals, additions
             else:
