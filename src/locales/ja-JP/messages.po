@@ -103,7 +103,7 @@ msgstr "アドレス・パズルハッシュ値"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:48
+#: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:331
@@ -118,8 +118,8 @@ msgstr "金額 ({cc_unit})"
 msgid "Amount For Initial Coin"
 msgstr "最初にコインに充てる金額"
 
-#: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "本当にこの耕地を削除しますか？耕地は削除すると復元できません。"
 
@@ -154,7 +154,7 @@ msgstr "バックアップファイルはスマートウォレットの復元に
 msgid "Balance"
 msgstr "残高"
 
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
 msgstr "農家への基本報酬額"
 
@@ -167,22 +167,22 @@ msgstr "以下が現在のブロックチャレンジです。これらのチャ
 msgid "Best estimate over last 5 hours"
 msgstr "過去5時間を基に推定"
 
-#: src/components/block/Block.jsx:109
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:148
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:112
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:306
 msgid "Block"
 msgstr "ブロック"
 
-#: src/components/block/Block.jsx:121
+#: src/components/block/Block.jsx:124
 msgid "Block Test"
 msgstr "ブロックテスト"
 
-#: src/components/block/Block.jsx:227
+#: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
 msgstr "ブロック VDF 評価回数"
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "チアブロックチェーン内の高さ {0} のブロック"
 
@@ -190,11 +190,11 @@ msgstr "チアブロックチェーン内の高さ {0} のブロック"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:126
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "ハッシュ値 {headerHash} のブロック"
 
-#: src/components/block/Block.jsx:155
+#: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
 msgstr "ハッシュ値 {headerHash} のブロックは存在しません。"
 
@@ -333,7 +333,7 @@ msgstr "接続解除の確認"
 msgid "Confirmed at block:"
 msgstr "承認ブロック:"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
 msgstr "高さ {0} で承認完了"
 
@@ -492,7 +492,7 @@ msgstr "DID ウォレット"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:29
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:35
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "Date"
 msgstr "日時"
 
@@ -500,17 +500,17 @@ msgstr "日時"
 msgid "Delay"
 msgstr "遅延時間"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/PlotAction.tsx:43
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/PlotAction.tsx:48
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "削除"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "耕地を削除"
 
@@ -539,7 +539,7 @@ msgstr "開発者"
 msgid "Developer Tools"
 msgstr "開発者向けツール"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "難易度"
@@ -636,7 +636,7 @@ msgstr "開けませんでした (耕地に問題あり)"
 msgid "Farm"
 msgstr "畑"
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
 msgstr "農家パズルハッシュ値"
 
@@ -673,7 +673,7 @@ msgstr "耕作中"
 msgid "Farming Status"
 msgstr "耕作の状態"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
@@ -695,7 +695,7 @@ msgstr "手数料"
 msgid "Fee ({currencyCode})"
 msgstr "手数料 ({currencyCode})"
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:294
 msgid "Fees Amount"
 msgstr "全手数料"
 
@@ -760,11 +760,11 @@ msgstr "階層的決定性鍵、または HD 鍵とは、一つの秘密鍵に�
 msgid "Header Hash"
 msgstr "ヘッダーのハッシュ値"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:180
 msgid "Header hash"
 msgstr "ヘッダーのハッシュ値"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
@@ -782,7 +782,7 @@ msgstr "翻訳に協力"
 msgid "Hide Advanced Options"
 msgstr "詳細設定を隠す"
 
-#: src/components/wallet/WalletHistory.tsx:60
+#: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
 msgstr "取引履歴"
 
@@ -815,7 +815,7 @@ msgstr "合言葉 (24語) で鍵をインポート"
 msgid "In Progress"
 msgstr "進行中"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
 msgstr "入金"
 
@@ -970,7 +970,7 @@ msgstr "新規アドレス"
 msgid "New Wallet"
 msgstr "新規ウォレット作成"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
@@ -993,7 +993,7 @@ msgstr "この鍵はインポートされているため、24語の種があり�
 msgid "No blocks farmed yet"
 msgstr "まだ収穫ブロックはありません"
 
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
 msgstr "履歴無し"
 
@@ -1060,7 +1060,7 @@ msgstr "注文"
 msgid "Offers Created"
 msgstr "作成した注文"
 
-#: src/components/wallet/WalletHistory.tsx:18
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
 msgstr "出金"
 
@@ -1076,7 +1076,7 @@ msgstr "先端の高さ"
 msgid "Peak Time"
 msgstr "先端の日時"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
 msgstr "保留中"
 
@@ -1173,7 +1173,7 @@ msgstr "耕地"
 msgid "Plot Count"
 msgstr "耕地数"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:268
 msgid "Plot Id"
 msgstr "耕地 Id"
 
@@ -1185,7 +1185,7 @@ msgstr "耕地鍵"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
 msgstr "耕地公開鍵"
 
@@ -1233,11 +1233,11 @@ msgstr "ビットフィールドを有効にして耕すと、書き込み量が
 msgid "Pool Key"
 msgstr "プール鍵"
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
 msgstr "プール公開鍵"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
 msgstr "プールパズルハッシュ値"
 
@@ -1245,7 +1245,7 @@ msgstr "プールパズルハッシュ値"
 msgid "Pool Reward Address"
 msgstr "プール報酬アドレス"
 
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "プール報酬額"
 
@@ -1256,7 +1256,7 @@ msgstr "プール報酬額"
 msgid "Port"
 msgstr "ポート"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:320
 msgid "Previous"
 msgstr "前へ"
 
@@ -1264,7 +1264,7 @@ msgstr "前へ"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
 msgstr "前ヘッダーハッシュ値"
 
@@ -1284,7 +1284,7 @@ msgstr "秘密鍵 {0}"
 msgid "Private key:"
 msgstr "秘密鍵:"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "空間証明の大きさ"
 
@@ -1541,7 +1541,7 @@ msgstr "状態"
 #: src/components/fullNode/FullNode.jsx:151
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:93
 msgid "Status"
@@ -1646,19 +1646,19 @@ msgstr "ノードが同期されていません"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "ノードが同期中です。ブロックチェーンの先端に辿り着くまで他のノードからブロックをダウンロードします。"
 
-#: src/components/block/Block.jsx:268
+#: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "耕地作成に使用する種。プール pk 及び耕地 pk に依存した値です。"
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "このブロックまでに全ブロックチェーンに行った VDF (検証可能遅延関数)、つまり時間証明の評価回数"
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "このブロックに行った VDF (検証可能遅延関数)、つまり時間証明の評価回数"
 
-#: src/components/block/Block.jsx:294
+#: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "このブロック内の取引手数料の合計。農家への報酬となります。"
 
@@ -1692,7 +1692,7 @@ msgstr "これが (まだブロックチェーンに含まれていない) 保�
 msgid "This is the time of the latest peak sub block."
 msgstr "最新のピークサブブロックの日時です。"
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "これが農家がブロックを作成した日時です。時間証明によって完成する前の段階です。"
 
@@ -1736,11 +1736,11 @@ msgstr "作成日時"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:184
 msgid "Timestamp"
 msgstr "タイムスタンプ"
 
-#: src/components/wallet/WalletHistory.tsx:31
+#: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
 msgstr "宛先"
 
@@ -1770,7 +1770,7 @@ msgstr "全耕地容量:"
 msgid "Total Size of Plots"
 msgstr "全ての耕地の容量の合計"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
 msgstr "全 VDF 評価回数"
 
@@ -1810,11 +1810,11 @@ msgstr "交換"
 msgid "Trading History"
 msgstr "交換履歴"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
 msgstr "取引フィルターハッシュ値"
 
-#: src/components/wallet/WalletHistory.tsx:21
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
 msgstr "種類"
 
@@ -1839,7 +1839,7 @@ msgstr "VDF サブスロット評価回数"
 msgid "View"
 msgstr "表示"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "ログを表示"
@@ -1917,11 +1917,11 @@ msgstr "畑に耕地を増やしましょう。さらにチアを得られます
 msgid "Want to have a delay before the next plot starts?"
 msgstr "次の耕地を耕しはじめる前に遅延時間を挟みますか？"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:198
 msgid "Weight"
 msgstr "重さ"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "ブロック重とはこのブロックを含めた全てのブロックの難易度の合計です。"
 

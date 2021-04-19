@@ -103,7 +103,7 @@ msgstr "Адрес / Хэш-головоломка"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:48
+#: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:331
@@ -118,8 +118,8 @@ msgstr "Количество ({cc_unit})"
 msgid "Amount For Initial Coin"
 msgstr "Начальное количество монет"
 
-#: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Вы уверены, что хотите удалить участок? Участок не подлежит восстановлению."
 
@@ -154,7 +154,7 @@ msgstr "Файл резервной копии используется для �
 msgid "Balance"
 msgstr "Баланс"
 
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
 msgstr "Базовая сумма вознаграждения фермера"
 
@@ -167,22 +167,22 @@ msgstr "Ниже приведены значения испытаний для �
 msgid "Best estimate over last 5 hours"
 msgstr "Лучшая оценка за последние 5 часов"
 
-#: src/components/block/Block.jsx:109
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:148
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:112
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:306
 msgid "Block"
 msgstr "Блок"
 
-#: src/components/block/Block.jsx:121
+#: src/components/block/Block.jsx:124
 msgid "Block Test"
 msgstr "Проверка блока"
 
-#: src/components/block/Block.jsx:227
+#: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
 msgstr "VDF итераций блока"
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Блок на высоте {0} в блокчейне Chia"
 
@@ -190,11 +190,11 @@ msgstr "Блок на высоте {0} в блокчейне Chia"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:126
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Блок с хэшем {headerHash}"
 
-#: src/components/block/Block.jsx:155
+#: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Блок с хешем {headerHash} не существует."
 
@@ -333,7 +333,7 @@ msgstr "Подтвердить отключение"
 msgid "Confirmed at block:"
 msgstr "Подтверждено на блоке:"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
 msgstr "Подтверждено на высоте {0}"
 
@@ -492,7 +492,7 @@ msgstr "DID кошелек"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:29
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:35
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "Date"
 msgstr "Дата"
 
@@ -500,17 +500,17 @@ msgstr "Дата"
 msgid "Delay"
 msgstr "Задержка"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/PlotAction.tsx:43
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/PlotAction.tsx:48
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Удалить"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Удалить участок"
 
@@ -539,7 +539,7 @@ msgstr "Разработчик"
 msgid "Developer Tools"
 msgstr "Инструменты разработчика"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "Сложность"
@@ -636,7 +636,7 @@ msgstr "Неудается открыть (некоррекные участки
 msgid "Farm"
 msgstr "Ферма"
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
 msgstr "Хеш-головоломка фермера"
 
@@ -673,7 +673,7 @@ msgstr "Фарминг"
 msgid "Farming Status"
 msgstr "Статус фарминга"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
@@ -695,7 +695,7 @@ msgstr "Комиссия"
 msgid "Fee ({currencyCode})"
 msgstr "Комиссия ({currencyCode})"
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:294
 msgid "Fees Amount"
 msgstr "Объем коммисий"
 
@@ -760,11 +760,11 @@ msgstr "HD или иерархические детерминированные 
 msgid "Header Hash"
 msgstr "Хэш заголовка"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:180
 msgid "Header hash"
 msgstr "Хэш заголовка"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
@@ -782,7 +782,7 @@ msgstr "Помогите с переводом"
 msgid "Hide Advanced Options"
 msgstr "Скрыть дополнительные опции"
 
-#: src/components/wallet/WalletHistory.tsx:60
+#: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
 msgstr "История"
 
@@ -815,7 +815,7 @@ msgstr "Импорт мнемоники (24 слова)"
 msgid "In Progress"
 msgstr "В процессе"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
 msgstr "Входящие"
 
@@ -970,7 +970,7 @@ msgstr "Новый адрес"
 msgid "New Wallet"
 msgstr "Новый кошелек"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
@@ -993,7 +993,7 @@ msgstr "Нет 24 слов семя, так как этот ключ импор�
 msgid "No blocks farmed yet"
 msgstr "Выращенных блоков пока нет"
 
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
 msgstr "Нет предыдущих транзакций"
 
@@ -1060,7 +1060,7 @@ msgstr "Предложение"
 msgid "Offers Created"
 msgstr "Предложение создано"
 
-#: src/components/wallet/WalletHistory.tsx:18
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
 msgstr "Исходящие"
 
@@ -1076,7 +1076,7 @@ msgstr "Пиковая высота"
 msgid "Peak Time"
 msgstr "Пиковое время"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
 msgstr "Ожидающие"
 
@@ -1173,7 +1173,7 @@ msgstr "Участок"
 msgid "Plot Count"
 msgstr "Количество участков"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:268
 msgid "Plot Id"
 msgstr "ID участка"
 
@@ -1185,7 +1185,7 @@ msgstr "Публ. ключ"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
 msgstr "Публичный ключ участка"
 
@@ -1233,11 +1233,11 @@ msgstr "Засеивание с включенным битовым полем �
 msgid "Pool Key"
 msgstr "Ключ пула"
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
 msgstr "Публичный ключ пула"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
 msgstr "Хеш-головоломка пула"
 
@@ -1245,7 +1245,7 @@ msgstr "Хеш-головоломка пула"
 msgid "Pool Reward Address"
 msgstr "Адрес выплаты пулу"
 
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Сумма вознаграждения пула"
 
@@ -1256,7 +1256,7 @@ msgstr "Сумма вознаграждения пула"
 msgid "Port"
 msgstr "Порт"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:320
 msgid "Previous"
 msgstr "Предыдущий"
 
@@ -1264,7 +1264,7 @@ msgstr "Предыдущий"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
 msgstr "Хэш предыдущего блока"
 
@@ -1284,7 +1284,7 @@ msgstr "Закрытый ключ {0}"
 msgid "Private key:"
 msgstr "Закрытый ключ:"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Размер доказательства пространства (Proof of Space)"
 
@@ -1541,7 +1541,7 @@ msgstr "Состояние"
 #: src/components/fullNode/FullNode.jsx:151
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:93
 msgid "Status"
@@ -1646,19 +1646,19 @@ msgstr "Узел не синхронизирован с сетью"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Узел синхронизируется, что означает, что он загружает блоки с других узлов, чтобы достичь последнего блока в цепи"
 
-#: src/components/block/Block.jsx:268
+#: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Зерно, которое использовалось для создания участка. Зерно зависит от публичного ключа пула и публичного ключа участка."
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Общее количество итерации VDF (от англ. Verifiable Delay Function - проверяемая функция задержки) или доказательств временных итераций по всей цепочке до этого подблока."
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Общее количество итераций VDF (от англ. Verifiable Delay Function - проверяемая функция задержки), другими словами общее количество доказательств временных итераций (proof of time) в этом блоке."
 
-#: src/components/block/Block.jsx:294
+#: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Общая комиссия за транзакции в этом блоке, полученная в награду фермерами."
 
@@ -1692,7 +1692,7 @@ msgstr "Здесь рассчитана сумма входящих и исхо�
 msgid "This is the time of the latest peak sub block."
 msgstr "Это время последнего пикового суб блока."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Это момент времени, когда блок был создан фермером, то есть до того, как он был завершен с применением алгоритма подтверждения времени (proof of time)."
 
@@ -1736,11 +1736,11 @@ msgstr "Время создания"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:184
 msgid "Timestamp"
 msgstr "Временная метка"
 
-#: src/components/wallet/WalletHistory.tsx:31
+#: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
 msgstr "Кому"
 
@@ -1770,7 +1770,7 @@ msgstr "Общий объем участков:"
 msgid "Total Size of Plots"
 msgstr "Общий объем участков"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
 msgstr "Общее количество итерации VDF"
 
@@ -1810,11 +1810,11 @@ msgstr "Торговля"
 msgid "Trading History"
 msgstr "История торгов"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
 msgstr "Хэш фильтра транзакций"
 
-#: src/components/wallet/WalletHistory.tsx:21
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
 msgstr "Тип"
 
@@ -1839,7 +1839,7 @@ msgstr "Итерации VDF суб слота"
 msgid "View"
 msgstr "Вид"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Посмотреть журнал"
@@ -1917,11 +1917,11 @@ msgstr "Хотите получать больше дохода в Чиа? До�
 msgid "Want to have a delay before the next plot starts?"
 msgstr "Хотите установить задержку между стартом параллельного засевания файлов?"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:198
 msgid "Weight"
 msgstr "Вес"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Вес - это общая добавленная сложность всех подблоков, включая этот"
 
