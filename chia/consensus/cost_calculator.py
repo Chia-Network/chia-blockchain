@@ -34,8 +34,8 @@ def calculate_cost_of_program(program: SerializedProgram, npc_result: NPCResult,
                 total_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
             elif condition is ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
                 total_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_ABSOLUTE.value
-            elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
-                total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_RELATIVE.value
+            elif condition is ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+                total_cost += len(cvp_list) * ConditionCost.ASSERT_SECONDS_RELATIVE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
                 total_cost += len(cvp_list) * ConditionCost.ASSERT_HEIGHT_ABSOLUTE.value
             elif condition is ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
