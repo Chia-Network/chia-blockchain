@@ -258,6 +258,8 @@ full_node:
   # Setting this flag as True, blueboxes will sanitize only data needed in weight proof calculation, as opposed to whole blocks.
   # Default is set to False, as the network needs only one or two blueboxes like this.
   sanitize_weight_proof_only: False
+  # timeout for weight proof request
+  weight_proof_timeout: 180
 
   farmer_peer:
       host: *self_hostname
