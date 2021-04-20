@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 class SyncStore:
     # Whether or not we are syncing
     sync_mode: bool
-    long_sync:bool
+    long_sync: bool
     peak_to_peer: Dict[bytes32, Set[bytes32]]  # Header hash : peer node id
     peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]  # peer node id : [header_hash, height, weight]
     sync_target_header_hash: Optional[bytes32]  # Peak hash we are syncing towards
