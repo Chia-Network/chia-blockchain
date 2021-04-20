@@ -91,7 +91,12 @@ class WSChiaConnection:
         self.request_results: Dict[bytes32, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
-        self.request_nonce: uint16 = uint16(0)
+        if is_outbound:
+            self.request_nonce: uint16 = uint16(0)
+        else:
+            # Different nonce to reduce chances of overlap. Each peer will increment the nonce by one for each
+            # request
+            self.request_nonce = uint16(2 ** 15)
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
