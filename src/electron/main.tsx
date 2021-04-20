@@ -331,10 +331,9 @@ if (!handleSquirrelEvent()) {
           },
           {
             label: i18n._(/* i18n */ { id: 'Full Screen' }),
-            type: 'checkbox',
             accelerator:
               process.platform === 'darwin' ? 'Ctrl+Command+F' : 'F11',
-            click: () => windows.main.toggleFullScreen(),
+            click: () => mainWindow.setFullScreen(!mainWindow.isFullScreen()),
           },
         ],
       },
