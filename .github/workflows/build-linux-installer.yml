@@ -104,12 +104,12 @@ jobs:
         aws-region: us-west-2
 
     - name: Upload to s3
-      run: ls ${{ github.workspace }}/build_scripts/final_installer/
-#      run: aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/* s3://download-chia-net/devops-test/
-#      uses: shallwefootball/s3-upload-action@master
-#      with:
-#        aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-#        aws_secret_access_key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-#        aws_bucket: 'download-chia-net'
-#        source_dir: ${{ github.workspace }}/build_scripts/final_installer/
-#        destination_dir: 'devops-test'
+      run: aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/devops-test/
+           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/devops-test/
+      uses: shallwefootball/s3-upload-action@master
+      with:
+        aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws_secret_access_key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws_bucket: 'download-chia-net'
+        source_dir: ${{ github.workspace }}/build_scripts/final_installer/
+        destination_dir: 'devops-test'
