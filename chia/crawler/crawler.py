@@ -211,7 +211,7 @@ class Crawler:
                 if self.peer_count == 0:
                     await self.create_client(self.introducer_info, introducer_action)
                 # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(1000)
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(2500)
                 # connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
                 # good_peers = await self.crawl_store.get_cached_peers(99999999)
 
@@ -262,7 +262,7 @@ class Crawler:
 
                 batch_count = 0
                 for peers in batch(peers_to_crawl, 250):
-                    # self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
+                    self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                     batch_count += 1
                     tasks = []
                     for peer in peers:
@@ -272,7 +272,8 @@ class Crawler:
                             total_nodes += 1
                             if peer.ip_address not in tried_nodes:
                                 tried_nodes.add(peer.ip_address)
-                    await asyncio.wait(tasks)
+                    if len(tasks) > 0:
+                        await asyncio.wait(tasks)
                     # stat_not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
                     # stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
                     # self.log.info(f"Current not_connected_peers count = {len(stat_not_connected_peers)}")
