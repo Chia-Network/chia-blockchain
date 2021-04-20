@@ -353,14 +353,14 @@ class TestFullNodeBlockCompression:
                             assert result.error is None
 
     @pytest.mark.asyncio
-    async def ztest_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
         self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
         self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
-    async def ztest_inbound_connection_limit(self, setup_four_nodes):
+    async def test_inbound_connection_limit(self, setup_four_nodes):
         nodes, _ = setup_four_nodes
         server_1 = nodes[0].full_node.server
         server_1.config["target_peer_count"] = 2
@@ -372,7 +372,7 @@ class TestFullNodeProtocol:
         assert len(server_1.get_full_node_connections()) == 2
 
     @pytest.mark.asyncio
-    async def ztest_request_peers(self, wallet_nodes):
+    async def test_request_peers(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
@@ -393,7 +393,7 @@ class TestFullNodeProtocol:
         full_node_1.full_node.full_node_peers.address_manager = AddressManager()
 
     @pytest.mark.asyncio
-    async def ztest_basic_chain(self, wallet_nodes):
+    async def test_basic_chain(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
         incoming_queue, _ = await add_dummy_connection(server_1, 12312)
@@ -416,7 +416,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
     @pytest.mark.asyncio
-    async def ztest_respond_end_of_sub_slot(self, wallet_nodes):
+    async def test_respond_end_of_sub_slot(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
@@ -474,7 +474,7 @@ class TestFullNodeProtocol:
         )
 
     @pytest.mark.asyncio
-    async def ztest_respond_unfinished(self, wallet_nodes):
+    async def test_respond_unfinished(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
@@ -622,7 +622,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.blockchain.contains_block(block.header_hash)
 
     @pytest.mark.asyncio
-    async def ztest_new_peak(self, wallet_nodes):
+    async def test_new_peak(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
@@ -676,7 +676,7 @@ class TestFullNodeProtocol:
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.asyncio
-    async def ztest_new_transaction_and_mempool(self, wallet_nodes):
+    async def test_new_transaction_and_mempool(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -907,7 +907,7 @@ class TestFullNodeProtocol:
         assert incoming_queue.qsize() == 0
 
     @pytest.mark.asyncio
-    async def ztest_request_block(self, wallet_nodes):
+    async def test_request_block(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -949,7 +949,7 @@ class TestFullNodeProtocol:
         assert res.type != ProtocolMessageTypes.reject_block.value
 
     @pytest.mark.asyncio
-    async def ztest_request_blocks(self, wallet_nodes):
+    async def test_request_blocks(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -1010,7 +1010,7 @@ class TestFullNodeProtocol:
         assert std_hash(fetched_blocks[-1]) == std_hash(blocks_t[-1])
 
     @pytest.mark.asyncio
-    async def ztest_new_unfinished_block(self, wallet_nodes):
+    async def test_new_unfinished_block(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -1041,7 +1041,7 @@ class TestFullNodeProtocol:
         assert res is None
 
     @pytest.mark.asyncio
-    async def ztest_request_unfinished_block(self, wallet_nodes):
+    async def test_request_unfinished_block(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         peer = await connect_and_get_peer(server_1, server_2)
@@ -1071,7 +1071,7 @@ class TestFullNodeProtocol:
         assert res is not None
 
     @pytest.mark.asyncio
-    async def ztest_new_signage_point_or_end_of_sub_slot(self, wallet_nodes):
+    async def test_new_signage_point_or_end_of_sub_slot(self, wallet_nodes):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -1126,7 +1126,7 @@ class TestFullNodeProtocol:
         await time_out_assert(20, caught_up_slots)
 
     @pytest.mark.asyncio
-    async def ztest_new_signage_point_caching(self, wallet_nodes, empty_blockchain):
+    async def test_new_signage_point_caching(self, wallet_nodes, empty_blockchain):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -1172,7 +1172,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
 
     @pytest.mark.asyncio
-    async def ztest_slot_catch_up_genesis(self, setup_two_nodes):
+    async def test_slot_catch_up_genesis(self, setup_two_nodes):
         nodes, _ = setup_two_nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -1204,7 +1204,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.skip("a timebomb causes mainnet to stop after transactions start, so this test doesn't work yet")
     @pytest.mark.asyncio
-    async def ztest_mainnet_softfork(self, wallet_nodes_mainnet):
+    async def test_mainnet_softfork(self, wallet_nodes_mainnet):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes_mainnet
         blocks = await full_node_1.get_all_full_blocks()
 
@@ -1264,7 +1264,7 @@ class TestFullNodeProtocol:
         assert error is None
 
     @pytest.mark.asyncio
-    async def ztest_compact_protocol(self, setup_two_nodes):
+    async def test_compact_protocol(self, setup_two_nodes):
         nodes, _ = setup_two_nodes
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
@@ -1378,7 +1378,7 @@ class TestFullNodeProtocol:
             assert full_node_2.full_node.blockchain.get_peak().height == height
 
     @pytest.mark.asyncio
-    async def ztest_compact_protocol_invalid_messages(self, setup_two_nodes):
+    async def test_compact_protocol_invalid_messages(self, setup_two_nodes):
         nodes, _ = setup_two_nodes
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
