@@ -2,15 +2,18 @@ import dataclasses
 import time
 import asyncio
 import random
+import logging
 from datetime import timedelta
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import aiosqlite
 
 from src.crawler.peer_record import PeerRecord, PeerReliability
 from src.types.peer_info import PeerInfo 
 from pytz import timezone
+
+log = logging.getLogger(__name__)
 
 def utc_to_eastern(date: datetime):
     date = date.replace(tzinfo=timezone("UTC"))
@@ -46,6 +49,9 @@ class CrawlStore:
     cached_peers: List[PeerRecord]
     last_timestamp: int
     lock: asyncio.Lock
+
+    host_to_records: Dict
+    host_to_reliability: Dict
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection):
@@ -97,9 +103,15 @@ class CrawlStore:
         self.cached_peers = []
         self.last_timestamp = 0
         self.lock = asyncio.Lock()
+        self.host_to_records = {}
+        self.host_to_reliability = {}
         return self
 
     async def add_peer(self, peer_record: PeerRecord, peer_reliability: PeerReliability):
+        self.host_to_records[peer_record.peer_id] = peer_record
+        self.host_to_reliability[peer_reliability.peer_id] = peer_reliability
+        return
+        # TODO: Periodically save in DB.
         added_timestamp = utc_timestamp()
         cursor = await self.crawl_db.execute(
             "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
@@ -131,6 +143,7 @@ class CrawlStore:
         await cursor.close()
 
     async def get_peer_reliability(self, peer_id: str) -> PeerReliability:
+        return self.host_to_reliability[peer_id]
         cursor = await self.crawl_db.execute(
             f"SELECT * from peer_reliability WHERE peer_id=?",
             (peer_id,),
@@ -166,7 +179,7 @@ class CrawlStore:
         await self.add_peer(replaced, reliability)
 
     async def get_peers_today(self) -> List[PeerRecord]:
-        now = utc_timestamp()
+        """now = utc_timestamp()
         start = utc_timestamp_to_eastern(now)
         start = start - timedelta(days=1)
         start = start.replace(hour=23, minute=59, second=59)
@@ -182,6 +195,8 @@ class CrawlStore:
             peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             peers.append(peer)
         return peers
+        """
+        pass
 
     async def get_peer_by_ip(self, ip_address) -> Optional[PeerRecord]:
         cursor = await self.crawl_db.execute(
@@ -220,7 +235,14 @@ class CrawlStore:
         start = start - timedelta(days=1)
         start = start.replace(hour=23, minute=59, second=59)
         start_timestamp = int(start.timestamp())
-        cursor = await self.crawl_db.execute(
+        counter = 0
+        for peer_id in self.host_to_records:
+            record = self.host_to_records[peer_id]
+            if record.connected_timestamp > start_timestamp and record.connected:
+                counter += 1
+        return counter
+
+        """cursor = await self.crawl_db.execute(
             f"SELECT * from peer_records WHERE connected_timestamp>? and connected=?",
             (start_timestamp,1,),
         )
@@ -231,22 +253,19 @@ class CrawlStore:
             peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             peers.append(peer)
         return peers
+        """
 
     async def get_cached_peers(self, peer_count: int) -> List[PeerInfo]:
         now = int(utc_timestamp())
         peers = []
+        t1 = time.time()
         async with self.lock:
             if now - self.last_timestamp > 300:
-                cursor = await self.crawl_db.execute(
-                    f"SELECT peer_id from peer_reliability WHERE is_reliable=?",
-                    (1,),
-                )
-                rows = await cursor.fetchall()
-                peers = []
-                await cursor.close()
-                for row in rows:
-                    peer = PeerInfo(row[0], 8444)
-                    peers.append(peer)
+                for peer_id in self.host_to_reliability:
+                    reliability = self.host_to_reliability[peer_id]
+                    if reliability.is_reliable():
+                        peer = PeerInfo(peer_id, 8444)
+                        peers.append(peer)    
                 self.cached_peers = peers
                 self.last_timestamp = utc_timestamp()
             else:
@@ -254,10 +273,32 @@ class CrawlStore:
         if len(peers) > peer_count:
             random.shuffle(peers)
             peers = peers[:peer_count]
+        t2 = time.time()
+        log.error(f"Get cached peers took {t2 - t1}.")
         return peers
 
     async def get_peers_to_crawl(self, batch_size) -> List[PeerRecord]:
-        peer_id_1 = []
+        now = int(utc_timestamp())
+        t1 = time.time()
+        records = []
+        for peer_id in self.host_to_reliability:
+            add = False
+            reliability = self.host_to_reliability[peer_id]
+            if reliability.ignore_till < now and reliability.get_ban_time() < now:
+                add = True
+            record = self.host_to_records[peer_id]
+            if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
+                add = True
+            if add:
+                records.append(record)
+        if len(records) > batch_size:
+            random.shuffle(records)
+            records = records[:batch_size]
+        t2 = time.time()
+        log.error(f"Get peers to crawl took {t2 - t1}.")
+        return records
+
+        """peer_id_1 = []
         peer_records_1: List[PeerRecord] = []
         peer_records_2: List[PeerRecord] = []
         peer_records_3: List[PeerRecord] = []
@@ -313,3 +354,4 @@ class CrawlStore:
             peer_records_3 = peer_records_3[:(batch_size // 4)]
         peers = peer_records_1 + peer_records_2 + peer_records_3
         return peers
+        """

@@ -3,6 +3,7 @@ import logging
 import ipaddress
 import traceback
 import random
+import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, List
 
@@ -183,6 +184,7 @@ class Crawler:
             self.connection = await aiosqlite.connect(self.db_path)
             self.crawl_store = await CrawlStore.create(self.connection)
             self.log.info("Started")
+            t_start = time.time()
             self.peer_count = 0
             total_nodes = 0
             self.seen_nodes = set()
@@ -280,13 +282,19 @@ class Crawler:
                     # self.log.info(f"Current connected_peers count = {len(stat_connected_peers)}")
 
                 self.server.banned_peers = {}
+                self.log.error("***")
+                self.log.error(f"Finished batch:")
                 self.log.error(f"Total connections attempted: {total_nodes}")
                 self.log.error(f"Total unique nodes attempted: {len(tried_nodes)}.")
+                t_now = time.time()
+                t_delta = int(t_now - t_start)
+                self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
                 if random.randrange(0, 10) == 0:
                     good_peers = await self.crawl_store.get_cached_peers(99999999)
                     self.log.error(f"Reliable nodes: {len(good_peers)}")
-                    stat_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
-                    self.log.error(f"Peers reachable today: {len(stat_connected_peers)}.")
+                    num_connected_today = await self.crawl_store.get_peers_today_connected()
+                    self.log.error(f"Peers reachable today: {num_connected_today}.")
+                self.log.error("***")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 

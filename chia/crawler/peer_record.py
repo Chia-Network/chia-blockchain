@@ -45,6 +45,8 @@ class PeerReliability:
     stat_1d: PeerStat
     stat_1w: PeerStat
     stat_1m: PeerStat
+    tries: int
+    successes: int
 
     def __init__(
         self,
@@ -73,8 +75,12 @@ class PeerReliability:
         self.stat_1d = PeerStat(stat_1d_weight, stat_1d_count, stat_1d_reliability)
         self.stat_1w = PeerStat(stat_1w_weight, stat_1w_count, stat_1w_reliability)
         self.stat_1m = PeerStat(stat_1m_weight, stat_1m_count, stat_1m_reliability)
+        self.tries = 0
+        self.successes = 0
 
     def is_reliable(self) -> bool:
+        if self.tries > 0 and self.tries <= 3 and self.successes * 2 >= self.tries:
+            return True
         if self.stat_2h.reliability > 0.85 and self.stat_2h.count > 2:
             return True
         if self.stat_8h.reliability > 0.7 and self.stat_8h.count > 4:
@@ -117,6 +123,9 @@ class PeerReliability:
         self.stat_1d.update(is_reachable, age, 24 * 3600)
         self.stat_1w.update(is_reachable, age, 7 * 24 * 3600)
         self.stat_1m.update(is_reachable, age, 24 * 30 * 3600)
+        self.tries += 1
+        if is_reachable:
+            self.successes += 1
         current_ignore_time = self.get_ignore_time()
         now = datetime.utcnow()
         now = now.replace(tzinfo=timezone("UTC"))
