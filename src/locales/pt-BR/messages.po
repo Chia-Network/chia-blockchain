@@ -1226,8 +1226,12 @@ msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Lotear em paralelo pode economizar tempo. Caso contrário, adicione lotes (s) à fila."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr "O loteamento com campo de bit habilitado tem cerca de 30% a menos de escritas globais e agora é quase sempre mais rápido. Você pode ver os requisitos de memória reduzidos loteando com o campo de bit desabilitado. Se o seu CPU for de antes de 2010, talvez você tenha que desativar o loteamento com campo de bit."
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr "O loteamento com campo de bit habilitado tem cerca de 30% a menos de escritas globais e agora é quase sempre mais rápido. Você pode ver os requisitos de memória reduzidos loteando com o campo de bit desabilitado. Se o seu CPU for de antes de 2010, talvez você tenha que desativar o loteamento com campo de bit."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"

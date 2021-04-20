@@ -1226,8 +1226,12 @@ msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "平行規劃耕地可節省時間。若不，新增耕地至隊列。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr "以 bitfield 規劃耕地可以減少約 30％ 的總寫入量，而現在也都幾乎比較快。 關閉 Bitfield 規劃耕地的話有可能降低記憶體需求。如果你的 CPU 設計是 2010 年以前的話很有可能需要關閉 bitfield 規劃耕地。"
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr "以 bitfield 規劃耕地可以減少約 30％ 的總寫入量，而現在也都幾乎比較快。 關閉 Bitfield 規劃耕地的話有可能降低記憶體需求。如果你的 CPU 設計是 2010 年以前的話很有可能需要關閉 bitfield 規劃耕地。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"

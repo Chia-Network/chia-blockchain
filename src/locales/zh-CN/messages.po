@@ -1226,8 +1226,12 @@ msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "并发拓荒可以有效节省拓荒时间但对系统资源要求很高. 系统硬件不够的话建议选择按队列顺序拓荒."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr "在耕地时启用bitfield会减少约30%的磁盘写入，而且几乎总是更快。但如果您在耕地时禁用bitfield，所需内存则可能会减少。如果您的CPU是2010年以前的老款，您可能必须禁用bitfield耕地。"
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr "在耕地时启用bitfield会减少约30%的磁盘写入，而且几乎总是更快。但如果您在耕地时禁用bitfield，所需内存则可能会减少。如果您的CPU是2010年以前的老款，您可能必须禁用bitfield耕地。"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"

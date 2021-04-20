@@ -1226,8 +1226,12 @@ msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Plottare in parallelo può far risparmiare tempo. In alternativa, aggiungi plot alla coda."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr "Il grafico con bitfield abilitato ha circa il 30% in meno di scritture complessive ed è ora quasi sempre più veloce. Potresti vedere requisiti di memoria ridotti con il bitfield disabilitato. Se l'architettura della tua CPU è precedente al 2010 potresti dover disattivare il bitfield."
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr "Il grafico con bitfield abilitato ha circa il 30% in meno di scritture complessive ed è ora quasi sempre più veloce. Potresti vedere requisiti di memoria ridotti con il bitfield disabilitato. Se l'architettura della tua CPU è precedente al 2010 potresti dover disattivare il bitfield."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
