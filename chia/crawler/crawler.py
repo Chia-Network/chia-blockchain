@@ -211,7 +211,7 @@ class Crawler:
                 if self.peer_count == 0:
                     await self.create_client(self.introducer_info, introducer_action)
                 # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(2500)
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(4000)
                 # connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
                 # good_peers = await self.crawl_store.get_cached_peers(99999999)
 
@@ -261,7 +261,7 @@ class Crawler:
                         yield iterable[ndx:min(ndx + n, l)]
 
                 batch_count = 0
-                for peers in batch(peers_to_crawl, 250):
+                for peers in batch(peers_to_crawl, 500):
                     self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                     batch_count += 1
                     tasks = []

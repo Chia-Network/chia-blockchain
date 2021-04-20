@@ -310,6 +310,6 @@ class CrawlStore:
             peer_records_3.append(PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]))
         if len(peer_records_3) > batch_size // 4:
             random.shuffle(peer_records_3)
-            peer_records_3 = peer_records_3[:(peer_records_3 // 4)]
+            peer_records_3 = peer_records_3[:(batch_size // 4)]
         peers = peer_records_1 + peer_records_2 + peer_records_3
         return peers
