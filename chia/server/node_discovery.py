@@ -171,6 +171,7 @@ class FullNodeDiscovery:
         empty_tables = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        first = True
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
         while not self.is_closed:
@@ -179,7 +180,8 @@ class FullNodeDiscovery:
 
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
-                if size == 0 or empty_tables:
+                if size == 0 or empty_tables or first:
+                    first = False
                     await self._introducer_client()
                     try:
                         await asyncio.sleep(min(5, self.peer_connect_interval))
