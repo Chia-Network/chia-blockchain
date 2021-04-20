@@ -19,6 +19,7 @@ from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_f
 from tests.time_out_assert import time_out_assert
 from secrets import token_bytes
 from chia.wallet.util.transaction_type import TransactionType
+from chia.consensus.constants import ConsensusConstants
 
 
 @pytest.fixture(scope="module")
@@ -487,7 +488,7 @@ class TestDIDWallet:
             ]
         )
         try:
-            cost, result = puz.run_with_cost(fullsol)
+            cost, result = puz.run_with_cost(ConsensusConstants.MAX_BLOCK_COST_CLVM, fullsol)
         except Exception as e:
             assert e.args == ("path into atom",)
         else:
