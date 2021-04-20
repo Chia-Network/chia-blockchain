@@ -105,7 +105,7 @@ jobs:
 
     - name: Upload to s3
       run: aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/devops-test/
-           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/devops-test/
+           #aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/devops-test/
       uses: shallwefootball/s3-upload-action@master
       with:
         aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
