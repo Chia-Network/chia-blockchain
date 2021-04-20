@@ -31,6 +31,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/decompress_coin_solution_entry.clvm",
         "chia/wallet/puzzles/block_program_zero.clvm",
         "chia/wallet/puzzles/test_generator_deserialize.clvm",
+        "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
     ]
 )
 

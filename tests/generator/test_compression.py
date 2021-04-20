@@ -1,18 +1,22 @@
 # flake8: noqa: F501
+from dataclasses import dataclass
+from typing import List
 from unittest import TestCase
 
 from chia.full_node.bundle_tools import (
     bundle_suitable_for_compression,
-    simple_solution_generator,
+    compressed_coin_solution_entry_list,
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
+    simple_solution_generator,
 )
 from chia.full_node.generator import run_generator, create_generator_args
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
-from chia.types.generator_types import CompressorArg
+from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
@@ -29,13 +33,48 @@ DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
     "decompress_coin_solution_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
 )
 DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
-
+TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clvm", package_or_requirement="chia.wallet.puzzles")
 
 Nil = Program.from_bytes(b"\x80")
 
 original_generator = hexstr_to_bytes(
     "ff01ffffffa00000000000000000000000000000000000000000000000000000000000000000ff830186a080ffffff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3ff018080ffff80ffff01ffff33ffa06b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9ff830186a08080ff8080808080"
 )  # noqa
+
+gen1 = b"aaaaaaaaaa" + original_generator
+gen2 = b"bb" + original_generator
+FAKE_BLOCK_HEIGHT1 = uint32(100)
+FAKE_BLOCK_HEIGHT2 = uint32(200)
+
+
+@dataclass(frozen=True)
+@streamable
+class MultipleCompressorArg(Streamable):
+    arg: List[CompressorArg]
+    split_offset: int
+
+
+def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: SpendBundle) -> BlockGenerator:
+    """
+    Decompress a transaction by referencing bytes from multiple input generator references
+    """
+    compressed_cse_list = compressed_coin_solution_entry_list(spend_bundle)
+    program = TEST_MULTIPLE.curry(
+        DECOMPRESS_PUZZLE,
+        DECOMPRESS_CSE_WITH_PREFIX,
+        args.arg[0].start,
+        args.arg[0].end - args.split_offset,
+        args.arg[1].end - args.split_offset,
+        args.arg[1].end,
+        compressed_cse_list,
+    )
+
+    # TODO aqk: Improve ergonomics of CompressorArg -> GeneratorArg conversion
+    generator_args = [
+        GeneratorArg(FAKE_BLOCK_HEIGHT1, args.arg[0].generator),
+        GeneratorArg(FAKE_BLOCK_HEIGHT2, args.arg[1].generator),
+    ]
+    return BlockGenerator(program, generator_args)
 
 
 class TestCompression(TestCase):
@@ -45,6 +84,27 @@ class TestCompression(TestCase):
 
     def test_compress_spend_bundle(self):
         pass
+
+    def test_multiple_input_gen_refs(self):
+        start1, end1 = match_standard_transaction_at_any_index(gen1)
+        start2, end2 = match_standard_transaction_at_any_index(gen2)
+        ca1 = CompressorArg(FAKE_BLOCK_HEIGHT1, SerializedProgram.from_bytes(gen1), start1, end1)
+        ca2 = CompressorArg(FAKE_BLOCK_HEIGHT2, SerializedProgram.from_bytes(gen2), start2, end2)
+
+        prefix_len1 = end1 - start1
+        prefix_len2 = end2 - start2
+        assert prefix_len1 == prefix_len2
+        prefix_len = prefix_len1
+        results = []
+        for split_offset in range(prefix_len):
+            gen_args = MultipleCompressorArg([ca1, ca2], split_offset)
+            spend_bundle: SpendBundle = make_spend_bundle(1)
+            multi_gen = create_multiple_ref_generator(gen_args, spend_bundle)
+            cost, result = run_generator(multi_gen, INFINITE_COST)
+            results.append(result)
+            assert result is not None
+            assert cost > 0
+        assert all(r == results[0] for r in results)
 
     def test_compressed_block_results(self):
         sb: SpendBundle = make_spend_bundle(1)
@@ -201,12 +261,7 @@ class TestDecompression(TestCase):
         print(out)
 
         p_with_cses = DECOMPRESS_BLOCK.curry(
-            DECOMPRESS_PUZZLE,
-            DECOMPRESS_CSE_WITH_PREFIX,
-            start,
-            Program.to(end),
-            cse2,
-            DESERIALIZE_MOD,
+            DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end), cse2, DESERIALIZE_MOD
         )
         generator_args = create_generator_args([SerializedProgram.from_bytes(original_generator)])
         cost, out = p_with_cses.run_with_cost(INFINITE_COST, generator_args)
