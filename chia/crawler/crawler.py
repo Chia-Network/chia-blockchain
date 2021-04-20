@@ -196,7 +196,7 @@ class Crawler:
                     response = await peer.request_peers_introducer(introducer_protocol.RequestPeersIntroducer())
                     # Add peers to DB
                     if isinstance(response, introducer_protocol.RespondPeersIntroducer):
-                        self.log.info(f"Introduced sent us {len(response.peer_list)} peers")
+                        # self.log.error(f"Introduced sent us {len(response.peer_list)} peers")
                         for response_peer in response.peer_list:
                             current = await self.crawl_store.get_peer_by_ip(response_peer.host)
                             if current is None:
@@ -206,7 +206,7 @@ class Crawler:
                                 new_peer_reliability = PeerReliability(response_peer.host)
                                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
                     self.peer_count += len(response.peer_list)
-                    # self.log.error(f"Peer count: {self.peer_count}.")
+                    self.log.error(f"Peer count: {self.peer_count}.")
                     # disconnect
                     await peer.close()
 
@@ -222,10 +222,10 @@ class Crawler:
                     response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=3)
                     # Add peers to DB
                     if isinstance(response, full_node_protocol.RespondPeers):
-                        self.log.info(f"{peer.peer_host} sent us {len(response.peer_list)}")
+                        # self.log.error(f"{peer.peer_host} sent us {len(response.peer_list)}")
                         for response_peer in response.peer_list:
                             # current = await self.crawl_store.get_peer_by_ip(response_peer.host)
-                            if response_peer.host not in self.seen_nodes:
+                            if response_peer.host not in self.seen_nodes and response_peer.timestamp > time.time() - 5 * 24 * 3600:
                                 self.seen_nodes.add(response_peer.host)
                                 new_peer = PeerRecord(response_peer.host, response_peer.host, response_peer.port,
                                                     False, 0, 0, 0, utc_timestamp())
