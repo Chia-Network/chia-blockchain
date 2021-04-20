@@ -28,6 +28,7 @@ if $UBUNTU; then
 	if [ "$(which bc |wc -l)" -eq 0 ]; then sudo apt install bc -y; fi
 	# Mint 20.04 repsonds with 20 here so 20 instead of 20.04
 	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
+	UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
 fi
 
 # Manage npm and other install requirements on an OS specific basis
@@ -42,6 +43,10 @@ if [ "$(uname)" = "Linux" ]; then
 		echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
 		sudo apt-get update
 		sudo apt-get install -y python3.8-venv python3-distutils
+	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
+		echo "Installing on Ubuntu/Debian 21.04 or newer"
+		sudo apt-get update
+		sudo apt-get install -y python3.9-venv python3-distutils
 	elif type pacman && [ -f "/etc/arch-release" ]; then
 		# Arch Linux
 		echo "Installing on Arch Linux"
