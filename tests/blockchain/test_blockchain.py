@@ -1627,6 +1627,13 @@ class TestBodyValidation:
         err = (await b.receive_block(block))[1]
         assert err == Err.INVALID_FOLIAGE_BLOCK_HASH
 
+    @pytest.mark.asyncio
+    async def test_invalid_reward_claims(self, empty_blockchain):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        pass
+
 
 class TestReorgs:
     @pytest.mark.asyncio

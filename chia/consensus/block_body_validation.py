@@ -59,14 +59,17 @@ async def validate_block_body(
     This assumes the header block has been completely validated.
     Validates the transactions and body of the block. Returns None for the first value if everything
     validates correctly, or an Err if something does not validate. For the second value, returns a CostResult
-    if validation succeeded, and there are transactions
+    only if validation succeeded, and there are transactions. In other cases it returns None. The NPC result is
+    the result of running the generator with the previous generators refs. It is only present for transaction
+    blocks which have spent coins.
     """
     if isinstance(block, FullBlock):
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
 
-    # 1. For non block blocks, foliage block, transaction filter, transactions info, and generator must be empty
-    # If it is a block but not a transaction block, there is no body to validate. Check that all fields are None
+    # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
+    # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
+    # None
     if block.foliage.foliage_transaction_block_hash is None:
         if (
             block.foliage_transaction_block is not None
@@ -95,10 +98,7 @@ async def validate_block_body(
         return Err.INVALID_FOLIAGE_BLOCK_HASH, None
 
     # 5. The reward claims must be valid for the previous blocks, and current block fees
-    if height == 0:
-        # if block.foliage_transaction_block.re
-        pass
-    else:
+    if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
         prev_transaction_block_height = prev_transaction_block.height
@@ -197,7 +197,7 @@ async def validate_block_body(
             # 7. Check that cost <= MAX_BLOCK_COST_CLVM
             log.debug(
                 f"Cost: {cost} max: {constants.MAX_BLOCK_COST_CLVM} "
-                f"percent full: {cost / constants.MAX_BLOCK_COST_CLVM}"
+                f"percent full: {round(100 * (cost / constants.MAX_BLOCK_COST_CLVM), 2)}%"
             )
             if cost > constants.MAX_BLOCK_COST_CLVM:
                 return Err.BLOCK_COST_EXCEEDS_MAX, None
