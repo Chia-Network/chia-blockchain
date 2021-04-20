@@ -50,6 +50,8 @@ soa_record = SOA(
 )
 ns_records = [NS(D.ns1), NS(D.ns2)]
 
+bootstrap_peers = []
+
 class DomainName(str):
     def __getattr__(self, item):
         return DomainName(item + '.' + self)
@@ -189,6 +191,11 @@ class Crawler:
             total_nodes = 0
             self.seen_nodes = set()
             tried_nodes = set()
+            for peer in bootstrap_peers:
+                new_peer = PeerRecord(peer, peer, 8444, False, 0, 0, 0, utc_timestamp())
+                new_peer_reliability = PeerReliability(peer)
+                await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+
             while True:
                 await asyncio.sleep(2)
                 async def introducer_action(peer: ws.WSChiaConnection):
@@ -213,7 +220,7 @@ class Crawler:
                 if self.peer_count == 0:
                     await self.create_client(self.introducer_info, introducer_action)
                 # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(4000)
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(10000)
                 # connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
                 # good_peers = await self.crawl_store.get_cached_peers(99999999)
 
@@ -263,7 +270,7 @@ class Crawler:
                         yield iterable[ndx:min(ndx + n, l)]
 
                 batch_count = 0
-                for peers in batch(peers_to_crawl, 500):
+                for peers in batch(peers_to_crawl, 1000):
                     self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                     batch_count += 1
                     tasks = []
