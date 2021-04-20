@@ -111,6 +111,7 @@ def coin_announcements_for_conditions_dict(
     output_announcements: Set[Announcement] = set()
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, []):
         message = cvp.vars[0]
+        assert len(message) <= 1024
         announcement = Announcement(input_coin.name(), message)
         output_announcements.add(announcement)
     return output_announcements
@@ -123,6 +124,7 @@ def puzzle_announcements_for_conditions_dict(
     output_announcements: Set[Announcement] = set()
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, []):
         message = cvp.vars[0]
+        assert len(message) <= 1024
         announcement = Announcement(input_coin.puzzle_hash, message)
         output_announcements.add(announcement)
     return output_announcements
@@ -135,6 +137,7 @@ def coin_announcements_names_for_npc(npc_list) -> Set[bytes32]:
             if condition == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
+                    assert len(message) <= 1024
                     announcement = Announcement(npc.coin_name, message)
                     output_announcements.add(announcement.name())
     return output_announcements
@@ -147,6 +150,7 @@ def puzzle_announcements_names_for_npc(npc_list) -> Set[bytes32]:
             if condition == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
+                    assert len(message) <= 1024
                     announcement = Announcement(npc.puzzle_hash, message)
                     output_announcements.add(announcement.name())
     return output_announcements
