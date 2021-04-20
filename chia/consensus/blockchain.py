@@ -197,7 +197,10 @@ class Blockchain(BlockchainInterface):
 
             if block.is_transaction_block():
                 if block.transactions_generator is not None:
-                    block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+                    try:
+                        block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+                    except ValueError:
+                        return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None
                     assert block_generator is not None
                     npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
@@ -495,9 +498,16 @@ class Blockchain(BlockchainInterface):
 
         npc_result = None
         if block.transactions_generator is not None:
-            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
-            assert block_generator is not None
-            npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
+            assert block.transactions_info is not None
+            try:
+                block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+            except ValueError:
+                return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
+            if block_generator is None:
+                return PreValidationResult(uint16(Err.GENERATOR_REF_HAS_NO_GENERATOR.value), None, None)
+            npc_result = get_name_puzzle_conditions(
+                block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
+            )
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
@@ -722,7 +732,8 @@ class Blockchain(BlockchainInterface):
                 header_hash = self.height_to_hash(ref_height)
                 ref_block = await self.get_full_block(header_hash)
                 assert ref_block is not None
-                assert ref_block.transactions_generator is not None
+                if ref_block.transactions_generator is None:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                 result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
         else:
             # First tries to find the blocks in additional_blocks
@@ -756,13 +767,15 @@ class Blockchain(BlockchainInterface):
                 if ref_height in reorg_chain:
                     ref_block = reorg_chain[ref_height]
                     assert ref_block is not None
-                    assert ref_block.transactions_generator is not None
+                    if ref_block.transactions_generator is None:
+                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
                 else:
                     header_hash = self.height_to_hash(ref_height)
                     ref_block = await self.get_full_block(header_hash)
                     assert ref_block is not None
-                    assert ref_block.transactions_generator is not None
+                    if ref_block.transactions_generator is None:
+                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
         assert len(result) == len(ref_list)
         return BlockGenerator(block.transactions_generator, result)

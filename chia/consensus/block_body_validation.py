@@ -38,7 +38,7 @@ from chia.util.generator_tools import (
     tx_removals_and_additions,
 )
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -98,6 +98,7 @@ async def validate_block_body(
         return Err.INVALID_FOLIAGE_BLOCK_HASH, None
 
     # 5. The reward claims must be valid for the previous blocks, and current block fees
+    # If height == 0, expected_reward_coins will be left empty
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
@@ -144,6 +145,12 @@ async def validate_block_body(
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS, None
 
+    if block.foliage_transaction_block.timestamp > constants.INITIAL_FREEZE_END_TIMESTAMP:
+        if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
+            # No duplicates, after transaction freeze period. Duplicates cause no issues because we filter them out
+            # anyway.
+            return Err.INVALID_REWARD_COINS, None
+
     removals: List[bytes32] = []
     coinbase_additions: List[Coin] = list(expected_reward_coins)
     additions: List[Coin] = []
@@ -158,20 +165,22 @@ async def validate_block_body(
         block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
         and block.transactions_generator is not None
     ):
+        # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
         return Err.INITIAL_TRANSACTION_FREEZE, None
     else:
-        # 5a. The generator root must be the hash of the serialized bytes of
+        # 7a. The generator root must be the hash of the serialized bytes of
         #     the generator for this block (or zeroes if no generator)
         if block.transactions_generator is not None:
             if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
-                return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
+                return Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None
         else:
             if block.transactions_info.generator_root != bytes([0] * 32):
-                return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT, None
+                return Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None
 
-        # 6a. The generator_ref_list must be the hash of the serialized bytes of
+        # 8a. The generator_ref_list must be the hash of the serialized bytes of
         #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
-        # 6b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
+        # 8b. The generator ref list length must be less than or equal to MAX_GENERATOR_REF_LIST_SIZE entries
+        # 8c. The generator ref list must not point to a height >= this block's height
         if block.transactions_generator_ref_list in (None, []):
             if block.transactions_info.generator_refs_root != bytes([1] * 32):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
@@ -185,7 +194,9 @@ async def validate_block_body(
             if block.transactions_info.generator_refs_root != generator_refs_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
             if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-                return Err.PRE_SOFT_FORK_TOO_MANY_GENERATOR_REFS, None
+                return Err.TOO_MANY_GENERATOR_REFS, None
+            if any([index >= height for index in block.transactions_generator_ref_list]):
+                return Err.FUTURE_GENERATOR_REFS, None
 
         if block.transactions_generator is not None:
             # Get List of names removed, puzzles hashes for removed coins and conditions created
@@ -303,6 +314,7 @@ async def validate_block_body(
             while curr.height > fork_h:
                 # Coin store doesn't contain coins from fork, we have to run generator for each block in fork
                 if curr.transactions_generator is not None:
+                    # These blocks are in the past and therefore assumed to be valid, so get_block_generator won't raise
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
                     assert curr_block_generator is not None
                     npc_result = get_name_puzzle_conditions(curr_block_generator, constants.MAX_BLOCK_COST_CLVM, False)
@@ -351,7 +363,6 @@ async def validate_block_body(
                     # This coin is not in the current heaviest chain, so it must be in the fork
                     if rem not in additions_since_fork:
                         # Check for spending a coin that does not exist in this fork
-                        # TODO: fix this, there is a consensus bug here
                         return Err.UNKNOWN_UNSPENT, None
                     new_coin, confirmed_height = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
@@ -383,16 +394,19 @@ async def validate_block_body(
             return Err.MINTING_COIN, None
 
         fees = removed - added
-        assert_fee_sum: uint64 = uint64(0)
+        assert fees >= 0
+        assert_fee_sum: uint128 = uint128(0)
 
         for npc in npc_list:
             if ConditionOpcode.RESERVE_FEE in npc.condition_dict:
                 fee_list: List[ConditionWithArgs] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
-                    assert_fee_sum = assert_fee_sum + fee
+                    if fee < 0:
+                        return Err.RESERVE_FEE_CONDITION_FAILED, None
+                    assert_fee_sum = uint128(assert_fee_sum + fee)
 
-        # 17. Check that the assert fee sum <= fees
+        # 17. Check that the assert fee sum <= fees, and that each reserved fee is non-negative
         if fees < assert_fee_sum:
             return Err.RESERVE_FEE_CONDITION_FAILED, None
 

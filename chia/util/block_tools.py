@@ -280,6 +280,7 @@ class BlockTools:
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
         previous_generator: CompressorArg = None,
+        genesis_timestamp: Optional[uint64] = None,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -301,7 +302,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=uint64(int(time.time())),
+                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
             )
             log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -727,6 +728,7 @@ class BlockTools:
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
+                            current_time=current_time,
                         )
 
                         if block_record.is_transaction_block:

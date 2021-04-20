@@ -12,7 +12,9 @@ from blspy import AugSchemeMPL, G2Element
 
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo, FoliageTransactionBlock
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -20,11 +22,12 @@ from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_tools import BlockTools, get_vdf_info_and_proof
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint64
+from chia.util.ints import uint8, uint64, uint32
 from chia.util.recursive_replace import recursive_replace
 from chia.util.wallet_tools import WalletTool
 from tests.core.fixtures import default_400_blocks  # noqa: F401; noqa: F401
@@ -1629,10 +1632,239 @@ class TestBodyValidation:
 
     @pytest.mark.asyncio
     async def test_invalid_reward_claims(self, empty_blockchain):
+        # 5
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
         assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        pass
+        block: FullBlock = blocks[-1]
+
+        # Too few
+        too_few_reward_claims = block.transactions_info.reward_claims_incorporated[:-1]
+        block_2: FullBlock = recursive_replace(
+            block, "transactions_info.reward_claims_incorporated", too_few_reward_claims
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_REWARD_COINS
+
+        # Too many
+        h = std_hash(b"")
+        too_many_reward_claims = block.transactions_info.reward_claims_incorporated + [
+            Coin(h, h, too_few_reward_claims[0].amount)
+        ]
+        block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", too_many_reward_claims)
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_REWARD_COINS
+
+        # Duplicates
+        duplicate_reward_claims = block.transactions_info.reward_claims_incorporated + [
+            block.transactions_info.reward_claims_incorporated[-1]
+        ]
+        block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", duplicate_reward_claims)
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_REWARD_COINS
+
+    @pytest.mark.asyncio
+    async def test_initial_freeze(self, empty_blockchain):
+        # 6
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            pool_reward_puzzle_hash=bt.pool_ph,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            genesis_timestamp=time.time() - 1000,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[2].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
+        )
+        err = (await b.receive_block(blocks[-1]))[1]
+        assert err == Err.INITIAL_TRANSACTION_FREEZE
+
+    @pytest.mark.asyncio
+    async def test_invalid_transactions_generator_hash(self, empty_blockchain):
+        # 7
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2, guarantee_transaction_block=True)
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        # No tx should have all zeroes
+        block: FullBlock = blocks[-1]
+        block_2 = recursive_replace(block, "transactions_info.generator_root", bytes([1] * 32))
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        blocks = bt.get_consecutive_blocks(
+            2,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[3]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+
+        # Non empty generator hash must be correct
+        block = blocks[-1]
+        block_2 = recursive_replace(block, "transactions_info.generator_root", bytes([0] * 32))
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+
+    @pytest.mark.asyncio
+    async def test_invalid_transactions_ref_list(self, empty_blockchain):
+        # No generator should have [1]s for the root
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        block: FullBlock = blocks[-1]
+        block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([0] * 32))
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+
+        # No generator should have no refs list
+        block_2 = recursive_replace(block, "transactions_generator_ref_list", [uint32(0)])
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+
+        # Hash should be correct when there is a ref list
+        assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
+        for block in blocks[-5:]:
+            assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+        assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
+        assert generator_arg is not None
+
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=tx,
+            previous_generator=generator_arg,
+        )
+        block = blocks[-1]
+        assert len(block.transactions_generator_ref_list) > 0
+
+        block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([1] * 32))
+        block_2 = recursive_replace(
+            block_2, "foliage_transaction_block.transactions_info_hash", block_2.transactions_info.get_hash()
+        )
+        block_2 = recursive_replace(
+            block_2, "foliage.foliage_transaction_block_hash", block_2.foliage_transaction_block.get_hash()
+        )
+        new_m = block_2.foliage.foliage_transaction_block_hash
+        new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
+        block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
+
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+
+        # Too many heights
+        block_2 = recursive_replace(block, "transactions_generator_ref_list", [block.height - 2, block.height - 1])
+        err = (await b.receive_block(block_2))[1]
+        assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR
+        assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
+
+        # Not tx block
+        for h in range(0, block.height - 1):
+            block_2 = recursive_replace(block, "transactions_generator_ref_list", [h])
+            err = (await b.receive_block(block_2))[1]
+            assert err == Err.GENERATOR_REF_HAS_NO_GENERATOR or err == Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
+            assert (await b.pre_validate_blocks_multiprocessing([block_2], {})) is None
 
 
 class TestReorgs:

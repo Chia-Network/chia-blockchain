@@ -305,6 +305,8 @@ class MempoolManager:
                 fee_list: List[ConditionWithArgs] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
+                    if fee < 0:
+                        return None, MempoolInclusionStatus.FAILED, Err.RESERVE_FEE_CONDITION_FAILED
                     assert_fee_sum = assert_fee_sum + fee
         if fees < assert_fee_sum:
             return (
