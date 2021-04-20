@@ -75,9 +75,19 @@ async def validate_block_body(
             block.foliage_transaction_block is not None
             or block.transactions_info is not None
             or block.transactions_generator is not None
-            or len(block.transactions_generator_ref_list) > 0
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
+
+        prev_tb: BlockRecord = blocks.block_record(block.prev_header_hash)
+        while not prev_tb.is_transaction_block:
+            prev_tb = blocks.block_record(prev_tb.prev_hash)
+        assert prev_tb.timestamp is not None
+        if (
+            prev_tb.timestamp > constants.INITIAL_FREEZE_END_TIMESTAMP
+            and len(block.transactions_generator_ref_list) > 0
+        ):
+            return Err.NOT_BLOCK_BUT_HAS_DATA, None
+
         return None, None  # This means the block is valid
 
     # All checks below this point correspond to transaction blocks
