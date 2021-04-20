@@ -257,8 +257,12 @@ class CrawlStore:
         return peers
 
     async def get_peers_to_crawl(self, batch_size) -> List[PeerRecord]:
-        peer_id = []
+        peer_id_1 = []
+        peer_records_1: List[PeerRecord] = []
+        peer_records_2: List[PeerRecord] = []
+        peer_records_3: List[PeerRecord] = []
         now = int(utc_timestamp())
+        # Option 1: Select not ignored/banned node. 50% of batch size.
         cursor = await self.crawl_db.execute(
             f"SELECT * from peer_reliability WHERE ignore_till<?",
             (now,),
@@ -271,26 +275,41 @@ class CrawlStore:
                 row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15], row[16],
             )
             if peer.get_ban_time() < now:
-                peer_id.append(peer.peer_id)
-        cursor = await self.crawl_db.execute(
-            f"SELECT peer_id from peer_records WHERE last_try_timestamp=0 AND connected_timestamp=0",
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        for row in rows:
-            peer_id.append(row[0])
-        if len(peer_id) > batch_size:
-            random.shuffle(peer_id)
-            peer_id = peer_id[:batch_size]
-        peers = []
-        for id in peer_id:
+                peer_id_1.append(row[0])
+
+        if len(peer_id_1) > batch_size // 2:
+            random.shuffle(peer_id_1)
+            peer_id_1 = peer_id_1[:(batch_size // 2)]
+        for id in peer_id_1:
             cursor = await self.crawl_db.execute(
                 f"SELECT * from peer_records WHERE peer_id=?",
                 (id,),
             )
-            rows = await cursor.fetchall()
-            await cursor.close()
-            for row in rows:
-                peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
-                peers.append(peer)
+            rows = await cursor.fetchone()
+            peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
+            peer_records_1.append(peer)
+
+        # Option 2: Select not tried node. 25% of batch size.
+        cursor = await self.crawl_db.execute(
+            f"SELECT * from peer_records WHERE last_try_timestamp=0 AND connected_timestamp=0",
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            peer_records_2.append(PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]))
+        if len(peer_records_2) > batch_size // 4:
+            random.shuffle(peer_records_2)
+            peer_records_2 = peer_records_2[:(batch_size // 4)]
+        # Option 3: Select connected node, in order to improve their PeerStat. 25% of batch size.
+        cursor = await self.crawl_db.execute(
+            f"SELECT * from peer_records WHERE connected=1",
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            peer_records_3.append(PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]))
+        if len(peer_records_3) > batch_size // 4:
+            random.shuffle(peer_records_3)
+            peer_records_3 = peer_records_3[:(peer_records_3 // 4)]
+        peers = peer_records_1 + peer_records_2 + peer_records_3
         return peers
