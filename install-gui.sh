@@ -79,7 +79,7 @@ if [ ! "$CI" ]; then
 		echo ""
 	fi
 
-	npm install
+	npm install --unsafe-perm=true --allow-root
 	npm audit fix || true
 	npm run build
 else
