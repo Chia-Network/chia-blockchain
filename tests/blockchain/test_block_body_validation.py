@@ -7,7 +7,9 @@ import pytest
 from blspy import G2Element
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.coinbase import create_farmer_coin
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
@@ -754,3 +756,36 @@ class TestBodyValidation:
             1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
         )
         assert (await b.receive_block(blocks_reorg[-1]))[1] == Err.DOUBLE_SPEND_IN_FORK
+
+        rewards_ph = wt.get_new_puzzlehash()
+        blocks_reorg = bt.get_consecutive_blocks(
+            10,
+            block_list_input=blocks_reorg[:-1],
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=rewards_ph,
+        )
+        for block in blocks_reorg[-10:]:
+            r, e, _ = await b.receive_block(block)
+            assert e is None
+
+        # ephemeral coin is spent
+        first_coin = await b.coin_store.get_coin_record(new_coin.name())
+        assert first_coin is not None and first_coin.spent
+        second_coin = await b.coin_store.get_coin_record(tx_2.additions()[0].name())
+        assert second_coin is not None and not second_coin.spent
+
+        farmer_coin = create_farmer_coin(
+            blocks_reorg[-1].height,
+            rewards_ph,
+            calculate_base_farmer_reward(blocks_reorg[-1].height),
+            bt.constants.GENESIS_CHALLENGE,
+        )
+        tx_3: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), farmer_coin)
+
+        blocks_reorg = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_3
+        )
+        assert (await b.receive_block(blocks_reorg[-1]))[1] is None
+
+        farmer_coin = await b.coin_store.get_coin_record(farmer_coin.name())
+        assert first_coin is not None and farmer_coin.spent
