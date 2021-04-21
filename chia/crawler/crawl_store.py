@@ -102,7 +102,7 @@ class CrawlStore:
         self.coin_record_cache = dict()
         self.cached_peers = []
         self.last_timestamp = 0
-        self.lock = asyncio.Lock()
+        # self.lock = asyncio.Lock()
         self.host_to_records = {}
         self.host_to_reliability = {}
         return self
@@ -255,34 +255,37 @@ class CrawlStore:
         return peers
         """
 
-    async def get_cached_peers(self, peer_count: int) -> List[PeerInfo]:
-        now = int(utc_timestamp())
+    async def reload_cached_peers(self):
         peers = []
         t1 = time.time()
-        async with self.lock:
-            if now - self.last_timestamp > 300:
-                for peer_id in self.host_to_reliability:
-                    reliability = self.host_to_reliability[peer_id]
-                    if reliability.is_reliable():
-                        peer = PeerInfo(peer_id, 8444)
-                        peers.append(peer)    
-                self.cached_peers = peers
-                self.last_timestamp = utc_timestamp()
-            else:
-                peers = self.cached_peers
+        counter = 0
+        for peer_id in self.host_to_reliability:
+            counter += 1
+            reliability = self.host_to_reliability[peer_id]
+            if reliability.is_reliable():
+                peer = PeerInfo(peer_id, 8444)
+                peers.append(peer)
+            # Switch to responding some DNS queries.
+            if counter % 50000 == 0:
+                await asyncio.sleep(0.1)
+        t2 = time.time()
+        self.cached_peers = peers
+
+    async def get_cached_peers(self, peer_count: int) -> List[PeerInfo]:
+        peers = self.cached_peers
         if len(peers) > peer_count:
             random.shuffle(peers)
             peers = peers[:peer_count]
-        t2 = time.time()
-        log.error(f"Get cached peers took {t2 - t1}.")
         return peers
 
     async def get_peers_to_crawl(self, batch_size) -> List[PeerRecord]:
         now = int(utc_timestamp())
         t1 = time.time()
         records = []
+        counter = 0
         for peer_id in self.host_to_reliability:
             add = False
+            counter += 1
             reliability = self.host_to_reliability[peer_id]
             if reliability.ignore_till < now and reliability.get_ban_time() < now:
                 add = True
@@ -291,11 +294,13 @@ class CrawlStore:
                 add = True
             if add:
                 records.append(record)
+            # Switch to responding some DNS queries.
+            if counter % 50000 == 0:
+                await asyncio.sleep(0.1)
         if len(records) > batch_size:
             random.shuffle(records)
             records = records[:batch_size]
         t2 = time.time()
-        log.error(f"Get peers to crawl took {t2 - t1}.")
         return records
 
         """peer_id_1 = []
