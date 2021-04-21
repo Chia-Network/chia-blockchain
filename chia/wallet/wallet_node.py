@@ -669,6 +669,8 @@ class WalletNode:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 raise ValueError("Value error peer sent us invalid block")
+        if advanced_peak:
+            await self.wallet_state_manager.create_more_puzzle_hashes()
         return True, advanced_peak
 
     def validate_additions(
