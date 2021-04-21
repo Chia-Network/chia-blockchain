@@ -76,13 +76,13 @@ def mempool_assert_absolute_time_exceeds(condition: ConditionWithArgs, timestamp
     Check if the current time in seconds exceeds the time specified by condition
     """
     try:
-        expected_sec_time = int_from_bytes(condition.vars[0])
+        expected_seconds = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
 
     if timestamp is None:
         timestamp = uint64(int(time.time()))
-    if timestamp < expected_sec_time:
+    if timestamp < expected_seconds:
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
