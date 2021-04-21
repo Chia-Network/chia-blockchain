@@ -542,9 +542,9 @@ class WalletRpcApi:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
-        tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee)
-
-        await wallet.push_transaction(tx)
+        async with self.service.wallet_state_manager.tx_lock:
+            tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee)
+            await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
@@ -594,9 +594,9 @@ class WalletRpcApi:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
-
-        tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee)
-        await wallet.wallet_state_manager.add_pending_transaction(tx)
+        async with self.service.wallet_state_manager.tx_lock:
+            tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee)
+            await wallet.push_transaction(tx)
 
         return {
             "transaction": tx,
@@ -873,8 +873,9 @@ class WalletRpcApi:
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         fee = int(request["fee"])
-        tx = await wallet.clawback_rl_coin_transaction(fee)
-        await wallet.push_transaction(tx)
+        async with self.service.wallet_state_manager.tx_lock:
+            tx = await wallet.clawback_rl_coin_transaction(fee)
+            await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {

@@ -72,6 +72,8 @@ class WalletStateManager:
     # Makes sure only one asyncio thread is changing the blockchain state at one time
     lock: asyncio.Lock
 
+    tx_lock: asyncio.Lock
+
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
@@ -119,6 +121,7 @@ class WalletStateManager:
         else:
             self.log = logging.getLogger(__name__)
         self.lock = asyncio.Lock()
+        self.tx_lock = asyncio.Lock()
 
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
