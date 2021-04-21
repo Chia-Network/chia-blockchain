@@ -96,11 +96,11 @@ jobs:
         name: Linux-Installers
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
-    - name: Download artifactrs
+    - name: Download artifacts
       uses: actions/download-artifact@v2
       id: download
       with:
-        name: 'linux-installers'
+        name: 'Linux-Installers'
 
     - name: Invoke Torrent Hook
       run: |
