@@ -949,20 +949,23 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
-        async with self.full_node.blockchain.lock:
-            if (
-                block is None
-                or block.is_transaction_block() is False
-                or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
-            ):
-                reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
+        if (
+            block is None
+            or block.is_transaction_block() is False
+            or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
+        ):
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
 
-                msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
-                return msg
+            msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
+            return msg
 
-            assert block is not None and block.foliage_transaction_block is not None
+        assert block is not None and block.foliage_transaction_block is not None
 
-            additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
+        # Note: this might return bad data
+        additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
+
+        if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
+            raise ValueError(f"Block {block.header_hash} no longer in chain")
 
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
         for coin_record in additions:
