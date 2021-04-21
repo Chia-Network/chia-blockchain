@@ -609,6 +609,9 @@ class WalletStateManager:
                 await self.coin_added(
                     coin, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, height, all_outgoing_tx[wallet_id]
                 )
+            derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin.puzzle_hash)
+            if derivation_index is not None:
+                await self.puzzle_store.set_used_up_to(derivation_index, True)
 
         return trade_adds
 
