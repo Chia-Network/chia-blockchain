@@ -114,9 +114,20 @@ jobs:
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/builds/
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/builds/
 
-    - name: Upload Release Files
-      if: startsWith(github.ref, 'refs/tags') && ${GITHUB_REF##/} == "v"
+    - name: Install mktorrent
       run: |
-        aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/test-installs/
-        aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/test-installs/
+          sudo apt-get install -y mktorrent
+
+    - name: Create Torrent Files
+      if:  github.ref == "torrent-workflow"
+      run: |
+          mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.rpm
+          mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.deb
+
+    - name: Upload Release Files
+      if: github.ref == "torrent-workflow"
+      run: |
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/test-installs/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/test-installs/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/test-installs/
 
