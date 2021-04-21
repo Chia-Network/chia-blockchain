@@ -97,5 +97,4 @@ jobs:
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Invoke Torrent Hook
-      run: |
-        curl -XPOST -H "Authorization: token ${{ secrets.WEBHOOK_CREDENTIAL }}" -H "Accept: application/vnd.github.v3+json" -H "Content-Type: application/json" https://api.github.com/repos/Chia-Network/chia-torrent-generator/actions/workflows/generate-torrent.yml/dispatches --data '{"ref": "main", "inputs": { "file_url": "${{steps.download.outputs.download-path}}"  } }'
+      run: echo ${{steps.download.outputs.download-path}}
