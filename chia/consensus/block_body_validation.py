@@ -297,7 +297,9 @@ async def validate_block_body(
             fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
         # Get additions and removals since (after) fork_h but not including this block
-        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}  # This includes coinbase additions
+        # The values include: the coin that was added, the height of the block in which it was confirmed, and the
+        # timestamp of the block in which it was confirmed
+        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = {}  # This includes coinbase additions
         removals_since_fork: Set[bytes32] = set()
 
         # For height 0, there are no additions and removals before this block, so we can skip
@@ -307,8 +309,6 @@ async def validate_block_body(
             reorg_blocks: Dict[uint32, FullBlock] = {}
             curr: Optional[FullBlock] = prev_block
             assert curr is not None
-            if curr.height > fork_h:
-                reorg_blocks[curr.height] = curr
             while curr.height > fork_h:
                 if curr.height == 0:
                     break
@@ -338,11 +338,17 @@ async def validate_block_body(
                     removals_since_fork.add(c_name)
                 for c in additions_in_curr:
                     assert c.name() not in additions_since_fork
-                    additions_since_fork[c.name()] = (c, curr.height)
+                    assert curr.foliage_transaction_block is not None
+                    additions_since_fork[c.name()] = (c, curr.height, curr.foliage_transaction_block.timestamp)
 
                 for coinbase_coin in curr.get_included_reward_coins():
                     assert coinbase_coin.name() not in additions_since_fork
-                    additions_since_fork[coinbase_coin.name()] = (coinbase_coin, curr.height)
+                    assert curr.foliage_transaction_block is not None
+                    additions_since_fork[coinbase_coin.name()] = (
+                        coinbase_coin,
+                        curr.height,
+                        curr.foliage_transaction_block.timestamp,
+                    )
                 if curr.height == 0:
                     break
                 curr = reorg_blocks[curr.height - 1]
@@ -356,8 +362,8 @@ async def validate_block_body(
                 new_unspent: CoinRecord = CoinRecord(
                     rem_coin,
                     height,
-                    uint32(0),
-                    False,
+                    height,
+                    True,
                     False,
                     block.foliage_transaction_block.timestamp,
                 )
@@ -376,22 +382,22 @@ async def validate_block_body(
                     if rem not in additions_since_fork:
                         # Check for spending a coin that does not exist in this fork
                         return Err.UNKNOWN_UNSPENT, None
-                    new_coin, confirmed_height = additions_since_fork[rem]
+                    new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
                         new_coin,
                         confirmed_height,
                         uint32(0),
                         False,
                         False,
-                        block.foliage_transaction_block.timestamp,
+                        confirmed_timestamp,
                     )
                     removal_coin_records[new_coin_record.name] = new_coin_record
 
                 # This check applies to both coins created before fork (pulled from coin_store),
-                # and coins created after fork (additions_since_fork)>
+                # and coins created after fork (additions_since_fork)
                 if rem in removals_since_fork:
                     # This coin was spent in the fork
-                    return Err.DOUBLE_SPEND, None
+                    return Err.DOUBLE_SPEND_IN_FORK, None
 
         removed = 0
         for unspent in removal_coin_records.values():

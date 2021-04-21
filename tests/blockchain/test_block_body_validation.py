@@ -654,7 +654,7 @@ class TestBodyValidation:
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
         )
         tx_2: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            11, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
         )
         agg = SpendBundle.aggregate([tx, tx_2])
 
@@ -662,3 +662,95 @@ class TestBodyValidation:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=agg
         )
         assert (await b.receive_block(blocks[-1]))[1] == Err.DOUBLE_SPEND
+
+    @pytest.mark.asyncio
+    async def test_double_spent_in_coin_store(self, empty_blockchain):
+        # 15
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+        assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        tx_2: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-2].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
+        )
+
+        assert (await b.receive_block(blocks[-1]))[1] == Err.DOUBLE_SPEND
+
+    @pytest.mark.asyncio
+    async def test_double_spent_in_reorg(self, empty_blockchain):
+        # 15
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+        )
+        assert (await b.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await b.receive_block(blocks[2]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+        )
+        assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        new_coin: Coin = tx.additions()[0]
+        tx_2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), new_coin)
+        # This is fine because coin exists
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
+        )
+        assert (await b.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+        blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=True)
+        for block in blocks[-5:]:
+            assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
+
+        blocks_reorg = bt.get_consecutive_blocks(2, block_list_input=blocks[:-7], guarantee_transaction_block=True)
+        assert (await b.receive_block(blocks_reorg[-2]))[0] == ReceiveBlockResult.ADDED_AS_ORPHAN
+        assert (await b.receive_block(blocks_reorg[-1]))[0] == ReceiveBlockResult.ADDED_AS_ORPHAN
+
+        # Coin does not exist in reorg
+        blocks_reorg = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
+        )
+
+        assert (await b.receive_block(blocks_reorg[-1]))[1] == Err.UNKNOWN_UNSPENT
+
+        # Finally add the block to the fork (spending both in same bundle, this is ephemeral)
+        agg = SpendBundle.aggregate([tx, tx_2])
+        blocks_reorg = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_reorg[:-1], guarantee_transaction_block=True, transaction_data=agg
+        )
+        assert (await b.receive_block(blocks_reorg[-1]))[1] is None
+
+        blocks_reorg = bt.get_consecutive_blocks(
+            1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_2
+        )
+        assert (await b.receive_block(blocks_reorg[-1]))[1] == Err.DOUBLE_SPEND_IN_FORK

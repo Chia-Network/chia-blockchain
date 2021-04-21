@@ -146,6 +146,7 @@ class Err(Enum):
     INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT = 119
     FUTURE_GENERATOR_REFS = 120  # All refs must be to blocks in the past
     GENERATOR_REF_HAS_NO_GENERATOR = 121
+    DOUBLE_SPEND_IN_FORK = 122
 
 
 class ValidationError(Exception):
