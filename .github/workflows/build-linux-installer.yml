@@ -98,6 +98,4 @@ jobs:
 
     - name: Invoke Torrent Hook
       run: |
-        curl -XPOST -H "Authorization: token ${{ secrets.REPO_ADMIN }}" -H "Accept: application/vnd.github.v3+json" -H
-        "Content-Type: application/json" https://api.github.com/repos/Chia-Network/chia-blockchain/actions/workflows/build-torrent.yml/dispatches --data
-        '{"ref": "main", "inputs": { "file_url": "${{steps.download.outputs.download-path}}"  } }'
+        curl -XPOST -H "Authorization: token ${{ secrets.REPO_ADMIN }}" -H "Accept: application/vnd.github.v3+json" -H "Content-Type: application/json" https://api.github.com/repos/Chia-Network/chia-blockchain/actions/workflows/build-torrent.yml/dispatches --data '{"ref": "main", "inputs": { "file_url": "${{steps.download.outputs.download-path}}"  } }'
