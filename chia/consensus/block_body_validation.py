@@ -429,8 +429,8 @@ async def validate_block_body(
         if fees < assert_fee_sum:
             return Err.RESERVE_FEE_CONDITION_FAILED, None
 
-        # 18. Check that the fee amount + 0.25 < maximum coin amount. 2 is added since that's the max farmer reward
-        if fees + 0.25 > constants.MAX_COIN_AMOUNT:
+        # 18. Check that the fee amount + farmer reward < maximum coin amount
+        if fees + calculate_base_farmer_reward(height) > constants.MAX_COIN_AMOUNT:
             return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None
 
         # 19. Check that the computed fees are equal to the fees in the block header
