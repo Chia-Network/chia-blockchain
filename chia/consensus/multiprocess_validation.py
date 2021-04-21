@@ -232,7 +232,9 @@ async def pre_validate_blocks_multiprocessing(
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
+    block_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
     for i, block in enumerate(blocks):
+        block_dict[block.header_hash] = block
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
 
@@ -258,8 +260,10 @@ async def pre_validate_blocks_multiprocessing(
             # generator references
             prev_blocks_dict: Dict[uint32, Union[FullBlock, HeaderBlock]] = {}
             curr_b: Union[FullBlock, HeaderBlock] = block
-            while curr_b.prev_header_hash in blocks:
-                prev_blocks_dict[curr_b.prev_header_hash] = blocks[curr_b.prev_header_hash]
+
+            while curr_b.prev_header_hash in block_dict:
+                curr_b = block_dict[curr_b.prev_header_hash]
+                prev_blocks_dict[curr_b.header_hash] = curr_b
 
             if isinstance(block, FullBlock):
                 assert get_block_generator is not None
