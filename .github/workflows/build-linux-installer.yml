@@ -113,3 +113,10 @@ jobs:
       run: |
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/builds/
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/builds/
+
+    - name: Upload Release Files
+      if: startsWith(github.ref, 'refs/tags') && ${GITHUB_REF##/} == "v"
+      run: |
+        aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/test-installs/
+        aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/test-installs/
+
