@@ -12,6 +12,9 @@ from chia.util.clvm import int_from_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 
+# TODO: review each `assert` and consider replacing with explicit checks
+#       since asserts can be stripped with python `-OO` flag
+
 
 def parse_sexp_to_condition(
     sexp: Program,
