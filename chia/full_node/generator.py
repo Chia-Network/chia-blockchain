@@ -57,7 +57,7 @@ def create_compressed_generator(
     return BlockGenerator(program, [generator_arg])
 
 
-def setup_generator_args(self: BlockGenerator):
+def setup_generator_args(self: BlockGenerator) -> Tuple[SerializedProgram, Program]:
     args = create_generator_args(self.generator_refs())
     return self.program, args
 
