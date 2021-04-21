@@ -274,13 +274,14 @@ class MempoolManager:
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
                 # TODO(straya): what timestamp to use here?
+                assert self.peak.timestamp is not None
                 removal_record = CoinRecord(
                     removal_coin,
                     uint32(self.peak.height + 1),  # In mempool, so will be included in next height
                     uint32(0),
                     False,
                     False,
-                    uint64(int(time.time())),
+                    uint64(self.peak.timestamp + 1),
                 )
 
             assert removal_record is not None
@@ -367,12 +368,14 @@ class MempoolManager:
             chialisp_height = (
                 self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
             )
+            assert self.peak.timestamp is not None
             error = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements_in_spend,
                 puzzle_announcements_in_spend,
                 npc.condition_dict,
                 uint32(chialisp_height),
+                self.peak.timestamp,
             )
 
             if error:
@@ -465,9 +468,12 @@ class MempoolManager:
         """
         if new_peak is None:
             return []
+        if new_peak.is_transaction_block is False:
+            return []
         if self.peak == new_peak:
             return []
-        if int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
+        assert new_peak.timestamp is not None
+        if new_peak.timestamp <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
             return []
 
         self.peak = new_peak

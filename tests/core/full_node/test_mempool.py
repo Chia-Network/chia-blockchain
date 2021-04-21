@@ -7,6 +7,7 @@ import pytest
 
 from chia.full_node.mempool import Mempool
 from chia.protocols import full_node_protocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_solution import CoinSolution
@@ -458,7 +459,7 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        time_now = uint64(int(time() * 1000))
+        time_now = uint64(int(time()))
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
@@ -474,7 +475,7 @@ class TestMempoolManager:
         assert sb1 is spend_bundle1
 
     @pytest.mark.asyncio
-    async def test_assert_time_exceeds_both_cases(self, two_nodes):
+    async def test_assert_time_relative_exceeds(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = await full_node_1.get_all_full_blocks()
@@ -493,20 +494,22 @@ class TestMempoolManager:
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
-        time_now = uint64(int(time() * 1000))
-        time_now_plus_3 = time_now + 3000
+        time_relative = uint64(3)
 
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [time_now_plus_3.to_bytes(8, "big")])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [time_relative.to_bytes(8, "big")])
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
-
         assert spend_bundle1 is not None
+
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1, peer)
 
-        # Sleep so that 3 sec passes
-        await asyncio.sleep(3)
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert sb1 is None
+
+        for i in range(0, 4):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx2, peer)
