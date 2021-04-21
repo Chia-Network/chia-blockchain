@@ -162,7 +162,7 @@ class Crawler:
 
             reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
 
-        self.log.error(f"Reply: {reply}")
+        # self.log.error(f"Reply: {reply}")
         return reply.pack()
 
     async def _start(self):
@@ -220,6 +220,9 @@ class Crawler:
                 if self.peer_count == 0:
                     await self.create_client(self.introducer_info, introducer_action)
                 # not_connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_not_connected()
+                # Periodically reload cached peers.
+                if random.randrange(0, 4) == 0:
+                    await self.crawl_store.reload_cached_peers()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(10000)
                 # connected_peers: List[PeerRecord] = await self.crawl_store.get_peers_today_connected()
                 # good_peers = await self.crawl_store.get_cached_peers(99999999)
@@ -270,7 +273,7 @@ class Crawler:
                         yield iterable[ndx:min(ndx + n, l)]
 
                 batch_count = 0
-                for peers in batch(peers_to_crawl, 1000):
+                for peers in batch(peers_to_crawl, 500):
                     self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                     batch_count += 1
                     tasks = []
@@ -296,6 +299,7 @@ class Crawler:
                 t_now = time.time()
                 t_delta = int(t_now - t_start)
                 self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
+                # Periodically print detailed stats.
                 if random.randrange(0, 10) == 0:
                     good_peers = await self.crawl_store.get_cached_peers(99999999)
                     self.log.error(f"Reliable nodes: {len(good_peers)}")
