@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Dict, List, Optional, Set
 
@@ -134,9 +135,13 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
     return None
 
 
+log = logging.getLogger(__name__)
+
+
 def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mode: bool) -> NPCResult:
     try:
         block_program, block_program_args = setup_generator_args(generator)
+        log.warning(f"Running with max cost {max_cost}")
         if safe_mode:
             cost, result = GENERATOR_MOD.run_safe_with_cost(max_cost, block_program, block_program_args)
         else:

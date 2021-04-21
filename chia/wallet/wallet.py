@@ -319,6 +319,11 @@ class Wallet:
         spends: List[CoinSolution] = []
         output_created = False
 
+        # Check for duplicates
+        all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
+        if len(set(all_primaries_list)) != len(all_primaries_list):
+            raise ValueError("Cannot create two identical coins")
+
         for coin in coins:
             self.log.info(f"coin from coins {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)

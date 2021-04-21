@@ -1,3 +1,4 @@
+import logging
 import random
 from dataclasses import replace
 from typing import Callable, Dict, List, Optional, Tuple
@@ -30,6 +31,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.recursive_replace import recursive_replace
+
+log = logging.getLogger(__name__)
 
 
 def create_foliage(
@@ -236,6 +239,7 @@ def create_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
+        log.warning(f"Transaction info: {transactions_info}")
         foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
             prev_transaction_block_hash,
             timestamp,
