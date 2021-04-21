@@ -1,0 +1,22 @@
+name: Create torrent using mktorrent
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: 'URL of upstream installer'
+        required: true
+
+jobs:
+  create:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install mktorrent
+        run: sudo apt-get install mktorrent
+
+      - name: Download file
+        run: wget -nv -O "${{ github.event.inputs.file_url }}"
+             ls
+
+#      - name: Create torrent using mktorrent
+#        run: mktorrent "${{ github.event.inputs.file_name }}"
