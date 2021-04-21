@@ -542,7 +542,7 @@ class WalletRpcApi:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
-        with self.service.wallet_state_manager.tx_lock:
+        async with self.service.wallet_state_manager.tx_lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee)
             await wallet.push_transaction(tx)
 
@@ -594,7 +594,7 @@ class WalletRpcApi:
             fee = uint64(request["fee"])
         else:
             fee = uint64(0)
-        with self.service.wallet_state_manager.tx_lock:
+        async with self.service.wallet_state_manager.tx_lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction([amount], [puzzle_hash], fee)
             await wallet.push_transaction(tx)
 
@@ -873,7 +873,7 @@ class WalletRpcApi:
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         fee = int(request["fee"])
-        with self.service.wallet_state_manager.tx_lock:
+        async with self.service.wallet_state_manager.tx_lock:
             tx = await wallet.clawback_rl_coin_transaction(fee)
             await wallet.push_transaction(tx)
 
