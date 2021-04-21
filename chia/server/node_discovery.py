@@ -189,6 +189,14 @@ class FullNodeDiscovery:
                     except asyncio.CancelledError:
                         return
                     await self._introducer_client()
+                    # there's some delay between receiving the peers from the
+                    # introducer until they get incorporated to prevent this
+                    # loop for running one more time. Add this delay to ensure
+                    # that once we get peers, we stop contacting the introducer.
+                    try:
+                        await asyncio.sleep(5)
+                    except asyncio.CancelledError:
+                        return
                     empty_tables = False
                     # keep doubling the introducer delay until we reach 5
                     # minutes
