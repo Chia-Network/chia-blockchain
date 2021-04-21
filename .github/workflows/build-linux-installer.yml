@@ -119,7 +119,7 @@ jobs:
           sudo apt-get install -y mktorrent
 
     - name: Create Torrent Files
-      if: ${{github.ref}} == 'torrent-workflowr'
+      if: ${{github.ref}} == 'torrent-workflow'
       run: |
           mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.rpm
           mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.deb
