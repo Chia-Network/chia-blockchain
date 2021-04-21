@@ -463,7 +463,7 @@ class DIDWallet:
         )
         list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
-        message = puzhash + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        message = Program.to([coin.amount, puzhash]).get_tree_hash() + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
@@ -532,7 +532,8 @@ class DIDWallet:
 
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        message = innermessage + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        to_sign = Program.to([coin.puzzle_hash, coin.amount, innermessage]).get_tree_hash()
+        message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
@@ -804,7 +805,7 @@ class DIDWallet:
         )
         list_of_solutions = [CoinSolution(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
-        message = coin.puzzle_hash + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+        message = Program.to([coin.amount, coin.puzzle_hash]).get_tree_hash() + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
