@@ -745,8 +745,10 @@ class Blockchain(BlockchainInterface):
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
             curr: Union[FullBlock, UnfinishedBlock] = block
+            additional_height_dict = {block.height: block}
             while curr.prev_header_hash in additional_blocks:
                 prev: FullBlock = additional_blocks[curr.prev_header_hash]
+                additional_height_dict[prev.height] = prev
                 if isinstance(curr, FullBlock):
                     assert curr.height == prev.height + 1
                 reorg_chain[prev.height] = prev
@@ -777,8 +779,11 @@ class Blockchain(BlockchainInterface):
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(GeneratorArg(ref_block.height, ref_block.transactions_generator))
                 else:
-                    header_hash = self.height_to_hash(ref_height)
-                    ref_block = await self.get_full_block(header_hash)
+                    if ref_height in additional_height_dict:
+                        ref_block = additional_height_dict[ref_height]
+                    else:
+                        header_hash = self.height_to_hash(ref_height)
+                        ref_block = await self.get_full_block(header_hash)
                     assert ref_block is not None
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
