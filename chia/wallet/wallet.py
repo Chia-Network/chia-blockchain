@@ -320,9 +320,10 @@ class Wallet:
         output_created = False
 
         # Check for duplicates
-        all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
-        if len(set(all_primaries_list)) != len(all_primaries_list):
-            raise ValueError("Cannot create two identical coins")
+        if primaries is not None:
+            all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
+            if len(set(all_primaries_list)) != len(all_primaries_list):
+                raise ValueError("Cannot create two identical coins")
 
         for coin in coins:
             self.log.info(f"coin from coins {coin}")

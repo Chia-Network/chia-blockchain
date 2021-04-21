@@ -288,6 +288,7 @@ async def validate_block_body(
                 return Err.DOUBLE_SPEND, None
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
+        # The fork point is the last block in common between the peak chain and the chain of `block`
         if peak is None or height == 0:
             fork_h: int = -1
         elif fork_point_with_peak is not None:
@@ -295,30 +296,26 @@ async def validate_block_body(
         else:
             fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
-        if fork_h == -1:
-            coin_store_reorg_height = -1
-        else:
-            last_block_in_common = await blocks.get_block_record_from_db(blocks.height_to_hash(uint32(fork_h)))
-            assert last_block_in_common is not None
-            coin_store_reorg_height = last_block_in_common.height
-
         # Get additions and removals since (after) fork_h but not including this block
-        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
+        additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}  # This includes coinbase additions
         removals_since_fork: Set[bytes32] = set()
-        coinbases_since_fork: Dict[bytes32, uint32] = {}
 
+        # For height 0, there are no additions and removals before this block, so we can skip
         if height > 0:
+            # First, get all the blocks in the fork > fork_h, < block.height
             prev_block: Optional[FullBlock] = await block_store.get_full_block(block.prev_header_hash)
-            reorg_blocks: Dict[int, FullBlock] = {}
+            reorg_blocks: Dict[uint32, FullBlock] = {}
             curr: Optional[FullBlock] = prev_block
             assert curr is not None
-            reorg_blocks[curr.height] = curr
+            if curr.height > fork_h:
+                reorg_blocks[curr.height] = curr
             while curr.height > fork_h:
                 if curr.height == 0:
                     break
                 curr = await block_store.get_full_block(curr.prev_header_hash)
                 assert curr is not None
                 reorg_blocks[curr.height] = curr
+            assert len(reorg_blocks) == height - fork_h - 1
 
             curr = prev_block
             assert curr is not None
@@ -327,9 +324,9 @@ async def validate_block_body(
                 if curr.transactions_generator is not None:
                     # These blocks are in the past and therefore assumed to be valid, so get_block_generator won't raise
                     curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
-                    assert curr_block_generator is not None
+                    assert curr_block_generator is not None and curr.transactions_info is not None
                     curr_npc_result = get_name_puzzle_conditions(
-                        curr_block_generator, constants.MAX_BLOCK_COST_CLVM, False
+                        curr_block_generator, min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost), False
                     )
                     removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
                 else:
@@ -337,13 +334,15 @@ async def validate_block_body(
                     additions_in_curr = []
 
                 for c_name in removals_in_curr:
+                    assert c_name not in removals_since_fork
                     removals_since_fork.add(c_name)
                 for c in additions_in_curr:
+                    assert c.name() not in additions_since_fork
                     additions_since_fork[c.name()] = (c, curr.height)
 
                 for coinbase_coin in curr.get_included_reward_coins():
+                    assert coinbase_coin.name() not in additions_since_fork
                     additions_since_fork[coinbase_coin.name()] = (coinbase_coin, curr.height)
-                    coinbases_since_fork[coinbase_coin.name()] = curr.height
                 if curr.height == 0:
                     break
                 curr = reorg_blocks[curr.height - 1]
@@ -359,16 +358,16 @@ async def validate_block_body(
                     height,
                     uint32(0),
                     False,
-                    (rem in coinbases_since_fork),
+                    False,
                     block.foliage_transaction_block.timestamp,
                 )
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 unspent = await coin_store.get_coin_record(rem)
-                if unspent is not None and unspent.confirmed_block_index <= coin_store_reorg_height:
+                if unspent is not None and unspent.confirmed_block_index <= fork_h:
                     # Spending something in the current chain, confirmed before fork
                     # (We ignore all coins confirmed after fork)
-                    if unspent.spent == 1 and unspent.spent_block_index <= coin_store_reorg_height:
+                    if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                         # Check for coins spent in an ancestor block
                         return Err.DOUBLE_SPEND, None
                     removal_coin_records[unspent.name] = unspent
@@ -383,7 +382,7 @@ async def validate_block_body(
                         confirmed_height,
                         uint32(0),
                         False,
-                        (rem in coinbases_since_fork),
+                        False,
                         block.foliage_transaction_block.timestamp,
                     )
                     removal_coin_records[new_coin_record.name] = new_coin_record
