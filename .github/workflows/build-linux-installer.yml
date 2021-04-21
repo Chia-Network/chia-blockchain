@@ -102,6 +102,13 @@ jobs:
       with:
         name: 'Linux-Installers'
 
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
     - name: Upload to s3
       run: |
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/devops-test/
