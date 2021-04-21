@@ -560,6 +560,57 @@ class TestMempoolManager:
         assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
+    async def test_coin_announcement_too_big(self, two_nodes):
+        reward_ph = WALLET_A.get_new_puzzlehash()
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+        start_height = blocks[-1].height if len(blocks) > 0 else -1
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
+        )
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        for block in blocks:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
+
+        coin_1 = list(blocks[-2].get_included_reward_coins())[0]
+        coin_2 = list(blocks[-1].get_included_reward_coins())[0]
+
+        announce = Announcement(coin_2.name(), bytes([1] * 10000))
+
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
+
+        dic = {cvp.opcode: [cvp]}
+
+        cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [bytes("test", "utf-8")])
+        dic2 = {cvp.opcode: [cvp2]}
+        spend_bundle1 = generate_test_spend_bundle(coin_1, dic)
+
+        spend_bundle2 = generate_test_spend_bundle(coin_2, dic2)
+
+        bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
+
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
+        await full_node_1.respond_transaction(tx1, peer)
+
+        assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
+
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundle
+        )
+        try:
+            await full_node_1.full_node.blockchain.receive_block(blocks[-1])
+            assert False
+        except AssertionError:
+            pass
+
+    @pytest.mark.asyncio
     async def test_invalid_coin_announcement_rejected(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         full_node_1, full_node_2, server_1, server_2 = two_nodes
