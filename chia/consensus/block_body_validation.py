@@ -315,7 +315,8 @@ async def validate_block_body(
                 curr = await block_store.get_full_block(curr.prev_header_hash)
                 assert curr is not None
                 reorg_blocks[curr.height] = curr
-            assert len(reorg_blocks) == height - fork_h - 1
+            if fork_h != -1:
+                assert len(reorg_blocks) == height - fork_h - 1
 
             curr = prev_block
             assert curr is not None
