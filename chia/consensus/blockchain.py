@@ -201,8 +201,10 @@ class Blockchain(BlockchainInterface):
                         block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
                     except ValueError:
                         return ReceiveBlockResult.INVALID_BLOCK, Err.GENERATOR_REF_HAS_NO_GENERATOR, None
-                    assert block_generator is not None
-                    npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
+                    assert block_generator is not None and block.transactions_info is not None
+                    npc_result = get_name_puzzle_conditions(
+                        block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
+                    )
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
                 else:
                     removals, additions = [], list(block.get_included_reward_coins())

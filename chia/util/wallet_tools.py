@@ -137,18 +137,15 @@ class WalletTool:
         self,
         amount: uint64,
         new_puzzle_hash: bytes32,
-        coin: Coin,
+        coins: List[Coin],
         condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
         fee: int = 0,
         secret_key: Optional[PrivateKey] = None,
     ) -> List[CoinSolution]:
         spends = []
-        spend_value = coin.amount
-        puzzle_hash = coin.puzzle_hash
-        if secret_key is None:
-            secret_key = self.get_private_key_for_puzzle_hash(puzzle_hash)
-        pubkey = secret_key.get_g1()
-        puzzle = puzzle_for_pk(bytes(pubkey))
+
+        spend_value = sum([c.amount for c in coins])
+
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
 
@@ -160,11 +157,20 @@ class WalletTool:
             change_puzzle_hash = self.get_new_puzzlehash()
             change_output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
             condition_dic[output.opcode].append(change_output)
-            solution = self.make_solution(condition_dic)
+            main_solution: Program = self.make_solution(condition_dic)
         else:
-            solution = self.make_solution(condition_dic)
+            main_solution = self.make_solution(condition_dic)
 
-        spends.append(CoinSolution(coin, puzzle, solution))
+        for n, coin in enumerate(coins):
+            puzzle_hash = coin.puzzle_hash
+            if secret_key is None:
+                secret_key = self.get_private_key_for_puzzle_hash(puzzle_hash)
+            pubkey = secret_key.get_g1()
+            puzzle = puzzle_for_pk(bytes(pubkey))
+            if n == 0:
+                spends.append(CoinSolution(coin, puzzle, main_solution))
+            else:
+                spends.append(CoinSolution(coin, puzzle, self.make_solution({})))
         return spends
 
     def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
@@ -200,6 +206,20 @@ class WalletTool:
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
-        transaction = self.generate_unsigned_transaction(amount, new_puzzle_hash, coin, condition_dic, fee)
+        transaction = self.generate_unsigned_transaction(amount, new_puzzle_hash, [coin], condition_dic, fee)
+        assert transaction is not None
+        return self.sign_transaction(transaction)
+
+    def generate_signed_transaction_multiple_coins(
+        self,
+        amount: uint64,
+        new_puzzle_hash: bytes32,
+        coins: List[Coin],
+        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
+        fee: int = 0,
+    ) -> SpendBundle:
+        if condition_dic is None:
+            condition_dic = {}
+        transaction = self.generate_unsigned_transaction(amount, new_puzzle_hash, coins, condition_dic, fee)
         assert transaction is not None
         return self.sign_transaction(transaction)
