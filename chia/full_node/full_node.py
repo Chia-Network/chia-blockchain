@@ -1532,7 +1532,7 @@ class FullNode:
                     new_tx = full_node_protocol.NewTransaction(
                         spend_name,
                         cost,
-                        uint64(transaction.fees()),
+                        fees,
                     )
                     msg = make_msg(ProtocolMessageTypes.new_transaction, new_tx)
                     if peer is None:
