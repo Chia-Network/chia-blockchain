@@ -175,7 +175,7 @@ class CrawlStore:
         replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         assert reliability is not None
-        reliability.update(False, now - peer.last_try_timestamp)
+        reliability.update(True, now - peer.last_try_timestamp)
         await self.add_peer(replaced, reliability)
 
     async def get_peers_today(self) -> List[PeerRecord]:
