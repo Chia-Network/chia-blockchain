@@ -174,6 +174,8 @@ class FullNodeDiscovery:
         first = True
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
+
+        introducer_backoff = 1
         while not self.is_closed:
             try:
                 assert self.address_manager is not None
@@ -182,13 +184,19 @@ class FullNodeDiscovery:
                 size = await self.address_manager.size()
                 if size == 0 or empty_tables or first:
                     first = False
-                    await self._introducer_client()
                     try:
-                        await asyncio.sleep(min(5, self.peer_connect_interval))
+                        await asyncio.sleep(introducer_backoff)
                     except asyncio.CancelledError:
                         return
+                    await self._introducer_client()
                     empty_tables = False
+                    # keep doubling the introducer delay until we reach 5
+                    # minutes
+                    if introducer_backoff < 300:
+                        introducer_backoff *= 2
                     continue
+                else:
+                    introducer_backoff = 1
 
                 # Only connect out to one peer per network group (/16 for IPv4).
                 groups = []
