@@ -79,9 +79,6 @@ class CoinStore:
             )
             await self._add_coin_record(record)
 
-        for coin_name in removals:
-            await self._set_spent(coin_name, block.height)
-
         included_reward_coins = block.get_included_reward_coins()
         if block.height == 0:
             assert len(included_reward_coins) == 0
@@ -98,6 +95,9 @@ class CoinStore:
                 block.foliage_transaction_block.timestamp,
             )
             await self._add_coin_record(reward_coin_r)
+
+        for coin_name in removals:
+            await self._set_spent(coin_name, block.height)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
@@ -215,7 +215,7 @@ class CoinStore:
     async def _set_spent(self, coin_name: bytes32, index: uint32):
         current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
-            return
+            raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
         spent: CoinRecord = CoinRecord(
             current.coin,
             current.confirmed_block_index,
