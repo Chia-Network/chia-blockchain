@@ -745,8 +745,7 @@ class Blockchain(BlockchainInterface):
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
             curr: Union[FullBlock, UnfinishedBlock] = block
-            assert isinstance(block, FullBlock)
-            additional_height_dict = {block.height: block}
+            additional_height_dict = {}
             while curr.prev_header_hash in additional_blocks:
                 prev: FullBlock = additional_blocks[curr.prev_header_hash]
                 additional_height_dict[prev.height] = prev
