@@ -961,7 +961,7 @@ class FullNodeAPI:
 
         assert block is not None and block.foliage_transaction_block is not None
 
-        # Note: this might return bad data
+        # Note: this might return bad data if there is a reorg in this time
         additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
 
         if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
@@ -1012,20 +1012,24 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
-        async with self.full_node.blockchain.lock:
-            if (
-                block is None
-                or block.is_transaction_block() is False
-                or block.height != request.height
-                or block.height > self.full_node.blockchain.get_peak_height()
-                or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
-            ):
-                reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
-                msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
-                return msg
+        if (
+            block is None
+            or block.is_transaction_block() is False
+            or block.height != request.height
+            or block.height > self.full_node.blockchain.get_peak_height()
+            or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
+        ):
+            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
+            msg = make_msg(ProtocolMessageTypes.reject_removals_request, reject)
+            return msg
 
-            assert block is not None and block.foliage_transaction_block is not None
-            all_removals: List[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+        assert block is not None and block.foliage_transaction_block is not None
+
+        # Note: this might return bad data if there is a reorg in this time
+        all_removals: List[CoinRecord] = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+
+        if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
+            raise ValueError(f"Block {block.header_hash} no longer in chain")
 
         all_removals_dict: Dict[bytes32, Coin] = {}
         for coin_record in all_removals:
