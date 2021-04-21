@@ -119,13 +119,13 @@ jobs:
           sudo apt-get install -y mktorrent
 
     - name: Create Torrent Files
-      if: github.ref == 'refs/heads/torrent-workflow'
+      if: ${GITHUB_REF##/} == 'torrent-workflow'
       run: |
           mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.rpm
           mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.deb
 
     - name: Upload Release Files
-      if: github.ref == 'refs/heads/torrent-workflow'
+      if: ${GITHUB_REF##/} == 'torrent-workflow'
       run: |
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/test-installs/
           aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/test-installs/
