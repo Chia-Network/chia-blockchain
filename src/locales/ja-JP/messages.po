@@ -34,8 +34,8 @@ msgstr "バケツ数は 128 がおすすめ"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "収穫機は耕地が実際に保存されているデバイス上に走らせるサービスです。農家と収穫機はフルノードと通信することでブロックチェーンの状態を認識します。以下が接続されている収穫機ネットワークです。詳しく"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "チアブロックチェーンについて"
 
@@ -71,7 +71,7 @@ msgstr "耕地ディレクトリを追加"
 msgid "Add Plot to Queue"
 msgstr "耕地をキューに追加"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "ウォレット追加"
 
@@ -222,7 +222,7 @@ msgstr "しかし、現在 <0/> で耕作中です。"
 msgid "Buy"
 msgstr "購入"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "CC ウォレット"
 
@@ -259,19 +259,19 @@ msgstr "チャレンジ"
 msgid "Challenge Hash"
 msgstr "チャレンジのハッシュ値"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Keybase でチャット"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "チア"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "チアブロックチェーンの Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "チアウォレット"
 
@@ -372,7 +372,7 @@ msgstr "接続の種類"
 msgid "Connections"
 msgstr "接続数"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "GitHub で開発協力"
 
@@ -482,7 +482,7 @@ msgstr "現在の交換状態"
 msgid "DANGER: permanently delete private key"
 msgstr "！危険！: 秘密鍵を永久的に削除"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "DID ウォレット"
 
@@ -704,7 +704,7 @@ msgstr "全手数料"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "ファイル"
 
@@ -723,11 +723,11 @@ msgstr "最終フォルダの場所"
 msgid "Finished"
 msgstr "完成"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Twitter でフォロー"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "よくある質問"
 
@@ -770,7 +770,7 @@ msgstr "ヘッダーのハッシュ値"
 msgid "Height"
 msgstr "高さ"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "ヘルプ"
 
@@ -1324,7 +1324,7 @@ msgstr "順番待ち"
 msgid "RAM max usage"
 msgstr "最大使用 RAM"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "RL ウォレット"
 
@@ -1362,7 +1362,7 @@ msgstr "DID ウォレットを復元"
 msgid "Refresh Plots"
 msgstr "耕地一覧を更新"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "リリースノート"
 
@@ -1370,7 +1370,7 @@ msgstr "リリースノート"
 msgid "Rename"
 msgstr "名称変更"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "問題を報告"
 
@@ -1503,7 +1503,7 @@ msgstr "ログイン"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "最終ディレクトリを収穫機に追加せず、ディレクトリ内の耕地で耕作しません。"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "スピーチ"
 
@@ -1547,7 +1547,7 @@ msgstr "状態"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "状態"
 
@@ -1905,7 +1905,7 @@ msgstr "同期待ち"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "ウォレット"
 
@@ -1941,7 +1941,7 @@ msgstr "ご利用ありがとうございます！以下の合言葉はあなた
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "管理者からセットアップ用の情報パケットを受け取ったら、以下に入力してレート制限付きウォレットのセットアップを完了してください:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "ウィンドウ"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "あなたの収穫機ネットワーク"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "接続数:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "高さ:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "同期されていません"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "状態:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "同期完了"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "同期中"
 

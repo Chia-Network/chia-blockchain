@@ -34,8 +34,8 @@ msgstr "128 buckets er anbefalet"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "En harvester er en service der kører på en maskine hvor plot filen(filerne) er opbevaret. En farmer og harvester snakker med en fuld node for at følge kædens nuværende form. Se dit netværk af tilsluttede harvesters her under Lær mere"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Om Chia Blockchain"
 
@@ -71,7 +71,7 @@ msgstr "Tilføj plot folder"
 msgid "Add Plot to Queue"
 msgstr "Tilføj Plot til Kø"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Tilføj pung"
 
@@ -222,7 +222,7 @@ msgstr "Men du høster lige nu <0/>"
 msgid "Buy"
 msgstr "Køb"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "CC Pung"
 
@@ -259,19 +259,19 @@ msgstr "Udfordring"
 msgid "Challenge Hash"
 msgstr "Udfordringshash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Chat på KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Chia Pung"
 
@@ -372,7 +372,7 @@ msgstr "Forbindelses Type"
 msgid "Connections"
 msgstr "Forbindelser"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Bidrag på GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Nuværende bytte status"
 msgid "DANGER: permanently delete private key"
 msgstr "ADVARSEL: permanent sletning af privat nøgle"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "DID pung"
 
@@ -704,7 +704,7 @@ msgstr "Gebyr Beløb"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Fil"
 
@@ -723,11 +723,11 @@ msgstr "Endelig folder placering"
 msgid "Finished"
 msgstr "Færdig"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Følg på Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Ofte Stillet Spørgsmål"
 
@@ -770,7 +770,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Højde"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Hjælp"
 
@@ -1324,7 +1324,7 @@ msgstr "I kø"
 msgid "RAM max usage"
 msgstr "RAM max forbrug"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "RL Pung"
 
@@ -1362,7 +1362,7 @@ msgstr "Gendan DID pung"
 msgid "Refresh Plots"
 msgstr "Opdater Plotfiler"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Udgivelses Noter"
 
@@ -1370,7 +1370,7 @@ msgstr "Udgivelses Noter"
 msgid "Rename"
 msgstr "Omdøb"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Raportér et Problem..."
 
@@ -1503,7 +1503,7 @@ msgstr "Log Ind"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Skipper tilføjelse af endelig mappe til harvesteren for farmning"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Tale"
 
@@ -1547,7 +1547,7 @@ msgstr "Status"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Status"
 
@@ -1905,7 +1905,7 @@ msgstr "Afvent synkronisering"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Punge"
 
@@ -1941,7 +1941,7 @@ msgstr "Velkommen! De følgende ord bruges som backup til din pung. Uden disse, 
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Når du modtager din opsætningspakke fra din admin, indtast den herunder for at gennemfører din Rate Begrænset Pung opsætning:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Vindue"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "Dit Harvester netværk"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "forbindelser:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "højde:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "ikke synkroniseret"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "synkroniseret"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "synkroniserer"
 

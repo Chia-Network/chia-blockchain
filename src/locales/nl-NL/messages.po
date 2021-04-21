@@ -34,8 +34,8 @@ msgstr "128 buckets is aanbevolen"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Een 'harvester' is een service op een machine waar plot bestanden opgeslagen zijn. Een 'farmer' en 'harvester' communiceren via jou 'node' met het blockchain netwerk. Je vindt een overzicht van jou geconnecteerde 'harvesters' onderaan. Meer info"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Over Chia Blockchain"
 
@@ -71,7 +71,7 @@ msgstr "Voeg een plot-map toe"
 msgid "Add Plot to Queue"
 msgstr "Voeg Plot toe aan de Wachtrij"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Voeg wallet toe"
 
@@ -222,7 +222,7 @@ msgstr "Maar momenteel ben je <0/> aan het farmen"
 msgid "Buy"
 msgstr "Koop"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "CC wallet"
 
@@ -259,19 +259,19 @@ msgstr "Uitdaging"
 msgid "Challenge Hash"
 msgstr "Te vinden Hash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Chat op KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Chia Portemonnee"
 
@@ -372,7 +372,7 @@ msgstr "Verbindingstype"
 msgid "Connections"
 msgstr "Verbindingen"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Bijdrage op GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Huidige status handelsaanbod"
 msgid "DANGER: permanently delete private key"
 msgstr "GEVAAR: permanent verwijderen private sleutel"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "DID portemonnee"
 
@@ -704,7 +704,7 @@ msgstr "Bedrag vergoeding"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Bestand"
 
@@ -723,11 +723,11 @@ msgstr "Finale locatie map"
 msgid "Finished"
 msgstr "Beëindigd"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Volg op Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Veel gestelde vragen"
 
@@ -770,7 +770,7 @@ msgstr ""
 msgid "Height"
 msgstr "Hoogte"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Hulp"
 
@@ -1324,7 +1324,7 @@ msgstr "In de wachtrij"
 msgid "RAM max usage"
 msgstr "Maximaal geheugen gebruik"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr ""
 
@@ -1362,7 +1362,7 @@ msgstr ""
 msgid "Refresh Plots"
 msgstr "Vernieuw plots"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Release Nota's"
 
@@ -1370,7 +1370,7 @@ msgstr "Release Nota's"
 msgid "Rename"
 msgstr "Hernoem"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Meld een probleem..."
 
@@ -1503,7 +1503,7 @@ msgstr "Meld aan"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr ""
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Spraak"
 
@@ -1547,7 +1547,7 @@ msgstr "Toestand"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Status"
 
@@ -1905,7 +1905,7 @@ msgstr "Wachten op synchronisatie"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Portemonnees"
 
@@ -1941,7 +1941,7 @@ msgstr ""
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr ""
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Scherm"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "Jouw Harvester netwerk"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "verbindingen:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "hoogte:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "niet gesynchroniseerd"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "gesynchroniseerd"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "aan het synchroniseren"
 

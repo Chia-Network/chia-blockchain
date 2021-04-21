@@ -34,8 +34,8 @@ msgstr "128 корзин рекомендуется"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Комбайн - это служба, работающая на машине, на которой фактически хранятся участки. Фермер и комбайн общаются с полным узлом, чтобы увидеть состояние цепи. Просмотрите вашу сеть подключенных комбайнов ниже. <0>Подробнее</0>"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "О программе Chia Blockchain"
 
@@ -71,7 +71,7 @@ msgstr "Добавить директорию с участками"
 msgid "Add Plot to Queue"
 msgstr "Добавить участок в очередь"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Добавить кошелек"
 
@@ -222,7 +222,7 @@ msgstr "Но в настоящий момент выполняется фарм�
 msgid "Buy"
 msgstr "Покупка"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "Кошелек Цветной Монеты"
 
@@ -259,19 +259,19 @@ msgstr "Испытание"
 msgid "Challenge Hash"
 msgstr "Хэш испытания"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Чат в KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Чиа"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Блокчейн Chia на Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Кошелек Chia"
 
@@ -372,7 +372,7 @@ msgstr "Тип подключения"
 msgid "Connections"
 msgstr "Подключения"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Сотрудничать на GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Текущий торговый статус"
 msgid "DANGER: permanently delete private key"
 msgstr "ОПАСНОСТЬ: удалить закрытый ключ навсегда"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "DID кошелек"
 
@@ -704,7 +704,7 @@ msgstr "Объем коммисий"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Файл"
 
@@ -723,11 +723,11 @@ msgstr "Путь к папке для окончательного хранен�
 msgid "Finished"
 msgstr "Завершен"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Следить в Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Часто задаваемые вопросы"
 
@@ -770,7 +770,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Помощь"
 
@@ -1324,7 +1324,7 @@ msgstr "В очереди"
 msgid "RAM max usage"
 msgstr "Максимольное использование ОЗУ"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "Кошелек Ограниченной Скорости"
 
@@ -1362,7 +1362,7 @@ msgstr "Восстанавление Кошелека Децентрализов
 msgid "Refresh Plots"
 msgstr "Обновить участки"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Примечания к релизу"
 
@@ -1370,7 +1370,7 @@ msgstr "Примечания к релизу"
 msgid "Rename"
 msgstr "Переименовать"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Сообщить о проблеме..."
 
@@ -1503,7 +1503,7 @@ msgstr "Войти в систему"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Пропускает добавление окончательной директории в комбайн для фермерства"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Речь"
 
@@ -1547,7 +1547,7 @@ msgstr "Состояние"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Статус"
 
@@ -1905,7 +1905,7 @@ msgstr "Дождитесь синхронизации"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Кошельки"
 
@@ -1941,7 +1941,7 @@ msgstr "Добро пожаловать! Перечисленные слова �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Окно"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "Ваша сеть комбайнов"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "подключения:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "высота:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "не синхр."
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "статус:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "синхр."
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "синх-ция"
 

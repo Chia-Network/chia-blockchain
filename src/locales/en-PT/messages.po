@@ -34,8 +34,8 @@ msgstr "128 buckets be good fer many"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "A tender be a vessel where crewdogs are actually at. A plunderer 'n tender coordinate wit' a capt'n t' see the state o' the chain. View yer connected tenders below Learn more"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "About Chia Blockchain"
 
@@ -71,7 +71,7 @@ msgstr "Add Crew Room"
 msgid "Add Plot to Queue"
 msgstr "Add Crewdog t' Queue"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Add Treasure Chest"
 
@@ -222,7 +222,7 @@ msgstr "But ye be currently plunderin' <0/>"
 msgid "Buy"
 msgstr "Buy"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "CC Treasure Chest"
 
@@ -259,19 +259,19 @@ msgstr "Victim"
 msgid "Challenge Hash"
 msgstr "Victim"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Natter on KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Chia Treasure Chest"
 
@@ -372,7 +372,7 @@ msgstr "Contact type"
 msgid "Connections"
 msgstr "Contacts"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Get yerself busy on GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Current trade status"
 msgid "DANGER: permanently delete private key"
 msgstr "Arrr: Burn all your treasure maps"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "Did Treasure Chest"
 
@@ -704,7 +704,7 @@ msgstr "Fees Amount"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "File"
 
@@ -723,11 +723,11 @@ msgstr "Final folder"
 msgid "Finished"
 msgstr "Done"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Follow on Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Oftentimes Asked Questions"
 
@@ -770,7 +770,7 @@ msgstr "Header hash"
 msgid "Height"
 msgstr "Booty Number"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Help"
 
@@ -1324,7 +1324,7 @@ msgstr "Queued"
 msgid "RAM max usage"
 msgstr "RAM max usage"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "RL Treasure Chest"
 
@@ -1362,7 +1362,7 @@ msgstr "Recover DID treasure chest"
 msgid "Refresh Plots"
 msgstr "Roll Call o' Crew"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Builder's Notes"
 
@@ -1370,7 +1370,7 @@ msgstr "Builder's Notes"
 msgid "Rename"
 msgstr "Change Name"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Speak up fer somethin'..."
 
@@ -1503,7 +1503,7 @@ msgstr "Enter"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Final folder won't be added t' plunderer"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Parler"
 
@@ -1547,7 +1547,7 @@ msgstr "State"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "State o' t'ings"
 
@@ -1905,7 +1905,7 @@ msgstr "Waitin' fer better times"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Treasure Chests"
 
@@ -1941,7 +1941,7 @@ msgstr "Ahoy! Make sure t' scribble down the followin' secret code. Then ye can 
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "When ye 'ave the setup info packet from yer pirate lord, enter it below t' complete yer Rate Limited Treasure Chest:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Porthole"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "State o' yer Tenders"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "connections:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "booty number:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "not there yet"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "state o' t'ings:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "lookin' jolly"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "catchin' up"
 

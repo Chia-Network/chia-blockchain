@@ -34,8 +34,8 @@ msgstr "推荐设置为128个桶"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "收割者（程序）是一个在存有农田plot(s) 文件的机器上运行的服务。农夫（程序）和收割者（程序）通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割者们。 了解更多"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "关于奇亚Chia区块链项目"
 
@@ -71,7 +71,7 @@ msgstr "添加农田文件目录"
 msgid "Add Plot to Queue"
 msgstr "在队列中加入一个绘图作业"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "添加钱包"
 
@@ -222,7 +222,7 @@ msgstr "但你目前正在耕种<0/>"
 msgid "Buy"
 msgstr "购买"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "染色钱包"
 
@@ -259,19 +259,19 @@ msgstr "挑战"
 msgid "Challenge Hash"
 msgstr "哈希(Hash)挑战"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "在Keybase上讨论Chia"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "奇亚"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "奇亚区块链项目维基"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Chia钱包"
 
@@ -372,7 +372,7 @@ msgstr "连接类型"
 msgid "Connections"
 msgstr "连接数"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "来Github出点力"
 
@@ -482,7 +482,7 @@ msgstr "当前交易状态"
 msgid "DANGER: permanently delete private key"
 msgstr "注意: 永久性删除私钥"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "DID钱包"
 
@@ -704,7 +704,7 @@ msgstr "费用数据"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "文件"
 
@@ -723,11 +723,11 @@ msgstr "最终文件夹位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "关注我们的Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "常见问题解答"
 
@@ -770,7 +770,7 @@ msgstr "头部哈希"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "帮助"
 
@@ -1324,7 +1324,7 @@ msgstr "队列"
 msgid "RAM max usage"
 msgstr "内存最大使用量"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "费用限定钱包"
 
@@ -1362,7 +1362,7 @@ msgstr "恢复DID钱包"
 msgid "Refresh Plots"
 msgstr "刷新农田列表"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "发布通知"
 
@@ -1370,7 +1370,7 @@ msgstr "发布通知"
 msgid "Rename"
 msgstr "重命名"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "报告问题"
 
@@ -1503,7 +1503,7 @@ msgstr "登录"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "跳过添加农业收割者的最终目录"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "演说"
 
@@ -1547,7 +1547,7 @@ msgstr "状态"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "状态"
 
@@ -1905,7 +1905,7 @@ msgstr "等待同步"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "钱包"
 
@@ -1941,7 +1941,7 @@ msgstr "欢迎使用奇亚! 下面的词语列表是你的钱包密语, 请务�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下面以便完成费用限定型钱包设置:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "窗口"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "你的收割网络"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "连接："
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "高度："
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "未同步"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "状态："
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "已同步"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "正在同步"
 

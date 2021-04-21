@@ -34,8 +34,8 @@ msgstr "128 este recomandat"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un 'cultivator' este un serviciu care rulează pe o mașină care deține fișiere tip parcelă. Un 'fermier' și un 'cultivator' comunică cu un 'nod principal' pentru a vedea starea lanțului. Vezi mai jos rețeaua ta de cultivatoare conectate Află mai multe"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Despre blockchain-ul Chia"
 
@@ -71,7 +71,7 @@ msgstr "Adaugă Director cu Parcele"
 msgid "Add Plot to Queue"
 msgstr "Adaugă Parcelă la Coadă"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Adaugă Portofel"
 
@@ -222,7 +222,7 @@ msgstr "Însă tu cultivi acum <0/>"
 msgid "Buy"
 msgstr "Cumpără"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "Portofel CC"
 
@@ -259,19 +259,19 @@ msgstr "Provocare"
 msgid "Challenge Hash"
 msgstr "Hash-ul provocării"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Discută pe KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki Blockchain Chia"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Portofel Chia"
 
@@ -372,7 +372,7 @@ msgstr "Tipul conexiunii"
 msgid "Connections"
 msgstr "Conexiuni"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Contribuie pe GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Starea actuală a tranzactiilor"
 msgid "DANGER: permanently delete private key"
 msgstr "PERICOL: Șterge permanent cheia privată"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "Portofel DID"
 
@@ -704,7 +704,7 @@ msgstr "Suma taxe"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Filă"
 
@@ -723,11 +723,11 @@ msgstr "Locatia folderului final"
 msgid "Finished"
 msgstr "Terminat"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Urmărește pe Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Întrebări frecvente"
 
@@ -770,7 +770,7 @@ msgstr "Hash-ul Antetului"
 msgid "Height"
 msgstr "Înălțime"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Ajutor"
 
@@ -1324,7 +1324,7 @@ msgstr "În așteptare"
 msgid "RAM max usage"
 msgstr "Utilizarea maximă de RAM"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "Portofel TL"
 
@@ -1362,7 +1362,7 @@ msgstr "Recuperare portofel DID"
 msgid "Refresh Plots"
 msgstr "Re-scanează parcele"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Note de lansare"
 
@@ -1370,7 +1370,7 @@ msgstr "Note de lansare"
 msgid "Rename"
 msgstr "Redenumește"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Semnalează o problemă..."
 
@@ -1503,7 +1503,7 @@ msgstr "Loghează-te"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Sari peste adăugarea unui director final la harvester pentru farmare"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Vorbire"
 
@@ -1547,7 +1547,7 @@ msgstr "Stare"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Status"
 
@@ -1905,7 +1905,7 @@ msgstr "Asteapta sincronizarea"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Portofele"
 
@@ -1941,7 +1941,7 @@ msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portof
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cand primiti pachetul de informatii despre configurare de la administratorul dvs., introduceti-l mai jos pentru a finaliza configurarea portofelului dvs. limitat:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Fereastră"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "Reteaua dvs. de 'Harvesteri'"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "conexiuni:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "inaltimea:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "nesincronizat"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "sincronizat"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "se sincronizeaza"
 

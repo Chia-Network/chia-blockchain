@@ -34,8 +34,8 @@ msgstr "128 muistilohkoa on suositusmäärä"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot ovat tallennettu. Farmari ja harvesteri ovat yhteydessä noodiin, jolta saavat lohkoketjun tilatiedot. Katso alta yhdistetyt harvesteripalvelut"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Chia Lohkoketjusta"
 
@@ -71,7 +71,7 @@ msgstr "Lisää Plot-hakemisto"
 msgid "Add Plot to Queue"
 msgstr "Lisää Plottausprosessi Jonoon"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Lisää Lompakko"
 
@@ -222,7 +222,7 @@ msgstr "Mutta farmisi sisältää <0/>"
 msgid "Buy"
 msgstr "Osta"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "Värilompakko"
 
@@ -259,19 +259,19 @@ msgstr "Haaste"
 msgid "Challenge Hash"
 msgstr "Haastetiiviste"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Keskustele KeyBasessa"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Chia-lompakko"
 
@@ -372,7 +372,7 @@ msgstr "Yhteystyyppi"
 msgid "Connections"
 msgstr "Yhteydet"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Anna panoksesi GitHubissa"
 
@@ -482,7 +482,7 @@ msgstr "Kaupan tila"
 msgid "DANGER: permanently delete private key"
 msgstr "VAROITUS: tuhoaa yksityisen avaimen"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "Hajautettu Lompakko"
 
@@ -704,7 +704,7 @@ msgstr "Palkkiosumma"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Tiedosto"
 
@@ -723,11 +723,11 @@ msgstr "Lopullinen hakemisto"
 msgid "Finished"
 msgstr "Valmis"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Seuraa Twitterissä"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Usein Kysytyt Kysymykset"
 
@@ -770,7 +770,7 @@ msgstr "Lohkotunniste"
 msgid "Height"
 msgstr "Lohkokorkeus"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Apuja"
 
@@ -1324,7 +1324,7 @@ msgstr "Jonossa"
 msgid "RAM max usage"
 msgstr "RAM enimmäismäärä"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "Rajoitettu Lompakko"
 
@@ -1362,7 +1362,7 @@ msgstr "Palauta hajautetettu lompakko"
 msgid "Refresh Plots"
 msgstr "Päivitä Plot-tiedostot"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Version Muutokset"
 
@@ -1370,7 +1370,7 @@ msgstr "Version Muutokset"
 msgid "Rename"
 msgstr "Nimeä Uudelleen"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Raportoi Ongelma..."
 
@@ -1503,7 +1503,7 @@ msgstr "Kirjaudu"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Ei lisää lopullista hakemistoa harvesteriin farmaroitavaksi"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Puhe"
 
@@ -1547,7 +1547,7 @@ msgstr "Tila"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Tila"
 
@@ -1905,7 +1905,7 @@ msgstr "Odota synkroinointia"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Lompakot"
 
@@ -1941,7 +1941,7 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Ikkuna"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "Harvesteriverkkosi"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "yhteydet:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "korkeus:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "ei synkronoitu"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "tila:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "synkronoitu"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "synkronoi"
 

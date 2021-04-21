@@ -34,8 +34,8 @@ msgstr "Se recomiendan 128 cubos"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un cosechador es un servicio que se ejecuta en una máquina en donde actualmente se almacena(n) la(s) parcela(s). Un agricultor y un cosechador hablan con un nodo completo para ver el estado de la cadena. Vea su red de cosechadoras conectadas a continuación Más información"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Acerca de Chia Blockchain"
 
@@ -71,7 +71,7 @@ msgstr "Añadir Directorio de Parcela"
 msgid "Add Plot to Queue"
 msgstr "Añadir Parcela a la Cola"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Añadir Monedero"
 
@@ -222,7 +222,7 @@ msgstr "Pero actualmente estás cultivando <0 />"
 msgid "Buy"
 msgstr "Comprar"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "Monedero CC"
 
@@ -259,19 +259,19 @@ msgstr "Desafío"
 msgid "Challenge Hash"
 msgstr "Desafío Hash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Chatear en Keybase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Wiki de Cadena de Bloques Chia"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Monedero Chia"
 
@@ -372,7 +372,7 @@ msgstr "Tipo de Conexión"
 msgid "Connections"
 msgstr "Conexiones"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Contribuir en GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Estado actual de la operación"
 msgid "DANGER: permanently delete private key"
 msgstr "ADVERTENCIA: eliminar llave privada permanentemente"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "Monedero DID"
 
@@ -704,7 +704,7 @@ msgstr "Monto de tarifas"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Archivo"
 
@@ -723,11 +723,11 @@ msgstr "Ubicación de la Carpeta Final"
 msgid "Finished"
 msgstr "Finalizado"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Seguir en Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Preguntas Frecuentes"
 
@@ -770,7 +770,7 @@ msgstr "Encabezado de hash"
 msgid "Height"
 msgstr "Altura"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Ayuda"
 
@@ -1324,7 +1324,7 @@ msgstr "En cola"
 msgid "RAM max usage"
 msgstr "Uso Máximo de RAM"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "Monedero RL"
 
@@ -1362,7 +1362,7 @@ msgstr "Recuperar Monedero DID"
 msgid "Refresh Plots"
 msgstr "Actualizar Parcelas"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Notas de lanzamiento"
 
@@ -1370,7 +1370,7 @@ msgstr "Notas de lanzamiento"
 msgid "Rename"
 msgstr "Renombrar"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Reportar un problema..."
 
@@ -1503,7 +1503,7 @@ msgstr "Iniciar Sesión"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Se salta el paso de añadir el directorio final al cosechador para cultivar"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Habla"
 
@@ -1547,7 +1547,7 @@ msgstr "Estado"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Estado"
 
@@ -1905,7 +1905,7 @@ msgstr "Esperar sincronización"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Monederos"
 
@@ -1941,7 +1941,7 @@ msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de segur
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Cuando reciba el paquete de información de configuración de su administrador, ingréselo a continuación para completar la configuración de su Monedero con Tarifa Limitada:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Ventana"
 
@@ -1996,31 +1996,31 @@ msgid "Your Harvester Network"
 msgstr "Su Red de Cosechadores"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "conexiones:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "altura:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "no sincronizado"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "estado:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "sincronizado"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "sincronizando"
 

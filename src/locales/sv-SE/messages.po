@@ -34,8 +34,8 @@ msgstr "128 buckets rekommenderas"
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "En skördare är en tjänst som körs på en maskin där plottar lagras. En odlare och skördare kommunicerar med en fullständig nod för att läsa blockkedjans tillstånd. Du kan se ditt nätverk av anslutna skördare nedan Läs mer"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Om Chia Blockchain"
 
@@ -71,7 +71,7 @@ msgstr "Lägg till mapp med plottar"
 msgid "Add Plot to Queue"
 msgstr "Lägg till plott i kön"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Lägg till plånbok"
 
@@ -222,7 +222,7 @@ msgstr "Men för tillfället odlar du <0/>"
 msgid "Buy"
 msgstr "Köp"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "CC-plånbok"
 
@@ -259,19 +259,19 @@ msgstr "Verifiering"
 msgid "Challenge Hash"
 msgstr "Verifieringshash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
 msgstr "Chatta på KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchains wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Chia-plånbok"
 
@@ -372,7 +372,7 @@ msgstr "Anslutningstyp"
 msgid "Connections"
 msgstr "Anslutningar"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "Delta på GitHub"
 
@@ -482,7 +482,7 @@ msgstr "Aktuell handelsstatus"
 msgid "DANGER: permanently delete private key"
 msgstr "VARNING: permanent ta bort privat nyckel"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "DID-plånbok"
 
@@ -704,7 +704,7 @@ msgstr "Avgiftsbelopp"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Fil"
 
@@ -723,11 +723,11 @@ msgstr "Sökväg till slutlig mapp"
 msgid "Finished"
 msgstr "Färdigt"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Följ på Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Vanliga frågor"
 
@@ -770,7 +770,7 @@ msgstr "Huvudhash"
 msgid "Height"
 msgstr "Höjd"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Hjälp"
 
@@ -1324,7 +1324,7 @@ msgstr "I kö"
 msgid "RAM max usage"
 msgstr "Max RAM-användning"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "RL-plånbok"
 
@@ -1362,7 +1362,7 @@ msgstr "Återställ DID-plånbok"
 msgid "Refresh Plots"
 msgstr "Uppdatera plottar"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Viktig information"
 
@@ -1370,7 +1370,7 @@ msgstr "Viktig information"
 msgid "Rename"
 msgstr "Byt namn"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Rapportera ett problem ..."
 
@@ -1503,7 +1503,7 @@ msgstr "Logga in"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Hoppar över steget att lägga till en slutlig mapp till skördaren för odling"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Tal"
 
@@ -1547,7 +1547,7 @@ msgstr "Tillstånd"
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Status"
 
@@ -1905,7 +1905,7 @@ msgstr "Väntar på synkronisering"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Plånböcker"
 
@@ -1941,7 +1941,7 @@ msgstr "Välkommen! Följande ord används för din plånboks säkerhetskopia. U
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "När du fått konfigurationsinfopaketet av din administratör anger du det nedan för att slutföra konfigurationen av din spenderbegränsade plånbok:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Fönster"
 
@@ -1998,31 +1998,31 @@ msgid "Your Harvester Network"
 msgstr "Ditt nätverk av skördare"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "anslutningar:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "höjd:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "ej synkad"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "status:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "synkad"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "synkar"
 
