@@ -215,7 +215,7 @@ class CoinStore:
     async def _set_spent(self, coin_name: bytes32, index: uint32):
         current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
-            return
+            raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
         spent: CoinRecord = CoinRecord(
             current.coin,
             current.confirmed_block_index,

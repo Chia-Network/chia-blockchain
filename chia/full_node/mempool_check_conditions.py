@@ -1,4 +1,3 @@
-import logging
 import time
 from typing import Dict, List, Optional, Set
 
@@ -133,9 +132,6 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
     if unspent.coin.amount != int_from_bytes(condition.vars[0]):
         return Err.ASSERT_MY_AMOUNT_FAILED
     return None
-
-
-log = logging.getLogger(__name__)
 
 
 def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mode: bool) -> NPCResult:

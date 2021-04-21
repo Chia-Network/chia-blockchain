@@ -955,12 +955,6 @@ class FullNodeAPI:
                 or block.is_transaction_block() is False
                 or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
             ):
-                if block is None:
-                    self.full_node.log.error("Block is nont")
-                else:
-                    self.full_node.log.error(
-                        f"REJECTING {self.full_node.blockchain.height_to_hash(block.height)} {request.header_hash}"
-                    )
                 reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
 
                 msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
@@ -969,7 +963,6 @@ class FullNodeAPI:
             assert block is not None and block.foliage_transaction_block is not None
 
             additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
-        self.log.warning("no error")
 
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
         for coin_record in additions:
