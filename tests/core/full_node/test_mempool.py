@@ -7,6 +7,7 @@ import pytest
 
 from chia.full_node.mempool import Mempool
 from chia.protocols import full_node_protocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_solution import CoinSolution
@@ -501,19 +502,14 @@ class TestMempoolManager:
         spend_bundle1 = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0], dic)
         assert spend_bundle1 is not None
 
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1, peer)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
 
-        # Sleep so that 10 sec passes
-        await asyncio.sleep(10)
-        for block in blocks:
-            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        for i in range(0, 4):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx2, peer)

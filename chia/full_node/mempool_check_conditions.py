@@ -71,21 +71,18 @@ def mempool_assert_relative_block_height_exceeds(
     return None
 
 
-def mempool_assert_absolute_time_exceeds(
-    condition: ConditionWithArgs, timestamp: uint64
-) -> Optional[Err]:
+def mempool_assert_absolute_time_exceeds(condition: ConditionWithArgs, timestamp: uint64) -> Optional[Err]:
     """
     Check if the current time in seconds exceeds the time specified by condition
     """
     try:
-        expected_mili_time = int_from_bytes(condition.vars[0])
+        expected_sec_time = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
 
     if timestamp is None:
         timestamp = uint64(int(time.time()))
-    if timestamp < expected_mili_time:
-        breakpoint()
+    if timestamp < expected_sec_time:
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
@@ -104,7 +101,6 @@ def mempool_assert_relative_time_exceeds(
     if timestamp is None:
         timestamp = uint64(int(time.time()))
     if timestamp < expected_seconds + unspent.timestamp:
-        breakpoint()
         return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None
 
