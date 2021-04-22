@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-22 18:13\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "過去5時間を基に推定"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -611,7 +611,7 @@ msgstr "エラー: チアは色付きのアドレスには送れません。チ�
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "報酬が当たるまでの推定時間"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -1235,7 +1235,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-#~ msgstr "ビットフィールドを有効にして耕すと、書き込み量が30%ほと減少し、現状ではほとんどの場合速く完了します。ビットフィールドを無効にするとRAMの必要量が減る可能性があります。ご使用のCPUが2010年以前の物ですと、ビットフィールド無効しか使えない可能性があります。"
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1973,7 +1973,7 @@ msgstr "耕地作成には同期も接続も必要ありません。耕し中に
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "あなたはネットワークの {0}% の容量を所有しているため、ブロックを耕すには {expectedTimeToWin} かかると推定されます。実際には推定の 3 から 4 倍かかることがあります。"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2047,3 +2047,4 @@ msgstr "{currencyCode} 全収穫チア"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} ユーザー取引手数料"
+
