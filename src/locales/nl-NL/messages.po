@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl_NL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 08:00\n"
+"PO-Revision-Date: 2021-04-22 18:13\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "Beste schatting over de 5 laatste uren"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -1148,7 +1148,7 @@ msgstr "Selecteer een hoeveelheid, aub"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Selecteer koop of verkoop"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
@@ -1203,7 +1203,7 @@ msgstr "Plot grootte"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
-msgstr ""
+msgstr "Plot parallel"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
@@ -1235,7 +1235,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-#~ msgstr "Plotten met bitfield sortering aan, heeft ongeveer 30% minder schrijfbewerkingen en is nu bijna altijd sneller. Je ziet mogelijk verminderde geheugenvereisten met bitfield plotten uitgeschakeld. Als uw CPU ontwerp van voor 2010 is, moet u wellicht bitfield plotting uitschakelen."
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -2047,3 +2047,4 @@ msgstr "{currencyCode} Totaal Chia gefarmed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Gebruikers Transactie Vergoeding"
+
