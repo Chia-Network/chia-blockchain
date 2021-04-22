@@ -27,8 +27,8 @@ const locales: { [char: string]: string } = {
   'fi-FI': 'Suomi',
   'sv-SE': 'Svenska',
   // 'vi-VN': 'Tiếng Việt',
-  'zh-TW': '中文',
-  'zh-CN': '中文 (中国)',
+  'zh-TW': '繁體中文',
+  'zh-CN': '简体中文',
 };
 
 export default function LocaleToggle() {
