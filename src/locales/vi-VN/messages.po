@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 13:36\n"
+"PO-Revision-Date: 2021-04-22 18:12\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "* Bạn muốn khám phá thêm về Chia blockchain ? Xem <0> Chia Explorer </0> được xây dựng bởi các nhà phát triển nguồn mở."
+msgstr "* Bạn muốn khám phá thêm về Chia Blockchain? Xem <0> Chia Explorer </0> được xây dựng bởi các nhà phát triển nguồn mở."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,10 +32,10 @@ msgstr "128 nhóm được khuyến nghị"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot. Một farmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
+msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot  . Một farmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Về Chia Blockchain"
 
@@ -45,19 +45,19 @@ msgstr "Đồng ý"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Đồng ý tại thời điểm"
+msgstr "Đồng ý tại thời điểm:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr "Hành động"
+msgstr "Hoạt động"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr "Hành động"
+msgstr "Hoạt động"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -65,26 +65,26 @@ msgstr "Thêm"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "Thêm thư mục Plot"
+msgstr "Thêm Thư Mục Plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "Thêm Plot vào hàng đợi"
+msgstr "Thêm Plot vào Hàng Chờ"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "Thêm ví"
+msgstr "Thêm Ví"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "Thêm plot"
+msgstr "Thêm một Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr "Thêm plot"
+msgstr "Thêm một Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
@@ -94,7 +94,7 @@ msgstr "Thêm thư mục plot"
 #: src/components/wallet/coloured/WalletColoured.tsx:457
 #: src/components/wallet/standard/WalletStandard.tsx:373
 msgid "Address"
-msgstr "Địa chỉ ví"
+msgstr "Địa chỉ"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
@@ -103,7 +103,7 @@ msgstr "Địa chỉ / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:48
+#: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:331
@@ -112,24 +112,24 @@ msgstr "Số lượng"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
-msgstr "Số lượng({amount})"
+msgstr "Số lượng ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "Số tiền xu ban đầu"
+msgstr "Số lượng Coin Khởi Tạo"
 
-#: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "Bạn có muốn xoá plot ? Plot sẽ không thể khôi phục."
+msgstr "Bạn có muốn xoá plot? Plot này sẽ không thể khôi phục."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr "Bạn có muốn ngắt kết nối?"
+msgstr "Bạn có chắc chắn muốn ngắt kết nối?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Bạn có muốn thoát? GUI Plotting và farming sẽ dừng."
+msgstr "Bạn có chắc chắn muốn thoát? GUI Plotting và farming sẽ dừng."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -137,12 +137,12 @@ msgstr "Bạn có muốn thoát? GUI Plotting và farming sẽ dừng."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "Bạn có muốn sử dụng k={plotSize}?"
+msgstr "Bạn có chắc chắn muốn sử dụng k={plotSize}?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr "Trở lại"
+msgstr "Quay lại"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
@@ -154,9 +154,9 @@ msgstr "Tệp sao lưu được sử dụng để khôi phục ví."
 msgid "Balance"
 msgstr "Số dư"
 
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Số  phần thưởng cho farmer."
+msgstr "Số Phần Thưởng Gốc"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -164,43 +164,47 @@ msgid "Below are the current block challenges. You may or may not have a proof o
 msgstr "Dưới đây là những thách thức khối hiện tại. Bạn có thể có hoặc không có bằng chứng về không gian cho những thách thức này. Các khối này hiện không chứa bằng chứng về thời gian."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
-msgid "Best estimate over last 5 hours"
-msgstr "Ước tính tốt nhất trong 5 giờ qua"
+msgid "Best estimate over last 24 hours"
+msgstr ""
 
-#: src/components/block/Block.jsx:109
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:148
-#: src/components/block/Block.jsx:303
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
+
+#: src/components/block/Block.jsx:112
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:306
 msgid "Block"
 msgstr "Block"
 
-#: src/components/block/Block.jsx:121
+#: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr "Kiểm tra khối"
+msgstr "Kiểm Tra Khối"
 
-#: src/components/block/Block.jsx:227
+#: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr "Khối VDF lặp lại"
+msgstr "Khối VDF Lặp Lại"
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Chiều cao khối {0} trong chuỗi khối Chia"
+msgstr "Khối thứ {0} trong Chia blockchain"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:126
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
 msgstr "Khối với băm {headerHash}"
 
-#: src/components/block/Block.jsx:155
+#: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
 msgstr "Khối có băm {headerHash} không tồn tại."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
-msgstr "Các khối"
+msgstr "Block"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -222,7 +226,7 @@ msgstr "Nhưng bạn hiện đang farm <0 />"
 msgid "Buy"
 msgstr "Mua"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
 msgstr "Ví CC"
 
@@ -241,7 +245,7 @@ msgstr "Có thể được sao lưu vào mnemonic seed"
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr "Huỷ"
+msgstr "Hủy bỏ"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
@@ -259,29 +263,29 @@ msgstr "Challenge"
 msgid "Challenge Hash"
 msgstr "Challenge Hash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr "Chat trên Keybase"
+msgstr "Chat trên KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
 msgstr "Ví Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr "Chọn số lượng Plot"
+msgstr "Chọn Số Lượng Plot"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr "Chọn kích thước plot"
+msgstr "Chọn Kích Thước Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:48
@@ -290,7 +294,7 @@ msgstr "Đóng"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "Đóng node và máy chủ"
+msgstr "Tắt node và máy chủ"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -323,28 +327,28 @@ msgstr "Tuỳ chọn coin sắc tố"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
-msgstr "Xác nhận"
+msgstr "Xác Nhận"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr "Xác nhận ngắt kết nối"
+msgstr "Xác Nhận Ngắt Kết Nối"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr "Được xác nhận ở khối:"
+msgstr "Được xác nhận ở block:"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
 msgstr "Được xác nhận ở chiều cao {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
-msgstr "Kết nối"
+msgstr "Kết Nối"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
-msgstr "Kết nối với máy ngang hàng khác"
+msgstr "Kết nối ngang hàng khác"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
@@ -357,12 +361,12 @@ msgstr "Đang kết nối đến ví"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
-msgstr "Tình trạng kết nối"
+msgstr "Trạng thái kết nối"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr "Tình trạng kết nối:"
+msgstr "Trạng thái kết nối:"
 
 #: src/components/fullNode/FullNodeConnections.tsx:50
 msgid "Connection type"
@@ -372,9 +376,9 @@ msgstr "Kiểu kết nối"
 msgid "Connections"
 msgstr "Các kết nối"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr "Đóng góp qua GitHub"
+msgstr "Đóng Góptrên GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -390,7 +394,7 @@ msgstr "Sao chép"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr "Sao chép vào khay nhớ"
+msgstr "Sao chép vào Clipboard"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -406,19 +410,19 @@ msgstr "Thêm ví DID"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr "Tạo đề xuất"
+msgstr "Tạo đề nghị"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
-msgstr "Thêm plot"
+msgstr "Thêm Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Tạo Ví quản trị viên được giới hạn tỷ lệ"
+msgstr "Tạo Ví Admin Giới Hạn"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Tạo Ví cá nhân được giới hạn tỷ lệ"
+msgstr "Tạo Ví Người Dùng Giới Hạn"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -468,11 +472,11 @@ msgstr "Tạo ví cho sắc tố hiện có"
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr "Tạo vào:"
+msgstr "Ngày tạo:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr "Xây dựng bởi chúng tôi:"
+msgstr "Tạo bởi chúng tôi:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -480,9 +484,9 @@ msgstr "Tình trạng giao dịch hiện tại"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr "Cảnh báo: Xoá chuỗi khóa cá nhân"
+msgstr "CẢNH BÁO: xóa vĩnh viễn khóa cá nhân"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
 msgstr "Ví DID"
 
@@ -492,25 +496,25 @@ msgstr "Ví DID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:29
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:35
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "Date"
 msgstr "Ngày"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "Delay"
-msgstr "Hoãn"
+msgstr "Độ trễ"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/PlotAction.tsx:43
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/PlotAction.tsx:48
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Xoá"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
 msgstr "Xoá Plot"
 
@@ -537,9 +541,9 @@ msgstr "Nhà phát triển"
 
 #: src/electron/main.tsx:263
 msgid "Developer Tools"
-msgstr "Công cụ nhà phát triển"
+msgstr "Công cụ Nhà phát triển"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "Độ khó"
@@ -607,7 +611,7 @@ msgstr "Lỗi: Không thể gửi chia đến địa chỉ coloured. Vui lòng n
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Thời gian giành phần thưởng dự kiến"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -636,7 +640,7 @@ msgstr "Không mở được (plot không hợp lệ)"
 msgid "Farm"
 msgstr "Farm"
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
@@ -673,7 +677,7 @@ msgstr "Farming"
 msgid "Farming Status"
 msgstr "Tình trạng Farm"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
@@ -695,7 +699,7 @@ msgstr "Phí"
 msgid "Fee ({currencyCode})"
 msgstr "Phí ({currencyCode})"
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:294
 msgid "Fees Amount"
 msgstr "Số lượng phí"
 
@@ -704,7 +708,7 @@ msgstr "Số lượng phí"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Tệp"
 
@@ -723,11 +727,11 @@ msgstr "Thư mục cuối"
 msgid "Finished"
 msgstr "Hoàn thành"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Theo dõi trên Twitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Câu hỏi thường gặp"
 
@@ -760,21 +764,21 @@ msgstr "Khóa xác định phân cấp hoặc HD là một loại khóa công kh
 msgid "Header Hash"
 msgstr "Băm tiêu đề"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:180
 msgid "Header hash"
 msgstr "Băm tiêu đề"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Chiều cao"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Hỗ trợ"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
 msgstr "Hỗ trợ dịch thuật"
 
@@ -782,7 +786,7 @@ msgstr "Hỗ trợ dịch thuật"
 msgid "Hide Advanced Options"
 msgstr "Ẩn tuỳ chọn nâng cao"
 
-#: src/components/wallet/WalletHistory.tsx:60
+#: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
 msgstr "Lịch sử"
 
@@ -815,7 +819,7 @@ msgstr "Nhập ví từ Mnemonics"
 msgid "In Progress"
 msgstr "Đang xử lý"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
 msgstr "Đang nhận"
 
@@ -855,6 +859,11 @@ msgstr "Kích cỡ"
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
 msgstr "Khóa"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:40
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+msgid "KiB Up/Down"
+msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -928,8 +937,6 @@ msgstr "Quản lý phần thưởng farm"
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Quản lý địa chỉ nhận phần thưởng farm của bạn"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
 msgstr "MiB Up/Down"
@@ -967,7 +974,7 @@ msgstr "Địa chỉ ví mới"
 msgid "New Wallet"
 msgstr "Ví mới"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
@@ -990,7 +997,7 @@ msgstr "Không có chuỗi 24 từ bí mật, vì khóa này đã được nhậ
 msgid "No blocks farmed yet"
 msgstr "Chưa có khối được farm"
 
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
 msgstr "Không có giao dịch trước đó"
 
@@ -1057,7 +1064,7 @@ msgstr "Đề nghị"
 msgid "Offers Created"
 msgstr "Đề nghị được tạo"
 
-#: src/components/wallet/WalletHistory.tsx:18
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
 msgstr "Đầu ra"
 
@@ -1073,7 +1080,7 @@ msgstr "Chiều cao chóp"
 msgid "Peak Time"
 msgstr "Thời gian chóp"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
 msgstr "Đang xử lý"
 
@@ -1170,7 +1177,7 @@ msgstr "Plot"
 msgid "Plot Count"
 msgstr "Số lượng Plot"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:268
 msgid "Plot Id"
 msgstr "ID Plot"
 
@@ -1182,7 +1189,7 @@ msgstr "Khoá của Plot"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
 msgstr "Khoá công khai của Plot"
 
@@ -1223,18 +1230,22 @@ msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
 msgstr "Plotting song song có thể tiết kiệm thời gian. Nếu không, hãy thêm plot vào hàng đợi."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
 msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
 msgstr "Khoá của Pool"
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
 msgstr "Khoá công khai của Pool"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
 msgstr "Puzzle Hash của Pool"
 
@@ -1242,7 +1253,7 @@ msgstr "Puzzle Hash của Pool"
 msgid "Pool Reward Address"
 msgstr "Địa chỉ Pool nhận phần thưởng"
 
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
 msgstr "Số lượng phần thưởng Pool"
 
@@ -1253,7 +1264,7 @@ msgstr "Số lượng phần thưởng Pool"
 msgid "Port"
 msgstr "Cổng"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:320
 msgid "Previous"
 msgstr "Trở lại"
 
@@ -1261,7 +1272,7 @@ msgstr "Trở lại"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
 msgstr "Header Hash trước đó"
 
@@ -1281,7 +1292,7 @@ msgstr "Khóa cá nhân {0}"
 msgid "Private key:"
 msgstr "Khoá cá nhân:"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
 msgstr "Bằng chứng về kích thước không gian"
 
@@ -1317,7 +1328,7 @@ msgstr "Đã lên danh sách"
 msgid "RAM max usage"
 msgstr "Ram tối đa"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
 msgstr "Ví RL"
 
@@ -1355,7 +1366,7 @@ msgstr "Khôi phục ví DID"
 msgid "Refresh Plots"
 msgstr "Làm mới plot"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
 msgstr "Ghi chú phát hành"
 
@@ -1363,7 +1374,7 @@ msgstr "Ghi chú phát hành"
 msgid "Rename"
 msgstr "Đổi tên"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
 msgstr "Báo cáo vấn đề..."
 
@@ -1496,7 +1507,7 @@ msgstr "Đăng nhập"
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Bỏ qua việc thêm thư mục cuối cùng vào harvester để farm"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
 msgstr "Phát biểu"
 
@@ -1538,9 +1549,9 @@ msgstr "Tình trạng"
 #: src/components/fullNode/FullNode.jsx:151
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
 msgstr "Tình trạng"
 
@@ -1624,7 +1635,7 @@ msgstr "Vị trí thư mục tạm thời thứ hai"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Ứng dụng sẽ ngưng hoạt động tại độ cao khối 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1643,19 +1654,19 @@ msgstr "Nút không được đồng bộ hóa"
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Nút đang đồng bộ hóa, có nghĩa là nó đang tải xuống các khối từ các nút khác, để đạt được khối mới nhất trong chuỗi"
 
-#: src/components/block/Block.jsx:268
+#: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Chuỗi được sử dụng để tạo ra plot. Điều này phụ thuộc vào khoá công khai của Pool và plot."
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Tổng số VDF (chức năng trì hoãn có thể xác minh) hoặc bằng chứng về thời gian lặp lại trên toàn bộ chuỗi cho đến khối con này."
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Tổng số VDF (hàm trễ có thể xác minh) hoặc bằng chứng về thời gian lặp lại trên khối này."
 
-#: src/components/block/Block.jsx:294
+#: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Tổng phí giao dịch trong khối này. Thưởng cho farmer."
 
@@ -1689,7 +1700,7 @@ msgstr "Đây là tổng của các giao dịch đang chờ xử lý đến và 
 msgid "This is the time of the latest peak sub block."
 msgstr "Đây là thời điểm khối phụ cao điểm nhất."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Đây là thời gian khối được tạo ra bởi farmer, trước khi nó được hoàn thiện với một bằng chứng về thời gian"
 
@@ -1723,7 +1734,7 @@ msgstr "Giao dịch này đã được đưa vào blockchain ở chiều cao kh�
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Phiên bản Chia này không còn tương thích với blockchain và không thể farm một cách an toàn."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1733,11 +1744,11 @@ msgstr "Tạo vào"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:184
 msgid "Timestamp"
 msgstr "Mốc thời gian"
 
-#: src/components/wallet/WalletHistory.tsx:31
+#: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
 msgstr "Đến"
 
@@ -1767,7 +1778,7 @@ msgstr "Tổng kích thước Plot:"
 msgid "Total Size of Plots"
 msgstr "Tổng kích thước Plot"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
 msgstr "Tổng số lần lặp VDF"
 
@@ -1807,11 +1818,11 @@ msgstr "Giao dịch"
 msgid "Trading History"
 msgstr "Lịch sử giao dịch"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
 msgstr "Giao dịch lọc theo băm "
 
-#: src/components/wallet/WalletHistory.tsx:21
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
 msgstr "Loại"
 
@@ -1836,7 +1847,7 @@ msgstr "Lặp lại vùng phụ VDF"
 msgid "View"
 msgstr "Xem"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Xem bản ghi"
@@ -1898,7 +1909,7 @@ msgstr "Chờ đồng bộ hóa"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Wallets"
 
@@ -1914,11 +1925,11 @@ msgstr "Muốn thêm Chia? Thêm nhiều plot vào farm của bạn."
 msgid "Want to have a delay before the next plot starts?"
 msgstr "Bạn muốn có một khoảng thời gian trì hoãn trước khi phần tiếp theo bắt đầu?"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:198
 msgid "Weight"
 msgstr "Khối lượng"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Trọng lượng là tổng độ khó cộng thêm của tất cả các khối phụ lên đến và bao gồm khối này"
 
@@ -1934,7 +1945,7 @@ msgstr "Chào mừng! Các từ sau được sử dụng để sao lưu ví củ
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Khi bạn nhận được gói thông tin thiết lập từ quản trị viên của mình, hãy nhập gói này vào bên dưới để hoàn tất quá trình thiết lập Ví giới hạn giá của bạn:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Cửa sổ"
 
@@ -1962,7 +1973,7 @@ msgstr "Bạn không cần phải được đồng bộ hóa hoặc kết nối 
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Bạn chiếm {0}% dung lượng của mạng lưới, vì vậy để đào được một block dự kiến sẽ mất khoảng {expectedTimeToWin}. Kết quả thực tế có thể gấp 3 đến 4 lần dự kiến này."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -1989,31 +2000,31 @@ msgid "Your Harvester Network"
 msgstr "Mạng lưới Harvester của bạn"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
 msgstr "các kết nối:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
 msgstr "chiều cao:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
 msgstr "chưa được đồng bộ hóa"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
 msgstr "tình trạng:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:105
+#: src/components/wallet/Wallets.tsx:107
 msgid "synced"
 msgstr "đã đồng bộ"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
+#: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
 msgstr "đang đồng bộ"
 
