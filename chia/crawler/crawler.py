@@ -33,28 +33,25 @@ class DomainName(str):
     def __getattr__(self, item):
         return DomainName(item + '.' + self)
 
-# TODO: Figure out proper values.
-D = DomainName('example.com.')
+D = DomainName('seeder.example.com.')
+ns = DomainName('example.com.')
 IP = '127.0.0.1'
 TTL = 60 * 5
 soa_record = SOA(
-    mname=D.ns1,  # primary name server
-    rname=D.andrei,  # email of the domain administrator
+    mname=ns,  # primary name server
+    rname=ns.hostmaster,  # email of the domain administrator
     times=(
-        201307231,  # serial number
-        60 * 60 * 1,  # refresh
-        60 * 60 * 3,  # retry
-        60 * 60 * 24,  # expire
-        60 * 60 * 1,  # minimum
+        1619105223,  # serial number
+        10800,  # refresh
+        3600,  # retry
+        604800,  # expire
+        1800,  # minimum
     )
 )
-ns_records = [NS(D.ns1), NS(D.ns2)]
+ns_records = [NS(ns)]
 
 bootstrap_peers = []
 
-class DomainName(str):
-    def __getattr__(self, item):
-        return DomainName(item + '.' + self)
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
     def __init__(self, callback):
@@ -148,7 +145,6 @@ class Crawler:
         qn = str(qname)
         qtype = request.q.qtype
         qt = QTYPE[qtype]
-
         if qn == D or qn.endswith('.' + D):
             for name, rrs in records.items():
                 if name == qn:
@@ -162,7 +158,6 @@ class Crawler:
 
             reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
 
-        # self.log.error(f"Reply: {reply}")
         return reply.pack()
 
     async def _start(self):
@@ -175,7 +170,7 @@ class Crawler:
         # client requests.
         self.transport, self.protocol = await loop.create_datagram_endpoint(
             lambda: EchoServerProtocol(self.dns_response),
-            local_addr=('127.0.0.1', 9999)
+            local_addr=('0.0.0.0', 53)
         )
 
     async def create_client(self, peer_info, on_connect):
