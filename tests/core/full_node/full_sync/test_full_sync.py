@@ -328,7 +328,17 @@ class TestFullSync:
         # node 2 should keep being synced and receive blocks
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_3.full_node.on_connect)
         # trigger long sync in full node 2
-        await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(default_10000_blocks[1050]))
+        peak_block = default_10000_blocks[1050]
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_2.full_node.on_connect)
+        con = server_2.all_connections[full_node_3.full_node.server.node_id]
+        peak = full_node_protocol.NewPeak(
+            peak_block.header_hash,
+            peak_block.height,
+            peak_block.weight,
+            peak_block.height,
+            peak_block.reward_chain_block.get_unfinished().get_hash())
+        await full_node_2.full_node.new_peak(peak,con)
+        await asyncio.sleep(2)
         assert not full_node_2.full_node.sync_store.get_sync_mode()
         for block in default_1000_blocks[1000-num_blocks_initial:]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
