@@ -120,11 +120,6 @@ jobs:
       with:
         name: 'Chia-Installer-on-MacOS-10.15-dmg'
 
-    - name: View Path & Files
-      run: |
-        pwd
-        ls
-        
     - name: Install AWS CLI
       run: |
         curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
@@ -139,7 +134,7 @@ jobs:
 
     - name: Upload to s3
       run: |
-          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/builds/
+          aws s3 cp /Users/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/builds/
 
     - name: Install mktorrent
       if: startsWith(github.ref, 'refs/tags/')
@@ -149,10 +144,10 @@ jobs:
     - name: Create Torrent Files
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-          mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.dmg
+          mktorrent /Users/runner/work/chia-blockchain/chia-blockchain/*.dmg
 
     - name: Upload Release Files
       if: startsWith(github.ref, 'refs/tags/')
       run: |
-          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/test-installs/
-          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/test-installs/
+          aws s3 cp /Users/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/test-installs/
+          aws s3 cp /Users/runner/work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/test-installs/
