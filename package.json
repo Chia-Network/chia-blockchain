@@ -6,6 +6,9 @@
   "private": true,
   "homepage": "./",
   "main": "build/electron/main.js",
+  "engines": {
+    "node": ">=10.14.2"
+  },
   "scripts": {
     "start": "cross-env NODE_ENV=development webpack serve --config ./webpack.react.babel.ts",
     "dev:electron": "cross-env NODE_ENV=development webpack --config webpack.electron.babel.ts --mode development && electron .",
