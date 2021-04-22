@@ -12,6 +12,9 @@ from chia.util.clvm import int_from_bytes
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 
+# TODO: review each `assert` and consider replacing with explicit checks
+#       since asserts can be stripped with python `-OO` flag
+
 
 def parse_sexp_to_condition(
     sexp: Program,
@@ -75,11 +78,13 @@ def pkm_pairs_for_conditions_dict(
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
         assert len(cwa.vars) == 2
+        assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
         ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1]))
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
         assert len(cwa.vars) == 2
+        assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
         assert cwa.vars[0] is not None and cwa.vars[1] is not None
         ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
     return ret
@@ -109,6 +114,7 @@ def coin_announcements_for_conditions_dict(
     output_announcements: Set[Announcement] = set()
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, []):
         message = cvp.vars[0]
+        assert len(message) <= 1024
         announcement = Announcement(input_coin.name(), message)
         output_announcements.add(announcement)
     return output_announcements
@@ -121,6 +127,7 @@ def puzzle_announcements_for_conditions_dict(
     output_announcements: Set[Announcement] = set()
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, []):
         message = cvp.vars[0]
+        assert len(message) <= 1024
         announcement = Announcement(input_coin.puzzle_hash, message)
         output_announcements.add(announcement)
     return output_announcements
@@ -133,6 +140,7 @@ def coin_announcements_names_for_npc(npc_list) -> Set[bytes32]:
             if condition == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
+                    assert len(message) <= 1024
                     announcement = Announcement(npc.coin_name, message)
                     output_announcements.add(announcement.name())
     return output_announcements
@@ -145,6 +153,7 @@ def puzzle_announcements_names_for_npc(npc_list) -> Set[bytes32]:
             if condition == ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT:
                 for cvp in cvp_list:
                     message = cvp.vars[0]
+                    assert len(message) <= 1024
                     announcement = Announcement(npc.puzzle_hash, message)
                     output_announcements.add(announcement.name())
     return output_announcements
@@ -169,8 +178,9 @@ def puzzle_announcement_names_for_conditions_dict(
 def conditions_dict_for_solution(
     puzzle_reveal: Program,
     solution: Program,
+    max_cost: int,
 ) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionWithArgs]]], uint64]:
-    error, result, cost = conditions_for_solution(puzzle_reveal, solution)
+    error, result, cost = conditions_for_solution(puzzle_reveal, solution, max_cost)
     if error or result is None:
         return error, None, uint64(0)
     return None, conditions_by_opcode(result), cost
@@ -179,10 +189,11 @@ def conditions_dict_for_solution(
 def conditions_for_solution(
     puzzle_reveal: Program,
     solution: Program,
+    max_cost: int,
 ) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
-        cost, r = puzzle_reveal.run_with_cost(solution)
+        cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
         error, result = parse_sexp_to_conditions(r)
         return error, result, uint64(cost)
     except Program.EvalError:

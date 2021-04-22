@@ -73,9 +73,12 @@ def batch_pre_validate_blocks(
                 if block.transactions_generator is not None and npc_result is None:
                     prev_generator_bytes = prev_transaction_generators[i]
                     assert prev_generator_bytes is not None
+                    assert block.transactions_info is not None
                     block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
                     assert block_generator.program == block.transactions_generator
-                    npc_result = get_name_puzzle_conditions(block_generator, True)
+                    npc_result = get_name_puzzle_conditions(
+                        block_generator, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
+                    )
                     removals, additions = block_removals_and_additions(block, npc_result.npc_list)
 
                 header_block = get_block_header(block, additions, removals)
@@ -229,7 +232,9 @@ async def pre_validate_blocks_multiprocessing(
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
+    block_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
     for i, block in enumerate(blocks):
+        block_dict[block.header_hash] = block
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
 
@@ -250,13 +255,25 @@ async def pre_validate_blocks_multiprocessing(
         hb_pickled: Optional[List[bytes]] = None
         previous_generators: List[Optional[bytes]] = []
         for block in blocks_to_validate:
-            blocks_dict = {b.header_hash: b for b in blocks}
+            # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
+            # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
+            # generator references
+            prev_blocks_dict: Dict[uint32, Union[FullBlock, HeaderBlock]] = {}
+            curr_b: Union[FullBlock, HeaderBlock] = block
+
+            while curr_b.prev_header_hash in block_dict:
+                curr_b = block_dict[curr_b.prev_header_hash]
+                prev_blocks_dict[curr_b.header_hash] = curr_b
+
             if isinstance(block, FullBlock):
                 assert get_block_generator is not None
                 if b_pickled is None:
                     b_pickled = []
                 b_pickled.append(bytes(block))
-                block_generator: Optional[BlockGenerator] = await get_block_generator(block, blocks_dict)
+                try:
+                    block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
+                except ValueError:
+                    return None
                 if block_generator is not None:
                     previous_generators.append(bytes(block_generator))
                 else:

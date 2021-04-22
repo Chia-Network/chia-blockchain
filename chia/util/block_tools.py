@@ -95,7 +95,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "INITIAL_FREEZE_PERIOD": 0,
+        "INITIAL_FREEZE_END_TIMESTAMP": int(time.time()) - 1,
         "NETWORK_TYPE": 1,
     }
 )
@@ -280,6 +280,7 @@ class BlockTools:
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
         previous_generator: CompressorArg = None,
+        genesis_timestamp: Optional[uint64] = None,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -301,7 +302,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=uint64(int(time.time())),
+                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
             )
             log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -727,6 +728,7 @@ class BlockTools:
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
+                            current_time=current_time,
                         )
 
                         if block_record.is_transaction_block:
@@ -1313,7 +1315,10 @@ def get_full_block_and_block_record(
     current_time: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
     if current_time is True:
-        timestamp = uint64(int(time.time()))
+        if prev_block.timestamp is not None:
+            timestamp = uint64(max(int(time.time()), prev_block.timestamp + int(time_per_block)))
+        else:
+            timestamp = uint64(int(time.time()))
     else:
         timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)

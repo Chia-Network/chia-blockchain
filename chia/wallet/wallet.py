@@ -78,14 +78,16 @@ class Wallet:
             )
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            result: NPCResult = get_name_puzzle_conditions(program, True)
+            result: NPCResult = get_name_puzzle_conditions(
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
+            )
             cost_result: uint64 = calculate_cost_of_program(
                 program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
             )
             self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
-        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
+        max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
         current_cost = 0
         total_amount = 0
         total_coin_count = 0
@@ -317,6 +319,12 @@ class Wallet:
         spends: List[CoinSolution] = []
         output_created = False
 
+        # Check for duplicates
+        if primaries is not None:
+            all_primaries_list = [(p["puzzlehash"], p["amount"]) for p in primaries] + [(newpuzzlehash, amount)]
+            if len(set(all_primaries_list)) != len(all_primaries_list):
+                raise ValueError("Cannot create two identical coins")
+
         for coin in coins:
             self.log.info(f"coin from coins {coin}")
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
@@ -345,6 +353,7 @@ class Wallet:
             coin_solutions,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
     async def generate_signed_transaction(
@@ -374,6 +383,7 @@ class Wallet:
             transaction,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
         now = uint64(int(time.time()))
@@ -437,5 +447,6 @@ class Wallet:
             list_of_solutions,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
         return spend_bundle

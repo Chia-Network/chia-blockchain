@@ -1,4 +1,4 @@
-(mod (block_program block_ref coinname)
+(mod (block_decompresser_program (historical_blocks_tree))
 
     (defconstant local_deserialize_mod
         ;; this monstrosity is the assembly output of `chialisp_deserialisation.clvm`
@@ -10,26 +10,28 @@
               1))
     )
 
-  ; takes a lisp tree and returns the hash of it
-  (defun sha256tree1 (TREE)
-      (if (l TREE)
-          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)))
-
-  (defun check_coin_solution ((parent puzzle amount solution) coinname)
-      (= (sha256 parent (sha256tree1 puzzle) amount) coinname)
-  )
-
-  (defun check_for_coinname (coin_solutions coinname)
-    (if coin_solutions
-      (if (check_coin_solution (f coin_solutions) coinname)
-        (list (f (r (f coin_solutions))) (f (r (r (r (f coin_solutions))))))
-        (check_for_coinname (r coin_solutions) coinname)
-      )
-      (x)
+    (defun sha256tree
+           (TREE)
+           (if (l TREE)
+               (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+               (sha256 1 TREE)
+           )
     )
-  )
 
-  ; main
-  (check_for_coinname (f (a block_program (list local_deserialize_mod block_ref))) coinname)
+    (defun process_coin_solution ((parent puzzle amount solution . spend_level_extras))
+        (c parent (c (sha256tree puzzle) (c amount (c (a puzzle solution) spend_level_extras))))
+    )
+
+    (defun recurse (coin_solutions)
+        (if coin_solutions
+            (c (process_coin_solution (f coin_solutions)) (recurse (r coin_solutions)))
+            0
+        )
+    )
+
+    (defun process-decompressor ((coin_solutions . block-level-extras))
+        (c (recurse coin_solutions) block-level-extras)
+    )
+
+    (process-decompressor (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree))))
 )

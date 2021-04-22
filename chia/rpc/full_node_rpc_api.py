@@ -63,8 +63,8 @@ class FullNodeRpcApi:
         return []
 
     async def get_initial_freeze_period(self):
-        freeze_period = self.service.constants.INITIAL_FREEZE_PERIOD
-        return {"INITIAL_FREEZE_PERIOD": freeze_period}
+        freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
+        return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
 
     async def get_blockchain_state(self, _request: Dict):
         """

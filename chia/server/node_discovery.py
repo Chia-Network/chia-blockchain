@@ -171,22 +171,40 @@ class FullNodeDiscovery:
         empty_tables = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        first = True
         if self.initial_wait > 0:
             await asyncio.sleep(self.initial_wait)
+
+        introducer_backoff = 1
         while not self.is_closed:
             try:
                 assert self.address_manager is not None
 
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
-                if size == 0 or empty_tables:
-                    await self._introducer_client()
+                if size == 0 or empty_tables or first:
+                    first = False
                     try:
-                        await asyncio.sleep(min(5, self.peer_connect_interval))
+                        await asyncio.sleep(introducer_backoff)
+                    except asyncio.CancelledError:
+                        return
+                    await self._introducer_client()
+                    # there's some delay between receiving the peers from the
+                    # introducer until they get incorporated to prevent this
+                    # loop for running one more time. Add this delay to ensure
+                    # that once we get peers, we stop contacting the introducer.
+                    try:
+                        await asyncio.sleep(5)
                     except asyncio.CancelledError:
                         return
                     empty_tables = False
+                    # keep doubling the introducer delay until we reach 5
+                    # minutes
+                    if introducer_backoff < 300:
+                        introducer_backoff *= 2
                     continue
+                else:
+                    introducer_backoff = 1
 
                 # Only connect out to one peer per network group (/16 for IPv4).
                 groups = []

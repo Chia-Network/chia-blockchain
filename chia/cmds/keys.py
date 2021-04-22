@@ -23,10 +23,13 @@ def generate_cmd(ctx: click.Context):
 
 
 @keys_cmd.command("show", short_help="Displays all the keys in keychain")
-def show_cmd():
+@click.option(
+    "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
+)
+def show_cmd(show_mnemonic_seed):
     from .keys_funcs import show_all_keys
 
-    show_all_keys()
+    show_all_keys(show_mnemonic_seed)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")

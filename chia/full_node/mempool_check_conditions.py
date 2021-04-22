@@ -15,7 +15,7 @@ from chia.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
-from chia.wallet.puzzles.lowlevel_generator import get_generator
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
@@ -71,38 +71,36 @@ def mempool_assert_relative_block_height_exceeds(
     return None
 
 
-def mempool_assert_absolute_time_exceeds(
-    condition: ConditionWithArgs, timestamp: Optional[uint64] = None
-) -> Optional[Err]:
+def mempool_assert_absolute_time_exceeds(condition: ConditionWithArgs, timestamp: uint64) -> Optional[Err]:
     """
-    Check if the current time in millis exceeds the time specified by condition
+    Check if the current time in seconds exceeds the time specified by condition
     """
     try:
-        expected_mili_time = int_from_bytes(condition.vars[0])
+        expected_seconds = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
 
     if timestamp is None:
-        timestamp = uint64(int(time.time() * 1000))
-    if timestamp < expected_mili_time:
+        timestamp = uint64(int(time.time()))
+    if timestamp < expected_seconds:
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
     return None
 
 
 def mempool_assert_relative_time_exceeds(
-    condition: ConditionWithArgs, unspent: CoinRecord, timestamp: Optional[uint64] = None
+    condition: ConditionWithArgs, unspent: CoinRecord, timestamp: uint64
 ) -> Optional[Err]:
     """
-    Check if the current time in millis exceeds the time specified by condition
+    Check if the current time in seconds exceeds the time specified by condition
     """
     try:
-        expected_mili_time = int_from_bytes(condition.vars[0])
+        expected_seconds = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
 
     if timestamp is None:
-        timestamp = uint64(int(time.time() * 1000))
-    if timestamp < expected_mili_time + unspent.timestamp:
+        timestamp = uint64(int(time.time()))
+    if timestamp < expected_seconds + unspent.timestamp:
         return Err.ASSERT_SECONDS_RELATIVE_FAILED
     return None
 
@@ -134,25 +132,25 @@ def mempool_assert_my_amount(condition: ConditionWithArgs, unspent: CoinRecord) 
     return None
 
 
-def get_name_puzzle_conditions(generator: BlockGenerator, safe_mode: bool) -> NPCResult:
+def get_name_puzzle_conditions(generator: BlockGenerator, max_cost: int, safe_mode: bool) -> NPCResult:
     try:
         block_program, block_program_args = setup_generator_args(generator)
         if safe_mode:
-            cost, result = GENERATOR_MOD.run_safe_with_cost(block_program, block_program_args)
+            cost, result = GENERATOR_MOD.run_safe_with_cost(max_cost, block_program, block_program_args)
         else:
-            cost, result = GENERATOR_MOD.run_with_cost(block_program, block_program_args)
+            cost, result = GENERATOR_MOD.run_with_cost(max_cost, block_program, block_program_args)
         npc_list: List[NPC] = []
         opcodes: Set[bytes] = set(item.value for item in ConditionOpcode)
 
-        for res in result.as_iter():
+        for res in result.first().as_iter():
             conditions_list: List[ConditionWithArgs] = []
 
-            spent_coin_parent_id: bytes32 = res.first().first().as_atom()
-            spent_coin_puzzle_hash: bytes32 = res.first().rest().first().as_atom()
-            spent_coin_amount: uint64 = uint64(res.first().rest().rest().first().as_int())
+            spent_coin_parent_id: bytes32 = res.first().as_atom()
+            spent_coin_puzzle_hash: bytes32 = res.rest().first().as_atom()
+            spent_coin_amount: uint64 = uint64(res.rest().rest().first().as_int())
             spent_coin: Coin = Coin(spent_coin_parent_id, spent_coin_puzzle_hash, spent_coin_amount)
 
-            for cond in res.rest().first().as_iter():
+            for cond in res.rest().rest().rest().first().as_iter():
                 if cond.first().as_atom() in opcodes:
                     opcode: ConditionOpcode = ConditionOpcode(cond.first().as_atom())
                 elif not safe_mode:
@@ -172,7 +170,7 @@ def get_name_puzzle_conditions(generator: BlockGenerator, safe_mode: bool) -> NP
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), [], uint64(0))
 
 
-def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes):
+def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes, max_cost: int):
     try:
         block_program = generator.program
         if not generator.generator_args:
@@ -180,7 +178,9 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes
         else:
             block_program_args = create_generator_args(generator.generator_refs())
 
-        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(block_program, block_program_args, coin_name)
+        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(
+            max_cost, block_program, block_program_args, coin_name
+        )
         puzzle = result.first()
         solution = result.rest().first()
         return None, puzzle, solution
@@ -194,7 +194,7 @@ def mempool_check_conditions_dict(
     puzzle_announcement_names: Set[bytes32],
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     prev_transaction_block_height: uint32,
-    timestamp: Optional[uint64] = None,
+    timestamp: uint64,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.

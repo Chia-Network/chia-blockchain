@@ -1,3 +1,4 @@
+import logging
 import random
 from dataclasses import replace
 from typing import Callable, Dict, List, Optional, Tuple
@@ -30,6 +31,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.recursive_replace import recursive_replace
+
+log = logging.getLogger(__name__)
 
 
 def create_foliage(
@@ -123,7 +126,7 @@ def create_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list()
-            result: NPCResult = get_name_puzzle_conditions(block_generator, True)
+            result: NPCResult = get_name_puzzle_conditions(block_generator, constants.MAX_BLOCK_COST_CLVM, True)
             cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
 
             removal_amount = 0
@@ -217,7 +220,7 @@ def create_foliage(
 
         generator_refs_hash = bytes32([1] * 32)
         if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join([i.to_bytes(4, byteorder="big") for i in generator_block_heights_list])
+            generator_ref_list_bytes = b"".join([bytes(i) for i in generator_block_heights_list])
             generator_refs_hash = std_hash(generator_ref_list_bytes)
 
         filter_hash: bytes32 = std_hash(encoded)

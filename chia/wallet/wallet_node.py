@@ -549,8 +549,7 @@ class WalletNode:
             self.log.info("No peers to sync to")
             return
 
-        await self.wallet_state_manager.blockchain.lock.acquire()
-        try:
+        async with self.wallet_state_manager.blockchain.lock:
             fork_height = None
             if peak is not None:
                 fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
@@ -586,8 +585,6 @@ class WalletNode:
                         peak.height - self.constants.BLOCKS_CACHE_SIZE,
                     )
                 )
-        finally:
-            self.wallet_state_manager.blockchain.lock.release()
 
     async def fetch_blocks_and_validate(
         self,
@@ -672,6 +669,8 @@ class WalletNode:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 raise ValueError("Value error peer sent us invalid block")
+        if advanced_peak:
+            await self.wallet_state_manager.create_more_puzzle_hashes()
         return True, advanced_peak
 
     def validate_additions(

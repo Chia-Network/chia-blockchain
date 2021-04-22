@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import GeneratorBlockCacheInterface
-from chia.full_node.generator import create_block_generator, create_generator_args, list_to_tree
+from chia.full_node.generator import create_block_generator, create_generator_args
 from chia.util.ints import uint32
 
 gen0 = SerializedProgram.from_bytes(
@@ -44,18 +44,8 @@ class TestGeneratorTypes(TestCase):
         gen_args = create_generator_args(generator_ref_list)
         gen_args_as_program = Program.from_bytes(bytes(gen_args))
 
-        d = gen_args_as_program.first()
-
-        # First argument: clvm deserializer
-
-        b = bytes.fromhex("ff8568656c6c6fff86667269656e6480")  # ("hello" "friend")
-        cost, output = d.run_with_cost([b])
-        # print(cost, output)
-        out = Program.to(output)
-        assert out == Program.from_bytes(b)
-
-        # Second Argument to the block generator is the first template generator
-        arg2 = gen_args_as_program.rest().first()
+        # First Argument to the block generator is the first template generator
+        arg2 = gen_args_as_program.first().first()
         print(arg2)
         assert arg2 == bytes(gen1)
 
@@ -68,37 +58,3 @@ class TestGeneratorTypes(TestCase):
     #    arg2 = gen_args_as_program.rest().first()
     #    assert arg2 == binutils.assemble("('gen1' 'gen2')")
     #    print(arg2)
-
-    def test_list_to_tree(self):
-        self.assertEqual([], list_to_tree([]))
-        self.assertEqual(1, list_to_tree([1]))
-        self.assertEqual((1, 2), list_to_tree([1, 2]))
-        self.assertEqual(((1, 2), 3), list_to_tree([1, 2, 3]))
-        self.assertEqual(((1, 2), (3, 4)), list_to_tree([1, 2, 3, 4]))
-        self.assertEqual((((1, 2), 3), (4, 5)), list_to_tree([1, 2, 3, 4, 5]))
-        self.assertEqual((((1, 2), 3), ((4, 5), 6)), list_to_tree([1, 2, 3, 4, 5, 6]))
-        self.assertEqual((((1, 2), (3, 4)), ((5, 6), 7)), list_to_tree([1, 2, 3, 4, 5, 6, 7]))
-        self.assertEqual((((1, 2), (3, 4)), ((5, 6), (7, 8))), list_to_tree([1, 2, 3, 4, 5, 6, 7, 8]))
-        R = (
-            (
-                (
-                    ((((0, 1), 2), (3, 4)), (((5, 6), 7), (8, 9))),
-                    ((((10, 11), 12), (13, 14)), (((15, 16), 17), (18, 19))),
-                ),
-                (
-                    ((((20, 21), 22), (23, 24)), (((25, 26), 27), (28, 29))),
-                    ((((30, 31), 32), (33, 34)), (((35, 36), 37), (38, 39))),
-                ),
-            ),
-            (
-                (
-                    ((((40, 41), 42), (43, 44)), (((45, 46), 47), (48, 49))),
-                    ((((50, 51), 52), (53, 54)), (((55, 56), 57), (58, 59))),
-                ),
-                (
-                    ((((60, 61), 62), (63, 64)), (((65, 66), 67), (68, 69))),
-                    ((((70, 71), 72), (73, 74)), (((75, 76), 77), (78, 79))),
-                ),
-            ),
-        )
-        self.assertEqual(R, list_to_tree(list(range(80))))

@@ -151,17 +151,23 @@ class WalletPuzzleStore:
 
         return None
 
-    async def set_used_up_to(self, index: uint32) -> None:
+    async def set_used_up_to(self, index: uint32, in_transaction=False) -> None:
         """
         Sets a derivation path to used so we don't use it again.
         """
-        async with self.db_wrapper.lock:
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
             cursor = await self.db_connection.execute(
                 "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
                 (index,),
             )
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def puzzle_hash_exists(self, puzzle_hash: bytes32) -> bool:
         """

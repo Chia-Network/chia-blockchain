@@ -5,7 +5,6 @@ import logging
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
-
 from blspy import AugSchemeMPL, G1Element
 from chiabip158 import PyBIP158
 
@@ -38,12 +37,10 @@ from chia.util.streamable import recurse_jsonify
 log = logging.getLogger(__name__)
 
 
-def get_npc_multiprocess(
-    spend_bundle_bytes: bytes,
-) -> bytes:
+def get_npc_multiprocess(spend_bundle_bytes: bytes, max_cost: int) -> bytes:
     program = simple_solution_generator(SpendBundle.from_bytes(spend_bundle_bytes))
     # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-    return bytes(get_name_puzzle_conditions(program, True))
+    return bytes(get_name_puzzle_conditions(program, max_cost, True))
 
 
 class MempoolManager:
@@ -58,6 +55,7 @@ class MempoolManager:
 
         self.coin_store = coin_store
 
+        self.limit_factor = 0.5
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
         self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.potential_cache_cost: int = 0
@@ -81,7 +79,7 @@ class MempoolManager:
         if (
             self.peak is None
             or self.peak.header_hash != peak_header_hash
-            or self.peak.height <= self.constants.INITIAL_FREEZE_PERIOD
+            or int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP
         ):
             return None
 
@@ -98,7 +96,7 @@ class MempoolManager:
             for item in dic.values():
                 log.info(f"Cumulative cost: {cost_sum}")
                 if (
-                    item.cost + cost_sum <= 0.5 * self.constants.MAX_BLOCK_COST_CLVM
+                    item.cost + cost_sum <= self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM
                     and item.fee + fee_sum <= self.constants.MAX_COIN_AMOUNT
                 ):
                     spend_bundles.append(item.spend_bundle)
@@ -199,7 +197,7 @@ class MempoolManager:
         """
         start_time = time.time()
         cached_result_bytes = await asyncio.get_running_loop().run_in_executor(
-            self.pool, get_npc_multiprocess, bytes(new_spend)
+            self.pool, get_npc_multiprocess, bytes(new_spend), self.constants.MAX_BLOCK_COST_CLVM
         )
         end_time = time.time()
         log.info(f"It took {end_time - start_time} to pre validate transaction")
@@ -226,7 +224,7 @@ class MempoolManager:
 
         log.debug(f"Cost: {cost}")
 
-        if cost > self.constants.MAX_BLOCK_COST_CLVM:
+        if cost > int(self.limit_factor * self.constants.MAX_BLOCK_COST_CLVM):
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
         if npc_result.error is not None:
@@ -276,13 +274,14 @@ class MempoolManager:
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
                 # TODO(straya): what timestamp to use here?
+                assert self.peak.timestamp is not None
                 removal_record = CoinRecord(
                     removal_coin,
                     uint32(self.peak.height + 1),  # In mempool, so will be included in next height
                     uint32(0),
                     False,
                     False,
-                    uint64(int(time.time())),
+                    uint64(self.peak.timestamp + 1),
                 )
 
             assert removal_record is not None
@@ -307,6 +306,8 @@ class MempoolManager:
                 fee_list: List[ConditionWithArgs] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
+                    if fee < 0:
+                        return None, MempoolInclusionStatus.FAILED, Err.RESERVE_FEE_CONDITION_FAILED
                     assert_fee_sum = assert_fee_sum + fee
         if fees < assert_fee_sum:
             return (
@@ -367,12 +368,14 @@ class MempoolManager:
             chialisp_height = (
                 self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
             )
+            assert self.peak.timestamp is not None
             error = mempool_check_conditions_dict(
                 coin_record,
                 coin_announcements_in_spend,
                 puzzle_announcements_in_spend,
                 npc.condition_dict,
                 uint32(chialisp_height),
+                self.peak.timestamp,
             )
 
             if error:
@@ -465,9 +468,12 @@ class MempoolManager:
         """
         if new_peak is None:
             return []
+        if new_peak.is_transaction_block is False:
+            return []
         if self.peak == new_peak:
             return []
-        if new_peak.height <= self.constants.INITIAL_FREEZE_PERIOD:
+        assert new_peak.timestamp is not None
+        if new_peak.timestamp <= self.constants.INITIAL_FREEZE_END_TIMESTAMP:
             return []
 
         self.peak = new_peak

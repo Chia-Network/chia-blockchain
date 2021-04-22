@@ -6,15 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## 1.1.0 Chia Blockchain 2021-04-21
 
 ### Added
 
-### Fixed
+- This fork release includes full transaction support for the Chia Blockchain. Transactions are still disabled until 5/3/2021 at 10:00AM PDT. It is hard understate how much work and clean up went into this release.
+- This is the 1.0 release of Chialisp. Much has been massaged and finalized. We will be putting a focus on updating and expanding the documentation on [chialisp.com](https://chialisp.com) shortly.
+- Farmers now compress blocks using code snippets from previous blocks. This saves storage space and allows larger smart coins to have a library of sorts on chain.
+- You can now ask for an offset wallet receive address in the cli. Thanks @jespino.
+- When adding plots we attempt to detect a duplicate and not load it.
 
 ### Changed
 
+- We have changed how transactions will unlock from a blockheight to a timestamp. As noted above that timestamp is 5/3/2021 at 10AM PDT.
+- We have temporarily disabled the "Delete Plots" button in the Windows GUI as we are still working on debugging upstream issues that are causing it.
+- There are various optimizations in node and wallet to increase sync speed and lower work to stay in sync. We expect to add additional significant performance improvements in the next release also.
+- Transactions now add the agg_sig_me of the genesis block for chain compatibility reasons.
+- Wallet is far less chatty to unload the classic introducers. DNS introducers will be coming shortly to replace the classic introducers that are still deployed.
+- Netspace is now calculated across the previous 4068 blocks (generally the past 24 hours) in the GUI and cli.
+
+### Fixed
+
 - Performance of streamable has been increased, which should help the full node use less CPU - especially when syncing.
+- Timelords are now successfully infusing almost 100% of blocks.
+- Harvester should be a bit more tolerant of some bad plots.
 
 ## 1.0.5 Chia Blockchain 2021-04-14
 

@@ -1,14 +1,13 @@
 import logging
 from typing import List, Optional, Union, Tuple
-from chia.types.blockchain_format.program import Program, SerializedProgram, NIL
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator, GeneratorArg, GeneratorBlockCacheInterface, CompressorArg
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.lowlevel_generator import get_generator
+from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
 DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
 DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
 # DECOMPRESS_CSE = load_clvm("decompress_coin_solution_entry.clvm", package_or_requirement="chia.wallet.puzzles")
@@ -38,8 +37,7 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
-    gen_ref_tree = list_to_tree(gen_ref_list)
-    return Program.to([DESERIALIZE_MOD, gen_ref_tree])
+    return Program.to([gen_ref_list])
 
 
 def create_compressed_generator(
@@ -60,37 +58,16 @@ def create_compressed_generator(
 
 
 def setup_generator_args(self: BlockGenerator):
-    if not self.generator_args:
-        args = NIL
-    else:
-        args = create_generator_args(self.generator_refs())
+    args = create_generator_args(self.generator_refs())
     return self.program, args
 
 
-def run_generator(self: BlockGenerator) -> Tuple[int, SerializedProgram]:
+def run_generator(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
     program, args = setup_generator_args(self)
-    return GENERATOR_MOD.run_safe_with_cost(program, args)
+    return GENERATOR_MOD.run_safe_with_cost(max_cost, program, args)
 
 
-def run_generator_unsafe(self: BlockGenerator) -> Tuple[int, SerializedProgram]:
+def run_generator_unsafe(self: BlockGenerator, max_cost: int) -> Tuple[int, SerializedProgram]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     program, args = setup_generator_args(self)
-    return GENERATOR_MOD.run_with_cost(program, args)
-
-
-def list_to_tree(items):
-    """
-    This recursively turns a python list into a minimal depth tree.
-    [] => []
-    [a] => a (a leaf node)
-    [a_1, ..., a_n] => (list_to_tree(B_0), list_to_tree(B_1)) where len(B_0) - len(B_1) is 0 or 1
-      and B_0 + B_1 is the original list
-    [1, 2, 3, 4] => ((1, 2), (3, 4))
-    """
-    size = len(items)
-    if size == 0:
-        return []
-    if size == 1:
-        return items[0]
-    halfway = (size + 1) // 2
-    return (list_to_tree(items[:halfway]), list_to_tree(items[halfway:]))
+    return GENERATOR_MOD.run_with_cost(max_cost, program, args)

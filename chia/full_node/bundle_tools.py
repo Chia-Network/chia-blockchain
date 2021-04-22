@@ -17,8 +17,10 @@ def spend_bundle_to_coin_solution_entry_list(bundle: SpendBundle) -> List[Any]:
     r = []
     for coin_solution in bundle.coin_solutions:
         entry = [
-            [coin_solution.coin.parent_coin_info, coin_solution.coin.amount],
-            [coin_solution.puzzle_reveal, coin_solution.solution],
+            coin_solution.coin.parent_coin_info,
+            coin_solution.puzzle_reveal,
+            coin_solution.coin.amount,
+            coin_solution.solution,
         ]
         r.append(entry)
     return r
@@ -29,7 +31,7 @@ def simple_solution_generator(bundle: SpendBundle) -> BlockGenerator:
     Simply quotes the solutions we know.
     """
     cse_list = spend_bundle_to_coin_solution_entry_list(bundle)
-    block_program = SerializedProgram.from_bytes(SExp.to((binutils.assemble("#q"), cse_list)).as_bin())
+    block_program = SerializedProgram.from_bytes(SExp.to((binutils.assemble("#q"), [cse_list])).as_bin())
     generator = BlockGenerator(block_program, [])
     return generator
 
