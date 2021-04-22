@@ -78,6 +78,11 @@ jobs:
       with:
         name: 'Linux-ARM-64-Installer'
 
+    - name: View Path & Files
+      run: |
+          pwd
+          ls
+
     - name: Install AWS CLI
       run: |
           sudo apt-get install -y awscli
