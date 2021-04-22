@@ -120,6 +120,11 @@ jobs:
       with:
         name: 'Chia-Installer-on-MacOS-10.15-dmg'
 
+    - name: View Path & Files
+      run: |
+        pwd
+        ls
+        
     - name: Install AWS CLI
       run: |
         curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
