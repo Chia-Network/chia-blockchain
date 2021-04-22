@@ -713,13 +713,17 @@ class FullNodeAPI:
                 difficulty,
                 request.challenge_chain_sp,
             )
-            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
-            ip_iters: uint64 = calculate_ip_iters(
-                self.full_node.constants,
-                sub_slot_iters,
-                request.signage_point_index,
-                required_iters,
-            )
+            try:
+                sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
+                ip_iters: uint64 = calculate_ip_iters(
+                    self.full_node.constants,
+                    sub_slot_iters,
+                    request.signage_point_index,
+                    required_iters,
+                )
+            except ValueError as e:
+                self.log.warning(f"Value Error: {e}")
+                return None
 
             # The block's timestamp must be greater than the previous transaction block's timestamp
             timestamp = uint64(int(time.time()))
