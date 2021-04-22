@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-22 18:12\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -28,7 +28,7 @@ msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Ex
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "Odporúčame 128 bucketov"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -37,7 +37,7 @@ msgstr "Kombajn je služba bežiaca na stroji, kde sú uložené polia. Farmár 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "O Chia blockchaine"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -129,7 +129,7 @@ msgstr "Naozaj sa chcete odpojiť?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "Naozaj chcete skončiť? GUI pre plotting a farmenie bude ukončené."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -146,7 +146,7 @@ msgstr "Späť"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Súbor so zálohou inteligentných peňaženiek."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "Najlepší odhad za posledných 5 hodín"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -180,7 +180,7 @@ msgstr "Blok"
 
 #: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr ""
+msgstr "Test bloku"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
@@ -188,7 +188,7 @@ msgstr "Blok VDF iterácii"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Blok s výškou {0} v Chia blockchaine"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "Blok s hashom {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "Block s hashom {headerHash} neexistuje."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -273,7 +273,7 @@ msgstr "Chia"
 
 #: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia Blockchain Wiki"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
@@ -378,7 +378,7 @@ msgstr "Pripojenia"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Prispejte na GitHube"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -554,7 +554,7 @@ msgstr "Zložitosť"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr ""
+msgstr "Zruš bitfield plotting"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -571,7 +571,7 @@ msgstr ""
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr ""
+msgstr "Máte existujúce ploty na tomto stroji? <0>Pridaj Adresár s Plotmi</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -611,7 +611,7 @@ msgstr "Chyba: Prosím zadajte platnú adresu."
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Očakávaný čas na výhru"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -656,7 +656,7 @@ msgstr "Farmár nie je pripojený"
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "Nebeží farmer"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -776,7 +776,7 @@ msgstr "Poradie"
 
 #: src/electron/main.tsx:308
 msgid "Help"
-msgstr ""
+msgstr "Pomoc"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
@@ -1310,11 +1310,11 @@ msgstr "Verejný kľúč:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr ""
+msgstr "Názov Frontu"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
-msgstr ""
+msgstr "Názov frontu"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
@@ -1734,7 +1734,7 @@ msgstr "Tento obchod bol zahrnutý v blockchaine na tejto pozícii"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Táto verzia Chii nie je kompatibilná s blockchainom a farmenie na nej nie je bezpečné."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1764,7 +1764,7 @@ msgstr "Celkový zostatok"
 
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
-msgstr ""
+msgstr "Celkový Počet Iterácií"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
@@ -1784,7 +1784,7 @@ msgstr "Celkový počet iterácií VDF"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Celkový počet iterácií od začiatku blockchainu"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
@@ -1947,7 +1947,7 @@ msgstr ""
 
 #: src/electron/main.tsx:294
 msgid "Window"
-msgstr ""
+msgstr "Okno"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
@@ -1997,7 +1997,7 @@ msgstr "Vaše pripojenie k sieti"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr ""
+msgstr "Sieť Tvojich Harvesterov"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2038,12 +2038,13 @@ msgstr "synchronizácia"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr ""
+msgstr "{currencyCode} Odmena Za Blok"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
-msgstr ""
+msgstr "{currencyCode} Celkové Množstvo Nafarmenej Chii"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr ""
+msgstr "{currencyCode} Užívateľské Poplatky Za Transakcie"
+
