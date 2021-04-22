@@ -1213,7 +1213,12 @@ class TestFullNodeProtocol:
         await full_node_1.respond_signage_point(
             fnp.RespondSignagePoint(4, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
         )
+        # Should not add duplicates to cache though
+        await full_node_1.respond_signage_point(
+            fnp.RespondSignagePoint(4, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
+        )
         assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is None
+        assert len(full_node_1.full_node.full_node_store.future_sp_cache[sp.rc_vdf.challenge]) == 1
 
         # Add block
         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)

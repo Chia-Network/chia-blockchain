@@ -178,7 +178,8 @@ class FullNodeStore:
             return
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             self.future_sp_cache[signage_point.rc_vdf.challenge] = []
-        self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
+        if (index, signage_point) not in self.future_sp_cache[signage_point.rc_vdf.challenge]:
+            self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
         self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
         log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge}. caching signage point {index}.")
 
