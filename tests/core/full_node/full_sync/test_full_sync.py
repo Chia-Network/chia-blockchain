@@ -300,8 +300,6 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 89)
         await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
 
-
-
     @pytest.mark.asyncio
     async def test_sync_bad_peak_while_synced(self, three_nodes, default_1000_blocks, default_10000_blocks):
         # Must be larger than "sync_block_behind_threshold" in the config
@@ -336,12 +334,12 @@ class TestFullSync:
             peak_block.height,
             peak_block.weight,
             peak_block.height,
-            peak_block.reward_chain_block.get_unfinished().get_hash())
-        await full_node_2.full_node.new_peak(peak,con)
+            peak_block.reward_chain_block.get_unfinished().get_hash(),
+        )
+        await full_node_2.full_node.new_peak(peak, con)
         await asyncio.sleep(2)
         assert not full_node_2.full_node.sync_store.get_sync_mode()
-        for block in default_1000_blocks[1000-num_blocks_initial:]:
+        for block in default_1000_blocks[1000 - num_blocks_initial :]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
 
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
