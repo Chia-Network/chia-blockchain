@@ -107,7 +107,7 @@ jobs:
 
     - name: View Path & Files
       run: |
-          dir ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+          dir ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer
           cd
 
     - name: Install AWS CLI
@@ -123,7 +123,7 @@ jobs:
 
     - name: Upload to s3
       run: |
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe s3://download-chia-net/builds/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe s3://download-chia-net/builds/
 
     - name: Install py3createtorrent
       run: |
@@ -131,9 +131,9 @@ jobs:
 
     - name: Create Torrent Files
       run: |
-        py3createtorrent D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe
+        py3createtorrent ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
 
     - name: Upload Release Files
       run: |
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe s3://download-chia-net/test-installs/
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe.torrent s3://download-chia-net/test-installs/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe s3://download-chia-net/test-installs/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.torrent s3://download-chia-net/test-installs/
