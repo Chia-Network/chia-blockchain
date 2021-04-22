@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 08:00\n"
+"PO-Revision-Date: 2021-04-22 18:12\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "已過5小時最佳預估值"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -611,7 +611,7 @@ msgstr "錯誤：不能發送 Chia 到有色地址。請輸入 Chia 地址。"
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr "估計贏取時間"
+msgstr "預計贏取時間"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -1235,7 +1235,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-#~ msgstr "以 bitfield 規劃耕地可以減少約 30％ 的總寫入量，而現在也都幾乎比較快。 關閉 Bitfield 規劃耕地的話有可能降低記憶體需求。如果你的 CPU 設計是 2010 年以前的話很有可能需要關閉 bitfield 規劃耕地。"
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1973,7 +1973,7 @@ msgstr "你不需要同步或連線後才能規劃耕地。規劃耕地時所產
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "你擁有網路中 {0} ％的空間，耕種一個區塊預計要 {expectedTimeToWin} 。實際結果可能是比預計的多 3 至 4 倍時間。"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2047,3 +2047,4 @@ msgstr "{currencyCode} 已收耕 Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 使用者交易費用"
+
