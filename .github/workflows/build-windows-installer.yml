@@ -123,7 +123,7 @@ jobs:
 
     - name: Upload to s3
       run: |
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\?.exe s3://download-chia-net/builds/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe s3://download-chia-net/builds/
 
     - name: Install py3createtorrent
       run: |
@@ -131,9 +131,9 @@ jobs:
 
     - name: Create Torrent Files
       run: |
-        py3createtorrent D:\a\chia-blockchain\chia-blockchain\windows-installer\?.exe
+        py3createtorrent D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe
 
     - name: Upload Release Files
       run: |
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\?.exe s3://download-chia-net/test-installs/
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\?.torrent s3://download-chia-net/test-installs/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe s3://download-chia-net/test-installs/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\ChiaSetup-1.1.252.exe.torrent s3://download-chia-net/test-installs/
