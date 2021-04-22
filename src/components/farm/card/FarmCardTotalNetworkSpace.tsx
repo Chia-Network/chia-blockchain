@@ -18,7 +18,7 @@ export default function FarmCardTotalNetworkSpace() {
       value={<FormatBytes value={totalNetworkSpace} precision={3} />}
       description={
         <Trans>
-          Best estimate over last 5 hours
+          Best estimate over last 24 hours
         </Trans>
       }
     />
