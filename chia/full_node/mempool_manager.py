@@ -178,16 +178,25 @@ class MempoolManager:
             # the new item
             for coin in item.removals:
                 if coin.name() not in removals:
+                    log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                     return False
 
         # New item must have higher fee per cost
-        if fees_per_cost <= conflicting_fees / conflicting_cost:
+        conflicting_fees_per_cost = conflicting_fees / conflicting_cost
+        if fees_per_cost <= conflicting_fees_per_cost:
+            log.debug(
+                f"Rejecting conflicting tx due to not increasing fees per cost "
+                f"({fees_per_cost} <= {conflicting_fees_per_cost})"
+            )
             return False
 
         # New item must increase the total fee at least by a certain amount
-        if fees < conflicting_fees + self.get_min_fee_increase():
+        fee_increase = fees - conflicting_fees
+        if fee_increase < self.get_min_fee_increase():
+            log.debug(f"Rejecting conflicting tx due to low fee increase ({fee_increase})")
             return False
 
+        log.info(f"Replacing conflicting tx in mempool. New tx fee: {fees}, old tx fees: {conflicting_fees}")
         return True
 
     async def pre_validate_spendbundle(self, new_spend: SpendBundle) -> NPCResult:
