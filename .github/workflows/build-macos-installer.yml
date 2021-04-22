@@ -113,3 +113,40 @@ jobs:
       with:
         name: Chia-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      id: download
+      with:
+        name: 'Chia-Installer-on-MacOS-10.15-dmg'
+
+    - name: Install AWS CLI
+      run: |
+          sudo apt-get install -y awscli
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      run: |
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/builds/
+
+    - name: Install mktorrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          sudo apt-get install -y mktorrent
+
+    - name: Create Torrent Files
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          mktorrent /home/runner/work/chia-blockchain/chia-blockchain/*.dmg
+
+    - name: Upload Release Files
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.dmg s3://download-chia-net/test-installs/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/test-installs/
