@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-22 18:13\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -28,7 +28,7 @@ msgstr "Chciałbyś dokładniej przejrzeć bloki Chia? Sprawdź otwartoźródło
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "Zalecane jest 128 wiader"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "Najlepsze przybliżenie ostatnich 5 godzin"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -418,7 +418,7 @@ msgstr "Stwórz działkę"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr ""
+msgstr "Utwórz Portfel z limitowaną stawką administratora"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
@@ -566,7 +566,7 @@ msgstr "Rozłącz"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Opcje Rozproszonej Tożsamości"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -611,7 +611,7 @@ msgstr "Błąd: Nie można wysłać chia na adres colored. Proszę podać adres 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Szacunkowy czas oczekiwania na wygraną"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -829,7 +829,7 @@ msgstr "Indeks"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "Wskazuje, czy ta oferta została stworzona przez nas"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
@@ -1046,7 +1046,7 @@ msgstr "Nie znaleziono działek"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "Liczba wiader"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
@@ -1070,7 +1070,7 @@ msgstr "Wychodzące"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr ""
+msgstr "Wysokość szczytowa"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1078,7 +1078,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
-msgstr ""
+msgstr "Czas szczytu"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
@@ -1087,21 +1087,21 @@ msgstr "Oczekujące"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr ""
+msgstr "Oczekujące saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr ""
+msgstr "Oczekujące saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Oczekujące saldo"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Proszę dodać parę transakcji"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
@@ -1109,7 +1109,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Wprowadź prawidłową wartość monet"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
@@ -1489,7 +1489,7 @@ msgstr "Pokaż zaawansowane opcje"
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Strona"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
@@ -1513,17 +1513,17 @@ msgstr "Mowa"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Dostępna kwota"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "Kwota do wydania na przedział"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Dostępne saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
@@ -1635,7 +1635,7 @@ msgstr "Lokalizacja folderu tymczasowego"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Aplikacja przestanie działać na wysokości bloku 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1734,7 +1734,7 @@ msgstr "To zlecenie zostało uwzględnione w blockchainie na tej wysokości"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Ta wersja Chia nie jest już kompatybilna z blockchain i nie może bezpiecznie uprawiać."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1859,11 +1859,11 @@ msgstr "Zobacz Ofertę"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr ""
+msgstr "Zobacz oczekujące saldo"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "Zobacz oczekujące saldo..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1939,11 +1939,11 @@ msgstr "Witaj w Chia. Zaloguj się z instniejącym kluczem, lub utwórz nowy klu
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Witamy! Poniższe słowa służą do tworzenia kopii zapasowej portfela. Bez nich stracisz dostęp do swojego portfela, chroń je! Zapisz każde słowo wraz z numerem zamówienia obok nich. (Kolejność jest ważna)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "Gdy otrzymasz pakiet informacji konfiguracyjnych od administratora, wprowadź go poniżej, aby zakończyć konfigurację portfela z ograniczeniami dotyczącymi stawek:"
 
 #: src/electron/main.tsx:294
 msgid "Window"
@@ -1973,7 +1973,7 @@ msgstr "Nie musisz być zsynchronizowany ani połączony aby generować działki
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Masz {0}% miejsca w sieci, więc rolnictwo bloku zajmie {expectedTimeToWin}. Rzeczywiste wyniki mogą trwać od 3 do 4 razy dłużej niż to oszacowane."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2047,3 +2047,4 @@ msgstr "{currencyCode} Całkowita ilość wydobytego Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Opłaty za transakcję użytkownika"
+
