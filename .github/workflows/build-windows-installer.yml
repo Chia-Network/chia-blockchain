@@ -120,3 +120,20 @@ jobs:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
         aws-region: us-west-2
+
+    - name: Upload to s3
+      run: |
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\*.exe s3://download-chia-net/builds/
+
+    - name: Install py3createtorrent
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create Torrent Files
+      run: |
+        py3createtorrent D:\a\chia-blockchain\chia-blockchain\windows-installer\*.exe
+
+    - name: Upload Release Files
+      run: |
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\*.exe s3://download-chia-net/test-installs/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\*.torrent s3://download-chia-net/test-installs/
