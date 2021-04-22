@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-22 18:13\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "Mejor estimado de las últimas 5 horas"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -611,7 +611,7 @@ msgstr "Error: No se puede enviar chia a la dirección de color. Por favor intro
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Tiempo Estimado para Ganar"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -667,7 +667,7 @@ msgstr "Los agricultores obtienen recompensas en bloque y tarifas de transacció
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr "Cultivando"
+msgstr "Joseando"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -1235,7 +1235,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-#~ msgstr "Sembrar con bitfield habilitado tiene aproximadamente 30% menos escrituras y ahora es casi siempre más rápido. Puede llegar a notar una reducción de los requerimientos de memoria con bitfield deshabilitado. Si el diseño de su CPU es anterior al 2010 pudiera ser necesario que deshabilite sembrar con bitfield."
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1973,7 +1973,7 @@ msgstr "No necesita estar sincronizado o conectado para sembrar. Los archivos te
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Tienes un {0}% del espacio en la red, así que la recolección de un bloque tomará {expectedTimeToWin} de espera. Los resultados reales pueden tardar entre 3 y 4 veces más que esta estimación."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2047,3 +2047,4 @@ msgstr "{currencyCode} Total de Chia Cultivada"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Tarifas de Transacción del Usuario"
+
