@@ -107,7 +107,7 @@ jobs:
 
     - name: View Path & Files
       run: |
-          dir windows-installer
+          dir ${{ github.workspace }}\chia-blockchain-gui\release-builds\
           cd
 
     - name: Install AWS CLI
