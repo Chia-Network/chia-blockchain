@@ -79,19 +79,19 @@
     (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG_UNSAFE) (unquote pubkey) (unquote newpuz)))))
   )
 
-  (defun create_consume_message (coin_id my_id new_innerpuz pubkey)
+  (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
     (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-  (defun create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
     (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
                     mod_hash
                     mod_hash_hash
                     inner_puzzle_hash)
   )
 
-  (defun create_coin_ID_for_recovery (mod_hash mod_hash_hash did parent innerpuzhash amount)
+  (defun-inline create_coin_ID_for_recovery (mod_hash mod_hash_hash did parent innerpuzhash amount)
     (sha256 parent (create_fullpuzhash mod_hash mod_hash_hash did innerpuzhash) amount)
   )
 

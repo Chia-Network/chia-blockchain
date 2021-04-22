@@ -80,7 +80,7 @@ class DIDWallet:
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-
+        assert self.did_info.origin_coin is not None
         did_puzzle_hash = did_wallet_puzzles.create_fullpuz(
             self.did_info.current_inner, self.did_info.origin_coin.puzzle_hash
         ).get_tree_hash()
@@ -310,6 +310,7 @@ class DIDWallet:
 
     def create_backup(self, filename: str):
         assert self.did_info.current_inner is not None
+        assert self.did_info.origin_coin is not None
         try:
             f = open(filename, "w")
             output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
@@ -332,7 +333,7 @@ class DIDWallet:
             f = open(filename, "r")
             details = f.readline().split(":")
             f.close()
-            origin = Coin(bytes.fromhex(details[0]), bytes.fromhex(details[1]), int(details[2]))
+            origin = Coin(bytes.fromhex(details[0]), bytes.fromhex(details[1]), uint64(int(details[2])))
             backup_ids = []
             for d in details[3].split(","):
                 backup_ids.append(bytes.fromhex(d))
@@ -352,7 +353,8 @@ class DIDWallet:
             )
             await self.save_info(did_info, False)
             await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-            full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.puzzle_hash)
+
+            full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, origin.puzzle_hash)
             full_puzzle_hash = full_puz.get_tree_hash()
             (
                 sub_height,
@@ -427,6 +429,7 @@ class DIDWallet:
         )
 
     def get_my_DID(self) -> str:
+        assert self.did_info.origin_coin is not None
         core = self.did_info.origin_coin.puzzle_hash
         assert core is not None
         return core.hex()
@@ -434,6 +437,7 @@ class DIDWallet:
     # This is used to cash out, or update the id_list
     async def create_spend(self, puzhash: bytes32):
         assert self.did_info.current_inner is not None
+        assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
         assert coins is not None
         coin = coins.pop()
@@ -448,7 +452,6 @@ class DIDWallet:
         )
         parent_info = await self.get_parent_for_coin(coin)
         assert parent_info is not None
-
         fullsol = Program.to(
             [
                 [self.did_info.origin_coin.parent_coin_info, self.did_info.origin_coin.amount],
@@ -503,6 +506,7 @@ class DIDWallet:
         self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element, filename=None
     ) -> SpendBundle:
         assert self.did_info.current_inner is not None
+        assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
         coin = coins.pop()
@@ -633,6 +637,7 @@ class DIDWallet:
         pubkey: G1Element,
         spend_bundle: SpendBundle,
     ) -> SpendBundle:
+        assert self.did_info.origin_coin is not None
         # innerpuz solution is (mode amount new_puz identity my_puz parent_innerpuzhash_amounts_for_recovery_ids)
         innersol = Program.to(
             [
@@ -796,6 +801,7 @@ class DIDWallet:
         return full_spend
 
     async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
+        assert self.did_info.origin_coin is not None
         # innerpuz solution is (mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids)
         innersol = Program.to([0, coin.amount, coin.puzzle_hash, coin.name(), coin.puzzle_hash, []])
         # full solution is (parent_info my_amount innersolution)
