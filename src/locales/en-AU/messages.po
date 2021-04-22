@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_AU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-22 18:12\n"
 "Last-Translator: \n"
 "Language-Team: English, Australia\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
-#~ msgstr "Best guesstimate over last 5 hours"
+#~ msgstr ""
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
@@ -277,7 +277,7 @@ msgstr "Chia Blockchain Wiki"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr "Chia Wallet with my future beer money"
+msgstr "Chia Wallet"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -327,11 +327,11 @@ msgstr "Coloured Coin Options"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
-msgstr "You ripper"
+msgstr "Confirm"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr "You ripper"
+msgstr "Confirm Disconnect"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -602,7 +602,7 @@ msgstr "Enter the 24 word mnemonic that you have saved in order to restore your 
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr "Error, she's knacked"
+msgstr "Error"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -611,7 +611,7 @@ msgstr "Error: Cannot send chia to coloured address. Please enter a chia address
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Estimated Time to Win"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
@@ -651,12 +651,12 @@ msgstr "Farmer Reward Address"
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "Farmer is not connected you drongo"
+msgstr "Farmer is not connected"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "Farmer is not running you drongo"
+msgstr "Farmer is not running"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -667,7 +667,7 @@ msgstr "Farmers earn block rewards and transaction fees by committing spare spac
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr "Earning beer money"
+msgstr "Farming"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -776,7 +776,7 @@ msgstr "Height"
 
 #: src/electron/main.tsx:308
 msgid "Help"
-msgstr "Help me Jebus"
+msgstr "Help"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
@@ -1235,7 +1235,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-#~ msgstr "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
@@ -1973,7 +1973,7 @@ msgstr "You do not need to be synched or connected to plot. Temporary files are 
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -2047,3 +2047,4 @@ msgstr "{currencyCode} Total Chia Farmed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} User Transaction Fees, extra beer money"
+
