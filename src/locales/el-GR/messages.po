@@ -8,7 +8,7 @@ msgstr ""
 "Language: el_GR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:46\n"
+"PO-Revision-Date: 2021-04-22 18:13\n"
 "Last-Translator: \n"
 "Language-Team: Greek\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
+msgstr "*Θέλετε να εμβαθύνετε περαιτέρω στον κόσμο των Chia Blocks? Τσέκαρέ το! <0>Ο Εξερευνητής Chiar</0> δημιουργήθηκε από έναν προγραμματιστή ανοιχτού κώδικα."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,108 +28,108 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "Συνιστάται η χρήση 128 bucket"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "Ο harvester είναι μια υπηρεσία που εκτελείται σε ένα μηχάνημα(τα) όπου βρίσκονται αποθηκευμένο(-α) τα plot(s). Ο farmer και ο harvester αλληλεπιδρούν σε έναν πλήρη κόμβο για να δουν την κατάσταση της αλυσίδας(chain). Δείτε το δίκτυο συνδεδεμένων harvester παρακάτω. Μάθετε περισσότερα"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr ""
+msgstr "Περί Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr ""
+msgstr "Αποδοχή"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Έγινε αποδεκτή την ημερομηνία:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr ""
+msgstr "Ενέργεια"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr ""
+msgstr "Ενέργειες"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr ""
+msgstr "Προσθήκη"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Προσθήκη Plot Directory"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr ""
+msgstr "Προσθήκη plot σε αναμονή"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr ""
+msgstr "Προσθήκη Πορτοφολιού"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Προσθήκη plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr ""
+msgstr "Προσθήκη plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr ""
+msgstr "Προσθήκη Plot Directory"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
 #: src/components/wallet/standard/WalletStandard.tsx:373
 msgid "Address"
-msgstr ""
+msgstr "Ηλ. Διεύθυνση"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Ηλ. Διεύθυνση / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:48
+#: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:331
 msgid "Amount"
-msgstr ""
+msgstr "Ποσό"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Ποσό ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "Ποσό Αρχικού Νομίσματος"
 
-#: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτόν τον πελάτη; Δεν είναι δυνατή η αναίρεση αυτής της ενέργειας."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr ""
+msgstr "Είστε βέβαιοι οτι θέλετε να αποσυνδεθείτε;"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr ""
+msgstr "Είστε βέβαιοι ότι θέλετε να σταματήσετε? Το GUI Plotting και το Farming θα σταματήσει."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -137,70 +137,74 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr ""
+msgstr "Είστε βέβαιοι ότι θέλετε να χρησιμοποιήσετε k={plotSize};"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr ""
+msgstr "Επιστροφή"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Το αντίγραφο ασφαλείας χρησιμοποιείται για την αποκατάσταση των έξυπνων πορτοφολιών."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
 #: src/components/wallet/standard/WalletStandard.tsx:194
 msgid "Balance"
-msgstr ""
+msgstr "Υπόλοιπο"
 
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Μέσο Ποσό Ανταμοιβής Farmer"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr "Παρακάτω είναι τα τρέχοντα block challenges. Μπορεί να έχετε ή να μην έχετε μια αποδεικτικό χώρου για αυτά τα challenges. Αυτά τα μπλοκ δεν περιέχουν επί του παρόντος αποδεικτικό χρόνου."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+msgid "Best estimate over last 24 hours"
 msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
-msgid "Best estimate over last 5 hours"
-msgstr ""
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
 
-#: src/components/block/Block.jsx:109
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:148
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:112
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:306
 msgid "Block"
-msgstr ""
+msgstr "Block"
 
-#: src/components/block/Block.jsx:121
+#: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr ""
+msgstr "Δοκιμή Μπλοκ"
 
-#: src/components/block/Block.jsx:227
+#: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "Αποκλεισμός Επαναλήψεων Vdf"
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Αποκλεισμός στο ύψος {0} στο Chia blockchain"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:126
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "Block with hash {headerHash}"
 
-#: src/components/block/Block.jsx:155
+#: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "Block με hash {headerHash} δεν υπάρχει."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
-msgstr ""
+msgstr "Blocks"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -210,21 +214,21 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Εξερεύνηση"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr ""
+msgstr "Αλλά επί του παρόντος κάνετε farming <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
 #: src/components/trading/TradingOverview.jsx:297
 msgid "Buy"
-msgstr ""
+msgstr "Αγορά"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC Πορτοφόλι"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -232,7 +236,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "Μπορεί να δημιουργηθεί αντίγραφο ασφαλείας σε μνημονικό seed"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -241,144 +245,144 @@ msgstr ""
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr ""
+msgstr "Ακύρωση"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "Ακύρωσε και Ξόδεψε"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "Προσοχή, η διαγραφή αυτών των plot, θα τα διαγράψει για πάντα. Ελέγξτε ότι οι συσκευές αποθήκευσης είναι σωστά συνδεδεμένες."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Challenge"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Challenge Hash"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Συνομιλήστε στο KeyBase"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia Blockchain Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Πορτοφόλι Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Επιλέξτε τον αριθμό των Plots"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Επιλέξτε Μέγεθος Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:48
 msgid "Close"
-msgstr ""
+msgstr "Κλείσιμο"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Κλείσιμο κόμβου και διακομιστή"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Νομίσματα:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Χρώμα"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "Πληροφορίες Χρώματος"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Colour String"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Χρώμα:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Χρωματισμένο Nόμισμα"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Επιλογές Χρωματισμένων Νομισμάτων"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
-msgstr ""
+msgstr "Επιβεβαίωση"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr ""
+msgstr "Επιβεβαίωση Αποσύνδεσης"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Επιβεβαιώθηκε στο μπλοκ:"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Επιβεβαιώθηκε στο ύψος {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
-msgstr ""
+msgstr "Σύνδεση"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Σύνδεση με άλλους υπολογιστές"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
-msgstr ""
+msgstr "Συνδέθηκε"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Σύνδεση σε πορτοφόλι"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
-msgstr ""
+msgstr "Κατάσταση Σύνδεσης"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Κατάσταση Σύνδεσης:"
 
 #: src/components/fullNode/FullNodeConnections.tsx:50
 msgid "Connection type"
-msgstr ""
+msgstr "Τύπος σύνδεσης"
 
 #: src/components/fullNode/FullNodeConnections.tsx:73
 msgid "Connections"
-msgstr ""
+msgstr "Συνδέσεις"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Συμβάλετε στο GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Αντιγράφηκε"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:461
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -386,11 +390,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
 #: src/components/wallet/standard/WalletStandard.tsx:377
 msgid "Copy"
-msgstr ""
+msgstr "Αντιγραφή"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Αντιγραφή στο Πρόχειρο"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -398,27 +402,27 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Δημιουργία"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "Δημιουργία DID πορτοφολιού"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Δημιουργία Προσφοράς"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
-msgstr ""
+msgstr "Δημιουργία Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr ""
+msgstr "Δημιουργία Περιορισμένου Ρυθμού του Διαχειριστή του Πορτοφολιού"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr ""
+msgstr "Δημιουργία Περιορισμένου Ρυθμού του Χρήστη του Πορτοφολιού"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -426,41 +430,41 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Δημιουργία Προσφοράς Συναλλαγής"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
-msgstr ""
+msgstr "Δημιουργία Συναλλαγής"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr ""
+msgstr "Δημιουργία αντιγράφου ασφαλείας"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Δημιουργία νέου ιδιωτικού κλειδιού"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr ""
+msgstr "Δημιουργία πορτοφολιού διαχειριστή"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Δημιουργία νέου χρωματισμένου νομίσματος"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr ""
+msgstr "Δημιουργία πορτοφολιού χρήστη"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr ""
+msgstr "Δημιουργία πορτοφολιού για το χρώμα"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Δημιουργία πορτοφολιού για το υπάρχον χρώμα"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -468,23 +472,23 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr ""
+msgstr "Δημιουργήθηκε στις:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "Δημιουργήθηκε από εμάς:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
-msgstr ""
+msgstr "Τρέχουσα κατάσταση συναλλαγής"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr ""
+msgstr "ΚΙΝΔΥΝΟΣ: μόνιμη διαγραφή ιδιωτικού κλειδιού"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID Πορτοφόλι"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -492,57 +496,57 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:29
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:35
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "Date"
-msgstr ""
+msgstr "Ημερομηνία"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "Delay"
-msgstr ""
+msgstr "Καθυστέρηση"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/PlotAction.tsx:43
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/PlotAction.tsx:48
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
-msgstr ""
+msgstr "Διαγραφή"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
-msgstr ""
+msgstr "Διαγραφή Plot"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Διαγραφή όλων των κλειδιών"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Διαγραφή κλειδιού"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Διαγράφοντας όλα τα κλειδιά θα αφαιρέσετε μόνιμα τα κλειδιά από τον υπολογιστή σας, βεβαιωθείτε ότι έχετε αντίγραφα ασφαλείας. Είστε σίγουροι ότι θέλετε να συνεχίσετε;"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Διαγράφοντας όλα τα κλειδιά θα αφαιρέσετε μόνιμα τα κλειδιά από τον υπολογιστή σας, βεβαιωθείτε ότι έχετε αντίγραφα ασφαλείας. Είστε σίγουροι ότι θέλετε να συνεχίσετε;"
 
 #: src/electron/main.tsx:260
 msgid "Developer"
-msgstr ""
+msgstr "Προγραμματιστής"
 
 #: src/electron/main.tsx:263
 msgid "Developer Tools"
-msgstr ""
+msgstr "Εργαλεία Προγραμματιστή"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
-msgstr ""
+msgstr "Eπίπεδο Δυσκολίας"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -550,11 +554,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr ""
+msgstr "Απενεργοποίηση bitfield plotting"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr ""
+msgstr "Αποσύνδεση"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -562,33 +566,33 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Επιλογές Διανεμημένης Ταυτότητας"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr ""
+msgstr "Έχετε ήδη plots σε αυτό το μηχάνημα? <0>Προσθήκη καταλόγου σχεδίου</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr ""
+msgstr "Yποστηρίζει το μηχάνημα μας σας parallel plotting;"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "Μεταφορά και απόθεση αρχείου προσφοράς"
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
-msgstr ""
+msgstr "Σύρετε και αποθέστε το αρχείο σας εδώ"
 
 #: src/electron/main.tsx:219
 msgid "Edit"
-msgstr ""
+msgstr "Επεξεργασία"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "Εισάγετε την 24η μνημονική λέξη που έχετε αποθηκεύσει για να επαναφέρετε το Chia πορτοφόλι σας."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -598,28 +602,28 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "Σφάλμα"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "Σφάλμα: Δεν μπορείτε να στείλετε chia σε χρωματισμένη διεύθυνση. Παρακαλώ εισάγετε μια διεύθυνση chia."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Εκτιμώμενος χρόνος για να κερδίσετε:"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
-msgstr ""
+msgstr "Εκτιμώμενος χώρος δικτύου"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr ""
+msgstr "Εκτιμώμενο άθροισμα του συνόλου του plotted disk space όλων των farmers στο δίκτυο"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "Εξαίρεση final directory"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -628,42 +632,42 @@ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr ""
+msgstr "Απέτυχε το άνοιγμα (invalid plots)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
-msgstr ""
+msgstr "Farm"
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
-msgstr ""
+msgstr "Farmer Puzzle Hash"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr ""
+msgstr "Διεύθυνση Ανταμοιβής Farmer"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "Ο Farmer δεν είναι συνδεδεμένος"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "Farmer is not running"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "Οι Farmers κερδίζουν ανταμοιβές και τέλη συναλλαγών δεσμεύοντας ελεύθερο χώρο στο δίκτυο για να βοηθήσουν στην ασφάλεια των συναλλαγών. Εδώ θα είναι το αγρόκτημά σας μόλις προσθέσετε ένα οικόπεδο. <0>Μάθετε περισσότερα</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr ""
+msgstr "Farming"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -671,9 +675,9 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr ""
+msgstr "Farming Status"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
@@ -681,7 +685,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
 #: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
-msgstr ""
+msgstr "Προμήθεια"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee (TXCH)"
@@ -693,64 +697,64 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr ""
+msgstr "Τέλη ({currencyCode})"
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:294
 msgid "Fees Amount"
-msgstr ""
+msgstr "Ποσό Χρεώσεων"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
-msgstr ""
+msgstr "Αρχείο"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
-msgstr ""
+msgstr "Όνομα αρχείου"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "Τελική τοποθεσία φακέλου"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Finished"
-msgstr ""
+msgstr "Ολοκληρώθηκε"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
-msgstr ""
+msgstr "Ακολουθήστε μας στο Τwitter"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Συχνές ερωτήσεις"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
-msgstr ""
+msgstr "Πλήρης Κόμβος"
 
 #: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
-msgstr ""
+msgstr "Κατάσταση Πλήρους Κόμβου"
 
 #: src/electron/main.tsx:287
 msgid "Full Screen"
-msgstr ""
+msgstr "Πλήρης Οθόνη"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "Δημιουργία Νέου Χρώματος"
 
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr ""
+msgstr "Τα HD ή τα Hierarchical Deterministic keys είναι ένας τύπος δημόσιου κλειδιού/ιδιωτικού κλειδιού όπου ένα ιδιωτικό κλειδί μπορεί να έχει ένα σχεδόν άπειρο αριθμό διαφορετικών δημόσιων κλειδιών (και συνεπώς και διευθύνσεις λήψης πορτοφολιού) που όλα τελικά θα επανέλθουν και θα δαπανηθούν από ένα μόνο ιδιωτικό κλειδί."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -758,127 +762,132 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
-msgstr ""
+msgstr "Header Hash"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:180
 msgid "Header hash"
-msgstr ""
+msgstr "Header Hash"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
-msgstr ""
+msgstr "Ύψος"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
-msgstr ""
+msgstr "Βοήθεια"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
-msgstr ""
+msgstr "Βοηθήστε στην Μετάφραση"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
-msgstr ""
+msgstr "Απόκρυψη Προχωρημένων επιλογών"
 
-#: src/components/wallet/WalletHistory.tsx:60
+#: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
-msgstr ""
+msgstr "Ιστορικό"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "Όνομα Διακομιστή"
 
 #: src/components/fullNode/FullNodeConnections.tsx:27
 msgid "IP address"
-msgstr ""
+msgstr "Διεύθυνση IP"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
-msgstr ""
+msgstr "Διεύθυνση IP / εξυπηρετητής"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr ""
+msgstr "Αν δεν επιλεγεί κάτι, τότε θα προκαθοριστεί στον προσωρινό κατάλογο."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr ""
+msgstr "Εισαγωγή πορτοφολιού από Mnemonics"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr ""
+msgstr "Εισαγωγή από Mnemonics (24 λέξεις)"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
-msgstr ""
+msgstr "Σε Εξέλιξη"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
-msgstr ""
+msgstr "Εισερχόμενες"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Index"
-msgstr ""
+msgstr "Ευρετήριο"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "Αναφέρεται εάν αυτή η προσφορά δημιουργήθηκε από εμάς"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "Ένδειξη του χρόνου αποδοχής αυτής της προσφοράς"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr ""
+msgstr "Πακέτο Πληροφοριών"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
-msgstr ""
+msgstr "Αρχικό ποσό"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "Δημιουργία Περιορισμένου Ρυθμού του Χρήστη του Πορτοφολιού:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "Μεσοδιάστημα"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr ""
+msgstr "K-Size"
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
+msgstr "Κλειδιά"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:40
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+msgid "KiB Up/Down"
 msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr ""
+msgstr "Τελευταία Προσπάθεια Απόδειξης"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr ""
+msgstr "Last Height Farmed"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr ""
+msgstr "Τελευταίες Προκλήσεις Μπλοκ"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
-msgstr ""
+msgstr "Φόρτωση..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "Τοπικά Harvester Plots"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
-msgstr ""
+msgstr "Σύνδεση..."
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -922,33 +931,31 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:34
 msgid "Manage Farming Rewards"
-msgstr ""
+msgstr "Διαχείριση Ανταμοιβών Farming"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr ""
+msgstr "Διαχειριστείτε Τις Διευθύνσεις των Επιβραβεύσρων του Farming σας"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB Up/Down"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
-msgstr ""
+msgstr "Λεπτά"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
-msgstr ""
+msgstr "Περισσότερη μνήμη αυξάνει ελαφρώς την ταχύτητα"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr ""
+msgstr "Αντιγραφή Pubkey"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
-msgstr ""
+msgstr "Όνομα Δικτύου"
 
 #: src/components/fullNode/FullNode.jsx:106
 #~ msgid "Network has not yet been launched, once it launches full node will start automatically."
@@ -961,109 +968,109 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:471
 #: src/components/wallet/standard/WalletStandard.tsx:387
 msgid "New Address"
-msgstr ""
+msgstr "Νέα διεύθυνση"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr ""
+msgstr "Νέο Πορτοφόλι"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
-msgstr ""
+msgstr "Επόμενο"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
-msgstr ""
+msgstr "Ψευδώνυμο"
 
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron/main.tsx:159
 msgid "No"
-msgstr ""
+msgstr "Όχι"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "No 24 word seed, since this key is imported."
-msgstr ""
+msgstr "Κανένα seed 24 λέξεων, καθώς αυτό το κλειδί έχει εισαχθεί."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "No blocks farmed yet"
 
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
-msgstr ""
+msgstr "Δεν υπάρχουν προηγούμενες συναλλαγές"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "Δεν υπάρχουν ιδιωτικά κλειδιά για μία ή και για τις δύο διευθύνσεις. Ασφαλής μόνο αν στέλνετε ανταμοιβές σε άλλο πορτοφόλιο."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.tsx:23
 msgid "Node ID"
-msgstr ""
+msgstr "ID κόμβου"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "Κανένα από τα plots σας δεν έχει περάσει ακόμα το plot filter."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "Μη διαθέσιμο"
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
-msgstr ""
+msgstr "Δεν έγινε συνγχρονισμός"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "Δεν έχει γίνει ακόμη δεκτή"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "Δεν έχει επιβεβαιωθεί ακόμη"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:145
 #: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
-msgstr ""
+msgstr "Μη συνδεδεμένο"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr ""
+msgstr "Δεν βρέθηκαν Plots"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "Αριθμός buckets"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr ""
+msgstr "Αριθμός threads"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
-msgstr ""
+msgstr "Αποδοχή"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "Προσφορά"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Δημιουργήθηκαν Προσφορές"
 
-#: src/components/wallet/WalletHistory.tsx:18
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
-msgstr ""
+msgstr "Εξερχόμενες"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr ""
+msgstr "Peak Height"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1071,44 +1078,44 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
-msgstr ""
+msgstr "Peak Time"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
-msgstr ""
+msgstr "Εκκρεμεί"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr ""
+msgstr "Εκκρεμεί Υπόλοιπο"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr ""
+msgstr "Εκκρεμής Αλλαγή"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Συνολικό Υπόλοιπο Σε Εκκρεμότητα"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Παρακαλούμε προσθέστε ένα ζεύγος συναλλαγών"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Παρακαλώ εισάγετε 0 χρέωση. Oι θετικές χρεώσεις δεν υποστηρίζονται ακόμα για RL."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Παρακαλώ εισάγετε ένα έγκυρο αρχικό ποσό νομίσματος"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
 #: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "Παρακαλώ εισάγετε ένα έγκυρο αριθμητικό ποσό"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -1116,36 +1123,36 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
 #: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Παρακαλώ εισάγετε μια έγκυρη αριθμητική χρέωση"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Παρακαλώ εισάγετε ένα έγκυρο αριθμητικό μήκος διαστήματος"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Παρακαλώ δώστε ένα έγκυρο αριθμητικό δαπανήσιμο ποσό"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Παρακαλώ δώστε ένα έγκυρο pubkey"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Παρακαλώ ολοκληρώστε το συγχρονισμό πριν πραγματοποιήσετε μια συναλλαγή"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
-msgstr ""
+msgstr "Παρακαλώ εισάγετε ποσό"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Επιλέξτε αγορά ή πώληση"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Παρακαλώ επιλέξτε χρώμα νομίσματος"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1154,37 +1161,37 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "Παρακαλούμε προσδιορίστε το final directory"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "Παρακαλούμε προσδιορίστε το temporary directory"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
-msgstr ""
+msgstr "Plot"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:7
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
-msgstr ""
+msgstr "Μετρητής Plot"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:268
 msgid "Plot Id"
-msgstr ""
+msgstr "Plot Id"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr ""
+msgstr "Plot Key"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
-msgstr ""
+msgstr "Plot Public Key"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1192,78 +1199,82 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
-msgstr ""
+msgstr "Μέγεθος Plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
-msgstr ""
+msgstr "Plot in Parallel"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Plot is duplicate of {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr ""
+msgstr "Plots"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr ""
+msgstr "Plots Passed Filter"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "Τα plots κατανέμονται στο σκληρό σας δίσκο που είναι για farm και κερδίζετε Chia. <0>Μάθετε περισσότερα</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
-msgstr ""
+msgstr "Plotting"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+msgstr "Το Plotting in parallel μπορεί να εξοικονομήσει χρόνο. Διαφορετικά, προσθέστε plots στην ουρά."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
 msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
-msgstr ""
+msgstr "Plot Key"
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
-msgstr ""
+msgstr "Public Key Πισίνας"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "Puzzle Hash Πισίνας"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
-msgstr ""
+msgstr "Διεύθυνση Ανταμοιβής Πισίνας"
 
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "Ποσό Ανταμοιβής Πισίνας"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
 #: src/components/fullNode/FullNodeAddConnection.tsx:62
 #: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "Port"
-msgstr ""
+msgstr "Port"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:320
 msgid "Previous"
-msgstr ""
+msgstr "Προηγούμενο"
 
 #: src/components/block/Block.jsx:203
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "Προηγούμενη Header Hash"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1271,43 +1282,43 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Ιδιωτικό κλειδί με δημόσιο αποτύπωμα {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
-msgstr ""
+msgstr "Ιδιωτικό κλειδί {0}"
 
 #: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
-msgstr ""
+msgstr "Ιδιωτικό κλειδί:"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "Αποδεικτικό μεγέθους χώρου"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "Βρέθηκαν Αποδεικτικά"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "Pubkey"
 
 #: src/middleware/middleware_api.jsx:265
 msgid "Public key:"
-msgstr ""
+msgstr "Δημόσιο κλειδί:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr ""
+msgstr "Όνομα Ουράς"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
-msgstr ""
+msgstr "Όνομα Ουράς"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
-msgstr ""
+msgstr "Στην ουρά"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
@@ -1315,11 +1326,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "Μέγιστη χρήση RAM"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr ""
+msgstr "RL Πορτοφόλι"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1327,49 +1338,49 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "Rate Limited"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Rate Limited Info"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Rate Limited Επιλογές"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Rate Limited User Wallet Setup"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
-msgstr ""
+msgstr "Διεύθυνση Λήψης"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Ανάκτηση πορτοφολιού DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Ανανέωση Plots"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
-msgstr ""
+msgstr "Τι νέο υπάρχει"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr ""
+msgstr "Μετονομασία"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Αναφορά προβλήματος..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "Επαναφορά μεταδεδομένων για έγχρωμα νομίσματα και άλλα έξυπνα πορτοφόλια από το αντίγραφο ασφαλείας"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1382,12 +1393,12 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr ""
+msgstr "Ασφαλής Παράλειψη"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "Αποθήκευση"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -1399,77 +1410,77 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Δεύτερη τοποθεσία προσωρινού φακέλου"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr ""
+msgstr "Προβολή ιδιωτικού κλειδιού"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Seed:"
-msgstr ""
+msgstr "Seed:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Επιλογή 2ου Προσωρινού Καταλόγου"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Επιλογή Τελικού Καταλόγου"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr ""
+msgstr "Επιλογή Κλειδιού"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Επιλογή Προσφοράς"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Επιλέξτε Προσωρινό Κατάλογο"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Επιλέξτε Τύπο Πορτοφολιού"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Επιλέξτε τον τελικό προορισμό για το φάκελο όπου θα θέλατε να αποθηκευτεί το plot. Σας συνιστούμε να χρησιμοποιήσετε ένα μεγάλο αργό σκληρό δίσκο (όπως εξωτερικό HDD)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Επιλέξτε τον προσωρινό προορισμό για το φάκελο όπου θα θέλατε να αποθηκευτεί το plot. Σας συνιστούμε να χρησιμοποιήσετε ένα γρήγορο SSD."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "Επιλέχθηκαν"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr ""
+msgstr "Πώληση"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
 #: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Send"
-msgstr ""
+msgstr "Αποστολή"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Στείλτε αυτό το πακέτο πληροφοριών στο χρήστη Rate Limited Wallet που πρέπει να το χρησιμοποιήσει για να ολοκληρώσει την εγκατάσταση του πορτοφολιού του:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Στείλτε το δημόσιο κλειδί σας στον διαχειριστή του Rate Limited Wallet:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Δείξε επιλογές για προχωρημένους"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -1478,11 +1489,11 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Πλευρά"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "Είσοδος"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
@@ -1494,43 +1505,43 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Skips adding a final directory to harvester for farming"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
-msgstr ""
+msgstr "Speech"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Spendable Amount"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "Spendable Amount Per Interval"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Spendable Balance"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Spending Interval (number of blocks): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Spending Interval Length (number of blocks)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Όριο δαπανών (chia ανά διάστημα): {0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
-msgstr ""
+msgstr "State"
 
 #: src/components/fullNode/FullNode.jsx:104
 #: src/components/fullNode/FullNode.jsx:121
@@ -1538,15 +1549,15 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:151
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
-msgstr ""
+msgstr "Κατάσταση"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "Κατάσταση:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1578,21 +1589,21 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
-msgstr ""
+msgstr "Υποβολή"
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
-msgstr ""
+msgstr "Συγχρονίστηκε"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr ""
+msgstr "Συγχρονισμός..."
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
-msgstr ""
+msgstr "Γίνεται συγχρονισμός {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1620,90 +1631,90 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr ""
+msgstr "Τοποθεσία προσωρινού φακέλου"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Η εφαρμογή θα σταματήσει να λειτουργεί σε ύψος μπλοκ 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Ο πλήρης κόμβος στον οποίο είναι συνδεδεμένος ο farmer σας. <0>Μάθετε περισσότερα</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "Το ελάχιστο απαιτούμενο μέγεθος για το mainnet είναι k=32"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr ""
+msgstr "Ο κόμβος δεν είναι συγχρονισμένος"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "Ο κόμβος συγχρονίζεται, πράγμα που σημαίνει ότι γίνεται λήψη μπλοκ από άλλους κόμβους, για να φτάσει το τελευταίο μπλοκ στην αλυσίδα"
 
-#: src/components/block/Block.jsx:268
+#: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "Το seed που χρησιμοποιείται για τη δημιουργία του plot. Αυτό εξαρτάται από το pk της πισίνας και το pk του plot."
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "Ο συνολικός αριθμός VDF (επαληθεύσιμη λειτουργία καθυστέρησης) ή απόδειξη χρονικών επαναλήψεων σε ολόκληρη την αλυσίδα μέχρι αυτό το υπό-μπλοκ."
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "Ο συνολικός αριθμός VDF (επαληθεύσιμη λειτουργία καθυστέρησης) ή απόδειξη χρονικών επαναλήψεων σε ολόκληρη την αλυσίδα μέχρι αυτό το υπό-μπλοκ."
 
-#: src/components/block/Block.jsx:294
+#: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "Το συνολικό ποσό των τελών των συναλλαγών σε αυτό το μπλοκ. Ανταμοιβή στον αγρότη."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr ""
+msgstr "Αυτά τα plot δεν είναι έγκυρα, ίσως θέλετε να τα διαγράψετε."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "Αυτό σας επιτρέπει να προσθέσετε έναν κατάλογο που περιέχει plot Αν δεν έχετε δημιουργήσει plot, μεταβείτε στην οθόνη σχεδίασης."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Αυτή η δυνατότητα είναι διαθέσιμη μόνο στα μέλη PRO."
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Αυτό είναι το ποσό Chia που μπορείτε να χρησιμοποιήσετε επί του παρόντος για να κάνετε συναλλαγές. Δεν περιλαμβάνει εκκρεμείς ανταμοιβές για το farming, τις αναμενόμενες εισερχόμενες συναλλαγές, και το Chia που έχετε μόλις ξοδέψει αλλά δεν είναι ακόμη στο blockchain."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Αυτή είναι η αλλαγή που εκκρεμεί, η οποία είναι η αλλαγή νομισμάτων που έχετε στείλει στον εαυτό σας, αλλά δεν έχουν επιβεβαιωθεί ακόμη."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Αυτό είναι το άθροισμα των εισερχόμενων και εξερχόμενων συναλλαγών (που δεν περιλαμβάνονται ακόμη στο blockchain). Αυτό δεν περιλαμβάνει τις farming ανταμοιβές."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Αυτή είναι η ώρα του τελευταίου υπο-μπλοκ κορυφής."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Αυτή είναι η στιγμή που το μπλοκ δημιουργήθηκε από τον farmer, η οποία είναι πριν οριστικοποιηθεί με αποδεικτικό χρόνου"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Αυτή είναι η συνολική ποσότητα chia στο blockchain στο τρέχον υπο-μπλοκ κορυφής που ελέγχεται από τα ιδιωτικά σας κλειδιά. Περιλαμβάνει βραβεία frozen farming, αλλά όχι εισερχόμενες και εξερχόμενες συναλλαγές."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Αυτό είναι το συνολικό υπόλοιπο + το εκκρεμές υπόλοιπο: αυτό είναι που θα είναι το υπόλοιπό σας μετά από όλες τις εκκρεμείς συναλλαγές που θα επιβεβαιωθούν."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Αυτός ο κόμβος είναι πλήρως παγιδευμένος και επικυρώνει το δίκτυο"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1711,41 +1722,41 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr ""
+msgstr "Αυτός ο πίνακας σας δείχνει την τελευταία φορά που το farm σας προσπάθησε να κερδίσει ένα block challenge. <0>Μάθετε περισσότερα</0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Αυτή η συναλλαγή δημιουργήθηκε αυτή την ώρα"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Αυτή η συναλλαγή συμπεριλήφθηκε στο blockchain σε αυτό το ύψος μπλοκ"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Αυτή η έκδοση του Chia δεν είναι πλέον συμβατή με το blockchain και δεν μπορεί να γίνει farm με ασφάλεια."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
-msgstr ""
+msgstr "Ώρα δημιουργίας"
 
 #: src/components/trading/TradingOverview.jsx:192
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:184
 msgid "Timestamp"
-msgstr ""
+msgstr "Χρονικό Στιγμιότυπο"
 
-#: src/components/wallet/WalletHistory.tsx:31
+#: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
-msgstr ""
+msgstr "Προς"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
-msgstr ""
+msgstr "Συνολικό Υπόλοιπο"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -1753,112 +1764,112 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
-msgstr ""
+msgstr "Σύνολο Επαναλήψεων"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "Συνολικός Χώρος Δικτύου"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Συνολικό Μέγεθος Plot:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Συνολικό μέγεθος των plots"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Σύνολο Επαναλήψεων VDF"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Συνολικές επαναλήψεις από την αρχή του blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Trade Details"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "Ταυτότητα Συναλλαγής"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "Ταυτότητα Συναλλαγής:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Επισκόπηση Συναλλαγών"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Οι Συναλλαγές θα εμφανιστούν εδώ"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "Trading"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "Trading History"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Hash Φίλτρο Συναλλαγών"
 
-#: src/components/wallet/WalletHistory.tsx:21
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
-msgstr ""
+msgstr "Τύπος"
 
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Unfinished"
-msgstr ""
+msgstr "Μη Ολοκληρωμένο"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Μοναδικό αναγνωριστικό"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr ""
+msgstr "Pubkey Χρήστη"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF Sub Slot Iterations"
 
 #: src/electron/main.tsx:251
 msgid "View"
-msgstr ""
+msgstr "Εμφάνιση"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
-msgstr ""
+msgstr "Εμφάνιση αρχείου καταγραφής"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "Προβολή Προσφοράς"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr ""
+msgstr "Προβολή εκκρεμών υπολοίπων"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "Προβολή εκκρεμών υπολοίπων..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:25
 msgid "Wait for synchronization"
-msgstr ""
+msgstr "Αναμονή για συγχρονισμό"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
@@ -1898,9 +1909,9 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
-msgstr ""
+msgstr "Πορτοφόλια"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -1908,45 +1919,45 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Θέλετε να κερδίσετε περισσότερα Chia? Προσθέστε περισσότερα plots στο farm σας."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
-
-#: src/components/block/Block.jsx:195
-msgid "Weight"
-msgstr ""
+msgstr "Θέλετε να έχετε μια καθυστέρηση πριν ξεκινήσει το επόμενο plot;"
 
 #: src/components/block/Block.jsx:198
+msgid "Weight"
+msgstr "Βάρος"
+
+#: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Το βάρος είναι η συνολική προστιθέμενη δυσκολία όλων των υπο-μπλοκ μέχρι και αυτό"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Καλώς ήρθατε στη Chia. Παρακαλώ συνδεθείτε με ένα υπάρχον κλειδί ή δημιουργήστε ένα νέο κλειδί."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Καλώς ορίσατε! Οι ακόλουθες λέξεις χρησιμοποιούνται για το αντίγραφο ασφαλείας του πορτοφολιού σας. Χωρίς αυτές, θα χάσετε την πρόσβαση στο πορτοφόλι σας. Σημειώστε κάθε λέξη μαζί με τον αριθμό σειράς δίπλα τους. (Η σειρά είναι σημαντική)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "Όταν λαμβάνετε το πακέτο πληροφοριών εγκατάστασης από τον διαχειριστή σας, πληκτρολογήστε το παρακάτω για να ολοκληρώσετε την εγκατάσταση του Rate Limited Wallet:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
-msgstr ""
+msgstr "Παράθυρο"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
-msgstr ""
+msgstr "Χωρίς Χρεώσεις"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron/main.tsx:160
 msgid "Yes"
-msgstr ""
+msgstr "Ναι"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1954,7 +1965,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Δεν χρειάζεται να συγχρονιστείτε ή να είστε συνδεδεμένοι με το plot. Τα προσωρινά αρχεία δημιουργούνται κατά τη διάρκεια της διαδικασίας plotting που υπερβαίνει το μέγεθος των τελικών αρχείων plot. Βεβαιωθείτε ότι έχετε αρκετό χώρο. <0>Μάθετε περισσότερα</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1962,7 +1973,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Έχετε {0}% του χώρου στο δίκτυο, έτσι ώστε να καλλιεργήσει ένα μπλοκ θα πάρει {expectedTimeToWin} σε αναμονή. Τα πραγματικά αποτελέσματα μπορεί να χρειαστούν 3 έως 4 φορές περισσότερο από αυτή την εκτίμηση."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -1978,44 +1989,44 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Επισκόπηση Του Farm"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr ""
+msgstr "Η Πλήρης Σύνδεση Κόμβου Σας"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr ""
+msgstr "Το Δικό σας Δίκτυο Harvester"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
-msgstr ""
+msgstr "συνδέσεις:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
-msgstr ""
+msgstr "ύψος:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
-msgstr ""
+msgstr "δεν συγχρονίστηκε"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
-msgstr ""
+msgstr "κατάσταση:"
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:107
+msgid "synced"
+msgstr "συγχρονίστηκε"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:105
-msgid "synced"
-msgstr ""
-
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
-msgstr ""
+msgstr "συγχρονισμός..."
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -2027,13 +2038,13 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr ""
+msgstr "{currencyCode} Ανταμοιβές μπλοκ"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
-msgstr ""
+msgstr "{currencyCode} Σύνολο Chia που έχουν γίνει Farmed"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr ""
+msgstr "{currencyCode} Τέλη Συναλλαγής Χρήστη"
 
