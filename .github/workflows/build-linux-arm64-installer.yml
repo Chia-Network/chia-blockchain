@@ -72,6 +72,24 @@ jobs:
         name: Linux-ARM-64-Installer
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      id: download
+      with:
+        name: 'Linux-ARM-64-Installer'
+
+    - name: View Path & Files
+      run: |
+        ls
+        pwd
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
     - name: Clean up on self hosted runner
       run: |
         sudo rm -rf build_scrpits/final_installer
