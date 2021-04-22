@@ -110,7 +110,7 @@ jobs:
           dir windows-installer
           cd
 
-    - name: Install aws cli
+    - name: Install AWS CLI
       run: |
           msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
 
@@ -123,7 +123,7 @@ jobs:
 
     - name: Upload to s3
       run: |
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\*.exe s3://download-chia-net/builds/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\?.exe s3://download-chia-net/builds/
 
     - name: Install py3createtorrent
       run: |
@@ -131,9 +131,9 @@ jobs:
 
     - name: Create Torrent Files
       run: |
-        py3createtorrent D:\a\chia-blockchain\chia-blockchain\windows-installer\*.exe
+        py3createtorrent D:\a\chia-blockchain\chia-blockchain\windows-installer\?.exe
 
     - name: Upload Release Files
       run: |
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\*.exe s3://download-chia-net/test-installs/
-        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\*.torrent s3://download-chia-net/test-installs/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\?.exe s3://download-chia-net/test-installs/
+        aws s3 cp D:\a\chia-blockchain\chia-blockchain\windows-installer\?.torrent s3://download-chia-net/test-installs/
