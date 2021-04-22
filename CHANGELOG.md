@@ -6,13 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.1.1 Chia Blockchain 2021-04-21
+
+### Added
+
+- This is a bug fix release for 1.1.0. It is not required to upgrade from 1.1.0 if you are not experiencing the specific issue that it addresses. You are required to upgrade from any 1.0.x version before Monday evening PDT to continue farming.
+
+### Changed
+
+- Logging now includes year, month, and date. Thanks and apologies for not tipping the hat sooner to @alfonsoperez for the PR.
+
+### Fixed
+
+- Changes were made in 1.1.0 to make sure that even out of order signage points were found and responded to by as many farmers as possible. That change lead to a situation where the harvester could thrash on the same cached signage point.
+
 ## 1.1.0 Chia Blockchain 2021-04-21
 
 ### Added
 
-- This fork release includes full transaction support for the Chia Blockchain. Transactions are still disabled until 5/3/2021 at 10:00AM PDT. It is hard understate how much work and clean up went into this release.
+- This fork release includes full transaction support for the Chia Blockchain. Transactions are still disabled until 5/3/2021 at 10:00AM PDT. It is hard to overstate how much work and clean up went into this release.
 - This is the 1.0 release of Chialisp. Much has been massaged and finalized. We will be putting a focus on updating and expanding the documentation on [chialisp.com](https://chialisp.com) shortly.
 - Farmers now compress blocks using code snippets from previous blocks. This saves storage space and allows larger smart coins to have a library of sorts on chain.
+- We now support offline signing of coins.
 - You can now ask for an offset wallet receive address in the cli. Thanks @jespino.
 - When adding plots we attempt to detect a duplicate and not load it.
 
