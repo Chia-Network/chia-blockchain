@@ -107,7 +107,7 @@ jobs:
 
     - name: View Path & Files
       run: |
-          dir
+          dir windows-installer
           cd
 
     - name: Install aws cli
