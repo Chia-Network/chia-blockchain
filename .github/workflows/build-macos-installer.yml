@@ -122,7 +122,8 @@ jobs:
 
     - name: Install AWS CLI
       run: |
-          sudo apt-get install -y awscli
+        curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+        sudo installer -pkg AWSCLIV2.pkg -target /
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
