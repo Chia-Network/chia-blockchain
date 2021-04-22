@@ -8,7 +8,7 @@ msgstr ""
 "Language: tr_TR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-15 01:45\n"
+"PO-Revision-Date: 2021-04-22 18:12\n"
 "Last-Translator: \n"
 "Language-Team: Turkish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -28,14 +28,14 @@ msgstr "Chia'nın bloklarını daha da keşfetmek ister misiniz? Açık kaynakl�
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr ""
+msgstr "128 kova önerilir"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 
-#: src/electron/main.tsx:366
-#: src/electron/main.tsx:444
+#: src/electron/main.tsx:365
+#: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
 msgstr "Chia Blokzinciri Hakkında"
 
@@ -45,19 +45,19 @@ msgstr "Kabul Et"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr ""
+msgstr "Şu zamanda kabul edildi:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr ""
+msgstr "İşlem"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr ""
+msgstr "İşlemler"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -65,13 +65,13 @@ msgstr "Ekle"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr ""
+msgstr "Bir Plot Dizini Ekleyin"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr ""
+msgstr "Kuyruğa Ekle"
 
-#: src/components/wallet/Wallets.tsx:81
+#: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
 msgstr "Cüzdan Ekle"
 
@@ -80,15 +80,15 @@ msgstr "Cüzdan Ekle"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr ""
+msgstr "Plot Ekle"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr ""
+msgstr "Plot Ekle"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr ""
+msgstr "Bir plot dizini ekleyin"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -99,11 +99,11 @@ msgstr "Adres"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
-msgstr ""
+msgstr "Adres / Puzzle hash"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/wallet/WalletHistory.tsx:48
+#: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
 #: src/components/wallet/standard/WalletStandard.tsx:331
@@ -112,16 +112,16 @@ msgstr "Miktar"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:415
 msgid "Amount ({cc_unit})"
-msgstr ""
+msgstr "Miktar ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr ""
+msgstr "İlk Coin için Miktar"
 
-#: src/components/plot/PlotAction.tsx:25
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/PlotAction.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:32
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr ""
+msgstr "Bu dosyayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -137,7 +137,7 @@ msgstr "Çıkmak istediğinizden emin misiniz? GUI Dizini ve madenciliği duraca
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr ""
+msgstr "k={plotSize} kullanmak istediğinize emin misiniz?"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -146,7 +146,7 @@ msgstr "Geri"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr ""
+msgstr "Yedekleme dosyası akıllı cüzdanları geri yüklemek için kullanılmaktadır."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -154,53 +154,57 @@ msgstr ""
 msgid "Balance"
 msgstr "Bakiye"
 
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "Temel Çiftçi Ödül Miktarı"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr "Mevcut blok zorlukları aşağıdadır. Bu zorluklar için bir alanınız olabilir veya olmayabilir. Bu bloklar şu anda bir zaman kanıtı içermiyor."
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+msgid "Best estimate over last 24 hours"
 msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
-msgid "Best estimate over last 5 hours"
-msgstr ""
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr ""
 
-#: src/components/block/Block.jsx:109
-#: src/components/block/Block.jsx:143
-#: src/components/block/Block.jsx:148
-#: src/components/block/Block.jsx:303
+#: src/components/block/Block.jsx:112
+#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:306
 msgid "Block"
 msgstr "Blok"
 
-#: src/components/block/Block.jsx:121
+#: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr ""
+msgstr "Blok Testi"
 
-#: src/components/block/Block.jsx:227
+#: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "VDF Yinelemelerini Engelle"
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "Chia blok zincirinde {0} yüksekliğinde engelle"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:126
+#: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "Blok Hash {headerHash}"
 
-#: src/components/block/Block.jsx:155
+#: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "{headerHash} Hash'li blok mevcut değil."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
-msgstr ""
+msgstr "Bloklar"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -210,11 +214,11 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Browse"
-msgstr ""
+msgstr "Göz at"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr ""
+msgstr "Şuan zaten çiftçilik yapıyorsun <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -222,9 +226,9 @@ msgstr ""
 msgid "Buy"
 msgstr "Satın Al"
 
-#: src/components/wallet/Wallets.tsx:34
+#: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr ""
+msgstr "CC Cündanı"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -232,7 +236,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "Anımsatıcı tohuma yedeklenebilir"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -245,43 +249,43 @@ msgstr "İptal"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "İptal Et ve Harca"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr ""
+msgstr "Dikkat, bu grafikleri silmek onları sonsuza dek silecektir. Depolama cihazlarının doğru şekilde bağlanıp bağlanmadığını kontrol edin."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr ""
+msgstr "Zorluk"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "Zorluk Hash Değeri"
 
-#: src/electron/main.tsx:346
+#: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "Keybase Sohbeti"
 
-#: src/electron/main.tsx:363
+#: src/electron/main.tsx:362
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
-#: src/electron/main.tsx:313
+#: src/electron/main.tsx:312
 msgid "Chia Blockchain Wiki"
-msgstr ""
+msgstr "Chia Blokzinciri Wiki"
 
-#: src/components/wallet/Wallets.tsx:30
+#: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Chia Cüzdanı"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Plot Sayısını Seçin"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Plot Büyüküğünü Seçin"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:48
@@ -290,11 +294,11 @@ msgstr "Kapat"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Sunucu ve Node Kapatılıyor"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Coinler:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
@@ -307,19 +311,19 @@ msgstr "Renk Bilgisi"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Renk Dizesi"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Renk:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Renklendirilmiş Coin"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Renklendirilmiş Coin Ayarları"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
@@ -327,15 +331,15 @@ msgstr "Onayla"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr ""
+msgstr "Bağlantıyı Kesmeyi Onayla"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Şu Blokta Onaylandı:"
 
-#: src/components/wallet/WalletHistory.tsx:39
+#: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Şu Yükseklikte Onaylandı {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -372,7 +376,7 @@ msgstr "Bağlantı türü"
 msgid "Connections"
 msgstr "Bağlantılar"
 
-#: src/electron/main.tsx:331
+#: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
 msgstr "GitHub'da katkıda bulunun"
 
@@ -402,23 +406,23 @@ msgstr "Oluştur"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "DID Cüzdanı Oluştur"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
-msgstr ""
+msgstr "Teklif Oluştur"
 
 #: src/components/plot/add/PlotAdd.tsx:67
 msgid "Create Plot"
-msgstr ""
+msgstr "Plot Oluştur"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr ""
+msgstr "Oran sınırlamalı yetkili cüzdanı yarat"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr ""
+msgstr "Oran sınırlamalı kullanıcı cüzdanı yarat"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -426,41 +430,41 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr ""
+msgstr "Takas Teklifi Oluştur"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
-msgstr ""
+msgstr "İşlem Oluşturun"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
-msgstr ""
+msgstr "Yedekleme Oluştur"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr ""
+msgstr "Yeni bir özel anahtar oluştur"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr ""
+msgstr "{0} cüzdanı oluştur"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "Yeni renkli koin oluştur"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr ""
+msgstr "Yeni cüzdan oluştur"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr ""
+msgstr "Renk için cüzdan yarat"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "Varolan renk için cüzdan yarat"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -468,23 +472,23 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "Created At:"
-msgstr ""
+msgstr "Oluşturulma tarihi:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "%@ tarafından oluşturuldu:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
-msgstr ""
+msgstr "Mevcut alım satım durumu"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr ""
+msgstr "TEHLİKE: Özel anahtarı geri dönülemeyecek şekilde sil"
 
-#: src/components/wallet/Wallets.tsx:48
+#: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID cüzdan"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -492,7 +496,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:29
 #: src/components/trading/TradingOverview.jsx:137
-#: src/components/wallet/WalletHistory.tsx:35
+#: src/components/wallet/WalletHistory.tsx:36
 msgid "Date"
 msgstr "Tarih"
 
@@ -500,46 +504,46 @@ msgstr "Tarih"
 msgid "Delay"
 msgstr "Ertele"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/PlotAction.tsx:43
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/PlotAction.tsx:48
+#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:65
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Sil"
 
-#: src/components/plot/PlotAction.tsx:24
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/PlotAction.tsx:29
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Delete Plot"
-msgstr ""
+msgstr "Arazi sil"
 
 #: src/components/selectKey/SelectKey.tsx:53
 #: src/components/selectKey/SelectKey.tsx:122
 msgid "Delete all keys"
-msgstr ""
+msgstr "Tüm anahtarları sil"
 
 #: src/components/selectKey/SelectKey.tsx:39
 msgid "Delete key"
-msgstr ""
+msgstr "Anahtarı Sil"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Tüm anahtarları silmek bilgisayarında olan tüm anahtarları kalıcı olarak kaldıracaktır, yedekleme yaptığından emin ol. Devam etmek istediğine emin misin?"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
+msgstr "Anahtarı silmek kalıcı olarak anahtarı bilgisayarından kaldıracaktır. Anahtarı yedeklediğinden emin ol. Devam etmek istediğine emin misin?"
 
 #: src/electron/main.tsx:260
 msgid "Developer"
-msgstr ""
+msgstr "Geliştirici"
 
 #: src/electron/main.tsx:263
 msgid "Developer Tools"
-msgstr ""
+msgstr "Geliştirici araçları"
 
-#: src/components/block/Block.jsx:213
+#: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
 msgstr "Zorluk"
@@ -550,11 +554,11 @@ msgstr "Zorluk"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr ""
+msgstr "Bitfield arazi oluşturmayı kapat"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr ""
+msgstr "Bağlantıyı Kes"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -562,33 +566,33 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "Dağıtılmış kimlik seçenekleri"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr ""
+msgstr "Bu makinede araziniz var mı? <0>Arazi klasörü ekle</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr ""
+msgstr "Makineniz paralel arazilendirmeyi destekliyor mu?"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "Teklif dosyasını sürükle bırak"
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
-msgstr ""
+msgstr "Yedekleme dosyanı sürükle bırak"
 
 #: src/electron/main.tsx:219
 msgid "Edit"
-msgstr ""
+msgstr "Düzenle"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "Chia cüzdanınıza ulaşmak için saklamış olduğunuz 24 kelimelik şifre öbeğini girin."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -602,24 +606,24 @@ msgstr "Hata"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "Hata: Renkli adrese chia gönderemiyorum. Lütfen bir chia adresi girin."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "Tahmini kazanma süresi"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
-msgstr ""
+msgstr "Tahmini Ağ büyüklüğü"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr ""
+msgstr "Ağ üzerindeki toplam bölümlendirilmiş disk alanı büyüklüğü"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "Hedef klasörü hariç et"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -628,42 +632,42 @@ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr ""
+msgstr "Açılamadı (geçersiz arazi)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
-msgstr ""
+msgstr "Çiftlik"
 
-#: src/components/block/Block.jsx:249
+#: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
-msgstr ""
+msgstr "Çiftçi bulmaca hashi"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr ""
+msgstr "Çiftçi ödül adresi"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "Çiftçi bağlı değil"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "Çiftçi çalışmıyor"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "Madenciler, işlemlerin güvenliğini sağlamak için ağa yedek alan ayırırlar ve bu sayede blok ödülleri ile transfer komisyonu kazanırlar. Bir plot oluşturduğunuzda burada gözükecek. <0>Daha fazlasını öğren</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr ""
+msgstr "Üretim yapılıyor"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -671,9 +675,9 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr ""
+msgstr "Üretim Durumu"
 
-#: src/components/wallet/WalletHistory.tsx:52
+#: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
 #: src/components/wallet/create/createNewColouredCoin.jsx:138
 #: src/components/wallet/create/createRLAdmin.jsx:266
@@ -693,18 +697,18 @@ msgstr "Ücret"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr ""
+msgstr "Ücret ({currencyCode})"
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:294
 msgid "Fees Amount"
-msgstr ""
+msgstr "Komisyon Miktarı"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
 #: src/electron/main.tsx:211
-#: src/electron/main.tsx:399
+#: src/electron/main.tsx:398
 msgid "File"
 msgstr "Dosya"
 
@@ -723,22 +727,22 @@ msgstr "Dosya Adresi"
 msgid "Finished"
 msgstr "Bitti"
 
-#: src/electron/main.tsx:352
+#: src/electron/main.tsx:351
 msgid "Follow on Twitter"
 msgstr "Twitter'da Takip Et"
 
-#: src/electron/main.tsx:319
+#: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
 msgstr "Sıkça Sorulan Sorular"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
-msgstr ""
+msgstr "Tam Node"
 
 #: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
-msgstr ""
+msgstr "Tam Node Durumu"
 
 #: src/electron/main.tsx:287
 msgid "Full Screen"
@@ -746,11 +750,11 @@ msgstr "Tam Ekran"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "Yeni Renk Oluştur"
 
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr ""
+msgstr "HD veya Hiyerarşik Deterministik anahtarlar, bir public key/private anahtarın neredeyse sonsuz sayıda farklı genel anahtara sahip olabileceği (ve bu nedenle cüzdanın adresleri alabileceği), hepsi nihayetinde geri dönecek ve tek bir özel anahtar tarafından kullanılabilecek bir tür genel anahtar / özel anahtar şemasıdır."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -758,23 +762,23 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
-msgstr ""
+msgstr "Baştaki Hash"
 
-#: src/components/block/Block.jsx:177
+#: src/components/block/Block.jsx:180
 msgid "Header hash"
-msgstr ""
+msgstr "Baştaki hash"
 
-#: src/components/block/Block.jsx:191
+#: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
-msgstr ""
+msgstr "Yükseklik"
 
-#: src/electron/main.tsx:309
+#: src/electron/main.tsx:308
 msgid "Help"
 msgstr "Yardım"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:61
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
 msgid "Help translate"
 msgstr "Çeviriye Yardım Et"
 
@@ -782,14 +786,14 @@ msgstr "Çeviriye Yardım Et"
 msgid "Hide Advanced Options"
 msgstr "Gelişmiş Seçenekleri Gizle"
 
-#: src/components/wallet/WalletHistory.tsx:60
+#: src/components/wallet/WalletHistory.tsx:62
 msgid "History"
 msgstr "Geçmiş"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:24
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:24
 msgid "Host Name"
-msgstr ""
+msgstr "Yönetici İsmi"
 
 #: src/components/fullNode/FullNodeConnections.tsx:27
 msgid "IP address"
@@ -797,27 +801,27 @@ msgstr "IP adresi"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
-msgstr ""
+msgstr "IP Adresi / Yönetici"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr ""
+msgstr "Hiçbiri seçilmezse, varsayılan olarak geçici dizine ayarlanır."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr ""
+msgstr "Cüzdanı Mnemonics'ten içe aktar"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr ""
+msgstr "Mneminocs'ten içe aktar. (24 kelime)"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
-msgstr ""
+msgstr "İşlem Sürüyor"
 
-#: src/components/wallet/WalletHistory.tsx:19
+#: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
-msgstr ""
+msgstr "Gelen"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Index"
@@ -825,48 +829,53 @@ msgstr "Dizin"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "Bu teklifin bizim tarafımızdan oluşturulup oluşturulmadığını belirtir"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "Bu teklifin ne zaman kabul edildiğini gösterir"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr ""
+msgstr "Bilgi paketi"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
-msgstr ""
+msgstr "Başlangıç ​​miktarı"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "Hız Limiti bulunan kullanıcı cüzdanını başlat:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "Aralık"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr ""
+msgstr "K-Ebadı"
 
 #: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "Keys"
+msgstr "Anahtarlar"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:40
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
+msgid "KiB Up/Down"
 msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr ""
+msgstr "Son denenmiş kanıt"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr ""
+msgstr "İşlenen son yükseklik"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr ""
+msgstr "Son Blok Yarışları"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
@@ -874,7 +883,7 @@ msgstr "Yükleniyor..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "Yerel Kazıcı Plot'ları"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -922,17 +931,15 @@ msgstr "Giriş Yapılıyor"
 
 #: src/components/farm/overview/FarmOverview.tsx:34
 msgid "Manage Farming Rewards"
-msgstr ""
+msgstr "İşleme ödüllerini yönet"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr ""
+msgstr "İşleme ödülleri için gönderim adreslerini yönet"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:40
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB Yukarı/Aşağı"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
@@ -944,7 +951,7 @@ msgstr "Daha fazla memory hızı bir miktar artırır"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr ""
+msgstr "Herkese Açık Anahtarım"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
@@ -967,7 +974,7 @@ msgstr "Yeni Adres"
 msgid "New Wallet"
 msgstr "Yeni Cüzdan"
 
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
 #: src/components/wallet/WalletImport.tsx:77
 msgid "Next"
@@ -975,7 +982,7 @@ msgstr "Sonraki"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:200
 msgid "Nickname"
-msgstr ""
+msgstr "Kullanıcı adı"
 
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron/main.tsx:159
@@ -984,40 +991,40 @@ msgstr "Hayır"
 
 #: src/middleware/middleware_api.jsx:283
 msgid "No 24 word seed, since this key is imported."
-msgstr ""
+msgstr "Bu anahtar içe aktarıldığı için 24 kelimeye ihtiyaç yok."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "Herhangi bir blok işlenmedi"
 
-#: src/components/wallet/WalletHistory.tsx:62
+#: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
-msgstr ""
+msgstr "Daha önce yapılmış bir işlem yok"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "Adreslerden biri veya her ikisi için özel bir anahtar yok. Yalnızca başka bir cüzdana ödül gönderiyorsanız bu yöntem güvenlidir."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.tsx:23
 msgid "Node ID"
-msgstr ""
+msgstr "Node ID'si"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "Henüz plot'larınızdan hiçbiri plot filtresinden geçemedi."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "Uygun Değil"
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
-msgstr ""
+msgstr "Senkronize değil"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
@@ -1035,15 +1042,15 @@ msgstr "Bağlantı Yok"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr ""
+msgstr "Plot bulunamadı"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "Kovaların Sayısı"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr ""
+msgstr "İş Parçacığı Sayısı"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
@@ -1051,19 +1058,19 @@ msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "Teklif"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Teklif Oluşturuldu"
 
-#: src/components/wallet/WalletHistory.tsx:18
+#: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
 msgstr "Giden"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr ""
+msgstr "Tepe Yüksekliği"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1071,44 +1078,44 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
-msgstr ""
+msgstr "En Yoğun Zaman"
 
-#: src/components/wallet/WalletHistory.tsx:41
+#: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
 msgstr "Beklemede"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr ""
+msgstr "Bekleyen Bakiye"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr ""
+msgstr "Bekleyen Değişiklik"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Bekleyen Toplam Bakiye"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Lütfen alım/satım çifti ekleyin"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Lütfen komisyonu 0 giriniz. Komisyonlara pozitif sayı girilmesi henüz RL için desteklenmiyor."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Lütfen geçerli bir başlangıç bakiyesi miktarı girin"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
 #: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "Lütfen geçerli bir sayısal miktar giriniz"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -1116,28 +1123,28 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
 #: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Lütfen geçerli bir sayısal komisyon giriniz"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Lütfen geçerli bir sayısal aralık giriniz"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Lütfen geçerli bir harcanabilir miktar giriniz"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Lütfen geçerli bir herkese açık anahtar giriniz"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Lütfen transfer yapmadan önce senkronizasyonu bitirin"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
-msgstr ""
+msgstr "Lütfen miktar seçin"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
@@ -1145,7 +1152,7 @@ msgstr "Lütfen Satın Al veya Sat seçeneklerinden birini seçiniz"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Lütfen coin rengi seçin"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1154,37 +1161,37 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "Lütfen son konumu belirtin"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "Lütfen geçici konumu belirtin"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
-msgstr ""
+msgstr "Plot"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:7
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "Plot Count"
-msgstr ""
+msgstr "Plot Sayısı"
 
-#: src/components/block/Block.jsx:265
+#: src/components/block/Block.jsx:268
 msgid "Plot Id"
-msgstr ""
+msgstr "Plot Kimliği"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "Plot Key"
-msgstr ""
+msgstr "Plot Anahtarı"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:244
 msgid "Plot Public Key"
-msgstr ""
+msgstr "Herkese Açık Plot Anahtarı"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Plot Seed"
@@ -1192,59 +1199,63 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:66
 msgid "Plot Size"
-msgstr ""
+msgstr "Plot Boyutu"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
-msgstr ""
+msgstr "Eş Zamanlı Plot"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
-msgstr ""
+msgstr "Plot {0} ile aynı"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr ""
+msgstr "Plot'lar"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr ""
+msgstr "Plot'ların Pas Geçme Filtresi"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "Plot'lar sabit diskinizde madencilik yapmak ve Chia kazanmak için belli alanlara ayrılmıştır. <0>Daha Fazlasını Öğren</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
-msgstr ""
+msgstr "Plot Yapmak"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
+msgstr "Eş zamanlı plot yapmak zaman kazandırabilir. Ya da sıraya başka plot(lar) ekleyin."
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
+msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
 msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-msgstr ""
+#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
-msgstr ""
+msgstr "Havuz Anahtarı"
 
-#: src/components/block/Block.jsx:245
+#: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
-msgstr ""
+msgstr "Herkese Açık Havuz Anahtarı"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
-msgstr ""
+msgstr "Karma Havuz Bulmacası"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
-msgstr ""
+msgstr "Havuz Ödür Adresi"
 
-#: src/components/block/Block.jsx:283
+#: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "Havuz Ödül Miktarı"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1253,7 +1264,7 @@ msgstr ""
 msgid "Port"
 msgstr "Port"
 
-#: src/components/block/Block.jsx:317
+#: src/components/block/Block.jsx:320
 msgid "Previous"
 msgstr "Önceki"
 
@@ -1261,9 +1272,9 @@ msgstr "Önceki"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:205
+#: src/components/block/Block.jsx:208
 msgid "Previous Header Hash"
-msgstr ""
+msgstr "Önceki Başlık Karması"
 
 #: src/components/block/Block.jsx:217
 #~ msgid "Previous Sub Block Hash"
@@ -1271,31 +1282,31 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr ""
+msgstr "Herkese açık parmak izi ile gizli anahtar {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
-msgstr ""
+msgstr "Gizli anahtar {0}"
 
 #: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
-msgstr ""
+msgstr "Gizli anahtar:"
 
-#: src/components/block/Block.jsx:237
+#: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "Boşluk Kanıtı Boyutu"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "Kanıtlar Bulundu"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "Herkese açık anahtar"
 
 #: src/middleware/middleware_api.jsx:265
 msgid "Public key:"
-msgstr ""
+msgstr "Herkese açık anahtar:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
@@ -1315,11 +1326,11 @@ msgstr "Sıraya Alındı"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "RAM max usage"
-msgstr ""
+msgstr "En fazla RAM kullanımı"
 
-#: src/components/wallet/Wallets.tsx:41
+#: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr ""
+msgstr "RL Cüzdanı"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1327,49 +1338,49 @@ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "Hız Limiti"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Hız Limiti Bilgisi"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Hız Limit Ayarı"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "Hız Limitli Kullanıcı Cüzdanı Kurulumu"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
-msgstr ""
+msgstr "Alım Adresi"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "DID geri yükleme cüzdanı"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Plot'ları Yenile"
 
-#: src/electron/main.tsx:325
+#: src/electron/main.tsx:324
 msgid "Release Notes"
-msgstr ""
+msgstr "Güncelleme Notları"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Yeniden Adlandır"
 
-#: src/electron/main.tsx:340
+#: src/electron/main.tsx:339
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Hata bildir..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "Renkli coinler için metaveriyi ve diğer akıllı cüzdanları yedeklemelerden geri yüklemek"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1382,7 +1393,7 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr ""
+msgstr "Geçmek için Güvenli"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1403,43 +1414,43 @@ msgstr "İkinci Geçici Dosya Adresi"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr ""
+msgstr "Gizli anahtarı gör"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Seed:"
-msgstr ""
+msgstr "Tohum:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "2. Geçici Konumu Belirle"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Son Konumu Belirle"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr ""
+msgstr "Anahtar Seç"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Teklif Seç"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Geçici Konum Seç"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Cüzdan Türünü Seç"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "Grafiğin depolanmasını istediğiniz klasör için son hedefi seçin. Büyük ve yavaş bir sabit sürücü kullanmanızı öneririz (harici HDD gibi)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "Grafiğin depolanmasını istediğiniz klasör için geçici hedefi seçin. Hızlı bir SSD kullanmanızı tavsiye ederiz."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1461,15 +1472,15 @@ msgstr "Gönder"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "Bu bilgi paketini, cüzdanlarının kurulumunu tamamlamak için kullanması gereken Rate Limited Wallet kullanıcınıza gönderin:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "Yayın anahtarınızı Rate Limited Cüzdan yöneticinize gönderin:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Gelişmiş Seçenekleri Göster"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -1478,7 +1489,7 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Yan"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
@@ -1494,43 +1505,43 @@ msgstr "Giriş Yap"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Kazıcıya madencilik için son konum eklemeyi atla"
 
-#: src/electron/main.tsx:410
+#: src/electron/main.tsx:409
 msgid "Speech"
-msgstr ""
+msgstr "Konuşma"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Harcanabilir Miktar"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "Aralık Başına Harcanabilir Tutar"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Harcanabilir Bakiye"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Harcama Aralığı (blokların sayısı): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Harcama Aralığı Uzunluğu (blokların sayısı)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Harcama Limiti (aralık başına chia): {0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
-msgstr ""
+msgstr "Bölge"
 
 #: src/components/fullNode/FullNode.jsx:104
 #: src/components/fullNode/FullNode.jsx:121
@@ -1538,15 +1549,15 @@ msgstr ""
 #: src/components/fullNode/FullNode.jsx:151
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
-#: src/components/wallet/WalletHistory.tsx:42
+#: src/components/wallet/WalletHistory.tsx:43
 #: src/components/wallet/WalletStatusCard.tsx:11
-#: src/components/wallet/Wallets.tsx:93
+#: src/components/wallet/Wallets.tsx:95
 msgid "Status"
-msgstr ""
+msgstr "Durum"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "Durum:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1582,17 +1593,17 @@ msgstr "Onayla"
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
-msgstr ""
+msgstr "Senkronize Edildi"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr ""
+msgstr "Senkronize ediliyor"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
-msgstr ""
+msgstr "Senkronize ediliyor {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1620,90 +1631,90 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr ""
+msgstr "Geçiçi dosya konumu"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Blok yüksekliği 193536 olduğunda uygulama çalışmayı durduracak."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "Çiftçinizin bağlı olduğu tam düğüm aşağıdadır. <0> Daha fazla bilgi edinin </0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "Ana ağ için gerekli minimum boyut k=32'dir"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr ""
+msgstr "Düğüm senkronize edilmedi"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "Düğüm senkronize oluyor, ki bu zincirdeki en son bloğa ulaşmak için diğer düğümlerden bloklar indirildiği anlamına geliyor"
 
-#: src/components/block/Block.jsx:268
+#: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "Arsa oluşturmak için kullanılan tohum. Bu, pk havuzuna ve pk plotuna bağlıdır."
 
-#: src/components/block/Block.jsx:220
+#: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "Toplam VDF sayısı (doğrulanabilir gecikme fonksiyonu) veya alt bloğa kadar tüm zincirdeki zaman yinelemelerinin kanıtı."
 
-#: src/components/block/Block.jsx:230
+#: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "Toplam VDF sayısı (doğrulanabilir gecikme fonksiyonu) veya bu bloktaki zaman yinelemelerinin kanıtı."
 
-#: src/components/block/Block.jsx:294
+#: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "Bu bloktaki toplam işlem ücretleri. Çiftçi ödüllendirildi."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr ""
+msgstr "Bu plotlar geçersiz, onların silinmesi gerekebilir."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "Bu, içinde plotlar olan bir klasör eklemenize olanak tanır. Herhangi bir plot dosyası oluşturmadıysanız, plotlama ekranına gidin."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
 #: src/hooks/useSelectFile.tsx:26
 msgid "This feature is available only from the GUI."
-msgstr ""
+msgstr "Bu özellik yalnızca grafik arayüzden kullanılabilir."
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "Bu, şu anda işlem yapmak için kullanabileceğiniz Chia miktarıdır. Bekleyen tarım ödüllerini, bekleyen işlemleri ve henüz harcadığınız ancak henüz blok zincirinde olmayan Chia'yı içermez."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "Bu, kendinize gönderdiğiniz fakat henüz onaylanmayan değişim conilerinin onaylanmasını bekleyen değişim onaylamasıdır."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "Bu toplam, gelen, giden ve bekleyen işlemlerin toplamıdır (henüz blok zincirine dahil edilmemiştir). Bu, çiftçilik ödüllerini içermez."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Bu, en son tepe alt bloğunun zamanıdır."
 
-#: src/components/block/Block.jsx:184
+#: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "Bu, bloğun çiftçi tarafından oluşturulduğu zamandır ve bu, bir zaman kanıtıyla sonuçlandırılmadan öncedir"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Bu, özel anahtarlarınız tarafından kontrol edilen mevcut en yüksek alt bloktaki blok zincirindeki toplam chia miktarıdır. Dondurulmuş ödüllerini içerir, ancak bekleyen gelen ve giden işlemleri içermez."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "Bu, toplam bakiye + bekleyen bakiyedir: ki bu tüm bekleyen işlemler onaylandıktan sonra bakiyenizin oluşacak bakiyedir."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "Bu düğüm tamamen yakalandı ve ağı doğruluyor"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1711,19 +1722,19 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr ""
+msgstr "Bu tablo, çiftliğinizin bir blok için en son ne zaman kazanmaya çalıştığını gösterir. <0> Daha fazla bilgi edinin </0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Bu ticaret şu anda oluşturuldu"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Bu ticaret, bu blok yüksekliğindeki blok zincirine dahil edildi"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Chia'nın bu sürümü artık blockchain ile uyumlu değil ve güvenli bir şekilde hasat yapamıyor."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1733,11 +1744,11 @@ msgstr "Oluşturulma Zamanı"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:184
 msgid "Timestamp"
 msgstr "Zaman damgası"
 
-#: src/components/wallet/WalletHistory.tsx:31
+#: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
 msgstr "İçin"
 
@@ -1761,43 +1772,43 @@ msgstr "Toplam Ağ Alanı"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Plot'un Toplam Boyutu:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Plot'ların Toplam Boyutu"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Toplam VDF Yinelemeleri"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Blok zincirinin başlangıcından bu yana toplam yineleme"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Alım/Satım"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Alım/Satım detayları"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "Alım/Satım Kimliği"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "Alım/Satım Kimliği:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Alım/Satım Önizlemesi"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Alım/Satımlar burada gözükecek"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
@@ -1807,11 +1818,11 @@ msgstr "Ticaret"
 msgid "Trading History"
 msgstr "Ticaret Geçmişi"
 
-#: src/components/block/Block.jsx:276
+#: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Karma Transfer Filtresi"
 
-#: src/components/wallet/WalletHistory.tsx:21
+#: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
 msgstr "Tür"
 
@@ -1821,22 +1832,22 @@ msgstr "Bitmemiş"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "Benzersiz Tanımlayıcı"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr ""
+msgstr "Herkese Açık Kullanıcı Anahtarı"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "VDF alt alan yinelemeleri"
 
 #: src/electron/main.tsx:251
 msgid "View"
 msgstr "Görünüm"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Günlüğü Görüntüle"
@@ -1898,7 +1909,7 @@ msgstr "Senkronizasyonu bekleyin"
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:24
-#: src/components/wallet/Wallets.tsx:131
+#: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
 msgstr "Cüzdanlar"
 
@@ -1908,39 +1919,39 @@ msgstr "Cüzdanlar"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Daha fazla Chia kazanmak için madencinize daha fazla plot ekleyin."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Bir sonraki plot başlamadan önce biraz zaman mı istiyorsunuz?"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:198
 msgid "Weight"
 msgstr "Ağırlık"
 
-#: src/components/block/Block.jsx:198
+#: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "Ağırlık, buna kadar ve buna dahil tüm alt blokların toplam zorluğudur"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-msgstr ""
+msgstr "Chia'ya hoş geldiniz. Lütfen mevcut bir anahtarla giriş yapın veya yeni bir anahtar oluşturun."
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Hoş geldiniz! Belirtilen kelimeler cüzdanınızın yedeği için kullanılacaktır. Onlar olmadan cüzdanınızın erişimini kaybedersiniz, onları güvende tutun! Her kelimeyi yanlarındaki sıra numarasıyla birlikte yazın. (Sıra numarası önemlidir)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "Yöneticinizden kurulum bilgi paketini aldığınızda, Hızı Sınırlı Cüzdan kurulumunu tamamlamak için aşağıya girin:"
 
-#: src/electron/main.tsx:295
+#: src/electron/main.tsx:294
 msgid "Window"
 msgstr "Pencere"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
-msgstr ""
+msgstr "Komisyonlar olmadan"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
@@ -1954,7 +1965,7 @@ msgstr "Evet"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Grafiğe senkronize olmanıza veya bağlanmanıza gerek yoktur. Çizim işlemi sırasında, nihai çizim dosyalarının boyutunu aşan geçici dosyalar oluşturulur. Yeterli alanınız olduğundan emin olun. <0> Daha fazla bilgi edinin </0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -1962,7 +1973,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
-msgstr ""
+msgstr "Ağ üzerinde % {0} alana sahipsiniz. bu yüzden bir bloğu kazmak etmek {expectedTimeToWin} kadar sürecektir. Gerçek sonuçlar bu tahminden 3 veya 4 kat daha uzun sürebilir."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
@@ -1978,44 +1989,44 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Maden Özetiniz"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
-msgstr ""
+msgstr "Tam Node Bağlantınız"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr ""
+msgstr "Kazıcı Ağınız"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
-#: src/components/wallet/Wallets.tsx:119
+#: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
-msgstr ""
+msgstr "bağlantılar:"
 
 #: src/components/wallet/WalletStatusCard.tsx:24
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:115
 msgid "height:"
-msgstr ""
+msgstr "yükseklik:"
 
-#: src/components/wallet/Wallets.tsx:107
+#: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
-msgstr ""
+msgstr "senkronize edilmedi"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:100
 msgid "status:"
-msgstr ""
+msgstr "durum:"
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+#: src/components/wallet/Wallets.tsx:107
+msgid "synced"
+msgstr "senkronize edildi"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:105
-msgid "synced"
-msgstr ""
-
-#: src/components/wallet/WalletStatusCard.tsx:19
-#: src/components/wallet/Wallets.tsx:103
 msgid "syncing"
-msgstr ""
+msgstr "senkronize ediliyor"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -2027,13 +2038,13 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr ""
+msgstr "{currencyCode} Blok Ödülleri"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
-msgstr ""
+msgstr "{currencyCode} Toplam Çıkartılan Chia"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr ""
+msgstr "{currencyCode} Kullanıcı Transfer Ücretleri"
 
