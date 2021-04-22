@@ -39,8 +39,8 @@ if [ "$(uname)" = "Linux" ]; then
 		echo "Installing on Ubuntu/Debian pre 20.04 LTS"
 		sudo apt-get update
 		sudo apt-get install -y python3.7-venv python3.7-distutils
-	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ]; then
-		echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
+	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
+		echo "Installing on Ubuntu/Debian 20.04 LTS"
 		sudo apt-get update
 		sudo apt-get install -y python3.8-venv python3-distutils
 	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
