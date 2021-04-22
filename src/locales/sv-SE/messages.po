@@ -164,8 +164,12 @@ msgid "Below are the current block challenges. You may or may not have a proof o
 msgstr "Nedan visas aktuella blockverifieringar. Eventuellt har du ett bevis-på-utrymme för dessa verifieringar. Dessa block innehåller för närvarande inget bevis-på-tid."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
-msgid "Best estimate over last 5 hours"
-msgstr "Bästa uppskattning under de senaste 5 timmarna"
+msgid "Best estimate over last 24 hours"
+msgstr ""
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr "Bästa uppskattning under de senaste 5 timmarna"
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146

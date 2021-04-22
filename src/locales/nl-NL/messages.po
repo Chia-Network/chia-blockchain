@@ -164,8 +164,12 @@ msgid "Below are the current block challenges. You may or may not have a proof o
 msgstr "Hieronder vind je de huidige block challenges. Je hebt of hebt geen proof of space voor deze challenges. Deze blocks bevatten momenteel geen proof of time."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
-msgid "Best estimate over last 5 hours"
-msgstr "Beste schatting over de 5 laatste uren"
+msgid "Best estimate over last 24 hours"
+msgstr ""
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+#~ msgid "Best estimate over last 5 hours"
+#~ msgstr "Beste schatting over de 5 laatste uren"
 
 #: src/components/block/Block.jsx:112
 #: src/components/block/Block.jsx:146
