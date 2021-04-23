@@ -99,6 +99,7 @@ logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
   log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
 
 harvester:
   # The harvester server (if run) will run on this port

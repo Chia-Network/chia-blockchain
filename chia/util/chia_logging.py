@@ -29,7 +29,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         logger.addHandler(handler)
     else:
         logger = logging.getLogger()
-        handler = ConcurrentRotatingFileHandler(log_path, "a", maxBytes=20 * 1024 * 1024, backupCount=7)
+        handler = ConcurrentRotatingFileHandler(log_path, "a", maxBytes=20 * 1024 * 1024, backupCount=logging_config.get("log_maxfilesrotation", 7))
         handler.setFormatter(
             logging.Formatter(
                 fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
