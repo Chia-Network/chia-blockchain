@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-22 18:12\n"
+"PO-Revision-Date: 2021-04-23 12:38\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -165,7 +165,7 @@ msgstr "Abaixo estão os desafios do bloco atual. Você pode ou não ter uma pro
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr ""
+msgstr "Melhor estimativa nas últimas 24 horas"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -863,7 +863,7 @@ msgstr "Chaves"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr ""
+msgstr "KiB Enviados/Recebidos"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -1231,7 +1231,7 @@ msgstr "Lotear em paralelo pode economizar tempo. Caso contrário, adicione lote
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "O loteamento com o bitfield habilitado tem aproximadamente 30% a menos de escritas no geral e é quase sempre mais rápido. Você verá os requisitos de memória sendo reduzidos ao lotear com o bitfield desabilitado. Se o seu CPU for de antes de 2010, talvez você tenha que desativar o loteamento com bitfield."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
