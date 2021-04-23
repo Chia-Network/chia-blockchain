@@ -8,7 +8,7 @@ msgstr ""
 "Language: nl_NL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-22 18:13\n"
+"PO-Revision-Date: 2021-04-23 00:12\n"
 "Last-Translator: \n"
 "Language-Team: Dutch\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -165,7 +165,7 @@ msgstr "Hieronder vind je de huidige block challenges. Je hebt of hebt geen proo
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr ""
+msgstr "Beste schatting van de afgelopen 24 uur"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -646,7 +646,7 @@ msgstr "Farmer puzzel hash"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr ""
+msgstr "Miner Beloning Adres"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
@@ -762,11 +762,11 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
-msgstr ""
+msgstr "Koptekst Hash"
 
 #: src/components/block/Block.jsx:180
 msgid "Header hash"
-msgstr ""
+msgstr "Koptekst Hash"
 
 #: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
@@ -863,7 +863,7 @@ msgstr "Sleutels"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr ""
+msgstr "KiB Omhoog/Omlaag"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -1003,7 +1003,7 @@ msgstr "Geen vorige transacties"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "Geen privé sleutels voor één of beide adressen. Alleen als u beloningen stuurt naar een andere wallet."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1013,7 +1013,7 @@ msgstr "Node ID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "Geen van je plots hebben de plot filter gepasseerd."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
@@ -1131,16 +1131,16 @@ msgstr "Vul een geldige numerieke intervallengte in"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Vul een geldig numeriek getal in"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Voer een geldige pubkey in"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Synchroniseren voordat u een transactie uitvoert"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1239,7 +1239,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
-msgstr ""
+msgstr "Pool Key"
 
 #: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
