@@ -1,5 +1,4 @@
 import isElectron from 'is-electron';
-import { i18n } from '@lingui/core';
 import * as actions from '../modules/websocket';
 import {
   registerService,

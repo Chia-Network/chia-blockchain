@@ -34,7 +34,7 @@
     "@material-ui/icons": "^4.11.2",
     "@material-ui/lab": "4.0.0-alpha.57",
     "@material-ui/styles": "^4.11.3",
-    "@rehooks/local-storage": "^2.4.1",
+    "@rehooks/local-storage": "2.4.0",
     "bech32": "^2.0.0",
     "big.js": "^6.0.3",
     "byte-size": "^7.0.1",

@@ -9,6 +9,7 @@ import {
   Logo,
   ToolbarSpacing,
 } from '@chia/core';
+import { defaultLocale, locales } from '../../config/locales';
 import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plot from '../plot/Plot';
@@ -65,7 +66,7 @@ export default function Dashboard() {
         <Toolbar>
           <DashboardTitleTarget />
           <Flex flexGrow={1} />
-          <LocaleToggle />
+          <LocaleToggle locales={locales} defaultLocale={defaultLocale} />
           <DarkModeToggle />
         </Toolbar>
       </StyledAppBar>

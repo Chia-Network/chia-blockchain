@@ -1,5 +1,6 @@
-const { i18n } = require('@lingui/core');
-const {
+import { i18n } from '@lingui/core';
+import moment from 'moment';
+import {
   da,
   de,
   en,
@@ -17,7 +18,8 @@ const {
   vi,
   zh,
   es,
-} = require('make-plural/plurals');
+} from 'make-plural/plurals';
+import * as materialLocales from '@material-ui/core/locale';
 
 const catalogDa = require('../locales/da-DK/messages');
 const catalogDe = require('../locales/de-DE/messages');
@@ -40,6 +42,74 @@ const catalogSv = require('../locales/sv-SE/messages');
 // const catalogViVn = require('../locales/vi-VN/messages');
 const catalogZh = require('../locales/zh-TW/messages');
 const catalogZhCN = require('../locales/zh-CN/messages');
+
+export const defaultLocale = 'en-US';
+
+// https://www.codetwo.com/admins-blog/list-of-office-365-language-id/
+export const locales = [{
+  locale: 'da-DK',
+  label: 'Dansk',
+}, {
+  locale: 'de-DE',
+  label: 'Deutsch',
+}, {
+  locale: 'en-US',
+  label: 'English',
+}, {
+  locale: 'en-AU',
+  label: 'English (Australia)',
+}, {
+  locale: 'en-PT',
+  label: 'English (Pirate)',
+}, {
+  locale: 'es-ES',
+  label: 'Español',
+}, {
+  locale: 'fr-FR',
+  label: 'Français',
+}, {
+  locale: 'it-IT',
+  label: 'Italiano',
+}, {
+  locale: 'ja-JP',
+  label: '日本語 (日本)',
+}, {
+  locale: 'nl-NL',
+  label: 'Nederlands',
+}, {
+  locale: 'pl-PL',
+  label: 'Polski',
+}, {
+  locale: 'pt-PT',
+  label: 'Português',
+}, {
+  locale: 'pt-BR',
+  label: 'Português (Brasil)',
+}, {
+  locale: 'ro-RO',
+  label: 'Română',
+}, {
+  locale: 'ru-RU',
+  label: 'Русский',
+}, {
+  locale: 'sk-SK',
+  label: 'Slovenčina',
+}, {
+  locale: 'fi-FI',
+  label: 'Suomi',
+}, {
+  locale: 'sv-SE',
+  label: 'Svenska',
+}, /* {
+  locale: 'vi-VN',
+  label: 'Tiếng Việt',
+}, */ {
+  locale: 'zh-TW',
+  label: '繁體中文',
+}, {
+  locale: 'zh-CN',
+  label: '简体中文',
+}];
 
 i18n.loadLocaleData('da-DK', { plurals: da });
 i18n.loadLocaleData('de-DE', { plurals: de });
@@ -82,8 +152,23 @@ i18n.load('sk-SK', catalogSk.messages);
 i18n.load('sv-SE', catalogSv.messages);
 // i18n.load('vi-VN', catalogViVn.messages);
 i18n.load('zh-TW', catalogZh.messages);
-i18n.load('zh-CN', catalogZhCN.messages);
+i18n.load('zh-CN', catalogZhCN.messages);2
 
-i18n.activate('en-US');
+export function getMaterialLocale(locale: string) {
+  const materialLocale = locale.replace('-', '');
+  return materialLocales[materialLocale] ?? materialLocales.enUS;
+}
 
-module.exports = i18n;
+export function activateLocale(locale: string) {
+  i18n.activate(locale);
+  moment.locale([locale, 'en']);
+
+  // @ts-ignore
+  if (typeof window !== 'undefined') {
+    window.ipcRenderer?.send('set-locale', locale);
+  }
+}
+
+export { i18n };  
+
+activateLocale(defaultLocale);

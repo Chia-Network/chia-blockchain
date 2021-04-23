@@ -3,15 +3,15 @@ import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
 export default function useLocale(
   defaultLocale: string,
 ): [string, (locale: string) => void] {
-  let [locale] = useLocalStorage('locale');
+  let [locale] = useLocalStorage<string>('locale', defaultLocale);
 
   if (locale && locale.length === 2) {
-    locale = null;
+    locale = defaultLocale;
   }
 
   function handleSetLocale(locale: string) {
     writeStorage('locale', locale);
   }
 
-  return [locale ?? defaultLocale, handleSetLocale];
+  return [locale, handleSetLocale];
 }

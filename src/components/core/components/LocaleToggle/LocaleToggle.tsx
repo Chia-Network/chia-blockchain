@@ -1,38 +1,22 @@
-import React from 'react';
-import { Trans } from '@lingui/macro';
+import React, { useMemo } from 'react';
+import { Trans, t } from '@lingui/macro';
 import { useToggle } from 'react-use';
 import { Button, Menu, MenuItem } from '@material-ui/core';
 import { Translate, ExpandMore } from '@material-ui/icons';
 import useLocale from '../../../../hooks/useLocale';
 import useOpenExternal from '../../../../hooks/useOpenExternal';
 
-// https://www.codetwo.com/admins-blog/list-of-office-365-language-id/
-const locales: { [char: string]: string } = {
-  'da-DK': 'Dansk',
-  'de-DE': 'Deutsch',
-  'en-US': 'English',
-  'en-AU': 'English (Australia)',
-  'en-PT': 'English (Pirate)',
-  'es-ES': 'Español',
-  'fr-FR': 'Français',
-  'it-IT': 'Italiano',
-  'ja-JP': '日本語 (日本)',
-  'nl-NL': 'Nederlands',
-  'pl-PL': 'Polski',
-  'pt-PT': 'Português',
-  'pt-BR': 'Português (Brasil)',
-  'ro-RO': 'Română',
-  'ru-RU': 'Русский',
-  'sk-SK': 'Slovenčina',
-  'fi-FI': 'Suomi',
-  'sv-SE': 'Svenska',
-  // 'vi-VN': 'Tiếng Việt',
-  'zh-TW': '繁體中文',
-  'zh-CN': '简体中文',
+type Props = {
+  defaultLocale: string;
+  locales: [{
+    locale: string;
+    label: string;
+  }];
 };
 
-export default function LocaleToggle() {
-  const [currentLocale, setLocale] = useLocale('en-US');
+export default function LocaleToggle(props: Props) {
+  const { defaultLocale, locales } = props;
+  const [currentLocale, setLocale] = useLocale(defaultLocale);
   const [open, toggleOpen] = useToggle(false);
   const openExternal = useOpenExternal();
 
@@ -59,6 +43,13 @@ export default function LocaleToggle() {
     openExternal('https://github.com/Chia-Network/chia-blockchain-gui/tree/main/src/locales/README.md');
   }
 
+  const localeData = useMemo(
+    () => locales.find((item)=> item.locale === currentLocale), 
+    [currentLocale, locales],
+  );
+
+  const currentLocaleLabel = localeData?.label ?? t`Unknown`;
+
   return (
     <>
       <Button
@@ -68,7 +59,7 @@ export default function LocaleToggle() {
         startIcon={<Translate />}
         endIcon={<ExpandMore />}
       >
-        {currentLocale in locales ? locales[currentLocale] : 'Unknown'}
+        {currentLocaleLabel}
       </Button>
       <Menu
         id="simple-menu"
@@ -77,13 +68,13 @@ export default function LocaleToggle() {
         open={open}
         onClose={handleClose}
       >
-        {Object.keys(locales).map((locale) => (
+        {locales.map((item) => (
           <MenuItem
-            key={locale}
-            onClick={() => handleSelect(locale)}
-            selected={locale === currentLocale}
+            key={item.locale}
+            onClick={() => handleSelect(item.locale)}
+            selected={item.locale === currentLocale}
           >
-            {locales[locale]}
+            {item.label}
           </MenuItem>
         ))}
         <MenuItem onClick={handleHelpTranslate}>

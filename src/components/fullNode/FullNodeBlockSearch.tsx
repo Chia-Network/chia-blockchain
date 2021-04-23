@@ -1,5 +1,5 @@
 import React from 'react';
-import { i18n } from '@lingui/core';
+import { t } from '@lingui/macro';
 import { Box, IconButton, Paper } from '@material-ui/core';
 import { Search as SearchIcon } from '@material-ui/icons';
 import { useHistory } from 'react-router-dom';
@@ -41,7 +41,7 @@ export default function FullNodeBlockSearch() {
           <Box />
           <StyledInputBase
             name="hash"
-            placeholder={i18n._('Search block by header hash')}
+            placeholder={t`Search block by header hash`}
             fullWidth
           />
           <IconButton type="submit" aria-label="search">

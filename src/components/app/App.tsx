@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
-import { deDE, enUS, zhCN, esES, frFR, fiFI, itIT, jaJP, nlNL, ptBR, ptPT, plPL, roRO, ruRU, skSK, svSE, viVN } from '@material-ui/core/locale';
 import useDarkMode from 'use-dark-mode';
-import moment from 'moment';
 import isElectron from 'is-electron';
 import { createGlobalStyle } from 'styled-components'
 import { ConnectedRouter } from 'connected-react-router';
@@ -17,7 +15,7 @@ import { exit_and_close } from '../../modules/message';
 import useLocale from '../../hooks/useLocale';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
-import i18n from '../../config/locales';
+import { i18n, activateLocale, defaultLocale, getMaterialLocale } from '../../config/locales';
 import Fonts from './fonts/Fonts';
 
 const GlobalStyle = createGlobalStyle`
@@ -37,52 +35,16 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-function localeToMaterialLocale(locale: string): object {
-  switch (locale) {
-    case 'de-DE':
-      return deDE;
-    case 'en-US':
-      return enUS;
-    case 'es-ES':
-      return esES;
-    case 'fr-FR':
-      return frFR;
-    case 'it-IT':
-      return itIT;
-    case 'ja-JP':
-      return jaJP;
-    case 'nl-NL':
-      return nlNL;
-    case 'fi-FI':
-      return fiFI;
-    case 'pl-PL':
-      return plPL;
-    case 'pt-BR':
-      return ptBR;
-    case 'pt-PT':
-      return ptPT;
-    case 'ro-RO':
-      return roRO;
-    case 'ru-RU':
-      return ruRU;
-    case 'sk-SK':
-      return skSK;
-    case 'sv-SE':
-      return svSE;
-    case 'vi-VN':
-      return viVN;
-    case 'zh-TW':
-    case 'zh-CN':
-      return zhCN;
-    default:
-      return enUS;
-  }
-}
-
 export default function App() {
   const { value: darkMode } = useDarkMode();
-  const [locale] = useLocale('en-US');
-  const [theme, setTheme] = useState(lightTheme(localeToMaterialLocale(locale)));
+  const [locale] = useLocale(defaultLocale);
+  
+  const theme = useMemo(() => {
+    const material = getMaterialLocale(locale);
+    return darkMode
+      ? darkTheme(material)
+      : lightTheme(material);
+  }, [locale, darkMode]);
 
   // get the daemon's uri from global storage (put there by loadConfig)
   let daemon_uri = null;
@@ -93,16 +55,8 @@ export default function App() {
   }
 
   useEffect(() => {
-    i18n.activate(locale);
-    // @ts-ignore
-    window.ipcRenderer.send("set-locale", locale)
-    if (darkMode) {
-      setTheme(darkTheme(localeToMaterialLocale(locale)));
-    } else {
-      setTheme(lightTheme(localeToMaterialLocale(locale)));
-    }
-    moment.locale([locale, 'en']);
-  }, [locale, darkMode]);
+    activateLocale(locale);
+  }, [locale]);
 
   useEffect(() => {
     window.addEventListener('load', () => {

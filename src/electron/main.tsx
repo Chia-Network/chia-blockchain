@@ -12,7 +12,7 @@ import config from '../config/config';
 import dev_config from '../dev_config';
 import chiaEnvironment from '../util/chiaEnvironment';
 import chiaConfig from '../util/config';
-import i18n from '../config/locales';
+import { i18n } from '../config/locales';
 import About from '../components/about/About';
 import packageJson from '../../package.json';
 
