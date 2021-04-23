@@ -443,8 +443,9 @@ class AddressManager:
         if not new_only and self.tried_count > 0 and (self.new_count == 0 or randrange(2) == 0):
             chance = 1.0
             start = time.time()
+            cached_tried_matrix_positions: List[Tuple[int, int]] = []
             if len(self.used_tried_matrix_positions) < math.sqrt(TRIED_BUCKET_COUNT * BUCKET_SIZE):
-                cached_tried_matrix_positions = list(self.used_tried_matrix_positions)
+                cached_tried_matrix_positions += self.used_tried_matrix_positions
             while True:
                 if len(self.used_tried_matrix_positions) < math.sqrt(TRIED_BUCKET_COUNT * BUCKET_SIZE):
                     if len(self.used_tried_matrix_positions) == 0:
@@ -472,8 +473,9 @@ class AddressManager:
         else:
             chance = 1.0
             start = time.time()
+            cached_new_matrix_positions: List[Tuple[int, int]] = []
             if len(self.used_new_matrix_positions) < math.sqrt(NEW_BUCKET_COUNT * BUCKET_SIZE):
-                cached_new_matrix_positions = list(self.used_new_matrix_positions)
+                cached_new_matrix_positions += self.used_new_matrix_positions
             while True:
                 if len(self.used_new_matrix_positions) < math.sqrt(NEW_BUCKET_COUNT * BUCKET_SIZE):
                     if len(self.used_new_matrix_positions) == 0:
