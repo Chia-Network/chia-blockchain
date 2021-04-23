@@ -82,7 +82,7 @@ def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
     return hrp, data[:-6]
 
 
-def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True):
+def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True) -> Optional[List[int]]:
     """General power-of-2 base conversion."""
     acc = 0
     bits = 0
