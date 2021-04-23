@@ -664,6 +664,25 @@ class FullNode:
             raise RuntimeError(f"Not syncing, no peers with header_hash {peak_hash} ")
         advanced_peak = False
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+
+        our_peak_height = self.blockchain.get_peak_height()
+        ses_heigths = self.blockchain.get_ses_heights()
+        if len(ses_heigths) > 2 and our_peak_height is not None:
+            ses_heigths.sort()
+            max_fork_ses_height = ses_heigths[-3]
+            # This is fork point in SES in case where fork was not detected
+            if self.blockchain.get_peak_height() is not None and fork_point_height == max_fork_ses_height:
+                for peer in peers_with_peak:
+                    # Grab a block at peak + 1 and check if fork point is actually our current height
+                    block_response: Optional[Any] = await peer.request_block(
+                        full_node_protocol.RequestBlock(uint32(our_peak_height + 1), True)
+                    )
+                    if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
+                        peak = self.blockchain.get_peak()
+                        if peak is not None and block_response.block.prev_header_hash == peak.header_hash:
+                            fork_point_height = our_peak_height
+                        break
+
         for i in range(fork_point_height, target_peak_sb_height, batch_size):
             start_height = i
             end_height = min(target_peak_sb_height, start_height + batch_size)
@@ -675,7 +694,7 @@ class FullNode:
                 if peer.closed:
                     to_remove.append(peer)
                     continue
-                response = await peer.request_blocks(request, timeout=15)
+                response = await peer.request_blocks(request, timeout=60)
                 if response is None:
                     await peer.close()
                     to_remove.append(peer)
