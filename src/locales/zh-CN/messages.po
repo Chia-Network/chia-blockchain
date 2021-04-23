@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 00:13\n"
+"PO-Revision-Date: 2021-04-23 12:38\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -265,7 +265,7 @@ msgstr "哈希(Hash)挑战"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr "在Keybase上参与讨论"
+msgstr "在KeyBase上聊天"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
@@ -476,7 +476,7 @@ msgstr "创建于："
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr "由我们创造:"
+msgstr "创始人:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -484,7 +484,7 @@ msgstr "当前交易状态"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr "注意：永久性删除私钥"
+msgstr "危险：永久性删除私钥"
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
