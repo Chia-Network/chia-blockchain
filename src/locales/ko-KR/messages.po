@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 06:11\n"
+"PO-Revision-Date: 2021-04-23 12:38\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "Chia의 블록을 더 탐험하고 싶으십니까? 오픈 소스 개발자가 만든 <0>Chia Explorer</0> 를 확인하세요."
+msgstr "Chia의 블록을 더 탐험하고 싶으십니까? 오픈 소스 개발자가 만든 <0>Chia Explorer</0>를 확인하세요."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
