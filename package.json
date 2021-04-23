@@ -113,7 +113,6 @@
     "concurrently": "^6.0.2",
     "copy-webpack-plugin": "^8.1.1",
     "cross-env": "^7.0.3",
-    "cypress": "^7.1.0",
     "electron": "^11.4.3",
     "electron-osx-sign": "github:electron/electron-osx-sign#master",
     "electron-winstaller": "^5.0.0",
