@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import aiosqlite
 
@@ -8,6 +8,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
+from chia.util.lru_cache import LRUCache
 
 
 class CoinStore:
@@ -17,7 +18,7 @@ class CoinStore:
     """
 
     coin_record_db: aiosqlite.Connection
-    coin_record_cache: Dict[str, CoinRecord]
+    coin_record_cache: LRUCache
     cache_size: uint32
     db_wrapper: DBWrapper
 
@@ -57,7 +58,7 @@ class CoinStore:
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(puzzle_hash)")
 
         await self.coin_record_db.commit()
-        self.coin_record_cache = dict()
+        self.coin_record_cache = LRUCache(cache_size)
         return self
 
     async def new_block(self, block: FullBlock, additions: List[Coin], removals: List[bytes32]):
@@ -101,8 +102,9 @@ class CoinStore:
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
-        if coin_name.hex() in self.coin_record_cache:
-            return self.coin_record_cache[coin_name.hex()]
+        cached = self.coin_record_cache.get(coin_name.hex())
+        if cached is not None:
+            return cached
         cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
@@ -162,7 +164,7 @@ class CoinStore:
         """
         # Update memory cache
         delete_queue: bytes32 = []
-        for coin_name, coin_record in self.coin_record_cache.items():
+        for coin_name, coin_record in self.coin_record_cache.cache.items():
             if int(coin_record.spent_block_index) > block_index:
                 new_record = CoinRecord(
                     coin_record.coin,
@@ -172,12 +174,12 @@ class CoinStore:
                     coin_record.coinbase,
                     coin_record.timestamp,
                 )
-                self.coin_record_cache[coin_record.coin.name().hex()] = new_record
+                self.coin_record_cache.put(coin_record.coin.name().hex(), new_record)
             if int(coin_record.confirmed_block_index) > block_index:
                 delete_queue.append(coin_name)
 
         for coin_name in delete_queue:
-            del self.coin_record_cache[coin_name]
+            self.coin_record_cache.remove(coin_name)
 
         # Delete from storage
         c1 = await self.coin_record_db.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
@@ -205,11 +207,7 @@ class CoinStore:
             ),
         )
         await cursor.close()
-        self.coin_record_cache[record.coin.name().hex()] = record
-        if len(self.coin_record_cache) > self.cache_size:
-            while len(self.coin_record_cache) > self.cache_size:
-                first_in = list(self.coin_record_cache.keys())[0]
-                del self.coin_record_cache[first_in]
+        self.coin_record_cache.put(record.coin.name().hex(), record)
 
     # Update coin_record to be spent in DB
     async def _set_spent(self, coin_name: bytes32, index: uint32):
