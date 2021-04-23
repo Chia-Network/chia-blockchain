@@ -123,6 +123,9 @@ class BlockStore:
             return SubEpochSegments.from_bytes(row[0]).challenge_segments
         return None
 
+    def cache_block(self, block: FullBlock):
+        self.block_cache.put(block.header_hash, block)
+
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:

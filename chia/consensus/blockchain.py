@@ -269,6 +269,7 @@ class Blockchain(BlockchainInterface):
                         ] = fetched_block_record.sub_epoch_summary_included
                 if peak_height is not None:
                     self._peak_height = peak_height
+                self.block_store.cache_block(block)
             except BaseException:
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
