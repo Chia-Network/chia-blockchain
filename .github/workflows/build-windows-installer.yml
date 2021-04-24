@@ -105,34 +105,42 @@ jobs:
       with:
         name: 'Windows-Installers'
 
-    - name: View Path & Files
-      run: |
-          dir ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer
-          cd
 
     - name: Install AWS CLI
       run: |
           msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
 
-#    - name: Configure AWS Credentials
-#      uses: aws-actions/configure-aws-credentials@v1
-#      with:
-#        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-#        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-#        aws-region: us-west-2
+    #- name: Configure AWS Credentials
+    #  uses: aws-actions/configure-aws-credentials@v1
+    #  with:
+    #    aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+    #    aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+    #    aws-region: us-west-2
 
+        # inside .github/workflows/your-action.yml
 
+   #- name: Upload file to bucket
+    #   uses: zdurham/s3-upload-github-action@master
+    #   with:
+    #     args: --acl public-read
+    #   env:
+    #    FILE: ${{ github.workspace }}\chia-blockchain-gui\release-builds\*
+    #    AWS_REGION: 'us-west-2'
+    #    S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+    #    S3_KEY: ${{ secrets.S3_KEY }}
+    #    AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+    #    AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
     - name: Upload to s3
       uses: shallwefootball/s3-upload-action@master
       with:
         aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws_secret_access_key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-        aws_bucket: s3://download-chia-net/builds/
+        aws_bucket: s3://download-chia-net
         source_dir: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
-
-#    - name: Upload to s3
-#      run: |
-#        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe s3://download-chia-net/builds/
+        destination_dir: builds
+    #- name: Upload to s3
+    #  run: |
+    #    aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ s3://download-chia-net/builds/
 
     - name: Install py3createtorrent
       run: |
