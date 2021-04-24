@@ -87,6 +87,15 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         .\build_scripts\build_windows.ps1
 
+    - name: Create installer version number
+      id: version_number
+      run: |
+        unset CHIA_INSTALLER_VERSION
+        . .\venv\Scripts\Activate.ps1
+        $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+        echo ::set-output name=CHIA_INSTALLER_VERSION::${CHIA_INSTALLER_VERSION}
+        echo "Installer version is: $CHIA_INSTALLER_VERSION"
+
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
@@ -131,8 +140,11 @@ jobs:
 #        source_dir: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
 
     - name: Upload to s3
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\*.exe s3://download-chia-net/builds/
+        ls ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\Chia-$CHIA_INSTALLER_VERSION.exe s3://download-chia-net/builds/
 
 #    - name: Install py3createtorrent
 #      run: |
