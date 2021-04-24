@@ -99,50 +99,50 @@ jobs:
         name: Windows-Installers
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v2
-      id: download
-      with:
-        name: 'Windows-Installers'
+#    - name: Download artifacts
+#      uses: actions/download-artifact@v2
+#      id: download
+#      with:
+#        name: 'Windows-Installers'
 
-    - name: View Path & Files
-      run: |
-          dir ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer
-          cd
+#    - name: View Path & Files
+#      run: |
+#          dir ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer
+#          cd
 
     - name: Install AWS CLI
       run: |
           msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
 
-#    - name: Configure AWS Credentials
-#      uses: aws-actions/configure-aws-credentials@v1
-#      with:
-#        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-#        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-#        aws-region: us-west-2
-
-
-    - name: Upload t o s3
-      uses: shallwefootball/s3-upload-action@master
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-        aws_secret_access_key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-        aws_bucket: s3://download-chia-net/builds/
-        source_dir: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
 
-#    - name: Upload to s3
+
+#    - name: Upload t o s3
+#      uses: shallwefootball/s3-upload-action@master
+#      with:
+#        aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+#        aws_secret_access_key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+#        aws_bucket: s3://download-chia-net/builds/
+#        source_dir: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
+
+    - name: Upload to s3
+      run: |
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\*.exe s3://download-chia-net/builds/
+
+#    - name: Install py3createtorrent
 #      run: |
-#        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe s3://download-chia-net/builds/
+#        pip3 install py3createtorrent
 
-    - name: Install py3createtorrent
-      run: |
-        pip3 install py3createtorrent
+#    - name: Create Torrent Files
+#      run: |
+#        py3createtorrent ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
 
-    - name: Create Torrent Files
-      run: |
-        py3createtorrent ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
-
-    - name: Upload Release Files
-      run: |
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe s3://download-chia-net/test-installs/
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.torrent s3://download-chia-net/test-installs/
+#    - name: Upload Release Files
+#      run: |
+#        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe s3://download-chia-net/test-installs/
+#        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.torrent s3://download-chia-net/test-installs/
