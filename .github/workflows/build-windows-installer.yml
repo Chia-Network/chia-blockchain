@@ -67,7 +67,7 @@ jobs:
       run: |
         unset HAS_SECRET
         if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        echo "::set-output name=HAS_SECRET::${HAS_SECRET}"
       env:
         SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
 
@@ -92,7 +92,7 @@ jobs:
       run: |
         . .\venv\Scripts\Activate.ps1
         $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
-        echo ::set-output name=CHIA_INSTALLER_VERSION::${CHIA_INSTALLER_VERSION}
+        echo "::set-output name=CHIA_INSTALLER_VERSION::${CHIA_INSTALLER_VERSION}"
         echo "Installer version is: $CHIA_INSTALLER_VERSION"
 
     - name: Upload Windows exe's to artifacts
@@ -142,8 +142,8 @@ jobs:
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        ls ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\Chia-$CHIA_INSTALLER_VERSION.exe s3://download-chia-net/builds/
+        ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\Chia-$CHIA_INSTALLER_VERSION.exe s3://download-chia-net/builds/
 
 #    - name: Install py3createtorrent
 #      run: |
