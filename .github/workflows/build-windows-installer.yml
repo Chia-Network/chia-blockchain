@@ -90,7 +90,6 @@ jobs:
     - name: Create installer version number
       id: version_number
       run: |
-        unset CHIA_INSTALLER_VERSION
         . .\venv\Scripts\Activate.ps1
         $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
         echo ::set-output name=CHIA_INSTALLER_VERSION::${CHIA_INSTALLER_VERSION}
