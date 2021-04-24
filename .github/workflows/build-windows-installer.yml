@@ -122,13 +122,13 @@ jobs:
 #        aws-region: us-west-2
 
 
-    - name: Upload t o s3
+    - name: Upload to s3
       uses: shallwefootball/s3-upload-action@master
       with:
         aws_key_id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         aws_secret_access_key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
         aws_bucket: s3://download-chia-net/builds/
-        source_dir: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\*.exe
+        source_dir: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
 
 #    - name: Upload to s3
 #      run: |
