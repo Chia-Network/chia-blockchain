@@ -118,8 +118,7 @@ class TestWalletRpc:
             assert (await client.get_wallet_balance("1"))["confirmed_wallet_balance"] == initial_funds
 
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
-                await asyncio.sleep(0.5)
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]

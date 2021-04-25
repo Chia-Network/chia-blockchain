@@ -66,7 +66,7 @@ class TestFullNodeStore:
         for height, unf_block in enumerate(unfinished_blocks):
             store.add_candidate_block(unf_block.get_hash(), height, unf_block)
 
-        assert store.get_candidate_block(unfinished_blocks[4].get_hash()) == unfinished_blocks[4]
+        assert store.get_candidate_block(unfinished_blocks[4].get_hash())[1] == unfinished_blocks[4]
         store.clear_candidate_blocks_below(uint32(8))
         assert store.get_candidate_block(unfinished_blocks[5].get_hash()) is None
         assert store.get_candidate_block(unfinished_blocks[8].get_hash()) is not None
@@ -132,7 +132,7 @@ class TestFullNodeStore:
         # Test adding genesis peak
         await blockchain.receive_block(blocks[0])
         peak = blockchain.get_peak()
-        peak_full_block = blockchain.get_full_peak()
+        peak_full_block = await blockchain.get_full_peak()
         if peak.overflow:
             store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], False, {})
         else:

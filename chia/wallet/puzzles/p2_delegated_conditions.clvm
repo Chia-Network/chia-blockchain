@@ -13,6 +13,6 @@
          )
   )
 
-  (c (list AGG_SIG public_key (sha256tree1 conditions)) conditions)
+  (c (list AGG_SIG_ME public_key (sha256tree1 conditions)) conditions)
 
 )

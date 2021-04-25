@@ -5,7 +5,7 @@ from clvm import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
@@ -64,11 +64,11 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         print(f"  with id {coin_name}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
-        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution)
+        error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
-            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name):
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin_name, bytes([3] * 32)):
                 pks.append(pk)
                 msgs.append(m)
             print()
@@ -86,10 +86,10 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         print(f"  {disassemble(as_prog)}")
                 created_announcements.extend(
-                    [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_ANNOUNCEMENT, [])
+                    [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
                 )
                 asserted_annoucements.extend(
-                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_ANNOUNCEMENT, [])]
+                    [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
                 )
                 print()
             else:

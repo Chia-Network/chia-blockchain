@@ -8,31 +8,39 @@ from chia.types.mempool_item import MempoolItem
 
 
 class Mempool:
-    spends: Dict[bytes32, MempoolItem]
-    sorted_spends: SortedDict  # Dict[float, Dict[bytes32, MempoolItem]]
-    additions: Dict[bytes32, MempoolItem]
-    removals: Dict[bytes32, MempoolItem]
-    size: int
+    def __init__(self, max_size_in_cost: int):
+        self.spends: Dict[bytes32, MempoolItem] = {}
+        self.sorted_spends: SortedDict = SortedDict()
+        self.additions: Dict[bytes32, MempoolItem] = {}
+        self.removals: Dict[bytes32, MempoolItem] = {}
+        self.max_size_in_cost: int = max_size_in_cost
+        self.total_mempool_cost: int = 0
 
-    # if new min fee is added
-    @staticmethod
-    def create(size: int):
-        self = Mempool()
-        self.spends = {}
-        self.additions = {}
-        self.removals = {}
-        self.sorted_spends = SortedDict()
-        self.size = size
-        return self
+    def get_min_fee_rate(self, cost: int) -> float:
+        """
+        Gets the minimum fpc rate that a transaction with specified cost will need in order to get included.
+        """
 
-    def get_min_fee_rate(self) -> float:
-        if self.at_full_capacity():
-            fee_per_cost, val = self.sorted_spends.peekitem(index=0)
-            return fee_per_cost
+        if self.at_full_capacity(cost):
+            current_cost = self.total_mempool_cost
+
+            # Iterates through all spends in increasing fee per cost
+            for fee_per_cost, spends_with_fpc in self.sorted_spends.items():
+                for spend_name, item in spends_with_fpc.items():
+                    current_cost -= item.cost
+                    # Removing one at a time, until our transaction of size cost fits
+                    if current_cost + cost <= self.max_size_in_cost:
+                        return fee_per_cost
+            raise ValueError(
+                f"Transaction with cost {cost} does not fit in mempool of max cost {self.max_size_in_cost}"
+            )
         else:
             return 0
 
-    def remove_spend(self, item: MempoolItem):
+    def remove_from_pool(self, item: MempoolItem):
+        """
+        Removes an item from the mempool.
+        """
         removals: List[Coin] = item.spend_bundle.removals()
         additions: List[Coin] = item.spend_bundle.additions()
         for rem in removals:
@@ -44,6 +52,8 @@ class Mempool:
         dic = self.sorted_spends[item.fee_per_cost]
         if len(dic.values()) == 0:
             del self.sorted_spends[item.fee_per_cost]
+        self.total_mempool_cost -= item.cost
+        assert self.total_mempool_cost >= 0
 
     def add_to_pool(
         self,
@@ -51,25 +61,33 @@ class Mempool:
         additions: List[Coin],
         removals_dic: Dict[bytes32, Coin],
     ):
-        if self.at_full_capacity():
+        """
+        Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
+        """
+
+        while self.at_full_capacity(item.cost):
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
             to_remove = list(val.values())[0]
-            self.remove_spend(to_remove)
+            self.remove_from_pool(to_remove)
 
         self.spends[item.name] = item
 
         # sorted_spends is Dict[float, Dict[bytes32, MempoolItem]]
-        if item.fee_per_cost in self.sorted_spends:
-            self.sorted_spends[item.fee_per_cost][item.name] = item
-        else:
+        if item.fee_per_cost not in self.sorted_spends:
             self.sorted_spends[item.fee_per_cost] = {}
-            self.sorted_spends[item.fee_per_cost][item.name] = item
+
+        self.sorted_spends[item.fee_per_cost][item.name] = item
 
         for add in additions:
             self.additions[add.name()] = item
         for key in removals_dic.keys():
             self.removals[key] = item
+        self.total_mempool_cost += item.cost
 
-    def at_full_capacity(self) -> bool:
-        return len(self.spends.keys()) >= self.size
+    def at_full_capacity(self, cost: int) -> bool:
+        """
+        Checks whether the mempool is at full capacity and cannot accept a transaction with size cost.
+        """
+
+        return self.total_mempool_cost + cost > self.max_size_in_cost

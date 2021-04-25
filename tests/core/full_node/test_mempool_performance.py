@@ -1,6 +1,4 @@
 # flake8: noqa: F811, F401
-"""
-Commenting out until clvm_rs is in.
 
 import asyncio
 import time
@@ -36,7 +34,7 @@ def event_loop():
     yield loop
 
 
-class XTestMempoolPerformance:
+class TestMempoolPerformance:
     @pytest.fixture(scope="module")
     async def wallet_nodes(self):
         key_seed = bt.farmer_master_sk_entropy
@@ -72,11 +70,10 @@ class XTestMempoolPerformance:
         for con in cons:
             await con.close()
 
-        # blocks = bt.get_consecutive_blocks(3, blocks)
-        # await full_node_api_1.full_node.respond_block(full_node_protocol.respondblock(blocks[-3]))
-        #
-        # for block in blocks[-2:]:
-        #     start_t_2 = time.time()
-        #     await full_node_api_1.full_node.respond_block(full_node_protocol.respondblock(block))
-        #     assert time.time() - start_t_2 < 1
-"""
+        blocks = bt.get_consecutive_blocks(3, blocks)
+        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
+
+        for block in blocks[-2:]:
+            start_t_2 = time.time()
+            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            assert time.time() - start_t_2 < 1
