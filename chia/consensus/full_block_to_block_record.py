@@ -22,7 +22,7 @@ def block_to_block_record(
     required_iters: uint64,
     full_block: Optional[Union[FullBlock, HeaderBlock]],
     header_block: Optional[HeaderBlock],
-):
+) -> BlockRecord:
 
     if full_block is None:
         assert header_block is not None
@@ -92,7 +92,7 @@ def header_block_to_sub_block_record(
     deficit: uint8,
     prev_transaction_block_height: uint32,
     ses: Optional[SubEpochSummary],
-):
+) -> BlockRecord:
 
     reward_claims_incorporated = (
         block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None

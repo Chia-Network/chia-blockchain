@@ -205,7 +205,7 @@ class TestMempoolManager:
         coins = iter(blocks[-1].get_included_reward_coins())
         coin1, coin2 = next(coins), next(coins)
         coins = iter(blocks[-2].get_included_reward_coins())
-        coin3 = next(coins)
+        coin3, coin4 = next(coins), next(coins)
 
         sb1_1 = await self.gen_and_send_sb(full_node_1, peer, coin1)
         sb1_2 = await self.gen_and_send_sb(full_node_1, peer, coin1, fee=uint64(1))
@@ -239,6 +239,25 @@ class TestMempoolManager:
         # coins that are spent in the latter (specifically, coin1)
         self.assert_sb_in_pool(full_node_1, sb12)
         self.assert_sb_not_in_pool(full_node_1, sb23)
+
+        await self.send_sb(full_node_1, peer, sb3)
+        # Adding non-conflicting sb3 should succeed
+        self.assert_sb_in_pool(full_node_1, sb3)
+
+        sb4_1 = generate_test_spend_bundle(coin4, fee=uint64(min_fee_increase))
+        sb1234_1 = SpendBundle.aggregate((sb12, sb3, sb4_1))
+        await self.send_sb(full_node_1, peer, sb1234_1)
+        # sb1234_1 should not be in pool as it decreases total fees per cost
+        self.assert_sb_not_in_pool(full_node_1, sb1234_1)
+
+        sb4_2 = generate_test_spend_bundle(coin4, fee=uint64(min_fee_increase * 2))
+        sb1234_2 = SpendBundle.aggregate((sb12, sb3, sb4_2))
+        await self.send_sb(full_node_1, peer, sb1234_2)
+        # sb1234_2 has a higher fee per cost than its conflicts and should get
+        # into mempool
+        self.assert_sb_in_pool(full_node_1, sb1234_2)
+        self.assert_sb_not_in_pool(full_node_1, sb12)
+        self.assert_sb_not_in_pool(full_node_1, sb3)
 
     @pytest.mark.asyncio
     async def test_invalid_block_index(self, two_nodes):

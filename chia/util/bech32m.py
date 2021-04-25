@@ -82,7 +82,7 @@ def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
     return hrp, data[:-6]
 
 
-def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True):
+def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True) -> List[int]:
     """General power-of-2 base conversion."""
     acc = 0
     bits = 0
@@ -91,7 +91,7 @@ def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True):
     max_acc = (1 << (frombits + tobits - 1)) - 1
     for value in data:
         if value < 0 or (value >> frombits):
-            return None
+            raise ValueError("Invalid Value")
         acc = ((acc << frombits) | value) & max_acc
         bits += frombits
         while bits >= tobits:
@@ -101,7 +101,7 @@ def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True):
         if bits:
             ret.append((acc << (tobits - bits)) & maxv)
     elif bits >= frombits or ((acc << (tobits - bits)) & maxv):
-        return None
+        raise ValueError("Invalid bits")
     return ret
 
 

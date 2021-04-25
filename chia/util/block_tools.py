@@ -1084,7 +1084,7 @@ def finish_block(
     sub_slot_iters: uint64,
     difficulty: uint64,
     normalized_to_identity_cc_ip: bool = False,
-):
+) -> Tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
@@ -1179,7 +1179,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir():
+def get_plot_dir() -> Path:
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
