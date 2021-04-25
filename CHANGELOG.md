@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.1.2 Chia Blockchain 2021-04-24
+
+### Changed
+
+- Weight proof time outs have been increased from 3 minutes to 6 minutes.
+
+### Fixed
+
+- When attempting to sync, connections could accidentally disconnect for rate limiting reasons. This was causing many to not be able to sync.
+- Some temp files were not being closed during GUI plotting.
+
 ## 1.1.1 Chia Blockchain 2021-04-21
 
 ### Added
