@@ -28,7 +28,7 @@ async def get_plots(harvester_rpc_port: int) -> Optional[Dict[str, Any]]:
         )
         plots = await harvester_client.get_plots()
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if harvester is running at {harvester_rpc_port}")
         else:
             print(f"Exception from 'harvester' {e}")
@@ -48,7 +48,7 @@ async def get_blockchain_state(rpc_port: int) -> Optional[Dict[str, Any]]:
         client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
         blockchain_state = await client.get_blockchain_state()
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if full node is running at {rpc_port}")
         else:
             print(f"Exception from 'full node' {e}")
@@ -92,7 +92,7 @@ async def get_average_block_time(rpc_port: int) -> float:
         return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
 
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if full node is running at {rpc_port}")
         else:
             print(f"Exception from 'full node' {e}")
@@ -112,7 +112,7 @@ async def get_wallets_stats(wallet_rpc_port: int) -> Optional[Dict[str, Any]]:
         wallet_client = await WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), DEFAULT_ROOT_PATH, config)
         amounts = await wallet_client.get_farmed_amount()
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
         else:
             print(f"Exception from 'wallet' {e}")
@@ -133,7 +133,7 @@ async def is_farmer_running(farmer_rpc_port: int) -> bool:
         await farmer_client.get_connections()
         is_running = True
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if farmer is running at {farmer_rpc_port}")
         else:
             print(f"Exception from 'farmer' {e}")
@@ -153,7 +153,7 @@ async def get_challenges(farmer_rpc_port: int) -> Optional[List[Dict[str, Any]]]
         farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
         signage_points = await farmer_client.get_signage_points()
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if farmer is running at {farmer_rpc_port}")
         else:
             print(f"Exception from 'farmer' {e}")

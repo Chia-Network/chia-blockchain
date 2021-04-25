@@ -225,7 +225,7 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if wallet is running at {wallet_rpc_port}")
         else:
             print(f"Exception from 'wallet' {e}")

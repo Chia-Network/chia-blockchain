@@ -261,7 +261,7 @@ async def show_async(
                 print("Block with header hash", block_header_hash_by_height, "not found")
 
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if full node rpc is running at {rpc_port}")
             print("This is normal if full node is still starting up")
         else:
