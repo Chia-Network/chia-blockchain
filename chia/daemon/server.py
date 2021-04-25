@@ -362,15 +362,11 @@ class WebSocketServer:
                 return
 
             if new:
-                if config["log"] is None:
-                    config["log"] = 1
-                else:
-                    config["log"] = config["log"] + 1
+                config["log"] = config["log"] + 1
                 self.state_changed(service_plotter, "log_changed")
 
                 for word in words:
                     if word in new:
-                        config["log"] = None
                         fp.close()  # prevent memory leak in daemon on windows
                         return
             else:
