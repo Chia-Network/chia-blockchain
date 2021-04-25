@@ -15,15 +15,15 @@ class DBWrapper:
         self.db = connection
         self.lock = asyncio.Lock()
 
-    async def begin_transaction(self):
+    async def begin_transaction(self) -> None:
         cursor = await self.db.execute("BEGIN TRANSACTION")
         await cursor.close()
 
-    async def rollback_transaction(self):
+    async def rollback_transaction(self) -> None:
         # Also rolls back the coin store, since both stores must be updated at once
         if self.db.in_transaction:
             cursor = await self.db.execute("ROLLBACK")
             await cursor.close()
 
-    async def commit_transaction(self):
+    async def commit_transaction(self) -> None:
         await self.db.commit()

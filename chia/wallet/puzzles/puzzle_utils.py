@@ -6,7 +6,7 @@ def make_create_coin_condition(puzzle_hash, amount) -> List[Any]:
     return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
 
 
-def make_assert_aggsig_condition(pubkey) -> List[any]:
+def make_assert_aggsig_condition(pubkey) -> List[Any]:
     return [ConditionOpcode.AGG_SIG_UNSAFE, pubkey]
 
 
@@ -35,7 +35,6 @@ def make_reserve_fee_condition(fee) -> List[Any]:
 
 def make_assert_coin_announcement(announcement_hash) -> List[Any]:
     return [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, announcement_hash]
-
 
 def make_assert_puzzle_announcement(announcement_hash) -> List[Any]:
     return [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, announcement_hash]

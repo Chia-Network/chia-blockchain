@@ -182,7 +182,7 @@ class DIDWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.DISTRIBUTED_ID)
 
-    def id(self):
+    def id(self) -> uint32:
         return self.wallet_info.id
 
     async def get_confirmed_balance(self, record_list=None) -> uint64:

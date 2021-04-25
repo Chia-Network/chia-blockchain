@@ -85,7 +85,7 @@ def dataclass_from_dict(klass, d) -> Any:
         return klass(d)
 
 
-T = TypeVar("T", List, Dict)
+T = TypeVar("T", List, Dict, Tuple)
 
 
 def recurse_jsonify(d: T) -> T:
@@ -109,8 +109,10 @@ def recurse_jsonify(d: T) -> T:
             if isinstance(item, int) and type(item) in big_ints:
                 item = int(item)
             new_list.append(item)
-        d = new_list
-
+        if isinstance(d, list):
+            d = new_list
+        if isinstance(d, tuple):
+            d = tuple(new_list)  # type: ignore
     else:
         for key, value in d.items():
             if type(value) in unhashable_types or issubclass(type(value), bytes):

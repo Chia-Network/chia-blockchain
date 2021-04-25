@@ -87,7 +87,7 @@ def create_recovery_message_puzzle(recovering_coin: bytes32, newpuz: bytes32, pu
     return Program.to(puz)
 
 
-def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey):
+def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey) -> CoinSolution:
     puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
