@@ -358,6 +358,7 @@ class WebSocketServer:
             new = await loop.run_in_executor(io_pool_exc, fp.readline)
 
             if config["state"] is not PlotState.RUNNING:
+                fp.close()
                 return
 
             config["log"] = new if config["log"] is None else config["log"] + new
@@ -366,6 +367,7 @@ class WebSocketServer:
             if new:
                 for word in words:
                     if word in new:
+                        fp.close()
                         return
             else:
                 time.sleep(0.5)
