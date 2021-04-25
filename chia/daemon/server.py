@@ -306,7 +306,7 @@ class WebSocketServer:
             "delay": plot_queue_item["delay"],
             "state": plot_queue_item["state"],
             "error": str(error) if has_error else None,
-            "log": plot_queue_item.get("log"),
+            "log": plot_queue_item["log"],
         }
 
     def extract_plot_queue(self) -> List[Dict]:
@@ -361,12 +361,16 @@ class WebSocketServer:
                 fp.close()  # prevents memory leak in daemon on windows
                 return
 
-            config["log"] = new if config["log"] is None else config["log"] + new
-            self.state_changed(service_plotter, "log_changed")
-
             if new:
+                if config["log"] is None:
+                    config["log"] = 1
+                else:
+                    config["log"] = config["log"] + 1
+                self.state_changed(service_plotter, "log_changed")
+
                 for word in words:
                     if word in new:
+                        config["log"] = None
                         fp.close()  # prevent memory leak in daemon on windows
                         return
             else:
@@ -486,7 +490,6 @@ class WebSocketServer:
 
             # (output, err) = process.communicate()
             # await process.wait()
-
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, "state")
 
@@ -524,7 +527,7 @@ class WebSocketServer:
                 "delay": delay * k if parallel is True else delay,
                 "state": PlotState.SUBMITTED,
                 "error": None,
-                "log": None,
+                "log": 0,
                 "process": None,
             }
 
