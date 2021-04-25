@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from decimal import Decimal
 
+
 @click.group("wallet", short_help="Manage your wallet")
 def wallet_cmd() -> None:
     pass
