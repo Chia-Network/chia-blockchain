@@ -5,7 +5,7 @@ import socket
 import time
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from blspy import PrivateKey
 
@@ -69,6 +69,7 @@ class WalletNode:
     syncing: bool
     full_node_peer: Optional[PeerInfo]
     peer_task: Optional[asyncio.Task]
+    logged_in: bool
 
     def __init__(
         self,
@@ -107,6 +108,7 @@ class WalletNode:
         self.new_peak_lock: Optional[asyncio.Lock] = None
         self.logged_in_fingerprint: Optional[int] = None
         self.peer_task = None
+        self.logged_in = False
 
     def get_key_for_fingerprint(self, fingerprint: Optional[int]):
         private_keys = self.keychain.get_all_private_keys()
@@ -133,6 +135,7 @@ class WalletNode:
     ) -> bool:
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
+            self.logged_in = False
             return False
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
@@ -144,7 +147,10 @@ class WalletNode:
         path = path_from_root(self.root_path, db_path_replaced)
         mkdir(path.parent)
 
-        self.wallet_state_manager = await WalletStateManager.create(private_key, self.config, path, self.constants)
+        assert self.server is not None
+        self.wallet_state_manager = await WalletStateManager.create(
+            private_key, self.config, path, self.constants, self.server
+        )
 
         self.wsm_close_task = None
 
@@ -163,6 +169,7 @@ class WalletNode:
                 self.backup_initialized = False
                 await self.wallet_state_manager.close_all_stores()
                 self.wallet_state_manager = None
+                self.logged_in = False
                 return False
 
         self.backup_initialized = True
@@ -185,8 +192,8 @@ class WalletNode:
         self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
-        self.log.info("self.sync_job")
         self.logged_in_fingerprint = fingerprint
+        self.logged_in = True
         return True
 
     def _close(self) -> None:
@@ -208,6 +215,7 @@ class WalletNode:
         if self.peer_task is not None:
             self.peer_task.cancel()
             self.peer_task = None
+        self.logged_in = False
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -546,6 +554,33 @@ class WalletNode:
             fork_height = None
             if peak is not None:
                 fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
+                our_peak_height = self.wallet_state_manager.blockchain.get_peak_height()
+                ses_heigths = self.wallet_state_manager.blockchain.get_ses_heights()
+                if len(ses_heigths) > 2 and our_peak_height is not None:
+                    ses_heigths.sort()
+                    max_fork_ses_height = ses_heigths[-3]
+                    # This is fork point in SES in case where fork was not detected
+                    if (
+                        self.wallet_state_manager.blockchain.get_peak_height() is not None
+                        and fork_height == max_fork_ses_height
+                    ):
+                        peers = self.server.get_full_node_connections()
+                        for peer in peers:
+                            # Grab a block at peak + 1 and check if fork point is actually our current height
+                            potential_height = uint32(our_peak_height + 1)
+                            block_response: Optional[Any] = await peer.request_header_blocks(
+                                wallet_protocol.RequestHeaderBlocks(potential_height, potential_height)
+                            )
+                            if block_response is not None and isinstance(
+                                block_response, wallet_protocol.RespondHeaderBlocks
+                            ):
+                                our_peak = self.wallet_state_manager.blockchain.get_peak()
+                                if (
+                                    our_peak is not None
+                                    and block_response.header_blocks[0].prev_header_hash == our_peak.header_hash
+                                ):
+                                    fork_height = our_peak_height
+                                break
             if fork_height is None:
                 fork_height = uint32(0)
             await self.wallet_state_manager.blockchain.warmup(fork_height)
@@ -662,6 +697,8 @@ class WalletNode:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
                 raise ValueError("Value error peer sent us invalid block")
+        if advanced_peak:
+            await self.wallet_state_manager.create_more_puzzle_hashes()
         return True, advanced_peak
 
     def validate_additions(

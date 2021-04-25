@@ -74,6 +74,7 @@ class ChiaServer:
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = None,
+        introducer_peers: Optional[IntroducerPeers] = None,
     ):
         # Keeps track of all connections to and from this node.
         logging.basicConfig(level=logging.DEBUG)
@@ -337,7 +338,7 @@ class ChiaServer:
         session = None
         connection: Optional[WSChiaConnection] = None
         try:
-            timeout = ClientTimeout(total=10)
+            timeout = ClientTimeout(total=30)
             session = ClientSession(timeout=timeout)
 
             try:
@@ -494,6 +495,11 @@ class ChiaServer:
                     if not hasattr(f, "api_function"):
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
+
+                    # If api is not ready ignore the request
+                    if hasattr(self.api, "api_ready"):
+                        if self.api.api_ready is False:
+                            return None
 
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)

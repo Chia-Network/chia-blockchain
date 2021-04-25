@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 from blspy import AugSchemeMPL, G2Element
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import CoinSolution, SpendBundle
@@ -120,7 +120,9 @@ def spend_bundle_for_spendable_ccs(
     # figure out what the output amounts are by running the inner puzzles & solutions
     output_amounts = []
     for cc_spend_info, inner_solution in zip(spendable_cc_list, inner_solutions):
-        error, conditions, cost = conditions_dict_for_solution(cc_spend_info.inner_puzzle, inner_solution)
+        error, conditions, cost = conditions_dict_for_solution(
+            cc_spend_info.inner_puzzle, inner_solution, INFINITE_COST
+        )
         total = 0
         if conditions:
             for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):

@@ -18,7 +18,7 @@
             (sha256 1 tree)))
 
     (defun-inline aggsig-solution-with-key (key)
-        (list AGG_SIG key (sha256tree (c mode args)))
+        (list AGG_SIG_UNSAFE key (sha256tree (c mode args)))
     )
 
     (defmacro assert items
@@ -36,7 +36,7 @@
             0))
 
     (defun create-lock (consolidating_primary_input consolidating_coin_puzzle_hash outgoing_amount)
-        (list CREATE_ANNOUNCEMENT
+        (list CREATE_COIN_ANNOUNCEMENT
               (sha256 consolidating_primary_input
                       consolidating_coin_puzzle_hash
                       outgoing_amount))
@@ -65,7 +65,7 @@
     (defun generate-block-age-condition (min_block_time outgoing_amount rate_amount interval_time)
         (assert (>= (* min_block_time rate_amount)
                     (* outgoing_amount interval_time))
-            (list ASSERT_HEIGHT_AGE_EXCEEDS min_block_time)))
+            (list ASSERT_HEIGHT_RELATIVE min_block_time)))
 
     (defun create-change (my_puzzlehash my_amount outgoing_amount fee)
         (list CREATE_COIN my_puzzlehash (- my_amount (+ outgoing_amount fee))))

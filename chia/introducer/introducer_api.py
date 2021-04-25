@@ -35,17 +35,17 @@ class IntroducerAPI:
 
         peers = []
         for r_peer in rawpeers:
-            if r_peer.get_hash() not in self.introducer.vetted:
+            if r_peer.vetted <= 0:
                 continue
-            if self.introducer.vetted[r_peer.get_hash()]:
-                if r_peer.host == peer.peer_host and r_peer.port == peer.peer_server_port:
-                    continue
-                peer_without_timestamp = TimestampedPeerInfo(
-                    r_peer.host,
-                    r_peer.port,
-                    uint64(0),
-                )
-                peers.append(peer_without_timestamp)
+
+            if r_peer.host == peer.peer_host and r_peer.port == peer.peer_server_port:
+                continue
+            peer_without_timestamp = TimestampedPeerInfo(
+                r_peer.host,
+                r_peer.port,
+                uint64(0),
+            )
+            peers.append(peer_without_timestamp)
 
             if len(peers) >= max_peers:
                 break

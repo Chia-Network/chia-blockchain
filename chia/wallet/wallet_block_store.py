@@ -6,7 +6,9 @@ from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
+from chia.util.lru_cache import LRUCache
 from chia.wallet.block_record import HeaderBlockRecord
 
 
@@ -16,12 +18,17 @@ class WalletBlockStore:
     """
 
     db: aiosqlite.Connection
+    db_wrapper: DBWrapper
+    block_cache: LRUCache
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection):
+    async def create(cls, db_wrapper: DBWrapper):
         self = cls()
 
-        self.db = connection
+        self.db_wrapper = db_wrapper
+        self.db = db_wrapper.db
+        await self.db.execute("pragma journal_mode=wal")
+        await self.db.execute("pragma synchronous=2")
 
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS header_blocks(header_hash text PRIMARY KEY, height int,"
@@ -47,8 +54,7 @@ class WalletBlockStore:
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
         await self.db.commit()
-
-        await self.db.commit()
+        self.block_cache = LRUCache(1000)
         return self
 
     async def _clear_database(self):
@@ -61,6 +67,12 @@ class WalletBlockStore:
         Adds a block record to the database. This block record is assumed to be connected
         to the chain, but it may or may not be in the LCA path.
         """
+        cached = self.block_cache.get(header_block_record.header_hash)
+        if cached is not None:
+            # Since write to db can fail, we remove from cache here to avoid potential inconsistency
+            # Adding to cache only from reading
+            self.block_cache.put(header_block_record.header_hash, None)
+
         if header_block_record.header.foliage_transaction_block is not None:
             timestamp = header_block_record.header.foliage_transaction_block.timestamp
         else:
@@ -93,18 +105,6 @@ class WalletBlockStore:
         )
 
         await cursor_2.close()
-        await self.db.commit()
-
-    async def get_header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
-        """Gets a block record from the database, if present"""
-        cursor = await self.db.execute("SELECT block from header_blocks WHERE header_hash=?", (header_hash.hex(),))
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is not None:
-            hbr = HeaderBlockRecord.from_bytes(row[0])
-            return hbr.header
-        else:
-            return None
 
     async def get_header_block_at(self, heights: List[uint32]) -> List[HeaderBlock]:
         if len(heights) == 0:
@@ -119,11 +119,15 @@ class WalletBlockStore:
 
     async def get_header_block_record(self, header_hash: bytes32) -> Optional[HeaderBlockRecord]:
         """Gets a block record from the database, if present"""
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached
         cursor = await self.db.execute("SELECT block from header_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            hbr = HeaderBlockRecord.from_bytes(row[0])
+            hbr: HeaderBlockRecord = HeaderBlockRecord.from_bytes(row[0])
+            self.block_cache.put(hbr.header_hash, hbr)
             return hbr
         else:
             return None
@@ -168,7 +172,6 @@ class WalletBlockStore:
             (header_hash.hex(),),
         )
         await cursor_2.close()
-        await self.db.commit()
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int

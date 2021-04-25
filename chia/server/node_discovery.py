@@ -55,6 +55,10 @@ class FullNodeDiscovery:
         self.connection_time_pretest: Dict = {}
         self.received_count_from_peers: Dict = {}
         self.lock = asyncio.Lock()
+        self.connect_peers_task: Optional[asyncio.Task] = None
+        self.serialize_task: Optional[asyncio.Task] = None
+        self.cleanup_task: Optional[asyncio.Task] = None
+        self.initial_wait: int = 0
 
     async def initialize_address_manager(self) -> None:
         mkdir(self.peer_db_path.parent)
@@ -75,10 +79,17 @@ class FullNodeDiscovery:
 
     async def _close_common(self) -> None:
         self.is_closed = True
-        self.connect_peers_task.cancel()
-        self.serialize_task.cancel()
-        self.cleanup_task.cancel()
+        self.cancel_task_safe(self.connect_peers_task)
+        self.cancel_task_safe(self.serialize_task)
+        self.cancel_task_safe(self.cleanup_task)
         await self.connection.close()
+
+    def cancel_task_safe(self, task: Optional[asyncio.Task]):
+        if task is not None:
+            try:
+                task.cancel()
+            except Exception as e:
+                self.log.error(f"Error while canceling task.{e} {task}")
 
     def add_message(self, message, data):
         self.message_queue.put_nowait((message, data))
@@ -160,20 +171,40 @@ class FullNodeDiscovery:
         empty_tables = False
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
+        first = True
+        if self.initial_wait > 0:
+            await asyncio.sleep(self.initial_wait)
+
+        introducer_backoff = 1
         while not self.is_closed:
             try:
                 assert self.address_manager is not None
 
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
-                if size == 0 or empty_tables:
-                    await self._introducer_client()
+                if size == 0 or empty_tables or first:
+                    first = False
                     try:
-                        await asyncio.sleep(min(5, self.peer_connect_interval))
+                        await asyncio.sleep(introducer_backoff)
+                    except asyncio.CancelledError:
+                        return
+                    await self._introducer_client()
+                    # there's some delay between receiving the peers from the
+                    # introducer until they get incorporated to prevent this
+                    # loop for running one more time. Add this delay to ensure
+                    # that once we get peers, we stop contacting the introducer.
+                    try:
+                        await asyncio.sleep(5)
                     except asyncio.CancelledError:
                         return
                     empty_tables = False
+                    # keep doubling the introducer delay until we reach 5
+                    # minutes
+                    if introducer_backoff < 300:
+                        introducer_backoff *= 2
                     continue
+                else:
+                    introducer_backoff = 1
 
                 # Only connect out to one peer per network group (/16 for IPv4).
                 groups = []
@@ -571,6 +602,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self) -> None:
+        self.initial_wait = 60
         await self.initialize_address_manager()
         await self.start_tasks()
 

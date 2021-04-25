@@ -98,7 +98,9 @@ def generate_replacements(defaults: Dict, conf: Dict, dir: Path, test_files: Lis
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
     test_paths = ["tests/" + str(f) for f in test_files]
-    replacements["TEST_DIR"] = " ".join(test_paths)
+    # We have to list the test files individually until pytest has the
+    # option to only collect tests in the named dir, and not those below
+    replacements["TEST_DIR"] = " ".join(sorted(test_paths))
     replacements["TEST_NAME"] = test_name(str(dir))
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]

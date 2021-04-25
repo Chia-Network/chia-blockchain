@@ -1,0 +1,5 @@
+(mod (deserialize decompress_puzzle puzzle_prefix suffix cse)
+
+  ; decompress a single compressed standard transaction
+  (c (f cse) (c (a decompress_puzzle (list deserialize puzzle_prefix (f (f (r cse))) suffix)) (c (f (r (f cse))) (r (f (r cse))))))
+)

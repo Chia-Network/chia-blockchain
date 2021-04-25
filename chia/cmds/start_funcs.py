@@ -1,6 +1,8 @@
 import asyncio
 import os
 import subprocess
+import sys
+
 from pathlib import Path
 from typing import Optional, List
 
@@ -11,7 +13,8 @@ from chia.util.service_groups import services_for_groups
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIA_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
-    process = subprocess.Popen("chia run_daemon".split(), stdout=subprocess.PIPE)
+    chia = sys.argv[0]
+    process = subprocess.Popen(f"{chia} run_daemon".split(), stdout=subprocess.PIPE)
     return process
 
 

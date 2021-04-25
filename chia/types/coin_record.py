@@ -19,7 +19,7 @@ class CoinRecord(Streamable):
     spent_block_index: uint32
     spent: bool
     coinbase: bool
-    timestamp: uint64
+    timestamp: uint64  # Timestamp of the block at height confirmed_block_index
 
     @property
     def name(self) -> bytes32:

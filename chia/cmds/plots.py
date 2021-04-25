@@ -39,7 +39,7 @@ def plots_cmd(ctx: click.Context):
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
 @click.option("--override-k", help="Force size smaller than 32", default=False, show_default=True, is_flag=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
-@click.option("-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=4608, show_default=True)
+@click.option("-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=3389, show_default=True)
 @click.option("-r", "--num_threads", help="Number of threads to use", type=int, default=2, show_default=True)
 @click.option("-u", "--buckets", help="Number of buckets", type=int, default=128, show_default=True)
 @click.option(

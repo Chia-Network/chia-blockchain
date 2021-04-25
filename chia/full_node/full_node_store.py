@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import time
 from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.block_record import BlockRecord
@@ -16,6 +17,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import CompressorArg
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -27,6 +29,7 @@ class FullNodeStore:
 
     # Blocks which we have created, but don't have plot signatures yet, so not yet "unfinished blocks"
     candidate_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
+    candidate_backup_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]]
 
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
@@ -47,16 +50,22 @@ class FullNodeStore:
     future_eos_cache: Dict[bytes32, List[EndOfSubSlotBundle]]
 
     # Signage points which depend on infusions that we don't have
-    future_sp_cache: Dict[bytes32, List[SignagePoint]]
+    future_sp_cache: Dict[bytes32, List[Tuple[uint8, SignagePoint]]]
 
     # Infusion point VDFs which depend on infusions that we don't have
     future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]]
 
+    # This stores the time that each key was added to the future cache, so we can clear old keys
+    future_cache_key_times: Dict[bytes32, int]
+
     # Partial hashes of unfinished blocks we are requesting
-    requesting_unfinished_blocks: Set[bytes32] = set()
+    requesting_unfinished_blocks: Set[bytes32]
+
+    previous_generator: Optional[CompressorArg]
 
     def __init__(self):
         self.candidate_blocks = {}
+        self.candidate_backup_blocks = {}
         self.seen_unfinished_blocks = set()
         self.unfinished_blocks = {}
         self.finished_sub_slots = []
@@ -64,6 +73,8 @@ class FullNodeStore:
         self.future_sp_cache = {}
         self.future_ip_cache = {}
         self.requesting_unfinished_blocks = set()
+        self.previous_generator = None
+        self.future_cache_key_times = {}
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
@@ -74,18 +85,20 @@ class FullNodeStore:
         return self
 
     def add_candidate_block(
-        self,
-        quality_string: bytes32,
-        height: uint32,
-        unfinished_block: UnfinishedBlock,
+        self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
     ):
-        self.candidate_blocks[quality_string] = (height, unfinished_block)
+        if backup:
+            self.candidate_backup_blocks[quality_string] = (height, unfinished_block)
+        else:
+            self.candidate_blocks[quality_string] = (height, unfinished_block)
 
-    def get_candidate_block(self, quality_string: bytes32) -> Optional[UnfinishedBlock]:
-        result = self.candidate_blocks.get(quality_string, None)
-        if result is None:
-            return None
-        return result[1]
+    def get_candidate_block(
+        self, quality_string: bytes32, backup: bool = False
+    ) -> Optional[Tuple[uint32, UnfinishedBlock]]:
+        if backup:
+            return self.candidate_backup_blocks.get(quality_string, None)
+        else:
+            return self.candidate_blocks.get(quality_string, None)
 
     def clear_candidate_blocks_below(self, height: uint32) -> None:
         del_keys = []
@@ -95,6 +108,15 @@ class FullNodeStore:
         for key in del_keys:
             try:
                 del self.candidate_blocks[key]
+            except KeyError:
+                pass
+        del_keys = []
+        for key, value in self.candidate_backup_blocks.items():
+            if value[0] < height:
+                del_keys.append(key)
+        for key in del_keys:
+            try:
+                del self.candidate_backup_blocks[key]
             except KeyError:
                 pass
 
@@ -145,8 +167,36 @@ class FullNodeStore:
             self.future_ip_cache[ch] = []
         self.future_ip_cache[ch].append(infusion_point)
 
+    def add_to_future_sp(self, signage_point: SignagePoint, index: uint8):
+        # We are missing a block here
+        if (
+            signage_point.cc_vdf is None
+            or signage_point.rc_vdf is None
+            or signage_point.cc_proof is None
+            or signage_point.rc_proof is None
+        ):
+            return
+        if signage_point.rc_vdf.challenge not in self.future_sp_cache:
+            self.future_sp_cache[signage_point.rc_vdf.challenge] = []
+        if (index, signage_point) not in self.future_sp_cache[signage_point.rc_vdf.challenge]:
+            self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
+        self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
+        log.info(f"Don't have rc hash {signage_point.rc_vdf.challenge}. caching signage point {index}.")
+
     def get_future_ip(self, rc_challenge_hash: bytes32) -> List[timelord_protocol.NewInfusionPointVDF]:
         return self.future_ip_cache.get(rc_challenge_hash, [])
+
+    def clear_old_cache_entries(self) -> None:
+        current_time: int = int(time.time())
+        remove_keys: List[bytes32] = []
+        for rc_hash, time_added in self.future_cache_key_times.items():
+            if current_time - time_added > 3600:
+                remove_keys.append(rc_hash)
+        for k in remove_keys:
+            self.future_cache_key_times.pop(k, None)
+            self.future_ip_cache.pop(k, [])
+            self.future_eos_cache.pop(k, [])
+            self.future_sp_cache.pop(k, [])
 
     def clear_slots(self) -> None:
         self.finished_sub_slots.clear()
@@ -214,7 +264,8 @@ class FullNodeStore:
                 if rc_challenge not in self.future_eos_cache:
                     self.future_eos_cache[rc_challenge] = []
                 self.future_eos_cache[rc_challenge].append(eos)
-                log.info(f"Don't have challenge hash {rc_challenge}")
+                self.future_cache_key_times[rc_challenge] = int(time.time())
+                log.info(f"Don't have challenge hash {rc_challenge}, caching EOS")
                 return None
 
             if peak.deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -455,6 +506,7 @@ class FullNodeStore:
                 if not signage_point.cc_vdf == dataclasses.replace(
                     cc_vdf_info_expected, number_of_iterations=delta_iters
                 ):
+                    self.add_to_future_sp(signage_point, index)
                     return False
                 if check_from_start_of_ss:
                     start_ele = ClassgroupElement.get_default_element()
@@ -467,16 +519,19 @@ class FullNodeStore:
                         start_ele,
                         cc_vdf_info_expected,
                     ):
+                        self.add_to_future_sp(signage_point, index)
                         return False
                     if signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
                         self.constants,
                         ClassgroupElement.get_default_element(),
                         signage_point.cc_vdf,
                     ):
+                        self.add_to_future_sp(signage_point, index)
                         return False
 
                 if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
                     # This signage point is probably outdated
+                    self.add_to_future_sp(signage_point, index)
                     return False
 
                 if not skip_vdf_validation:
@@ -486,10 +541,12 @@ class FullNodeStore:
                         signage_point.rc_vdf,
                         rc_vdf_info_expected,
                     ):
+                        self.add_to_future_sp(signage_point, index)
                         return False
 
                 sp_arr[index] = signage_point
                 return True
+        self.add_to_future_sp(signage_point, index)
         return False
 
     def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
@@ -563,7 +620,9 @@ class FullNodeStore:
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
         blocks: BlockchainInterface,
-    ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
+    ) -> Tuple[
+        Optional[EndOfSubSlotBundle], List[Tuple[uint8, SignagePoint]], List[timelord_protocol.NewInfusionPointVDF]
+    ]:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more blocks with an sp in the previous sub-slot)
@@ -601,20 +660,22 @@ class FullNodeStore:
             self.finished_sub_slots.append((ip_sub_slot, ip_sub_slot_sps, ip_sub_slot_total_iters))
 
         new_eos: Optional[EndOfSubSlotBundle] = None
-        new_sps: List[SignagePoint] = []
+        new_sps: List[Tuple[uint8, SignagePoint]] = []
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
 
-        for eos in self.future_eos_cache.get(peak.reward_infusion_new_challenge, []):
+        future_eos: List[EndOfSubSlotBundle] = self.future_eos_cache.get(peak.reward_infusion_new_challenge, []).copy()
+        for eos in future_eos:
             if self.new_finished_sub_slot(eos, blocks, peak, peak_full_block) is not None:
                 new_eos = eos
                 break
 
-        # This cache is not currently being used
-        for sp in self.future_sp_cache.get(peak.reward_infusion_new_challenge, []):
+        future_sps: List[Tuple[uint8, SignagePoint]] = self.future_sp_cache.get(
+            peak.reward_infusion_new_challenge, []
+        ).copy()
+        for index, sp in future_sps:
             assert sp.cc_vdf is not None
-            index = uint8(sp.cc_vdf.number_of_iterations // peak.sub_slot_iters)
             if self.new_signage_point(index, blocks, peak, peak.sub_slot_iters, sp):
-                new_sps.append(sp)
+                new_sps.append((index, sp))
 
         for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):
             new_ips.append(ip)
