@@ -236,14 +236,16 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
 async def create_new_wallet(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     data = await wallet_client.create_new_wallet(args["wallet_type"], args["data"])
     if data and data["success"]:
-        if args["wallet_type"] == "cc_wallet" and args["data"]["mode"] == "new":
-            print("New colour created: ", data["colour"])
-        elif args["wallet_type"] == "cc_wallet" and args["data"]["mode"] == "existing":
-            print("New colour wallet created.")
-        elif args["wallet_type"] == "rl_wallet" and args["data"]["rl_type"] == "user":
-            print("Public key:", data["pubkey"])
-            print("Send this information to your rate limited wallet admin.")
-        elif args["wallet_type"] == "rl_wallet" and args["data"]["rl_type"] == "admin":
-            print("Rate limited wallet created.")
+        if args["wallet_type"] == "cc_wallet":
+            if args["data"]["mode"] == "new":
+                print("New colour created: ", data["colour"])
+            elif args["data"]["mode"] == "existing":
+                print("New colour wallet created.")
+        elif args["wallet_type"] == "rl_wallet":
+            if args["data"]["rl_type"] == "user":
+                print("Public key:", data["pubkey"])
+                print("Send this information to your rate limited wallet admin.")
+            elif args["data"]["rl_type"] == "admin":
+                print("Rate limited wallet created.")
     else:
         print("Unable to create the new wallet")
