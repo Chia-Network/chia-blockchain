@@ -1,4 +1,5 @@
 # flake8: noqa
+# pylint: disable
 from __future__ import annotations
 
 import dataclasses
@@ -6,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, get_type_hints
+from typing import Any, BinaryIO, Dict, List, Tuple, Type
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -59,7 +60,13 @@ def dataclass_from_dict(klass, d):
             return None
         return dataclass_from_dict(get_args(klass)[0], d)
     elif is_type_Tuple(klass):
-        return tuple(dataclass_from_dict(get_args(klass)[0], item) for item in d)
+        # Type is tuple, can have multiple different types inside
+        i = 0
+        klass_properties = []
+        for item in d:
+            klass_properties.append(dataclass_from_dict(klass.__args__[i], item))
+            i = i + 1
+        return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
         fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
@@ -83,7 +90,7 @@ def recurse_jsonify(d):
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
     """
-    if isinstance(d, list):
+    if isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
             if type(item) in unhashable_types or issubclass(type(item), bytes):
@@ -91,6 +98,8 @@ def recurse_jsonify(d):
             if isinstance(item, dict):
                 item = recurse_jsonify(item)
             if isinstance(item, list):
+                item = recurse_jsonify(item)
+            if isinstance(item, tuple):
                 item = recurse_jsonify(item)
             if isinstance(item, Enum):
                 item = item.name
@@ -106,6 +115,8 @@ def recurse_jsonify(d):
             if isinstance(value, dict):
                 d[key] = recurse_jsonify(value)
             if isinstance(value, list):
+                d[key] = recurse_jsonify(value)
+            if isinstance(value, tuple):
                 d[key] = recurse_jsonify(value)
             if isinstance(value, Enum):
                 d[key] = value.name
@@ -148,16 +159,15 @@ class Streamable:
     @classmethod
     def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
         inner_type: Type
-        if is_type_List(f_type):
-            inner_type = get_args(f_type)[0]
-            full_list: List[inner_type] = []  # type: ignore
-            # wjb assert inner_type != get_args(List)[0]  # type: ignore
-            list_size_bytes = f.read(4)
-            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-            list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
-            for list_index in range(list_size):
-                full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
-            return full_list
+        if f_type is bool:
+            bool_byte = f.read(1)
+            assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
+            if bool_byte == bytes([0]):
+                return False
+            elif bool_byte == bytes([1]):
+                return True
+            else:
+                raise ValueError("Bool byte must be 0 or 1")
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
             is_present_bytes = f.read(1)
@@ -168,31 +178,32 @@ class Streamable:
                 return cls.parse_one_item(inner_type, f)  # type: ignore
             else:
                 raise ValueError("Optional must be 0 or 1")
+        if hasattr(f_type, "parse"):
+            return f_type.parse(f)
+        if f_type == bytes:
+            list_size_bytes = f.read(4)
+            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+            list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
+            bytes_read = f.read(list_size)
+            assert bytes_read is not None and len(bytes_read) == list_size
+            return bytes_read
+        if is_type_List(f_type):
+            inner_type = get_args(f_type)[0]
+            full_list: List[inner_type] = []  # type: ignore
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
+            list_size_bytes = f.read(4)
+            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+            list_size = uint32(int.from_bytes(list_size_bytes, "big"))
+            for list_index in range(list_size):
+                full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
+            return full_list
         if is_type_Tuple(f_type):
             inner_types = get_args(f_type)
             full_list = []
             for inner_type in inner_types:
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
             return tuple(full_list)
-        if f_type is bool:
-            bool_byte = f.read(1)
-            assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
-            if bool_byte == bytes([0]):
-                return False
-            elif bool_byte == bytes([1]):
-                return True
-            else:
-                raise ValueError("Bool byte must be 0 or 1")
-        if f_type == bytes:
-            list_size_bytes = f.read(4)
-            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-            list_size = uint32(int.from_bytes(list_size_bytes, "big"))
-            bytes_read = f.read(list_size)
-            assert bytes_read is not None and len(bytes_read) == list_size
-            return bytes_read
-        if hasattr(f_type, "parse"):
-            return f_type.parse(f)
-        if hasattr(f_type, "from_bytes") and size_hints[f_type.__name__]:
+        if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
             bytes_read = f.read(bytes_to_read)
             assert bytes_read is not None and len(bytes_read) == bytes_to_read
@@ -204,37 +215,28 @@ class Streamable:
             str_read_bytes = f.read(str_size)
             assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
             return bytes.decode(str_read_bytes, "utf-8")
-        else:
-            raise RuntimeError(f"Type {f_type} does not have parse")
+        raise RuntimeError(f"Type {f_type} does not have parse")
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
         values = []
-        for _, f_type in get_type_hints(cls).items():
+        try:
+            fields = cls.__annotations__  # pylint: disable=no-member
+        except Exception:
+            fields = {}
+        for _, f_type in fields.items():
             values.append(cls.parse_one_item(f_type, f))  # type: ignore
         return cls(*values)
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
         inner_type: Type
-        if is_type_List(f_type):
-            assert is_type_List(type(item))
-            f.write(uint32(len(item)).to_bytes(4, "big"))
-            inner_type = get_args(f_type)[0]
-            # wjb assert inner_type != get_args(List)[0]  # type: ignore
-            for element in item:
-                self.stream_one_item(inner_type, element, f)
-        elif is_type_SpecificOptional(f_type):
+        if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
             if item is None:
                 f.write(bytes([0]))
             else:
                 f.write(bytes([1]))
                 self.stream_one_item(inner_type, item, f)
-        elif is_type_Tuple(f_type):
-            inner_types = get_args(f_type)
-            assert len(item) == len(inner_types)
-            for i in range(len(item)):
-                self.stream_one_item(inner_types[i], item[i], f)
         elif f_type == bytes:
             f.write(uint32(len(item)).to_bytes(4, "big"))
             f.write(item)
@@ -242,6 +244,19 @@ class Streamable:
             item.stream(f)
         elif hasattr(f_type, "__bytes__"):
             f.write(bytes(item))
+        elif is_type_List(f_type):
+            assert is_type_List(type(item))
+            f.write(uint32(len(item)).to_bytes(4, "big"))
+            inner_type = get_args(f_type)[0]
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
+            for element in item:
+                self.stream_one_item(inner_type, element, f)
+        elif is_type_Tuple(f_type):
+            inner_types = get_args(f_type)
+            assert len(item) == len(inner_types)
+            for i in range(len(item)):
+                self.stream_one_item(inner_types[i], item[i], f)
+
         elif f_type is str:
             str_bytes = item.encode("utf-8")
             f.write(uint32(len(str_bytes)).to_bytes(4, "big"))
@@ -252,7 +267,11 @@ class Streamable:
             raise NotImplementedError(f"can't stream {item}, {f_type}")
 
     def stream(self, f: BinaryIO) -> None:
-        for f_name, f_type in get_type_hints(self).items():  # type: ignore
+        try:
+            fields = self.__annotations__  # pylint: disable=no-member
+        except Exception:
+            fields = {}
+        for f_name, f_type in fields.items():
             self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:

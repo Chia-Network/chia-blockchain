@@ -1,0 +1,19 @@
+
+(mod (decompress_puzzle decompress_coin_solution_entry start1 end1 start2 end2 compressed_cses deserialize gen_list reserved_arg)
+
+  (defun decompress_cses (decompress_puzzle decompress_coin_solution_entry cses deserialize puzzle_prefix)
+    (if cses
+      (c (a decompress_coin_solution_entry (list deserialize decompress_puzzle puzzle_prefix (f cses)))
+         (decompress_cses decompress_puzzle decompress_coin_solution_entry (r cses) deserialize puzzle_prefix ))
+      ()) )
+
+  (defun join_gen_args (generators start1 end1 start2 end2)
+    (concat
+      (substr (f generators) start1 end1)
+      (substr (f (r generators)) start2 end2)
+    )
+  )
+
+  (list (decompress_cses decompress_puzzle decompress_coin_solution_entry compressed_cses deserialize (join_gen_args gen_list start1 end1 start2 end2)))
+
+)

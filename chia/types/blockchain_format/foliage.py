@@ -14,11 +14,11 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 class TransactionsInfo(Streamable):
     # Information that goes along with each transaction block
-    generator_root: bytes32  # This needs to be a tree hash
+    generator_root: bytes32  # sha256 of the block generator in this block
     generator_refs_root: bytes32  # sha256 of the concatenation of the generator ref list entries
     aggregated_signature: G2Element
     fees: uint64  # This only includes user fees, not block rewards
-    cost: uint64
+    cost: uint64  # This is the total cost of running this block in the CLVM
     reward_claims_incorporated: List[Coin]  # These can be in any order
 
 

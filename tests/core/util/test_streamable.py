@@ -176,6 +176,14 @@ class TestStreamable(unittest.TestCase):
         with raises(AssertionError):
             TestClassProgram.from_bytes(bytes(program) + b"9")
 
+    def test_streamable_empty(self):
+        @dataclass(frozen=True)
+        @streamable
+        class A(Streamable):
+            pass
+
+        assert A.from_bytes(bytes(A())) == A()
+
 
 if __name__ == "__main__":
     unittest.main()

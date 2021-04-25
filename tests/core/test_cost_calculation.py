@@ -6,10 +6,12 @@ import time
 import pytest
 from clvm_tools import binutils
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.condition_costs import ConditionCost
+from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import bt, test_constants
 
@@ -33,7 +35,7 @@ def large_block_generator(size):
     # the idea is, if the algorithm for building the big block changes,
     # the name of the cache file will also change
 
-    name = SMALL_BLOCK_GENERATOR.get_tree_hash().hex()[:16]
+    name = SMALL_BLOCK_GENERATOR.program.get_tree_hash().hex()[:16]
 
     my_dir = pathlib.Path(__file__).absolute().parent
     hex_path = my_dir / f"large-block-{name}-{size}.hex"
@@ -43,7 +45,7 @@ def large_block_generator(size):
             return bytes.fromhex(hex_str)
     except FileNotFoundError:
         generator = make_block_generator(size)
-        blob = bytes(generator)
+        blob = bytes(generator.program)
         #  TODO: Re-enable large-block*.hex but cache in ~/.chia/subdir
         #  with open(hex_path, "w") as f:
         #      f.write(blob.hex())
@@ -71,21 +73,27 @@ class TestCostCalculation:
             coinbase,
         )
         assert spend_bundle is not None
-        program = best_solution_program(spend_bundle)
+        program: BlockGenerator = simple_solution_generator(spend_bundle)
 
-        ratio = test_constants.CLVM_COST_RATIO_CONSTANT
+        npc_result: NPCResult = get_name_puzzle_conditions(program, test_constants.MAX_BLOCK_COST_CLVM, False)
 
-        result: CostResult = calculate_cost_of_program(program, ratio)
-        clvm_cost = result.cost
+        cost = calculate_cost_of_program(program.program, npc_result, test_constants.COST_PER_BYTE)
 
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
-        assert error is None
-        coin_name = npc_list[0].coin_name
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        assert npc_result.error is None
+        coin_name = npc_result.npc_list[0].coin_name
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(
+            program, coin_name, test_constants.MAX_BLOCK_COST_CLVM
+        )
         assert error is None
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        assert clvm_cost == 200 * ratio + 92 * ratio + len(bytes(program)) * ratio + cost
+        assert (
+            cost
+            == ConditionCost.CREATE_COIN.value
+            + ConditionCost.AGG_SIG.value
+            + len(bytes(program.program)) * test_constants.COST_PER_BYTE
+            + npc_result.clvm_cost
+        )
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):
@@ -117,48 +125,81 @@ class TestCostCalculation:
         disassembly = binutils.disassemble(puzzle)
         program = SerializedProgram.from_bytes(
             binutils.assemble(
-                f"(q . (((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa 300)"
-                f" ({disassembly} (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ())))))"
+                f"(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa {disassembly} 300"
+                f"  (() (q . ((65 '00000000000000000000000000000000' 0x0cbba106e000))) ()))))"
             ).as_bin()
         )
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
-        assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
-        assert error is None
+        generator = BlockGenerator(program, [])
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, True)
+        assert npc_result.error is not None
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, False)
+        assert npc_result.error is None
 
-        coin_name = npc_list[0].coin_name
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
+        coin_name = npc_result.npc_list[0].coin_name
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(
+            generator, coin_name, test_constants.MAX_BLOCK_COST_CLVM
+        )
         assert error is None
 
     @pytest.mark.asyncio
     async def test_clvm_strict_mode(self):
-        block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR))
+        block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
         disassembly = binutils.disassemble(block)
         # this is a valid generator program except the first clvm
         # if-condition, that depends on executing an unknown operator
         # ("0xfe"). In strict mode, this should fail, but in non-strict
         # mode, the unknown operator should be treated as if it returns ().
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
-        error, npc_list, cost = get_name_puzzle_conditions(program, True)
-        assert error is not None
-        error, npc_list, cost = get_name_puzzle_conditions(program, False)
-        assert error is None
+        generator = BlockGenerator(program, [])
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, True)
+        assert npc_result.error is not None
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, False)
+        assert npc_result.error is None
 
     @pytest.mark.asyncio
     async def test_tx_generator_speed(self):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
-        generator = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
-        program = SerializedProgram.from_bytes(generator)
+        generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
+        program = SerializedProgram.from_bytes(generator_bytes)
 
         start_time = time.time()
-        err, npc, cost = get_name_puzzle_conditions(program, False)
+        generator = BlockGenerator(program, [])
+        npc_result = get_name_puzzle_conditions(generator, test_constants.MAX_BLOCK_COST_CLVM, False)
         end_time = time.time()
         duration = end_time - start_time
-        assert err is None
-        assert len(npc) == LARGE_BLOCK_COIN_CONSUMED_COUNT
+        assert npc_result.error is None
+        assert len(npc_result.npc_list) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
-        assert duration < 3
+        assert duration < 1
+
+    @pytest.mark.asyncio
+    async def test_clvm_max_cost(self):
+
+        block = Program.from_bytes(bytes(SMALL_BLOCK_GENERATOR.program))
+        disassembly = binutils.disassemble(block)
+        # this is a valid generator program except the first clvm
+        # if-condition, that depends on executing an unknown operator
+        # ("0xfe"). In strict mode, this should fail, but in non-strict
+        # mode, the unknown operator should be treated as if it returns ().
+        # the CLVM program has a cost of 391969
+        program = SerializedProgram.from_bytes(
+            binutils.assemble(f"(i (softfork (q . 10000000)) (q . ()) {disassembly})").as_bin()
+        )
+
+        # ensure we fail if the program exceeds the cost
+        generator = BlockGenerator(program, [])
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, 10000000, False)
+
+        assert npc_result.error is not None
+        assert npc_result.clvm_cost == 0
+
+        # raise the max cost to make sure this passes
+        # ensure we pass if the program does not exceeds the cost
+        npc_result: NPCResult = get_name_puzzle_conditions(generator, 20000000, False)
+
+        assert npc_result.error is None
+        assert npc_result.clvm_cost > 10000000
 
     @pytest.mark.asyncio
     async def test_standard_tx(self):
@@ -178,7 +219,7 @@ class TestCostCalculation:
         time_start = time.time()
         total_cost = 0
         for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(solution_program)
+            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 
         time_end = time.time()

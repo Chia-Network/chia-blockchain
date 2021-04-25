@@ -1,0 +1,128 @@
+(mod (mod_hash genesis_id innerpuz parent_info my_amount inner_solution)
+
+;mod_hash, genesis_id, innerpuz are curried in
+
+; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 0xcafef00d 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
+
+(include condition_codes.clvm)
+
+; This is for the core
+
+  (defmacro and ARGS
+    (if ARGS
+      (qq (if (unquote (f ARGS))
+            (unquote (c and (r ARGS)))
+            ()
+      ))
+    1)
+  )
+
+  (defmacro not (ARGS)
+    (qq (if (unquote ARGS) 0 1))
+  )
+
+  (defun is-in-list (atom items)
+    ;; returns 1 iff `atom` is in the list of `items`
+    (if items
+      (if (= atom (f items))
+        1
+        (is-in-list atom (r items))
+      )
+      0
+    )
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+          (sha256 1 TREE)
+      )
+  )
+
+  ;; utility function used by `curry_args`
+  (defun fix_curry_args (items core)
+    (if items
+        (qq (c (q . (unquote (f items))) (unquote (fix_curry_args (r items) core))))
+        core
+    )
+  )
+
+  ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
+  (defun curry_args (func list_of_args) (qq (a (q . (unquote func)) (unquote (fix_curry_args list_of_args (q . 1))))))
+
+  ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
+  (defun curry (func . args) (curry_args func args))
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
+  ;; You probably actually want to use `curry_and_hash` though.
+  (defun sha256tree_esc_list
+         (TREE LITERALS)
+         (if (l TREE)
+             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
+             (if (is-in-list TREE LITERALS)
+                 TREE
+                 (sha256 1 TREE)
+             )
+         )
+  )
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the tree hash of a sub-expression.
+  (defun sha256tree_esc
+     (TREE . LITERAL)
+     (sha256tree_esc_list TREE LITERAL)
+  )
+
+  ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
+  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+    (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+                    mod_hash
+                    mod_hash_hash
+                    inner_puzzle_hash)
+  )
+
+  ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
+  (defun-inline create_my_ID (mod_hash mod_hash_hash genesis_id innerpuzhash parent_parent parent_innerpuz parent_amount my_amount)
+    (sha256 (sha256 parent_parent (create_fullpuzhash mod_hash mod_hash_hash genesis_id parent_innerpuz) parent_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount)
+  )
+
+  (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_id my_innerpuzhash parent_info my_amount)
+    (if (logand my_amount 1)
+      (if (l parent_info)
+        (list ASSERT_MY_COIN_ID (create_my_ID mod_hash mod_hash_hash genesis_id my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
+        (list ASSERT_MY_COIN_ID (sha256 genesis_id (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount))
+      )
+      (x)
+    )
+  )
+
+  ; Check that only one output with odd value exists
+  (defun check_outputs_value (outputs_loop flag)
+    (if outputs_loop
+      (if (= (f (f outputs_loop)) CREATE_COIN)
+        (if (logand (f (r (r (f outputs_loop)))) 1)
+          (if flag
+            (x)
+            (check_outputs_value (r outputs_loop) 1)
+          )
+          (check_outputs_value (r outputs_loop) flag)
+        )
+        (check_outputs_value (r outputs_loop) flag)
+      )
+      1
+    )
+  )
+
+  (defun check_id_and_check_outputs (mod_hash mod_hash_hash genesis_id parent_info innerpuzhash my_amount outputs)
+    (if (check_outputs_value outputs 0)
+      (c (check_my_amount_and_ID mod_hash mod_hash_hash genesis_id innerpuzhash parent_info my_amount) outputs)
+      (x)
+    )
+  )
+
+  ;main
+  (check_id_and_check_outputs mod_hash (sha256 1 mod_hash) genesis_id parent_info (sha256tree1 innerpuz) my_amount (a innerpuz inner_solution))
+
+)

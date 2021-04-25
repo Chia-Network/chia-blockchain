@@ -14,6 +14,11 @@ from typing import Callable, Dict, List, Optional, Tuple
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
+from chia.full_node.bundle_tools import (
+    best_solution_generator_from_template,
+    detect_potential_template_generator,
+    simple_solution_generator,
+)
 from chia.plotting.create_plots import create_plots
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -49,6 +54,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
+from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
@@ -87,10 +93,9 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MAX_FUTURE_TIME": 3600
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "TX_PER_SEC": 1,
-        "CLVM_COST_RATIO_CONSTANT": 108,
-        "INITIAL_FREEZE_PERIOD": 0,
+        "INITIAL_FREEZE_END_TIMESTAMP": int(time.time()) - 1,
         "NETWORK_TYPE": 1,
     }
 )
@@ -252,10 +257,10 @@ class BlockTools:
         raise ValueError(f"Do not have key {pool_pk}")
 
     def get_farmer_wallet_tool(self) -> WalletTool:
-        return WalletTool(self.farmer_master_sk)
+        return WalletTool(self.constants, self.farmer_master_sk)
 
     def get_pool_wallet_tool(self) -> WalletTool:
-        return WalletTool(self.pool_master_sk)
+        return WalletTool(self.constants, self.pool_master_sk)
 
     def get_consecutive_blocks(
         self,
@@ -274,6 +279,8 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
+        previous_generator: CompressorArg = None,
+        genesis_timestamp: Optional[uint64] = None,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -295,7 +302,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
-                timestamp=uint64(int(time.time())),
+                timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
             )
             log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
@@ -417,6 +424,19 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
+                        if transaction_data is not None:
+                            if previous_generator is not None:
+                                block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
+                                    previous_generator, transaction_data
+                                )
+                            else:
+                                block_generator = simple_solution_generator(transaction_data)
+
+                            aggregate_signature = transaction_data.aggregated_signature
+                        else:
+                            block_generator = None
+                            aggregate_signature = G2Element()
+
                         full_block, block_record = get_full_block_and_block_record(
                             constants,
                             blocks,
@@ -430,7 +450,8 @@ class BlockTools:
                             start_timestamp,
                             start_height,
                             time_per_block,
-                            transaction_data,
+                            block_generator,
+                            aggregate_signature,
                             additions,
                             removals,
                             height_to_hash,
@@ -454,6 +475,13 @@ class BlockTools:
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
+                        if full_block.transactions_generator is not None:
+                            compressor_arg = detect_potential_template_generator(
+                                full_block.height, full_block.transactions_generator
+                            )
+                            if compressor_arg is not None:
+                                previous_generator = compressor_arg
+
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
@@ -659,6 +687,17 @@ class BlockTools:
                                 pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
+                        if transaction_data is not None:
+                            if previous_generator is not None:
+                                block_generator = best_solution_generator_from_template(
+                                    previous_generator, transaction_data
+                                )
+                            else:
+                                block_generator = simple_solution_generator(transaction_data)
+                            aggregate_signature = transaction_data.aggregated_signature
+                        else:
+                            block_generator = None
+                            aggregate_signature = G2Element()
                         full_block, block_record = get_full_block_and_block_record(
                             constants,
                             blocks,
@@ -672,7 +711,8 @@ class BlockTools:
                             start_timestamp,
                             start_height,
                             time_per_block,
-                            transaction_data,
+                            block_generator,
+                            aggregate_signature,
                             additions,
                             removals,
                             height_to_hash,
@@ -688,6 +728,7 @@ class BlockTools:
                             overflow_cc_challenge=overflow_cc_challenge,
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
+                            current_time=current_time,
                         )
 
                         if block_record.is_transaction_block:
@@ -698,6 +739,13 @@ class BlockTools:
                             pending_ses = False
 
                         block_list.append(full_block)
+                        if full_block.transactions_generator is not None:
+                            compressor_arg = detect_potential_template_generator(
+                                full_block.height, full_block.transactions_generator
+                            )
+                            if compressor_arg is not None:
+                                previous_generator = compressor_arg
+
                         blocks_added_this_sub_slot += 1
                         log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
@@ -1036,7 +1084,7 @@ def finish_block(
     sub_slot_iters: uint64,
     difficulty: uint64,
     normalized_to_identity_cc_ip: bool = False,
-):
+) -> Tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
     if len(finished_sub_slots) == 0:
@@ -1131,7 +1179,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir():
+def get_plot_dir() -> Path:
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
@@ -1247,7 +1295,8 @@ def get_full_block_and_block_record(
     start_timestamp: uint64,
     start_height: uint32,
     time_per_block: float,
-    transaction_data: Optional[SpendBundle],
+    block_generator: Optional[BlockGenerator],
+    aggregate_signature: G2Element,
     additions: Optional[List[Coin]],
     removals: Optional[List[Coin]],
     height_to_hash: Dict[uint32, bytes32],
@@ -1266,11 +1315,15 @@ def get_full_block_and_block_record(
     current_time: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
     if current_time is True:
-        timestamp = uint64(int(time.time()))
+        if prev_block.timestamp is not None:
+            timestamp = uint64(max(int(time.time()), prev_block.timestamp + int(time_per_block)))
+        else:
+            timestamp = uint64(int(time.time()))
     else:
         timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
+
     unfinished_block = create_unfinished_block(
         constants,
         sub_slot_start_total_iters,
@@ -1288,7 +1341,8 @@ def get_full_block_and_block_record(
         timestamp,
         BlockCache(blocks),
         seed,
-        transaction_data,
+        block_generator,
+        aggregate_signature,
         additions,
         removals,
         prev_block,

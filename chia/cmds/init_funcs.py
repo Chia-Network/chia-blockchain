@@ -1,7 +1,7 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
@@ -222,7 +222,7 @@ def generate_ssl_for_nodes(ssl_dir: Path, ca_crt: bytes, ca_key: bytes, private:
         generate_ca_signed_cert(ca_crt, ca_key, crt_path, key_path)
 
 
-def init(create_certs: Path, root_path: Path):
+def init(create_certs: Optional[Path], root_path: Path):
     if create_certs is not None:
         if root_path.exists():
             if os.path.isdir(create_certs):

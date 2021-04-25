@@ -80,6 +80,9 @@ vdf_bench
 # Backup Files
 *.backup
 
+# Attest Files
+*.attest
+
 # Compiled CLVM
 main.sym
 *.recompiled

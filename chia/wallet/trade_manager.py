@@ -12,6 +12,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cc_wallet import cc_utils
@@ -43,7 +44,7 @@ class TradeManager:
     @staticmethod
     async def create(
         wallet_state_manager: Any,
-        db_connection,
+        db_wrapper: DBWrapper,
         name: str = None,
     ):
         self = TradeManager()
@@ -53,7 +54,7 @@ class TradeManager:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.trade_store = await TradeStore.create(db_connection)
+        self.trade_store = await TradeStore.create(db_wrapper)
         return self
 
     async def get_offers_with_status(self, status: TradeStatus) -> List[TradeRecord]:
@@ -139,15 +140,15 @@ class TradeManager:
 
             if failed is False:
                 # Mark this trade as successful
-                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, height)
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
                 self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
             else:
                 # Either we canceled this trade or this trade failed
                 if trade.status == TradeStatus.PENDING_CANCEL.value:
-                    await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED)
+                    await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED, True)
                     self.log.info(f"Trade with id: {trade.trade_id} canceled at height: {height}")
                 elif trade.status == TradeStatus.PENDING_CONFIRM.value:
-                    await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
+                    await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED, True)
                     self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {height}")
 
     async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
@@ -194,7 +195,7 @@ class TradeManager:
         return result
 
     async def cancel_pending_offer(self, trade_id: bytes32):
-        await self.trade_store.set_status(trade_id, TradeStatus.CANCELED)
+        await self.trade_store.set_status(trade_id, TradeStatus.CANCELED, False)
 
     async def cancel_pending_offer_safely(self, trade_id: bytes32):
         """ This will create a transaction that includes coins that were offered"""
@@ -221,11 +222,11 @@ class TradeManager:
                 )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
-        await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
+        await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL, False)
         return
 
     async def save_trade(self, trade: TradeRecord):
-        await self.trade_store.add_trade_record(trade)
+        await self.trade_store.add_trade_record(trade, False)
 
     async def create_offer_for_ids(
         self, offer: Dict[int, int], file_name: str

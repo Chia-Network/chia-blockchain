@@ -25,7 +25,7 @@ jobs:
     steps:
     - name: Cancel previous runs on the same branch
       if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.8.0
+      uses: styfle/cancel-workflow-action@0.9.0
       with:
         access_token: ${{ github.token }}
 
@@ -45,7 +45,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -90,4 +90,4 @@ jobs:
     - name: Test core-full_node code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/full_node/test_full_node_store.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_mempool.py tests/core/full_node/test_node_load.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_initial_freeze.py tests/core/full_node/test_full_node.py -s -v --durations 0 
+        ./venv/bin/py.test tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_store.py tests/core/full_node/test_coin_store.py tests/core/full_node/test_full_node.py tests/core/full_node/test_full_node_store.py tests/core/full_node/test_initial_freeze.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_sync_store.py tests/core/full_node/test_transactions.py -s -v --durations 0 

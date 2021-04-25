@@ -9,6 +9,7 @@ import pytest
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.util.db_wrapper import DBWrapper
 from tests.setup_nodes import bt, test_constants
 
 
@@ -34,14 +35,16 @@ class TestBlockStore:
 
         connection = await aiosqlite.connect(db_filename)
         connection_2 = await aiosqlite.connect(db_filename_2)
+        db_wrapper = DBWrapper(connection)
+        db_wrapper_2 = DBWrapper(connection_2)
 
         # Use a different file for the blockchain
-        coin_store_2 = await CoinStore.create(connection_2)
-        store_2 = await BlockStore.create(connection_2)
+        coin_store_2 = await CoinStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2)
         bc = await Blockchain.create(coin_store_2, store_2, test_constants)
 
-        store = await BlockStore.create(connection)
-        await BlockStore.create(connection_2)
+        store = await BlockStore.create(db_wrapper)
+        await BlockStore.create(db_wrapper_2)
         try:
             # Save/get block
             for block in blocks:
@@ -96,10 +99,12 @@ class TestBlockStore:
 
         connection = await aiosqlite.connect(db_filename)
         connection_2 = await aiosqlite.connect(db_filename_2)
-        store = await BlockStore.create(connection)
+        wrapper = DBWrapper(connection)
+        wrapper_2 = DBWrapper(connection_2)
 
-        coin_store_2 = await CoinStore.create(connection_2)
-        store_2 = await BlockStore.create(connection_2)
+        store = await BlockStore.create(wrapper)
+        coin_store_2 = await CoinStore.create(wrapper_2)
+        store_2 = await BlockStore.create(wrapper_2)
         bc = await Blockchain.create(coin_store_2, store_2, test_constants)
         block_records = []
         for block in blocks:

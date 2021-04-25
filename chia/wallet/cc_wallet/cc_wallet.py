@@ -8,13 +8,15 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import AugSchemeMPL, G2Element
 
-from chia.consensus.cost_calculator import CostResult, calculate_cost_of_program
-from chia.full_node.bundle_tools import best_solution_program
+from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -241,12 +243,15 @@ class CCWallet:
             tx = await self.generate_signed_transaction(
                 [coin.amount], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
-            program = best_solution_program(tx.spend_bundle)
+            program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            cost_result: CostResult = calculate_cost_of_program(
-                program, self.wallet_state_manager.constants.CLVM_COST_RATIO_CONSTANT, True
+            result: NPCResult = get_name_puzzle_conditions(
+                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, True
             )
-            self.cost_of_single_tx = cost_result.cost
+            cost_result: uint64 = calculate_cost_of_program(
+                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
+            )
+            self.cost_of_single_tx = cost_result
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2  # avoid full block TXs
@@ -269,7 +274,7 @@ class CCWallet:
     async def set_name(self, new_name: str):
         new_info = replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
-        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
 
     def get_colour(self) -> str:
         assert self.cc_info.my_genesis_checker is not None
@@ -283,7 +288,7 @@ class CCWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
         lineage_proof = Program.to((1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount]))
-        await self.add_lineage(coin.name(), lineage_proof)
+        await self.add_lineage(coin.name(), lineage_proof, True)
 
         for name, lineage_proofs in self.cc_info.lineage_proofs:
             if coin.parent_coin_info == name:
@@ -310,6 +315,7 @@ class CCWallet:
                 callback="puzzle_solution_received",
                 done=False,
                 data=data_str,
+                in_transaction=True,
             )
 
     async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
@@ -529,14 +535,18 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name) -> List[G2Element]:
+    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name: bytes32) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         sigs: List[G2Element] = []
-        error, conditions, cost = conditions_dict_for_solution(innerpuz, innersol)
+        error, conditions, cost = conditions_dict_for_solution(
+            innerpuz, innersol, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM
+        )
         if conditions is not None:
-            for _, msg in pkm_pairs_for_conditions_dict(conditions, coin_name):
+            for _, msg in pkm_pairs_for_conditions_dict(
+                conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
         return sigs
@@ -641,20 +651,20 @@ class CCWallet:
             name=spend_bundle.name(),
         )
 
-    async def add_lineage(self, name: bytes32, lineage: Optional[Program]):
+    async def add_lineage(self, name: bytes32, lineage: Optional[Program], in_transaction=False):
         self.log.info(f"Adding parent {name}: {lineage}")
         current_list = self.cc_info.lineage_proofs.copy()
         current_list.append((name, lineage))
         cc_info: CCInfo = CCInfo(self.cc_info.my_genesis_checker, current_list)
-        await self.save_info(cc_info)
+        await self.save_info(cc_info, in_transaction)
 
-    async def save_info(self, cc_info: CCInfo):
+    async def save_info(self, cc_info: CCInfo, in_transaction):
         self.cc_info = cc_info
         current_info = self.wallet_info
         data_str = bytes(cc_info).hex()
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
-        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
 
     async def generate_new_coloured_coin(self, amount: uint64) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(amount)
@@ -676,7 +686,7 @@ class CCWallet:
         lineage_proof: Optional[Program] = lineage_proof_for_genesis(origin)
         lineage_proofs = [(origin_id, lineage_proof)]
         cc_info: CCInfo = CCInfo(genesis_coin_checker, lineage_proofs)
-        await self.save_info(cc_info)
+        await self.save_info(cc_info, False)
         return tx_record.spend_bundle
 
     async def create_spend_bundle_relative_amount(self, cc_amount, zero_coin: Coin = None) -> Optional[SpendBundle]:
