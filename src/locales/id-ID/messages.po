@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-22 18:12\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "*Ingin tahu soal blok Chia lebih jauh? Periksa laman <0>Chia Explorer</0> yang dibuat oleh pengembang sumber terbuka."
+msgstr "*Ingin tahu soal blok Chia lebih jauh? Periksa laman <0>Chia Explorer</0> yang dibuat oleh software sumber terbuka."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,7 +28,7 @@ msgstr "*Ingin tahu soal blok Chia lebih jauh? Periksa laman <0>Chia Explorer</0
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "Baiknya gunakan 128 buckets"
+msgstr "Sebaiknya menggunakan 128 buckets"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -165,7 +165,7 @@ msgstr "Dibawah ini adalah tantangan blok saat ini. Anda mungkin atau mungkin me
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr ""
+msgstr "Estimasi terbaik berdasarkan 24 jam lalu"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -176,11 +176,11 @@ msgstr ""
 #: src/components/block/Block.jsx:151
 #: src/components/block/Block.jsx:306
 msgid "Block"
-msgstr "Block"
+msgstr "Blok"
 
 #: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr "Test Block"
+msgstr "Test Blok"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
@@ -265,7 +265,7 @@ msgstr "Challenge Hash"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr "Chat di KeyBase"
+msgstr "Hubung Chat di KeyBase"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
@@ -809,7 +809,7 @@ msgstr "Jika tidak ada yang dipilih, maka akan default ke direktori sementara."
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr "Impor Dompet dari Mnemonik"
+msgstr "Impor Dompet elektronik dari Mnemonik"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
@@ -863,7 +863,7 @@ msgstr "Keys"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr ""
+msgstr "KiB Naik/Turun"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -875,7 +875,7 @@ msgstr "Puncak Tertuai Terakhir"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr "Block Challenge Terbaru"
+msgstr "Blok Challenge Terbaru"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:15
 msgid "Loading..."
@@ -972,7 +972,7 @@ msgstr "Alamat Baru"
 
 #: src/components/wallet/WalletAdd.tsx:32
 msgid "New Wallet"
-msgstr "Dompet Baru"
+msgstr "Dompet elektronik Baru"
 
 #: src/components/block/Block.jsx:325
 #: src/components/wallet/WalletAdd.tsx:47
@@ -999,78 +999,78 @@ msgstr "Belum ada blok yang dibudidayakan"
 
 #: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
-msgstr ""
+msgstr "Tiada transaksi sebelum ini"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "Tiada kod pribadi untuk satu atau semua alamat. Hanya selamat jika menghantar ganjaran ke dompet elektronik."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.tsx:23
 msgid "Node ID"
-msgstr ""
+msgstr "Nod ID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "Anda tidak ada plot yang telah lulus plot filter."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "Tidak Tersedia"
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
-msgstr ""
+msgstr "Tidak Disinkronkan"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "Belum diterima lagi"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "Belum dikonfirmasi lagi"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:145
 #: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
-msgstr ""
+msgstr "Tidak terhubung"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr ""
+msgstr "Tidak dijumpai plot-plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "Bilangan bucket"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr ""
+msgstr "Bilangan thread"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "Tawaran"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "Tawaran dicipta"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
-msgstr ""
+msgstr "Keluar"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr ""
+msgstr "Puncak tertinggi"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1078,44 +1078,44 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
-msgstr ""
+msgstr "Puncak Masa"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
-msgstr ""
+msgstr "Dalam proses"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr ""
+msgstr "Dalam Proses Mengira Saldo"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr ""
+msgstr "Perubahan Tertunda"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "Proses Mengira Jumlah Saldo"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "Sila masukkan pasangan perdagangan"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "Silahkan memasukkan 0 untuk biaya. Biaya tambahan belum didukung sementara ini untuk RL."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "Silakan masukkan jumlah Sebelum pajak yang valid"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
 #: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "Sila masukkan nombor yang valid"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -1123,24 +1123,24 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
 #: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "Silahkan memasukkan angka biaya yang sah"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "Silahkan memasukkan panjang interval angka yang sah"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "Sila masukkan nombor perbelanjaan yang valid"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "Silakan masukkan public key yang valid"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
 msgid "Please finish syncing before making a transaction"
-msgstr ""
+msgstr "Silahkan menyelesaikan sinkronisasi sebelum melakukan sebuah transaksi"
 
 #: src/components/trading/CreateOffer.jsx:75
 msgid "Please select amount"
@@ -1148,11 +1148,11 @@ msgstr "Harap pilih jumlah"
 
 #: src/components/trading/CreateOffer.jsx:85
 msgid "Please select buy or sell"
-msgstr ""
+msgstr "Sila pilih beli atau jual"
 
 #: src/components/trading/CreateOffer.jsx:63
 msgid "Please select coin colour"
-msgstr ""
+msgstr "Sila pilih warna duit"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1161,12 +1161,12 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "Silakan tentukan direktori akhir yang sah"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "Silakan tentukan direktori sementara yang sah"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1211,19 +1211,20 @@ msgstr "Plot ini duplikat dari {0}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr ""
+msgstr "Plot-Plot"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
-msgstr ""
+msgstr "Plot Diterima Seleksi"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-msgstr ""
+msgstr "Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
+"<0>Pelajari lebih lanjut</0>"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "Plotting"
-msgstr ""
+msgstr "Plotkan"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
@@ -1231,7 +1232,7 @@ msgstr "Plotting secara paralel dapat mempersingkat waktu. Jika tidak, masukkan 
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "Membuat plot dengan bitfield yang diaktifkan akan memiliki sekitar 30% lebih sedikit penulisan keseluruhan dan sekarang ini hampir selalu lebih cepat. Anda mungkin melihat berkurangnya persyaratan memori dengan cara menonaktifkan bitfield plotting. Jika desain CPU Anda dari sebelum tahun 2010, anda sebaiknya menonaktifkan plotting dengan bitfield."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1243,7 +1244,7 @@ msgstr "Kunci Pool"
 
 #: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
-msgstr "Kunci Publik Pool"
+msgstr "Pool Kunci Publik"
 
 #: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
@@ -1338,16 +1339,16 @@ msgstr "Dompet RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr ""
+msgstr "Batas Kelajuan"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr ""
+msgstr "Info Batas Kelajuan"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
-msgstr ""
+msgstr "Laju dari pilihan - pilihan yang terbatas"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
@@ -1356,27 +1357,27 @@ msgstr ""
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
-msgstr ""
+msgstr "Alamat Penerima"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr ""
+msgstr "Mendapatkan kembali dompet DID"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr ""
+msgstr "Segarkan data Plot-Plot"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
-msgstr ""
+msgstr "Release Notes"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr ""
+msgstr "Ubah nama"
 
 #: src/electron/main.tsx:339
 msgid "Report an Issue..."
-msgstr ""
+msgstr "Melaporkan sebuah masalah..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1393,12 +1394,12 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr ""
+msgstr "Langkah Tidak Wajib"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
 msgid "Save"
-msgstr ""
+msgstr "Simpan"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -1406,43 +1407,43 @@ msgstr ""
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Cari block dari hulu hash"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "Folder sementara dua"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
-msgstr ""
+msgstr "Lihat kata kunci pribadi"
 
 #: src/middleware/middleware_api.jsx:275
 msgid "Seed:"
-msgstr ""
+msgstr "Benih:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr ""
+msgstr "Pilih Direktori Sementara kedua"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "Pilih Direktori Akhir"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
-msgstr ""
+msgstr "Pilih kunci"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "Pilih Penawaran"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "Pilih Direktori Sementara"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "Pilih Jenis Dompet elektronik"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -1456,19 +1457,19 @@ msgstr ""
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "Dipilih"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr ""
+msgstr "Jual"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
 #: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Send"
-msgstr ""
+msgstr "Kirim"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
@@ -1480,7 +1481,7 @@ msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "Lihat opsi lanjutan"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -1489,11 +1490,11 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "Sisi"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "Log Masuk"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
@@ -1505,43 +1506,43 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "Lewati saja penambahan sebuah direktori akhir ke harvester unuk farming"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
-msgstr ""
+msgstr "Pertuturan"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "Jumlah boleh dibelanja"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "Jumlah Yang Dapat Dikeluarkan Per Jarak Waktu"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr ""
+msgstr "Saldo yang Tersedia"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "Pengeluaran Jarak Waktu (jumlah blok): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "Durasi Interval Pengeluaran (jumlah blok)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "Batas Pengeluaran (chia per jarak waktu): {0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
-msgstr ""
+msgstr "Keadaan"
 
 #: src/components/fullNode/FullNode.jsx:104
 #: src/components/fullNode/FullNode.jsx:121
@@ -1553,11 +1554,11 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "Status:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1589,21 +1590,21 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
-msgstr ""
+msgstr "Kirim"
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
-msgstr ""
+msgstr "Sinkron"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr ""
+msgstr "Sinkronisasi"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
-msgstr ""
+msgstr "Sinkronisasi {progress}/{tip}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:15
 #~ msgid "TXCH Block Rewards"
@@ -1631,11 +1632,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr ""
+msgstr "Folder sementara untuk kompilasi"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "Aplikasi akan tamat kerja pada blok 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1648,7 +1649,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr ""
+msgstr "Node tidak sinkron"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -1668,11 +1669,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "Total dari biaya transaksi pada block ini. Diberikan kepada farmer."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr ""
+msgstr "Plot - plot ini tidak valid, anda sebaiknya menghapus semuanya."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
@@ -1698,7 +1699,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "Ini adalah waktu dari ketinggian terakhir sub block."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
@@ -1726,19 +1727,19 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "Perdagangan ini dibuat pada saat ini"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "Perdagangan ini sudah termasuk di blockchain pada ketinggian block ini"
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "Versi Chia anda tidak serasi kepada blockchain dan tidak boleh ditransaksi."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
-msgstr ""
+msgstr "Waktu Dibuat"
 
 #: src/components/trading/TradingOverview.jsx:192
 #~ msgid "Time this trade was created at this time"
@@ -1746,17 +1747,17 @@ msgstr ""
 
 #: src/components/block/Block.jsx:184
 msgid "Timestamp"
-msgstr ""
+msgstr "Timestamp"
 
 #: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
-msgstr ""
+msgstr "Ke"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
-msgstr ""
+msgstr "Jumlah Saldo"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -1764,71 +1765,71 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
-msgstr ""
+msgstr "Jumlah iterasi"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "Jumlah Jarak Rangkaian"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "Jumlah Ukuran Plot:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "Jumlah Ukuran Plot-Plot"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "Jumlah iterasi VDF"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "Jumlah bilangan sejak mula blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Trade"
-msgstr ""
+msgstr "Perdagangan"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "Maklumat Perdagangan"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "Id perdagangan"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "Id perdagangan:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "Overview Perdagangan"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "Perdagangan tertera di sini"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "Perdagangan"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "Sejarah Perdagangan"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "Seleksi Hash Transaksi"
 
 #: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
-msgstr ""
+msgstr "Jenis"
 
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Unfinished"
-msgstr "Belum selesai"
+msgstr "Belum Selesai"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
@@ -1836,7 +1837,7 @@ msgstr "Identifikasi unik"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "Diketahui"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -1927,11 +1928,11 @@ msgstr "Ingin mendapatkan lebih banyak Chia? Tambahkan lebih banyak plot ke farm
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "Anda hendak lebih masa sebelum plot seterusnya mula?"
 
 #: src/components/block/Block.jsx:198
 msgid "Weight"
-msgstr ""
+msgstr "Berat"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
@@ -1943,7 +1944,7 @@ msgstr "Selamat datang di Chia. Silahkan masuk dengan key eksisting atau dengan 
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "Selamat datang! kata-kata frasa ini akan diguna untuk simpanan dompet elektronik anda. Jika hilang, anda tidak boleh mengeluar data anda. Simpan dalam tempat selamat! Tuliskan setiap ayat dalam tuturan asal. (Pastikan susunan perkataan betul)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -1993,7 +1994,7 @@ msgstr ""
 
 #: src/components/farm/overview/FarmOverview.tsx:24
 msgid "Your Farm Overview"
-msgstr ""
+msgstr "Overview Perdagangan Anda"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:56
 msgid "Your Full Node Connection"
@@ -2042,7 +2043,7 @@ msgstr "sinkronisasi"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "{currencyCode} Block Rewards"
-msgstr ""
+msgstr "{currencyCode} Blok Ganjaran"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:17
 msgid "{currencyCode} Total Chia Farmed"
@@ -2051,3 +2052,4 @@ msgstr "{currencyCode} Total Chia yang di-Farm"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Biaya Transaksi User"
+
