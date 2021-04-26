@@ -178,6 +178,12 @@ class CrawlStore:
         reliability.update(True, now - peer.last_try_timestamp)
         await self.add_peer(replaced, reliability)
 
+    async def peer_connected_hostname(self, host: str):
+        if host not in self.host_to_records:
+            return
+        record = self.host_to_records[host]
+        await self.peer_connected(record)
+
     async def get_peers_today(self) -> List[PeerRecord]:
         """now = utc_timestamp()
         start = utc_timestamp_to_eastern(now)
