@@ -164,7 +164,7 @@ class CoinStore:
         """
         # Update memory cache
         delete_queue: bytes32 = []
-        for coin_name, coin_record in self.coin_record_cache.cache.items():
+        for coin_name, coin_record in list(self.coin_record_cache.cache.items()):
             if int(coin_record.spent_block_index) > block_index:
                 new_record = CoinRecord(
                     coin_record.coin,
