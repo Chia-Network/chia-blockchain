@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 12:38\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -28,7 +28,7 @@ msgstr "* 想要进一步了解奇亚？来看看一位开源开发者创建的 
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "推荐设置为128个桶"
+msgstr "排序桶数量推荐设置为128"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -51,13 +51,13 @@ msgstr "接受时间："
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr "动作"
+msgstr "操作"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr "动作"
+msgstr "操作"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -125,7 +125,7 @@ msgstr "你确定要删除这个农田吗？删除后将不可恢复"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr "确定要断开连接吗?"
+msgstr "是否要断开连接？"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
@@ -137,16 +137,16 @@ msgstr "确定要退出吗? 农田开垦和耕种将会停止。"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "你确定要使用k={plotSize}?"
+msgstr "你确定要使用 k={plotSize}？"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr "后退"
+msgstr "返回"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "用来恢复智能钱包的备份文件."
+msgstr "备份文件课用于恢复智能钱包。"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -236,7 +236,7 @@ msgstr "染色钱包"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr "可以备份到助记词中"
+msgstr "可备份为助记词"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -249,7 +249,7 @@ msgstr "取消"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr "取消与花费"
+msgstr "取消并支付"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -261,11 +261,11 @@ msgstr "挑战"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr "哈希(Hash)挑战"
+msgstr "挑战哈希"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr "在KeyBase上聊天"
+msgstr "在Keybase上参与讨论"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
@@ -294,11 +294,11 @@ msgstr "关闭"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "关闭节点与服务器"
+msgstr "正在关闭节点与服务"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr "币:"
+msgstr "币："
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
@@ -335,11 +335,11 @@ msgstr "确认断开连接"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr "在区块上有确认："
+msgstr "区块上已确认："
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr "在区块高度有确认 {0}"
+msgstr "区块高度确认 {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -378,7 +378,7 @@ msgstr "连接数"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr "来Github出点力"
+msgstr "在 GitHub 上贡献"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -1406,7 +1406,7 @@ msgstr "保存"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "按头部哈希搜索区块"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1836,7 +1836,7 @@ msgstr "唯一识别码"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "未知"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -2051,3 +2051,4 @@ msgstr "{currencyCode} 收获的奇亚币总计"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 用户交易费用"
+
