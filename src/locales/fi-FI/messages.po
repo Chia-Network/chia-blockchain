@@ -2051,4 +2051,3 @@ msgstr "{currencyCode} Chioja Farmaroitu"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Transaktioveloitukset Käyttäjälle"
-

@@ -1836,10 +1836,6 @@ msgstr "Jedinečný identifikátor"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr "Neznámé"
-
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
-msgid "Unknown"
 msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
