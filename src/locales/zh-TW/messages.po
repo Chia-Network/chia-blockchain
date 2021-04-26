@@ -2003,6 +2003,14 @@ msgstr "你的完整節點連線"
 msgid "Your Harvester Network"
 msgstr "你的收割機網路"
 
+#: src/util/getDescriptiveError.ts:4
+msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr ""
+
+#: src/util/getDescriptiveError.ts:7
+msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr ""
+
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"

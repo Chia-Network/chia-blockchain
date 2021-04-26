@@ -3,6 +3,7 @@ import { Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
 import { AlertDialog } from '@chia/core';
 import type { RootState } from './rootReducer';
+import getDescriptiveError from '../util/getDescriptiveError';
 
 let nextId = 1;
 
@@ -45,7 +46,9 @@ export function openDialog(
 export function openErrorDialog(
   error: string,
 ): ThunkAction<any, RootState, unknown, Action<Object>> {
-  return (dispatch) => dispatch(openDialog(<AlertDialog>{error}</AlertDialog>));
+  const message = getDescriptiveError(error);
+  return (dispatch) =>
+    dispatch(openDialog(<AlertDialog>{message}</AlertDialog>));
 }
 
 export type Dialog = {

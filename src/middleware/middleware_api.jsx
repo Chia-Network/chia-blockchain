@@ -417,7 +417,8 @@ export const handle_message = async (store, payload, errorProcessed) => {
 
     // DEPRECATED we will throw Error instead
     if (payload.data.error && !errorProcessed) {
-      store.dispatch(openErrorDialog(payload.data.error));
+      const error = payload.data.error;
+      store.dispatch(openErrorDialog(error));
     }
   }
 };
