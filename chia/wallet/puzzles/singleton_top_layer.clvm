@@ -8,19 +8,6 @@
 
 ; This is for the core
 
-  (defmacro and ARGS
-    (if ARGS
-      (qq (if (unquote (f ARGS))
-            (unquote (c and (r ARGS)))
-            ()
-      ))
-    1)
-  )
-
-  (defmacro not (ARGS)
-    (qq (if (unquote ARGS) 0 1))
-  )
-
   (defun is-in-list (atom items)
     ;; returns 1 iff `atom` is in the list of `items`
     (if items
