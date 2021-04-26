@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 00:13\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -99,7 +99,7 @@ msgstr "位址"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
-msgstr "位址 / 拼圖雜湊"
+msgstr "位址 / 拼圖雜湊值"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -642,7 +642,7 @@ msgstr "耕種"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
-msgstr "農夫拼圖雜湊值"
+msgstr "塊農拼圖雜湊值"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
@@ -1020,7 +1020,7 @@ msgstr "你還沒有任何的耕地通過篩選。"
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr "無可用"
+msgstr "尚無"
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
@@ -1062,7 +1062,7 @@ msgstr "提案"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr "提案已建立"
+msgstr "已建立提案"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1087,7 +1087,7 @@ msgstr "待確認中"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr "待確認中餘額"
+msgstr "未結餘額"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
@@ -1097,7 +1097,7 @@ msgstr "未結更動"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr "待確認中總餘額"
+msgstr "未結總餘額"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1231,7 +1231,7 @@ msgstr "平行規劃耕地可節省時間。若不，新增耕地至隊列。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr "以 bitfield 規劃耕地可以減少約 30％ 的總寫入量，而現在也都幾乎比較快。 關閉 Bitfield 規劃耕地的話有可能降低記憶體需求。如果你的 CPU 設計是 2010 年以前的話很有可能需要關閉 bitfield 規劃耕地。"
+msgstr "以 bitfield 規劃耕地可減少約 30％ 的總寫入量且如今也幾乎較快。 關閉 Bitfield 規劃耕地有可能降低記憶體需求。如果你的 CPU 是 2010 年以前的設計很有可能需要關閉 bitfield 規劃耕地。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1406,7 +1406,7 @@ msgstr "儲存"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "以表頭雜湊值搜尋區塊"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1710,7 +1710,7 @@ msgstr "這是由你的私鑰控制的目前峰值子區塊中區塊鏈中 Chia 
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr "這是總餘額 + 未結餘額：這是在全部未結交易完成後你的餘額。"
+msgstr "這是總餘額 + 未結餘額：這是在全部未結交易結清後你的餘額。"
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
@@ -1836,7 +1836,7 @@ msgstr "唯一識別碼"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "未知"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -2051,3 +2051,4 @@ msgstr "{currencyCode} 已收耕 Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 使用者交易費用"
+
