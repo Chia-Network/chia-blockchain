@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 12:38\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1050,7 +1050,7 @@ msgstr "버킷 수"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr "쓰레드 수"
+msgstr "쓰레드 갯수"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
@@ -1203,7 +1203,7 @@ msgstr "구성 크기"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:43
 msgid "Plot in Parallel"
-msgstr "병렬 구성"
+msgstr "병렬 플로팅"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "Plot is duplicate of {0}"
@@ -1211,7 +1211,7 @@ msgstr "{0} 의 복제된 구성"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "Plots"
-msgstr "구성들"
+msgstr "플롯"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:19
 msgid "Plots Passed Filter"
@@ -1227,7 +1227,7 @@ msgstr "구성중"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
-msgstr "병렬 구성은 시간이 절약됩니다. 대신, 구성(들)을 직렬 추가하기."
+msgstr "병렬 플로팅은 시간을 절약해줍니다. 혹은 순차 플로팅(들) 을 추가하십시오"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
@@ -1298,7 +1298,7 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "보상 발견됨"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
@@ -1446,11 +1446,11 @@ msgstr "지갑 종류 선택"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "플롯이 최종 저장될 폴더를 지정하십시오. 용량이 크고 느린 하드디스크를 추천합니다 (예시: 외장하드)."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "플롯이 임시 저장될 폴더를 지정하십시오. 빠른 SSD를 추천합니다."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
@@ -1644,7 +1644,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "mainnet을 위한 최소 사이즈는 k=32입니다."
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
@@ -1836,7 +1836,7 @@ msgstr "고유 식별자"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "알 수 없음"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -1923,11 +1923,11 @@ msgstr "지갑"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "Chia를 더 얻고 싶다면, 더 많은 플롯들을 당신의 농장에 추가하세요."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "다음 플로팅 시작 전 지연시간"
 
 #: src/components/block/Block.jsx:198
 msgid "Weight"
@@ -1943,7 +1943,7 @@ msgstr "Chia에 오신 것을 환영합니다. 사용하고 계신 키로 로그
 
 #: src/components/wallet/WalletAdd.tsx:35
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
+msgstr "환영합니다. 다음의 단어들은 당신의 지갑 백업에 사용됩니다. 단어를 잊는다면, 지갑 접근 권한을 잃게 될 것이기 때문에 꼭 저장하세요. 각각의 단어를 순서에 맞게 적어두세요. (순서가 매우 중요합니다)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -1969,7 +1969,7 @@ msgstr "예"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "플롯에 동기화하거나 연결할 필요가 없습니다. 플로팅 과정에서 최정 플롯 파일의 크기를 뛰어넘는 임시 플롯 파일이 생성됩니다. 충분한 공간이 확보됐는지 확인하십시오. <0>더 알아보기</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2051,3 +2051,4 @@ msgstr "{currencyCode} 채굴된 총 Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 사용자 거래 수수료"
+
