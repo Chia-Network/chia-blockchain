@@ -8,7 +8,7 @@ msgstr ""
 "Language: tr_TR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 00:13\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Turkish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1231,7 +1231,7 @@ msgstr "Eş zamanlı plot yapmak zaman kazandırabilir. Ya da sıraya başka plo
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "Bitfield etkinken çizim yapmak yaklaşık% 30 daha az genel yazma sağlar ve artık neredeyse her zaman daha hızlıdır. Bit alanı çizimi devre dışı bırakıldığında bellek gereksinimlerinin azaldığını görebilirsiniz. CPU tasarımınız 2010'dan önceyse, bit alanı grafiğini devre dışı bırakmanız gerekebilir."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1286,11 +1286,11 @@ msgstr "Herkese açık parmak izi ile gizli anahtar {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
-msgstr "Gizli anahtar {0}"
+msgstr "Özel anahtar"
 
 #: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
-msgstr "Gizli anahtar:"
+msgstr "Özel Anahtar:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -1306,11 +1306,11 @@ msgstr "Herkese açık anahtar"
 
 #: src/middleware/middleware_api.jsx:265
 msgid "Public key:"
-msgstr "Herkese açık anahtar:"
+msgstr "Açık anahtar"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr "Sıra Adı"
+msgstr "Sıra adı"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
@@ -1318,7 +1318,7 @@ msgstr "Sıra adı"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "Queued"
-msgstr "Sıraya Alındı"
+msgstr "Sıraya eklendi"
 
 #: src/electron-starter.js:80
 #~ msgid "Quit"
@@ -1330,7 +1330,7 @@ msgstr "En fazla RAM kullanımı"
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr "RL Cüzdanı"
+msgstr "CC Cündanı"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1338,12 +1338,12 @@ msgstr "RL Cüzdanı"
 
 #: src/components/wallet/create/WalletCreate.jsx:130
 msgid "Rate Limited"
-msgstr "Hız Limiti"
+msgstr "Hız Sınırı"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:402
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "Rate Limited Info"
-msgstr "Hız Limiti Bilgisi"
+msgstr "Hız Sınırı"
 
 #: src/components/wallet/create/WalletCreate.jsx:232
 msgid "Rate Limited Options"
@@ -1356,11 +1356,11 @@ msgstr "Hız Limitli Kullanıcı Cüzdanı Kurulumu"
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "Receive Address"
-msgstr "Alım Adresi"
+msgstr "Alıcının adresi"
 
 #: src/components/wallet/create/WalletCreate.jsx:320
 msgid "Recover DID wallet"
-msgstr "DID geri yükleme cüzdanı"
+msgstr "Eski cüzdanınızı kurtarma"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
@@ -1368,15 +1368,15 @@ msgstr "Plot'ları Yenile"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
-msgstr "Güncelleme Notları"
+msgstr "Sürüm notları"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
-msgstr "Yeniden Adlandır"
+msgstr "Yeniden adlandır"
 
 #: src/electron/main.tsx:339
 msgid "Report an Issue..."
-msgstr "Hata bildir..."
+msgstr "Sorun Bildirin..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -1406,11 +1406,11 @@ msgstr "Kaydet"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Blok Başlığına Göre Ara"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr "İkinci Geçici Dosya Adresi"
+msgstr "Geçiçi dosya konumu"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
@@ -1434,7 +1434,7 @@ msgstr "Anahtar Seç"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr "Teklif Seç"
+msgstr "Bir teklif seçin"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
@@ -1456,13 +1456,13 @@ msgstr "Grafiğin depolanmasını istediğiniz klasör için geçici hedefi seç
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr "Seçili"
+msgstr "seçili"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr "Sat"
+msgstr "Satış"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
@@ -1489,11 +1489,11 @@ msgstr "Gelişmiş Seçenekleri Göster"
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr "Yan"
+msgstr "Yön"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr "Giriş Yap"
+msgstr "Oturum Aç"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
@@ -1513,17 +1513,17 @@ msgstr "Konuşma"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr "Harcanabilir Miktar"
+msgstr "Kullanilabilir Miktar"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr "Aralık Başına Harcanabilir Tutar"
+msgstr "Aralık Başına Kullanilabilir Tutar"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr "Harcanabilir Bakiye"
+msgstr "Kullanilabilir Bakiye"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
@@ -1836,7 +1836,7 @@ msgstr "Benzersiz Tanımlayıcı"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "Bilinmeyen"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -1854,7 +1854,7 @@ msgstr "Görünüm"
 #: src/components/plot/queue/PlotQueueActions.tsx:54
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
-msgstr "Günlüğü Görüntüle"
+msgstr "Kayıtlara Bak"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
@@ -2051,3 +2051,4 @@ msgstr "{currencyCode} Toplam Çıkartılan Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Kullanıcı Transfer Ücretleri"
+
