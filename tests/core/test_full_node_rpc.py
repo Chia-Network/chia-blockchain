@@ -157,6 +157,7 @@ class TestRpc:
 
             assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1
             assert len(list(filter(lambda cr: not cr.spent, (await client.get_coin_records_by_puzzle_hash(ph))))) == 3
+            assert len(await client.get_coin_records_by_puzzle_hashes([ph_receiver, ph])) == 5
             assert len(await client.get_coin_records_by_puzzle_hash(ph, False)) == 3
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True)) == 4
 

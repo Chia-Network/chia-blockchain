@@ -36,14 +36,13 @@ class FullNodeRpcApi:
             "/get_network_info": self.get_network_info,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
+            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
             "/push_tx": self.push_tx,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
-            # Deprecated
-            "/get_unspent_coins": self.get_coin_records_by_puzzle_hash,
         }
 
     async def _state_changed(self, change: str) -> List[WsRpcMessage]:
@@ -326,6 +325,28 @@ class FullNodeRpcApi:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
+
+        return {"coin_records": coin_records}
+
+    async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves the coins for a given puzzlehash, by default returns unspent coins.
+        """
+        if "puzzle_hashes" not in request:
+            raise ValueError("Puzzle hashes not in request")
+        kwargs: Dict[str, Any] = {
+            "include_spent_coins": False,
+            "puzzle_hashes": [hexstr_to_bytes(ph) for ph in request["puzzle_hashes"]],
+        }
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
+
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
         return {"coin_records": coin_records}
 
