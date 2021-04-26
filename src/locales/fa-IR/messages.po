@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-22 18:12\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -265,7 +265,7 @@ msgstr ""
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr ""
+msgstr "در اپلیکیشن کی بیس صبحت کنید"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
@@ -281,7 +281,7 @@ msgstr "کیف پول چیا"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "تعداد پلات ها را انتخاب کنید"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
@@ -294,7 +294,7 @@ msgstr "بسته"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "بستن نود و سرور"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -335,7 +335,7 @@ msgstr "تایید و قطع ارتباط"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "تایید شده در بلاک:"
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
@@ -541,12 +541,12 @@ msgstr "توسعه دهنده"
 
 #: src/electron/main.tsx:263
 msgid "Developer Tools"
-msgstr ""
+msgstr "ابزارهای توسعه دهنده گان"
 
 #: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
-msgstr ""
+msgstr "سختی"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -554,11 +554,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr ""
+msgstr "غیر فعال کردن بیتفیلد برای پلات ها"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
-msgstr ""
+msgstr "قطع ارتباط"
 
 #: src/components/wallet/create/WalletCreate.jsx:144
 #~ msgid "Distributed Identity"
@@ -575,7 +575,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
-msgstr ""
+msgstr "آیا ماشین شما از پلات های همزمان پیشتیبانی میکند؟"
 
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
@@ -584,11 +584,11 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
-msgstr ""
+msgstr "درگ و دراپ فایل بک آپ"
 
 #: src/electron/main.tsx:219
 msgid "Edit"
-msgstr ""
+msgstr "ويرايش"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -602,7 +602,7 @@ msgstr ""
 #: src/components/plot/PlotStatus.tsx:18
 #: src/components/plot/queue/PlotQueueIndicator.tsx:14
 msgid "Error"
-msgstr ""
+msgstr "خطا"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -611,11 +611,11 @@ msgstr ""
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr ""
+msgstr "زمان تقریبی برنده شدن"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
-msgstr ""
+msgstr "فضای تقریبی کل شبکه"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
@@ -651,7 +651,7 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr ""
+msgstr "مزرعه دار وصل نیست"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
@@ -710,17 +710,17 @@ msgstr ""
 #: src/electron/main.tsx:211
 #: src/electron/main.tsx:398
 msgid "File"
-msgstr ""
+msgstr "فایل"
 
 #: src/components/plot/PlotsFailed.tsx:10
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
-msgstr ""
+msgstr "نام فايل"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr ""
+msgstr "مکان پوشه نهایی"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
@@ -738,11 +738,11 @@ msgstr "سوالات متداول"
 #: src/components/dashboard/DashboardSideBar.tsx:23
 #: src/components/fullNode/FullNode.jsx:312
 msgid "Full Node"
-msgstr ""
+msgstr "نود کامل"
 
 #: src/components/fullNode/FullNode.jsx:255
 msgid "Full Node Status"
-msgstr ""
+msgstr "وضعیت نود کامل"
 
 #: src/electron/main.tsx:287
 msgid "Full Screen"
@@ -778,7 +778,7 @@ msgstr "ارتفاع"
 msgid "Help"
 msgstr "راهنما"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
 msgid "Help translate"
 msgstr "کمک در ترجمه"
 
@@ -801,7 +801,7 @@ msgstr "آدرس IP"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:61
 msgid "IP address / host"
-msgstr ""
+msgstr "آدرس آی پی/میزبان"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
@@ -1024,25 +1024,25 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
-msgstr ""
+msgstr "همگام سازی نشده است"
 
 #: src/components/trading/TradingOverview.jsx:227
 msgid "Not accepted yet"
-msgstr ""
+msgstr "هنوز تایید نشده"
 
 #: src/components/trading/TradingOverview.jsx:199
 msgid "Not confirmed yet"
-msgstr ""
+msgstr "هنوز تایید نشده"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 #: src/components/fullNode/FullNode.jsx:145
 #: src/components/fullNode/FullNode.jsx:152
 msgid "Not connected"
-msgstr ""
+msgstr "متصل نیست"
 
 #: src/components/plot/PlotsNotFound.tsx:24
 msgid "Not found Plots"
-msgstr ""
+msgstr "پلات های یافت نشده"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
@@ -1054,11 +1054,11 @@ msgstr ""
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
-msgstr ""
+msgstr "تأیید"
 
 #: src/components/trading/ViewOffer.jsx:71
 msgid "Offer"
-msgstr ""
+msgstr "پیشنهاد"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
@@ -1239,11 +1239,11 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Pool Key"
-msgstr ""
+msgstr "کلید استخر"
 
 #: src/components/block/Block.jsx:248
 msgid "Pool Public Key"
-msgstr ""
+msgstr "کلید عمومی استخر"
 
 #: src/components/block/Block.jsx:260
 msgid "Pool Puzzle Hash"
@@ -1251,11 +1251,11 @@ msgstr ""
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:96
 msgid "Pool Reward Address"
-msgstr ""
+msgstr "آدرس جایزه استخر"
 
 #: src/components/block/Block.jsx:286
 msgid "Pool Reward Amount"
-msgstr ""
+msgstr "مقدار جایزه استخر"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:30
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:30
@@ -1298,11 +1298,11 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
-msgstr ""
+msgstr "اثبات های یافت شده"
 
 #: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "Pubkey"
-msgstr ""
+msgstr "کلید عمومی"
 
 #: src/middleware/middleware_api.jsx:265
 msgid "Public key:"
@@ -1393,7 +1393,7 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr ""
+msgstr "برای رد کردن مشکلی نیست"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1404,13 +1404,13 @@ msgstr "ذخیره"
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:326
-#~ msgid "Search block by header hash"
-#~ msgstr ""
+#: src/components/fullNode/FullNodeBlockSearch.tsx:30
+msgid "Search block by header hash"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
-msgstr ""
+msgstr "مکان دوم پوشه موقت"
 
 #: src/components/selectKey/SelectKey.tsx:93
 msgid "See private key"
@@ -1553,7 +1553,7 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:11
 #: src/components/wallet/Wallets.tsx:95
 msgid "Status"
-msgstr ""
+msgstr "وضعیت"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
@@ -1593,13 +1593,13 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
-msgstr ""
+msgstr "همگام سازی شده"
 
 #: src/components/farm/FarmerStatus.tsx:28
 #: src/components/farm/card/FarmCardStatus.tsx:12
 #: src/components/plot/PlotStatus.tsx:15
 msgid "Syncing"
-msgstr ""
+msgstr "در حال همگام سازی"
 
 #: src/components/fullNode/FullNode.jsx:106
 msgid "Syncing {progress}/{tip}"
@@ -1631,7 +1631,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:48
 msgid "Temporary folder location"
-msgstr ""
+msgstr "مکان دوم پوشه موقت"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
@@ -1648,7 +1648,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
-msgstr ""
+msgstr "نود همگام سازی نشده"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
@@ -1832,6 +1832,10 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
+msgstr ""
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
+msgid "Unknown"
 msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
