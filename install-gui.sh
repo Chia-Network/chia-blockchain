@@ -21,12 +21,12 @@ if [ "$(uname)" = "Linux" ]; then
 	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2"
-		curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
 		sudo yum install -y nodejs
 	elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
 		# CentOS or Redhat
 		echo "Installing on CentOS/Redhat"
-		curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
 		sudo yum install -y nodejs
 	fi
 elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version >/dev/null 2>&1; then
