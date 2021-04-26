@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 00:12\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -204,7 +204,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
-msgstr ""
+msgstr "Blokkok"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
@@ -366,23 +366,23 @@ msgstr "Kapcsolat állapota"
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "A kapcsolat állapota:"
 
 #: src/components/fullNode/FullNodeConnections.tsx:50
 msgid "Connection type"
-msgstr ""
+msgstr "A kapcsolat típusa"
 
 #: src/components/fullNode/FullNodeConnections.tsx:73
 msgid "Connections"
-msgstr ""
+msgstr "Kapcsolatok"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Közreműködés a GitHub-on"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Másolva"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:461
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -394,7 +394,7 @@ msgstr "Másol"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Másolás a vágólapra"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -402,7 +402,7 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Létrehoz"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
@@ -778,7 +778,7 @@ msgstr "Magasság"
 msgid "Help"
 msgstr "Súgó"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
 msgid "Help translate"
 msgstr "Segíts a fordításban"
 
@@ -1404,9 +1404,9 @@ msgstr ""
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:326
-#~ msgid "Search block by header hash"
-#~ msgstr ""
+#: src/components/fullNode/FullNodeBlockSearch.tsx:30
+msgid "Search block by header hash"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1832,6 +1832,10 @@ msgstr "Befejezetlen"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
+msgstr ""
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
+msgid "Unknown"
 msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
