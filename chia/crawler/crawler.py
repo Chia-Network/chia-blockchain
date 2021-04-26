@@ -295,9 +295,9 @@ class Crawler:
                 t_delta = int(t_now - t_start)
                 self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
                 # Periodically print detailed stats.
-                if True:
-                    good_peers = await self.crawl_store.get_cached_peers(99999999)
-                    self.log.error(f"Reliable nodes: {len(good_peers)}")
+                good_peers = await self.crawl_store.get_cached_peers(99999999)
+                self.log.error(f"Reliable nodes: {len(good_peers)}")
+                if random.randrange(0, 10) == 0:
                     num_connected_today = await self.crawl_store.get_peers_today_connected()
                     self.log.error(f"Peers reachable today: {num_connected_today}.")
                 self.log.error("***")
