@@ -655,6 +655,7 @@ class WalletStateManager:
         """
         Adding coin to DB
         """
+        self.log.info(f"Adding coin: {coin} at {height}")
         farm_reward = False
         if coinbase or fee_reward:
             farm_reward = True
