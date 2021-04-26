@@ -1,6 +1,6 @@
 from typing import List
 
-from blspy import AugSchemeMPL, PrivateKey, G1Element
+from blspy import AugSchemeMPL, PrivateKey
 
 from chia.util.ints import uint32
 
