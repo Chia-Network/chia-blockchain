@@ -66,7 +66,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
                 print(f"The network has an estimated {network_space_terabytes_estimate:.3f} TiB")
 
     except Exception as e:
-        if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
+        if isinstance(e, aiohttp.ClientConnectorError):
             print(f"Connection error. Check if full node rpc is running at {rpc_port}")
         else:
             print(f"Exception {e}")
