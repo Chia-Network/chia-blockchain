@@ -8,6 +8,7 @@ import sys
 import time
 import traceback
 import uuid
+
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
@@ -345,38 +346,31 @@ class WebSocketServer:
     def state_changed(self, service: str, state: str):
         asyncio.create_task(self._state_changed(service, state))
 
-    async def _watch_file_changes(self, id: str, loop: asyncio.AbstractEventLoop):
-        config = self._get_plots_queue_item(id)
+    async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
+        final_words = ["Renamed final file"]
+        self.state_changed(service_plotter, "log_changed")
 
-        if config is None:
-            raise Exception(f"Plot queue config with ID {id} is not defined")
-
-        words = ["Renamed final file"]
-        file_path = config["out_file"]
-        fp = open(file_path, "r")
         while True:
-            new = await loop.run_in_executor(io_pool_exc, fp.readline)
+            new_data = await loop.run_in_executor(io_pool_exc, fp.readline)
 
             if config["state"] is not PlotState.RUNNING:
                 return
 
-            config["log"] = new if config["log"] is None else config["log"] + new
-            self.state_changed(service_plotter, "log_changed")
+            if new_data not in (None, ""):
+                config["log"] = new_data
+                self.state_changed(service_plotter, "log_changed")
 
-            if new:
-                for word in words:
-                    if word in new:
+            if new_data:
+                for word in final_words:
+                    if word in new_data:
                         return
             else:
                 time.sleep(0.5)
 
-    async def _track_plotting_progress(self, id: str, loop: asyncio.AbstractEventLoop):
-        config = self._get_plots_queue_item(id)
-
-        if config is None:
-            raise Exception(f"Plot queue config with ID {id} is not defined")
-
-        await self._watch_file_changes(id, loop)
+    async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
+        file_path = config["out_file"]
+        with open(file_path, "r") as fp:
+            await self._watch_file_changes(config, fp, loop)
 
     def _build_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         service_name = request["service"]
@@ -449,7 +443,7 @@ class WebSocketServer:
             config = self._get_plots_queue_item(id)
 
             if config is None:
-                raise Exception(f"Plot queue with ID {id} does not exists")
+                raise Exception(f"Plot queue config with ID {id} does not exist")
 
             state = config["state"]
             if state is not PlotState.SUBMITTED:
@@ -480,7 +474,7 @@ class WebSocketServer:
 
             self.services[service_name].append(process)
 
-            await self._track_plotting_progress(id, loop)
+            await self._track_plotting_progress(config, loop)
 
             # (output, err) = process.communicate()
             # await process.wait()
