@@ -98,7 +98,7 @@ class Harvester:
             [str(s) for s in self.no_key_filenames],
         )
 
-    async def refresh_plots(self):
+    async def refresh_plots(self) -> None:
         locked: bool = self._refresh_lock.locked()
         changed: bool = False
         if not locked:

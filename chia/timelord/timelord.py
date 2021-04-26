@@ -202,7 +202,7 @@ class Timelord:
             return new_block_iters
         return None
 
-    async def _reset_chains(self, first_run=False, only_eos=False):
+    async def _reset_chains(self, first_run: bool = False, only_eos: bool = False) -> None:
         # First, stop all chains.
         self.last_active_time = time.time()
         log.debug("Resetting chains")
@@ -216,7 +216,7 @@ class Timelord:
         # Adjust all signage points iterations to the peak.
         iters_per_signage = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
         self.signage_point_iters = [
-            (k * iters_per_signage - ip_iters, k)
+            (uint64(k * iters_per_signage - ip_iters), uint8(k))
             for k in range(1, self.constants.NUM_SPS_SUB_SLOT)
             if k * iters_per_signage - ip_iters > 0
         ]
@@ -257,7 +257,7 @@ class Timelord:
                 count_signage += 1
                 if count_signage == 3:
                     break
-        left_subslot_iters = sub_slot_iters - ip_iters
+        left_subslot_iters = uint64(sub_slot_iters - ip_iters)
         assert left_subslot_iters > 0
 
         if self.last_state.get_deficit() < self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -270,7 +270,7 @@ class Timelord:
             for iteration in iters:
                 assert iteration > 0
 
-    async def _handle_new_peak(self):
+    async def _handle_new_peak(self) -> None:
         assert self.new_peak is not None
         self.last_state.set_state(self.new_peak)
 
@@ -303,7 +303,7 @@ class Timelord:
         self.new_peak = None
         await self._reset_chains()
 
-    async def _handle_subslot_end(self):
+    async def _handle_subslot_end(self) -> None:
         self.last_state.set_state(self.new_subslot_end)
         for block in self.unfinished_blocks:
             if self._can_infuse_unfinished_block(block) is not None:

@@ -7,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type
+from typing import Any, BinaryIO, Dict, List, Tuple, Type, TypeVar
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -49,7 +49,7 @@ unhashable_types = [
 big_ints = [uint64, int64, uint128, int512]
 
 
-def dataclass_from_dict(klass, d):
+def dataclass_from_dict(klass, d) -> Any:
     """
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
@@ -85,7 +85,10 @@ def dataclass_from_dict(klass, d):
         return klass(d)
 
 
-def recurse_jsonify(d):
+T = TypeVar("T", List, Dict, Tuple)
+
+
+def recurse_jsonify(d: T) -> T:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
@@ -106,8 +109,10 @@ def recurse_jsonify(d):
             if isinstance(item, int) and type(item) in big_ints:
                 item = int(item)
             new_list.append(item)
-        d = new_list
-
+        if isinstance(d, list):
+            d = new_list
+        if isinstance(d, tuple):
+            d = tuple(new_list)  # type: ignore
     else:
         for key, value in d.items():
             if type(value) in unhashable_types or issubclass(type(value), bytes):

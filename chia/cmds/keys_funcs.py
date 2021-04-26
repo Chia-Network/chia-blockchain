@@ -25,7 +25,7 @@ def generate_and_print():
     return mnemonic
 
 
-def generate_and_add():
+def generate_and_add() -> None:
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
     """
@@ -35,7 +35,7 @@ def generate_and_add():
     add_private_key_seed(mnemonic)
 
 
-def query_and_add_private_key_seed():
+def query_and_add_private_key_seed() -> None:
     mnemonic = input("Enter the mnemonic you want to use: ")
     add_private_key_seed(mnemonic)
 

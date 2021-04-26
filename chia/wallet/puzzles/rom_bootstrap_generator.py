@@ -5,5 +5,5 @@ from .load_clvm import load_clvm
 MOD = SerializedProgram.from_bytes(load_clvm("rom_bootstrap_generator.clvm").as_bin())
 
 
-def get_generator():
+def get_generator() -> SerializedProgram:
     return MOD

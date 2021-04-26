@@ -533,7 +533,7 @@ class FullNode:
             pass
         await self.connection.close()
 
-    async def _sync(self):
+    async def _sync(self) -> None:
         """
         Performs a full sync of the blockchain up to the peak.
             - Wait a few seconds for peers to send us their peaks
@@ -608,7 +608,8 @@ class FullNode:
                 f" {heaviest_peak_height}"
             )
 
-            if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
+            peak = self.blockchain.get_peak()
+            if peak is not None and heaviest_peak_weight <= peak.weight:
                 raise ValueError("Not performing sync, already caught up.")
 
             wp_timeout = 180
@@ -797,7 +798,7 @@ class FullNode:
             )
         return True, advanced_peak, fork_height
 
-    async def _finish_sync(self):
+    async def _finish_sync(self) -> None:
         """
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
@@ -811,9 +812,9 @@ class FullNode:
         async with self.blockchain.lock:
             await self.sync_store.clear_sync_info()
 
-            peak_fb: FullBlock = await self.blockchain.get_full_peak()
-            if peak is not None:
-                await self.peak_post_processing(peak_fb, peak, peak.height - 1, None)
+            peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
+            if peak is not None and peak_fb is not None:
+                await self.peak_post_processing(peak_fb, peak, uint32(peak.height - 1), None)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)

@@ -45,7 +45,7 @@ BLANK = bytes([0] * 32)
 prehashed: Dict = {}
 
 
-def init_prehashed():
+def init_prehashed() -> None:
     for x in [EMPTY, TERMINAL, MIDDLE]:
         for y in [EMPTY, TERMINAL, MIDDLE]:
             prehashed[x + y] = sha256(bytes([0] * 30) + x + y)
@@ -146,7 +146,7 @@ class MerkleSet:
 
 
 class EmptyNode(Node):
-    def __init__(self):
+    def __init__(self) -> None:
         self.hash = BLANK
 
     def get_hash(self) -> bytes:
@@ -182,7 +182,7 @@ _empty = EmptyNode()
 
 
 class TerminalNode(Node):
-    def __init__(self, hash: bytes, bits: List[int] = None):
+    def __init__(self, hash: bytes, bits: List[int] = None) -> None:
         assert len(hash) == 32
         self.hash = hash
         if bits is not None:

@@ -42,7 +42,7 @@ def trade_record_to_dict(record: TradeRecord) -> Dict:
 
 
 # Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
-def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
+def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution) -> int:
     discrepancy = coin.amount - get_output_amount_for_puzzle_and_solution(puzzle, solution)
     return discrepancy
 

@@ -575,7 +575,7 @@ class AddressManager:
                     ):
                         self.clear_new_(bucket, pos)
 
-    def connect_(self, addr: PeerInfo, timestamp: int):
+    def connect_(self, addr: PeerInfo, timestamp: int) -> None:
         info, _ = self.find_(addr)
         if info is None:
             return
@@ -623,14 +623,14 @@ class AddressManager:
         addr: PeerInfo,
         count_failures: bool,
         timestamp: int = -1,
-    ):
+    ) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
             self.attempt_(addr, count_failures, timestamp)
 
     # See if any to-be-evicted tried table entries have been tested and if so resolve the collisions.
-    async def resolve_tried_collisions(self):
+    async def resolve_tried_collisions(self) -> None:
         async with self.lock:
             self.resolve_tried_collisions_()
 
@@ -649,7 +649,7 @@ class AddressManager:
         async with self.lock:
             return self.get_peers_()
 
-    async def connect(self, addr: PeerInfo, timestamp: int = -1):
+    async def connect(self, addr: PeerInfo, timestamp: int = -1) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:

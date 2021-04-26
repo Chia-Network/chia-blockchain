@@ -34,7 +34,7 @@ class PeerInfo(Streamable):
         return False
 
     # Functions related to peer bucketing in new/tried tables.
-    def get_key(self):
+    def get_key(self) -> bytes:
         try:
             ip = ipaddress.IPv6Address(self.host)
         except ValueError:
@@ -44,11 +44,11 @@ class PeerInfo(Streamable):
         key += bytes([self.port // 0x100, self.port & 0x0FF])
         return key
 
-    def get_group(self):
+    def get_group(self) -> bytes:
         # TODO: Port everything from Bitcoin.
         ipv4 = 1
         try:
-            ip = ipaddress.IPv4Address(self.host)
+            ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address] = ipaddress.IPv4Address(self.host)
         except ValueError:
             ip = ipaddress.IPv6Address(self.host)
             ipv4 = 0

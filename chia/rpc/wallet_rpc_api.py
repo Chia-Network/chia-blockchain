@@ -4,6 +4,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
+from typing_extensions import Literal
+
 
 from blspy import PrivateKey, G1Element
 
@@ -117,7 +119,7 @@ class WalletRpcApi:
             data["additional_data"] = args[2]
         return [create_payload_dict("state_changed", data, "chia_wallet", "wallet_ui")]
 
-    async def _stop_wallet(self):
+    async def _stop_wallet(self) -> None:
         """
         Stops a currently running wallet/key, which allows starting the wallet with a new key.
         Each key has it's own wallet database.
@@ -651,7 +653,7 @@ class WalletRpcApi:
             raise ValueError(error)
         return {}
 
-    async def get_trade(self, request: Dict):
+    async def get_trade(self, request: Dict) -> Dict[Literal["trade"], Dict]:
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager
@@ -664,7 +666,7 @@ class WalletRpcApi:
         result = trade_record_to_dict(trade)
         return {"trade": result}
 
-    async def get_all_trades(self, request: Dict):
+    async def get_all_trades(self, request: Dict) -> Dict[Literal["trades"], List[Dict]]:
         assert self.service.wallet_state_manager is not None
 
         trade_mgr = self.service.wallet_state_manager.trade_manager

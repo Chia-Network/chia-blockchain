@@ -207,7 +207,7 @@ class WeightProofHandler:
         )
         return recent_chain
 
-    async def create_prev_sub_epoch_segments(self):
+    async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
@@ -655,7 +655,7 @@ def _get_weights_for_sampling(
 def _sample_sub_epoch(
     start_of_epoch_weight: uint128,
     end_of_epoch_weight: uint128,
-    weight_to_check: List[uint128],
+    weight_to_check: Optional[List[uint128]],
 ) -> bool:
     """
     weight_to_check: List[uint128] is expected to be sorted
@@ -914,7 +914,7 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
-):
+) -> bool:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     sub_epoch_segments: SubEpochSegments = SubEpochSegments.from_bytes(weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -1436,7 +1436,9 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
     return curr_difficulty, curr_ssi
 
 
-def vars_to_bytes(constants, summaries, weight_proof):
+def vars_to_bytes(
+    constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof
+) -> Tuple[Dict, List[bytes], bytes, bytes]:
     constants_dict = recurse_jsonify(dataclasses.asdict(constants))
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))
@@ -1446,8 +1448,10 @@ def vars_to_bytes(constants, summaries, weight_proof):
     return constants_dict, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
 
 
-def bytes_to_vars(constants_dict, summaries_bytes):
-    summaries = []
+def bytes_to_vars(
+    constants_dict: Dict, summaries_bytes: List[bytes]
+) -> Tuple[ConsensusConstants, List[SubEpochSummary]]:
+    summaries: List[SubEpochSummary] = []
     for summary in summaries_bytes:
         summaries.append(SubEpochSummary.from_bytes(summary))
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
@@ -1521,7 +1525,7 @@ def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
     return False
 
 
-def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
+def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof: WeightProof):
     tip = weight_proof.recent_chain_data[-1]
     weight_to_check = _get_weights_for_sampling(rng, tip.weight, weight_proof.recent_chain_data)
     sampled_sub_epochs: dict[int, bool] = {}

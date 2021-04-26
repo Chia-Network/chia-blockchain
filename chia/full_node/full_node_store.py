@@ -198,7 +198,7 @@ class FullNodeStore:
             self.future_eos_cache.pop(k, [])
             self.future_sp_cache.pop(k, [])
 
-    def clear_slots(self):
+    def clear_slots(self) -> None:
         self.finished_sub_slots.clear()
 
     def get_sub_slot(self, challenge_hash: bytes32) -> Optional[Tuple[EndOfSubSlotBundle, int, uint128]]:
@@ -208,7 +208,7 @@ class FullNodeStore:
                 return sub_slot, index, total_iters
         return None
 
-    def initialize_genesis_sub_slot(self):
+    def initialize_genesis_sub_slot(self) -> None:
         self.clear_slots()
         self.finished_sub_slots = [(None, [None] * self.constants.NUM_SPS_SUB_SLOT, uint128(0))]
 

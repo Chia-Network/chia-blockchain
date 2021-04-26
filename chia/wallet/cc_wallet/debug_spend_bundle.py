@@ -21,7 +21,7 @@ KFA = {v: k for k, v in CONDITIONS.items()}
 # we may need also to save the `genesis_coin_mod` or its hash
 
 
-def disassemble(sexp):
+def disassemble(sexp) -> str:
     """
     This version of `disassemble` also disassembles condition opcodes like `ASSERT_ANNOUNCEMENT_CONSUMED`.
     """

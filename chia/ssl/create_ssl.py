@@ -62,7 +62,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     key_out.write_bytes(key_pem)
 
 
-def make_ca_cert(cert_path: Path, key_path: Path):
+def make_ca_cert(cert_path: Path, key_path: Path) -> None:
     root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     subject = issuer = x509.Name(
         [
@@ -98,7 +98,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     )
 
 
-def main():
+def main() -> None:
     return make_ca_cert(Path("./chia_ca.crt"), Path("./chia_ca.key"))
 
 

@@ -1,4 +1,5 @@
 import click
+from typing import List
 
 from chia.util.service_groups import all_groups
 
@@ -7,7 +8,7 @@ from chia.util.service_groups import all_groups
 @click.option("-r", "--restart", is_flag=True, type=bool, help="Restart running services")
 @click.argument("group", type=click.Choice(all_groups()), nargs=-1, required=True)
 @click.pass_context
-def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
+def start_cmd(ctx: click.Context, restart: bool, group: List[str]) -> None:
     import asyncio
     from .start_funcs import async_start
 
