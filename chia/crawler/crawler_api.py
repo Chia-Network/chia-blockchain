@@ -80,7 +80,7 @@ class CrawlerAPI:
     async def new_peak(
         self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
-        pass
+        await self.crawler.new_peak(request, peer)
 
     @peer_required
     @api_request

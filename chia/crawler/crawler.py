@@ -50,7 +50,8 @@ soa_record = SOA(
 )
 ns_records = [NS(ns)]
 
-bootstrap_peers = []
+bootstrap_peers = ['node-eu.chia.net']
+minimum_height = 100000
 
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
@@ -238,6 +239,7 @@ class Crawler:
                                 new_peer_reliability = PeerReliability(response_peer.host)
                                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
 
+                    await asyncio.sleep(1)
                     await peer.close()
 
                 tasks = []
@@ -253,9 +255,7 @@ class Crawler:
                             connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
                         """
                         connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
-                        if connected:
-                            await self.crawl_store.peer_connected(peer)
-                        else:
+                        if not connected:
                             await self.crawl_store.peer_tried_to_connect(peer)
                     except Exception as e:
                         self.log.info(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
@@ -295,7 +295,7 @@ class Crawler:
                 t_delta = int(t_now - t_start)
                 self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
                 # Periodically print detailed stats.
-                if random.randrange(0, 10) == 0:
+                if True:
                     good_peers = await self.crawl_store.get_cached_peers(99999999)
                     self.log.error(f"Reliable nodes: {len(good_peers)}")
                     num_connected_today = await self.crawl_store.get_peers_today_connected()
@@ -312,7 +312,10 @@ class Crawler:
             self.state_changed_callback(change)
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
-        pass
+        if request.height >= minimum_height:
+            peer_info = peer.get_peer_info()
+            if peer_info is not None:
+                await self.crawl_store.peer_connected_hostname(peer_info.host)
 
     async def on_connect(self, connection: ws.WSChiaConnection):
         pass
