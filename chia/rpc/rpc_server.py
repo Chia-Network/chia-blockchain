@@ -23,7 +23,7 @@ class RpcServer:
     Implementation of RPC server.
     """
 
-    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable, root_path, net_config):
+    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable, root_path: Path, net_config: Dict):
         self.rpc_api = rpc_api
         self.stop_cb: Callable = stop_cb
         self.log = log
@@ -74,8 +74,8 @@ class RpcServer:
             return
         asyncio.create_task(self._state_changed(*args))
 
-    def _wrap_http_handler(self, f) -> Callable:
-        async def inner(request) -> aiohttp.web.Response:
+    def _wrap_http_handler(self, f: Callable) -> Callable:
+        async def inner(request: aiohttp.web.Request) -> aiohttp.web.Response:
             request_data = await request.json()
             try:
                 res_object = await f(request_data)
@@ -148,7 +148,7 @@ class RpcServer:
             ]
         return {"connections": con_info}
 
-    async def open_connection(self, request: Dict):
+    async def open_connection(self, request: Dict) -> Dict:
         host = request["host"]
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
@@ -161,7 +161,7 @@ class RpcServer:
             raise ValueError("Start client failed, or server is not set")
         return {}
 
-    async def close_connection(self, request: Dict):
+    async def close_connection(self, request: Dict) -> Dict:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
@@ -261,7 +261,7 @@ class RpcServer:
 
         await ws.close()
 
-    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
+    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16) -> None:
         while True:
             session = None
             try:
@@ -299,9 +299,9 @@ async def start_rpc_server(
     rpc_port: uint16,
     stop_cb: Callable,
     root_path: Path,
-    net_config,
-    connect_to_daemon=True,
-):
+    net_config: Dict,
+    connect_to_daemon: bool = True,
+) -> Callable:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.

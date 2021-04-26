@@ -10,7 +10,7 @@ from chia.wallet.wallet_node import WalletNode
 class WalletNodeAPI:
     wallet_node: WalletNode
 
-    def __init__(self, wallet_node) -> None:
+    def __init__(self, wallet_node: WalletNode) -> None:
         self.wallet_node = wallet_node
 
     @property

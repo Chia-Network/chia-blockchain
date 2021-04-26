@@ -22,7 +22,7 @@ class CoinStore:
     db_wrapper: DBWrapper
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(60000)):
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(60000)) -> "CoinStore":
         self = cls()
 
         self.cache_size = cache_size

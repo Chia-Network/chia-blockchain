@@ -67,7 +67,7 @@ class ExtendedPeerInfo:
         return out
 
     @classmethod
-    def from_string(cls, peer_str: str):
+    def from_string(cls, peer_str: str) -> "ExtendedPeerInfo":
         blobs = peer_str.split(" ")
         assert len(blobs) == 5
         peer_info = TimestampedPeerInfo(blobs[0], uint16(int(blobs[1])), uint64(int(blobs[2])))
@@ -141,7 +141,7 @@ class ExtendedPeerInfo:
 
         return False
 
-    def get_selection_chance(self, now: Optional[int] = None):
+    def get_selection_chance(self, now: Optional[int] = None) -> float:
         if now is None:
             now = int(math.floor(time.time()))
         chance = 1.0
@@ -562,7 +562,7 @@ class AddressManager:
 
         return addr
 
-    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int):
+    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int) -> None:
         now = int(math.floor(time.time()))
         for bucket in range(NEW_BUCKET_COUNT):
             for pos in range(BUCKET_SIZE):
@@ -575,7 +575,7 @@ class AddressManager:
                     ):
                         self.clear_new_(bucket, pos)
 
-    def connect_(self, addr: PeerInfo, timestamp: int):
+    def connect_(self, addr: PeerInfo, timestamp: int) -> None:
         info, _ = self.find_(addr)
         if info is None:
             return
@@ -611,7 +611,7 @@ class AddressManager:
         addr: PeerInfo,
         test_before_evict: bool = True,
         timestamp: int = -1,
-    ):
+    ) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
@@ -623,7 +623,7 @@ class AddressManager:
         addr: PeerInfo,
         count_failures: bool,
         timestamp: int = -1,
-    ):
+    ) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
@@ -649,8 +649,8 @@ class AddressManager:
         async with self.lock:
             return self.get_peers_()
 
-    async def connect(self, addr: PeerInfo, timestamp: int = -1):
+    async def connect(self, addr: PeerInfo, timestamp: int = -1) -> None:
         if timestamp == -1:
             timestamp = math.floor(time.time())
         async with self.lock:
-            return self.connect_(addr, timestamp)
+            self.connect_(addr, timestamp)
