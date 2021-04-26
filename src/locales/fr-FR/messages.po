@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 12:38\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -1406,7 +1406,7 @@ msgstr "Enregistrer"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Rechercher un bloc par le hash de l'entête"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1836,7 +1836,7 @@ msgstr "Identifiant unique"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "Inconnu"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -2051,3 +2051,4 @@ msgstr "{currencyCode} Total de Chia récoltés"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Frais de transaction utilisateur"
+
