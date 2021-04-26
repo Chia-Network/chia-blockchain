@@ -8,7 +8,7 @@ msgstr ""
 "Language: ar_SA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-22 18:13\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Arabic\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
@@ -165,7 +165,7 @@ msgstr "أدناه التحديات الحالية. قد يكون أو لا يك
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr ""
+msgstr "أفضل تقدير على مدى اخر 24 ساعة"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -778,7 +778,7 @@ msgstr "ارتفاع"
 msgid "Help"
 msgstr "المساعدة"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
 msgid "Help translate"
 msgstr "المساعدة في الترجمة"
 
@@ -939,7 +939,7 @@ msgstr "إدارة عناوين جوائز الزراعة"
 
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "ميجابيت تنزيل\\رفع"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
@@ -951,7 +951,7 @@ msgstr "المزيد من الذاكرة يزيد من السرعة قليلاً
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr ""
+msgstr "المفتاح العام الخاص بى"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
@@ -1262,11 +1262,11 @@ msgstr ""
 #: src/components/fullNode/FullNodeAddConnection.tsx:62
 #: src/components/fullNode/FullNodeConnections.tsx:33
 msgid "Port"
-msgstr ""
+msgstr "منفذ"
 
 #: src/components/block/Block.jsx:320
 msgid "Previous"
-msgstr ""
+msgstr "السابق"
 
 #: src/components/block/Block.jsx:203
 #~ msgid "Previous Block Hash"
@@ -1286,11 +1286,11 @@ msgstr ""
 
 #: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
-msgstr ""
+msgstr "المفتاح الخاص {0}"
 
 #: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
-msgstr ""
+msgstr "المفتاح الخاص:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -1404,9 +1404,9 @@ msgstr "حفظ"
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:326
-#~ msgid "Search block by header hash"
-#~ msgstr ""
+#: src/components/fullNode/FullNodeBlockSearch.tsx:30
+msgid "Search block by header hash"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1832,6 +1832,10 @@ msgstr "غير مكتمل"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
+msgstr ""
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
+msgid "Unknown"
 msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
