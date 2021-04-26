@@ -8,7 +8,7 @@ msgstr ""
 "Language: sl_SI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-22 18:12\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Slovenian\n"
 "Plural-Forms: nplurals=4; plural=(n%100==1 ? 1 : n%100==2 ? 2 : n%100==3 || n%100==4 ? 3 : 0);\n"
@@ -778,7 +778,7 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
 msgid "Help translate"
 msgstr ""
 
@@ -1404,9 +1404,9 @@ msgstr ""
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:326
-#~ msgid "Search block by header hash"
-#~ msgstr ""
+#: src/components/fullNode/FullNodeBlockSearch.tsx:30
+msgid "Search block by header hash"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1832,6 +1832,10 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
+msgstr ""
+
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
+msgid "Unknown"
 msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
