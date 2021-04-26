@@ -8,7 +8,7 @@ msgstr ""
 "Language: uk_UA\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-23 12:38\n"
+"PO-Revision-Date: 2021-04-26 16:03\n"
 "Last-Translator: \n"
 "Language-Team: Ukrainian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "Бажаєте подивитися більше інформації про блоки Чіа? Загляньте в оглядач блоків <0>Chia Explorer</0>, створений на основі відкритого вихідного коду."
+msgstr "Бажаєте подивитися більше інформації про блоки Chia? Загляньте в оглядач блоків <0>Chia Explorer</0>, створений на основі відкритого вихідного коду."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -45,7 +45,7 @@ msgstr "Прийняти"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "Прийняти в:"
+msgstr "Прийнято о:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
@@ -125,7 +125,7 @@ msgstr "Ви впевнені, що хочете видалити ділянку
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
-msgstr "Ви впевнені, що бажаєте відключиться?"
+msgstr "Ви впевнені, що бажаєте відключитися?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
@@ -165,7 +165,7 @@ msgstr "Нижче наведені значення випробувань дл
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr "Найкраща оцінка за останні 24 годин"
+msgstr "Найкраща оцінка за останні 24 години"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -188,7 +188,7 @@ msgstr "VDF ітерацій блоку"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Блок на висоті {0} в блокчейне Chia"
+msgstr "Блок на висоті {0} в блокчейні Chia"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -418,11 +418,11 @@ msgstr "Створити ділянку"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Створити кишеню адміністратора з обмеженням частоти"
+msgstr "Створити гаманець адміністратора з обмеженням частоти"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Створити гаманець адміністратора з обмеженням частоти"
+msgstr "Створити гаманець користувача з обмеженням частоти"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -846,7 +846,7 @@ msgstr "Початкова Кількість монет"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr "Ініціалізувати кишеню з обмеженням швидкості виведення монет:"
+msgstr "Ініціалізувати кишеню користувача з обмеженням швидкості виведення монет:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -863,11 +863,11 @@ msgstr "Ключі"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr "KiB вгору/вниз "
+msgstr "KiB Вивантаження/Завантаження"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr "Остання спроба підтвердження"
+msgstr "Остання спроба доказу"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
@@ -1231,7 +1231,7 @@ msgstr "Паралельне (одночасне) засіювання декі�
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr "Засіювання із увімкненим бітовим полем зменшує кількість загальних записів приблизно на 30% і майже завжди пришвидшує. Ви можете побачити вимоги до обсягу пам'яті із вимкненим бітовим полем. Якщо ваш процесор випущений раніше 2010 року, то можливо вам вимкнути бітове поле."
+msgstr "Засіювання із увімкненим бітовим полем зменшує кількість загальних операцій запису приблизно на 30% і майже завжди працює швидше. Вимкнення бітового поля може зменшити вимоги до об'єму пам'яті. Якщо Ваш процесор випущений раніше 2010 року, можливо Вам слід вимкнути бітове поле."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1282,15 +1282,15 @@ msgstr "Хеш попереднього заголовка"
 
 #: src/components/selectKey/SelectKey.tsx:87
 msgid "Private key with public fingerprint {fingerprint}"
-msgstr "Приватний ключ з публічним відбитком пальця {fingerprint}"
+msgstr "Закритий ключ з публічним відбитком пальця {fingerprint}"
 
 #: src/middleware/middleware_api.jsx:247
 msgid "Private key {0}"
-msgstr "Приватний ключ {0}"
+msgstr "Закритий ключ {0}"
 
 #: src/middleware/middleware_api.jsx:257
 msgid "Private key:"
-msgstr "Приватний ключ:"
+msgstr "Закритий ключ:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
@@ -1406,7 +1406,7 @@ msgstr "Зберегти"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Пошук блоку за хешем заголовку"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1476,7 +1476,7 @@ msgstr "Надішліть цей пакет інформації до вашо�
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr "Надішліть свій публічний ключ на обмежений гаминець адміністратора:"
+msgstr "Надішліть свій публічний ключ адміністратору вашого гаманця з обмеженням частоти:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1706,7 +1706,7 @@ msgstr "Це час, коли блок був створений фермеро�
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "Це загальна кількість chia в блокчейку на поточному піковому блоці, який контролюється вашими приватними ключами. Він включає в себе заморожені фермерські винагороди, але не очікувані вхідні та вихідні транзакції."
+msgstr "Це загальна кількість chia в блокчейку на поточному піковому блоці, який контролюється вашими закритими ключами. Він включає в себе заморожені фермерські винагороди, але не очікувані вхідні та вихідні транзакції."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -1836,7 +1836,7 @@ msgstr "Унікальний ідентифікатор"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "Невідомо"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -2051,3 +2051,4 @@ msgstr "{currencyCode} Всього Chia створено"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Комісії за транзакціями користувачів"
+
