@@ -778,7 +778,7 @@ msgstr "Ύψος"
 msgid "Help"
 msgstr "Βοήθεια"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:62
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
 msgid "Help translate"
 msgstr "Βοηθήστε στην Μετάφραση"
 
@@ -1404,9 +1404,9 @@ msgstr "Αποθήκευση"
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:326
-#~ msgid "Search block by header hash"
-#~ msgstr ""
+#: src/components/fullNode/FullNodeBlockSearch.tsx:30
+msgid "Search block by header hash"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1834,6 +1834,10 @@ msgstr "Μη Ολοκληρωμένο"
 msgid "Unique identifier"
 msgstr "Μοναδικό αναγνωριστικό"
 
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
+msgid "Unknown"
+msgstr ""
+
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
@@ -2047,4 +2051,3 @@ msgstr "{currencyCode} Σύνολο Chia που έχουν γίνει Farmed"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Τέλη Συναλλαγής Χρήστη"
-
