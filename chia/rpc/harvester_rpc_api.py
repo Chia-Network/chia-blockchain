@@ -31,7 +31,7 @@ class HarvesterRpcApi:
         return {
             "plots": plots,
             "failed_to_open_filenames": failed_to_open,
-            "not_found_filenames": not_found,
+            "no_key_filenames": not_found,
         }
 
     async def refresh_plots(self, request: Dict) -> Dict:
