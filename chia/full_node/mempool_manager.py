@@ -16,6 +16,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.condition_opcodes import ConditionOpcode
@@ -218,6 +219,7 @@ class MempoolManager:
         npc_result: NPCResult,
         spend_name: bytes32,
         validate_signature=True,
+        program: Optional[SerializedProgram] = None,
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
         Tries to add spendbundle to either self.mempools or to_pool if it's specified.
@@ -228,7 +230,8 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
 
         npc_list = npc_result.npc_list
-        program = simple_solution_generator(new_spend).program
+        if program is None:
+            program = simple_solution_generator(new_spend).program
         cost = calculate_cost_of_program(program, npc_result, self.constants.COST_PER_BYTE)
 
         log.debug(f"Cost: {cost}")
@@ -346,7 +349,9 @@ class MempoolManager:
                 sb: MempoolItem = self.mempool.removals[conflicting.name()]
                 conflicting_pool_items[sb.name] = sb
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
-                potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+                potential = MempoolItem(
+                    new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
+                )
                 self.add_to_potential_tx_set(potential)
                 return (
                     uint64(cost),
@@ -389,7 +394,9 @@ class MempoolManager:
 
             if error:
                 if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
-                    potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+                    potential = MempoolItem(
+                        new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
+                    )
                     self.add_to_potential_tx_set(potential)
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break
@@ -414,7 +421,7 @@ class MempoolManager:
             for mempool_item in conflicting_pool_items.values():
                 self.mempool.remove_from_pool(mempool_item)
 
-        new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+        new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
         log.info(f"add_spendbundle took {time.time() - start_time} seconds")
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
@@ -491,13 +498,15 @@ class MempoolManager:
         self.mempool = Mempool(self.mempool_max_total_cost)
 
         for item in old_pool.spends.values():
-            await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name, False)
+            await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name, False, item.program)
 
         potential_txs_copy = self.potential_txs.copy()
         self.potential_txs = {}
         txs_added = []
         for item in potential_txs_copy.values():
-            cost, status, error = await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
+            cost, status, error = await self.add_spendbundle(
+                item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
+            )
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.debug(
