@@ -91,7 +91,8 @@ class HarvesterAPI:
                 except Exception as e:
                     self.harvester.log.error(f"Error using prover object {e}")
                     self.harvester.log.error(
-                        f"File: {filename} Plot ID: {plot_id}, challenge: {sp_challenge_hash}, plot_info: {plot_info}"
+                        f"File: {filename} Plot ID: {plot_id.hex()}, "
+                        f"challenge: {sp_challenge_hash}, plot_info: {plot_info}"
                     )
                     return []
 
@@ -117,7 +118,7 @@ class HarvesterAPI:
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(
-                                    f"File: {filename} Plot ID: {plot_id}, challenge: {sp_challenge_hash}, "
+                                    f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
                                     f"plot_info: {plot_info}"
                                 )
                                 continue
