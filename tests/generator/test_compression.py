@@ -1,6 +1,6 @@
 # flake8: noqa: F501
 from dataclasses import dataclass
-from typing import List
+from typing import List, Any
 from unittest import TestCase
 
 from chia.full_node.bundle_tools import (
@@ -9,6 +9,7 @@ from chia.full_node.bundle_tools import (
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
     simple_solution_generator,
+    spend_bundle_to_serialized_coin_solution_entry_list,
 )
 from chia.full_node.generator import run_generator, create_generator_args
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
@@ -20,6 +21,10 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
+
+from clvm import SExp
+import io
+from clvm.serialize import sexp_from_stream
 
 from clvm_tools import binutils
 
@@ -77,6 +82,19 @@ def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: Spe
     return BlockGenerator(program, generator_args)
 
 
+def spend_bundle_to_coin_solution_entry_list(bundle: SpendBundle) -> List[Any]:
+    r = []
+    for coin_solution in bundle.coin_solutions:
+        entry = [
+            coin_solution.coin.parent_coin_info,
+            sexp_from_stream(io.BytesIO(bytes(coin_solution.puzzle_reveal)), SExp.to),
+            coin_solution.coin.amount,
+            sexp_from_stream(io.BytesIO(bytes(coin_solution.solution)), SExp.to),
+        ]
+        r.append(entry)
+    return r
+
+
 class TestCompression(TestCase):
     def test_spend_bundle_suitable(self):
         sb: SpendBundle = make_spend_bundle(1)
@@ -119,6 +137,13 @@ class TestCompression(TestCase):
         assert result_c is not None
         assert result_s is not None
         assert result_c == result_s
+
+    def test_spend_byndle_coin_solution(self):
+        for i in range(0, 10):
+            sb: SpendBundle = make_spend_bundle(i)
+            cs1 = SExp.to(spend_bundle_to_coin_solution_entry_list(sb)).as_bin()
+            cs2 = spend_bundle_to_serialized_coin_solution_entry_list(sb)
+            assert cs1 == cs2
 
 
 class TestDecompression(TestCase):

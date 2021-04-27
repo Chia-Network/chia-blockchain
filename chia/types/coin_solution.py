@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.blockchain_format.program import SerializedProgram, INFINITE_COST
 from chia.util.chain_utils import additions_for_solution
 from chia.util.streamable import Streamable, streamable
 
@@ -17,8 +17,8 @@ class CoinSolution(Streamable):
     """
 
     coin: Coin
-    puzzle_reveal: Program
-    solution: Program
+    puzzle_reveal: SerializedProgram
+    solution: SerializedProgram
 
     def additions(self) -> List[Coin]:
         return additions_for_solution(self.coin.name(), self.puzzle_reveal, self.solution, INFINITE_COST)

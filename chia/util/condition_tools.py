@@ -4,7 +4,7 @@ from blspy import G1Element
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -176,8 +176,8 @@ def puzzle_announcement_names_for_conditions_dict(
 
 
 def conditions_dict_for_solution(
-    puzzle_reveal: Program,
-    solution: Program,
+    puzzle_reveal: SerializedProgram,
+    solution: SerializedProgram,
     max_cost: int,
 ) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionWithArgs]]], uint64]:
     error, result, cost = conditions_for_solution(puzzle_reveal, solution, max_cost)
@@ -187,8 +187,8 @@ def conditions_dict_for_solution(
 
 
 def conditions_for_solution(
-    puzzle_reveal: Program,
-    solution: Program,
+    puzzle_reveal: SerializedProgram,
+    solution: SerializedProgram,
     max_cost: int,
 ) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
