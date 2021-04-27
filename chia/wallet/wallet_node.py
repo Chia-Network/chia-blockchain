@@ -455,7 +455,7 @@ class WalletNode:
                         weight_proof
                     )
                 else:
-                    valid, fork_point,_ = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
+                    valid, fork_point, _ = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
                         weight_proof
                     )
                     if not valid:
