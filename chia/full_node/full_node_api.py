@@ -144,8 +144,13 @@ class FullNodeAPI:
             self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
 
             async def tx_request_and_timeout(full_node: FullNode, transaction_id, task_id):
+                counter = 0
                 try:
                     while True:
+                        # Limit to asking 5 peers, it's possible that this tx got included on chain already
+                        # Highly unlikely 5 peers that advertised a tx don't respond to a request
+                        if counter == 5:
+                            break
                         if transaction_id not in full_node.full_node_store.peers_with_tx:
                             break
                         peers_with_tx: Set = full_node.full_node_store.peers_with_tx[transaction_id]
@@ -160,6 +165,7 @@ class FullNodeAPI:
                         msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
                         await peer.send_message(msg)
                         await asyncio.sleep(20)
+                        counter += 1
                         if full_node.mempool_manager.seen(transaction_id):
                             break
                 except asyncio.CancelledError:
