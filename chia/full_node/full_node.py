@@ -528,7 +528,7 @@ class FullNode:
 
     async def _await_closed(self):
         cancel_task_safe(self._sync_task, self.log)
-        for task in self.tx_fetch_tasks:
+        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
 
