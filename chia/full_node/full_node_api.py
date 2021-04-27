@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import time
+from secrets import token_bytes
 from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
@@ -124,9 +125,9 @@ class FullNodeAPI:
 
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             # If there's current pending request just add this peer to the set of peers that have this tx
-            if transaction.transaction_id in self.full_node.pending_tx_request:
-                if transaction.transaction_id in self.full_node.peers_with_tx:
-                    current_set = self.full_node.peers_with_tx[transaction.transaction_id]
+            if transaction.transaction_id in self.full_node.full_node_store.pending_tx_request:
+                if transaction.transaction_id in self.full_node.full_node_store.peers_with_tx:
+                    current_set = self.full_node.full_node_store.peers_with_tx[transaction.transaction_id]
                     if peer.peer_node_id in current_set:
                         return None
                     current_set.add(peer.peer_node_id)
@@ -134,20 +135,20 @@ class FullNodeAPI:
                 else:
                     new_set = set()
                     new_set.add(peer.peer_node_id)
-                    self.full_node.peers_with_tx[transaction.transaction_id] = new_set
+                    self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
                     return None
 
-            self.full_node.pending_tx_request[transaction.transaction_id] = peer.peer_node_id
+            self.full_node.full_node_store.pending_tx_request[transaction.transaction_id] = peer.peer_node_id
             new_set = set()
             new_set.add(peer.peer_node_id)
-            self.full_node.peers_with_tx[transaction.transaction_id] = new_set
+            self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
 
-            async def tx_request_and_timeout(full_node: FullNode, transaction_id):
+            async def tx_request_and_timeout(full_node: FullNode, transaction_id, task_id):
                 try:
                     while True:
-                        if transaction_id not in full_node.peers_with_tx:
+                        if transaction_id not in full_node.full_node_store.peers_with_tx:
                             break
-                        peers_with_tx: Set = full_node.peers_with_tx[transaction_id]
+                        peers_with_tx: Set = full_node.full_node_store.peers_with_tx[transaction_id]
                         if len(peers_with_tx) == 0:
                             break
                         peer_id = peers_with_tx.pop()
@@ -162,16 +163,19 @@ class FullNodeAPI:
                         if full_node.mempool_manager.seen(transaction_id):
                             break
                 except asyncio.CancelledError:
-                    return
+                    pass
                 finally:
                     # Always Cleanup
-                    if transaction_id in full_node.peers_with_tx:
-                        full_node.peers_with_tx.pop(transaction_id)
-                    if transaction_id in full_node.pending_tx_request:
-                        full_node.pending_tx_request.pop(transaction_id)
+                    if transaction_id in full_node.full_node_store.peers_with_tx:
+                        full_node.full_node_store.peers_with_tx.pop(transaction_id)
+                    if transaction_id in full_node.full_node_store.pending_tx_request:
+                        full_node.full_node_store.pending_tx_request.pop(transaction_id)
+                    if task_id in full_node.full_node_store.tx_fetch_tasks:
+                        full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
-            fetch_task = asyncio.create_task(tx_request_and_timeout(self.full_node, transaction.transaction_id))
-            self.full_node.tx_fetch_tasks.add(fetch_task)
+            task_id = token_bytes()
+            fetch_task = asyncio.create_task(tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id))
+            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
             return None
         return None
 
@@ -206,10 +210,10 @@ class FullNodeAPI:
         """
         assert tx_bytes != b""
         spend_name = std_hash(tx_bytes)
-        if spend_name in self.full_node.pending_tx_request:
-            self.full_node.pending_tx_request.pop(spend_name)
-        if spend_name in self.full_node.peers_with_tx:
-            self.full_node.peers_with_tx.pop(spend_name)
+        if spend_name in self.full_node.full_node_store.pending_tx_request:
+            self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        if spend_name in self.full_node.full_node_store.peers_with_tx:
+            self.full_node.full_node_store.peers_with_tx.pop(spend_name)
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 

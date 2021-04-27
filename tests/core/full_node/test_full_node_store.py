@@ -43,7 +43,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
 
-        store = await FullNodeStore.create(test_constants)
+        store = FullNodeStore(test_constants)
 
         unfinished_blocks = []
         for block in blocks:
@@ -558,7 +558,7 @@ class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_long_chain_slots(self, empty_blockchain, default_1000_blocks):
         blockchain = empty_blockchain
-        store = await FullNodeStore.create(test_constants)
+        store = FullNodeStore(test_constants)
         blocks = default_1000_blocks
         peak = None
         peak_full_block = None

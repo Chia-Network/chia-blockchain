@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import logging
 import time
@@ -62,8 +63,11 @@ class FullNodeStore:
     requesting_unfinished_blocks: Set[bytes32]
 
     previous_generator: Optional[CompressorArg]
+    pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
+    peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
+    tx_fetch_tasks: Dict[bytes32, asyncio.Task]  # Task id: task
 
-    def __init__(self):
+    def __init__(self, constants: ConsensusConstants):
         self.candidate_blocks = {}
         self.candidate_backup_blocks = {}
         self.seen_unfinished_blocks = set()
@@ -75,14 +79,12 @@ class FullNodeStore:
         self.requesting_unfinished_blocks = set()
         self.previous_generator = None
         self.future_cache_key_times = {}
-
-    @classmethod
-    async def create(cls, constants: ConsensusConstants):
-        self = cls()
         self.constants = constants
         self.clear_slots()
         self.initialize_genesis_sub_slot()
-        return self
+        self.pending_tx_request = {}
+        self.peers_with_tx = {}
+        self.tx_fetch_tasks = {}
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False

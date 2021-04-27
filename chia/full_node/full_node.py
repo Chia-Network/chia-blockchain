@@ -78,9 +78,6 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
-    pending_tx_request: Dict[bytes32, bytes32]
-    peers_with_tx: Dict[bytes32, Set[bytes32]]
-    tx_fetch_tasks: Set[asyncio.Task]
 
     def __init__(
         self,
@@ -100,9 +97,8 @@ class FullNode:
         self.full_node_peers = None
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
-        self.pending_tx_request = {}
-        self.peers_with_tx = {}
-        self.tx_fetch_tasks = set()
+        self.full_node_store = FullNodeStore(self.constants)
+
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -121,7 +117,6 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.block_store = await BlockStore.create(self.db_wrapper)
-        self.full_node_store = await FullNodeStore.create(self.constants)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
