@@ -1,19 +1,22 @@
 import asyncio
 import logging
 from time import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pytest
 
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.constants import ConsensusConstants
 from chia.full_node.mempool import Mempool
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.coin_solution import CoinSolution
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import conditions_for_solution
@@ -24,7 +27,9 @@ from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+
+from .ram_db import create_ram_blockchain
+
 
 BURN_PUZZLE_HASH = b"0" * 32
 BURN_PUZZLE_HASH_2 = b"1" * 32
@@ -68,12 +73,19 @@ async def two_nodes():
         yield _
 
 
-async def assert_spend_bundle_validity(blockchain, blocks, spend_bundle: SpendBundle, expected_err=None):
+async def assert_spend_bundle_validity(
+    constants: ConsensusConstants, blocks: List[FullBlock], spend_bundle: SpendBundle, expected_err: Optional[Err] = None
+):
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
+    blockchain = await create_ram_blockchain(constants)
+    for block in blocks:
+        received_block_result, err, fork_height = await blockchain.receive_block(block)
+        assert err is None
+
     additional_blocks = bt.get_consecutive_blocks(
         1,
         block_list_input=blocks,
@@ -388,7 +400,7 @@ class TestMempoolManager:
         # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 
         await assert_spend_bundle_validity(
-            full_node_1.full_node.blockchain, blocks, spend_bundle1, expected_err=Err.ASSERT_HEIGHT_RELATIVE_FAILED
+            bt.constants, blocks, spend_bundle1, expected_err=Err.ASSERT_HEIGHT_RELATIVE_FAILED
         )
 
     @pytest.mark.asyncio
@@ -423,7 +435,7 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is spend_bundle1
 
-        await assert_spend_bundle_validity(full_node_1.full_node.blockchain, blocks, spend_bundle1)
+        await assert_spend_bundle_validity(bt.constants, blocks, spend_bundle1)
 
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
