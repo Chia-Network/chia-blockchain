@@ -5,6 +5,7 @@ from typing import Dict, List
 
 import pytest
 
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.full_node.mempool import Mempool
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -65,6 +66,35 @@ async def two_nodes():
 
     async for _ in async_gen:
         yield _
+
+
+async def assert_spend_bundle_validity(blockchain, blocks, spend_bundle: SpendBundle, expected_err=None):
+    """
+    This test helper create an extra block after the given blocks that contains the given
+    `SpendBundle`, and then invokes `receive_block` to ensure that it's accepted (if `expected_err=None`)
+    or fails with the correct error code.
+    """
+    additional_blocks = bt.get_consecutive_blocks(
+        1,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=spend_bundle,
+    )
+    newest_block = additional_blocks[-1]
+
+    # TODO: ask around and make sure this api is legit to use in tests
+    # The key thing is we get the error back
+
+    received_block_result, err, fork_height = await blockchain.receive_block(newest_block)
+
+    if expected_err is None:
+        assert received_block_result == ReceiveBlockResult.NEW_PEAK
+        assert err is None
+        assert fork_height == len(blocks) - 1
+    else:
+        assert received_block_result == ReceiveBlockResult.INVALID_BLOCK
+        assert err == expected_err
+        assert fork_height is None
 
 
 class TestMempool:
@@ -355,6 +385,12 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
 
+        # now let's try to create a block with the spend bundle and ensure that it doesn't validate
+
+        await assert_spend_bundle_validity(
+            full_node_1.full_node.blockchain, blocks, spend_bundle1, expected_err=Err.ASSERT_HEIGHT_RELATIVE_FAILED
+        )
+
     @pytest.mark.asyncio
     async def test_correct_block_age(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
@@ -385,8 +421,9 @@ class TestMempoolManager:
         await full_node_1.respond_transaction(tx1, peer)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-
         assert sb1 is spend_bundle1
+
+        await assert_spend_bundle_validity(full_node_1.full_node.blockchain, blocks, spend_bundle1)
 
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
