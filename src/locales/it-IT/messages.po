@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Importo Per Moneta Iniziale"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:32
+#: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Sei sicuro di voler eliminare il plot? Il plot non può essere recuperato."
 
@@ -506,15 +506,15 @@ msgstr "Ritardo"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:31
-#: src/components/plot/queue/PlotQueueActions.tsx:65
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:60
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Elimina"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "Delete Plot"
 msgstr "Elimina Plot"
 
@@ -1851,7 +1851,7 @@ msgstr "Iterazioni Sottoslot VDF"
 msgid "View"
 msgstr "Visualizza"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:54
+#: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Vedi Log"

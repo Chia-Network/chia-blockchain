@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Jumlah koin awal"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:32
+#: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Anda yakin ingin menghapus plot ini? Plot ini tidak akan dapat dipulihkan."
 
@@ -506,15 +506,15 @@ msgstr "Tunda"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:31
-#: src/components/plot/queue/PlotQueueActions.tsx:65
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:60
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Hapus"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "Delete Plot"
 msgstr "Hapus Plot"
 
@@ -1853,7 +1853,7 @@ msgstr "Iterasi VDF Sub Slot"
 msgid "View"
 msgstr "Lihat"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:54
+#: src/components/plot/queue/PlotQueueActions.tsx:49
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Lihat Log"

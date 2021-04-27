@@ -12,7 +12,6 @@ import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
 import { stopPlotting } from '../../../modules/plotter_messages';
 import PlotQueueLogDialog from './PlotQueueLogDialog';
-import isWindows from '../../../util/isWindows';
 
 type Props = {
   queueItem: PlotQueueItem;
@@ -28,13 +27,8 @@ export default function PlotQueueAction(props: Props) {
 
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
-  const canDelete = !isWindows;
 
   async function handleDeletePlot() {
-    if (!canDelete) {
-      return;
-    }
-
     const deleteConfirmed = await openDialog((
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
@@ -78,7 +72,7 @@ export default function PlotQueueAction(props: Props) {
             </>
           )}
 
-          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }} disabled={!canDelete}>
+          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
             <ListItemIcon>
               <DeleteForeverIcon fontSize="small" />
             </ListItemIcon>
