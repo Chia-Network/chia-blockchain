@@ -18,19 +18,9 @@ def create_innerpuz(pubkey: bytes, identities: List[bytes], num_of_backup_ids_ne
     return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed)
 
 
-def create_fullpuz(innerpuz, genesis_id) -> Program:
+def create_fullpuz(innerpuz, genesis_puzhash) -> Program:
     mod_hash = DID_CORE_MOD.get_tree_hash()
-    return DID_CORE_MOD.curry(mod_hash, genesis_id, innerpuz)
-
-
-def fullpuz_hash_for_inner_puzzle_hash(mod_code, genesis_id, inner_puzzle_hash) -> bytes32:
-    """
-    Given an inner puzzle hash, calculate a puzzle program hash for a specific cc.
-    """
-    gid_hash = genesis_id.get_tree_hash()
-    return mod_code.curry(mod_code.get_tree_hash(), gid_hash, inner_puzzle_hash).get_tree_hash(
-        gid_hash, inner_puzzle_hash
-    )
+    return DID_CORE_MOD.curry(mod_hash, genesis_puzhash, innerpuz)
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:

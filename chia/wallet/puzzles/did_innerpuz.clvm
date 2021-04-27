@@ -79,19 +79,19 @@
     (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG_UNSAFE) (unquote pubkey) (unquote newpuz)))))
   )
 
-  (defun create_consume_message (coin_id my_id new_innerpuz pubkey)
+  (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
     (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
   )
 
   ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-  (defun create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+  (defun-inline create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
     (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
                     mod_hash
                     mod_hash_hash
                     inner_puzzle_hash)
   )
 
-  (defun create_coin_ID_for_recovery (mod_hash mod_hash_hash did parent innerpuzhash amount)
+  (defun-inline create_coin_ID_for_recovery (mod_hash mod_hash_hash did parent innerpuzhash amount)
     (sha256 parent (create_fullpuzhash mod_hash mod_hash_hash did innerpuzhash) amount)
   )
 
@@ -165,20 +165,19 @@
   (if mode
     (if (= mode 1)
       ; mode one - create message
-      ; formerly (list (recreate_self my_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list AGG_SIG_ME MY_PUBKEY new_puz))
-      (list (recreate_self my_puzhash amount) (list CREATE_COIN message 0) (list AGG_SIG_ME MY_PUBKEY message))
+      (list (recreate_self my_puzhash amount) (list CREATE_COIN message 0) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list my_puzhash amount message))))
     ; mode two - recovery
     ; check that recovery list is not empty
       (if recovery_list_reveal
         (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
           (check_messages_from_identities MOD_HASH (sha256tree1 MOD_HASH) NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
-          (x "recovery list reveal did not match hash")
+          (x)
         )
-        (x "DID recovery disabled")
+        (x)
       )
     )
     ; mode zero - normal spend
-    (list (create_new_coin amount message) (list AGG_SIG_ME MY_PUBKEY message))
+    (list (create_new_coin amount message) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list amount message))))
   )
 
 )

@@ -19,7 +19,7 @@ from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_f
 from tests.time_out_assert import time_out_assert
 from secrets import token_bytes
 from chia.wallet.util.transaction_type import TransactionType
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 
 @pytest.fixture(scope="module")
@@ -447,7 +447,7 @@ class TestDIDWallet:
 
         puz = did_wallet_puzzles.create_fullpuz(
             innerpuzhash,
-            did_wallet.did_info.my_did,
+            did_wallet.did_info.origin_coin.puzzle_hash,
         )
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
@@ -478,6 +478,7 @@ class TestDIDWallet:
         parent_info = await did_wallet.get_parent_for_coin(coin)
         fullsol = Program.to(
             [
+                [did_wallet.did_info.origin_coin.parent_coin_info, did_wallet.did_info.origin_coin.amount],
                 [
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,
@@ -488,7 +489,7 @@ class TestDIDWallet:
             ]
         )
         try:
-            cost, result = puz.run_with_cost(ConsensusConstants.MAX_BLOCK_COST_CLVM, fullsol)
+            cost, result = puz.run_with_cost(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, fullsol)
         except Exception as e:
             assert e.args == ("path into atom",)
         else:
@@ -564,10 +565,11 @@ class TestDIDWallet:
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
-            did_wallet.did_info.my_did,
+            did_wallet.did_info.origin_coin.puzzle_hash,
         )
         fullsol = Program.to(
             [
+                [did_wallet.did_info.origin_coin.parent_coin_info, did_wallet.did_info.origin_coin.amount],
                 [
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,
