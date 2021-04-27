@@ -101,12 +101,12 @@ fi
 # shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
-pip install --upgrade pip
-pip install wheel
+python -m pip install --upgrade pip
+python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1
-pip install -e . --extra-index-url https://pypi.chia.net/simple/
+python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.1
+python -m pip install -e . --extra-index-url https://pypi.chia.net/simple/
 
 echo ""
 echo "Chia blockchain install.sh complete."
