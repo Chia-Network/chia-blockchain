@@ -55,6 +55,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 class FullNode:
@@ -77,6 +78,9 @@ class FullNode:
     timelord_lock: asyncio.Lock
     initialized: bool
     weight_proof_handler: Optional[WeightProofHandler]
+    pending_tx_request: Dict[bytes32, bytes32]
+    peers_with_tx: Dict[bytes32, Set[bytes32]]
+    tx_fetch_tasks: Set[asyncio.Task]
 
     def __init__(
         self,
@@ -96,7 +100,9 @@ class FullNode:
         self.full_node_peers = None
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
-
+        self.pending_tx_request = {}
+        self.peers_with_tx = {}
+        self.tx_fetch_tasks = set()
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -526,11 +532,9 @@ class FullNode:
             self.uncompact_task.cancel()
 
     async def _await_closed(self):
-        try:
-            if self._sync_task is not None:
-                self._sync_task.cancel()
-        except asyncio.TimeoutError:
-            pass
+        cancel_task_safe(self._sync_task, self.log)
+        for task in self.tx_fetch_tasks:
+            cancel_task_safe(task, self.log)
         await self.connection.close()
 
     async def _sync(self):
