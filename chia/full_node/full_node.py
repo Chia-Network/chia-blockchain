@@ -550,9 +550,11 @@ class FullNode:
             return
 
         if self.sync_store.get_long_sync():
-            self.log.info("long sync started")
+            self.log.debug("already in long sync")
             return
+
         self.sync_store.set_long_sync(True)
+        self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
             self.log.info("Waiting to receive peaks from peers.")
