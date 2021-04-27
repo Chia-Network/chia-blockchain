@@ -68,14 +68,20 @@ class EchoServerProtocol(asyncio.DatagramProtocol):
 
     async def respond(self):
         while True:
-            resp, caller = await self.data_queue.get()
-            self.transport.sendto(resp, caller)
+            try:
+                resp, caller = await self.data_queue.get()
+                self.transport.sendto(resp, caller)
+            except Exception as e:
+                log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
     async def handler(self, data, caller):
-        data = await self.callback(data)
-        if data is None:
-            return
-        await self.data_queue.put((data, caller)) 
+        try:
+            data = await self.callback(data)
+            if data is None:
+                return
+            await self.data_queue.put((data, caller))
+        except Exception as e:
+            log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
 class Crawler:
     sync_store: Any
@@ -116,50 +122,53 @@ class Crawler:
         self.state_changed_callback = callback
 
     async def dns_response(self, data):
-        request = DNSRecord.parse(data)
-        IPs = [MX(D.mail), soa_record] + ns_records
-        # TODO: Balance for IPv4 and IPv6.
-        peers = await self.crawl_store.get_cached_peers(16)
-        if len(peers) == 0:
-            return None
-        for peer in peers:
-            ipv4 = True
-            try:
-                ip = ipaddress.IPv4Address(peer.host)
-            except ValueError:
-                ipv4 = False
-            if ipv4:
-                IPs.append(A(peer.host))
-            else:
-                IPs.append(AAAA(peer.host))
-        reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=len(peers), ra=1), q=request.q)
-        
-        records = {
-            D: IPs,
-            D.ns1: [A(IP)],  # MX and NS records must never point to a CNAME alias (RFC 2181 section 10.3)
-            D.ns2: [A(IP)],
-            D.mail: [A(IP)],
-            D.andrei: [CNAME(D)],
-        }
+        try:
+            request = DNSRecord.parse(data)
+            IPs = [MX(D.mail), soa_record] + ns_records
+            # TODO: Balance for IPv4 and IPv6.
+            peers = await self.crawl_store.get_cached_peers(16)
+            if len(peers) == 0:
+                return None
+            for peer in peers:
+                ipv4 = True
+                try:
+                    ip = ipaddress.IPv4Address(peer.host)
+                except ValueError:
+                    ipv4 = False
+                if ipv4:
+                    IPs.append(A(peer.host))
+                else:
+                    IPs.append(AAAA(peer.host))
+            reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=len(peers), ra=1), q=request.q)
+            
+            records = {
+                D: IPs,
+                D.ns1: [A(IP)],  # MX and NS records must never point to a CNAME alias (RFC 2181 section 10.3)
+                D.ns2: [A(IP)],
+                D.mail: [A(IP)],
+                D.andrei: [CNAME(D)],
+            }
 
-        qname = request.q.qname
-        qn = str(qname)
-        qtype = request.q.qtype
-        qt = QTYPE[qtype]
-        if qn == D or qn.endswith('.' + D):
-            for name, rrs in records.items():
-                if name == qn:
-                    for rdata in rrs:
-                        rqt = rdata.__class__.__name__
-                        if qt in ['*', rqt]:
-                            reply.add_answer(RR(rname=qname, rtype=getattr(QTYPE, rqt), rclass=1, ttl=TTL, rdata=rdata))
+            qname = request.q.qname
+            qn = str(qname)
+            qtype = request.q.qtype
+            qt = QTYPE[qtype]
+            if qn == D or qn.endswith('.' + D):
+                for name, rrs in records.items():
+                    if name == qn:
+                        for rdata in rrs:
+                            rqt = rdata.__class__.__name__
+                            if qt in ['*', rqt]:
+                                reply.add_answer(RR(rname=qname, rtype=getattr(QTYPE, rqt), rclass=1, ttl=TTL, rdata=rdata))
 
-            for rdata in ns_records:
-                reply.add_ar(RR(rname=D, rtype=QTYPE.NS, rclass=1, ttl=TTL, rdata=rdata))
+                for rdata in ns_records:
+                    reply.add_ar(RR(rname=D, rtype=QTYPE.NS, rclass=1, ttl=TTL, rdata=rdata))
 
-            reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
+                reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
 
-        return reply.pack()
+            return reply.pack()
+        except Exception as e:
+            self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
     async def _start(self):
         asyncio.create_task(self.crawl())
@@ -312,10 +321,13 @@ class Crawler:
             self.state_changed_callback(change)
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
-        if request.height >= minimum_height:
-            peer_info = peer.get_peer_info()
-            if peer_info is not None:
-                await self.crawl_store.peer_connected_hostname(peer_info.host)
+        try:
+            if request.height >= minimum_height:
+                peer_info = peer.get_peer_info()
+                if peer_info is not None:
+                    await self.crawl_store.peer_connected_hostname(peer_info.host)
+        except Exception as e:
+            self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
     async def on_connect(self, connection: ws.WSChiaConnection):
         pass
