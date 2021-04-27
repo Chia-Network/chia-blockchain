@@ -69,7 +69,7 @@ class BlockStore:
         if cached is not None:
             # Since write to db can fail, we remove from cache here to avoid potential inconsistency
             # Adding to cache only from reading
-            self.block_cache.put(block.header_hash, None)
+            self.block_cache.remove(block.header_hash)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
@@ -122,6 +122,9 @@ class BlockStore:
         if row is not None:
             return SubEpochSegments.from_bytes(row[0]).challenge_segments
         return None
+
+    def cache_block(self, block: FullBlock):
+        self.block_cache.put(block.header_hash, block)
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         cached = self.block_cache.get(header_hash)
