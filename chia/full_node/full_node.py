@@ -788,7 +788,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point
+                block, pre_validation_results[i], None if advanced_peak else fork_point,wp_summaries
             )
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
@@ -798,15 +798,6 @@ class FullNode:
                 return False, advanced_peak, fork_height
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
-                if wp_summaries is not None:
-                    # make sure this matches the summary list we got
-                    idx = len(self.blockchain.get_ses_heights())
-                    if not block_record.sub_epoch_summary_included.get_hash() == wp_summaries[idx - 1].get_hash():
-                        self.log.error(
-                            f"Error: summary in block does not match list, "
-                            f"got {block_record.sub_epoch_summary_included} expected {wp_summaries[idx-1]}"
-                        )
-                        return False, advanced_peak, fork_height
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
         if advanced_peak:
