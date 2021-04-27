@@ -713,7 +713,7 @@ class FullNode:
                         response.blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                     )
                     if success is False:
-                        await peer.close()
+                        await peer.close(600)
                         continue
                     else:
                         batch_added = True
