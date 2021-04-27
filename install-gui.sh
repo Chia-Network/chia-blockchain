@@ -14,7 +14,13 @@ UBUNTU=false
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
 	#LINUX=1
-	if type apt-get; then
+	if type npm && type nodejs; then
+		echo "Using already installed npm $(npm --version) and nodejs $(nodejs --version)"
+		if type apt-get; then
+			echo "Also installing libxss1"
+			sudo apt-get install -y libxss1
+		fi
+	elif type apt-get; then
 		# Debian/Ubuntu
 		UBUNTU=true
 		sudo apt-get install -y npm nodejs libxss1

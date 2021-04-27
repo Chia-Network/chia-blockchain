@@ -31,7 +31,7 @@ if $UBUNTU; then
 	UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
 fi
 
-# Manage npm and other install requirements on an OS specific basis
+# Manage install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
 	#LINUX=1
 	if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
