@@ -357,7 +357,8 @@ class WebSocketServer:
                 return
 
             if new_data not in (None, ""):
-                config["log"] = new_data
+                config["log"] = new_data if config["log"] is None else config["log"] + new_data
+                config["log_new"] = new_data
                 self.state_changed(service_plotter, "log_changed")
 
             if new_data:
