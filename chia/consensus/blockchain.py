@@ -274,7 +274,8 @@ class Blockchain(BlockchainInterface):
                             ):
                                 log.error(
                                     f"block ses does not match list, "
-                                    f"got {fetched_block_record.sub_epoch_summary_included} expected {sumaaries_to_check[ses_n]}"
+                                    f"got {fetched_block_record.sub_epoch_summary_included} "
+                                    f"expected {sumaaries_to_check[ses_n]}"
                                 )
                                 return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_SUB_EPOCH_SUMMARY, None
                         self.__sub_epoch_summaries[
