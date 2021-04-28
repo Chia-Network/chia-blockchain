@@ -1,5 +1,5 @@
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -22,7 +22,7 @@ class WalletTransactionStore:
     cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
     tx_wallet_cache: Dict[int, Dict[Any, Set[bytes32]]]
-    tx_submitted: Dict[bytes32, int]  # tx_id: time submitted
+    tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
 
     @classmethod
@@ -283,13 +283,17 @@ class WalletTransactionStore:
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             if record.name in self.tx_submitted:
-                time_submitted = self.tx_submitted[record.name]
+                time_submitted, count = self.tx_submitted[record.name]
                 if time_submitted < current_time - (60 * 10):
                     records.append(record)
-                    self.tx_submitted[record.name] = current_time
+                    self.tx_submitted[record.name] = current_time, 1
+                else:
+                    if count < 5:
+                        records.append(record)
+                        self.tx_submitted[record.name] = time_submitted, (count + 1)
             else:
                 records.append(record)
-                self.tx_submitted[record.name] = current_time
+                self.tx_submitted[record.name] = current_time, 1
 
         return records
 
