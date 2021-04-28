@@ -312,12 +312,13 @@ class Blockchain(BlockchainInterface):
         if block_record.weight > peak.weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            if fork_point_with_peak is not None:
-                fork_height: int = fork_point_with_peak
+            if block_record.prev_hash == peak.header_hash:
+                fork_height: int = peak.height
+            elif fork_point_with_peak is not None:
+                fork_height = fork_point_with_peak
             else:
                 fork_height = find_fork_point_in_chain(self, block_record, peak)
 
-            # Rollback to fork
             if block_record.prev_hash != peak.header_hash:
                 await self.coin_store.rollback_to_block(fork_height)
             # Rollback sub_epoch_summaries
