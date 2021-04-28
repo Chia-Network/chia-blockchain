@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -157,10 +158,7 @@ class WalletTool:
             change_puzzle_hash = self.get_new_puzzlehash()
             change_output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
             condition_dic[output.opcode].append(change_output)
-            main_solution: Program = self.make_solution(condition_dic)
-        else:
-            main_solution = self.make_solution(condition_dic)
-
+        secondary_coins_cond_dic = dict()
         for n, coin in enumerate(coins):
             puzzle_hash = coin.puzzle_hash
             if secret_key is None:
@@ -168,9 +166,17 @@ class WalletTool:
             pubkey = secret_key.get_g1()
             puzzle = puzzle_for_pk(bytes(pubkey))
             if n == 0:
+                message_list = [c.name() for c in coins]
+                for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
+                    message_list.append(Coin(coin.name(), outputs[0], outputs[1]).name())
+                message = Program.to(message_list).get_tree_hash()
+                condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message]))
+                primary_announcement_hash = Announcement(coin.name(), message).name()
+                secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT].append(ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash]))
+                main_solution = self.make_solution(condition_dic)
                 spends.append(CoinSolution(coin, puzzle, main_solution))
             else:
-                spends.append(CoinSolution(coin, puzzle, self.make_solution({})))
+                spends.append(CoinSolution(coin, puzzle, self.make_solution(secondary_coins_cond_dic)))
         return spends
 
     def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:

@@ -9,6 +9,7 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
 from chia.types.generator_types import BlockGenerator
@@ -317,7 +318,7 @@ class Wallet:
         change = spend_value - total_amount
 
         spends: List[CoinSolution] = []
-        output_created = False
+        primary_announcement_hash = None
 
         # Check for duplicates
         if primaries is not None:
@@ -330,7 +331,7 @@ class Wallet:
             puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
 
             # Only one coin creates outputs
-            if not output_created and origin_id in (None, coin.name()):
+            if primary_announcement_hash is None and origin_id in (None, coin.name()):
                 if primaries is None:
                     primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
                 else:
@@ -338,10 +339,14 @@ class Wallet:
                 if change > 0:
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-                solution = self.make_solution(primaries=primaries, fee=fee)
-                output_created = True
+                message_list = [c.name() for c in coins]
+                for primary in primaries:
+                    message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
+                message = Program.to(message_list).get_tree_hash()
+                solution = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message])
+                primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                solution = self.make_solution()
+                solution = self.make_solution(coin_announcements_to_assert=[primary_announcement_hash])
 
             spends.append(CoinSolution(coin, puzzle, solution))
 
