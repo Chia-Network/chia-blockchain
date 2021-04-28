@@ -162,7 +162,7 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: Optional[PreValidationResult] = None,
         fork_point_with_peak: Optional[uint32] = None,
-        sumaaries_to_check: List[SubEpochSummary] = None,  # passed only on long sync
+        summaries_to_check: List[SubEpochSummary] = None,  # passed only on long sync
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         This method must be called under the blockchain lock
@@ -265,17 +265,17 @@ class Blockchain(BlockchainInterface):
                 for fetched_block_record in records:
                     self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
                     if fetched_block_record.sub_epoch_summary_included is not None:
-                        if sumaaries_to_check is not None:
+                        if summaries_to_check is not None:
                             # make sure this matches the summary list we got
                             ses_n = len(self.get_ses_heights())
                             if (
                                 fetched_block_record.sub_epoch_summary_included.get_hash()
-                                != sumaaries_to_check[ses_n].get_hash()
+                                != summaries_to_check[ses_n].get_hash()
                             ):
                                 log.error(
                                     f"block ses does not match list, "
                                     f"got {fetched_block_record.sub_epoch_summary_included} "
-                                    f"expected {sumaaries_to_check[ses_n]}"
+                                    f"expected {summaries_to_check[ses_n]}"
                                 )
                                 return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_SUB_EPOCH_SUMMARY, None
                         self.__sub_epoch_summaries[
