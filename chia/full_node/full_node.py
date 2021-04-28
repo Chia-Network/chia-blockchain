@@ -55,6 +55,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 class FullNode:
@@ -96,6 +97,7 @@ class FullNode:
         self.full_node_peers = None
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
+        self.full_node_store = FullNodeStore(self.constants)
 
         if name:
             self.log = logging.getLogger(name)
@@ -115,7 +117,6 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.block_store = await BlockStore.create(self.db_wrapper)
-        self.full_node_store = await FullNodeStore.create(self.constants)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
@@ -526,11 +527,9 @@ class FullNode:
             self.uncompact_task.cancel()
 
     async def _await_closed(self):
-        try:
-            if self._sync_task is not None:
-                self._sync_task.cancel()
-        except asyncio.TimeoutError:
-            pass
+        cancel_task_safe(self._sync_task, self.log)
+        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+            cancel_task_safe(task, self.log)
         await self.connection.close()
 
     async def _sync(self):

@@ -1,7 +1,8 @@
 import asyncio
 import dataclasses
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from secrets import token_bytes
+from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -100,8 +101,11 @@ class FullNodeAPI:
         """
         return await self.full_node.new_peak(request, peer)
 
+    @peer_required
     @api_request
-    async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Optional[Message]:
+    async def new_transaction(
+        self, transaction: full_node_protocol.NewTransaction, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         """
         A peer notifies us of a new transaction.
         Requests a full transaction if we haven't seen it previously, and if the fees are enough.
@@ -120,9 +124,67 @@ class FullNodeAPI:
             return None
 
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
-            request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
-            msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-            return msg
+            # If there's current pending request just add this peer to the set of peers that have this tx
+            if transaction.transaction_id in self.full_node.full_node_store.pending_tx_request:
+                if transaction.transaction_id in self.full_node.full_node_store.peers_with_tx:
+                    current_set = self.full_node.full_node_store.peers_with_tx[transaction.transaction_id]
+                    if peer.peer_node_id in current_set:
+                        return None
+                    current_set.add(peer.peer_node_id)
+                    return None
+                else:
+                    new_set = set()
+                    new_set.add(peer.peer_node_id)
+                    self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
+                    return None
+
+            self.full_node.full_node_store.pending_tx_request[transaction.transaction_id] = peer.peer_node_id
+            new_set = set()
+            new_set.add(peer.peer_node_id)
+            self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
+
+            async def tx_request_and_timeout(full_node: FullNode, transaction_id, task_id):
+                counter = 0
+                try:
+                    while True:
+                        # Limit to asking 10 peers, it's possible that this tx got included on chain already
+                        # Highly unlikely 10 peers that advertised a tx don't respond to a request
+                        if counter == 10:
+                            break
+                        if transaction_id not in full_node.full_node_store.peers_with_tx:
+                            break
+                        peers_with_tx: Set = full_node.full_node_store.peers_with_tx[transaction_id]
+                        if len(peers_with_tx) == 0:
+                            break
+                        peer_id = peers_with_tx.pop()
+                        assert full_node.server is not None
+                        if peer_id not in full_node.server.all_connections:
+                            continue
+                        peer = full_node.server.all_connections[peer_id]
+                        request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
+                        msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
+                        await peer.send_message(msg)
+                        await asyncio.sleep(5)
+                        counter += 1
+                        if full_node.mempool_manager.seen(transaction_id):
+                            break
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    # Always Cleanup
+                    if transaction_id in full_node.full_node_store.peers_with_tx:
+                        full_node.full_node_store.peers_with_tx.pop(transaction_id)
+                    if transaction_id in full_node.full_node_store.pending_tx_request:
+                        full_node.full_node_store.pending_tx_request.pop(transaction_id)
+                    if task_id in full_node.full_node_store.tx_fetch_tasks:
+                        full_node.full_node_store.tx_fetch_tasks.pop(task_id)
+
+            task_id = token_bytes()
+            fetch_task = asyncio.create_task(
+                tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
+            )
+            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
+            return None
         return None
 
     @api_request
@@ -156,6 +218,10 @@ class FullNodeAPI:
         """
         assert tx_bytes != b""
         spend_name = std_hash(tx_bytes)
+        if spend_name in self.full_node.full_node_store.pending_tx_request:
+            self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        if spend_name in self.full_node.full_node_store.peers_with_tx:
+            self.full_node.full_node_store.peers_with_tx.pop(spend_name)
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 

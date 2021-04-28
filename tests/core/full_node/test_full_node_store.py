@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from secrets import token_bytes
+from typing import List
 
 import pytest
 from pytest import raises
@@ -11,6 +12,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_store import FullNodeStore
 from chia.full_node.signage_point import SignagePoint
+from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
@@ -43,7 +45,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
 
-        store = await FullNodeStore.create(test_constants)
+        store = FullNodeStore(test_constants)
 
         unfinished_blocks = []
         for block in blocks:
@@ -64,9 +66,11 @@ class TestFullNodeStore:
         # Add/get candidate block
         assert store.get_candidate_block(unfinished_blocks[0].get_hash()) is None
         for height, unf_block in enumerate(unfinished_blocks):
-            store.add_candidate_block(unf_block.get_hash(), height, unf_block)
+            store.add_candidate_block(unf_block.get_hash(), uint32(height), unf_block)
 
-        assert store.get_candidate_block(unfinished_blocks[4].get_hash())[1] == unfinished_blocks[4]
+        candidate = store.get_candidate_block(unfinished_blocks[4].get_hash())
+        assert candidate is not None
+        assert candidate[1] == unfinished_blocks[4]
         store.clear_candidate_blocks_below(uint32(8))
         assert store.get_candidate_block(unfinished_blocks[5].get_hash()) is None
         assert store.get_candidate_block(unfinished_blocks[8].get_hash()) is not None
@@ -81,7 +85,7 @@ class TestFullNodeStore:
         # Add/get unfinished block
         for height, unf_block in enumerate(unfinished_blocks):
             assert store.get_unfinished_block(unf_block.partial_hash) is None
-            store.add_unfinished_block(height, unf_block, PreValidationResult(None, uint64(123532), None))
+            store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(123532), None))
             assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
             store.remove_unfinished_block(unf_block.partial_hash)
             assert store.get_unfinished_block(unf_block.partial_hash) is None
@@ -109,17 +113,21 @@ class TestFullNodeStore:
         assert store.get_sub_slot(test_constants.GENESIS_CHALLENGE) is None
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
-        assert store.new_finished_sub_slot(sub_slots[1], {}, None, None) is None
-        assert store.new_finished_sub_slot(sub_slots[2], {}, None, None) is None
+        assert store.new_finished_sub_slot(sub_slots[1], blockchain, None, None) is None
+        assert store.new_finished_sub_slot(sub_slots[2], blockchain, None, None) is None
 
         # Test adding sub-slots after genesis
-        assert store.new_finished_sub_slot(sub_slots[0], {}, None, None) is not None
-        assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash())[0] == sub_slots[0]
+        assert store.new_finished_sub_slot(sub_slots[0], blockchain, None, None) is not None
+        sub_slot = store.get_sub_slot(sub_slots[0].challenge_chain.get_hash())
+        assert sub_slot is not None
+        assert sub_slot[0] == sub_slots[0]
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
-        assert store.new_finished_sub_slot(sub_slots[1], {}, None, None) is not None
+        assert store.new_finished_sub_slot(sub_slots[1], blockchain, None, None) is not None
         for i in range(len(sub_slots)):
-            assert store.new_finished_sub_slot(sub_slots[i], {}, None, None) is not None
-            assert store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())[0] == sub_slots[i]
+            assert store.new_finished_sub_slot(sub_slots[i], blockchain, None, None) is not None
+            slot_i = store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())
+            assert slot_i is not None
+            assert slot_i[0] == sub_slots[i]
 
         assert store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
         assert store.get_finished_sub_slots(BlockCache({}), None, std_hash(b"not a valid hash")) is None
@@ -134,18 +142,23 @@ class TestFullNodeStore:
         peak = blockchain.get_peak()
         peak_full_block = await blockchain.get_full_peak()
         if peak.overflow:
-            store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], False, {})
+            store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], False, blockchain)
         else:
-            store.new_peak(peak, peak_full_block, None, sub_slots[-1], False, {})
+            store.new_peak(peak, peak_full_block, None, sub_slots[-1], False, blockchain)
 
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[2].challenge_chain.get_hash()) is None
         if peak.overflow:
-            assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash())[0] == sub_slots[3]
+            slot_3 = store.get_sub_slot(sub_slots[3].challenge_chain.get_hash())
+            assert slot_3 is not None
+            assert slot_3[0] == sub_slots[3]
         else:
             assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash()) is None
-        assert store.get_sub_slot(sub_slots[4].challenge_chain.get_hash())[0] == sub_slots[4]
+
+        slot_4 = store.get_sub_slot(sub_slots[4].challenge_chain.get_hash())
+        assert slot_4 is not None
+        assert slot_4[0] == sub_slots[4]
 
         assert (
             store.get_finished_sub_slots(
@@ -225,7 +238,7 @@ class TestFullNodeStore:
                 [],
                 peak.sub_slot_iters,
             )
-            assert store.new_signage_point(i, blockchain, peak, peak.sub_slot_iters, sp)
+            assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
         blocks = blocks_reorg
         while True:
@@ -298,7 +311,7 @@ class TestFullNodeStore:
                 [],
                 peak.sub_slot_iters,
             )
-            assert store.new_signage_point(i, blockchain, peak, peak.sub_slot_iters, sp)
+            assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
         # Test adding future signage point, a few slots forward (good)
         saved_sp_hash = None
@@ -318,7 +331,7 @@ class TestFullNodeStore:
                 )
                 assert sp.cc_vdf is not None
                 saved_sp_hash = sp.cc_vdf.output.get_hash()
-                assert store.new_signage_point(i, blockchain, peak, peak.sub_slot_iters, sp)
+                assert store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
         # Test adding future signage point (bad)
         for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
@@ -331,7 +344,7 @@ class TestFullNodeStore:
                 finished_sub_slots[: len(finished_sub_slots)],
                 peak.sub_slot_iters,
             )
-            assert not store.new_signage_point(i, blockchain, peak, peak.sub_slot_iters, sp)
+            assert not store.new_signage_point(uint8(i), blockchain, peak, peak.sub_slot_iters, sp)
 
         # Test adding past signage point
         sp = SignagePoint(
@@ -342,7 +355,7 @@ class TestFullNodeStore:
         )
         assert not store.new_signage_point(
             blocks[1].reward_chain_block.signage_point_index,
-            {},
+            blockchain,
             peak,
             blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(test_constants),
             sp,
@@ -352,14 +365,14 @@ class TestFullNodeStore:
         assert (
             store.get_signage_point_by_index(
                 finished_sub_slots[0].challenge_chain.get_hash(),
-                4,
+                uint8(4),
                 finished_sub_slots[0].reward_chain.get_hash(),
             )
             is not None
         )
 
         assert (
-            store.get_signage_point_by_index(finished_sub_slots[0].challenge_chain.get_hash(), 4, std_hash(b"1"))
+            store.get_signage_point_by_index(finished_sub_slots[0].challenge_chain.get_hash(), uint8(4), std_hash(b"1"))
             is None
         )
 
@@ -380,7 +393,7 @@ class TestFullNodeStore:
                 [],
                 peak.sub_slot_iters,
             )
-            assert store.new_signage_point(i, {}, None, peak.sub_slot_iters, sp)
+            assert store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
 
         blocks_3 = bt.get_consecutive_blocks(
             1,
@@ -391,7 +404,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for slot in blocks_3[-1].finished_sub_slots:
-            store.new_finished_sub_slot(slot, {}, None, None)
+            store.new_finished_sub_slot(slot, blockchain, None, None)
         assert len(store.finished_sub_slots) == 3
         finished_sub_slots = blocks_3[-1].finished_sub_slots
 
@@ -409,7 +422,7 @@ class TestFullNodeStore:
                     finished_sub_slots[:slot_offset],
                     peak.sub_slot_iters,
                 )
-                assert store.new_signage_point(i, {}, None, peak.sub_slot_iters, sp)
+                assert store.new_signage_point(uint8(i), blockchain, None, peak.sub_slot_iters, sp)
 
         # Test adding signage points after genesis
         blocks_4 = bt.get_consecutive_blocks(
@@ -455,7 +468,7 @@ class TestFullNodeStore:
                 finished_sub_slots,
                 peak.sub_slot_iters,
             )
-            assert store.new_signage_point(i, empty_blockchain, sb, peak.sub_slot_iters, sp)
+            assert store.new_signage_point(uint8(i), empty_blockchain, sb, peak.sub_slot_iters, sp)
 
         # Test future EOS cache
         store.initialize_genesis_sub_slot()
@@ -543,9 +556,11 @@ class TestFullNodeStore:
             else:
                 case_1 = True
                 assert res[2] == []
-                found_ips = []
+                found_ips: List[timelord_protocol.NewInfusionPointVDF] = []
                 for ss in block.finished_sub_slots:
-                    found_ips += store.new_finished_sub_slot(ss, blockchain, sb, prev_block)
+                    ipvdf = store.new_finished_sub_slot(ss, blockchain, sb, prev_block)
+                    assert ipvdf is not None
+                    found_ips += ipvdf
                 assert found_ips == [new_ip]
 
         # If flaky, increase the number of blocks created
@@ -558,7 +573,7 @@ class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_long_chain_slots(self, empty_blockchain, default_1000_blocks):
         blockchain = empty_blockchain
-        store = await FullNodeStore.create(test_constants)
+        store = FullNodeStore(test_constants)
         blocks = default_1000_blocks
         peak = None
         peak_full_block = None
