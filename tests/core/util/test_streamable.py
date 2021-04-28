@@ -45,10 +45,12 @@ class TestStreamable(unittest.TestCase):
         bytes(a)
 
         try:
+
             @dataclass(frozen=True)
             @streamable
             class TestClass3(Streamable):
                 a: int
+
         except NotImplementedError:
             pass
 
