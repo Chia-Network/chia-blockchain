@@ -613,7 +613,7 @@ class FullNode:
             if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
                 raise ValueError("Not performing sync, already caught up.")
 
-            wp_timeout = 180
+            wp_timeout = 360
             if "weight_proof_timeout" in self.config:
                 wp_timeout = self.config["weight_proof_timeout"]
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
