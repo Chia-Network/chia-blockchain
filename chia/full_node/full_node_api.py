@@ -1008,8 +1008,8 @@ class FullNodeAPI:
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            removals, additions = await self.full_node.blockchain.get_removals_and_additions(block)
-            header_block = get_block_header(block, additions, removals)
+            tx_removals, tx_additions = await self.full_node.blockchain.get_tx_removals_and_additions(block)
+            header_block = get_block_header(block, tx_additions, tx_removals)
             msg = make_msg(
                 ProtocolMessageTypes.respond_block_header,
                 wallet_protocol.RespondBlockHeader(header_block),
@@ -1211,7 +1211,7 @@ class FullNodeAPI:
         for block in blocks:
             added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
             removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
-            added_coins = [record.coin for record in added_coins_records]
+            added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)
             header_blocks.append(header_block)
