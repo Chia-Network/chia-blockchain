@@ -96,7 +96,7 @@ class FullNodeRpcApi:
             difficulty = self.service.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.service.constants.SUB_SLOT_ITERS_STARTING
 
-        sync_mode: bool = self.service.sync_store.get_sync_mode()
+        sync_mode: bool = self.service.sync_store.get_sync_mode() or self.service.sync_store.get_long_sync()
 
         sync_tip_height: Optional[uint32] = uint32(0)
         if sync_mode:
