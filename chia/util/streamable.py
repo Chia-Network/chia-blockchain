@@ -125,6 +125,9 @@ def recurse_jsonify(d):
     return d
 
 
+PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+
+
 def streamable(cls: Any):
     """
     This is a decorator for class definitions. It applies the strictdataclass decorator,
@@ -162,7 +165,7 @@ def streamable(cls: Any):
     for _, f_type in fields.items():
         parse_functions.append(cls.function_to_parse_one_item(f_type))  # type: ignore
 
-    t._parse_functions = parse_functions
+    PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
     return t
 
 
@@ -262,7 +265,7 @@ class Streamable:
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
-        values = [parse_f(f) for parse_f in cls._parse_functions]
+        values = [parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls]]
         return cls(*values)
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
@@ -309,7 +312,8 @@ class Streamable:
         except Exception:
             fields = {}
         for f_name, f_type in fields.items():
-            self.stream_one_item(f_type, getattr(self, f_name), f)
+            if f_name != "_parse_functions":
+                self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:
         return bytes32(std_hash(bytes(self)))
