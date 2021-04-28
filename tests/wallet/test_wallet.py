@@ -1,14 +1,16 @@
 import asyncio
 
 import pytest
+import time
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -465,3 +467,75 @@ class TestWalletSimulator:
             pass
 
         assert above_limit_tx is None
+
+    @pytest.mark.asyncio
+    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes):
+        num_blocks = 5
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+
+        assert await wallet.get_confirmed_balance() == funds
+        assert await wallet.get_unconfirmed_balance() == funds
+        tx_amount = 3200000000000
+        tx_fee = 300000000000
+        tx = await wallet.generate_signed_transaction(
+            tx_amount,
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_fee,
+        )
+
+        # extract coin_solution from generated spend_bundle
+        for cs in tx.spend_bundle.coin_solutions:
+            if cs.additions() == []:
+                stolen_cs = cs
+        # get a legit signature
+        stolen_sb = await wallet.sign_transaction([stolen_cs])
+        now = uint64(int(time.time()))
+        add_list = list(stolen_sb.additions())
+        rem_list = list(stolen_sb.removals())
+        name = stolen_sb.name()
+        stolen_tx = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=32 * b"0",
+            amount=0,
+            fee_amount=stolen_cs.coin.amount,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=stolen_sb,
+            additions=add_list,
+            removals=rem_list,
+            wallet_id=wallet.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=name,
+        )
+        await wallet.push_transaction(stolen_tx)
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
+
+        for i in range(0, num_blocks):
+            await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        # Funds have not decreased because stolen_tx was rejected
+        outstanding_coinbase_rewards = 2000000000000
+        await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
+        await time_out_assert(5, wallet.get_confirmed_balance, funds + outstanding_coinbase_rewards)
