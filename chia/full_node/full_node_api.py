@@ -147,9 +147,9 @@ class FullNodeAPI:
                 counter = 0
                 try:
                     while True:
-                        # Limit to asking 5 peers, it's possible that this tx got included on chain already
-                        # Highly unlikely 5 peers that advertised a tx don't respond to a request
-                        if counter == 5:
+                        # Limit to asking 10 peers, it's possible that this tx got included on chain already
+                        # Highly unlikely 10 peers that advertised a tx don't respond to a request
+                        if counter == 10:
                             break
                         if transaction_id not in full_node.full_node_store.peers_with_tx:
                             break
@@ -164,7 +164,7 @@ class FullNodeAPI:
                         request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
                         msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
                         await peer.send_message(msg)
-                        await asyncio.sleep(20)
+                        await asyncio.sleep(5)
                         counter += 1
                         if full_node.mempool_manager.seen(transaction_id):
                             break
