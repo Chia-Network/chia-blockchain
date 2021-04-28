@@ -170,9 +170,13 @@ class WalletTool:
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
                     message_list.append(Coin(coin.name(), outputs[0], outputs[1]).name())
                 message = Program.to(message_list).get_tree_hash()
-                condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message]))
+                condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(
+                    ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message])
+                )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
-                secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT].append(ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash]))
+                secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT].append(
+                    ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash])
+                )
                 main_solution = self.make_solution(condition_dic)
                 spends.append(CoinSolution(coin, puzzle, main_solution))
             else:
