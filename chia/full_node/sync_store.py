@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 class SyncStore:
     # Whether or not we are syncing
     sync_mode: bool
+    long_sync: bool
     peak_to_peer: Dict[bytes32, Set[bytes32]]  # Header hash : peer node id
     peer_to_peak: Dict[bytes32, Tuple[bytes32, uint32, uint128]]  # peer node id : [header_hash, height, weight]
     sync_target_header_hash: Optional[bytes32]  # Peak hash we are syncing towards
@@ -24,6 +25,7 @@ class SyncStore:
         self = cls()
 
         self.sync_mode = False
+        self.long_sync = False
         self.sync_target_header_hash = None
         self.sync_target_height = None
         self.peak_fork_point = {}
@@ -50,6 +52,12 @@ class SyncStore:
 
     def get_sync_mode(self) -> bool:
         return self.sync_mode
+
+    def set_long_sync(self, long_sync: bool):
+        self.long_sync = long_sync
+
+    def get_long_sync(self) -> bool:
+        return self.long_sync
 
     def peer_has_block(self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool):
         """

@@ -84,7 +84,7 @@ if getattr(sys, "frozen", False):
         "chia_full_node_simulator": "start_simulator",
     }
 
-    def executable_for_service(service_name):
+    def executable_for_service(service_name: str) -> str:
         application_path = os.path.dirname(sys.executable)
         if sys.platform == "win32" or sys.platform == "cygwin":
             executable = name_map[service_name]
@@ -98,11 +98,11 @@ if getattr(sys, "frozen", False):
 else:
     application_path = os.path.dirname(__file__)
 
-    def executable_for_service(service_name):
+    def executable_for_service(service_name: str) -> str:
         return service_name
 
 
-async def ping() -> Dict:
+async def ping() -> Dict[str, Any]:
     response = {"success": True, "value": "pong"}
     return response
 
@@ -153,7 +153,7 @@ class WebSocketServer:
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
-    async def stop(self) -> Dict:
+    async def stop(self) -> Dict[str, Any]:
         self.shut_down = True
         self.cancel_task_safe(self.ping_job)
         await self.exit()
@@ -290,11 +290,11 @@ class WebSocketServer:
         full_response = format_response(message, response)
         return full_response, [websocket]
 
-    def get_status(self) -> Dict:
+    def get_status(self) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
         return response
 
-    def plot_queue_to_payload(self, plot_queue_item) -> Dict:
+    def plot_queue_to_payload(self, plot_queue_item) -> Dict[str, Any]:
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -421,7 +421,7 @@ class WebSocketServer:
 
         return command_args
 
-    def _is_serial_plotting_running(self, queue: str = "default"):
+    def _is_serial_plotting_running(self, queue: str = "default") -> bool:
         response = False
         for item in self.plots_queue:
             if item["queue"] == queue and item["parallel"] is False and item["state"] is PlotState.RUNNING:
@@ -545,7 +545,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, request: Dict[str, Any]) -> Dict:
+    async def stop_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -615,13 +615,13 @@ class WebSocketServer:
         response = {"success": success, "service": service_command, "error": error}
         return response
 
-    async def stop_service(self, request: Dict[str, Any]) -> Dict:
+    async def stop_service(self, request: Dict[str, Any]) -> Dict[str, Any]:
         service_name = request["service"]
         result = await kill_service(self.root_path, self.services, service_name)
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict:
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
         service_name = request["service"]
 
         if service_name == service_plotter:
@@ -643,7 +643,7 @@ class WebSocketServer:
 
         return response
 
-    async def exit(self) -> Dict:
+    async def exit(self) -> Dict[str, Any]:
         jobs = []
         for k in self.services.keys():
             jobs.append(kill_service(self.root_path, self.services, k))
@@ -658,7 +658,7 @@ class WebSocketServer:
         response = {"success": True}
         return response
 
-    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]) -> Dict:
+    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
         service = request["service"]
         if service not in self.connections:
@@ -952,7 +952,7 @@ def run_daemon(root_path: Path) -> int:
     return asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path))
 
 
-def main():
+def main() -> int:
     from chia.util.default_root import DEFAULT_ROOT_PATH
 
     return run_daemon(DEFAULT_ROOT_PATH)

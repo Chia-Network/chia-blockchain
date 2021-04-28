@@ -549,9 +549,12 @@ class FullNode:
         if self.sync_store.get_sync_mode():
             return
 
-        self.sync_store.set_sync_mode(True)
-        self._state_changed("sync_mode")
+        if self.sync_store.get_long_sync():
+            self.log.debug("already in long sync")
+            return
 
+        self.sync_store.set_long_sync(True)
+        self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
             self.log.info("Waiting to receive peaks from peers.")
@@ -640,7 +643,8 @@ class FullNode:
                 raise ValueError("Weight proof validation failed")
 
             self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {heaviest_peak_height}")
-
+            self.sync_store.set_sync_mode(True)
+            self._state_changed("sync_mode")
             # Ensures that the fork point does not change
             async with self.blockchain.lock:
                 await self.blockchain.warmup(fork_point)
@@ -802,6 +806,8 @@ class FullNode:
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
         """
+        self.log.info("long sync done")
+        self.sync_store.set_long_sync(False)
         self.sync_store.set_sync_mode(False)
         self._state_changed("sync_mode")
         if self.server is None:

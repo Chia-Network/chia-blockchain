@@ -11,6 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
+from chia.types.coin_solution import CoinSolution
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
@@ -361,16 +362,16 @@ class TradeManager:
         if trade_offer is not None:
             offer_spend_bundle: SpendBundle = trade_offer.spend_bundle
 
-        coinsols = []  # [] of CoinSolutions
-        cc_coinsol_outamounts: Dict[bytes32, List[Tuple[Any, int]]] = dict()
+        coinsols: List[CoinSolution] = []  # [] of CoinSolutions
+        cc_coinsol_outamounts: Dict[bytes32, List[Tuple[CoinSolution, int]]] = dict()
         aggsig = offer_spend_bundle.aggregated_signature
         cc_discrepancies: Dict[bytes32, int] = dict()
         chia_discrepancy = None
         wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
 
         for coinsol in offer_spend_bundle.coin_solutions:
-            puzzle: Program = coinsol.puzzle_reveal
-            solution: Program = coinsol.solution
+            puzzle: Program = Program.from_bytes(bytes(coinsol.puzzle_reveal))
+            solution: Program = Program.from_bytes(bytes(coinsol.solution))
 
             # work out the deficits between coin amount and expected output for each
             r = cc_utils.uncurry_cc(puzzle)
@@ -473,8 +474,8 @@ class TradeManager:
             # Create SpendableCC for each of the coloured coins received
             for cc_coinsol_out in cc_coinsol_outamounts[colour]:
                 cc_coinsol = cc_coinsol_out[0]
-                puzzle = cc_coinsol.puzzle_reveal
-                solution = cc_coinsol.solution
+                puzzle = Program.from_bytes(bytes(cc_coinsol.puzzle_reveal))
+                solution = Program.from_bytes(bytes(cc_coinsol.solution))
 
                 r = uncurry_cc(puzzle)
                 if r:

@@ -435,6 +435,7 @@ class WalletNode:
                     top = prev_head
                 blocks.reverse()
                 await self.complete_blocks(blocks, peer)
+                await self.wallet_state_manager.create_more_puzzle_hashes()
             elif header_block.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # Request weight proof
                 # Sync if PoW validates

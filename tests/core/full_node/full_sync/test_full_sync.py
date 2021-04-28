@@ -299,3 +299,47 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_1, 89)
         await time_out_assert(60, node_height_exactly, True, full_node_2, 89)
         await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
+
+    @pytest.mark.asyncio
+    async def test_sync_bad_peak_while_synced(self, three_nodes, default_1000_blocks, default_10000_blocks):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        num_blocks_initial = len(default_1000_blocks) - 250
+        blocks_750 = default_1000_blocks[:num_blocks_initial]
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        full_node_3.full_node.weight_proof_handler = None
+        for block in blocks_750:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        # Node 3 syncs from a different blockchain
+
+        for block in default_10000_blocks[:1100]:
+            await full_node_3.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1
+        await time_out_assert(180, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
+        # set new heavy peak, fn3 cannot serve wp's
+        # node 2 should keep being synced and receive blocks
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_3.full_node.on_connect)
+        # trigger long sync in full node 2
+        peak_block = default_10000_blocks[1050]
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_2.full_node.on_connect)
+        con = server_2.all_connections[full_node_3.full_node.server.node_id]
+        peak = full_node_protocol.NewPeak(
+            peak_block.header_hash,
+            peak_block.height,
+            peak_block.weight,
+            peak_block.height,
+            peak_block.reward_chain_block.get_unfinished().get_hash(),
+        )
+        await full_node_2.full_node.new_peak(peak, con)
+        await asyncio.sleep(2)
+        assert not full_node_2.full_node.sync_store.get_sync_mode()
+        for block in default_1000_blocks[1000 - num_blocks_initial :]:
+            await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await time_out_assert(180, node_height_exactly, True, full_node_2, 999)

@@ -15,6 +15,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol
+from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -42,6 +43,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
+from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
 from tests.core.fixtures import empty_blockchain  # noqa: F401
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
@@ -360,6 +362,12 @@ class TestFullNodeBlockCompression:
 
 
 class TestFullNodeProtocol:
+    @pytest.mark.asyncio
+    async def test_spendbundle_serialization(self):
+        sb: SpendBundle = make_spend_bundle(1)
+        protocol_message = RespondTransaction(sb)
+        assert bytes(sb) == bytes(protocol_message)
+
     @pytest.mark.asyncio
     async def test_inbound_connection_limit(self, setup_four_nodes):
         nodes, _ = setup_four_nodes

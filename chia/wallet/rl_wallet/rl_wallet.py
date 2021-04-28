@@ -549,7 +549,7 @@ class RLWallet:
         sigs = []
         for coin_solution in spends:
             pubkey, secretkey = await self.get_keys(coin_solution.coin.puzzle_hash)
-            signature = AugSchemeMPL.sign(secretkey, Program.to(coin_solution.solution).get_tree_hash())
+            signature = AugSchemeMPL.sign(secretkey, coin_solution.solution.get_tree_hash())
             sigs.append(signature)
 
         aggsig = AugSchemeMPL.aggregate(sigs)

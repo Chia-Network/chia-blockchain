@@ -224,7 +224,7 @@ def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_pu
     spendable_cc_list = []
 
     coin = coin_solution.coin
-    puzzle = coin_solution.puzzle_reveal
+    puzzle = Program.from_bytes(bytes(coin_solution.puzzle_reveal))
     r = uncurry_cc(puzzle)
     if r:
         mod_hash, genesis_coin_checker, inner_puzzle = r

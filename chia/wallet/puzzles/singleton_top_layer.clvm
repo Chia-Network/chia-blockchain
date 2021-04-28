@@ -1,25 +1,12 @@
-(mod (mod_hash genesis_id innerpuz parent_info my_amount inner_solution)
+(mod (mod_hash genesis_puzhash innerpuz (genesis_parent genesis_amount) parent_info my_amount inner_solution)
 
-;mod_hash, genesis_id, innerpuz are curried in
+;mod_hash, genesis_puzhash, innerpuz are curried in
 
 ; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 0xcafef00d 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
 (include condition_codes.clvm)
 
 ; This is for the core
-
-  (defmacro and ARGS
-    (if ARGS
-      (qq (if (unquote (f ARGS))
-            (unquote (c and (r ARGS)))
-            ()
-      ))
-    1)
-  )
-
-  (defmacro not (ARGS)
-    (qq (if (unquote ARGS) 0 1))
-  )
 
   (defun is-in-list (atom items)
     ;; returns 1 iff `atom` is in the list of `items`
@@ -84,15 +71,15 @@
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
-  (defun-inline create_my_ID (mod_hash mod_hash_hash genesis_id innerpuzhash parent_parent parent_innerpuz parent_amount my_amount)
-    (sha256 (sha256 parent_parent (create_fullpuzhash mod_hash mod_hash_hash genesis_id parent_innerpuz) parent_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount)
+  (defun-inline create_my_ID (mod_hash mod_hash_hash genesis_puzhash innerpuzhash parent_parent parent_innerpuz parent_amount my_amount)
+    (sha256 (sha256 parent_parent (create_fullpuzhash mod_hash mod_hash_hash genesis_puzhash parent_innerpuz) parent_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_puzhash my_innerpuzhash) my_amount)
   )
 
-  (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_id my_innerpuzhash parent_info my_amount)
+  (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_puzhash genesis_parent genesis_amount my_innerpuzhash parent_info my_amount)
     (if (logand my_amount 1)
       (if (l parent_info)
-        (list ASSERT_MY_COIN_ID (create_my_ID mod_hash mod_hash_hash genesis_id my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
-        (list ASSERT_MY_COIN_ID (sha256 genesis_id (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount))
+        (list ASSERT_MY_COIN_ID (create_my_ID mod_hash mod_hash_hash genesis_puzhash my_innerpuzhash (f parent_info) (f (r parent_info)) (f (r (r parent_info))) my_amount))
+        (list ASSERT_MY_COIN_ID (sha256 (sha256 genesis_parent genesis_puzhash genesis_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_puzhash my_innerpuzhash) my_amount))
       )
       (x)
     )
@@ -115,14 +102,14 @@
     )
   )
 
-  (defun check_id_and_check_outputs (mod_hash mod_hash_hash genesis_id parent_info innerpuzhash my_amount outputs)
+  (defun check_id_and_check_outputs (mod_hash mod_hash_hash genesis_puzhash genesis_parent genesis_amount parent_info innerpuzhash my_amount outputs)
     (if (check_outputs_value outputs 0)
-      (c (check_my_amount_and_ID mod_hash mod_hash_hash genesis_id innerpuzhash parent_info my_amount) outputs)
+      (c (check_my_amount_and_ID mod_hash mod_hash_hash genesis_puzhash genesis_parent genesis_amount innerpuzhash parent_info my_amount) outputs)
       (x)
     )
   )
 
   ;main
-  (check_id_and_check_outputs mod_hash (sha256 1 mod_hash) genesis_id parent_info (sha256tree1 innerpuz) my_amount (a innerpuz inner_solution))
+  (check_id_and_check_outputs mod_hash (sha256 1 mod_hash) genesis_puzhash genesis_parent genesis_amount parent_info (sha256tree1 innerpuz) my_amount (a innerpuz inner_solution))
 
 )

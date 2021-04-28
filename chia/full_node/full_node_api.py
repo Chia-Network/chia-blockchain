@@ -31,8 +31,9 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required
+from chia.util.api_decorators import api_request, peer_required, bytes_required
 from chia.util.generator_tools import get_block_header
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
 
@@ -141,14 +142,20 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
+    @bytes_required
     async def respond_transaction(
-        self, tx: full_node_protocol.RespondTransaction, peer: ws.WSChiaConnection, test: bool = False
+        self,
+        tx: full_node_protocol.RespondTransaction,
+        peer: ws.WSChiaConnection,
+        tx_bytes: bytes = b"",
+        test: bool = False,
     ) -> Optional[Message]:
         """
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (new_transaction)
         """
-        spend_name = tx.transaction.name()
+        assert tx_bytes != b""
+        spend_name = std_hash(tx_bytes)
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 
