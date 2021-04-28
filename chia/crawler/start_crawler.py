@@ -1,10 +1,5 @@
 import logging
 import pathlib
-import socketserver
-import sys
-import time
-import threading
-import asyncio
 from multiprocessing import freeze_support
 from typing import Dict
 
@@ -12,7 +7,6 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.crawler.crawler import Crawler
 from src.crawler.crawler_api import CrawlerAPI
-from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
 from src.util.config import load_config_cli
@@ -61,6 +55,7 @@ def main():
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
     return run_service(**kwargs)
+
 
 if __name__ == "__main__":
     freeze_support()
