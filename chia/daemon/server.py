@@ -69,6 +69,7 @@ class PlotState(str, Enum):
     REMOVING = "REMOVING"
     FINISHED = "FINISHED"
 
+
 class PlotEvent(str, Enum):
     LOG_CHANGED = "log_changed"
     STATE_CHANGED = "state_changed"
