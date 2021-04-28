@@ -15,6 +15,7 @@ from chia.types.coin_solution import CoinSolution
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.hash import std_hash
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -342,7 +343,7 @@ class Wallet:
                 message_list = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
-                message = Program.to(message_list).get_tree_hash()
+                message = std_hash(b"".join(message_list))
                 solution = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message])
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:

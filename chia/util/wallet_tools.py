@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
+from chia.util.hash import std_hash
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -169,7 +170,7 @@ class WalletTool:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
                     message_list.append(Coin(coin.name(), outputs[0], outputs[1]).name())
-                message = Program.to(message_list).get_tree_hash()
+                message = std_hash(b"".join(message_list))
                 condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(
                     ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message])
                 )
