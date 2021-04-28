@@ -441,7 +441,8 @@ class WebSocketServer:
     def _run_next_serial_plotting(self, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         next_plot_id = None
 
-
+        if self._is_serial_plotting_running(queue) is True:
+            return
 
         for item in self.plots_queue:
             if item["queue"] == queue and item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
