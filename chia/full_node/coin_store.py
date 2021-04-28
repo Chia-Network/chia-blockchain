@@ -1,4 +1,3 @@
-import logging
 from typing import List, Optional
 
 import aiosqlite
@@ -10,8 +9,6 @@ from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-
-log = logging.getLogger(__name__)
 
 
 class CoinStore:

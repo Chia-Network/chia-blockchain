@@ -110,8 +110,11 @@ class TestCoinStore:
 
                     assert block.get_included_reward_coins() == should_be_included_prev
 
-                    log.warning(f"Adding block {block.height}")
                     await coin_store.new_block(block, tx_additions, tx_removals)
+
+                    if block.height != 0:
+                        with pytest.raises(Exception):
+                            await coin_store.new_block(block, tx_additions, tx_removals)
 
                     for expected_coin in should_be_included_prev:
                         # Check that the coinbase rewards are added
@@ -157,6 +160,8 @@ class TestCoinStore:
 
                     for record in records:
                         await coin_store._set_spent(record.coin.name(), block.height)
+                        with pytest.raises(AssertionError):
+                            await coin_store._set_spent(record.coin.name(), block.height)
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
