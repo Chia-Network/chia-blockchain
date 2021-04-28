@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Kwota na monetę inicjującą"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Czy na pewno chcesz usunąć tę działkę? Tej działki nie będzie można odzyskać."
 
@@ -506,15 +506,15 @@ msgstr "Opóźnij"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Usuń"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "Usuń działkę"
 
@@ -600,7 +600,7 @@ msgstr "Podaj ziarno mnemoniczne składające się z 24 słów, aby odzyskać po
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "Błąd"
 
@@ -856,7 +856,7 @@ msgstr "Interwał"
 msgid "K-Size"
 msgstr "K-rozmiar"
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "Klucze"
 
@@ -989,7 +989,7 @@ msgstr "Pseudonim"
 msgid "No"
 msgstr "Nie"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr "Brak seeda 24 słów, ponieważ ten klucz jest zaimportowany."
 
@@ -1221,7 +1221,7 @@ msgstr "Działki które przeszły przez filtr"
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Działki to przestrzeń na twoim twardym dysku wykorzystywana do farmienia i zarabiania Chia. <0>Dowiedz się więcej</0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "Generowanie działki"
 
@@ -1284,11 +1284,11 @@ msgstr "Hasz poprzedniego bloku"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Klucz prywatny z publicznym odciskiem {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "Klucz prywatny {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "Klucz prywatny:"
 
@@ -1304,7 +1304,7 @@ msgstr "Znalezione dowody"
 msgid "Pubkey"
 msgstr "Klucz publiczny"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr "Klucz publiczny:"
 
@@ -1316,7 +1316,7 @@ msgstr "Nazwa kolejki"
 msgid "Queue name"
 msgstr "Nazwa kolejki"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "W kolejce"
 
@@ -1370,6 +1370,10 @@ msgstr "Odśwież działki"
 msgid "Release Notes"
 msgstr "Informacje o wydaniu"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Zmień nazwę"
@@ -1416,7 +1420,7 @@ msgstr "Drugi folder tymczasowy"
 msgid "See private key"
 msgstr "Zobacz klucz prywatny"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr "Ziarno:"
 
@@ -1787,8 +1791,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "Wszystkie powtórzenia od początku blockchainu"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "Handel"
+#~ msgid "Trade"
+#~ msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1851,7 +1855,7 @@ msgstr "Podrzędne Iteracje VDF"
 msgid "View"
 msgstr "Widok"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Zobacz Logi"

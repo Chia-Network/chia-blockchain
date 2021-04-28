@@ -51,7 +51,7 @@ import {
 } from '../modules/harvesterMessages';
 import { plottingStopped } from '../modules/plotter_messages';
 
-import { plotQueueUpdate } from '../modules/plotQueue';
+import { plotQueueInit, plotQueueUpdate } from '../modules/plotQueue';
 import { startService, startServiceTest } from '../modules/daemon_messages';
 import { get_all_trades } from '../modules/trade_messages';
 import {
@@ -193,6 +193,8 @@ export const handle_message = async (store, payload, errorProcessed) => {
   const { command } = payload;
   const stateBefore = store.getState();
 
+  // console.log('payload', payload);
+
   await store.dispatch(incomingMessage(payload));
   if (command === 'get_blockchain_state') {
     const state = store.getState();
@@ -324,15 +326,15 @@ export const handle_message = async (store, payload, errorProcessed) => {
   } else if (payload.command === 'register_service') {
     const { service, queue } = payload.data;
     if (service === service_plotter) {
-      store.dispatch(plotQueueUpdate(queue));
+      store.dispatch(plotQueueInit(queue));
     }
   } else if (payload.command === 'state_changed') {
     const { origin } = payload;
     const { state } = payload.data;
 
     if (origin === service_plotter) {
-      const { queue } = payload.data;
-      await store.dispatch(plotQueueUpdate(queue));
+      const { queue, state } = payload.data;
+      await store.dispatch(plotQueueUpdate(queue, state));
 
       // updated state of the plots
       if (state === 'state') {

@@ -1,7 +1,7 @@
 enum PlotStatus {
   SUBMITTED = 'SUBMITTED',
   RUNNING = 'RUNNING',
-  ERROR = 'ERROR',
+  REMOVING = 'REMOVING',
   FINISHED = 'FINISHED',
 }
 

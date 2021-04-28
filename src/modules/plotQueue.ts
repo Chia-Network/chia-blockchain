@@ -12,6 +12,47 @@ const FINISHED_LOG_LINES = 2626; // 128
 // const FINISHED_LOG_LINES_64 = 1379; // 64
 // const FINISHED_LOG_LINES_32 = 754; // 32
 
+type PlotQueueItemPartial = PlotQueueItem & {
+  log_new?: string;
+};
+
+function mergeQueue(
+  currentQueue: PlotQueueItem[],
+  partialQueue: PlotQueueItemPartial[],
+  event: string,
+): PlotQueueItem[] {
+  let result = [...currentQueue];
+
+  partialQueue.forEach((item) => {
+    const { id, log, log_new, ...rest } = item;
+
+    const index = currentQueue.findIndex((queueItem) => queueItem.id === id);
+    if (index === -1) {
+      result = [...currentQueue, item];
+      return;
+    }
+
+    const newItem = {
+      ...item,
+      ...rest,
+    };
+
+    if (event === 'log_changed' && log_new !== undefined) {
+      const originalItem = currentQueue[index];
+      const newLog = originalItem.log
+        ? `${originalItem.log}${log_new}`
+        : log_new;
+
+      newItem.log = newLog;
+    }
+
+    result = Object.assign([...result], { [index]: newItem });
+  });
+
+  // console.log('result', result);
+  return addPlotProgress(result);
+}
+
 export function plotQueueAdd(
   config: PlotAdd,
 ): ThunkAction<any, RootState, unknown, Action<Object>> {
@@ -56,13 +97,26 @@ export function plotQueueAdd(
   };
 }
 
+export function plotQueueInit(
+  queue: PlotQueueItem[],
+): ThunkAction<any, RootState, unknown, Action<Object>> {
+  return (dispatch) => {
+    dispatch({
+      type: 'PLOT_QUEUE_INIT',
+      queue,
+    });
+  };
+}
+
 export function plotQueueUpdate(
   queue: PlotQueueItem[],
+  event: string,
 ): ThunkAction<any, RootState, unknown, Action<Object>> {
   return (dispatch) => {
     dispatch({
       type: 'PLOT_QUEUE_UPDATE',
       queue,
+      event,
     });
   };
 }
@@ -125,13 +179,18 @@ export default function plotQueueReducer(
   state = { ...initialState },
   action: any,
 ): PlotQueueState {
-  switch (action.type) {
-    case 'PLOT_QUEUE_UPDATE':
-      const { queue } = action;
+  const { queue } = action;
 
+  switch (action.type) {
+    case 'PLOT_QUEUE_INIT':
       return {
         ...state,
         queue: addPlotProgress(queue),
+      };
+    case 'PLOT_QUEUE_UPDATE':
+      return {
+        ...state,
+        queue: mergeQueue(state.queue, queue, action.event),
       };
     default:
       return state;

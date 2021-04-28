@@ -28,7 +28,13 @@ export default function PlotQueueAction(props: Props) {
   const dispatch = useDispatch();
   const openDialog = useOpenDialog();
 
+  const canDelete = state !== PlotStatus.REMOVING;
+
   async function handleDeletePlot() {
+    if (!canDelete) {
+      return;
+    }
+
     const deleteConfirmed = await openDialog((
       <ConfirmDialog
         title={<Trans>Delete Plot</Trans>}
@@ -72,7 +78,7 @@ export default function PlotQueueAction(props: Props) {
             </>
           )}
 
-          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
+          <MenuItem onClick={() => { onClose(); handleDeletePlot(); }} disabled={!canDelete}>
             <ListItemIcon>
               <DeleteForeverIcon fontSize="small" />
             </ListItemIcon>

@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Bedrag Voor Initiële Munt"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Bent U zeker dat u het plot-bestand wil verwijderen? Dit is onomkeerbaar."
 
@@ -506,15 +506,15 @@ msgstr "Vertraging"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Verwijder"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "Verwijder plot"
 
@@ -600,7 +600,7 @@ msgstr "Vul de 24 mnemonic woorden in dat die je bewaard hebt om je Chia portemo
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "Fout"
 
@@ -856,7 +856,7 @@ msgstr "Interval"
 msgid "K-Size"
 msgstr "K-grootte"
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "Sleutels"
 
@@ -989,7 +989,7 @@ msgstr "Bijnaam"
 msgid "No"
 msgstr "Geen"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1221,7 +1221,7 @@ msgstr ""
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Plots zijn bestanden op uw harde schijf, die gebruikt worden om Chia te farmen en om Chie te verdienen. <0>Leer meer hierover</0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "Aan het plotten"
 
@@ -1284,11 +1284,11 @@ msgstr ""
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "Private sleutel {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "Private sleutel:"
 
@@ -1304,7 +1304,7 @@ msgstr "Bewijs gevonden"
 msgid "Pubkey"
 msgstr ""
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr "Publieke sleutel:"
 
@@ -1316,7 +1316,7 @@ msgstr "Naam Wachtrij"
 msgid "Queue name"
 msgstr "Naam Wachtrij"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "In de wachtrij"
 
@@ -1370,6 +1370,10 @@ msgstr "Vernieuw plots"
 msgid "Release Notes"
 msgstr "Release Nota's"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Hernoem"
@@ -1416,7 +1420,7 @@ msgstr "Locatie tweede tijdelijke map"
 msgid "See private key"
 msgstr "Bekijk private sleutel"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr ""
 
@@ -1787,8 +1791,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "Totale iteraties sinds de start van de Blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "Handel"
+#~ msgid "Trade"
+#~ msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1851,7 +1855,7 @@ msgstr "VDF Sub-slot herhalingen"
 msgid "View"
 msgstr "Bekijk"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Bekijk log"

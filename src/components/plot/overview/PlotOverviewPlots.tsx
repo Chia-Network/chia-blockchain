@@ -95,9 +95,7 @@ export default function PlotOverviewPlots() {
     return null;
   }
 
-  const queuePlots = queue?.filter((item) =>
-    [PlotStatusEnum.SUBMITTED, PlotStatusEnum.RUNNING].includes(item.state),
-  );
+  const queuePlots = queue?.filter((item) => item.state !== PlotStatusEnum.FINISHED);
 
   return (
     <>

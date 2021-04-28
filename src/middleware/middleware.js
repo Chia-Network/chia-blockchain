@@ -93,6 +93,7 @@ const socketMiddleware = () => {
               cert: fs.readFileSync(cert_path),
               key: fs.readFileSync(key_path),
               rejectUnauthorized: false,
+              perMessageDeflate: false,
             };
             socket = new WS(action.host, options);
           } catch {

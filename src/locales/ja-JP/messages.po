@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "最初にコインに充てる金額"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "本当にこの耕地を削除しますか？耕地は削除すると復元できません。"
 
@@ -506,15 +506,15 @@ msgstr "遅延時間"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "削除"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "耕地を削除"
 
@@ -600,7 +600,7 @@ msgstr "チアウォレットを復元するには、24語の合言葉を入力�
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "エラー"
 
@@ -856,7 +856,7 @@ msgstr "インターバル"
 msgid "K-Size"
 msgstr "K 値"
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "鍵"
 
@@ -989,7 +989,7 @@ msgstr "ニックネーム"
 msgid "No"
 msgstr "いいえ"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr "この鍵はインポートされているため、24語の種がありません。"
 
@@ -1221,7 +1221,7 @@ msgstr "フィルターを通過した耕地数"
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "耕地とは、チアを収穫し、得るためにハードドライブ上に確保する領域です。<0>詳しく</0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "耕し中"
 
@@ -1284,11 +1284,11 @@ msgstr "前ヘッダーハッシュ値"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "公開指紋 {fingerprint} に対応する秘密鍵"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "秘密鍵 {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "秘密鍵:"
 
@@ -1304,7 +1304,7 @@ msgstr "発見証明数"
 msgid "Pubkey"
 msgstr "公開鍵"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr "公開鍵:"
 
@@ -1316,7 +1316,7 @@ msgstr "キュー名"
 msgid "Queue name"
 msgstr "キュー名"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "順番待ち"
 
@@ -1370,6 +1370,10 @@ msgstr "耕地一覧を更新"
 msgid "Release Notes"
 msgstr "リリースノート"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "名称変更"
@@ -1416,7 +1420,7 @@ msgstr "2つ目の一時フォルダの場所"
 msgid "See private key"
 msgstr "秘密鍵を表示"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr "乱数種:"
 
@@ -1787,8 +1791,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "ブロックチェーンの開始からの合計評価回数"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "交換"
+#~ msgid "Trade"
+#~ msgstr "交換"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1851,7 +1855,7 @@ msgstr "VDF サブスロット評価回数"
 msgid "View"
 msgstr "表示"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "ログを表示"

@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Anzahl für initialen Coin"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Bist du sicher, dass du den Plot löschen möchtest? Der Plot kann nicht wiederhergestellt werden."
 
@@ -506,15 +506,15 @@ msgstr "Verzögerung"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Löschen"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "Löschen Plot"
 
@@ -606,7 +606,7 @@ msgstr "Gib dein gespeichertes 24 Worte langes Mnemonic ein um dein Chia Wallet 
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "Fehler"
 
@@ -862,7 +862,7 @@ msgstr "Intervall"
 msgid "K-Size"
 msgstr "K-Größe"
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "Schlüssel"
 
@@ -995,7 +995,7 @@ msgstr "Spitzname"
 msgid "No"
 msgstr "Nein"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr "Kein 24 Wort Seed seit dieser Schlüssel importiert wurde."
 
@@ -1227,7 +1227,7 @@ msgstr "Plots Filter bestanden"
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Plots werden Speicherplatz auf der Festplatte zugewiesen um Chia zu farmen und zu erhalten <0>Lerne mehr</0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "Plotting"
 
@@ -1292,11 +1292,11 @@ msgstr "Vorheriger Header Hash"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privater Schlüssel mit öffentlichem Fingerabdruck {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "Privater Schlüssel {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "Privater Schlüssel:"
 
@@ -1312,7 +1312,7 @@ msgstr "Proofs gefunden"
 msgid "Pubkey"
 msgstr "Pubkey"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr "Öffentlicher Schlüssel:"
 
@@ -1324,7 +1324,7 @@ msgstr "Warteschlangen Name"
 msgid "Queue name"
 msgstr "Warteschlangen Name"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "Eingereiht"
 
@@ -1378,6 +1378,10 @@ msgstr "Plots aktualisieren"
 msgid "Release Notes"
 msgstr "Versionshinweise"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Umbenennen"
@@ -1424,7 +1428,7 @@ msgstr "Temporärer Verzeichnisort"
 msgid "See private key"
 msgstr "Privaten Schlüssel anzeigen"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr "Seed:"
 
@@ -1795,8 +1799,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "Gesamte Iterationen seit Start der Blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "Handel"
+#~ msgid "Trade"
+#~ msgstr "Handel"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1859,7 +1863,7 @@ msgstr "VDF Sub Slot Iterationen"
 msgid "View"
 msgstr "Ansicht"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "Log anzeigen"

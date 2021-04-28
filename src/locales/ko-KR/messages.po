@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "초기 코인의 양"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "정말로 플롯을 삭제하시겠습니까? 삭제된 플롯은 복구되지 않습니다."
 
@@ -506,15 +506,15 @@ msgstr "지연"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "삭제"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "플롯 삭제"
 
@@ -600,7 +600,7 @@ msgstr "치아 지갑을 복구하기 위해서 24자로 된 니모닉 단어를
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "에러"
 
@@ -856,7 +856,7 @@ msgstr "간격"
 msgid "K-Size"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "키"
 
@@ -989,7 +989,7 @@ msgstr "별명"
 msgid "No"
 msgstr "아니오"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr ""
 
@@ -1221,7 +1221,7 @@ msgstr "필터 통과된 구성들"
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "구성들은 나의 하드 드라이브에 적재되어 Chia를 채굴하고 모읍니다. <0>더보기</0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "구성중"
 
@@ -1284,11 +1284,11 @@ msgstr "이전 해더 해시"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "퍼블릭 핑거프린트 {fingerprint} 의 개인 키"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "개인 키 {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "개인 키:"
 
@@ -1304,7 +1304,7 @@ msgstr "보상 발견됨"
 msgid "Pubkey"
 msgstr "퍼블릭 키"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr "퍼블릭 키:"
 
@@ -1316,7 +1316,7 @@ msgstr "큐 이름"
 msgid "Queue name"
 msgstr "큐 이름"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "대기중"
 
@@ -1370,6 +1370,10 @@ msgstr "구성 새로고침"
 msgid "Release Notes"
 msgstr "릴리스 노트"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "이름 바꾸기"
@@ -1416,7 +1420,7 @@ msgstr "두번째 임시 폴더 경로"
 msgid "See private key"
 msgstr "개인 키 보기"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr "시드:"
 
@@ -1787,8 +1791,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "블록체인 시작 후 총 반복"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "거래"
+#~ msgid "Trade"
+#~ msgstr "거래"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1851,7 +1855,7 @@ msgstr "VDF 서브 슬롯 반복"
 msgid "View"
 msgstr "보기"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "로그 보기"

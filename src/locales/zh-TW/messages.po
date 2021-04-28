@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "初始代幣數量"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:27
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "你確要刪除這個耕地嗎？此耕地將無法尋回。"
 
@@ -506,15 +506,15 @@ msgstr "延遲"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:26
-#: src/components/plot/queue/PlotQueueActions.tsx:60
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "刪除"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "刪除耕地"
 
@@ -600,7 +600,7 @@ msgstr "輸入你已存的 24 字助記符號以復原您的 Chia 錢包。"
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "錯誤"
 
@@ -856,7 +856,7 @@ msgstr "間隔"
 msgid "K-Size"
 msgstr "K-大小"
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "金鑰"
 
@@ -989,7 +989,7 @@ msgstr "暱稱"
 msgid "No"
 msgstr "否"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr "由這個鑰匙是匯入的，沒有 24 個字種子。"
 
@@ -1221,7 +1221,7 @@ msgstr "已通過篩選耕地"
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "耕地是在你硬碟上劃出的空間，用於耕種來賺取 Chia 。 <0>了解更多</0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "規劃耕地中"
 
@@ -1284,11 +1284,11 @@ msgstr "前一個表頭雜湊值"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "帶有公有指紋 {fingerprint} 的私鑰"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "私鑰 {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "私鑰："
 
@@ -1304,7 +1304,7 @@ msgstr "發現證明數"
 msgid "Pubkey"
 msgstr "公鑰"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr "公鑰："
 
@@ -1316,7 +1316,7 @@ msgstr "隊列名稱"
 msgid "Queue name"
 msgstr "隊列名稱"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "已隊列"
 
@@ -1370,6 +1370,10 @@ msgstr "刷新耕地"
 msgid "Release Notes"
 msgstr "發行說明"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr ""
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "更改名稱"
@@ -1416,7 +1420,7 @@ msgstr "第二暫存資料夾位置"
 msgid "See private key"
 msgstr "看私鑰"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr "種子："
 
@@ -1787,8 +1791,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "從區塊鏈開始後的總疊代次數"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "交易"
+#~ msgid "Trade"
+#~ msgstr "交易"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1851,7 +1855,7 @@ msgstr "VDF 子欄位疊代次數"
 msgid "View"
 msgstr "檢視"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:49
+#: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:26
 msgid "View Log"
 msgstr "檢視日誌"
