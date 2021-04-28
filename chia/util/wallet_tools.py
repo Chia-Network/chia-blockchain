@@ -150,6 +150,8 @@ class WalletTool:
 
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
+        if ConditionOpcode.CREATE_COIN_ANNOUNCEMENT not in condition_dic:
+            condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT] = []
 
         output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [new_puzzle_hash, int_to_bytes(amount)])
         condition_dic[output.opcode].append(output)
@@ -161,6 +163,7 @@ class WalletTool:
             condition_dic[output.opcode].append(change_output)
 
         secondary_coins_cond_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = dict()
+        secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT] = []
         for n, coin in enumerate(coins):
             puzzle_hash = coin.puzzle_hash
             if secret_key is None:
