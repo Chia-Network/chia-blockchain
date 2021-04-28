@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
@@ -10,10 +11,12 @@ from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
-from chia.util.generator_tools import run_and_get_removals_and_additions
+from chia.types.generator_types import BlockGenerator
+from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint64, uint32
 from chia.util.wallet_tools import WalletTool
 from chia.util.db_wrapper import DBWrapper
@@ -29,6 +32,8 @@ def event_loop():
 constants = test_constants
 
 WALLET_A = WalletTool(constants)
+
+log = logging.getLogger(__name__)
 
 
 def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
@@ -55,7 +60,7 @@ class TestCoinStore:
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
-        for cache_size in [0, 10, 100000]:
+        for cache_size in [0]:
             # Generate some coins
             blocks = bt.get_consecutive_blocks(
                 10,
@@ -96,11 +101,17 @@ class TestCoinStore:
                 should_be_included.add(farmer_coin)
                 should_be_included.add(pool_coin)
                 if block.is_transaction_block():
-                    removals, additions = run_and_get_removals_and_additions(block, constants.MAX_BLOCK_COST_CLVM)
+                    if block.transactions_generator is not None:
+                        block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [])
+                        npc_result = get_name_puzzle_conditions(block_gen, bt.constants.MAX_BLOCK_COST_CLVM, False)
+                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    else:
+                        tx_removals, tx_additions = [], []
 
                     assert block.get_included_reward_coins() == should_be_included_prev
 
-                    await coin_store.new_block(block, additions, removals)
+                    log.warning(f"Adding block {block.height}")
+                    await coin_store.new_block(block, tx_additions, tx_removals)
 
                     for expected_coin in should_be_included_prev:
                         # Check that the coinbase rewards are added
@@ -108,11 +119,11 @@ class TestCoinStore:
                         assert record is not None
                         assert not record.spent
                         assert record.coin == expected_coin
-                    for coin_name in removals:
+                    for coin_name in tx_removals:
                         # Check that the removed coins are set to spent
                         record = await coin_store.get_coin_record(coin_name)
                         assert record.spent
-                    for coin in additions:
+                    for coin in tx_additions:
                         # Check that the added coins are added
                         record = await coin_store.get_coin_record(coin.name())
                         assert not record.spent
@@ -139,7 +150,7 @@ class TestCoinStore:
             # Save/get block
             for block in blocks:
                 if block.is_transaction_block():
-                    removals, additions = run_and_get_removals_and_additions(block, constants.MAX_BLOCK_COST_CLVM)
+                    removals, additions = [], []
                     await coin_store.new_block(block, additions, removals)
                     coins = block.get_included_reward_coins()
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -169,7 +180,7 @@ class TestCoinStore:
 
             for block in blocks:
                 if block.is_transaction_block():
-                    removals, additions = run_and_get_removals_and_additions(block, constants.MAX_BLOCK_COST_CLVM)
+                    removals, additions = [], []
                     await coin_store.new_block(block, additions, removals)
                     coins = block.get_included_reward_coins()
                     records: List[Optional[CoinRecord]] = [

@@ -32,7 +32,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, block_removals_and_additions
+from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.streamable import recurse_jsonify
 
@@ -205,10 +205,10 @@ class Blockchain(BlockchainInterface):
                     npc_result = get_name_puzzle_conditions(
                         block_generator, min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), False
                     )
-                    removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
-                    removals, additions = [], list(block.get_included_reward_coins())
-                header_block = get_block_header(block, additions, removals)
+                    removals, tx_additions = [], []
+                header_block = get_block_header(block, tx_additions, removals)
             else:
                 npc_result = None
                 header_block = get_block_header(block, [], [])
@@ -300,11 +300,10 @@ class Blockchain(BlockchainInterface):
                 # Begins a transaction, because we want to ensure that the coin store and block store are only updated
                 # in sync.
                 if npc_result is not None:
-                    removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
-                    removals = []
-                    additions = list(block.get_included_reward_coins())
-                await self.coin_store.new_block(block, additions, removals)
+                    tx_removals, tx_additions = [], []
+                await self.coin_store.new_block(block, tx_additions, tx_removals)
                 await self.block_store.set_peak(block.header_hash)
                 return uint32(0), uint32(0), [block_record]
             return None, None, []
@@ -350,10 +349,12 @@ class Blockchain(BlockchainInterface):
                 records_to_add.append(fetched_block_record)
                 if fetched_block_record.is_transaction_block:
                     if fetched_block_record.header_hash == block_record.header_hash:
-                        removals, additions = await self.get_removals_and_additions(fetched_full_block, npc_result)
+                        tx_removals, tx_additions = await self.get_tx_removals_and_additions(
+                            fetched_full_block, npc_result
+                        )
                     else:
-                        removals, additions = await self.get_removals_and_additions(fetched_full_block, None)
-                    await self.coin_store.new_block(fetched_full_block, additions, removals)
+                        tx_removals, tx_additions = await self.get_tx_removals_and_additions(fetched_full_block, None)
+                    await self.coin_store.new_block(fetched_full_block, tx_additions, tx_removals)
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
@@ -362,7 +363,7 @@ class Blockchain(BlockchainInterface):
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None, None, []
 
-    async def get_removals_and_additions(
+    async def get_tx_removals_and_additions(
         self, block: FullBlock, npc_result: Optional[NPCResult] = None
     ) -> Tuple[List[bytes32], List[Coin]]:
         if block.is_transaction_block():
@@ -371,10 +372,10 @@ class Blockchain(BlockchainInterface):
                     block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
                     assert block_generator is not None
                     npc_result = get_name_puzzle_conditions(block_generator, self.constants.MAX_BLOCK_COST_CLVM, False)
-                removals, additions = block_removals_and_additions(block, npc_result.npc_list)
-                return removals, additions
+                tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                return tx_removals, tx_additions
             else:
-                return [], list(block.get_included_reward_coins())
+                return [], []
         else:
             return [], []
 
@@ -646,10 +647,12 @@ class Blockchain(BlockchainInterface):
         for block in blocks:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
-            additions: List[CoinRecord] = await self.coin_store.get_coins_added_at_height(block.height)
+            tx_additions: List[CoinRecord] = [
+                c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
+            ]
             removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
             header = get_block_header(
-                block, [record.coin for record in additions], [record.coin.name() for record in removed]
+                block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
             )
             header_blocks[header.header_hash] = header
 

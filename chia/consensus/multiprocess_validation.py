@@ -22,7 +22,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
-from chia.util.generator_tools import get_block_header, block_removals_and_additions
+from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint64, uint32
 from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 
@@ -59,16 +59,16 @@ def batch_pre_validate_blocks(
         for i in range(len(full_blocks_pickled)):
             try:
                 block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
-                additions: List[Coin] = list(block.get_included_reward_coins())
+                tx_additions: List[Coin] = []
                 removals: List[bytes32] = []
                 npc_result: Optional[NPCResult] = None
                 if block.height in npc_results:
                     npc_result = NPCResult.from_bytes(npc_results[block.height])
                     assert npc_result is not None
                     if npc_result.npc_list is not None:
-                        removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+                        removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                     else:
-                        removals, additions = block_removals_and_additions(block, [])
+                        removals, tx_additions = [], []
 
                 if block.transactions_generator is not None and npc_result is None:
                     prev_generator_bytes = prev_transaction_generators[i]
@@ -79,9 +79,9 @@ def batch_pre_validate_blocks(
                     npc_result = get_name_puzzle_conditions(
                         block_generator, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
                     )
-                    removals, additions = block_removals_and_additions(block, npc_result.npc_list)
+                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
 
-                header_block = get_block_header(block, additions, removals)
+                header_block = get_block_header(block, tx_additions, removals)
                 required_iters, error = validate_finished_header_block(
                     constants,
                     BlockCache(blocks),
