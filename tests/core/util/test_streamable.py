@@ -44,15 +44,11 @@ class TestStreamable(unittest.TestCase):
         a = TestClass2(uint32(1), uint32(2), b"3")
         bytes(a)
 
-        @dataclass(frozen=True)
-        @streamable
-        class TestClass3(Streamable):
-            a: int
-
-        b = TestClass3(1)
         try:
-            bytes(b)
-            assert False
+            @dataclass(frozen=True)
+            @streamable
+            class TestClass3(Streamable):
+                a: int
         except NotImplementedError:
             pass
 

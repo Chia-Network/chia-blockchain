@@ -152,7 +152,18 @@ def streamable(cls: Any):
     """
 
     cls1 = strictdataclass(cls)
-    return type(cls.__name__, (cls1, Streamable), {})
+    t = type(cls.__name__, (cls1, Streamable), {})
+
+    parse_functions = []
+    try:
+        fields = cls1.__annotations__  # pylint: disable=no-member
+    except Exception:
+        fields = {}
+    for _, f_type in fields.items():
+        parse_functions.append(cls.function_to_parse_one_item(f_type))  # type: ignore
+
+    t._parse_functions = parse_functions
+    return t
 
 
 def parse_bool(f):
@@ -218,42 +229,40 @@ def parse_str(f):
 
 class Streamable:
     @classmethod
-    def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
+    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
         inner_type: Type
         if f_type is bool:
-            return parse_bool(f)
+            return parse_bool
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
             parse_inner_type_f = lambda f: cls.parse_one_item(inner_type, f)
-            return parse_optional(f, parse_inner_type_f)
+            return lambda f: parse_optional(f, parse_inner_type_f)
         if hasattr(f_type, "parse"):
-            return f_type.parse(f)
+            return f_type.parse
         if f_type == bytes:
-            return parse_bytes(f)
+            return parse_bytes
         if is_type_List(f_type):
             inner_type = get_args(f_type)[0]
             parse_inner_type_f = lambda f: cls.parse_one_item(inner_type, f)
-            return parse_list(f, parse_inner_type_f)
+            return lambda f: parse_list(f, parse_inner_type_f)
         if is_type_Tuple(f_type):
             inner_type = get_args(f_type)[0]
             parse_inner_type_f = lambda f: cls.parse_one_item(inner_type, f)
-            return parse_tuple(f, parse_inner_type_f)
+            return lambda f: parse_tuple(f, parse_inner_type_f)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
-            return parse_size_hints(f, f_type, bytes_to_read)
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read)
         if f_type is str:
-            return parse_str(f)
-        raise RuntimeError(f"Type {f_type} does not have parse")
+            return parse_str
+        raise NotImplementedError(f"Type {f_type} does not have parse")
+
+    @classmethod
+    def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
+        return cls.function_to_parse_one_item(f_type)(f)
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
-        values = []
-        try:
-            fields = cls.__annotations__  # pylint: disable=no-member
-        except Exception:
-            fields = {}
-        for _, f_type in fields.items():
-            values.append(cls.parse_one_item(f_type, f))  # type: ignore
+        values = [parse_f(f) for parse_f in cls._parse_functions]
         return cls(*values)
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
