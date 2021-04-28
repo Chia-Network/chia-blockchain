@@ -56,6 +56,11 @@ class MempoolManager:
 
         self.coin_store = coin_store
 
+        # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other
+        # transactions. This prevents spam. This is equivalent to 0.055 XCH per block, or about 0.00005 XCH for two
+        # spends.
+        self.nonzero_fee_minimum_fpc = 5
+
         self.limit_factor = 0.5
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
         self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
@@ -139,7 +144,9 @@ class MempoolManager:
         if cost == 0:
             return False
         fees_per_cost = fees / cost
-        if not self.mempool.at_full_capacity(cost) or fees_per_cost > self.mempool.get_min_fee_rate(cost):
+        if not self.mempool.at_full_capacity(cost) or (
+            fees_per_cost >= self.nonzero_fee_minimum_fpc and fees_per_cost > self.mempool.get_min_fee_rate(cost)
+        ):
             return True
         return False
 
@@ -150,7 +157,7 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(first_in)
 
     def seen(self, bundle_hash: bytes32) -> bool:
-        """ Return true if we saw this spendbundle before """
+        """Return true if we saw this spendbundle before"""
         return bundle_hash in self.seen_bundle_hashes
 
     def remove_seen(self, bundle_hash: bytes32):
@@ -334,8 +341,8 @@ class MempoolManager:
         fees_per_cost: float = fees / cost
         # If pool is at capacity check the fee, if not then accept even without the fee
         if self.mempool.at_full_capacity(cost):
-            if fees == 0:
-                return None, MempoolInclusionStatus.FAILED, Err.INVALID_FEE_LOW_FEE
+            if fees_per_cost < self.nonzero_fee_minimum_fpc:
+                return None, MempoolInclusionStatus.FAILED, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO
             if fees_per_cost <= self.mempool.get_min_fee_rate(cost):
                 return None, MempoolInclusionStatus.FAILED, Err.INVALID_FEE_LOW_FEE
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
@@ -467,13 +474,13 @@ class MempoolManager:
             self.potential_txs.pop(first_in)
 
     def get_spendbundle(self, bundle_hash: bytes32) -> Optional[SpendBundle]:
-        """ Returns a full SpendBundle if it's inside one the mempools"""
+        """Returns a full SpendBundle if it's inside one the mempools"""
         if bundle_hash in self.mempool.spends:
             return self.mempool.spends[bundle_hash].spend_bundle
         return None
 
     def get_mempool_item(self, bundle_hash: bytes32) -> Optional[MempoolItem]:
-        """ Returns a MempoolItem if it's inside one the mempools"""
+        """Returns a MempoolItem if it's inside one the mempools"""
         if bundle_hash in self.mempool.spends:
             return self.mempool.spends[bundle_hash]
         return None
