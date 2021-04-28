@@ -166,10 +166,11 @@ def streamable(cls: Any):
     def fail(f_type):
         def not_streamable(f):
             raise NotImplementedError(f"{cls1} is not streamable")
+
         return not_streamable
 
     for _, f_type in fields.items():
-        parse_functions.append(getattr(cls1, "function_to_parse_one_item", fail)(f_type))  # type: ignore
+        parse_functions.append(getattr(cls1, "function_to_parse_one_item", fail)(f_type))
 
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
     return t
@@ -192,7 +193,7 @@ def parse_optional(f, parse_inner_type_f):
     if is_present_bytes == bytes([0]):
         return None
     elif is_present_bytes == bytes([1]):
-        return parse_inner_type_f(f)  # type: ignore
+        return parse_inner_type_f(f)
     else:
         raise ValueError("Optional must be 0 or 1")
 
@@ -207,13 +208,13 @@ def parse_bytes(f):
 
 
 def parse_list(f, parse_inner_type_f):
-    full_list: List = []  # type: ignore
-    # wjb assert inner_type != get_args(List)[0]  # type: ignore
+    full_list: List = []
+    # wjb assert inner_type != get_args(List)[0]
     list_size_bytes = f.read(4)
     assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
     list_size = uint32(int.from_bytes(list_size_bytes, "big"))
     for list_index in range(list_size):
-        full_list.append(parse_inner_type_f(f))  # type: ignore
+        full_list.append(parse_inner_type_f(f))
     return full_list
 
 
@@ -242,12 +243,16 @@ def parse_str(f):
 class Streamable:
     @classmethod
     def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
+        """
+        This function returns a function taking one argument `f: BinaryIO` that parses
+        and returns a value of the given type.
+        """
         inner_type: Type
         if f_type is bool:
             return parse_bool
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
-            parse_inner_type_f = lambda f: cls.parse_one_item(inner_type, f)
+            parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
             return lambda f: parse_optional(f, parse_inner_type_f)
         if hasattr(f_type, "parse"):
             return f_type.parse
@@ -271,10 +276,6 @@ class Streamable:
             raise NotImplementedError(f"Type {f_type} does not have parse")
 
         return fail
-
-    @classmethod
-    def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
-        return cls.function_to_parse_one_item(f_type)(f)
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
@@ -325,8 +326,7 @@ class Streamable:
         except Exception:
             fields = {}
         for f_name, f_type in fields.items():
-            if f_name != "_parse_functions":
-                self.stream_one_item(f_type, getattr(self, f_name), f)
+            self.stream_one_item(f_type, getattr(self, f_name), f)
 
     def get_hash(self) -> bytes32:
         return bytes32(std_hash(bytes(self)))
