@@ -751,7 +751,7 @@ class TestFullNodeProtocol:
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
-                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000)])
+                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(100000000)])
 
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -799,10 +799,10 @@ class TestFullNodeProtocol:
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             if puzzle_hash == puzzle_hashes[-1]:
                 force_high_fee = True
-                fee = 10000000  # 10 million
+                fee = 100000000  # 100 million (20 fee per cost)
             else:
                 force_high_fee = False
-                fee = random.randint(1, 10000000)
+                fee = random.randint(1, 100000000)
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
