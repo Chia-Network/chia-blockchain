@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 import math
-import time
-from datetime import timedelta
 from datetime import datetime
 from pytz import timezone
 
@@ -19,6 +17,7 @@ class PeerRecord(Streamable):
     try_count: uint32
     connected_timestamp: uint64
     added_timestamp: uint64
+
 
 class PeerStat:
     weight: float
