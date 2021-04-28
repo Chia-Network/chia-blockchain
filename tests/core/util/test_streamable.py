@@ -1,6 +1,6 @@
 import unittest
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from clvm_tools import binutils
 from pytest import raises
@@ -27,8 +27,9 @@ class TestStreamable(unittest.TestCase):
             d: List[List[uint32]]
             e: Optional[uint32]
             f: Optional[uint32]
+            g: Tuple[uint32, str, bytes]
 
-        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None)  # type: ignore
+        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
@@ -121,6 +122,16 @@ class TestStreamable(unittest.TestCase):
         # Does not have the required elements
         with raises(AssertionError):
             TestClassList.from_bytes(bytes([0, 0, 100, 24]))
+
+    def test_ambiguous_deserialization_tuple(self):
+        @dataclass(frozen=True)
+        @streamable
+        class TestClassTuple(Streamable):
+            a: Tuple[uint8, str]
+
+        # Does not have the required elements
+        with raises(AssertionError):
+            TestClassTuple.from_bytes(bytes([0, 0, 100, 24]))
 
     def test_ambiguous_deserialization_str(self):
         @dataclass(frozen=True)

@@ -211,8 +211,11 @@ def parse_list(f, parse_inner_type_f):
     return full_list
 
 
-def parse_tuple(f, parse_inner_type_f):
-    return tuple(parse_list(f, parse_inner_type_f))
+def parse_tuple(f, list_parse_inner_type_f):
+    full_list = []
+    for parse_f in list_parse_inner_type_f:
+        full_list.append(parse_f(f))
+    return tuple(full_list)
 
 
 def parse_size_hints(f, f_type, bytes_to_read):
@@ -246,12 +249,12 @@ class Streamable:
             return parse_bytes
         if is_type_List(f_type):
             inner_type = get_args(f_type)[0]
-            parse_inner_type_f = lambda f: cls.parse_one_item(inner_type, f)
+            parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
             return lambda f: parse_list(f, parse_inner_type_f)
         if is_type_Tuple(f_type):
-            inner_type = get_args(f_type)[0]
-            parse_inner_type_f = lambda f: cls.parse_one_item(inner_type, f)
-            return lambda f: parse_tuple(f, parse_inner_type_f)
+            inner_types = get_args(f_type)
+            list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
+            return lambda f: parse_tuple(f, list_parse_inner_type_f)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
             return lambda f: parse_size_hints(f, f_type, bytes_to_read)
