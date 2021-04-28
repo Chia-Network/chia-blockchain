@@ -273,7 +273,7 @@ full_node:
   # Default is set to False, as the network needs only one or two blueboxes like this.
   sanitize_weight_proof_only: False
   # timeout for weight proof request
-  weight_proof_timeout: 180
+  weight_proof_timeout: 360
 
   farmer_peer:
       host: *self_hostname
