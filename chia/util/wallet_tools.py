@@ -159,7 +159,8 @@ class WalletTool:
             change_puzzle_hash = self.get_new_puzzlehash()
             change_output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
             condition_dic[output.opcode].append(change_output)
-        secondary_coins_cond_dic = dict()
+
+        secondary_coins_cond_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = dict()
         for n, coin in enumerate(coins):
             puzzle_hash = coin.puzzle_hash
             if secret_key is None:
@@ -169,7 +170,7 @@ class WalletTool:
             if n == 0:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
-                    message_list.append(Coin(coin.name(), outputs[0], outputs[1]).name())
+                    message_list.append(Coin(coin.name(), outputs.vars[0], uint64(int(outputs.vars[1]))).name())
                 message = std_hash(b"".join(message_list))
                 condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT].append(
                     ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [message])
