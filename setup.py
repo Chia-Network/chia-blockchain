@@ -28,7 +28,7 @@ dependencies = [
     "dnspython==2.1.0",  # Query DNS seeds
     "watchdog==2.1.3",  # Filesystem event watching - watches keyring.yaml
     "pytz==2021.1",
-    "dnslib==0.9.14"  # dns lib
+    "dnslib==0.9.14",  # dns lib
 ]
 
 upnp_dependencies = [
