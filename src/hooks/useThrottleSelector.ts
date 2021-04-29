@@ -4,13 +4,18 @@ import { useUpdate } from 'react-use';
 import { throttle } from 'lodash';
 
 export default function useThrottleSelector<T extends (...args: any) => any>(
-    fn: T,
-    options: {
-      wait?: number;
-      leading?: boolean;
-      trailing?: boolean;
-      force?: (data: any, dataBefore: any, state: any, stateBefore: any) => boolean,
-    } = {},
+  fn: T,
+  options: {
+    wait?: number;
+    leading?: boolean;
+    trailing?: boolean;
+    force?: (
+      data: any,
+      dataBefore: any,
+      state: any,
+      stateBefore: any,
+    ) => boolean;
+  } = {},
 ): ReturnType<T> {
   const { force, leading = true, trailing = true, wait = 0 } = options;
 
@@ -19,12 +24,19 @@ export default function useThrottleSelector<T extends (...args: any) => any>(
   const refState = useRef<any>();
   const refData = useRef<any>();
 
-  const processUpdate = useCallback(throttle(() => {
-    update();
-  }, wait, {
-    leading,
-    trailing,
-  }), [wait, leading, trailing]);
+  const processUpdate = useCallback(
+    throttle(
+      () => {
+        update();
+      },
+      wait,
+      {
+        leading,
+        trailing,
+      },
+    ),
+    [wait, leading, trailing],
+  );
 
   useSelector((state: any) => {
     const newState = fn(state);
@@ -36,18 +48,19 @@ export default function useThrottleSelector<T extends (...args: any) => any>(
       refData.current = fn(state);
       processUpdate();
 
-      if (force && force(refData.current, dataBefore, refState.current, stateBefore)) {
+      if (
+        force &&
+        force(refData.current, dataBefore, refState.current, stateBefore)
+      ) {
         update();
       }
     }
   });
 
-  useEffect(() => {
-    return () => {
+  useEffect(() => () => {
       // @ts-ignore
       processUpdate.cancel();
-    };
-  }, []);
+    }, []);
 
   return refData.current;
 }

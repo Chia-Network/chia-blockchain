@@ -19,13 +19,16 @@ export default function usePlots(): {
     (state: RootState) => state.farming_state.harvester.plots,
   );
 
-  const queue = useThrottleSelector((state: RootState) => state.plot_queue.queue, {
-    wait: 5000,
-    force(_data, _dataBefore, state) {
-      const event = state.plot_queue?.event;
-      return event === 'state_changed';
+  const queue = useThrottleSelector(
+    (state: RootState) => state.plot_queue.queue,
+    {
+      wait: 5000,
+      force(_data, _dataBefore, state) {
+        const event = state.plot_queue?.event;
+        return event === 'state_changed';
+      },
     },
-  });
+  );
 
   const uniquePlots = useMemo(() => {
     if (!plots) {
