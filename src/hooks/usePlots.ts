@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import Plot from 'types/Plot';
 import PlotQueueItem from 'types/PlotQueueItem';
 import type { RootState } from '../modules/rootReducer';
+import useThrottleSelector from './useThrottleSelector';
 
 export default function usePlots(): {
   loading: boolean;
@@ -18,7 +19,14 @@ export default function usePlots(): {
     (state: RootState) => state.farming_state.harvester.plots,
   );
 
-  const queue = useSelector((state: RootState) => state.plot_queue.queue);
+  const queue = useThrottleSelector((state: RootState) => state.plot_queue.queue, {
+    wait: 5000,
+    force(_data, _dataBefore, state) {
+      const event = state.plot_queue?.event;
+      return event === 'state_changed';
+    },
+  });
+
   const uniquePlots = useMemo(() => {
     if (!plots) {
       return plots;

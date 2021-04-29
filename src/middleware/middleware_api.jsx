@@ -334,10 +334,10 @@ export const handle_message = async (store, payload, errorProcessed) => {
 
     if (origin === service_plotter) {
       const { queue, state } = payload.data;
-      await store.dispatch(plotQueueUpdate(queue, state));
+      store.dispatch(plotQueueUpdate(queue, state));
 
       // updated state of the plots
-      if (state === 'state') {
+      if (state === 'state_changed') {
         store.dispatch(refreshPlots());
       }
     } else if (state === 'coin_added' || state === 'coin_removed') {

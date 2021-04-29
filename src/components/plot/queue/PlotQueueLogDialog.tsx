@@ -1,10 +1,10 @@
 import React, { useEffect, useState, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import { Button, Dialog, DialogActions, DialogTitle, DialogContent, LinearProgress, Typography } from '@material-ui/core';
-import { useSelector } from 'react-redux';
 import { Flex, Log } from '@chia/core';
 import styled from 'styled-components';
 import type { RootState } from '../../../modules/rootReducer';
+import useThrottleSelector from '../../../hooks/useThrottleSelector';
 
 const StyledLinearProgress = styled(LinearProgress)`
   height: 10px;
@@ -20,7 +20,7 @@ type Props = {
 
 export default function PlotQueueLogDialog(props: Props) {
   const { id, open, onClose } = props;
-  const queueItem = useSelector((state: RootState) => state.plot_queue.queue.find((item) => item.id === id));
+  const queueItem = useThrottleSelector((state: RootState) => state.plot_queue.queue.find((item) => item.id === id), { wait: 2000 });
   const [log, setLog] = useState<ReactNode>(<Trans>Loading...</Trans>);
 
   useEffect(() => {

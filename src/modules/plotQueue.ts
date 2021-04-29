@@ -143,6 +143,7 @@ export function plotQueueDelete(
 type PlotQueueState = {
   queue: PlotQueueItem[];
   deleting: string[];
+  event?: string;
 };
 
 const initialState: PlotQueueState = {
@@ -191,6 +192,7 @@ export default function plotQueueReducer(
       return {
         ...state,
         queue: mergeQueue(state.queue, queue, action.event),
+        event: action.event,
       };
     default:
       return state;
