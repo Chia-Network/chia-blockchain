@@ -671,7 +671,6 @@ class FullNodeAPI:
                         mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
                             curr_l_tb.header_hash
                         )
-                        self.log.error(f"Making mempool bundle! {mempool_bundle}")
                     except Exception as e:
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
                         mempool_bundle = None
