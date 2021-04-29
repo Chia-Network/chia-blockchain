@@ -1,5 +1,3 @@
-import asyncio
-import traceback
 from typing import List, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -57,7 +55,10 @@ class FullNodeSimulator(FullNodeAPI):
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+            curr: BlockRecord = peak
+            while not curr.is_transaction_block:
+                curr = self.full_node.blockchain.block_record(curr.prev_hash)
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:
@@ -95,7 +96,10 @@ class FullNodeSimulator(FullNodeAPI):
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+            curr: BlockRecord = peak
+            while not curr.is_transaction_block:
+                curr = self.full_node.blockchain.block_record(curr.prev_hash)
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.prev_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:
