@@ -57,8 +57,8 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes):
         start = i * 11
         end = start + 11
         bits = bitarray[start:end]
-        m_word_poition = bits.uint
-        m_word = word_list[m_word_poition]
+        m_word_position = bits.uint
+        m_word = word_list[m_word_position]
         mnemonics.append(m_word)
 
     return " ".join(mnemonics)
