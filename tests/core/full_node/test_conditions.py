@@ -149,14 +149,12 @@ class TestConditions:
     async def test_invalid_seconds_absolute(self):
         # TODO: make the test suite not use `time.time` so we can more accurately
         # set `time_now` to make it minimal while still failing
-        blocks = initial_blocks()
         time_now = int(time.time()) + 3000
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]} {time_now}))"))
         await check_conditions(conditions, expected_err=Err.ASSERT_SECONDS_ABSOLUTE_FAILED)
 
     @pytest.mark.asyncio
     async def test_valid_seconds_absolute(self):
-        blocks = initial_blocks()
         time_now = int(time.time())
         conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_SECONDS_ABSOLUTE[0]} {time_now}))"))
         await check_conditions(conditions)
