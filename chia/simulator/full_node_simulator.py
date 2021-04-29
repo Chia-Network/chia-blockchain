@@ -101,7 +101,7 @@ class FullNodeSimulator(FullNodeAPI):
             curr: BlockRecord = peak
             while not curr.is_transaction_block:
                 curr = self.full_node.blockchain.block_record(curr.prev_hash)
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.prev_hash)
+            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
             else:
