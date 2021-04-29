@@ -14,6 +14,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 
 - Fixed excess memory use when displaying plot logs in GUI
+- Fixed plot update issue in GUI
 
 ## 1.1.2 Chia Blockchain 2021-04-24
 
