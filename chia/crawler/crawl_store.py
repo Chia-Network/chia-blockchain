@@ -258,7 +258,6 @@ class CrawlStore:
         )
         rows = await cursor.fetchall()
         await cursor.close()
-        counter = 0
         for row in rows:
             reliability = PeerReliability(
                 row[0],
@@ -279,9 +278,6 @@ class CrawlStore:
                 row[15],
                 row[16],
             )
-            counter += 1
-            if counter % 50000 == 0:
-                await asyncio.sleep(0.1)
             self.host_to_reliability[row[0]] = reliability
         cursor = await self.crawl_db.execute(
             "SELECT * from peer_records",
@@ -289,8 +285,5 @@ class CrawlStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            counter += 1
-            if counter % 50000 == 0:
-                await asyncio.sleep(0.1)
             peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             self.host_to_records[row[0]] = peer
