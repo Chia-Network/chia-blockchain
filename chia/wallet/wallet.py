@@ -195,8 +195,8 @@ class Wallet:
         primaries: Optional[List[Dict[str, Any]]] = None,
         min_time=0,
         me=None,
-        coin_announcements=None,
-        coin_announcements_to_assert=None,
+        coin_announcements: Optional[List[bytes32]] = None,
+        coin_announcements_to_assert: Optional[List[bytes32]] = None,
         puzzle_announcements=None,
         puzzle_announcements_to_assert=None,
         fee=0,
@@ -315,6 +315,7 @@ class Wallet:
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
         change = spend_value - total_amount
+        assert change >= 0
 
         spends: List[CoinSolution] = []
         output_created = False
