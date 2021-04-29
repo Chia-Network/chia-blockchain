@@ -76,7 +76,7 @@ class MempoolManager:
         self.pool.shutdown(wait=True)
 
     async def create_bundle_from_mempool(
-        self, peak_header_hash: bytes32
+        self, last_tb_header_hash: bytes32
     ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
@@ -84,7 +84,7 @@ class MempoolManager:
         """
         if (
             self.peak is None
-            or self.peak.header_hash != peak_header_hash
+            or self.peak.header_hash != last_tb_header_hash
             or int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP
         ):
             return None

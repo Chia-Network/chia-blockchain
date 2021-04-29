@@ -190,7 +190,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
-        """ Peer has requested a full transaction from us. """
+        """Peer has requested a full transaction from us."""
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -664,9 +664,13 @@ class FullNodeAPI:
             async with self.full_node.blockchain.lock:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
+                    # Finds the last transaction block before this one
+                    curr_l_tb: BlockRecord = peak
+                    while not curr_l_tb.is_transaction_block:
+                        curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                            peak.header_hash
+                            curr_l_tb.header_hash
                         )
                     except Exception as e:
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
