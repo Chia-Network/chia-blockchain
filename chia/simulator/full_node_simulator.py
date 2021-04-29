@@ -16,7 +16,6 @@ class FullNodeSimulator(FullNodeAPI):
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
-        self.lock = asyncio.Lock()
         self.config = full_node.config
         self.time_per_block = None
         if "simulation" in self.config and self.config["simulation"] is True:
@@ -47,46 +46,40 @@ class FullNodeSimulator(FullNodeAPI):
 
     @api_request
     async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):
-        await self.lock.acquire()
-        try:
-            self.log.info("Farming new block!")
-            current_blocks = await self.get_all_full_blocks()
-            if len(current_blocks) == 0:
-                genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                await self.full_node.blockchain.receive_block(genesis)
+            async with self.full_node.blockchain.lock:
+                self.log.info("Farming new block!")
+                current_blocks = await self.get_all_full_blocks()
+                if len(current_blocks) == 0:
+                    genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
+                    await self.full_node.blockchain.receive_block(genesis)
 
-            peak = self.full_node.blockchain.get_peak()
-            assert peak is not None
-            mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
-            if mempool_bundle is None:
-                spend_bundle = None
-            else:
-                spend_bundle = mempool_bundle[0]
+                peak = self.full_node.blockchain.get_peak()
+                assert peak is not None
+                mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                if mempool_bundle is None:
+                    spend_bundle = None
+                else:
+                    spend_bundle = mempool_bundle[0]
 
-            current_blocks = await self.get_all_full_blocks()
-            target = request.puzzle_hash
-            more = self.bt.get_consecutive_blocks(
-                1,
-                time_per_block=self.time_per_block,
-                transaction_data=spend_bundle,
-                farmer_reward_puzzle_hash=target,
-                pool_reward_puzzle_hash=target,
-                block_list_input=current_blocks,
-                guarantee_transaction_block=True,
-                current_time=self.use_current_time,
-                previous_generator=self.full_node.full_node_store.previous_generator,
-            )
-            rr = RespondBlock(more[-1])
+                current_blocks = await self.get_all_full_blocks()
+                target = request.puzzle_hash
+                more = self.bt.get_consecutive_blocks(
+                    1,
+                    time_per_block=self.time_per_block,
+                    transaction_data=spend_bundle,
+                    farmer_reward_puzzle_hash=target,
+                    pool_reward_puzzle_hash=target,
+                    block_list_input=current_blocks,
+                    guarantee_transaction_block=True,
+                    current_time=self.use_current_time,
+                    previous_generator=self.full_node.full_node_store.previous_generator,
+                )
+                rr = RespondBlock(more[-1])
             await self.full_node.respond_block(rr)
-        except Exception as e:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error while farming block: {error_stack} {e}")
-        finally:
-            self.lock.release()
 
     @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol):
-        async with self.lock:
+        async with self.full_node.blockchain.lock:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -111,7 +104,7 @@ class FullNodeSimulator(FullNodeAPI):
                 current_time=self.use_current_time,
             )
             rr: RespondBlock = RespondBlock(more[-1])
-            await self.full_node.respond_block(rr)
+        await self.full_node.respond_block(rr)
 
     @api_request
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
