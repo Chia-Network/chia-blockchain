@@ -8,7 +8,7 @@ from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_solution import CoinSolution
@@ -229,7 +229,7 @@ class Wallet:
         return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
-        """ Returns a set of coins that can be used for generating a new transaction. """
+        """Returns a set of coins that can be used for generating a new transaction."""
         async with self.wallet_state_manager.lock:
             if exclude is None:
                 exclude = []
@@ -296,7 +296,7 @@ class Wallet:
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         """
         if primaries_input is None:
-            primaries = None
+            primaries: Optional[List[Dict]] = None
             total_amount = amount + fee
         else:
             primaries = primaries_input.copy()
@@ -319,7 +319,7 @@ class Wallet:
         change = spend_value - total_amount
 
         spends: List[CoinSolution] = []
-        primary_announcement_hash = None
+        primary_announcement_hash: Optional[bytes32] = None
 
         # Check for duplicates
         if primaries is not None:
@@ -338,18 +338,22 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": amount})
                 if change > 0:
-                    changepuzzlehash = await self.get_new_puzzlehash()
-                    primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-                message_list = [c.name() for c in coins]
+                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
+                    primaries.append({"puzzlehash": change_puzzle_hash, "amount": change})
+                message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
-                message = std_hash(b"".join(message_list))
-                solution = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message])
+                message: bytes32 = std_hash(b"".join(message_list))
+                solution: Program = self.make_solution(primaries=primaries, fee=fee, coin_announcements=[message])
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
                 solution = self.make_solution(coin_announcements_to_assert=[primary_announcement_hash])
 
-            spends.append(CoinSolution(coin, puzzle, solution))
+            spends.append(
+                CoinSolution(
+                    coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
+                )
+            )
 
         self.log.info(f"Spends is {spends}")
         return spends
@@ -372,7 +376,7 @@ class Wallet:
         primaries: Optional[List[Dict[str, bytes32]]] = None,
         ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
-        """ Use this to generate transaction. """
+        """Use this to generate transaction."""
         if primaries is None:
             non_change_amount = amount
         else:
@@ -416,7 +420,7 @@ class Wallet:
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
-        """ Use this API to send transactions. """
+        """Use this API to send transactions."""
         await self.wallet_state_manager.add_pending_transaction(tx)
 
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
