@@ -249,7 +249,7 @@ class MempoolManager:
         if npc_result.error is not None:
             return None, MempoolInclusionStatus.FAILED, Err(npc_result.error)
         # build removal list
-        removal_names: List[bytes32] = new_spend.removal_names()
+        removal_names: List[bytes32] = [npc.coin_name for npc in npc_list]
 
         additions = additions_for_npc(npc_list)
 
