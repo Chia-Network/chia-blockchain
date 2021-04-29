@@ -49,7 +49,6 @@ function mergeQueue(
     result = Object.assign([...result], { [index]: newItem });
   });
 
-  // console.log('result', result);
   return addPlotProgress(result);
 }
 
