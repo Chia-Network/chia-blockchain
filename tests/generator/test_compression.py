@@ -17,7 +17,6 @@ from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorA
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
@@ -53,8 +52,7 @@ FAKE_BLOCK_HEIGHT2 = uint32(200)
 
 
 @dataclass(frozen=True)
-@streamable
-class MultipleCompressorArg(Streamable):
+class MultipleCompressorArg:
     arg: List[CompressorArg]
     split_offset: int
 

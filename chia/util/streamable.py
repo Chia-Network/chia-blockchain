@@ -163,14 +163,8 @@ def streamable(cls: Any):
     except Exception:
         fields = {}
 
-    def fail(f_type):
-        def not_streamable(f):
-            raise NotImplementedError(f"{cls1} is not streamable")
-
-        return not_streamable
-
     for _, f_type in fields.items():
-        parse_functions.append(getattr(cls1, "function_to_parse_one_item", fail)(f_type))
+        parse_functions.append(cls.function_to_parse_one_item(f_type))
 
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
     return t
@@ -271,11 +265,7 @@ class Streamable:
             return lambda f: parse_size_hints(f, f_type, bytes_to_read)
         if f_type is str:
             return parse_str
-
-        def fail(f):
-            raise NotImplementedError(f"Type {f_type} does not have parse")
-
-        return fail
+        raise NotImplementedError(f"Type {f_type} does not have parse")
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
