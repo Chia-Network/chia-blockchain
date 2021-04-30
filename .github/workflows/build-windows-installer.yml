@@ -67,7 +67,7 @@ jobs:
       run: |
         unset HAS_SECRET
         if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        echo "::set-output name=HAS_SECRET::${HAS_SECRET}"
       env:
         SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
 
@@ -87,6 +87,14 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         .\build_scripts\build_windows.ps1
 
+    - name: Create installer version number
+      id: version_number
+      run: |
+        . .\venv\Scripts\Activate.ps1
+        $env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
+        echo "$env:CHIA_INSTALLER_VERSION"
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$env:CHIA_INSTALLER_VERSION"
+
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
@@ -98,3 +106,35 @@ jobs:
       with:
         name: Windows-Installers
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+
+
+    - name: Install AWS CLI
+      run: |
+          msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/builds/.exe
+
+    - name: Install py3createtorrent
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create Torrent Files
+      run: |
+        py3createtorrent ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
+
+    - name: Upload Release Files
+      run: |
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/devops-test/
+        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download-chia-net/devops-test/
