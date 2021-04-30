@@ -61,7 +61,7 @@ def summary_cmd(
             wallet_rpc_port,
             fingerprint,
             {},
-            asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port)),
+            lambda *ignored: summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port),
         )
     )
 
