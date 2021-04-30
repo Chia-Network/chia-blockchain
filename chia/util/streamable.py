@@ -7,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type
+from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -170,7 +170,7 @@ def streamable(cls: Any):
     return t
 
 
-def parse_bool(f):
+def parse_bool(f: BinaryIO) -> bool:
     bool_byte = f.read(1)
     assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
     if bool_byte == bytes([0]):
@@ -181,7 +181,7 @@ def parse_bool(f):
         raise ValueError("Bool byte must be 0 or 1")
 
 
-def parse_optional(f, parse_inner_type_f):
+def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Optional[Any]:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
@@ -192,7 +192,7 @@ def parse_optional(f, parse_inner_type_f):
         raise ValueError("Optional must be 0 or 1")
 
 
-def parse_bytes(f):
+def parse_bytes(f: BinaryIO) -> bytes:
     list_size_bytes = f.read(4)
     assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
     list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
@@ -201,7 +201,7 @@ def parse_bytes(f):
     return bytes_read
 
 
-def parse_list(f, parse_inner_type_f):
+def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> List[Any]:
     full_list: List = []
     # wjb assert inner_type != get_args(List)[0]
     list_size_bytes = f.read(4)
@@ -212,20 +212,20 @@ def parse_list(f, parse_inner_type_f):
     return full_list
 
 
-def parse_tuple(f, list_parse_inner_type_f):
+def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[Callable[[BinaryIO], Any]]) -> Tuple[Any, ...]:
     full_list = []
     for parse_f in list_parse_inner_type_f:
         full_list.append(parse_f(f))
     return tuple(full_list)
 
 
-def parse_size_hints(f, f_type, bytes_to_read):
+def parse_size_hints(f: BinaryIO, f_type: Type, bytes_to_read: int) -> Any:
     bytes_read = f.read(bytes_to_read)
     assert bytes_read is not None and len(bytes_read) == bytes_to_read
     return f_type.from_bytes(bytes_read)
 
 
-def parse_str(f):
+def parse_str(f: BinaryIO) -> str:
     str_size_bytes = f.read(4)
     assert str_size_bytes is not None and len(str_size_bytes) == 4  # Checks for EOF
     str_size: uint32 = uint32(int.from_bytes(str_size_bytes, "big"))
