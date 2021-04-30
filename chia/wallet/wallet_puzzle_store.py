@@ -120,11 +120,11 @@ class WalletPuzzleStore:
 
         if row is not None and row[0] is not None:
             return DerivationRecord(
-                row[0],
-                bytes.fromhex(row[2]),
+                uint32(row[0]),
+                bytes32.fromhex(row[2]),
                 G1Element.from_bytes(bytes.fromhex(row[1])),
-                row[3],
-                row[4],
+                WalletType(row[3]),
+                uint32(row[4]),
             )
 
         return None
@@ -142,11 +142,11 @@ class WalletPuzzleStore:
 
         if row is not None and row[0] is not None:
             return DerivationRecord(
-                row[0],
-                bytes.fromhex(row[2]),
+                uint32(row[0]),
+                bytes32.fromhex(row[2]),
                 G1Element.from_bytes(bytes.fromhex(row[1])),
-                row[3],
-                row[4],
+                WalletType(row[3]),
+                uint32(row[4]),
             )
 
         return None

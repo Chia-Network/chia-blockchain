@@ -17,7 +17,6 @@ from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorA
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 from tests.core.make_block_generator import make_spend_bundle
@@ -53,8 +52,7 @@ FAKE_BLOCK_HEIGHT2 = uint32(200)
 
 
 @dataclass(frozen=True)
-@streamable
-class MultipleCompressorArg(Streamable):
+class MultipleCompressorArg:
     arg: List[CompressorArg]
     split_offset: int
 
@@ -182,7 +180,7 @@ class TestDecompression(TestCase):
     #    print(out)
 
     def test_decompress_cse(self):
-        """ Decompress a single CSE / CoinSolutionEntry """
+        """Decompress a single CSE / CoinSolutionEntry"""
         cse0 = binutils.assemble(
             "((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ())))"
         )  # noqa
