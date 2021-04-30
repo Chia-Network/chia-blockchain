@@ -255,29 +255,19 @@ class Blockchain(BlockchainInterface):
         # Always add the block to the database
         async with self.block_store.db_wrapper.lock:
             try:
+                # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(block, block_record)
                 fork_height, peak_height, records = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
                 await self.block_store.db_wrapper.commit_transaction()
+
+                # Then update the memory cache. It is important that this task is not cancelled and does not throw
                 self.add_block_record(block_record)
                 for fetched_block_record in records:
                     self.__height_to_hash[fetched_block_record.height] = fetched_block_record.header_hash
                     if fetched_block_record.sub_epoch_summary_included is not None:
-                        if summaries_to_check is not None:
-                            # make sure this matches the summary list we got
-                            ses_n = len(self.get_ses_heights())
-                            if (
-                                fetched_block_record.sub_epoch_summary_included.get_hash()
-                                != summaries_to_check[ses_n].get_hash()
-                            ):
-                                log.error(
-                                    f"block ses does not match list, "
-                                    f"got {fetched_block_record.sub_epoch_summary_included} "
-                                    f"expected {summaries_to_check[ses_n]}"
-                                )
-                                return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_SUB_EPOCH_SUMMARY, None
                         self.__sub_epoch_summaries[
                             fetched_block_record.height
                         ] = fetched_block_record.sub_epoch_summary_included
@@ -311,8 +301,6 @@ class Blockchain(BlockchainInterface):
                 block: Optional[FullBlock] = await self.block_store.get_full_block(block_record.header_hash)
                 assert block is not None
 
-                # Begins a transaction, because we want to ensure that the coin store and block store are only updated
-                # in sync.
                 if npc_result is not None:
                     tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                 else:
