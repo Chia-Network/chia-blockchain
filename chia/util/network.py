@@ -2,12 +2,14 @@ from ipaddress import ip_network, ip_address
 from typing import Iterable
 from chia.server.outbound_message import NodeType
 
+
 def is_in_network(peer_host: str, networks: Iterable[ip_network]) -> bool:
     try:
         peer_host_ip = ip_address(peer_host)
         return any(peer_host_ip in network for network in networks)
     except ValueError:
         return False
+
 
 def is_localhost(peer_host: str) -> bool:
     return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"

@@ -145,10 +145,12 @@ class ChiaServer:
         self.banned_peers: Dict[str, float] = {}
         self.invalid_protocol_ban_seconds = 10
         self.api_exception_ban_seconds = 10
-        self.exempt_peer_networks: List[ip_network] = [ip_network(net) for net in config.get('exempt_peer_networks', [])]
+        self.exempt_peer_networks: List[ip_network] = [
+            ip_network(net) for net in config.get("exempt_peer_networks", [])
+        ]
 
     def my_id(self) -> bytes32:
-        """ If node has public cert use that one for id, if not use private."""
+        """If node has public cert use that one for id, if not use private."""
         if self.p2p_crt_path is not None:
             pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
         else:
@@ -254,9 +256,8 @@ class ChiaServer:
 
             assert handshake is True
             # Limit inbound connections to config's specifications.
-            if (
-                not self.accept_inbound_connections(connection.connection_type) and
-                not is_in_network(connection.peer_host, self.exempt_peer_networks)
+            if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
+                connection.peer_host, self.exempt_peer_networks
             ):
                 self.log.info(f"Not accepting inbound connection: {connection.get_peer_info()}.Inbound limit reached.")
                 await connection.close()
