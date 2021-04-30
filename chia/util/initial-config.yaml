@@ -254,9 +254,9 @@ full_node:
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
   # Accept peers until this number of connections
-  target_peer_count: 60
+  target_peer_count: 80
   # Initiate outbound connections until this number is hit.
-  target_outbound_peer_count: 10
+  target_outbound_peer_count: 8
   # Accept at most # of inbound connections for different node types.
   max_inbound_wallet: 20
   max_inbound_farmer: 10
