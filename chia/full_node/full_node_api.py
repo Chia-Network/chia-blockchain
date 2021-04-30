@@ -32,7 +32,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required
+from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -92,6 +92,7 @@ class FullNodeAPI:
         await peer.close()
         return None
 
+    @execute_task
     @peer_required
     @api_request
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> Optional[Message]:
@@ -189,7 +190,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
-        """ Peer has requested a full transaction from us. """
+        """Peer has requested a full transaction from us."""
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -663,9 +664,13 @@ class FullNodeAPI:
             async with self.full_node.blockchain.lock:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
+                    # Finds the last transaction block before this one
+                    curr_l_tb: BlockRecord = peak
+                    while not curr_l_tb.is_transaction_block:
+                        curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                            peak.header_hash
+                            curr_l_tb.header_hash
                         )
                     except Exception as e:
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
@@ -1008,8 +1013,8 @@ class FullNodeAPI:
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            removals, additions = await self.full_node.blockchain.get_removals_and_additions(block)
-            header_block = get_block_header(block, additions, removals)
+            tx_removals, tx_additions = await self.full_node.blockchain.get_tx_removals_and_additions(block)
+            header_block = get_block_header(block, tx_additions, tx_removals)
             msg = make_msg(
                 ProtocolMessageTypes.respond_block_header,
                 wallet_protocol.RespondBlockHeader(header_block),
@@ -1211,7 +1216,7 @@ class FullNodeAPI:
         for block in blocks:
             added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
             removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
-            added_coins = [record.coin for record in added_coins_records]
+            added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)
             header_blocks.append(header_block)

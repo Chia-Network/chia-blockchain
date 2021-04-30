@@ -2,39 +2,46 @@ import logging
 import traceback
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Dict, Optional, Tuple
+from typing import Optional
+from functools import lru_cache
 
 from chiavdf import create_discriminant, verify_n_wesolowski
 
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
-discriminant_cache: Dict[Tuple[bytes32, int], int] = {}
+
+@lru_cache(maxsize=20)
+def get_discriminant(challenge, size_bites) -> int:
+    return int(
+        create_discriminant(challenge, size_bites),
+        16,
+    )
 
 
-def add_to_cache(challenge_size, dsc):
-    if len(discriminant_cache.keys()) > 10:
-        keys = list(discriminant_cache.keys())
-        for i in range(0, 5):
-            discriminant_cache.pop(keys[i])
-    discriminant_cache[challenge_size] = dsc
+@lru_cache(maxsize=100)
+def verify_vdf(
+    disc: int,
+    input_el: bytes100,
+    output: bytes,
+    number_of_iterations: uint64,
+    discriminant_size: int,
+    witness_type: uint8,
+):
 
-
-def get_discriminant(challenge, size_bites):
-    if (challenge, size_bites) in discriminant_cache:
-        return discriminant_cache[(challenge, size_bites)]
-    else:
-        dsc = int(
-            create_discriminant(challenge, size_bites),
-            16,
-        )
-        add_to_cache((challenge, size_bites), dsc)
-        return dsc
+    return verify_n_wesolowski(
+        str(disc),
+        input_el,
+        output,
+        number_of_iterations,
+        discriminant_size,
+        witness_type,
+    )
 
 
 @dataclass(frozen=True)
@@ -71,8 +78,8 @@ class VDFProof(Streamable):
         try:
             disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
             # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
-            return verify_n_wesolowski(
-                str(disc),
+            return verify_vdf(
+                disc,
                 input_el.data,
                 info.output.data + bytes(self.witness),
                 info.number_of_iterations,

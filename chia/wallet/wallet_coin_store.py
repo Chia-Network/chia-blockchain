@@ -270,10 +270,4 @@ class WalletCoinStore:
             "UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_height>?",
             (height,),
         )
-        c3 = await self.db_connection.execute(
-            "UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_height>?",
-            (height,),
-        )
-        await c3.close()
         await c2.close()
-        await self.db_connection.commit()

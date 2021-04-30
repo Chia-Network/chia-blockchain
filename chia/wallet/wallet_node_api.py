@@ -2,7 +2,7 @@ from chia.protocols import full_node_protocol, introducer_protocol, wallet_proto
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request, peer_required
+from chia.util.api_decorators import api_request, peer_required, execute_task
 from chia.util.errors import Err
 from chia.wallet.wallet_node import WalletNode
 
@@ -39,6 +39,7 @@ class WalletNodeAPI:
         """
         pass
 
+    @execute_task
     @peer_required
     @api_request
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):

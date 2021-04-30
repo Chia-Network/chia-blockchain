@@ -76,7 +76,7 @@ class MempoolManager:
         self.pool.shutdown(wait=True)
 
     async def create_bundle_from_mempool(
-        self, peak_header_hash: bytes32
+        self, last_tb_header_hash: bytes32
     ) -> Optional[Tuple[SpendBundle, List[Coin], List[Coin]]]:
         """
         Returns aggregated spendbundle that can be used for creating new block,
@@ -84,7 +84,7 @@ class MempoolManager:
         """
         if (
             self.peak is None
-            or self.peak.header_hash != peak_header_hash
+            or self.peak.header_hash != last_tb_header_hash
             or int(time.time()) <= self.constants.INITIAL_FREEZE_END_TIMESTAMP
         ):
             return None
@@ -249,7 +249,7 @@ class MempoolManager:
         if npc_result.error is not None:
             return None, MempoolInclusionStatus.FAILED, Err(npc_result.error)
         # build removal list
-        removal_names: List[bytes32] = new_spend.removal_names()
+        removal_names: List[bytes32] = [npc.coin_name for npc in npc_list]
 
         additions = additions_for_npc(npc_list)
 
@@ -522,17 +522,22 @@ class MempoolManager:
         )
         return txs_added
 
-    async def get_items_not_in_filter(self, mempool_filter: PyBIP158) -> List[MempoolItem]:
+    async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:
         items: List[MempoolItem] = []
-        checked_items: Set[bytes32] = set()
+        counter = 0
+        broke_from_inner_loop = False
 
-        for key, item in self.mempool.spends.items():
-            if key in checked_items:
-                continue
-            if mempool_filter.Match(bytearray(key)):
-                checked_items.add(key)
-                continue
-            checked_items.add(key)
-            items.append(item)
+        # Send 100 with highest fee per cost
+        for dic in self.mempool.sorted_spends.values():
+            if broke_from_inner_loop:
+                break
+            for item in dic.values():
+                if counter == limit:
+                    broke_from_inner_loop = True
+                    break
+                if mempool_filter.Match(bytearray(item.spend_bundle_name)):
+                    continue
+                items.append(item)
+                counter += 1
 
         return items
