@@ -55,6 +55,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 class FullNode:
@@ -96,6 +97,7 @@ class FullNode:
         self.full_node_peers = None
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
+        self.full_node_store = FullNodeStore(self.constants)
 
         if name:
             self.log = logging.getLogger(name)
@@ -115,7 +117,6 @@ class FullNode:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.block_store = await BlockStore.create(self.db_wrapper)
-        self.full_node_store = await FullNodeStore.create(self.constants)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
@@ -526,11 +527,9 @@ class FullNode:
             self.uncompact_task.cancel()
 
     async def _await_closed(self):
-        try:
-            if self._sync_task is not None:
-                self._sync_task.cancel()
-        except asyncio.TimeoutError:
-            pass
+        cancel_task_safe(self._sync_task, self.log)
+        for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
+            cancel_task_safe(task, self.log)
         await self.connection.close()
 
     async def _sync(self):
@@ -614,7 +613,7 @@ class FullNode:
             if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
                 raise ValueError("Not performing sync, already caught up.")
 
-            wp_timeout = 180
+            wp_timeout = 360
             if "weight_proof_timeout" in self.config:
                 wp_timeout = self.config["weight_proof_timeout"]
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
@@ -633,7 +632,7 @@ class FullNode:
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
             try:
-                validated, fork_point = await self.weight_proof_handler.validate_weight_proof(response.wp)
+                validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
             except Exception as e:
                 await weight_proof_peer.close(600)
                 raise ValueError(f"Weight proof validation threw an error {e}")
@@ -648,7 +647,7 @@ class FullNode:
             # Ensures that the fork point does not change
             async with self.blockchain.lock:
                 await self.blockchain.warmup(fork_point)
-                await self.sync_from_fork_point(fork_point, heaviest_peak_height, heaviest_peak_hash)
+                await self.sync_from_fork_point(fork_point, heaviest_peak_height, heaviest_peak_hash, summaries)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -659,7 +658,13 @@ class FullNode:
                 return
             await self._finish_sync()
 
-    async def sync_from_fork_point(self, fork_point_height: int, target_peak_sb_height: uint32, peak_hash: bytes32):
+    async def sync_from_fork_point(
+        self,
+        fork_point_height: int,
+        target_peak_sb_height: uint32,
+        peak_hash: bytes32,
+        summaries: List[SubEpochSummary],
+    ):
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
@@ -708,10 +713,10 @@ class FullNode:
                     continue
                 elif isinstance(response, RespondBlocks):
                     success, advanced_peak, _ = await self.receive_block_batch(
-                        response.blocks, peer, None if advanced_peak else uint32(fork_point_height)
+                        response.blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                     )
                     if success is False:
-                        await peer.close()
+                        await peer.close(600)
                         continue
                     else:
                         batch_added = True
@@ -752,7 +757,11 @@ class FullNode:
                 )
 
     async def receive_block_batch(
-        self, all_blocks: List[FullBlock], peer: ws.WSChiaConnection, fork_point: Optional[uint32]
+        self,
+        all_blocks: List[FullBlock],
+        peer: ws.WSChiaConnection,
+        fork_point: Optional[uint32],
+        wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, bool, Optional[uint32]]:
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
@@ -782,7 +791,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point
+                block, pre_validation_results[i], None if advanced_peak else fork_point, wp_summaries
             )
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
@@ -791,8 +800,9 @@ class FullNode:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                 return False, advanced_peak, fork_height
             block_record = self.blockchain.block_record(block.header_hash)
-            if block_record.sub_epoch_summary_included is not None and self.weight_proof_handler is not None:
-                await self.weight_proof_handler.create_prev_sub_epoch_segments()
+            if block_record.sub_epoch_summary_included is not None:
+                if self.weight_proof_handler is not None:
+                    await self.weight_proof_handler.create_prev_sub_epoch_segments()
         if advanced_peak:
             self._state_changed("new_peak")
             self.log.debug(

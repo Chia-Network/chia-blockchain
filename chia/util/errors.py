@@ -148,6 +148,8 @@ class Err(Enum):
     GENERATOR_REF_HAS_NO_GENERATOR = 121
     DOUBLE_SPEND_IN_FORK = 122
 
+    INVALID_FEE_TOO_CLOSE_TO_ZERO = 123
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

@@ -55,13 +55,13 @@ class CoinStore:
 
         await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
 
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(puzzle_hash)")
+        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
         await self.coin_record_db.commit()
         self.coin_record_cache = LRUCache(cache_size)
         return self
 
-    async def new_block(self, block: FullBlock, additions: List[Coin], removals: List[bytes32]):
+    async def new_block(self, block: FullBlock, tx_additions: List[Coin], tx_removals: List[bytes32]):
         """
         Only called for blocks which are blocks (and thus have rewards and transactions)
         """
@@ -69,7 +69,7 @@ class CoinStore:
             return
         assert block.foliage_transaction_block is not None
 
-        for coin in additions:
+        for coin in tx_additions:
             record: CoinRecord = CoinRecord(
                 coin,
                 block.height,
@@ -78,7 +78,7 @@ class CoinStore:
                 False,
                 block.foliage_transaction_block.timestamp,
             )
-            await self._add_coin_record(record)
+            await self._add_coin_record(record, False)
 
         included_reward_coins = block.get_included_reward_coins()
         if block.height == 0:
@@ -95,14 +95,18 @@ class CoinStore:
                 True,
                 block.foliage_transaction_block.timestamp,
             )
-            await self._add_coin_record(reward_coin_r)
+            await self._add_coin_record(reward_coin_r, False)
 
-        for coin_name in removals:
-            await self._set_spent(coin_name, block.height)
+        total_amount_spent: int = 0
+        for coin_name in tx_removals:
+            total_amount_spent += await self._set_spent(coin_name, block.height)
+
+        # Sanity check, already checked in block_body_validation
+        assert sum([a.amount for a in tx_additions]) <= total_amount_spent
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
-        cached = self.coin_record_cache.get(coin_name.hex())
+        cached = self.coin_record_cache.get(coin_name)
         if cached is not None:
             return cached
         cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
@@ -110,7 +114,9 @@ class CoinStore:
         await cursor.close()
         if row is not None:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            return CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
+            record = CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
+            self.coin_record_cache.put(record.coin.name(), record)
+            return record
         return None
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -201,7 +207,7 @@ class CoinStore:
                     coin_record.coinbase,
                     coin_record.timestamp,
                 )
-                self.coin_record_cache.put(coin_record.coin.name().hex(), new_record)
+                self.coin_record_cache.put(coin_record.coin.name(), new_record)
             if int(coin_record.confirmed_block_index) > block_index:
                 delete_queue.append(coin_name)
 
@@ -218,9 +224,12 @@ class CoinStore:
         await c2.close()
 
     # Store CoinRecord in DB and ram cache
-    async def _add_coin_record(self, record: CoinRecord) -> None:
+    async def _add_coin_record(self, record: CoinRecord, allow_replace: bool) -> None:
+        if self.coin_record_cache.get(record.coin.name()) is not None:
+            self.coin_record_cache.remove(record.coin.name())
+
         cursor = await self.coin_record_db.execute(
-            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT {'OR REPLACE ' if allow_replace else ''}INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.coin.name().hex(),
                 record.confirmed_block_index,
@@ -234,13 +243,14 @@ class CoinStore:
             ),
         )
         await cursor.close()
-        self.coin_record_cache.put(record.coin.name().hex(), record)
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_name: bytes32, index: uint32):
+    async def _set_spent(self, coin_name: bytes32, index: uint32) -> uint64:
         current: Optional[CoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
             raise ValueError(f"Cannot spend a coin that does not exist in db: {coin_name}")
+
+        assert not current.spent  # Redundant sanity check, already checked in block_body_validation
         spent: CoinRecord = CoinRecord(
             current.coin,
             current.confirmed_block_index,
@@ -249,4 +259,5 @@ class CoinStore:
             current.coinbase,
             current.timestamp,
         )  # type: ignore # noqa
-        await self._add_coin_record(spent)
+        await self._add_coin_record(spent, True)
+        return current.coin.amount

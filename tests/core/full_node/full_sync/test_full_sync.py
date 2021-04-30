@@ -168,7 +168,7 @@ class TestFullSync:
             full_node_protocol.RequestProofOfWeight(blocks_950[-1].height + 1, blocks_950[-1].header_hash)
         )
         assert res is not None
-        validated, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(
+        validated, _, _ = await full_node_1.full_node.weight_proof_handler.validate_weight_proof(
             full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
         )
         assert validated

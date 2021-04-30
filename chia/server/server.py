@@ -139,6 +139,8 @@ class ChiaServer:
         self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
         self.api_tasks: Dict[bytes32, asyncio.Task] = {}
+        self.execute_tasks: Set[bytes32] = set()
+
         self.tasks_from_peer: Dict[bytes32, Set[bytes32]] = {}
         self.banned_peers: Dict[str, float] = {}
         self.invalid_protocol_ban_seconds = 10
@@ -465,6 +467,8 @@ class ChiaServer:
 
         task_ids = self.tasks_from_peer[peer_id]
         for task_id in task_ids:
+            if task_id in self.execute_tasks:
+                continue
             task = self.api_tasks[task_id]
             task.cancel()
 
@@ -500,6 +504,9 @@ class ChiaServer:
                     if hasattr(self.api, "api_ready"):
                         if self.api.api_ready is False:
                             return None
+
+                    if hasattr(f, "execute_task"):
+                        self.execute_tasks.add(task_id)
 
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
@@ -542,6 +549,8 @@ class ChiaServer:
                         self.api_tasks.pop(task_id)
                     if task_id in self.tasks_from_peer[connection.peer_node_id]:
                         self.tasks_from_peer[connection.peer_node_id].remove(task_id)
+                    if task_id in self.execute_tasks:
+                        self.execute_tasks.remove(task_id)
 
             task_id = token_bytes()
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))

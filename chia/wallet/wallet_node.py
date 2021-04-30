@@ -443,7 +443,7 @@ class WalletNode:
                     return
                 weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
                 weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-                    weight_request, timeout=180
+                    weight_request, timeout=360
                 )
                 if weight_proof_response is None:
                     return
@@ -455,7 +455,7 @@ class WalletNode:
                         weight_proof
                     )
                 else:
-                    valid, fork_point = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
+                    valid, fork_point, _ = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
                         weight_proof
                     )
                     if not valid:

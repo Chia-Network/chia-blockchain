@@ -565,11 +565,11 @@ class WeightProofHandler:
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
-    async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
+    async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32, List[SubEpochSummary]]:
         assert self.blockchain is not None
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0)
+            return False, uint32(0), []
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
@@ -577,13 +577,13 @@ class WeightProofHandler:
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
         if summaries is None:
             log.error("weight proof failed sub epoch data validation")
-            return False, uint32(0)
+            return False, uint32(0), []
 
         seed = summaries[-2].get_hash()
         rng = random.Random(seed)
         if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
             log.error("failed weight proof sub epoch sample validation")
-            return False, uint32(0)
+            return False, uint32(0), []
 
         executor = ProcessPoolExecutor(1)
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
@@ -602,14 +602,14 @@ class WeightProofHandler:
         valid_recent_blocks = await valid_recent_blocks_task
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
-            return False, uint32(0)
+            return False, uint32(0), []
 
         valid_segments = await valid_segment_task
         if not valid_segments:
             log.error("failed validating weight proof sub epoch segments")
-            return False, uint32(0)
+            return False, uint32(0), []
 
-        return True, self.get_fork_point(summaries)
+        return True, self.get_fork_point(summaries), summaries
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point

@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Set
+import time
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -21,6 +22,8 @@ class WalletTransactionStore:
     cache_size: uint32
     tx_record_cache: Dict[bytes32, TransactionRecord]
     tx_wallet_cache: Dict[int, Dict[Any, Set[bytes32]]]
+    tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
+    unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000)):
@@ -78,6 +81,8 @@ class WalletTransactionStore:
         await self.db_connection.commit()
         self.tx_record_cache = dict()
         self.tx_wallet_cache = dict()
+        self.tx_submitted = dict()
+        self.unconfirmed_for_wallet = dict()
         return self
 
     async def _init_cache(self):
@@ -119,6 +124,17 @@ class WalletTransactionStore:
                 await self.db_connection.commit()
                 self.db_wrapper.lock.release()
         self.tx_record_cache[record.name] = record
+
+        if record.wallet_id in self.unconfirmed_for_wallet:
+            unconfirmed: Dict[bytes32, TransactionRecord] = self.unconfirmed_for_wallet[record.wallet_id]
+            if record.name in unconfirmed:
+                if record.confirmed:
+                    unconfirmed.pop(record.name)
+                else:
+                    unconfirmed[record.name] = record
+            else:
+                if not record.confirmed:
+                    unconfirmed[record.name] = record
 
         if record.wallet_id in self.tx_wallet_cache:
             if None in self.tx_wallet_cache[record.wallet_id]:
@@ -256,20 +272,28 @@ class WalletTransactionStore:
         """
         Returns the list of transaction that have not been received by full node yet.
         """
-
+        current_time = int(time.time())
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE sent<? and confirmed=?",
-            (
-                4,
-                0,
-            ),
+            "SELECT * from transaction_record WHERE confirmed=?",
+            (0,),
         )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
-            records.append(record)
+            if record.name in self.tx_submitted:
+                time_submitted, count = self.tx_submitted[record.name]
+                if time_submitted < current_time - (60 * 10):
+                    records.append(record)
+                    self.tx_submitted[record.name] = current_time, 1
+                else:
+                    if count < 5:
+                        records.append(record)
+                        self.tx_submitted[record.name] = time_submitted, (count + 1)
+            else:
+                records.append(record)
+                self.tx_submitted[record.name] = current_time, 1
 
         return records
 
@@ -312,7 +336,8 @@ class WalletTransactionStore:
         """
         Returns the list of transaction that have not yet been confirmed.
         """
-
+        if wallet_id in self.unconfirmed_for_wallet:
+            return list(self.unconfirmed_for_wallet[wallet_id].values())
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?",
             (
@@ -323,11 +348,13 @@ class WalletTransactionStore:
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
-
+        dict = {}
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
+            dict[record.name] = record
 
+        self.unconfirmed_for_wallet[wallet_id] = dict
         return records
 
     async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
@@ -417,5 +444,6 @@ class WalletTransactionStore:
     async def rollback_to_block(self, height: int):
         # Delete from storage
         self.tx_wallet_cache = {}
+        self.unconfirmed_for_wallet = {}
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()

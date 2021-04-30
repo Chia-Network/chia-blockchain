@@ -1,7 +1,8 @@
 import asyncio
 import dataclasses
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from secrets import token_bytes
+from typing import Callable, Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -31,7 +32,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required
+from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -91,6 +92,7 @@ class FullNodeAPI:
         await peer.close()
         return None
 
+    @execute_task
     @peer_required
     @api_request
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> Optional[Message]:
@@ -100,8 +102,11 @@ class FullNodeAPI:
         """
         return await self.full_node.new_peak(request, peer)
 
+    @peer_required
     @api_request
-    async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Optional[Message]:
+    async def new_transaction(
+        self, transaction: full_node_protocol.NewTransaction, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         """
         A peer notifies us of a new transaction.
         Requests a full transaction if we haven't seen it previously, and if the fees are enough.
@@ -120,14 +125,72 @@ class FullNodeAPI:
             return None
 
         if self.full_node.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
-            request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
-            msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
-            return msg
+            # If there's current pending request just add this peer to the set of peers that have this tx
+            if transaction.transaction_id in self.full_node.full_node_store.pending_tx_request:
+                if transaction.transaction_id in self.full_node.full_node_store.peers_with_tx:
+                    current_set = self.full_node.full_node_store.peers_with_tx[transaction.transaction_id]
+                    if peer.peer_node_id in current_set:
+                        return None
+                    current_set.add(peer.peer_node_id)
+                    return None
+                else:
+                    new_set = set()
+                    new_set.add(peer.peer_node_id)
+                    self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
+                    return None
+
+            self.full_node.full_node_store.pending_tx_request[transaction.transaction_id] = peer.peer_node_id
+            new_set = set()
+            new_set.add(peer.peer_node_id)
+            self.full_node.full_node_store.peers_with_tx[transaction.transaction_id] = new_set
+
+            async def tx_request_and_timeout(full_node: FullNode, transaction_id, task_id):
+                counter = 0
+                try:
+                    while True:
+                        # Limit to asking 10 peers, it's possible that this tx got included on chain already
+                        # Highly unlikely 10 peers that advertised a tx don't respond to a request
+                        if counter == 10:
+                            break
+                        if transaction_id not in full_node.full_node_store.peers_with_tx:
+                            break
+                        peers_with_tx: Set = full_node.full_node_store.peers_with_tx[transaction_id]
+                        if len(peers_with_tx) == 0:
+                            break
+                        peer_id = peers_with_tx.pop()
+                        assert full_node.server is not None
+                        if peer_id not in full_node.server.all_connections:
+                            continue
+                        peer = full_node.server.all_connections[peer_id]
+                        request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
+                        msg = make_msg(ProtocolMessageTypes.request_transaction, request_tx)
+                        await peer.send_message(msg)
+                        await asyncio.sleep(5)
+                        counter += 1
+                        if full_node.mempool_manager.seen(transaction_id):
+                            break
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    # Always Cleanup
+                    if transaction_id in full_node.full_node_store.peers_with_tx:
+                        full_node.full_node_store.peers_with_tx.pop(transaction_id)
+                    if transaction_id in full_node.full_node_store.pending_tx_request:
+                        full_node.full_node_store.pending_tx_request.pop(transaction_id)
+                    if task_id in full_node.full_node_store.tx_fetch_tasks:
+                        full_node.full_node_store.tx_fetch_tasks.pop(task_id)
+
+            task_id = token_bytes()
+            fetch_task = asyncio.create_task(
+                tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
+            )
+            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
+            return None
         return None
 
     @api_request
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
-        """ Peer has requested a full transaction from us. """
+        """Peer has requested a full transaction from us."""
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -156,6 +219,10 @@ class FullNodeAPI:
         """
         assert tx_bytes != b""
         spend_name = std_hash(tx_bytes)
+        if spend_name in self.full_node.full_node_store.pending_tx_request:
+            self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+        if spend_name in self.full_node.full_node_store.peers_with_tx:
+            self.full_node.full_node_store.peers_with_tx.pop(spend_name)
         await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
         return None
 
@@ -597,9 +664,13 @@ class FullNodeAPI:
             async with self.full_node.blockchain.lock:
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
+                    # Finds the last transaction block before this one
+                    curr_l_tb: BlockRecord = peak
+                    while not curr_l_tb.is_transaction_block:
+                        curr_l_tb = self.full_node.blockchain.block_record(curr_l_tb.prev_hash)
                     try:
                         mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                            peak.header_hash
+                            curr_l_tb.header_hash
                         )
                     except Exception as e:
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
@@ -942,8 +1013,8 @@ class FullNodeAPI:
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
-            removals, additions = await self.full_node.blockchain.get_removals_and_additions(block)
-            header_block = get_block_header(block, additions, removals)
+            tx_removals, tx_additions = await self.full_node.blockchain.get_tx_removals_and_additions(block)
+            header_block = get_block_header(block, tx_additions, tx_removals)
             msg = make_msg(
                 ProtocolMessageTypes.respond_block_header,
                 wallet_protocol.RespondBlockHeader(header_block),
@@ -1145,7 +1216,7 @@ class FullNodeAPI:
         for block in blocks:
             added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
             removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
-            added_coins = [record.coin for record in added_coins_records]
+            added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)
             header_blocks.append(header_block)

@@ -51,3 +51,11 @@ def bytes_required(func):
         return func
 
     return inner()
+
+
+def execute_task(func):
+    def inner():
+        setattr(func, "execute_task", True)
+        return func
+
+    return inner()

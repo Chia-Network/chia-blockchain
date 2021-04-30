@@ -13,11 +13,12 @@ from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
-from chia.protocols import full_node_protocol as fnp
+from chia.protocols import full_node_protocol as fnp, full_node_protocol
 from chia.protocols import timelord_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager
+from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import SerializedProgram
@@ -50,6 +51,36 @@ from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, t
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
+
+
+async def new_transaction_not_requested(incoming, new_spend):
+    await asyncio.sleep(3)
+    while not incoming.empty():
+        response, peer = await incoming.get()
+        if (
+            response is not None
+            and isinstance(response, Message)
+            and response.type == ProtocolMessageTypes.request_transaction.value
+        ):
+            request = full_node_protocol.RequestTransaction.from_bytes(response.data)
+            if request.transaction_id == new_spend.transaction_id:
+                return False
+    return True
+
+
+async def new_transaction_requested(incoming, new_spend):
+    await asyncio.sleep(1)
+    while not incoming.empty():
+        response, peer = await incoming.get()
+        if (
+            response is not None
+            and isinstance(response, Message)
+            and response.type == ProtocolMessageTypes.request_transaction.value
+        ):
+            request = full_node_protocol.RequestTransaction.from_bytes(response.data)
+            if request.transaction_id == new_spend.transaction_id:
+                return True
+    return False
 
 
 async def get_block_path(full_node: FullNodeAPI):
@@ -706,7 +737,8 @@ class TestFullNodeProtocol:
             else -1
         )
         peer = await connect_and_get_peer(server_1, server_2)
-
+        incoming_queue, node_id = await add_dummy_connection(server_1, 12312)
+        fake_peer = server_1.all_connections[node_id]
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
 
@@ -719,7 +751,7 @@ class TestFullNodeProtocol:
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
-                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000)])
+                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(100000000)])
 
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -735,8 +767,8 @@ class TestFullNodeProtocol:
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
-            msg = await full_node_1.new_transaction(new_transaction)
-            assert msg.data == bytes(fnp.RequestTransaction(spend_bundle.get_hash()))
+            await full_node_1.new_transaction(new_transaction, fake_peer)
+            await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
 
             respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
             await full_node_1.respond_transaction(respond_transaction_2, peer)
@@ -750,8 +782,8 @@ class TestFullNodeProtocol:
             await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
 
             # Already seen
-            msg = await full_node_1.new_transaction(new_transaction)
-            assert msg is None
+            await full_node_1.new_transaction(new_transaction, fake_peer)
+            await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
         await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 5)
 
@@ -767,10 +799,10 @@ class TestFullNodeProtocol:
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             if puzzle_hash == puzzle_hashes[-1]:
                 force_high_fee = True
-                fee = 10000000  # 10 million
+                fee = 100000000  # 100 million (20 fee per cost)
             else:
                 force_high_fee = False
-                fee = random.randint(1, 10000000)
+                fee = random.randint(1, 100000000)
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
@@ -809,17 +841,18 @@ class TestFullNodeProtocol:
 
         # Mempool is full
         new_transaction = fnp.NewTransaction(token_bytes(32), 10000000, uint64(1))
-        msg = await full_node_1.new_transaction(new_transaction)
-        log.warning(f"MSG: {msg} {cost_result.clvm_cost}")
-        assert msg is None
+        await full_node_1.new_transaction(new_transaction, fake_peer)
+
+        await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
         # Farm one block to clear mempool
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
         # No longer full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
-        msg = await full_node_1.new_transaction(new_transaction)
-        assert msg is not None
+        await full_node_1.new_transaction(new_transaction, fake_peer)
+
+        await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
 
     @pytest.mark.asyncio
     async def test_request_respond_transaction(self, wallet_nodes):
