@@ -252,9 +252,19 @@ class FullNodeAPI:
         if wp is None:
             self.log.error(f"failed creating weight proof for peak {request.tip}")
             return None
-        return make_msg(
+
+        # Serialization of wp is slow
+        if (
+            self.full_node.full_node_store.serialized_wp_message_tip is not None
+            and self.full_node.full_node_store.serialized_wp_message_tip == request.tip
+        ):
+            return self.full_node.full_node_store.serialized_wp_message
+        message = make_msg(
             ProtocolMessageTypes.respond_proof_of_weight, full_node_protocol.RespondProofOfWeight(wp, request.tip)
         )
+        self.full_node.full_node_store.serialized_wp_message_tip = request.tip
+        self.full_node.full_node_store.serialized_wp_message = message
+        return message
 
     @api_request
     async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
