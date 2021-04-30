@@ -522,17 +522,22 @@ class MempoolManager:
         )
         return txs_added
 
-    async def get_items_not_in_filter(self, mempool_filter: PyBIP158) -> List[MempoolItem]:
+    async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:
         items: List[MempoolItem] = []
-        checked_items: Set[bytes32] = set()
+        counter = 0
+        broke_from_inner_loop = False
 
-        for key, item in self.mempool.spends.items():
-            if key in checked_items:
-                continue
-            if mempool_filter.Match(bytearray(key)):
-                checked_items.add(key)
-                continue
-            checked_items.add(key)
-            items.append(item)
+        # Send 100 with highest fee per cost
+        for dic in self.mempool.sorted_spends.values():
+            if broke_from_inner_loop:
+                break
+            for item in dic.values():
+                if counter == limit:
+                    broke_from_inner_loop = True
+                    break
+                if mempool_filter.Match(bytearray(item.spend_bundle_name)):
+                    continue
+                items.append(item)
+                counter += 1
 
         return items
