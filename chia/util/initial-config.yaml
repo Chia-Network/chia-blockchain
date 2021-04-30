@@ -257,6 +257,8 @@ full_node:
   target_peer_count: 80
   # Initiate outbound connections until this number is hit.
   target_outbound_peer_count: 8
+  # IPv4/IPv6 network addresses/CIDR blocks allowed to connect even when target_peer_count has been hit.
+  exempt_peer_networks: []
   # Accept at most # of inbound connections for different node types.
   max_inbound_wallet: 20
   max_inbound_farmer: 10
