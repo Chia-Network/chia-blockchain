@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "플롯의 크기를 고르세요"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "닫기"
 
@@ -877,7 +877,7 @@ msgstr "마지막 채굴 높이"
 msgid "Latest Block Challenges"
 msgstr "최신 블록 도전"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "불러오는 중…"
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "보기"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "로그 보기"
 

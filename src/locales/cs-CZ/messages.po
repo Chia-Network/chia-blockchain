@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Vyberte velikost pole"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Zavřít"
 
@@ -877,7 +877,7 @@ msgstr "Poslední farmená výška"
 msgid "Latest Block Challenges"
 msgstr "Poslední blokové výzvy"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Načítá se..."
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "Zobrazení"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Zobrazit log"
 

@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Choisir la taille de la parcelle"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Fermer"
 
@@ -877,7 +877,7 @@ msgstr "Dernière hauteur cultivée"
 msgid "Latest Block Challenges"
 msgstr "Derniers défis de bloc"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Chargement..."
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "Voir"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Voir le registre"
 

@@ -460,7 +460,7 @@ msgid "Choose Plot Size"
 msgstr "Выберите размер участка"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Закрыть"
 
@@ -1049,7 +1049,7 @@ msgstr "Высота последнего выращенного блока"
 msgid "Latest Block Challenges"
 msgstr "Последние испытания блоков"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Загрузка..."
 
@@ -2028,7 +2028,7 @@ msgid "View"
 msgstr "Вид"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Посмотреть журнал"
 

@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Kies plot grootte"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Sluit"
 
@@ -877,7 +877,7 @@ msgstr "Laatste hoogte 'farmed'"
 msgid "Latest Block Challenges"
 msgstr "Nieuwste Block uitdagingen"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Aan het laden..."
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "Bekijk"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Bekijk log"
 

@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Alege Dimensiunea Parcelei"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Închide"
 
@@ -877,7 +877,7 @@ msgstr "Înălțime Cultivată Recentă"
 msgid "Latest Block Challenges"
 msgstr "Încercări Block Recente"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Încărcare..."
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "Afișare"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Vezi Jurnal"
 

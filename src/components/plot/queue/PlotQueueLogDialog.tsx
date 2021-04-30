@@ -20,7 +20,13 @@ type Props = {
 
 export default function PlotQueueLogDialog(props: Props) {
   const { id, open, onClose } = props;
-  const queueItem = useThrottleSelector((state: RootState) => state.plot_queue.queue.find((item) => item.id === id), { wait: 2000 });
+  const queueItem = useThrottleSelector((state: RootState) => state.plot_queue.queue.find((item) => item.id === id), { 
+    wait: 2000,
+    force(_data, _dataBefore, state) {
+      const event = state.plot_queue?.event;
+      return event === 'state_changed';
+    },
+  });
   const [log, setLog] = useState<ReactNode>(<Trans>Loading...</Trans>);
 
   useEffect(() => {

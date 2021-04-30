@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Choose Strength o' Crewdog"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Close"
 
@@ -877,7 +877,7 @@ msgstr "Last Prize Taken"
 msgid "Latest Block Challenges"
 msgstr "Latest Ships to Plunder"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Unrolling Treasure Maps..."
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "View"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Look at Report"
 

@@ -32,13 +32,14 @@ function mergeQueue(
       return;
     }
 
+    const originalItem = currentQueue[index];
+
     const newItem = {
-      ...item,
+      ...originalItem,
       ...rest,
     };
 
     if (event === 'log_changed' && log_new !== undefined) {
-      const originalItem = currentQueue[index];
       const newLog = originalItem.log
         ? `${originalItem.log}${log_new}`
         : log_new;

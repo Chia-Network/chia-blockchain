@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Välj plottstorlek"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
 msgid "Close"
 msgstr "Stäng"
 
@@ -877,7 +877,7 @@ msgstr "Senaste höjd som odlats på"
 msgid "Latest Block Challenges"
 msgstr "Senaste blockverifieringar"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Läser in …"
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "Visa"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "View Log"
 msgstr "Visa logg"
 
