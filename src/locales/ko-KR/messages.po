@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "플롯의 크기를 고르세요"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "Close"
 msgstr "닫기"
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "보기"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "로그 보기"
 

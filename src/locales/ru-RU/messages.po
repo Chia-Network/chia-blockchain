@@ -460,7 +460,7 @@ msgid "Choose Plot Size"
 msgstr "Выберите размер участка"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "Close"
 msgstr "Закрыть"
 
@@ -2028,7 +2028,7 @@ msgid "View"
 msgstr "Вид"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Посмотреть журнал"
 

@@ -288,7 +288,7 @@ msgid "Choose Plot Size"
 msgstr "Scegli la Dimensione del Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "Close"
 msgstr "Chiudi"
 
@@ -1856,7 +1856,7 @@ msgid "View"
 msgstr "Visualizza"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Vedi Log"
 
