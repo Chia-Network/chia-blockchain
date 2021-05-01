@@ -510,8 +510,11 @@ class ChiaServer:
                         if self.api.api_ready is False:
                             return None
 
+                    timeout: Optional[int] = 600
                     if hasattr(f, "execute_task"):
+                        # Don't timeout on methods with execute_task decorator, these need to run fully
                         self.execute_tasks.add(task_id)
+                        timeout = None
 
                     if hasattr(f, "peer_required"):
                         coroutine = f(full_message.data, connection)
@@ -530,7 +533,7 @@ class ChiaServer:
                             raise e
                         return None
 
-                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=600)
+                    response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
                     connection.log.debug(
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
