@@ -121,7 +121,6 @@ class WalletStateManager:
         else:
             self.log = logging.getLogger(__name__)
         self.lock = asyncio.Lock()
-        self.tx_lock = asyncio.Lock()
 
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
@@ -533,12 +532,13 @@ class WalletStateManager:
         return removals
 
     async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32):
-        for coin in additions:
-            await self.puzzle_hash_created(coin)
-        trade_additions = await self.coins_of_interest_added(additions, height)
-        trade_removals = await self.coins_of_interest_removed(removals, height)
-        if len(trade_additions) > 0 or len(trade_removals) > 0:
-            await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
+        async with self.lock:
+            for coin in additions:
+                await self.puzzle_hash_created(coin)
+            trade_additions = await self.coins_of_interest_added(additions, height)
+            trade_removals = await self.coins_of_interest_removed(removals, height)
+            if len(trade_additions) > 0 or len(trade_removals) > 0:
+                await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
 
     async def coins_of_interest_added(self, coins: List[Coin], height: uint32) -> List[Coin]:
         (
@@ -785,7 +785,7 @@ class WalletStateManager:
     async def get_filter_additions_removals(
         self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
     ) -> Tuple[List[bytes32], List[bytes32]]:
-        """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
+        """Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter."""
         # assert new_block.prev_header_hash in self.blockchain.blocks
 
         tx_filter = PyBIP158([b for b in transactions_filter])
@@ -863,7 +863,7 @@ class WalletStateManager:
         return additions_of_interest, removals_of_interest
 
     async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
-        """ Returns the list of coins that are relevant to us.(We can spend them) """
+        """Returns the list of coins that are relevant to us.(We can spend them)"""
 
         result: List[Coin] = []
         my_puzzle_hashes: Set[bytes32] = self.puzzle_store.all_puzzle_hashes
@@ -891,7 +891,7 @@ class WalletStateManager:
         return wallet
 
     async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
-        """ Returns a list of our unspent coins that are in the passed list. """
+        """Returns a list of our unspent coins that are in the passed list."""
 
         result: List[Coin] = []
         wallet_coin_records = await self.coin_store.get_unspent_coins_at_height()

@@ -112,7 +112,9 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         if typ != "STANDARD_WALLET":
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
             print(f"   -Confirmed: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Confirmed - Pending Outgoing: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
+            print(
+                f"   -Confirmed minus Pending Outgoing: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
+            )
             print(f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}")
             print(f"   -Pending change: {balances['pending_change']/units['colouredcoin']}")
         else:
@@ -122,7 +124,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
                 f"({balances['confirmed_wallet_balance']/units['chia']} {address_prefix})"
             )
             print(
-                f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']} mojo "
+                f"   -Confirmed - Pending Outgoing:: {balances['unconfirmed_wallet_balance']} mojo "
                 f"({balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix})"
             )
             print(
