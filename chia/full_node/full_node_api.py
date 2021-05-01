@@ -44,8 +44,6 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
-        self.compact_vdf_lock = asyncio.Lock()
-        self.new_peak_lock = asyncio.Lock()
 
     def _set_state_changed_callback(self, callback: Callable):
         self.full_node.state_changed_callback = callback
@@ -102,7 +100,7 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
-        async with self.new_peak_lock:
+        async with self.full_node.new_peak_lock:
             return await self.full_node.new_peak(request, peer)
 
     @peer_required
@@ -1260,7 +1258,7 @@ class FullNodeAPI:
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
         if self.full_node.sync_store.get_sync_mode():
             return None
-        async with self.compact_vdf_lock:
+        async with self.fullnode.compact_vdf_lock:
             await self.full_node.new_compact_vdf(request, peer)
 
     @peer_required
