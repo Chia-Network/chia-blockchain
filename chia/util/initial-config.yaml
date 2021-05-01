@@ -112,6 +112,7 @@ harvester:
   start_rpc_server: True
   rpc_port: 8560
   num_threads: 30
+  plot_loading_frequency_seconds: 120
 
   logging: *logging
   network_overrides: *network_overrides
