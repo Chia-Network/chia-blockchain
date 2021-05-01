@@ -16,16 +16,14 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - We now require node 12.x to build the GUI. Installers have been building using node 12.x for quite some time.
-- Node will now farm while syncing so that a bogus weight proof attempt will not keep a farmer from farming the "correct" chain.
+- Node will now farm while syncing.
 - We changed chialisp singletons to take a puzzlehash as its origin. We also updated the DID wallet to use this.
 - Transactions are now cached for 10 minutes in mempool to retry if there is a failure of a spending attempt.
 - Thank you to @fiveangle for making install.sh more resilient across python installations.
 - Standard transactions now all have announcements.
 - VDF verification during sync and normal operations are now cached to enhance node performance.
 - Target peer count has been increased from 60 to 80 to increase the number of peer Nodes available to connect to.
-- Nonce collisions are now less likely.
 - The streamables class has had significant performance improvements.
-- Harvester DEBUG level shows the time for every proof of space quality lookup.
 - If a proof of space lookup takes longer than 5 seconds we will now log an error at WARNING level.
 - Allow configuration of the plot loading interval (default is 2 minutes) in config.yaml.
 - @martomi added logging of added coins back.
@@ -41,6 +39,7 @@ for setuptools_scm/PEP 440 reasons.
 - We fixed excess memory use when displaying plot logs in GUI. This was causing the GUI application to fail in many "fun" ways after plotting a lot of plots in parallel.
 - Fixed plot update issues in the GUI.
 - Long syncing will now correctly show "Syncing" around the application.
+- Nonce collisions in request IDs is fixed.
 - Some duplicate plots were not being caught and logged by harvester on loading.
 - We have removed many places where Node was making duplicate requests of other nodes.
 - Daemon now waits for services to end to attempt to avoid zombie processes.
