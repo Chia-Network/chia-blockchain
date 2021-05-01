@@ -6,7 +6,7 @@ import traceback
 from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Union, Set, Tuple
 
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
 from aiohttp.web_app import Application
