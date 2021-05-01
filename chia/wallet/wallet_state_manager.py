@@ -505,7 +505,7 @@ class WalletStateManager:
                 removal_amount += removal.amount
             for addition in record.additions:
                 # This change or a self transaction
-                if self.does_coin_belong_to_wallet(addition, wallet_id):
+                if await self.does_coin_belong_to_wallet(addition, wallet_id):
                     addition_amount += addition.amount
 
         result = confirmed - removal_amount + addition_amount
