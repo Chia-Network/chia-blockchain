@@ -12,6 +12,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
+from chia.server.outbound_message import Message
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -66,6 +67,8 @@ class FullNodeStore:
     pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
     peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
     tx_fetch_tasks: Dict[bytes32, asyncio.Task]  # Task id: task
+    serialized_wp_message: Optional[Message]
+    serialized_wp_message_tip: Optional[bytes32]
 
     def __init__(self, constants: ConsensusConstants):
         self.candidate_blocks = {}
@@ -85,6 +88,8 @@ class FullNodeStore:
         self.pending_tx_request = {}
         self.peers_with_tx = {}
         self.tx_fetch_tasks = {}
+        self.serialized_wp_message = None
+        self.serialized_wp_message_tip = None
 
     def add_candidate_block(
         self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
