@@ -113,8 +113,8 @@ class FullNode:
 
     async def _start(self):
         self.timelord_lock = asyncio.Lock()
-        self.compact_vdf_lock = asyncio.Lock()
-        self.new_peak_lock = asyncio.Lock()
+        self.compact_vdf_lock = asyncio.Semaphore(4)
+        self.new_peak_lock = asyncio.Semaphore(4)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
