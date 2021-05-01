@@ -140,6 +140,7 @@ class WalletStateManager:
             self.constants,
             self.coins_of_interest_received,
             self.reorg_rollback,
+            self.lock,
         )
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
@@ -536,13 +537,12 @@ class WalletStateManager:
         return removals
 
     async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32):
-        async with self.lock:
-            for coin in additions:
-                await self.puzzle_hash_created(coin)
-            trade_additions = await self.coins_of_interest_added(additions, height)
-            trade_removals = await self.coins_of_interest_removed(removals, height)
-            if len(trade_additions) > 0 or len(trade_removals) > 0:
-                await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
+        for coin in additions:
+            await self.puzzle_hash_created(coin)
+        trade_additions = await self.coins_of_interest_added(additions, height)
+        trade_removals = await self.coins_of_interest_removed(removals, height)
+        if len(trade_additions) > 0 or len(trade_removals) > 0:
+            await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
 
     async def coins_of_interest_added(self, coins: List[Coin], height: uint32) -> List[Coin]:
         (

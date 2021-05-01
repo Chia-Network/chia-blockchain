@@ -132,14 +132,13 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
-    fingerprints = await wallet_client.get_public_keys()
+    if fingerprint is not None:
+        fingerprints = [fingerprint]
+    else:
+        fingerprints = await wallet_client.get_public_keys()
     if len(fingerprints) == 0:
         print("No keys loaded. Run 'chia keys generate' or import a key")
         return None
-    if fingerprint is not None:
-        if fingerprint not in fingerprints:
-            print(f"Fingerprint {fingerprint} does not exist")
-            return None
     if len(fingerprints) == 1:
         fingerprint = fingerprints[0]
     if fingerprint is not None:
