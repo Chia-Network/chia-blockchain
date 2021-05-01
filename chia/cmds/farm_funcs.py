@@ -40,7 +40,7 @@ async def get_plots(harvester_rpc_port: int, harvester_rpc_hostname: str) -> Opt
     return plots
 
 
-async def get_harvesters(farmer_rpc_port: int) -> Optional[List[str]]:
+async def get_harvesters(farmer_rpc_port: int) -> List[str]:
     harvester_hosts = []
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -50,8 +50,8 @@ async def get_harvesters(farmer_rpc_port: int) -> Optional[List[str]]:
         farmer_client = await FarmerRpcClient.create(self_hostname, uint16(farmer_rpc_port), DEFAULT_ROOT_PATH, config)
         connections = await farmer_client.get_connections()
         for c in connections:
-            if c['type'] == NodeType.HARVESTER:
-                harvester_hosts.append(c['peer_host'])
+            if c["type"] == NodeType.HARVESTER:
+                harvester_hosts.append(c["peer_host"])
     except Exception as e:
         print(f"Exception from 'farmer' {e}")
 
@@ -64,11 +64,11 @@ async def get_all_plots(harvester_rpc_port: int, harvester_hosts: List[str]) -> 
     all_plots = None
     for host in harvester_hosts:
         plots = await get_plots(harvester_rpc_port, host)
-        if plots is not None and plots['success']:
+        if plots is not None and plots["success"]:
             if all_plots is None:
                 all_plots = plots
             else:
-                all_plots['plots'] += plots['plots']
+                all_plots["plots"] += plots["plots"]
     return all_plots
 
 
@@ -245,7 +245,7 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, 
         print("Block rewards: Unknown")
         print("Last height farmed: Unknown")
 
-    print(f"Harvesters count: {len(harvesters)}")
+    print(f"Harvester count: {len(harvesters)}")
 
     total_plot_size = 0
     if plots is not None:
