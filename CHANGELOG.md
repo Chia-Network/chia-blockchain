@@ -26,6 +26,7 @@ for setuptools_scm/PEP 440 reasons.
 - The streamables class has had significant performance improvements.
 - If a proof of space lookup takes longer than 5 seconds we will now log an error at WARNING level.
 - Allow configuration of the plot loading interval (default is 2 minutes) in config.yaml.
+- CLI wallet UI was improved and shows syncing status of wallet.
 - @martomi added logging of added coins back.
 - Thank you to @aisk for additional type checking.
 - @aisk added error checking in bech32m
