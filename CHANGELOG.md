@@ -22,7 +22,7 @@ for setuptools_scm/PEP 440 reasons.
 - Thank you to @fiveangle for making install.sh more resilient across python installations.
 - Standard transactions now all have announcements.
 - VDF verification during sync and normal operations are now cached to enhance node performance.
-- Target peer count has been increased from 60 to 80 to increase the number of peer Nodes available to connect to.
+- Target peer count has been increased from 60 to 80 to increase the number of peer Nodes available to connect to. Outbound connections were lowered from 10 to 8.
 - The streamables class has had significant performance improvements.
 - If a proof of space lookup takes longer than 5 seconds we will now log an error at WARNING level.
 - Allow configuration of the plot loading interval (default is 2 minutes) in config.yaml.
@@ -43,6 +43,7 @@ for setuptools_scm/PEP 440 reasons.
 - Some duplicate plots were not being caught and logged by harvester on loading.
 - We have removed many places where Node was making duplicate requests of other nodes.
 - Daemon now waits for services to end to attempt to avoid zombie processes.
+- Node is less likely to lose sync due to state inconsistency.
 - A large thank you to @sargonas for diagnosing why so many technical support questions were flooding GitHub issues, PRing a fix, and mass migrating issues to Discussions.
 - Thanks to @jeolcho for fixing a bug in full_node_rpc_api.py.
 - Thanks @antoniobg for a typo fix in keychain.py.
