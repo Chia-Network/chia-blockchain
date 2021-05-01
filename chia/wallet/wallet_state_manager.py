@@ -497,14 +497,18 @@ class WalletStateManager:
         """
         confirmed = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        removal_amount = 0
+        removal_amount: int = 0
+        addition_amount: int = 0
 
         for record in unconfirmed_tx:
+            for removal in record.removals:
+                removal_amount += removal.amount
+            for addition in record.additions:
+                # This change or a self transaction
+                if self.does_coin_belong_to_wallet(addition, wallet_id):
+                    addition_amount += addition.amount
 
-            removal_amount += record.amount
-            removal_amount += record.fee_amount
-
-        result = confirmed - removal_amount
+        result = confirmed - removal_amount + addition_amount
         return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
