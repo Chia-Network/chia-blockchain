@@ -1729,13 +1729,12 @@ class FullNode:
             return
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if await self._needs_compact_proof(request.vdf_info, header_block, field_vdf):
-            msg = make_msg(
-                ProtocolMessageTypes.request_compact_vdf,
-                full_node_protocol.RequestCompactVDF(
-                    request.height, request.header_hash, request.field_vdf, request.vdf_info
-                ),
+            peer_request = full_node_protocol.RequestCompactVDF(
+                request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
-            await peer.send_message(msg)
+            response = await peer.request_compact_vdf(peer_request)
+            if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
+                await self.respond_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)

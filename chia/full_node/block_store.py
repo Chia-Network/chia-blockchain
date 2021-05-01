@@ -146,6 +146,17 @@ class BlockStore:
             return block
         return None
 
+    async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            return cached
+        cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            return row[0]
+        return None
+
     async def get_full_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:
         if len(heights) == 0:
             return []

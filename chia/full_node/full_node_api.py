@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import time
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Callable, Dict, List, Optional, Tuple, Set, Any
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -44,6 +44,8 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
+        self.compact_vdf_lock = asyncio.Lock()
+        self.new_peak_lock = asyncio.Lock()
 
     def _set_state_changed_callback(self, callback: Callable):
         self.full_node.state_changed_callback = callback
@@ -100,7 +102,8 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
-        return await self.full_node.new_peak(request, peer)
+        async with self.new_peak_lock:
+            return await self.full_node.new_peak(request, peer)
 
     @peer_required
     @api_request
@@ -299,19 +302,28 @@ class FullNodeAPI:
                 msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
                 return msg
 
-        blocks = []
-
-        for i in range(request.start_height, request.end_height + 1):
-            block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-                self.full_node.blockchain.height_to_hash(uint32(i))
-            )
-            if block is None:
-                reject = RejectBlocks(request.start_height, request.end_height)
-                msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                return msg
-            if not request.include_transaction_block:
+        blocks: List[Any] = []
+        if not request.include_transaction_block:
+            for i in range(request.start_height, request.end_height + 1):
+                block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+                    self.full_node.blockchain.height_to_hash(uint32(i))
+                )
+                if block is None:
+                    reject = RejectBlocks(request.start_height, request.end_height)
+                    msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
+                    return msg
                 block = dataclasses.replace(block, transactions_generator=None)
-            blocks.append(block)
+                blocks.append(block)
+        else:
+            for i in range(request.start_height, request.end_height + 1):
+                block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(
+                    self.full_node.blockchain.height_to_hash(uint32(i))
+                )
+                if block_bytes is None:
+                    reject = RejectBlocks(request.start_height, request.end_height)
+                    msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
+                    return msg
+                blocks.append(block_bytes)
 
         msg = make_msg(
             ProtocolMessageTypes.respond_blocks,
@@ -1248,7 +1260,8 @@ class FullNodeAPI:
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
         if self.full_node.sync_store.get_sync_mode():
             return None
-        await self.full_node.new_compact_vdf(request, peer)
+        async with self.compact_vdf_lock:
+            await self.full_node.new_compact_vdf(request, peer)
 
     @peer_required
     @api_request
