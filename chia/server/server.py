@@ -3,7 +3,7 @@ import logging
 import ssl
 import time
 import traceback
-from ipaddress import IPv6Address, ip_address, ip_network
+from ipaddress import IPv6Address, ip_address, ip_network, IPv4Network, IPv6Network
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -145,7 +145,7 @@ class ChiaServer:
         self.banned_peers: Dict[str, float] = {}
         self.invalid_protocol_ban_seconds = 10
         self.api_exception_ban_seconds = 10
-        self.exempt_peer_networks: List[ip_network] = [
+        self.exempt_peer_networks: List[Union[IPv4Network, IPv6Network]] = [
             ip_network(net) for net in config.get("exempt_peer_networks", [])
         ]
 

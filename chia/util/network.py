@@ -1,9 +1,9 @@
-from ipaddress import ip_network, ip_address
-from typing import Iterable
+from ipaddress import ip_network, ip_address, IPv4Network, IPv6Network
+from typing import Iterable, Union
 from chia.server.outbound_message import NodeType
 
 
-def is_in_network(peer_host: str, networks: Iterable[ip_network]) -> bool:
+def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
     try:
         peer_host_ip = ip_address(peer_host)
         return any(peer_host_ip in network for network in networks)
