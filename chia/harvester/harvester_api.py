@@ -70,7 +70,7 @@ class HarvesterAPI:
         assert len(new_challenge.challenge_hash) == 32
 
         # Refresh plots to see if there are any new ones
-        if start - self.harvester.last_load_time > 120:
+        if start - self.harvester.last_load_time > self.harvester.plot_load_frequency:
             await self.harvester.refresh_plots()
             self.harvester.last_load_time = time.time()
 
@@ -151,11 +151,13 @@ class HarvesterAPI:
                 self.harvester.log.error(f"Unknown error: {e}")
                 return []
 
-        async def lookup_challenge(filename: Path, plot_info: PlotInfo) -> List[harvester_protocol.NewProofOfSpace]:
+        async def lookup_challenge(
+            filename: Path, plot_info: PlotInfo
+        ) -> Tuple[Path, List[harvester_protocol.NewProofOfSpace]]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._is_shutdown:
-                return []
+                return filename, []
             proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info
             )
@@ -169,7 +171,7 @@ class HarvesterAPI:
                         new_challenge.signage_point_index,
                     )
                 )
-            return all_responses
+            return filename, all_responses
 
         awaitables = []
         passed = 0
@@ -193,8 +195,17 @@ class HarvesterAPI:
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
-        for sublist_awaitable in asyncio.as_completed(awaitables):
-            for response in await sublist_awaitable:
+        for filename_sublist_awaitable in asyncio.as_completed(awaitables):
+            filename, sublist = await filename_sublist_awaitable
+            time_taken = time.time() - start
+            if time_taken > 5:
+                self.harvester.log.warning(
+                    f"Looking up qualities on {filename} took: {time.time() - start}. This should be below 5 seconds "
+                    f"to minimize risk of losing rewards."
+                )
+            else:
+                self.harvester.log.debug(f"Looking up qualities on {filename} took: {time.time() - start}")
+            for response in sublist:
                 total_proofs_found += 1
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
                 await peer.send_message(msg)
