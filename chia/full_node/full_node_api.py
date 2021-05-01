@@ -1253,12 +1253,11 @@ class FullNodeAPI:
             return None
         await self.full_node.respond_compact_proof_of_time(request)
 
+    @execute_task
     @peer_required
     @api_request
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
         if self.full_node.sync_store.get_sync_mode():
-            return None
-        if self.full_node.compact_vdf_lock.locked:
             return None
         async with self.full_node.compact_vdf_lock:
             await self.full_node.new_compact_vdf(request, peer)
