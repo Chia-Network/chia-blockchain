@@ -65,6 +65,7 @@ class WalletBlockchain(BlockchainInterface):
 
     coins_of_interest_received: Any
     reorg_rollback: Any
+    wallet_state_manager_lock: asyncio.Lock
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -79,6 +80,7 @@ class WalletBlockchain(BlockchainInterface):
         consensus_constants: ConsensusConstants,
         coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
         reorg_rollback: Callable,
+        lock: asyncio.Lock,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -100,6 +102,7 @@ class WalletBlockchain(BlockchainInterface):
         self.coins_of_interest_received = coins_of_interest_received
         self.reorg_rollback = reorg_rollback
         self.log = logging.getLogger(__name__)
+        self.wallet_state_manager_lock = lock
         await self._load_chain_from_store()
         return self
 
@@ -211,24 +214,27 @@ class WalletBlockchain(BlockchainInterface):
         )
 
         # Always add the block to the database
-        async with self.block_store.db_wrapper.lock:
-            try:
-                await self.block_store.db_wrapper.begin_transaction()
-                await self.block_store.add_block_record(header_block_record, block_record)
-                self.add_block_record(block_record)
-                self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
+        async with self.wallet_state_manager_lock:
+            async with self.block_store.db_wrapper.lock:
+                try:
+                    await self.block_store.db_wrapper.begin_transaction()
+                    await self.block_store.add_block_record(header_block_record, block_record)
+                    self.add_block_record(block_record)
+                    self.clean_block_record(block_record.height - self.constants.BLOCKS_CACHE_SIZE)
 
-                fork_height: Optional[uint32] = await self._reconsider_peak(block_record, genesis, fork_point_with_peak)
-                await self.block_store.db_wrapper.commit_transaction()
-            except BaseException as e:
-                self.log.error(f"Error during db transaction: {e}")
-                await self.block_store.db_wrapper.rollback_transaction()
-                raise
-        if fork_height is not None:
-            self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
-            return ReceiveBlockResult.NEW_PEAK, None, fork_height
-        else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+                    fork_height: Optional[uint32] = await self._reconsider_peak(
+                        block_record, genesis, fork_point_with_peak
+                    )
+                    await self.block_store.db_wrapper.commit_transaction()
+                except BaseException as e:
+                    self.log.error(f"Error during db transaction: {e}")
+                    await self.block_store.db_wrapper.rollback_transaction()
+                    raise
+            if fork_height is not None:
+                self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")
+                return ReceiveBlockResult.NEW_PEAK, None, fork_height
+            else:
+                return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
     async def _reconsider_peak(
         self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
