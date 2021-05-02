@@ -1,9 +1,9 @@
 # flake8: noqa: F811, F401
 import asyncio
+import dataclasses
 import logging
 import random
 import time
-from secrets import token_bytes
 from typing import Dict
 
 import pytest
@@ -11,12 +11,11 @@ import pytest
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.clvm import int_to_bytes
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint64
 from chia.util.wallet_tools import WalletTool
 from tests.core.fixtures import empty_blockchain  # noqa: F401
 
@@ -24,7 +23,7 @@ from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
 from tests.core.fixtures import empty_blockchain  # noqa: F401
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import bt, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
@@ -191,6 +190,8 @@ class TestPerformance:
         log.warning(f"Time for unfinished: {time.time() - start}")
 
         start = time.time()
-        res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block))
+        # No transactions generator, the full node already cached it from the unfinished block
+        block_small = dataclasses.replace(block, transactions_generator=None)
+        res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
         log.warning(f"Res: {res}")
         log.warning(f"Time for full block: {time.time() - start}")
