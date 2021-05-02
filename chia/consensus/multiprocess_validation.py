@@ -44,8 +44,7 @@ def batch_pre_validate_blocks(
     blocks_pickled: Dict[bytes, bytes],
     full_blocks_pickled: Optional[List[bytes]],
     header_blocks_pickled: Optional[List[bytes]],
-    transaction_generators_bytes: List[Optional[bytes]],
-    prev_transaction_generator_args_bytes: List[Optional[List[Tuple[int, bytes]]]],
+    block_generators_bytes: List[Optional[Tuple[bytes, List[Tuple[int, bytes]]]]],
     npc_results: Dict[uint32, bytes],
     check_filter: bool,
     expected_difficulty: List[uint64],
@@ -75,11 +74,11 @@ def batch_pre_validate_blocks(
                 has_transactions: bool = block.transactions_info is not None and block.transactions_info.cost > 0
                 if has_transactions and npc_result is None:
                     assert block.transactions_info is not None
-                    generator_bytes: Optional[bytes] = transaction_generators_bytes[i]
-                    assert generator_bytes is not None
-                    generator: SerializedProgram = SerializedProgram.from_bytes(generator_bytes)
+                    block_generator_bytes: Optional[Tuple[bytes, List[Tuple[int, bytes]]]] = block_generators_bytes[i]
+                    assert block_generator_bytes is not None
+                    generator: SerializedProgram = SerializedProgram.from_bytes(block_generator_bytes[0])
                     prev_generator_args: List[GeneratorArg] = []
-                    prev_gen_args_bytes: Optional[List[Tuple[int, bytes]]] = prev_transaction_generator_args_bytes[i]
+                    prev_gen_args_bytes: List[Tuple[int, bytes]] = block_generator_bytes[1]
                     assert prev_gen_args_bytes is not None
                     for bh, arg_bytes in prev_gen_args_bytes:
                         prev_generator_args.append(GeneratorArg(uint32(bh), SerializedProgram.from_bytes(arg_bytes)))
@@ -261,8 +260,11 @@ async def pre_validate_blocks_multiprocessing(
             final_pickled = recent_sb_compressed_pickled
         b_pickled: Optional[List[bytes]] = None
         hb_pickled: Optional[List[bytes]] = None
-        generators_bytes: List[Optional[bytes]] = []
-        prev_generator_args_bytes: List[Optional[List[Tuple[int, bytes]]]] = []
+
+        # This includes BlockGenerator objects in a way which makes them efficient to parse later (no need to parse
+        # the SerializedProgram with inefficient CLVM parsing, since we know the length here)
+        block_generators_pickled: List[Optional[Tuple[bytes, List[Tuple[int, bytes]]]]] = []
+
         for block in blocks_to_validate:
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
@@ -285,14 +287,12 @@ async def pre_validate_blocks_multiprocessing(
                 except ValueError:
                     return None
                 if block_generator is not None:
-                    generators_bytes.append(bytes(block_generator.program))
                     prev_list = [
                         (int(arg.block_height), bytes(arg.generator)) for arg in block_generator.generator_args
                     ]
-                    prev_generator_args_bytes.append(prev_list)
+                    block_generators_pickled.append((bytes(block_generator.program), prev_list))
                 else:
-                    generators_bytes.append(None)
-                    prev_generator_args_bytes.append(None)
+                    block_generators_pickled.append(None)
             else:
                 if hb_pickled is None:
                     hb_pickled = []
@@ -306,8 +306,7 @@ async def pre_validate_blocks_multiprocessing(
                 final_pickled,
                 b_pickled,
                 hb_pickled,
-                generators_bytes,
-                prev_generator_args_bytes,
+                block_generators_pickled,
                 npc_results_pickled,
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
