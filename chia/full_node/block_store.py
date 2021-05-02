@@ -147,9 +147,9 @@ class BlockStore:
         return None
 
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
-        cached = self.block_cache.get(header_hash)
+        cached: Optional[FullBlock] = self.block_cache.get(header_hash)
         if cached is not None:
-            return cached
+            return bytes(cached)
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()

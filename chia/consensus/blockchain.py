@@ -275,6 +275,8 @@ class Blockchain(BlockchainInterface):
                 if peak_height is not None:
                     self._peak_height = peak_height
             except BaseException:
+                if self.block_store.block_cache.get(block.header_hash) is not None:
+                    self.block_store.block_cache.remove(block.header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
         if fork_height is not None:
