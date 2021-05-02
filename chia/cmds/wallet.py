@@ -66,7 +66,13 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
 @click.option(
-    "-m", "--fee", help="Set the fees for the transaction, in XCH", type=str, default="0", show_default=True, required=True
+    "-m",
+    "--fee",
+    help="Set the fees for the transaction, in XCH",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
 )
 @click.option("-t", "--address", help="Address to send the XCH", type=str, required=True)
 def send_cmd(wallet_rpc_port: int, fingerprint: int, id: int, amount: str, fee: str, address: str) -> None:
