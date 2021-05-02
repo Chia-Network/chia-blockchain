@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import time
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set, Any
+from typing import Callable, Dict, List, Optional, Tuple, Set, Any, Union
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -314,7 +314,7 @@ class FullNodeAPI:
                 blocks.append(block)
         else:
             for i in range(request.start_height, request.end_height + 1):
-                block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(
+                block_bytes: Optional[Union[bytes, FullBlock]] = await self.full_node.block_store.get_full_block_bytes(
                     self.full_node.blockchain.height_to_hash(uint32(i))
                 )
                 if block_bytes is None:
