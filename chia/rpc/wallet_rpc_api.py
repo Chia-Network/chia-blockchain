@@ -67,6 +67,7 @@ class WalletRpcApi:
             "/get_wallet_balance": self.get_wallet_balance,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
+            "/validate_address": self.validate_address,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/create_backup": self.create_backup,
@@ -502,6 +503,18 @@ class WalletRpcApi:
     async def get_initial_freeze_period(self, _: Dict):
         freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP
         return {"INITIAL_FREEZE_END_TIMESTAMP": freeze_period}
+
+    async def validate_address(self, request: Dict) -> Dict:
+        try:
+            puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        except Exception:
+            return {
+                "valid": False
+            }
+
+        return {
+            "valid": True,
+        }
 
     async def get_next_address(self, request: Dict) -> Dict:
         """
