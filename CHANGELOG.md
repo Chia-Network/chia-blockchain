@@ -19,6 +19,7 @@ for setuptools_scm/PEP 440 reasons.
 - Node will now farm while syncing.
 - We changed chialisp singletons to take a puzzlehash as its origin. We also updated the DID wallet to use this.
 - Transactions are now cached for 10 minutes in mempool to retry if there is a failure of a spending attempt.
+- Thank you to @Chida82 who made the log rotation count fully configurable. Apologies to him for not initially being included here.
 - Thank you to @fiveangle for making install.sh more resilient across python installations.
 - Standard transactions now all have announcements.
 - VDF verification during sync and normal operations are now cached to enhance node performance.
