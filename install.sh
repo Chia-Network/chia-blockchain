@@ -21,7 +21,6 @@ fi
 # get submodules
 git submodule update --init mozilla-ca
 
-
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
 	LSB_RELEASE=$(lsb_release -rs)
