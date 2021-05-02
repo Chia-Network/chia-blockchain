@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -49,38 +50,54 @@ def batch_pre_validate_blocks(
     expected_sub_slot_iters: List[uint64],
 ) -> List[bytes]:
     blocks = {}
+    start_3 = time.time()
     for k, v in blocks_pickled.items():
         blocks[k] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
+    log.warning(f"Total time batch vali: 1: {time.time() - start_3}")
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:
         assert ValueError("Only one should be passed here")
     if full_blocks_pickled is not None:
         for i in range(len(full_blocks_pickled)):
             try:
+                log.warning(f"Total time batch vali: 2: {time.time() - start_3}")
                 block: FullBlock = FullBlock.from_bytes(full_blocks_pickled[i])
+                log.warning(f"Total time batch vali: 3: {time.time() - start_3}")
                 tx_additions: List[Coin] = []
                 removals: List[bytes32] = []
                 npc_result: Optional[NPCResult] = None
                 if block.height in npc_results:
+                    log.warning(f"Total time batch vali: 4: {time.time() - start_3}")
                     npc_result = NPCResult.from_bytes(npc_results[block.height])
+                    log.warning(f"Total time batch vali: 5: {time.time() - start_3}")
                     assert npc_result is not None
                     if npc_result.npc_list is not None:
+                        log.warning(f"Total time batch vali: 7: {time.time() - start_3}")
                         removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                        log.warning(f"Total time batch vali: 8: {time.time() - start_3}")
                     else:
                         removals, tx_additions = [], []
 
                 if block.transactions_generator is not None and npc_result is None:
+                    log.warning(f"Total time batch vali: 9: {time.time() - start_3}")
                     prev_generator_bytes = prev_transaction_generators[i]
                     assert prev_generator_bytes is not None
                     assert block.transactions_info is not None
+                    log.warning(f"Total time batch vali: 10: {time.time() - start_3}")
+                    log.warning(f"Len generator: {len(prev_generator_bytes)}")
                     block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
+                    log.warning(f"Prev gen len: {len(block_generator.generator_args)}")
                     assert block_generator.program == block.transactions_generator
+                    log.warning(f"Total time batch vali: 11: {time.time() - start_3}")
                     npc_result = get_name_puzzle_conditions(
                         block_generator, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
                     )
+                    log.warning(f"Total time batch vali: 12: {time.time() - start_3}")
                     removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    log.warning(f"Total time batch vali: 13: {time.time() - start_3}")
 
+                log.warning(f"Total time batch vali: 4: {time.time() - start_3}")
                 header_block = get_block_header(block, tx_additions, removals)
                 required_iters, error = validate_finished_header_block(
                     constants,
@@ -94,11 +111,13 @@ def batch_pre_validate_blocks(
                 if error is not None:
                     error_int = uint16(error.code.value)
 
+                log.warning(f"Total time batch vali: 5: {time.time() - start_3}")
                 results.append(PreValidationResult(error_int, required_iters, npc_result))
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
                 results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
+            log.warning(f"Total time batch vali: 6: {time.time() - start_3}")
     elif header_blocks_pickled is not None:
         for i in range(len(header_blocks_pickled)):
             try:
@@ -119,7 +138,10 @@ def batch_pre_validate_blocks(
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
                 results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
-    return [bytes(r) for r in results]
+    log.warning(f"Total time batch vali: 6: {time.time() - start_3}")
+    res = [bytes(r) for r in results]
+    log.warning(f"Total time batch vali: 7: {time.time() - start_3}")
+    return res
 
 
 async def pre_validate_blocks_multiprocessing(
@@ -148,6 +170,8 @@ async def pre_validate_blocks_multiprocessing(
         npc_results
         get_block_generator
     """
+    start_2 = time.time()
+    log.warning(f"Total time multi vali: 1: {time.time() - start_2}")
     prev_b: Optional[BlockRecord] = None
     # Collects all the recent blocks (up to the previous sub-epoch)
     recent_blocks: Dict[bytes32, BlockRecord] = {}
@@ -180,6 +204,7 @@ async def pre_validate_blocks_multiprocessing(
     for block in blocks:
         block_record_was_present.append(block_records.contains_block(block.header_hash))
 
+    log.warning(f"Total time multi vali: 2: {time.time() - start_2}")
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
@@ -232,12 +257,14 @@ async def pre_validate_blocks_multiprocessing(
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
+    log.warning(f"Total time multi vali: 3: {time.time() - start_2}")
     block_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
     for i, block in enumerate(blocks):
         block_dict[block.header_hash] = block
         if not block_record_was_present[i]:
             block_records.remove_block_record(block.header_hash)
 
+    log.warning(f"Total time multi vali: 4: {time.time() - start_2}")
     recent_sb_compressed_pickled = {bytes(k): bytes(v) for k, v in recent_blocks_compressed.items()}
     npc_results_pickled = {}
     for k, v in npc_results.items():
@@ -298,9 +325,12 @@ async def pre_validate_blocks_multiprocessing(
                 [diff_ssis[j][1] for j in range(i, end_i)],
             )
         )
+    log.warning(f"Total time multi vali: 5: {time.time() - start_2}")
     # Collect all results into one flat list
-    return [
+    res = [
         PreValidationResult.from_bytes(result)
         for batch_result in (await asyncio.gather(*futures))
         for result in batch_result
     ]
+    log.warning(f"Total time multi vali: 6: {time.time() - start_2}")
+    return res

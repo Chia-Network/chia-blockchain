@@ -1060,12 +1060,12 @@ class FullNode:
         block: FullBlock = respond_block.block
         if self.sync_store.get_sync_mode():
             return None
-
+        start_1 = time.time()
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
         if self.blockchain.contains_block(header_hash):
             return None
-
+        self.log.warning(f"Total time 1: {time.time() - start_1}")
         pre_validation_result: Optional[PreValidationResult] = None
         if (
             block.is_transaction_block()
@@ -1116,7 +1116,9 @@ class FullNode:
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
 
+        self.log.warning(f"Total time 2: {time.time() - start_1}")
         async with self.blockchain.lock:
+            self.log.warning(f"Total time 3: {time.time() - start_1}")
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
@@ -1125,9 +1127,11 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
+            self.log.warning(f"Npc results is non? {npc_results is None}")
             pre_validation_results: Optional[
                 List[PreValidationResult]
             ] = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+            self.log.warning(f"Total time 4: {time.time() - start_1}")
             if pre_validation_results is None:
                 raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
             if pre_validation_results[0].error is not None:
@@ -1146,6 +1150,7 @@ class FullNode:
                 )
                 assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                 added, error_code, fork_height = await self.blockchain.receive_block(block, result_to_validate, None)
+            self.log.warning(f"Total time 5: {time.time() - start_1}")
 
             validation_time = time.time() - validation_start
 
@@ -1175,6 +1180,7 @@ class FullNode:
                 # Should never reach here, all the cases are covered
                 raise RuntimeError(f"Invalid result from receive_block {added}")
 
+        self.log.warning(f"Total time 6: {time.time() - start_1}")
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
         peak = self.blockchain.get_peak()
         assert peak is not None
@@ -1190,6 +1196,7 @@ class FullNode:
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
                 self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
+        self.log.warning(f"Total time 7: {time.time() - start_1}")
         return None
 
     async def respond_unfinished_block(
