@@ -1060,10 +1060,12 @@ class FullNode:
         block: FullBlock = respond_block.block
         if self.sync_store.get_sync_mode():
             return None
+
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = block.header_hash
         if self.blockchain.contains_block(header_hash):
             return None
+
         pre_validation_result: Optional[PreValidationResult] = None
         if (
             block.is_transaction_block()

@@ -127,8 +127,7 @@ def batch_pre_validate_blocks(
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
                 results.append(PreValidationResult(uint16(Err.UNKNOWN.value), None, None))
-    res = [bytes(r) for r in results]
-    return res
+    return [bytes(r) for r in results]
 
 
 async def pre_validate_blocks_multiprocessing(
@@ -316,9 +315,8 @@ async def pre_validate_blocks_multiprocessing(
             )
         )
     # Collect all results into one flat list
-    res = [
+    return [
         PreValidationResult.from_bytes(result)
         for batch_result in (await asyncio.gather(*futures))
         for result in batch_result
     ]
-    return res
