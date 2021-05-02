@@ -75,7 +75,7 @@ rate_limits_other = {
     ProtocolMessageTypes.respond_compact_vdf: RLSettings(200, 100 * 1024),
     ProtocolMessageTypes.new_compact_vdf: RLSettings(100, 1024),
     ProtocolMessageTypes.request_peers: RLSettings(10, 100),
-    ProtocolMessageTypes.respond_peers: RLSettings(10, 1 * 1024 * 1024),
+    ProtocolMessageTypes.respond_peers: RLSettings(10 * 100, 10 * 100 * 20),
     ProtocolMessageTypes.request_puzzle_solution: RLSettings(100, 100),
     ProtocolMessageTypes.respond_puzzle_solution: RLSettings(100, 1024 * 1024),
     ProtocolMessageTypes.reject_puzzle_solution: RLSettings(100, 100),
