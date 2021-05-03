@@ -74,7 +74,7 @@ class NewEndOfSubSlotVDF(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class RequestCompactProofOfTime:
+class RequestCompactProofOfTime(Streamable):
     new_proof_of_time: VDFInfo
     header_hash: bytes32
     height: uint32
@@ -83,7 +83,7 @@ class RequestCompactProofOfTime:
 
 @dataclass(frozen=True)
 @streamable
-class RespondCompactProofOfTime:
+class RespondCompactProofOfTime(Streamable):
     vdf_info: VDFInfo
     vdf_proof: VDFProof
     header_hash: bytes32

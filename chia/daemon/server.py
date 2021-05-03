@@ -506,6 +506,7 @@ class WebSocketServer:
         finally:
             if current_process is not None:
                 self.services[service_name].remove(current_process)
+                current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
     async def start_plotting(self, request: Dict[str, Any]):

@@ -21,8 +21,7 @@ class GeneratorArg(Streamable):
 
 
 @dataclass(frozen=True)
-@streamable
-class CompressorArg(Streamable):
+class CompressorArg:
     """`CompressorArg` is used as input to the Block Compressor"""
 
     block_height: uint32
