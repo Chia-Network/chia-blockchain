@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
@@ -146,10 +146,10 @@ class BlockStore:
             return block
         return None
 
-    async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[Union[bytes, FullBlock]]:
+    async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
         cached: Optional[FullBlock] = self.block_cache.get(header_hash)
         if cached is not None:
-            return cached
+            return bytes(cached)
         cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
