@@ -506,7 +506,7 @@ class WalletRpcApi:
 
     async def validate_address(self, request: Dict) -> Dict:
         try:
-            puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+            decode_puzzle_hash(request["address"])
         except Exception:
             return {
                 "valid": False
