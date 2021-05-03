@@ -100,8 +100,8 @@ class WSChiaConnection:
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
-        self.outbound_rate_limiter = RateLimiter(percentage_of_limit=outbound_rate_limit_percent)
-        self.inbound_rate_limiter = RateLimiter(percentage_of_limit=inbound_rate_limit_percent)
+        self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
+        self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:

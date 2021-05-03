@@ -102,7 +102,24 @@ rate_limits_other = {
 
 
 class RateLimiter:
-    def __init__(self, reset_seconds=60, percentage_of_limit=100):
+    incoming: bool
+    reset_seconds: int
+    current_minute: int
+    message_counts: Counter
+    message_cumulative_sizes: Counter
+    percentage_of_limit: int
+    non_tx_message_counts: int = 0
+    non_tx_cumulative_size: int = 0
+
+    def __init__(self, incoming: bool, reset_seconds=60, percentage_of_limit=100):
+        """
+        The incoming parameter affects whether counters are incremented
+        unconditionally or not. For incoming messages, the counters are always
+        incremeneted. For outgoing messages, the counters are only incremented
+        if they are allowed to be sent by the rate limiter, since we won't send
+        the messages otherwise.
+        """
+        self.incoming = incoming
         self.reset_seconds = reset_seconds
         self.current_minute = time.time() // reset_seconds
         self.message_counts = Counter()
@@ -116,7 +133,7 @@ class RateLimiter:
         Returns True if message can be processed successfully, false if a rate limit is passed.
         """
 
-        current_minute = time.time() // self.reset_seconds
+        current_minute = int(time.time() // self.reset_seconds)
         if current_minute != self.current_minute:
             self.current_minute = current_minute
             self.message_counts = Counter()
@@ -129,31 +146,49 @@ class RateLimiter:
             log.warning(f"Invalid message: {message.type}, {e}")
             return True
 
-        self.message_counts[message_type] += 1
-        self.message_cumulative_sizes[message_type] += len(message.data)
-        proportion_of_limit = self.percentage_of_limit / 100
+        new_message_counts: int = self.message_counts[message_type] + 1
+        new_cumulative_size: int = self.message_cumulative_sizes[message_type] + len(message.data)
+        new_non_tx_count: int = self.non_tx_message_counts
+        new_non_tx_size: int = self.non_tx_cumulative_size
+        proportion_of_limit: float = self.percentage_of_limit / 100
 
-        limits = DEFAULT_SETTINGS
-        if message_type in rate_limits_tx:
-            limits = rate_limits_tx[message_type]
-        elif message_type in rate_limits_other:
-            limits = rate_limits_other[message_type]
-            self.non_tx_message_counts += 1
-            self.non_tx_cumulative_size += len(message.data)
-            if self.non_tx_message_counts > NON_TX_FREQ * proportion_of_limit:
+        ret: bool = False
+        try:
+
+            limits = DEFAULT_SETTINGS
+            if message_type in rate_limits_tx:
+                limits = rate_limits_tx[message_type]
+            elif message_type in rate_limits_other:
+                limits = rate_limits_other[message_type]
+                new_non_tx_count = self.non_tx_message_counts + 1
+                new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
+                if new_non_tx_count > NON_TX_FREQ * proportion_of_limit:
+                    return False
+                if new_non_tx_size > NON_TX_MAX_TOTAL_SIZE * proportion_of_limit:
+                    return False
+            else:
+                log.warning(f"Message type {message_type} not found in rate limits")
+
+            if limits.max_total_size is None:
+                limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
+            assert limits.max_total_size is not None
+
+            if new_message_counts > limits.frequency * proportion_of_limit:
                 return False
-            if self.non_tx_cumulative_size > NON_TX_MAX_TOTAL_SIZE * proportion_of_limit:
+            if len(message.data) > limits.max_size:
                 return False
-        else:
-            log.warning(f"Message type {message_type} not found in rate limits")
+            if new_cumulative_size > limits.max_total_size * proportion_of_limit:
+                return False
 
-        if limits.max_total_size is None:
-            limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
-
-        if self.message_counts[message_type] > limits.frequency * proportion_of_limit:
-            return False
-        if len(message.data) > limits.max_size:
-            return False
-        if self.message_cumulative_sizes[message_type] > limits.max_total_size * proportion_of_limit:
-            return False
-        return True
+            ret = True
+            return True
+        finally:
+            if self.incoming or ret:
+                # now that we determined that it's OK to send the message, commit the
+                # updates to the counters. Alternatively, if this was an
+                # incoming message, we already received it and it should
+                # increment the counters unconditionally
+                self.message_counts[message_type] = new_message_counts
+                self.message_cumulative_sizes[message_type] = new_cumulative_size
+                self.non_tx_message_counts = new_non_tx_count
+                self.non_tx_cumulative_size = new_non_tx_size
