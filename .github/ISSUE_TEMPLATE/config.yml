@@ -1,11 +1,14 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Ask for Support
-    url: https://github.com/Chia-Network/chia-blockchain/discussions/new?category=support
-    about: Ask a question or request support here
-  - name: Make a Request
-    url: https://github.com/Chia-Network/chia-blockchain/discussions/new?category=ideas
-    about: Request a new feature or idea here
-  - name: Join the Keybase.io support chat
-    url: https://keybase.io/team/chia_network.public
-    about: Get support on the Chia Keybase chat channels. #beginner & #support is where you can get help
+--- 
+contact_links: 
+  - 
+    about: "Ask a question or request support here"
+    name: "Ask for Support"
+    url: "https://github.com/Chia-Network/chia-blockchain/discussions/new?category=support"
+  - 
+    about: "Request a new feature or idea here"
+    name: "Make a Request"
+    url: "https://github.com/Chia-Network/chia-blockchain/discussions/new?category=ideas"
+  - 
+    about: "Get support on the Chia Keybase chat channels."
+    name: "Join the Keybase.io support chat"
+    url: "https://keybase.io/team/chia_network.public"
