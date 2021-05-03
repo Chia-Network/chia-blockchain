@@ -273,7 +273,8 @@ class FarmerAPI:
         await self.farmer.server.send_to_specific([msg], node_id)
 
     @api_request
-    async def farming_info(self, request: farmer_protocol.FarmingInfo):
+    @peer_required
+    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: ws.WSChiaConnection = None):
         self.farmer.state_changed(
             "new_farming_info",
             {
@@ -287,3 +288,5 @@ class FarmerAPI:
                 }
             },
         )
+        self.farmer.log.info(str(request.passed)+ " / "+str(request.total_plots)+" plots from "+str(peer.peer_host)+" "+str(peer.peer_node_id))
+
