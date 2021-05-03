@@ -7,7 +7,12 @@ from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
-from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
+from chia.types.weight_proof import (
+    SubEpochChallengeSegment,
+    SubEpochSegments,
+    SubEpochChallengeSegmentV2,
+    SubEpochSegmentsV2,
+)
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
@@ -42,10 +47,12 @@ class BlockStore:
             "block blob, sub_epoch_summary blob, is_peak tinyint, is_block tinyint)"
         )
 
-        # todo remove in v1.2
-        await self.db.execute("DROP TABLE IF EXISTS sub_epoch_segments_v2")
-
         # Sub epoch segments for weight proofs
+        await self.db.execute(
+            "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
+        )
+
+        # backward compatible Sub epoch segments for weight proofs
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
         )
@@ -126,6 +133,35 @@ class BlockStore:
         await cursor.close()
         if row is not None:
             challenge_segments = SubEpochSegments.from_bytes(row[0]).challenge_segments
+            self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
+            return challenge_segments
+        return None
+
+    async def persist_sub_epoch_challenge_segments_v2(
+        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegmentV2]
+    ) -> None:
+        async with self.db_wrapper.lock:
+            cursor_1 = await self.db.execute(
+                "INSERT OR REPLACE INTO segments VALUES(?, ?)",
+                (ses_block_hash.hex(), bytes(SubEpochSegmentsV2(segments))),
+            )
+            await cursor_1.close()
+            await self.db.commit()
+
+    async def get_sub_epoch_challenge_segments_v2(
+        self,
+        ses_block_hash: bytes32,
+    ) -> Optional[List[SubEpochChallengeSegmentV2]]:
+        cached = self.ses_challenge_cache.get(ses_block_hash)
+        if cached is not None:
+            return cached
+        cursor = await self.db.execute(
+            "SELECT challenge_segments from segments WHERE ses_block_hash=?", (ses_block_hash.hex(),)
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            challenge_segments = SubEpochSegmentsV2.from_bytes(row[0]).challenge_segments
             self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
             return challenge_segments
         return None
