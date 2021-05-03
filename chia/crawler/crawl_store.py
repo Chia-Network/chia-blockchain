@@ -8,8 +8,8 @@ from typing import List, Dict
 
 import aiosqlite
 
-from src.crawler.peer_record import PeerRecord, PeerReliability
-from src.types.peer_info import PeerInfo
+from chia.crawler.peer_record import PeerRecord, PeerReliability
+from chia.types.peer_info import PeerInfo
 from pytz import timezone
 
 log = logging.getLogger(__name__)

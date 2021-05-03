@@ -8,17 +8,17 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import aiosqlite
-import src.server.ws_connection as ws
-from src.consensus.constants import ConsensusConstants
-from src.crawler.crawl_store import CrawlStore, utc_timestamp
-from src.crawler.peer_record import PeerRecord, PeerReliability
-from src.full_node.coin_store import CoinStore
-from src.protocols import full_node_protocol
-from src.server.server import ChiaServer
-from src.types.peer_info import PeerInfo
-from src.util.path import mkdir, path_from_root
+import chia.server.ws_connection as ws
+from chia.consensus.constants import ConsensusConstants
+from chia.crawler.crawl_store import CrawlStore, utc_timestamp
+from chia.crawler.peer_record import PeerRecord, PeerReliability
+from chia.full_node.coin_store import CoinStore
+from chia.protocols import full_node_protocol
+from chia.server.server import ChiaServer
+from chia.types.peer_info import PeerInfo
+from chia.util.path import mkdir, path_from_root
 from dnslib import A, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
-from src.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ soa_record = SOA(
 ns_records = [NS(ns)]
 
 bootstrap_peers = ["node-eu.chia.net"]
-minimum_height = 100000
+minimum_height = 225974
 
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
