@@ -826,7 +826,7 @@ class WalletStateManager:
                 reorg_blocks.append(header_block_record)
                 if curr.height == 0:
                     break
-                curr = self.blockchain.block_record(curr.prev_hash)
+                curr = await self.blockchain.get_block_record_from_db(curr.prev_hash)
             reorg_blocks.reverse()
 
             # For each block, process additions to get all Coins, then process removals to get unspent coins
