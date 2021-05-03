@@ -259,6 +259,7 @@ full_node:
   # Initiate outbound connections until this number is hit.
   target_outbound_peer_count: 8
   # IPv4/IPv6 network addresses/CIDR blocks allowed to connect even when target_peer_count has been hit.
+  # exempt_peer_networks = ["192.168.0.3", "192.168.1.1/24", "fe80::/10", "2606:4700:4700::64/128"]
   exempt_peer_networks: []
   # Accept at most # of inbound connections for different node types.
   max_inbound_wallet: 20
