@@ -70,6 +70,8 @@ class WalletNode:
     full_node_peer: Optional[PeerInfo]
     peer_task: Optional[asyncio.Task]
     logged_in: bool
+    last_new_peak_message: Any
+    last_new_peak_peer: Any
 
     def __init__(
         self,
@@ -107,6 +109,8 @@ class WalletNode:
         self.sync_task: Optional[asyncio.Task] = None
         self.new_peak_lock: Optional[asyncio.Lock] = None
         self.logged_in_fingerprint: Optional[int] = None
+        self.last_new_peak_message: Any = None
+        self.last_new_peak_peer: Any = None
         self.peer_task = None
         self.logged_in = False
 
@@ -440,6 +444,8 @@ class WalletNode:
                 # Request weight proof
                 # Sync if PoW validates
                 if self.wallet_state_manager.sync_mode:
+                    self.last_new_peak_message = peak
+                    self.last_new_peak_peer = peer
                     return
                 weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
                 weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
@@ -506,11 +512,15 @@ class WalletNode:
             try:
                 assert self.wallet_state_manager is not None
                 self.wallet_state_manager.set_sync_mode(True)
+                self.last_new_peak_message = None
+                self.last_new_peak_peer = None
                 await self._sync()
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Loop exception in sync {e}. {tb}")
             finally:
+                if self.last_new_peak_peer is not None and self.last_new_peak_message is not None:
+                    asyncio.create_task(self.new_peak_wallet(self.last_new_peak_message, self.last_new_peak_peer))
                 if self.wallet_state_manager is not None:
                     self.wallet_state_manager.set_sync_mode(False)
             self.log.info("Loop end in sync job")
