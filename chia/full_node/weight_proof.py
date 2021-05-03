@@ -616,7 +616,7 @@ class WeightProofHandler:
         fork_point_index = 0
         ses_heights = self.blockchain.get_ses_heights()
         for idx, summary_height in enumerate(ses_heights):
-            log.info(f"check summary {idx} height {summary_height}")
+            log.debug(f"check summary {idx} height {summary_height}")
             local_ses = self.blockchain.get_ses(summary_height)
             if idx == len(received_summaries) - 1:
                 # break if end of wp summaries
