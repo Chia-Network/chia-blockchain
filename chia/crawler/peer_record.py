@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from src.util.ints import uint32, uint64
-from src.util.streamable import Streamable, streamable
+from chia.util.ints import uint32, uint64
+from chia.util.streamable import Streamable, streamable
 import math
 from datetime import datetime
 from pytz import timezone

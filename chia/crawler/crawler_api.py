@@ -1,9 +1,9 @@
 from typing import Callable, Optional
-import src.server.ws_connection as ws
-from src.crawler.crawler import Crawler
-from src.server.outbound_message import Message
-from src.util.api_decorators import api_request, peer_required
-from src.full_node.full_node import full_node_protocol
+import chia.server.ws_connection as ws
+from chia.crawler.crawler import Crawler
+from chia.server.outbound_message import Message
+from chia.util.api_decorators import api_request, peer_required
+from chia.full_node.full_node import full_node_protocol
 
 
 class CrawlerAPI:
