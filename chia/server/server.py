@@ -146,7 +146,7 @@ class ChiaServer:
         self.invalid_protocol_ban_seconds = 10
         self.api_exception_ban_seconds = 10
         self.exempt_peer_networks: List[Union[IPv4Network, IPv6Network]] = [
-            ip_network(net) for net in config.get("exempt_peer_networks", [])
+            ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])
         ]
 
     def my_id(self) -> bytes32:
