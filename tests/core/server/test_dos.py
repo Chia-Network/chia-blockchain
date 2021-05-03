@@ -245,6 +245,47 @@ class TestDos:
         await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
+    async def test_peer_gossip_not_rate_limited(self, setup_two_nodes):
+        """
+        We trigger the outgoing rate limit, then test that peer gossip messages
+        are let through as a special case.
+        """
+        nodes, _ = setup_two_nodes
+        full_node_1, full_node_2 = nodes
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+
+        assert len(server_1.all_connections) == 1
+
+        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
+        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
+
+        def is_not_closed():
+            return not ws_con.closed
+
+        peers_message = make_msg(
+            ProtocolMessageTypes.request_peers,
+            full_node_protocol.RequestPeers(),
+        )
+
+        for i in range(16):
+            await ws_con._send_message(peers_message)
+        await asyncio.sleep(1)
+        assert not ws_con.closed
+
+        await time_out_assert(15, is_not_closed)
+
+        def is_not_banned():
+            return "1.2.3.4" not in server_2.banned_peers
+
+        await time_out_assert(15, is_not_banned)
+
+    @pytest.mark.asyncio
     async def test_spam_message_too_large(self, setup_two_nodes):
         nodes, _ = setup_two_nodes
         full_node_1, full_node_2 = nodes
