@@ -61,7 +61,7 @@ class MempoolManager:
         # spends.
         self.nonzero_fee_minimum_fpc = 5
 
-        self.limit_factor = 0.5
+        self.limit_factor = 0.3
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
         self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.potential_cache_cost: int = 0
