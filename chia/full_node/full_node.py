@@ -635,8 +635,10 @@ class FullNode:
 
             # dont sync to wp if local peak is heavier,
             # dont ban peer, we asked for this peak
-            if response.wp.recent_chain_data[-1].reward_chain_block.weight <= self.blockchain.get_peak().weight:
-                raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
+            current_peak = self.blockchain.get_peak()
+            if current_peak is not None:
+                if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
+                    raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
 
             try:
                 validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
