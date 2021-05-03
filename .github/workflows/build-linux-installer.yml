@@ -1,6 +1,7 @@
 name: Linux installer on Python 3.8
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -94,3 +95,48 @@ jobs:
       with:
         name: Linux-Installers
         path: ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      id: download
+      with:
+        name: 'Linux-Installers'
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      env:
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        ls ${{ github.workspace }}/build_scripts/final_installer/
+      #run: |
+       #   aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/builds/
+        #  aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/builds/
+
+    - name: Install py3createtorrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create .rpm torrent
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          py3createtorrent ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
+
+    - name: Create Torrent Files
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        py3createtorrent /home/runner/work/chia-blockchain/chia-blockchain/*.rpm
+        py3createtorrent ${{ github.workspace }}/build_scripts/final_installer/reatetorrent /home/runner/work/chia-blockchain/chia-blockchain/*.deb
+
+    - name: Upload Release Files
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/test-installs/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/test-installs/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.torrent s3://download-chia-net/test-installs/
