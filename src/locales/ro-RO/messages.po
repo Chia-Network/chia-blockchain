@@ -2063,4 +2063,3 @@ msgstr "{currencyCode} Total Chia cultivat"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Comisioane de tranzacție"
-

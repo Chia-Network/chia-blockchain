@@ -2063,4 +2063,3 @@ msgstr "{currencyCode} 收获的奇亚币总计"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 用户交易费用"
-
