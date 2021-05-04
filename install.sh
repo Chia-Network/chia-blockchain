@@ -31,6 +31,26 @@ if $UBUNTU; then
 	UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
 fi
 
+check_for_dev() {
+  #Checks to see if there are any modified files and warns the user that their version number will be reported as a dev version.
+  if ! git --git-dir="./.git" diff --quiet
+  then
+      # do stuff...
+      echo "There are modified files. chia version will be reported as a RELEASE.dev version."
+      while true; do
+        read -p "Continue to install dev version (Y/n)? " yn
+          case $yn in
+              [Yy]* ) break;;
+              [Nn]* ) exit;;
+              * ) break;;
+          esac
+      done
+  fi
+
+}
+
+check_for_dev
+
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
 	#LINUX=1
