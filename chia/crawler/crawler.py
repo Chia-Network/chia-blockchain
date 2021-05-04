@@ -204,7 +204,7 @@ class Crawler:
                     await self.crawl_store.reload_cached_peers()
                 if random.randrange(0, 10) == 0:
                     await self.crawl_store.load_to_db()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(10000)
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(4000)
 
                 async def peer_action(peer: ws.WSChiaConnection):
                     # Ask peer for peers
@@ -250,7 +250,7 @@ class Crawler:
                         yield iterable[ndx : min(ndx + n, size)]
 
                 batch_count = 0
-                for peers in batch(peers_to_crawl, 1000):
+                for peers in batch(peers_to_crawl, 200):
                     self.log.info(f"Starting batch {batch_count*100}-{batch_count*100+100}")
                     batch_count += 1
                     tasks = []
@@ -275,6 +275,8 @@ class Crawler:
                 # Periodically print detailed stats.
                 good_peers = await self.crawl_store.get_cached_peers(99999999)
                 self.log.error(f"Reliable nodes: {len(good_peers)}")
+                banned_peers = self.crawl_store.get_banned_peers()
+                self.log.error(f"Banned/ignored addresses: {banned_peers}")
                 if random.randrange(0, 10) == 0:
                     num_connected_today = await self.crawl_store.get_peers_today_connected()
                     self.log.error(f"Peers reachable today: {num_connected_today}.")
