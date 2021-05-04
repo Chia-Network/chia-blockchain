@@ -8,7 +8,7 @@ msgstr ""
 "Language: it_IT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:50\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -37,7 +37,7 @@ msgstr "Un harvester è un servizio eseguito sulla macchina in cui i plot sono r
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "Sulla Blockchain Chia"
+msgstr "Info su Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -61,7 +61,7 @@ msgstr "Azioni"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr "Inserisci"
+msgstr "Aggiungi"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
@@ -88,7 +88,7 @@ msgstr "Aggiungi un plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "Aggiungi cartella plot"
+msgstr "Scegli la directory per il plot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -121,7 +121,7 @@ msgstr "Importo Per Moneta Iniziale"
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "Sei sicuro di voler eliminare il plot? Il plot non può essere recuperato."
+msgstr "Sei sicuro di voler eliminare il plot? Il plot non potrà essere recuperato."
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -129,7 +129,7 @@ msgstr "Sei sicuro di volerti disconnettere?"
 
 #: src/electron/main.tsx:164
 msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Sei sicuro di voler uscire? Il plotting ed il farming da GUI si interromperanno."
+msgstr "Sei sicuro di voler chiudere il programma? Eventuali creazioni di plot ed il farming verranno interrotti."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -156,7 +156,7 @@ msgstr "Bilancio"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Importo Base Ricompensa Farmer"
+msgstr "Quantità minima come ricompensansa per il farming"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -249,11 +249,11 @@ msgstr "Cancella"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr "Cancella e Spendi"
+msgstr "Annulla e cancella"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "Attenzione, eliminando questi plot saranno eliminati per sempre. Controlla che i dispositivi di storage siano propriamente connessi."
+msgstr "Attenzione, eliminando questi plot, essi saranno eliminati per sempre. Controlla che i dispositivi di memorizzazione siano connessi correttamente."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
@@ -261,7 +261,7 @@ msgstr "Sfida"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr "Hash Sfida"
+msgstr "Hash della sfida"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
@@ -281,7 +281,7 @@ msgstr "Wallet Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr "Scegli il Numero di Plot"
+msgstr "Scegli il numero di Plot"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
@@ -307,11 +307,11 @@ msgstr "Colore"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr "Informazioni Colore"
+msgstr "Informazioni sul colore"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr "Stringa Colore"
+msgstr "Colore della stringa"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
@@ -323,7 +323,7 @@ msgstr "Monete Colorate"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr "Opzioni Monete Colorate"
+msgstr "Opzioni delle monete colorate"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
@@ -348,7 +348,7 @@ msgstr "Connettiti"
 #: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
-msgstr "Connettiti con altri peer"
+msgstr "Connettiti ad altri peer"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
@@ -394,7 +394,7 @@ msgstr "Copia"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr "Copia sulla Clipboard"
+msgstr "Copia negli appunti"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -418,7 +418,7 @@ msgstr "Crea Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Crea Wallet Admin a Velocità Limitata"
+msgstr "Crea un wallett di tipo admin con tariffa limitata"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
@@ -430,13 +430,13 @@ msgstr "Crea User Wallet a Velocità Limitata"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr "Crea Offerta Commerciale"
+msgstr "Crea una proposta commerciale"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "Create Transaction"
-msgstr "Crea Transazione"
+msgstr "Crea un contratto"
 
 #: src/components/backup/BackupCreate.tsx:58
 msgid "Create a Backup"
@@ -541,7 +541,7 @@ msgstr "Sviluppatore"
 
 #: src/electron/main.tsx:263
 msgid "Developer Tools"
-msgstr "Strumenti Sviluppatore"
+msgstr "Strumenti per sviluppatori"
 
 #: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
@@ -571,7 +571,7 @@ msgstr "Opzioni Identità Distribuita"
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr "Hai dei plot esistenti su questa macchina? <0>Aggiungi Cartella Plot</0>"
+msgstr "Hai dei plot esistenti su questa macchina? <0>Aggiungi cartella Plot</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -615,11 +615,11 @@ msgstr "Tempo Stimato per Vincere"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
-msgstr "Spazio della rete stimato"
+msgstr "Dimensioni stimate della rete"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr "Stima della somma di tutto lo spazio disco plottato da tutti i farmer nella rete"
+msgstr "Stima delle dimensioni di tutta la memoria allocata da tutti i farmer della rete"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
@@ -660,7 +660,7 @@ msgstr "Il farmer non è in esecuzione"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr "I coltivatori guadagnano le ricompense del blocco e le tasse di transazione impegnando spazio inutilizzato alla rete per aiutare a rendere sicure le transazioni. Qua è dove sarà la tua coltivazione una volta aggiunto un plot. <0>Scopri di più</0>"
+msgstr "I coltivatori, guadagnano le ricompense del blocco e le tasse di transazione impegnando il proprio spazio di memoria inutilizzato all'interno della rete \"es. un hard disk che non ti occorre\", e ciò è fatto al fine di rendere sicure le transazioni. Qui è dove sarà visionabile la tua coltivazione una volta che avrai aggiunto un plot. <0>Scopri di più</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
@@ -685,7 +685,7 @@ msgstr "Stato della Coltivazione"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
 #: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
-msgstr "Fee"
+msgstr "Costo della commissione"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee (TXCH)"
@@ -701,7 +701,7 @@ msgstr "Tassa ({currencyCode})"
 
 #: src/components/block/Block.jsx:294
 msgid "Fees Amount"
-msgstr "Ammontare delle Fee"
+msgstr "Ammontare delle tasse"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
@@ -716,11 +716,11 @@ msgstr "File"
 #: src/components/plot/PlotsNotFound.tsx:10
 #: src/components/plot/overview/PlotOverviewPlots.tsx:61
 msgid "Filename"
-msgstr "Nome file"
+msgstr "Nome del file"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr "Posizione della cartella finale"
+msgstr "Seleziona la destinazione finale per la tua cartella plot"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
@@ -729,7 +729,7 @@ msgstr "Finito"
 
 #: src/electron/main.tsx:351
 msgid "Follow on Twitter"
-msgstr "Segui su Twitter"
+msgstr "Seguici su Twitter"
 
 #: src/electron/main.tsx:318
 msgid "Frequently Asked Questions"
@@ -833,7 +833,7 @@ msgstr "Indicato se questa offerta è stata creata da noi"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr "Indicato quando è stata accettata questa offerta"
+msgstr "Indica a che ora questa offerta è stata accettata"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
@@ -846,7 +846,7 @@ msgstr "Quantità Iniziale"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr "Inizializza un Wallet Utente a Velocità Limitata:"
+msgstr "Inizializza un Wallet Utente a tariffa Limitata:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -854,7 +854,7 @@ msgstr "Intervallo"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr "Taglia-K"
+msgstr "Dimensione-K"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
@@ -867,19 +867,19 @@ msgstr "KiB Up/Down"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr "Ultima Prova Tentata"
+msgstr "Ultima tentativo effettuato"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr "Ultima Altezza Coltivata"
+msgstr "Dimensione dell'ultima farm"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr "Ultime Sfide Blocchi"
+msgstr "L'ultimo blocco delle sfide farmato"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
-msgstr "Caricando..."
+msgstr "Caricamento in corso..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
@@ -887,7 +887,7 @@ msgstr "Plot Harvester Locale"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
-msgstr "Accedendo"
+msgstr "Accesso in corso"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1792,7 +1792,7 @@ msgstr "Totale iterazioni dall'inizio della blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
-#~ msgstr "Commercia"
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -2009,11 +2009,11 @@ msgstr "La rete del tuo Harvester"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Errore 13] Permesso negato. Stai cercando di accedere a un file/directory senza avere i permessi necessari. Molto probabilmente una delle cartelle di un plot nel tuo config.yaml ha un problema."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Errore 22] File non trovato. Molto probabilmente una delle cartelle di un plot nel tuo config.yaml ha un problema."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2063,3 +2063,4 @@ msgstr "{currencyCode} Chia Farmati in Totale"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Tasse Transazione Utente"
+
