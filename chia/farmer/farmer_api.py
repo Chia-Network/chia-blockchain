@@ -288,5 +288,5 @@ class FarmerAPI:
                 }
             },
         )
-        self.farmer.log.info(str(request.passed)+ " / "+str(request.total_plots)+" plots from "+str(peer.peer_host)+" "+str(peer.peer_node_id))
+        self.farmer.log.info(f"{request.passed} / {request.total_plots} plots eligible from {peer.peer_host} {peer.peer_node_id} Proofs: {request.proofs} Challenge: {request.challenge_hash} Signage Point: {request.sp_hash}")
 
