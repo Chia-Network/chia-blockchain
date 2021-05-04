@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:49\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -119,7 +119,7 @@ msgid "Amount For Initial Coin"
 msgstr "Số lượng Coin Khởi Tạo"
 
 #: src/components/plot/PlotAction.tsx:30
-#: src/components/plot/queue/PlotQueueActions.tsx:32
+#: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "Bạn có muốn xoá plot? Plot này sẽ không thể khôi phục."
 
@@ -188,7 +188,7 @@ msgstr "Khối VDF Lặp Lại"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Khối thứ {0} trong Chia blockchain"
+msgstr "Khối tại height {0} trong Chia blockchain"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -265,7 +265,7 @@ msgstr "Challenge Hash"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
-msgstr "Chat trên KeyBase"
+msgstr "Chat trên Keybase"
 
 #: src/electron/main.tsx:362
 msgid "Chia"
@@ -281,20 +281,20 @@ msgstr "Ví Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr "Chọn Số Lượng Plot"
+msgstr "Chọn số lượng Plot"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
 msgstr "Chọn Kích Thước Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:48
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "Close"
 msgstr "Đóng"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr "Tắt node và máy chủ"
+msgstr "Đóng node và máy chủ"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
@@ -339,7 +339,7 @@ msgstr "Được xác nhận ở block:"
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr "Được xác nhận ở chiều cao {0}"
+msgstr "Được xác nhận ở height {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -378,7 +378,7 @@ msgstr "Các kết nối"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr "Đóng Góptrên GitHub"
+msgstr "Đóng góp trên GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -394,7 +394,7 @@ msgstr "Sao chép"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr "Sao chép vào Clipboard"
+msgstr "Sao chép vào khay nhớ"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -476,7 +476,7 @@ msgstr "Ngày tạo:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr "Tạo bởi chúng tôi:"
+msgstr "Xây dựng bởi chúng tôi:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -506,15 +506,15 @@ msgstr "Độ trễ"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/PlotAction.tsx:48
-#: src/components/plot/queue/PlotQueueActions.tsx:31
-#: src/components/plot/queue/PlotQueueActions.tsx:65
+#: src/components/plot/queue/PlotQueueActions.tsx:30
+#: src/components/plot/queue/PlotQueueActions.tsx:64
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Delete"
 msgstr "Xoá"
 
 #: src/components/plot/PlotAction.tsx:29
-#: src/components/plot/queue/PlotQueueActions.tsx:31
+#: src/components/plot/queue/PlotQueueActions.tsx:30
 msgid "Delete Plot"
 msgstr "Xoá Plot"
 
@@ -600,7 +600,7 @@ msgstr "Nhập 24 từ ghi nhớ mà bạn đã lưu để khôi phục ví Chia
 #: src/components/farm/card/FarmCardStatus.tsx:25
 #: src/components/plot/PlotStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
-#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+#: src/components/plot/queue/PlotQueueIndicator.tsx:12
 msgid "Error"
 msgstr "Lỗi"
 
@@ -856,14 +856,14 @@ msgstr "Khoảng thời gian"
 msgid "K-Size"
 msgstr "Kích cỡ"
 
-#: src/components/dashboard/DashboardSideBar.tsx:28
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
 msgstr "Khóa"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr ""
+msgstr "KiB Lên / Xuống"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
@@ -871,13 +871,13 @@ msgstr "Bằng chứng cuối cùng"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr "Chiều cao khối được farm gần nhất."
+msgstr "Height được farm gần nhất."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
 msgstr "Thử thách khối mới nhất"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:15
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
 msgstr "Đang xử lý..."
 
@@ -989,7 +989,7 @@ msgstr "Biệt danh"
 msgid "No"
 msgstr "Không"
 
-#: src/middleware/middleware_api.jsx:283
+#: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
 msgstr "Không có chuỗi 24 từ bí mật, vì khóa này đã được nhập."
 
@@ -1070,7 +1070,7 @@ msgstr "Đầu ra"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr "Chiều cao chóp"
+msgstr "Peak Height"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1221,7 +1221,7 @@ msgstr "Plot đã lọc"
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
 msgstr "Plot được phân bổ không gian trên ổ cứng của bạn dùng để farm và thu về Chia. <0> Tìm hiểu thêm </0>"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+#: src/components/plot/queue/PlotQueueIndicator.tsx:21
 msgid "Plotting"
 msgstr "Plotting"
 
@@ -1231,7 +1231,7 @@ msgstr "Plotting song song có thể tiết kiệm thời gian. Nếu không, h�
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "Lập kế hoạch với trường bit được kích hoạt có tổng số lần ghi ít hơn khoảng 30% và hầu như lúc nào cũng nhanh hơn. Bạn có thể thấy yêu cầu bộ nhớ giảm khi tính năng vẽ trường bit bị tắt. Nếu thiết kế CPU của bạn là từ trước năm 2010, bạn có thể phải tắt tính năng bitfield."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1284,11 +1284,11 @@ msgstr "Header Hash trước đó"
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Khóa cá nhân với dấu vân tay công khai {fingerprint}"
 
-#: src/middleware/middleware_api.jsx:247
+#: src/middleware/middleware_api.jsx:249
 msgid "Private key {0}"
 msgstr "Khóa cá nhân {0}"
 
-#: src/middleware/middleware_api.jsx:257
+#: src/middleware/middleware_api.jsx:259
 msgid "Private key:"
 msgstr "Khoá cá nhân:"
 
@@ -1304,7 +1304,7 @@ msgstr "Bằng chứng tìm thấy"
 msgid "Pubkey"
 msgstr "Địa chỉ công khai"
 
-#: src/middleware/middleware_api.jsx:265
+#: src/middleware/middleware_api.jsx:267
 msgid "Public key:"
 msgstr " Khoá địa chỉ công khai :"
 
@@ -1316,7 +1316,7 @@ msgstr "Tên hàng đợi"
 msgid "Queue name"
 msgstr "Tên hàng đợi"
 
-#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+#: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
 msgstr "Đã lên danh sách"
 
@@ -1370,6 +1370,10 @@ msgstr "Làm mới plot"
 msgid "Release Notes"
 msgstr "Ghi chú phát hành"
 
+#: src/components/plot/queue/PlotQueueIndicator.tsx:23
+msgid "Removing"
+msgstr "Xóa bỏ"
+
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
 msgstr "Đổi tên"
@@ -1406,7 +1410,7 @@ msgstr "Lưu"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "Khối tìm kiếm theo hàm hash tiêu đề"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1416,7 +1420,7 @@ msgstr "Vị trí thư mục tạm thời thứ hai"
 msgid "See private key"
 msgstr "Xem khoá bí mật"
 
-#: src/middleware/middleware_api.jsx:275
+#: src/middleware/middleware_api.jsx:277
 msgid "Seed:"
 msgstr "Cụm khoá:"
 
@@ -1635,7 +1639,7 @@ msgstr "Vị trí thư mục tạm thời thứ hai"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr "Ứng dụng sẽ ngưng hoạt động tại độ cao khối 193536."
+msgstr "Ứng dụng sẽ ngưng hoạt động tại height 193536."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1787,8 +1791,8 @@ msgid "Total iterations since the start of the blockchain"
 msgstr "Tổng số lần lặp kể từ khi bắt đầu blockchain"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
-msgid "Trade"
-msgstr "Trade"
+#~ msgid "Trade"
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1836,7 +1840,7 @@ msgstr "Định danh duy nhất"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "Không xác định"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
@@ -1851,8 +1855,8 @@ msgstr "Lặp lại vùng phụ VDF"
 msgid "View"
 msgstr "Xem"
 
-#: src/components/plot/queue/PlotQueueActions.tsx:54
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:26
+#: src/components/plot/queue/PlotQueueActions.tsx:53
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
 msgstr "Xem bản ghi"
 
@@ -2003,6 +2007,14 @@ msgstr "Kết nối nút đầy đủ của bạn"
 msgid "Your Harvester Network"
 msgstr "Mạng lưới Harvester của bạn"
 
+#: src/util/getDescriptiveError.ts:4
+msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Lỗi 13] Quyền bị từ chối. Bạn đang cố gắng truy cập một tệp / thư mục mà không có các quyền cần thiết. Rất có thể một trong các thư mục cốt truyện trong config.yaml của bạn gặp sự cố."
+
+#: src/util/getDescriptiveError.ts:7
+msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
+msgstr "[Lỗi 22] Không tìm thấy tệp. Rất có thể một trong các thư mục cốt truyện trong config.yaml của bạn gặp sự cố."
+
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
 msgid "connections:"
@@ -2011,7 +2023,7 @@ msgstr "các kết nối:"
 #: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
-msgstr "chiều cao:"
+msgstr "height:"
 
 #: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
