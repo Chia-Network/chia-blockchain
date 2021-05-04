@@ -73,23 +73,26 @@ def configure(
             print("uPnP disabled")
         change_made = True
     if testnet is not None:
-        config["full_node"]["port"] = "58444"
-        config["full_node"]["introducer_peer"]["port"] = int("58444")
-        config["farmer"]["full_node_peer"]["port"] = int("58444")
-        config["timelord"]["full_node_peer"]["port"] = int("58444")
-        config["wallet"]["full_node_peer"]["port"] = int("58444")
-        config["wallet"]["introducer_peer"]["port"] = int("58444")
+        testnet_port = "58444"
+        testnet_introducer = "beta1_introducer.chia.net"
+        testnet = "testnet7"
+        config["full_node"]["port"] = int(testnet_port)
+        config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
+        config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
+        config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
+        config["wallet"]["full_node_peer"]["port"] = int(testnet_port)
+        config["wallet"]["introducer_peer"]["port"] = int(testnet_port)
         config["introducer"]["port"] = int("58444")
-        config["full_node"]["introducer_peer"]["host"] = "beta1_introducer.chia.net"
-        config["selected_network"] = "testnet7"
-        config["harvester"]["selected_network"] = "testnet7"
-        config["pool"]["selected_network"] = "testnet7"
-        config["farmer"]["selected_network"] = "testnet7"
-        config["timelord"]["selected_network"] = "testnet7"
-        config["full_node"]["selected_network"] = "testnet7"
-        config["ui"]["selected_network"] = "testnet7"
-        config["introducer"]["selected_network"] = "testnet7"
-        config["wallet"]["selected_network"] = "testnet7"
+        config["full_node"]["introducer_peer"]["host"] = testnet_introducer
+        config["selected_network"] = testnet
+        config["harvester"]["selected_network"] = testnet
+        config["pool"]["selected_network"] = testnet
+        config["farmer"]["selected_network"] = testnet
+        config["timelord"]["selected_network"] = testnet
+        config["full_node"]["selected_network"] = testnet
+        config["ui"]["selected_network"] = testnet
+        config["introducer"]["selected_network"] = testnet
+        config["wallet"]["selected_network"] = testnet
         print("Default full node port, introducer and network setting updated")
         change_made = True
     if change_made:
