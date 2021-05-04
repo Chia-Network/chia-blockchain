@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:49\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "排序桶数量推荐设置为128"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "收割机是一个在存有农田 文件的机器上运行的服务。农夫和收割机通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割机。了解更多"
+msgstr "收割机是一个在存有农田文件的机器上运行的服务。农场主和收割机通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割机。了解更多"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -65,7 +65,7 @@ msgstr "添加"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "添加农田文件目录"
+msgstr "添加农田文件夹"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
@@ -80,7 +80,7 @@ msgstr "添加钱包"
 #: src/components/plot/add/PlotAdd.tsx:55
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "Add a Plot"
-msgstr "添加农田文件"
+msgstr "开垦农田"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
@@ -88,7 +88,7 @@ msgstr "开垦农田"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "设置农田文件所在目录"
+msgstr "添加农田文件夹"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -116,12 +116,12 @@ msgstr "数量 ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "初始币的数目"
+msgstr "初始币数量"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:31
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
-msgstr "你确定要删除这个农田吗？删除后将不可恢复"
+msgstr "你确定要删除这个农田吗？删除后将不可恢复。"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:23
 msgid "Are you sure you want to disconnect?"
@@ -146,7 +146,7 @@ msgstr "返回"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
-msgstr "备份文件课用于恢复智能钱包。"
+msgstr "备份文件将用于恢复智能钱包。"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:286
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:562
@@ -228,7 +228,7 @@ msgstr "购买"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr "染色钱包"
+msgstr "染色币钱包"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -339,7 +339,7 @@ msgstr "区块上已确认："
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr "区块高度确认 {0}"
+msgstr "确认于区块高度 {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -382,7 +382,7 @@ msgstr "在 GitHub 上贡献"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr "复制成功"
+msgstr "已复制"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:461
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -406,7 +406,7 @@ msgstr "创建"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "创建DID钱包"
+msgstr "创建去中心化标识钱包"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -444,7 +444,7 @@ msgstr "创建备份"
 
 #: src/components/selectKey/SelectKey.tsx:109
 msgid "Create a new private key"
-msgstr "创建一个新的私钥"
+msgstr "创建新私钥"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
@@ -476,7 +476,7 @@ msgstr "创建于："
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr "创始人:"
+msgstr "创建人："
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -484,11 +484,11 @@ msgstr "当前交易状态"
 
 #: src/components/selectKey/SelectKey.tsx:98
 msgid "DANGER: permanently delete private key"
-msgstr "危险：永久性删除私钥"
+msgstr "注意：永久性删除私钥"
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr "DID钱包"
+msgstr "去中心化标识钱包"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -529,11 +529,11 @@ msgstr "删除密钥"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "删除所有密钥将会把你的密钥永久删除，请确保你已备份。确定还要继续吗？"
+msgstr "删除所有密钥将会把你的密钥从你的计算机中永久移除，请确保你已经将其备份。确定继续？"
 
 #: src/components/selectKey/SelectKey.tsx:40
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "删除密钥将会把此密钥永久删除，请确保你已备份。确定还要继续吗？"
+msgstr "删除此密钥将会把密钥从你的计算机中永久移除，请确保你已经将其备份。确定继续？"
 
 #: src/electron/main.tsx:260
 msgid "Developer"
@@ -566,7 +566,7 @@ msgstr "断开连接"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr "分布式身份选项"
+msgstr "分布式身份认证选项"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -580,7 +580,7 @@ msgstr "您的机器是否支持并行开垦？"
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr "拖放Offer文件"
+msgstr "拖放报价文件"
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
@@ -592,7 +592,7 @@ msgstr "编辑"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr "输入你之前记下来的24个助记词以便现在恢复你的奇亚钱包"
+msgstr "请输入你保存的24个助记词来恢复奇亚钱包"
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -611,19 +611,19 @@ msgstr "错误：无法发送奇亚到染色地址。请输入奇亚钱包地址
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 msgid "Estimated Time to Win"
-msgstr "预计爆块时间"
+msgstr "预计区块发现时间"
 
 #: src/components/fullNode/FullNode.jsx:197
 msgid "Estimated network space"
-msgstr "预估网络大小"
+msgstr "全网已占用空间（估算）"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr "估算全网总农田占用空间量"
+msgstr "估计网络中所有农场主已开垦农田占用磁盘空间量"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr "排除最终目录"
+msgstr "不耕种最终输出文件夹"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -642,21 +642,21 @@ msgstr "农场"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
-msgstr "农场解谜哈希"
+msgstr "农场主解谜哈希"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr "农场奖励地址"
+msgstr "农场主奖励地址"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
-msgstr "耕种节点无法连接"
+msgstr "农场主节点无法连接"
 
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr "耕种节点没有运行"
+msgstr "农场主节点没有运行"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -720,7 +720,7 @@ msgstr "文件名"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "Final folder location"
-msgstr "最终文件夹位置"
+msgstr "最终输出文件夹位置"
 
 #: src/components/fullNode/FullNode.jsx:41
 #: src/components/fullNode/FullNode.jsx:92
@@ -780,7 +780,7 @@ msgstr "帮助"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
 msgid "Help translate"
-msgstr "帮助翻译"
+msgstr "改进翻译"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "Hide Advanced Options"
@@ -805,19 +805,19 @@ msgstr "IP地址 / 主机"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:85
 msgid "If none selected, then it will default to the temporary directory."
-msgstr "如果未指定，将会默认使用临时目录。"
+msgstr "如果未指定，将会使用上述临时目录。"
 
 #: src/components/wallet/WalletImport.tsx:64
 msgid "Import Wallet from Mnemonics"
-msgstr "根据助记词导入钱包"
+msgstr "使用助记词导入钱包"
 
 #: src/components/selectKey/SelectKey.tsx:116
 msgid "Import from Mnemonics (24 words)"
-msgstr "自助记词导入(24个词)"
+msgstr "自助记词导入（24个词）"
 
 #: src/components/fullNode/FullNode.jsx:43
 msgid "In Progress"
-msgstr "进行中"
+msgstr "处理中"
 
 #: src/components/wallet/WalletHistory.tsx:20
 msgid "Incoming"
@@ -829,11 +829,11 @@ msgstr "索引"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr "该项出价是否由我们创建的标识"
+msgstr "表明此出价是否由我们创建"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr "该项出价被接受的时间标识"
+msgstr "表明次出价被接受的时间"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
@@ -947,7 +947,7 @@ msgstr "分钟"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
-msgstr "更多的内存可以略微增加速度"
+msgstr "增加内存可以略微提高速度"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
@@ -1003,7 +1003,7 @@ msgstr "无过往交易"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr "这个地址没有对应的私钥, 建议把奖励发送到另外一个钱包."
+msgstr "本机没有所输入地址对应的私钥。请确认是否要将奖励发送至非本机钱包。"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
@@ -1066,7 +1066,7 @@ msgstr "已创立的出价"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
-msgstr "开支"
+msgstr "支出"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
@@ -1097,7 +1097,7 @@ msgstr "待处理的找回"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr "待处理的总结余"
+msgstr "待处理总余额"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
@@ -1161,7 +1161,7 @@ msgstr "请选择币的色彩"
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr "请指定最终目录"
+msgstr "请指定最终输出文件夹"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
@@ -1372,7 +1372,7 @@ msgstr "发布通知"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "删除中"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1397,7 +1397,7 @@ msgstr "从备份中恢复染色币与智能钱包的元信息"
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr "安全跳过"
+msgstr "可安全跳过此步骤"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1426,11 +1426,11 @@ msgstr "种子："
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:70
 msgid "Select 2nd Temporary Directory"
-msgstr "选择第二临时目录"
+msgstr "选择第二临时文件夹"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr "选择最终目录"
+msgstr "选择最终输出文件夹"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
@@ -1442,7 +1442,7 @@ msgstr "选择出价"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr "选择临时目录"
+msgstr "选择临时文件夹"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
@@ -1450,7 +1450,7 @@ msgstr "选择钱包类别"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr "选择您希望保存农田文件的最终目录。我们建议您使用大容量、慢速的硬盘（比如外置机械硬盘）。"
+msgstr "选择您希望保存农田文件的最终输出文件夹。我们建议您使用大容量、慢速的硬盘（比如外置机械硬盘）。"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
@@ -1509,7 +1509,7 @@ msgstr "登录"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr "跳过添加收割机的最终目录"
+msgstr "勾选此项，将不会自动把最终目录添加到收割机进行耕种"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
@@ -1672,7 +1672,7 @@ msgstr "本区块上花费的总VDF(延迟验证函数) 或时间验证的迭代
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr "本区块上奖励给农夫的全部交易费用."
+msgstr "本区块上奖励给农场主的全部交易费用。"
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
@@ -1706,7 +1706,7 @@ msgstr "最新的子块时间."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr "由农夫创建的区块的时间, 这个时间早于它被确认的时间."
+msgstr "此时间是该区块被农场主创建的时间，因此，此时间会早于其被时间认证机制最终确认的时间。"
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -1754,7 +1754,7 @@ msgstr "时间戳"
 
 #: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
-msgstr "给"
+msgstr "目标地址"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
@@ -1772,7 +1772,7 @@ msgstr "总迭代次数"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr "全网大小"
+msgstr "全网占用空间"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
@@ -1792,7 +1792,7 @@ msgstr "自区块开始以来的迭代数"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
-#~ msgstr "交易"
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -2009,11 +2009,11 @@ msgstr "你的收割网络"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[错误 13] 权限被拒绝。您正试图访问的文件或目录没有必需的权限。农田文件夹中的 config.yaml 文件可能存在问题。"
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[错误 22] 文件未找到。农田文件夹中的 config.yaml 文件可能存在问题。"
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2063,3 +2063,4 @@ msgstr "{currencyCode} 收获的奇亚币总计"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 用户交易费用"
+
