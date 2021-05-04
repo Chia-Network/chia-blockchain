@@ -73,7 +73,6 @@ def configure(
             print("uPnP disabled")
         change_made = True
     if testnet is not None:
-
         testnet_port = "58444"
         testnet_introducer = "beta1_introducer.chia.net"
         testnet = "testnet7"
