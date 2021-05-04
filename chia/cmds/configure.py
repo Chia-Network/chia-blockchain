@@ -74,12 +74,12 @@ def configure(
         change_made = True
     if testnet is not None:
         config["full_node"]["port"] = "58444"
-        config["full_node"]["introducer_peer"]["port"] = "58444"
-        config["farmer"]["full_node_peer"]["port"] = "58444"
-        config["timelord"]["full_node_peer"]["port"] = "58444"
-        config["wallet"]["full_node_peer"]["port"] = "58444"
-        config["wallet"]["introducer_peer"]["port"] = "58444"
-        config["introducer"]["port"] = "58444"
+        config["full_node"]["introducer_peer"]["port"] = int("58444")
+        config["farmer"]["full_node_peer"]["port"] = int("58444")
+        config["timelord"]["full_node_peer"]["port"] = int("58444")
+        config["wallet"]["full_node_peer"]["port"] = int("58444")
+        config["wallet"]["introducer_peer"]["port"] = int("58444")
+        config["introducer"]["port"] = int("58444")
         config["full_node"]["introducer_peer"]["host"] = "beta1_introducer.chia.net"
         config["selected_network"] = '"testnet_7"'
         config["harvester"]["selected_network"] = "testnet_7"
