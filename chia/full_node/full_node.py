@@ -786,7 +786,7 @@ class FullNode:
         pre_validate_start = time.time()
         pre_validation_results: Optional[
             List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {})
+        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
         self.log.debug(f"Block pre-validation time: {time.time() - pre_validate_start}")
         if pre_validation_results is None:
             return False, False, None
@@ -800,7 +800,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             (result, error, fork_height,) = await self.blockchain.receive_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point, wp_summaries
+                block, pre_validation_results[i], None if advanced_peak else fork_point
             )
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
