@@ -1545,7 +1545,7 @@ class FullNode:
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
-        self.log.debug(f"Processingetransaction: {spend_name}")
+        self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
