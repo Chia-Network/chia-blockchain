@@ -65,7 +65,7 @@ class MempoolManager:
         self.mempool_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * self.constants.MEMPOOL_BLOCK_BUFFER)
         self.potential_cache_max_total_cost = int(self.constants.MAX_BLOCK_COST_CLVM * 5)
         self.potential_cache_cost: int = 0
-        self.seen_cache_size = 1000
+        self.seen_cache_size = 10000
         self.pool = ProcessPoolExecutor(max_workers=1)
 
         # The mempool will correspond to a certain peak
