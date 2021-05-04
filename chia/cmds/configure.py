@@ -73,6 +73,7 @@ def configure(
             print("uPnP disabled")
         change_made = True
     if testnet is not None:
+
         testnet_port = "58444"
         testnet_introducer = "beta1_introducer.chia.net"
         testnet = "testnet7"
@@ -102,7 +103,7 @@ def configure(
 
 
 @click.command("configure", short_help="Modify configuration")
-@click.option("--testnet", "-testnet", "-t", help="configures for connection to latest testnet", type=click.Choice(["true", "t", "false", "f"]))
+@click.option("--testnet", "-testnet", "-t", help="configures for connection to testnet", type=click.Choice(["true", "t", "false", "f"]))
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
