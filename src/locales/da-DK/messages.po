@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:50\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -348,7 +348,7 @@ msgstr "Forbind"
 #: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
-msgstr "Forbind til andrer noder"
+msgstr "Forbind til andre noder"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
@@ -1372,7 +1372,7 @@ msgstr "Udgivelses Noter"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "Fjerner"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1792,7 +1792,7 @@ msgstr "Total iterationer siden blokkædens start"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
-#~ msgstr "Handel"
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -2009,11 +2009,11 @@ msgstr "Dit Harvester netværk"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Fejl 13] Adgang nægtet. Du prøver at få adgang til en fil / mappe uden at have de nødvendige tilladelser. Mest sandsynligt har en af plotmapperne i din config.yaml et problem."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Fejl 22] Filen blev ikke fundet. Sandsynligvis har en af plotmapperne i din config.yaml et problem."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2063,3 +2063,4 @@ msgstr "{currencyCode} Total Chia Farmet"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Bruger Transaktionsgebyrer"
+
