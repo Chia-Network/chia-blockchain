@@ -3,7 +3,7 @@ import chia.server.ws_connection as ws
 from chia.crawler.crawler import Crawler
 from chia.server.outbound_message import Message
 from chia.util.api_decorators import api_request, peer_required
-from chia.full_node.full_node import full_node_protocol
+from chia.full_node.full_node import full_node_protocol, wallet_protocol
 
 
 class CrawlerAPI:
@@ -67,4 +67,61 @@ class CrawlerAPI:
     @peer_required
     @api_request
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+        pass
+
+    @api_request
+    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_unfinished_block(
+        self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
+    ) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_signage_point_or_end_of_sub_slot(
+        self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
+    ) -> Optional[Message]:
+        pass
+    
+    @peer_required
+    @api_request
+    async def request_mempool_transactions(
+        self,
+        request: full_node_protocol.RequestMempoolTransactions,
+        peer: ws.WSChiaConnection,
+    ) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
+        pass
+
+    @api_request
+    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+        pass
+    
+    @api_request
+    async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
         pass

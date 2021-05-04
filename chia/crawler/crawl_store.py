@@ -54,6 +54,7 @@ class CrawlStore:
 
     host_to_records: Dict
     host_to_reliability: Dict
+    banned_peers: int
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection):
@@ -101,6 +102,7 @@ class CrawlStore:
         await self.crawl_db.commit()
         self.cached_peers = []
         self.last_timestamp = 0
+        self.banned_peers = 0
         await self.unload_from_db()
         return self
 
@@ -219,12 +221,15 @@ class CrawlStore:
         now = int(utc_timestamp())
         records = []
         counter = 0
+        self.banned_peers = 0
         for peer_id in self.host_to_reliability:
             add = False
             counter += 1
             reliability = self.host_to_reliability[peer_id]
             if reliability.ignore_till < now and reliability.get_ban_time() < now:
                 add = True
+            else:
+                self.banned_peers += 1
             record = self.host_to_records[peer_id]
             if record.last_try_timestamp == 0 and record.connected_timestamp == 0:
                 add = True
@@ -237,6 +242,9 @@ class CrawlStore:
             random.shuffle(records)
             records = records[:batch_size]
         return records
+
+    def get_banned_peers(self) -> int:
+        return self.banned_peers
 
     async def load_to_db(self):
         counter = 0

@@ -216,6 +216,8 @@ class ChiaServer:
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
+        # Crawler.
+        return
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
@@ -340,7 +342,8 @@ class ChiaServer:
         session = None
         connection: Optional[WSChiaConnection] = None
         try:
-            timeout = ClientTimeout(total=30)
+            # Crawler.
+            timeout = ClientTimeout(total=5)
             session = ClientSession(timeout=timeout)
 
             try:
