@@ -7,6 +7,7 @@ import {
   el,
   en,
   es,
+  fa,
   fi,
   fr,
   id,
@@ -37,6 +38,7 @@ const catalogEnNZ = require('../locales/en-NZ/messages');
 const catalogEnPt = require('../locales/en-PT/messages');
 const catalogEn = require('../locales/en-US/messages');
 const catalogEs = require('../locales/es-ES/messages');
+const catalogFaIR = require('../locales/fa-IR/messages');
 const catalogFi = require('../locales/fi-FI/messages');
 const catalogFr = require('../locales/fr-FR/messages');
 const catalogIdID = require('../locales/id-ID/messages');
@@ -127,6 +129,10 @@ export const locales = [
     label: 'Norsk bokmål',
   },
   {
+    locale: 'fa-IR',
+    label: 'Persian',
+  },
+  {
     locale: 'pl-PL',
     label: 'Polski',
   },
@@ -188,6 +194,7 @@ i18n.loadLocaleData('en-PT', { plurals: en });
 i18n.loadLocaleData('en-US', { plurals: en });
 i18n.loadLocaleData('en-NZ', { plurals: en });
 i18n.loadLocaleData('es-ES', { plurals: es });
+i18n.loadLocaleData('fa-IR', { plurals: fa });
 i18n.loadLocaleData('fi-FI', { plurals: fi });
 i18n.loadLocaleData('fr-FR', { plurals: fr });
 i18n.loadLocaleData('id-ID', { plurals: id });
@@ -217,6 +224,7 @@ i18n.load('en-PT', catalogEnPt.messages);
 i18n.load('en-AU', catalogEnAu.messages);
 i18n.load('en-US', catalogEn.messages);
 i18n.load('es-ES', catalogEs.messages);
+i18n.load('fa-IR', catalogFaIR.messages);
 i18n.load('fi-FI', catalogFi.messages);
 i18n.load('fr-FR', catalogFr.messages);
 i18n.load('id-ID', catalogIdID.messages);
