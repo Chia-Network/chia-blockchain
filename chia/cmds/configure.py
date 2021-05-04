@@ -71,6 +71,26 @@ def configure(
         else:
             print("uPnP disabled")
         change_made = True
+    if testnet is not None:
+        config["full_node"]["port"] = "58444"
+        config["full_node"]["introducer_peer"]["port"] = "58444"
+        config["farmer"]["full_node_peer"]["port"] = "58444"
+        config["timelord"]["full_node_peer"]["port"] = "58444"
+        config["wallet"]["full_node_peer"]["port"] = "58444"
+        config["wallet"]["introducer_peer"]["port"] = "58444"
+        config["introducer"]["port"] = "58444"
+        config["full_node"]["introducer_peer"]["host"] = "beta1_introducer.chia.net"
+        config["selected_network"] = '"testnet_7"'
+        config["harvester"]["selected_network"] = "testnet_7"
+        config["pool"]["selected_network"] = "testnet_7"
+        config["farmer"]["selected_network"] = "testnet_7"
+        config["timelord"]["selected_network"] = "testnet_7"
+        config["full_node"]["selected_network"] = "testnet_7"
+        config["ui"]["selected_network"] = "testnet_7"
+        config["introducer"]["selected_network"] = "testnet_7"
+        config["wallet"]["selected_network"] = "testnet_7"
+        print("Default full node port, introducer and network setting updated")
+        change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
@@ -78,6 +98,7 @@ def configure(
 
 
 @click.command("configure", short_help="Modify configuration")
+@click.option("--testnet", "-testnet", "-t", help="configures for connection to latest testnet", type=click.Choice(["true", "t", "false", "f"]))
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
@@ -96,5 +117,5 @@ def configure(
     "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
 )
 @click.pass_context
-def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
-    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
+def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, testnet):
+    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, testnet)
