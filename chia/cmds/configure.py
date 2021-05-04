@@ -81,15 +81,15 @@ def configure(
         config["wallet"]["introducer_peer"]["port"] = int("58444")
         config["introducer"]["port"] = int("58444")
         config["full_node"]["introducer_peer"]["host"] = "beta1_introducer.chia.net"
-        config["selected_network"] = "testnet_7"
-        config["harvester"]["selected_network"] = "testnet_7"
-        config["pool"]["selected_network"] = "testnet_7"
-        config["farmer"]["selected_network"] = "testnet_7"
-        config["timelord"]["selected_network"] = "testnet_7"
-        config["full_node"]["selected_network"] = "testnet_7"
-        config["ui"]["selected_network"] = "testnet_7"
-        config["introducer"]["selected_network"] = "testnet_7"
-        config["wallet"]["selected_network"] = "testnet_7"
+        config["selected_network"] = "testnet7"
+        config["harvester"]["selected_network"] = "testnet7"
+        config["pool"]["selected_network"] = "testnet7"
+        config["farmer"]["selected_network"] = "testnet7"
+        config["timelord"]["selected_network"] = "testnet7"
+        config["full_node"]["selected_network"] = "testnet7"
+        config["ui"]["selected_network"] = "testnet7"
+        config["introducer"]["selected_network"] = "testnet7"
+        config["wallet"]["selected_network"] = "testnet7"
         print("Default full node port, introducer and network setting updated")
         change_made = True
     if change_made:
