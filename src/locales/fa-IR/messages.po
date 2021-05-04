@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:49\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "آیا می خواهید که بلاک های Chia را فراتز از این کاوش کنید؟ <0>Chia Explorer</0> را که توسط یک توسعه دهنده متن باز ساخته شده است را چک کنید."
+msgstr "آیا می خواهید که بلاک های Chia را فراتر از این کاوش کنید؟ <0>Chia Explorer</0> را که توسط یک توسعه دهنده متن باز ساخته شده است را چک کنید."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,7 +32,7 @@ msgstr "128 باکت پیشنهاد می شود"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "دروگر (Harvester) یک سرویس در حال اجرا بر روی ماشینی است که پلات (ها) در عمل آنجا ذخیره شده اند. مزرعه دار (Farmer) و دروگر برای دیدن حالت رشته (Chain) با نود کامل در تعامل هستند. شبکه دروگر های متصل خود را در زیر ببینید. بیشتر فرار بگیرید"
+msgstr "دروگر (Harvester) یک سرویس در حال اجرا بر روی ماشینی است که پلات (ها) در عمل آنجا ذخیره شده اند. مزرعه دار (Farmer) و دروگر برای دیدن حالت رشته (Chain) با گره کامل در تعامل هستند. شبکه دروگر های متصل خود را در زیر ببینید. بیشتر فرار بگیرید"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -41,17 +41,17 @@ msgstr "درباره بلاکچین Chia"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr "پذیرفتن"
+msgstr "پذیرش"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
-msgstr "پذیرفتن در زمان:"
+msgstr "پذیرش شده در زمان:"
 
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr "عملیات"
+msgstr "اقدام"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
@@ -61,11 +61,11 @@ msgstr "عملیات ها"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
-msgstr "افزودن"
+msgstr "اضافه کردن"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "Add Plot Directory"
-msgstr "افزودن دایرکتوری پلات"
+msgstr "افزودن دایرکتوری Plot ها"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
@@ -165,7 +165,7 @@ msgstr "در پایین چالش های بلاک کنونی را می بینید
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr ""
+msgstr "بهترین ارزیابی بر اساس 24 ساعت اخیر"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -184,11 +184,11 @@ msgstr "آزمودن بلاک"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "تکرار بلاک VDF"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "بلاک در ارتفاع {0} در بلاکچین چیا"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "بلاک با هش {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "بلاک با هش {headerHash} موجود نیست."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -228,7 +228,7 @@ msgstr "خریدن"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr ""
+msgstr "کیف پول CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -236,7 +236,7 @@ msgstr ""
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr ""
+msgstr "میتواند در دانه یادآور بک آپ گیری شود"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -249,7 +249,7 @@ msgstr "لغو"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr ""
+msgstr "لغو و خرج کردن"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -261,7 +261,7 @@ msgstr "چالش"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
-msgstr ""
+msgstr "چالش کشیدن هش"
 
 #: src/electron/main.tsx:345
 msgid "Chat on KeyBase"
@@ -566,12 +566,12 @@ msgstr "قطع ارتباط"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "گزینه های هویت پخش شده"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
-msgstr ""
+msgstr "پلاتی روی این ماشین دارید؟ <0>اضافه کردن دایرکتوری پلات</0>"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "Does your machine support parallel plotting?"
@@ -580,7 +580,7 @@ msgstr "آیا ماشین شما از پلات های همزمان پیشتیب�
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "فایل تقدیمی را کشیده و بندازید"
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
@@ -592,7 +592,7 @@ msgstr "ويرايش"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-msgstr ""
+msgstr "برای بازگردانی کیف پول چیای خود 24 کلمه یادآور خود را وارد کنید."
 
 #: src/components/farm/FarmerStatus.tsx:30
 #: src/components/farm/FarmerStatus.tsx:31
@@ -606,7 +606,7 @@ msgstr "خطا"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "خطا: چیا را به آدرس رنگی نمیشود ارسال کرد. لطفاً یک آدرس چیا وارد کنید."
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -619,11 +619,11 @@ msgstr "فضای تقریبی کل شبکه"
 
 #: src/components/fullNode/FullNode.jsx:200
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
-msgstr ""
+msgstr "مجموع تخمینی همه فضای دیسک قواره بندی شده تمامی کشت گران در شبکه"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:124
 msgid "Exclude final directory"
-msgstr ""
+msgstr "بجز آخرین دایرکتوری"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -632,21 +632,21 @@ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "Failed to open (invalid plots)"
-msgstr ""
+msgstr "ناتوانی در بازگشایی (قواره های اشتباه)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
 #: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "Farm"
-msgstr ""
+msgstr "مزرعه"
 
 #: src/components/block/Block.jsx:252
 msgid "Farmer Puzzle Hash"
-msgstr ""
+msgstr "هش پازل کشتگر"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:95
 msgid "Farmer Reward Address"
-msgstr ""
+msgstr "آدرس جایزه کشتگر"
 
 #: src/components/farm/card/FarmCardStatus.tsx:21
 #: src/components/plot/PlotStatus.tsx:28
@@ -656,18 +656,18 @@ msgstr "مزرعه دار وصل نیست"
 #: src/components/farm/card/FarmCardStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
-msgstr ""
+msgstr "کشتگر درحال اجرا نیست"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "کشتگران با در اختیار گزاردن فضای خالی برای کمک در امن کردن معاملات شبکه جایزه های بلاک و کارمزد معاملات کسب میکنند. این جاییست که مزرعتون وقتی قواره ای اضافه کنید قرار میگیرد. <0>بیشتر بدانید</0>"
 
 #: src/components/farm/Farm.tsx:15
 #: src/components/farm/FarmerStatus.tsx:27
 #: src/components/farm/card/FarmCardStatus.tsx:29
 #: src/components/plot/PlotStatus.tsx:14
 msgid "Farming"
-msgstr ""
+msgstr "کشاورزی"
 
 #: src/components/farm/card/FarmCardStatus.tsx:11
 #: src/components/farm/card/FarmCardStatus.tsx:16
@@ -675,7 +675,7 @@ msgstr ""
 #: src/components/farm/card/FarmCardStatus.tsx:24
 #: src/components/farm/card/FarmCardStatus.tsx:28
 msgid "Farming Status"
-msgstr ""
+msgstr "وضعیت کشاورزی"
 
 #: src/components/wallet/WalletHistory.tsx:53
 #: src/components/wallet/create/createExistingColouredCoin.jsx:131
@@ -685,7 +685,7 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
 #: src/components/wallet/standard/WalletStandard.tsx:336
 msgid "Fee"
-msgstr ""
+msgstr "کارمزد"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:420
 #~ msgid "Fee (TXCH)"
@@ -697,11 +697,11 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr ""
+msgstr "هزینه({currencyCode})"
 
 #: src/components/block/Block.jsx:294
 msgid "Fees Amount"
-msgstr ""
+msgstr "مبلغ"
 
 #: src/components/block/Block.jsx:313
 #~ msgid "Fees Puzzle Hash"
@@ -762,11 +762,11 @@ msgstr "اچ دی یا کلید های سلسله مراتب قطعی، نوعی
 
 #: src/components/fullNode/FullNode.jsx:59
 msgid "Header Hash"
-msgstr ""
+msgstr "سربرگ هش"
 
 #: src/components/block/Block.jsx:180
 msgid "Header hash"
-msgstr ""
+msgstr "سربرگ هش"
 
 #: src/components/block/Block.jsx:194
 #: src/components/fullNode/FullNode.jsx:75
@@ -833,12 +833,12 @@ msgstr "نشان داده شده که این پیشنهاد با توسط ما �
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "این ارائه چه زمانی پذیرفته شد"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "Info Packet"
-msgstr ""
+msgstr "بسته اطلاعاتی"
 
 #: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "Initial Amount"
@@ -846,15 +846,15 @@ msgstr "مقدار اولیه"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "نرخ اولیه کیف پول کاربر مورد نظر را راه اندازی:"
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "فاصله"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr ""
+msgstr "سایز-K"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
@@ -863,19 +863,19 @@ msgstr "کلیدها"
 #: src/components/farm/FarmFullNodeConnections.tsx:40
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:40
 msgid "KiB Up/Down"
-msgstr ""
+msgstr "KiB بالا/پایین"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:37
 msgid "Last Attempted Proof"
-msgstr ""
+msgstr "آخرین تلاش اثبات"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "Last Height Farmed"
-msgstr ""
+msgstr "آخرین ارتفاع کشاورزی"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:23
 msgid "Latest Block Challenges"
-msgstr ""
+msgstr "آخرین چالش های بلاک"
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:22
 msgid "Loading..."
@@ -931,15 +931,15 @@ msgstr "ورود"
 
 #: src/components/farm/overview/FarmOverview.tsx:34
 msgid "Manage Farming Rewards"
-msgstr ""
+msgstr "مدیریت پاداش های استخراج"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:82
 msgid "Manage Your Farming Rewards Target Addresses"
-msgstr ""
+msgstr "آدرس های مقصد خود را برای پاداش های استخراج مدیریت کنید"
 
 #: src/components/fullNode/FullNodeConnections.tsx:43
 msgid "MiB Up/Down"
-msgstr ""
+msgstr "MiB بالا/پایین"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "Minutes"
@@ -947,11 +947,11 @@ msgstr "دقیقه"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "More memory slightly increases speed"
-msgstr ""
+msgstr "حافظه بیشتر سرعت را کمی افزایش می دهد"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:429
 msgid "My Pubkey"
-msgstr ""
+msgstr "کلید عمومی من"
 
 #: src/components/fullNode/FullNode.jsx:160
 msgid "Network Name"
@@ -991,36 +991,36 @@ msgstr "خیر"
 
 #: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
-msgstr ""
+msgstr "از آنجایی که این بدونه 24 کلمه ریکاوری وارد شده است."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "No blocks farmed yet"
-msgstr ""
+msgstr "هنوز هیچ بلاکی تولید نشده است"
 
 #: src/components/wallet/WalletHistory.tsx:64
 msgid "No previous transactions"
-msgstr ""
+msgstr "بدون تراکنش های قبلی"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:91
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
-msgstr ""
+msgstr "بدون کلید خصوصی برای یک یا هر دو آدرس. فقط در صورت ارسال پاداش به کیف پول دیگر ، ایمن است."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 #: src/components/fullNode/FullNodeConnections.tsx:23
 msgid "Node ID"
-msgstr ""
+msgstr "شناسه گره"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "هنوز هیچ یک از طرح های شما (Plot) از فیلتر طرح عبور نکرده اند."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:16
 msgid "Not Available"
-msgstr ""
+msgstr "در دسترس نیست"
 
 #: src/components/fullNode/FullNode.jsx:122
 msgid "Not Synced"
@@ -1046,11 +1046,11 @@ msgstr "پلات های یافت نشده"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "Number of buckets"
-msgstr ""
+msgstr "تعداد سطل ها"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "Number of threads"
-msgstr ""
+msgstr "تعداد رشته های پردازنده"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:51
 msgid "OK"
@@ -1062,15 +1062,15 @@ msgstr "پیشنهاد"
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
-msgstr ""
+msgstr "پیشنهادات ایجاد شده"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
-msgstr ""
+msgstr "خروجی"
 
 #: src/components/fullNode/FullNode.jsx:166
 msgid "Peak Height"
-msgstr ""
+msgstr "حداکثر ارتفاع"
 
 #: src/components/fullNode/FullNode.jsx:204
 #~ msgid "Peak Sub-block Height"
@@ -1078,44 +1078,44 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:171
 msgid "Peak Time"
-msgstr ""
+msgstr "حداکثر زمان"
 
 #: src/components/wallet/WalletHistory.tsx:42
 msgid "Pending"
-msgstr ""
+msgstr "در انتظار"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "Pending Balance"
-msgstr ""
+msgstr "موجودی در انتظار"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:613
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "Pending Change"
-msgstr ""
+msgstr "در انتظار تغییر"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:595
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "Pending Total Balance"
-msgstr ""
+msgstr "مقدار موجودی در انتظار"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "Please add a trade pair"
-msgstr ""
+msgstr "لطفاً یک جفت تجاری اضافه کنید"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "لطفاً 0 هزینه وارد کنید. هزینه های مثبت هنوز برای RL پشتیبانی نمی شود."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
-msgstr ""
+msgstr "لطفاً یک مقدار اولیه سکه معتبر وارد کنید"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:69
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:679
 #: src/components/wallet/standard/WalletStandard.tsx:278
 msgid "Please enter a valid numeric amount"
-msgstr ""
+msgstr "لطفاً یک مقدار عددی معتبر وارد کنید"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:70
 #: src/components/wallet/create/createNewColouredCoin.jsx:81
@@ -1123,19 +1123,19 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:691
 #: src/components/wallet/standard/WalletStandard.tsx:284
 msgid "Please enter a valid numeric fee"
-msgstr ""
+msgstr "لطفاً کارمزد عددی معتبری وارد کنید"
 
 #: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "Please enter a valid numeric interval length"
-msgstr ""
+msgstr "لطفاً یک فاصله عددی معتبر وارد کنید"
 
 #: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "Please enter a valid numeric spendable amount"
-msgstr ""
+msgstr "لطفاً یک مقدار قابل مصرف عددی معتبر وارد کنید"
 
 #: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "Please enter a valid pubkey"
-msgstr ""
+msgstr "لطفاً یک کلید عمومی معتبر وارد کنید"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:661
 #: src/components/wallet/standard/WalletStandard.tsx:268
@@ -1161,12 +1161,12 @@ msgstr "لطفا رنگ سکه را انتخاب کنید"
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "Please specify final directory"
-msgstr ""
+msgstr "لطفاً فهرست نهایی را مشخص کنید"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:59
 msgid "Please specify temporary directory"
-msgstr ""
+msgstr "لطفا فهرست موقت را مشخص کنید"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot"
@@ -1294,7 +1294,7 @@ msgstr "کلید خصوصی:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "اثبات اندازه فضا"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
@@ -1310,11 +1310,11 @@ msgstr "کلید عمومی:"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "Queue Name"
-msgstr ""
+msgstr "نام صف"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:43
 msgid "Queue name"
-msgstr ""
+msgstr "نام صف"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
 msgid "Queued"
@@ -1330,7 +1330,7 @@ msgstr "ماکسیمم رم قابل استفاده"
 
 #: src/components/wallet/Wallets.tsx:43
 msgid "RL Wallet"
-msgstr ""
+msgstr "کیق پول RL"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -1351,7 +1351,7 @@ msgstr "تنظیمات محدودیت سرعت"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:275
 msgid "Rate Limited User Wallet Setup"
-msgstr ""
+msgstr "میزان محدودیت کیف پول کابر را مشخص کنید"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
 #: src/components/wallet/standard/WalletStandard.tsx:367
@@ -1372,7 +1372,7 @@ msgstr "یادداشت‌های انتشار"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "حذف کردن"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1430,7 +1430,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "Select Final Directory"
-msgstr ""
+msgstr "انتخاب دایرکتوری نهایی"
 
 #: src/components/selectKey/SelectKey.tsx:71
 msgid "Select Key"
@@ -1438,53 +1438,53 @@ msgstr "انتخاب کلید"
 
 #: src/components/trading/ViewOffer.jsx:38
 msgid "Select Offer"
-msgstr ""
+msgstr "انتخاب پیشنهاد"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:39
 msgid "Select Temporary Directory"
-msgstr ""
+msgstr "انتخای دایرکتوری موقت"
 
 #: src/components/wallet/create/WalletCreate.jsx:108
 msgid "Select Wallet Type"
-msgstr ""
+msgstr "انتخاب نوع کیف پول"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
-msgstr ""
+msgstr "مقصد نهایی را برای پوشه ای که می خواهید طرح در آن ذخیره شود انتخاب کنید. ما به شما توصیه می کنیم از یک دیسک سخت بزرگ بزرگ (مانند HDD خارجی) استفاده کنید."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-msgstr ""
+msgstr "مقصد موقت را برای پوشه ای که می خواهید طرح در آن ذخیره شود انتخاب کنید. توصیه می کنیم از SSD سریع استفاده کنید."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:63
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:81
 msgid "Selected"
-msgstr ""
+msgstr "انتخاب"
 
 #: src/components/trading/CreateOffer.jsx:182
 #: src/components/trading/TradesTable.tsx:30
 #: src/components/trading/TradingOverview.jsx:295
 msgid "Sell"
-msgstr ""
+msgstr "فروش"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
 #: src/components/wallet/standard/WalletStandard.tsx:349
 msgid "Send"
-msgstr ""
+msgstr "ارسال"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "این بسته اطلاعاتی را برای کاربر محدود شده خود ارسال کنید که برای تکمیل تنظیم کیف پول خود باید از آن استفاده کند:"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "pubkey خود را به ادمین کیف محدود شده خود ارسال کنید:"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
-msgstr ""
+msgstr "نمایش گزینه‌های پیشرفته"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -1493,11 +1493,11 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:174
 #: src/components/trading/TradesTable.tsx:13
 msgid "Side"
-msgstr ""
+msgstr "سمت"
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "Sign In"
-msgstr ""
+msgstr "ورود"
 
 #: src/components/backup/BackupRestore.tsx:122
 #~ msgid "Skip"
@@ -1509,25 +1509,25 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "از افزودن فهرست نهایی به کشاورزی برای برداشت محصول عبور می کند"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
-msgstr ""
+msgstr "صحبت کردن"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
-msgstr ""
+msgstr "مبلغ قابل مصرف"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "مبلغ قابل هزینه در هر فاصله"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "Spendable Balance"
-msgstr ""
+msgstr "موجودی مصرفی"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
@@ -1545,7 +1545,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
-msgstr ""
+msgstr "دولت"
 
 #: src/components/fullNode/FullNode.jsx:104
 #: src/components/fullNode/FullNode.jsx:121
@@ -1561,7 +1561,7 @@ msgstr "وضعیت"
 
 #: src/components/trading/TradingOverview.jsx:181
 msgid "Status:"
-msgstr ""
+msgstr "وضعیت:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -1593,7 +1593,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:357
 msgid "Submit"
-msgstr ""
+msgstr "ارسال"
 
 #: src/components/fullNode/FullNode.jsx:130
 msgid "Synced"
@@ -1639,7 +1639,7 @@ msgstr "مکان دوم پوشه موقت"
 
 #: src/components/app/AppTimeBomb.tsx:28
 msgid "The application will stop working at block height 193536."
-msgstr ""
+msgstr "فرایند کار در ارتفاع بلوک 193536 متوقف می شود."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -1648,7 +1648,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
 msgid "The minimum required size for mainnet is k=32"
-msgstr ""
+msgstr "حداقل اندازه مورد نیاز برای شبکه اصلی k = 32 است"
 
 #: src/components/fullNode/FullNode.jsx:124
 msgid "The node is not synced"
@@ -1656,19 +1656,19 @@ msgstr "نود همگام سازی نشده"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "گره در حال همگام سازی است ، به این معنی که بلوک ها را از گره های دیگر بارگیری می کند تا به آخرین بلوک در زنجیره برسد"
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "بذر مورد استفاده برای ایجاد طرح. این به استخر pk و plot pk بستگی دارد."
 
 #: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "تعداد کل VDF (عملکرد تأخیر قابل تأیید) یا اثبات تکرار زمان در کل زنجیره تا این زیر بلوک."
 
 #: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "تعداد کل VDF (عملکرد تأخیر قابل تأیید) یا اثبات تکرار زمان در این بلوک."
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
@@ -1742,7 +1742,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
-msgstr ""
+msgstr "زمان ایجاد"
 
 #: src/components/trading/TradingOverview.jsx:192
 #~ msgid "Time this trade was created at this time"
@@ -1750,17 +1750,17 @@ msgstr ""
 
 #: src/components/block/Block.jsx:184
 msgid "Timestamp"
-msgstr ""
+msgstr "برچسب زمان"
 
 #: src/components/wallet/WalletHistory.tsx:32
 msgid "To"
-msgstr ""
+msgstr "به"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:287
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:565
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "Total Balance"
-msgstr ""
+msgstr "موجودی کل"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:15
 #~ msgid "Total Chia Farmed"
@@ -1768,116 +1768,116 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:191
 msgid "Total Iterations"
-msgstr ""
+msgstr "کل تکرار ها"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Total Network Space"
-msgstr ""
+msgstr "فضای کل شبکه"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:91
 msgid "Total Plot Size:"
-msgstr ""
+msgstr "اندازه کل طرح ها:"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:8
 msgid "Total Size of Plots"
-msgstr ""
+msgstr "اندازه کل قطعات"
 
 #: src/components/block/Block.jsx:220
 msgid "Total VDF Iterations"
-msgstr ""
+msgstr "کل تکرار های VDF"
 
 #: src/components/fullNode/FullNode.jsx:193
 msgid "Total iterations since the start of the blockchain"
-msgstr ""
+msgstr "تکرار های کلی از زمان شروع بلاکچین"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
-#~ msgstr ""
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
-msgstr ""
+msgstr "جزئیات معامعه"
 
 #: src/components/trading/TradingOverview.jsx:125
 msgid "Trade ID"
-msgstr ""
+msgstr "شناسه معامله"
 
 #: src/components/trading/TradingOverview.jsx:174
 msgid "Trade ID:"
-msgstr ""
+msgstr "شناسه معامله:"
 
 #: src/components/trading/TradeManager.tsx:17
 msgid "Trade Overview"
-msgstr ""
+msgstr "بررسی اجمالی معاملات"
 
 #: src/components/trading/TradingOverview.jsx:153
 msgid "Trades will show up here"
-msgstr ""
+msgstr "معاملات در اینجا نشان داده می شود"
 
 #: src/components/trading/TradeManager.tsx:13
 msgid "Trading"
-msgstr ""
+msgstr "معامعه"
 
 #: src/components/trading/TradingOverview.jsx:435
 msgid "Trading History"
-msgstr ""
+msgstr "تاریخچه معاملات"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "فیلتر تراکنش های هش"
 
 #: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
-msgstr ""
+msgstr "نوع"
 
 #: src/components/fullNode/FullNode.jsx:92
 msgid "Unfinished"
-msgstr ""
+msgstr "ناتمام"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "Unique identifier"
-msgstr ""
+msgstr "شناسایی منحصر به فرد"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:32
 msgid "Unknown"
-msgstr ""
+msgstr "ناشناخته"
 
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr ""
+msgstr "کلید عمومی کاربر"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
-msgstr ""
+msgstr "تکرارهای زیر شکاف VDF"
 
 #: src/electron/main.tsx:251
 msgid "View"
-msgstr ""
+msgstr "مشاهده"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:53
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:33
 msgid "View Log"
-msgstr ""
+msgstr "مشاهده سوابق"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "View Offer"
-msgstr ""
+msgstr "مشاهده‌ی پیشنهادات"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr ""
+msgstr "موجودی های معلق را مشاهده کنید"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "مشاهده مانده های در انتظار ..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
 #: src/components/plot/PlotStatus.tsx:25
 msgid "Wait for synchronization"
-msgstr ""
+msgstr "منتظر همگام سازی باشید"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
@@ -1919,7 +1919,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:24
 #: src/components/wallet/Wallets.tsx:133
 msgid "Wallets"
-msgstr ""
+msgstr "کیف پول ها"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -1927,19 +1927,19 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr ""
+msgstr "آیا می خواهید Chia بیشتری بدست آورید؟ قطعات (Plot) بیشتری را به مزرعه خود اضافه کنید."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
-msgstr ""
+msgstr "آیا می خواهید قبل از شروع طرح بعدی تاخیر داشته باشید؟"
 
 #: src/components/block/Block.jsx:198
 msgid "Weight"
-msgstr ""
+msgstr "وزن"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "وزن به کل دشواری اضافه شده برای همه زیر بلوک ها تا این یکی از جمله است"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
@@ -1955,17 +1955,17 @@ msgstr ""
 
 #: src/electron/main.tsx:294
 msgid "Window"
-msgstr ""
+msgstr "پنجره"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:18
 msgid "Without fees"
-msgstr ""
+msgstr "بدونه هزینه"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/trading/TradingOverview.jsx:212
 #: src/electron/main.tsx:160
 msgid "Yes"
-msgstr ""
+msgstr "بله"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -1973,7 +1973,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "نیازی به همگام سازی یا اتصال به طرح نیست. پرونده های موقتی در طی مراحل رسم ایجاد می شوند که از اندازه پرونده های طرح نهایی بیشتر است. اطمینان حاصل کنید که فضای کافی دارید. <0> بیشتر بیاموزید</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -2023,16 +2023,16 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:24
 #: src/components/wallet/Wallets.tsx:115
 msgid "height:"
-msgstr ""
+msgstr "ارتفاع:"
 
 #: src/components/wallet/Wallets.tsx:109
 msgid "not synced"
-msgstr ""
+msgstr "همگام‌سازی نشده"
 
 #: src/components/wallet/WalletStatusCard.tsx:16
 #: src/components/wallet/Wallets.tsx:100
 msgid "status:"
-msgstr ""
+msgstr "وضعیت:"
 
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:107
@@ -2042,7 +2042,7 @@ msgstr ""
 #: src/components/wallet/WalletStatusCard.tsx:19
 #: src/components/wallet/Wallets.tsx:105
 msgid "syncing"
-msgstr ""
+msgstr "در حال همگام سازی"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -2063,3 +2063,4 @@ msgstr ""
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr ""
+
