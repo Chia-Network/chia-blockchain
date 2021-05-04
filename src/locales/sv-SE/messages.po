@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:50\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1372,7 +1372,7 @@ msgstr "Viktig information"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "Tar bort"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1792,7 +1792,7 @@ msgstr "Totalt antal iterationer sedan blockkedjan startade"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
-#~ msgstr "Handel"
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1973,8 +1973,7 @@ msgstr "Ja"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
-"Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
+msgstr "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -2011,11 +2010,11 @@ msgstr "Ditt nätverk av skördare"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Felkod 13] Åtkomst nekan. Du saknar behörighet till en fil eller katalog. Troligtvis för en av katalogerna för plottar i din config.yaml."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[Felkod 22] Filen går inte att hitta. Troligtvis en av katalog för plottar i din config.yaml som är felaktig."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2065,3 +2064,4 @@ msgstr "{currencyCode} Totalt antal Chia som odlats"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Transaktionsavgifter för användare"
+
