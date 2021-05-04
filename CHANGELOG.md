@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.1.4 Chia Blockchain 2021-05-04
+
+### Changed
+
+- Secret wallet key is hidden by default in `chia keys show`. Use `chia keys show --show-mnemonic-seed` for private keys.
+- Performance improvement while parsing variable length field in transaction blocks.
+
+### Fixed
+
+- Spends are now sorted in the mempool by fee/cost.
+- Resolved pending transaction issue during reorgs.
+- Fixed bug in message send retry logic.
+- Two issues with processing Weight Proofs during syncing while farming.
+- Fixed a bug in the outgoing rate control logic that could prevent messages being sent.
+
 ## 1.1.3 Chia Blockchain 2021-05-01
 
 ### Added
