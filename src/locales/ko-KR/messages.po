@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-04-26 16:03\n"
+"PO-Revision-Date: 2021-05-04 16:50\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -28,11 +28,11 @@ msgstr "Chia의 블록을 더 탐험하고 싶으십니까? 오픈 소스 개발
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "버킷의 수는 128개가 권장됩니다."
+msgstr "128의 버킷을 권장합니다."
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "수확기는 구성(들) 이 실제로 저장되어 있는 기기에서 동작하는 서비스입니다. 농부와 수확기는 전체 체인의 상태를 보기 위해 풀 노드와 정보를 교환합니다. 아래에서 연결된 수확기들의 네트워크를 확인하세요. 더보기"
+msgstr "수확기는 구성(들) 이 실제로 저장되어 있는 기기에서 동작하는 서비스입니다. 농부와 수확기는 전체 체인의 상태를 보기 위해 풀 노드와 정보를 교환합니다. 아래 더보기에서 연결된 수확기들의 네트워크를 확인하세요."
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -99,7 +99,7 @@ msgstr "주소"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
 msgid "Address / Puzzle hash"
-msgstr "주소/퍼즐 해쉬"
+msgstr "주소 / 퍼즐 해시"
 
 #: src/components/trading/CreateOffer.jsx:213
 #: src/components/trading/TradesTable.tsx:16
@@ -137,7 +137,7 @@ msgstr "정말로 나가시겠습니까? GUI 플로팅과 채굴 역시 멈출 �
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 msgid "Are you sure you want to use k={plotSize}?"
-msgstr "정말로 다음 값으로 정하시겠습니까? k={plotSize}"
+msgstr "다음 값으로 정하시겠습니까? k={plotSize}"
 
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
@@ -311,7 +311,7 @@ msgstr "색상 정보"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "컬러 문자열"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
@@ -566,7 +566,7 @@ msgstr "연결 끊김"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "분산 Id 옵션"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -580,7 +580,7 @@ msgstr "당신의 장치가 병렬 플로팅을 지원합니까?"
 #: src/components/trading/ViewOffer.jsx:41
 #: src/components/wallet/create/recoverDIDWallet.js:294
 msgid "Drag and drop offer file"
-msgstr ""
+msgstr "거래 파일을 끌어서 여기에 놓으세요"
 
 #: src/components/backup/BackupRestore.tsx:114
 msgid "Drag and drop your backup file"
@@ -754,7 +754,7 @@ msgstr "새로운 컬러 만들기"
 
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr ""
+msgstr "HD 또는 계층 적 결정 론적 키는 공개 키 / 개인 키 타입으로 개인 키 하나에 거의 무한한 수의 서로 다른 공개 키 (그리고 지갑 수신 주소) 를 가질 수있는 공개 키 / 개인 키 체계의 한 유형으로, 궁극적으로 하나의 개인키로 돌아와서 사용할 수 있습니다."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -829,11 +829,11 @@ msgstr "인덱스"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "Indicated if this offer was created by us"
-msgstr ""
+msgstr "이 제안이 당사에서 생성되었는지 표시"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "Indicated what time this offer was accepted"
-msgstr ""
+msgstr "이 제안이 수락 된 시간 표시"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:342
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
@@ -846,7 +846,7 @@ msgstr "초기 수량"
 
 #: src/components/wallet/create/createRLUser.jsx:89
 msgid "Initialize a Rate Limited User Wallet:"
-msgstr ""
+msgstr "비율 제한 사용자 지갑을 초기화합니다."
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
@@ -854,7 +854,7 @@ msgstr "간격"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
-msgstr ""
+msgstr "K-크기"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "Keys"
@@ -883,7 +883,7 @@ msgstr "불러오는 중…"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr ""
+msgstr "지역 수확기 플롯"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -991,7 +991,7 @@ msgstr "아니오"
 
 #: src/middleware/middleware_api.jsx:285
 msgid "No 24 word seed, since this key is imported."
-msgstr ""
+msgstr "24 단어의 씨드가 없습니다, 나중에 키를 가져 옵니다."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:8
 msgid "No blocks farmed yet"
@@ -1013,7 +1013,7 @@ msgstr "노드 ID"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "None of your plots have passed the plot filter yet."
-msgstr ""
+msgstr "아직 플롯 필터를 통과 한 플롯이 없습니다."
 
 #: src/components/farm/FarmerStatus.tsx:29
 #: src/components/farm/card/FarmCardNotAvailable.tsx:8
@@ -1105,7 +1105,7 @@ msgstr "거래 페어를 추가하십시오"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:712
 msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-msgstr ""
+msgstr "수수료 0을 입력하세요. RL에는 아직 양수 수수료가 지원되지 않습니다."
 
 #: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "Please enter a valid initial coin amount"
@@ -1231,7 +1231,7 @@ msgstr "병렬 플로팅은 시간을 절약해줍니다. 혹은 순차 플로�
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
-msgstr ""
+msgstr "비트 필드를 활성화 한 상태로 플로팅하면 전체 쓰기가 약 30 % 줄어들고 이러면 대부분 더 빠릅니다. 비트 필드 플로팅을 비활성화하면 메모리 요구 사항이 감소 할 수 있습니다. CPU 설계가 2010 년 이전 인 경우 비트 필드 플로팅을 비활성화해야 할 수 있습니다."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
@@ -1294,7 +1294,7 @@ msgstr "개인 키:"
 
 #: src/components/block/Block.jsx:240
 msgid "Proof of Space Size"
-msgstr ""
+msgstr "공간 크기 증명"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "Proofs Found"
@@ -1364,7 +1364,7 @@ msgstr "DID 지갑 찾기"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "Refresh Plots"
-msgstr "구성 새로고침"
+msgstr "Plots 새로고침"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
@@ -1372,7 +1372,7 @@ msgstr "릴리스 노트"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "제거"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -1380,11 +1380,11 @@ msgstr "이름 바꾸기"
 
 #: src/electron/main.tsx:339
 msgid "Report an Issue..."
-msgstr "문제 신고하기..."
+msgstr "문제 보고하기..."
 
 #: src/components/backup/BackupRestore.tsx:107
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
-msgstr ""
+msgstr "백업에서 컬러 코인 및 기타 스마트 지갑에 대한 메타 데이터 복원"
 
 #: src/components/backup/BackupRestore.tsx:107
 #~ msgid "Restore Smart Wallets From Backup"
@@ -1397,7 +1397,7 @@ msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:122
 msgid "Safe To Skip"
-msgstr "넘어가기"
+msgstr "안전하게 건너 뛰기"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:105
 #: src/components/trading/CreateOffer.jsx:160
@@ -1410,7 +1410,7 @@ msgstr "저장"
 
 #: src/components/fullNode/FullNodeBlockSearch.tsx:30
 msgid "Search block by header hash"
-msgstr ""
+msgstr "헤더 해시로 블록 검색"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:75
 msgid "Second temporary folder location"
@@ -1476,11 +1476,11 @@ msgstr "전송"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:478
 msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-msgstr ""
+msgstr "이 정보 패킷을 Rate Limited Wallet 사용자에게 보냅니다. 이 사용자는 이를 사용하여 지갑 설정을 완료해야합니다."
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:285
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
-msgstr ""
+msgstr "이 정보 패킷을 비율 제한 지갑 사용자에게 보냅니다. 이 사용자는 이를 사용하여 지갑 설정을 완료해야합니다."
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "Show Advanced Options"
@@ -1509,11 +1509,11 @@ msgstr "로그인"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 msgid "Skips adding a final directory to harvester for farming"
-msgstr ""
+msgstr "농업용 수확기에 최종 디렉토리 추가 건너뛰기"
 
 #: src/electron/main.tsx:409
 msgid "Speech"
-msgstr ""
+msgstr "말하다"
 
 #: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "Spendable Amount"
@@ -1521,7 +1521,7 @@ msgstr "사용 가능한 양"
 
 #: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "Spendable Amount Per Interval"
-msgstr ""
+msgstr "간격 당 지출 가능 금액"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:288
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:571
@@ -1532,16 +1532,16 @@ msgstr "사용 가능 잔고"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:408
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:459
 msgid "Spending Interval (number of blocks): {interval}"
-msgstr ""
+msgstr "지출 간격 (블록 수): {interval}"
 
 #: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "Spending Interval Length (number of blocks)"
-msgstr ""
+msgstr "지출 간격 길이 (블록 수)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:415
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 msgid "Spending Limit (chia per interval): {0}"
-msgstr ""
+msgstr "지출 한도 (간격 당 chia): {0}"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "State"
@@ -1643,7 +1643,7 @@ msgstr "애플리케이션은 블록 높이 193536에서 작업을 멈춥니다.
 
 #: src/components/farm/FarmFullNodeConnections.tsx:58
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
-msgstr ""
+msgstr "농부가 연결된 전체 노드는 다음과 같습니다. <0> 자세히 알아보기 </ 0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:30
 #: src/components/plot/add/PlotAddChooseSize.tsx:74
@@ -1656,31 +1656,31 @@ msgstr "노드가 동기화되지 않았습니다"
 
 #: src/components/fullNode/FullNode.jsx:112
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
-msgstr ""
+msgstr "노드가 동기화 중입니다. 즉, 체인의 최신 블록에 도달하기 위해 다른 노드에서 블록을 다운로드하고 있습니다."
 
 #: src/components/block/Block.jsx:271
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
-msgstr ""
+msgstr "플롯을 만드는 데 사용 된 시드입니다. 이는 풀 pk 및 플롯 pk에 따라 다릅니다."
 
 #: src/components/block/Block.jsx:223
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-msgstr ""
+msgstr "VDF (확인 가능한 지연 함수) 의 전체 수 또는 이 하위 블록까지 전체 체인에 대한 시간 반복의 전체 수 입니다."
 
 #: src/components/block/Block.jsx:233
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-msgstr ""
+msgstr "VDF (확인 가능한 지연 함수) 의 총 수 또는이 블록의 시간 반복 증명입니다."
 
 #: src/components/block/Block.jsx:297
 msgid "The total transactions fees in this block. Rewarded to the farmer."
-msgstr ""
+msgstr "이 블록의 총 거래 수수료. 농부에게 보상."
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "These plots are invalid, you might want to delete them."
-msgstr ""
+msgstr "이러한 플롯은 유효하지 않습니다. 삭제할 수 있습니다."
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:44
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
-msgstr ""
+msgstr "이렇게하면 플롯이있는 디렉토리를 추가 할 수 있습니다. 플롯을 생성하지 않은 경우 플로팅 화면으로 이동합니다."
 
 #: src/components/trading/CreateOffer.jsx:132
 #: src/hooks/useSelectDirectory.tsx:26
@@ -1690,35 +1690,35 @@ msgstr "이 기능은 GUI에서만 사용 가능합니다."
 
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-msgstr ""
+msgstr "이것은 거래를하기 위해 현재 사용할 수있는 Chia의 양입니다. 여기에는 보류중인 농업 보상, 보류중인 수신 거래 및 방금 지출했지만 아직 블록 체인에 포함되지 않은 Chia는 포함되지 않습니다."
 
 #: src/components/wallet/standard/WalletStandard.tsx:228
 msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-msgstr ""
+msgstr "이것은 귀하가 자신에게 보냈지만 아직 확인되지 않은 변경 코인 인 보류중인 변경 사항입니다."
 
 #: src/components/wallet/standard/WalletStandard.tsx:223
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-msgstr ""
+msgstr "이것은 들어오고 나가는 보류 트랜잭션의 합계입니다 (아직 블록 체인에 포함되지 않음). 여기에는 농업 보상이 포함되지 않습니다."
 
 #: src/components/fullNode/FullNode.jsx:173
 msgid "This is the time of the latest peak sub block."
-msgstr ""
+msgstr "이것은 최신 피크 서브 블록의 시간입니다."
 
 #: src/components/block/Block.jsx:187
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-msgstr ""
+msgstr "이것은 농부가 블록을 만든 시간이며 시간 증명으로 완성되기 전입니다."
 
 #: src/components/wallet/standard/WalletStandard.tsx:195
 msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "이것은 개인 키에 의해 제어되는 현재 피크 하위 블록에서 블록 체인의 총 chia 양입니다. 여기에는 냉동 농업 보상이 포함되지만 보류중인 들어오고 나가는 거래는 포함되지 않습니다."
 
 #: src/components/wallet/standard/WalletStandard.tsx:218
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-msgstr ""
+msgstr "이것은 총 잔액 + 보류 잔액입니다. 모든 보류중인 거래가 확인 된 후 잔액이 됩니다."
 
 #: src/components/fullNode/FullNode.jsx:133
 msgid "This node is fully caught up and validating the network"
-msgstr ""
+msgstr "이 노드는 완전히 포착되어 네트워크를 확인하고 있습니다."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
@@ -1726,19 +1726,19 @@ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
-msgstr ""
+msgstr "이 표는 농장에서 마지막으로 블록 챌린지에서 승리를 시도한 시간을 보여줍니다. <0> 자세히 알아보기 </ 0>"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "This trade was created at this time"
-msgstr ""
+msgstr "이 거래는 현재 생성되었습니다."
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "This trade was included on blockchain at this block height"
-msgstr ""
+msgstr "이 거래는이 block height 에서 블록 체인에 포함되었습니다."
 
 #: src/components/app/AppTimeBombAlert.tsx:11
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-msgstr ""
+msgstr "이 버전의 Chia는 더 이상 블록 체인과 호환되지 않으며 안전하게 파밍 할 수 없습니다."
 
 #: src/components/fullNode/FullNode.jsx:86
 msgid "Time Created"
@@ -1792,7 +1792,7 @@ msgstr "블록체인 시작 후 총 반복"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 #~ msgid "Trade"
-#~ msgstr "거래"
+#~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "Trade Details"
@@ -1824,7 +1824,7 @@ msgstr "거래내역"
 
 #: src/components/block/Block.jsx:279
 msgid "Transactions Filter Hash"
-msgstr ""
+msgstr "거래 필터 해시"
 
 #: src/components/wallet/WalletHistory.tsx:22
 msgid "Type"
@@ -1867,11 +1867,11 @@ msgstr "제안 보기"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:586
 #: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "View pending balances"
-msgstr ""
+msgstr "미결제 잔액보기"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:296
 msgid "View pending balances..."
-msgstr ""
+msgstr "미결제 잔액보기..."
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:9
 #: src/components/plot/PlotStatus.tsx:22
@@ -1939,7 +1939,7 @@ msgstr "중량"
 
 #: src/components/block/Block.jsx:201
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr ""
+msgstr "무게는 이것을 포함하여 모든 서브 블록의 총 추가 난이도입니다."
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
@@ -1951,7 +1951,7 @@ msgstr "환영합니다. 다음의 단어들은 당신의 지갑 백업에 사�
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:324
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-msgstr ""
+msgstr "관리자로부터 설정 정보 패킷을 받으면 아래에 입력하여 비율 제한 지갑 설정을 완료하세요."
 
 #: src/electron/main.tsx:294
 msgid "Window"
@@ -2009,11 +2009,11 @@ msgstr "내 수확기 네트워크"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[오류 13] 권한이 거부 되었습니다. 필요한 권한없이 파일 / 디렉토리에 액세스하려고 합니다. config.yaml의 플롯 폴더 중 하나에 문제가 있을 가능성이 높습니다."
 
 #: src/util/getDescriptiveError.ts:7
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
-msgstr ""
+msgstr "[오류 22] 파일을 찾을 수 없습니다. config.yaml의 플롯 폴더 중 하나에 문제가 있을 가능성이 높습니다."
 
 #: src/components/wallet/WalletStatusCard.tsx:30
 #: src/components/wallet/Wallets.tsx:121
@@ -2063,3 +2063,4 @@ msgstr "{currencyCode} 채굴된 총 Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 사용자 거래 수수료"
+
