@@ -109,17 +109,25 @@ jobs:
         aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
         aws-region: us-west-2
 
+    - name: Create Checksums
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+          sha256sum /home/runner/work/chia-blockchain/chia-blockchain/*.rpm > ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.rpm.checksum
+          sha256sum /home/runner/work/chia-blockchain/chia-blockchain/*.deb > ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.deb.checksum
+
     - name: Upload to s3
       env:
           CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+#      run: |
+#        ls ${{ github.workspace }}/build_scripts/final_installer/
+##        echo ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+##        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.rpm s3://download-chia-net/builds/
+##        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.deb s3://download-chia-net/builds/
       run: |
-        ls ${{ github.workspace }}/build_scripts/final_installer/
-        echo ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.rpm s3://download-chia-net/builds/
-        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.deb s3://download-chia-net/builds/
-      #run: |
-       #   aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/builds/
-        #  aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/builds/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.rpm s3://download-chia-net/builds/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.deb s3://download-chia-net/builds/
+          aws s3 cp /home/runner/work/chia-blockchain/chia-blockchain/*.checksum s3://download-chia-net/builds/
 
     - name: Install py3createtorrent
       if: startsWith(github.ref, 'refs/tags/')
