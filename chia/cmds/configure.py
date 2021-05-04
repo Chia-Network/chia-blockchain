@@ -81,7 +81,7 @@ def configure(
         config["wallet"]["introducer_peer"]["port"] = int("58444")
         config["introducer"]["port"] = int("58444")
         config["full_node"]["introducer_peer"]["host"] = "beta1_introducer.chia.net"
-        config["selected_network"] = '"testnet_7"'
+        config["selected_network"] = "testnet_7"
         config["harvester"]["selected_network"] = "testnet_7"
         config["pool"]["selected_network"] = "testnet_7"
         config["farmer"]["selected_network"] = "testnet_7"
