@@ -122,4 +122,5 @@ def configure(
 )
 @click.pass_context
 def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, testnet):
-    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, testnet)
+    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp,
+     testnet)
