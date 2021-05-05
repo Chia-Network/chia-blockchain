@@ -108,7 +108,7 @@ jobs:
           CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
           ls ${{ github.workspace }}/build_scripts/final_installer/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm s3://download-chia-net/builds/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}1.x86_64.rpm s3://download-chia-net/builds/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb s3://download-chia-net/builds/
 
     - name: Install py3createtorrent
