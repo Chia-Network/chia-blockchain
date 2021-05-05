@@ -59,8 +59,12 @@ if [ "$(uname)" = "Linux" ]; then
 		# CentOS or Redhat or Fedora
 		echo "Installing on CentOS/Redhat/Fedora"
 	fi
-elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
-	echo "Installation currently requires brew on MacOS - https://brew.sh/"
+elif [ "$(uname)" = "Darwin" ]; then
+	if type brew >/dev/null 2>&1; then
+		type cargo >/dev/null 2>&1 || brew install rust
+	else
+		echo "Installation currently requires brew on MacOS - https://brew.sh/"
+	fi
 elif [ "$(uname)" = "OpenBSD" ]; then
 	export MAKE=${MAKE:-gmake}
 	export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
