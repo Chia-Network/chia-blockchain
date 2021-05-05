@@ -93,6 +93,8 @@ class Crawler:
     root_path: Path
     peer_count: int
     peer_queue: asyncio.Queue
+    with_peers: set
+    with_peak: set
 
     def __init__(
         self,
@@ -111,6 +113,8 @@ class Crawler:
         self.crawl_store = None
         self.log = log
         self.peer_count = 0
+        self.with_peers = set()
+        self.with_peak = set()
 
         db_path_replaced: str = "crawler.db"
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -186,7 +190,6 @@ class Crawler:
         return await self.server.start_client(peer_info, on_connect)
 
     async def connect_task(self, peer):
-
         async def peer_action(peer: ws.WSChiaConnection):
             # Ask peer for peers
             response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=2)
@@ -211,6 +214,13 @@ class Crawler:
                         new_peer_reliability = PeerReliability(response_peer.host)
                         if self.crawl_store is not None:
                             await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+                peer_info = peer.get_peer_info()
+                if peer_info is None:
+                    return
+                if peer_info in self.with_peak:
+                    await peer.close()
+                else:
+                    self.with_peers.add(peer_info)
 
         try:
             connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
@@ -241,6 +251,8 @@ class Crawler:
                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
 
             while True:
+                self.with_peers = set()
+                self.with_peak = set()
                 await self.crawl_store.reload_cached_peers()
                 await self.crawl_store.load_to_db()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
@@ -287,10 +299,16 @@ class Crawler:
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         try:
+            peer_info = peer.get_peer_info()
+            if peer_info is None:
+                return
             if request.height >= minimum_height:
-                peer_info = peer.get_peer_info()
-                if peer_info is not None and self.crawl_store is not None:
+                if self.crawl_store is not None:
                     await self.crawl_store.peer_connected_hostname(peer_info.host)
+            if peer_info in self.with_peers:
+                await peer.close()
+            else:
+                self.with_peak.add(peer_info)
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
