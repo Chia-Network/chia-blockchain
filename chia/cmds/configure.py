@@ -103,7 +103,7 @@ def configure(
 
 @click.command("configure", short_help="Modify configuration")
 @click.option("--testnet", "-t", help="configures for connection to testnet",
- type=click.Choice(["true", "t", "false", "f"]))
+              type=click.Choice(["true", "t", "false", "f"]))
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
@@ -124,4 +124,4 @@ def configure(
 @click.pass_context
 def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, testnet):
     configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp,
-     testnet)
+              testnet)
