@@ -82,7 +82,7 @@ def configure(
         config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
         config["wallet"]["full_node_peer"]["port"] = int(testnet_port)
         config["wallet"]["introducer_peer"]["port"] = int(testnet_port)
-        config["introducer"]["port"] = int("58444")
+        config["introducer"]["port"] = int(testnet_port)
         config["full_node"]["introducer_peer"]["host"] = testnet_introducer
         config["selected_network"] = testnet
         config["harvester"]["selected_network"] = testnet
