@@ -57,5 +57,5 @@
   )
 
   ; main
-  (list (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (create_fullpuzhash SINGLETON_MOD_HASH SINGLETON_MOD_HASH_HASH SINGLETON_ID singleton_innerpuzhash) my_id)) (list CREATE_COIN_ANNOUNCEMENT 0x00))
+  (list (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (create_fullpuzhash SINGLETON_MOD_HASH SINGLETON_MOD_HASH_HASH SINGLETON_ID singleton_innerpuzhash) my_id)) (list CREATE_COIN_ANNOUNCEMENT 0x00) (list ASSERT_MY_ID my_id))
 )
