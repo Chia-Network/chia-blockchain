@@ -2,48 +2,13 @@ import dataclasses
 import asyncio
 import random
 import logging
-from datetime import timedelta
-from datetime import datetime
-from typing import List, Dict
-
+import time
 import aiosqlite
-
+from typing import List, Dict
 from chia.crawler.peer_record import PeerRecord, PeerReliability
 from chia.types.peer_info import PeerInfo
-from pytz import timezone
 
 log = logging.getLogger(__name__)
-
-
-def utc_to_eastern(date: datetime):
-    date = date.replace(tzinfo=timezone("UTC"))
-    date = date.astimezone(timezone("US/Eastern"))
-    return date
-
-
-def utc_timestamp():
-    now = datetime.utcnow()
-    now = now.replace(tzinfo=timezone("UTC"))
-    return int(now.timestamp())
-
-
-def utc_timestamp_to_eastern(timestamp: float):
-    date = datetime.fromtimestamp(timestamp, tz=timezone("UTC"))
-    eastern = date.astimezone(timezone("US/Eastern"))
-    return eastern
-
-
-def current_eastern_datetime():
-    date = datetime.utcnow()
-    date = date.replace(tzinfo=timezone("UTC"))
-    eastern = date.astimezone(timezone("US/Eastern"))
-    return eastern
-
-
-def datetime_eastern_datetime(date):
-    date = date.replace(tzinfo=timezone("UTC"))
-    eastern = date.astimezone(timezone("US/Eastern"))
-    return eastern
 
 
 class CrawlStore:
@@ -112,7 +77,7 @@ class CrawlStore:
             self.host_to_reliability[peer_reliability.peer_id] = peer_reliability
             return
 
-        added_timestamp = utc_timestamp()
+        added_timestamp = int(time.time())
         cursor = await self.crawl_db.execute(
             "INSERT OR REPLACE INTO peer_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -155,8 +120,8 @@ class CrawlStore:
     async def get_peer_reliability(self, peer_id: str) -> PeerReliability:
         return self.host_to_reliability[peer_id]
 
-    async def peer_tried_to_connect(self, peer: PeerRecord):
-        now = utc_timestamp()
+    async def peer_failed_to_connect(self, peer: PeerRecord):
+        now = int(time.time())
         replaced = dataclasses.replace(peer, try_count=peer.try_count + 1, last_try_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
@@ -165,7 +130,9 @@ class CrawlStore:
         await self.add_peer(replaced, reliability)
 
     async def peer_connected(self, peer: PeerRecord):
-        now = utc_timestamp()
+        now = int(time.time())
+        if now - peer.connected_timestamp < 60:
+            return
         replaced = dataclasses.replace(peer, connected=True, connected_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
@@ -178,23 +145,6 @@ class CrawlStore:
             return
         record = self.host_to_records[host]
         await self.peer_connected(record)
-
-    async def get_peers_today_connected(self):
-        now = utc_timestamp()
-        start = utc_timestamp_to_eastern(now)
-        start = start - timedelta(days=1)
-        start = start.replace(hour=23, minute=59, second=59)
-        start_timestamp = int(start.timestamp())
-        counter = 0
-        tries = 0
-        for peer_id in self.host_to_records:
-            record = self.host_to_records[peer_id]
-            if record.connected_timestamp > start_timestamp and record.connected:
-                counter += 1
-            tries += 1
-            if tries % 50000 == 0:
-                await asyncio.sleep(0.1)
-        return counter
 
     async def reload_cached_peers(self):
         peers = []
@@ -217,8 +167,8 @@ class CrawlStore:
             peers = peers[:peer_count]
         return peers
 
-    async def get_peers_to_crawl(self, batch_size) -> List[PeerRecord]:
-        now = int(utc_timestamp())
+    async def get_peers_to_crawl(self, min_batch_size, max_batch_size) -> List[PeerRecord]:
+        now = int(time.time())
         records = []
         counter = 0
         self.banned_peers = 0
@@ -238,6 +188,8 @@ class CrawlStore:
             # Switch to responding some DNS queries.
             if counter % 50000 == 0:
                 await asyncio.sleep(0.1)
+        batch_size = max(min_batch_size, len(records) // 10)
+        batch_size = min(batch_size, max_batch_size)
         if len(records) > batch_size:
             random.shuffle(records)
             records = records[:batch_size]
