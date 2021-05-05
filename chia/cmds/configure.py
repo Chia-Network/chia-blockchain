@@ -14,6 +14,8 @@ def configure(
     set_fullnode_port: str,
     set_log_level: str,
     enable_upnp: str,
+    set_outbound_peer_count: str,
+    set_peer_count: str
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
@@ -71,6 +73,14 @@ def configure(
         else:
             print("uPnP disabled")
         change_made = True
+    if set_outbound_peer_count is not None:
+        config["target_outbound_peer_count"]= int(set_outbound_peer_count)
+        print("Target outbound peer count updated")
+        change_made = True
+    if set_peer_count is not None:
+        config["target_peer_count"]= int(set_peer_count)
+        print("Target peer count updated")
+        change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
@@ -95,6 +105,13 @@ def configure(
 @click.option(
     "--enable-upnp", "--upnp", "-upnp", help="Enable or disable uPnP", type=click.Choice(["true", "t", "false", "f"])
 )
+@click.option(
+    "--set_outbound_peer_count", help="Update the target outbound peer count (default 10)", type=str)
+)
+@click.option(
+    "--set_peer_count", help="Update the target peer count (default 60)", type=str)
+)
 @click.pass_context
-def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp):
-    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp)
+def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, 
+    set_log_level, enable_upnp, set_outbound_peer_count, set_peer_count):
+    configure(ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, set_outbound_peer_count, set_peer_count)
