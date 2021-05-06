@@ -15,7 +15,9 @@ def configure(
     set_log_level: str,
     enable_upnp: str,
     set_outbound_peer_count: str,
-    set_peer_count: str
+    set_peer_count: str,
+    testned: str,
+    main
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
@@ -81,6 +83,29 @@ def configure(
         config["full_node"]["target_peer_count"] = int(set_peer_count)
         print("Target peer count updated")
         change_made = True
+    if testnet is not None:
+        testnet_port = "58444"
+        testnet_introducer = "beta1_introducer.chia.net"
+        testnet = "testnet7"
+        config["full_node"]["port"] = int(testnet_port)
+        config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
+        config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
+        config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
+        config["wallet"]["full_node_peer"]["port"] = int(testnet_port)
+        config["wallet"]["introducer_peer"]["port"] = int(testnet_port)
+        config["introducer"]["port"] = int(testnet_port)
+        config["full_node"]["introducer_peer"]["host"] = testnet_introducer
+        config["selected_network"] = testnet
+        config["harvester"]["selected_network"] = testnet
+        config["pool"]["selected_network"] = testnet
+        config["farmer"]["selected_network"] = testnet
+        config["timelord"]["selected_network"] = testnet
+        config["full_node"]["selected_network"] = testnet
+        config["ui"]["selected_network"] = testnet
+        config["introducer"]["selected_network"] = testnet
+        config["wallet"]["selected_network"] = testnet
+        print("Default full node port, introducer and network setting updated")
+        change_made = True
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
@@ -112,11 +137,16 @@ def configure(
     "--set-peer-count", help="Update the target peer count (default 60)", type=str
 )
 @click.pass_context
-def configure_cmd(
-    ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level,
-    enable_upnp, set_outbound_peer_count, set_peer_count
-):
+def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, target_outbound_peer_count, target_peer_count, testnet):
     configure(
-        ctx.obj["root_path"], set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level,
-        enable_upnp, set_outbound_peer_count, set_peer_count
+        ctx.obj["root_path"],
+        set_farmer_peer,
+        set_node_introducer,
+        set_fullnode_port,
+        set_log_level,
+        enable_upnp,
+        target_outbound_peer_count,
+        target_peer_count,
+        testnet,
+        main
     )
