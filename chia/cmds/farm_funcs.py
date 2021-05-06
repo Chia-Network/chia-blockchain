@@ -242,8 +242,7 @@ class Summary:
         return output
 
 
-async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int,
-                  farmer_rpc_port: int) -> Summary:
+async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int, farmer_rpc_port: int) -> Summary:
     amounts = await get_wallets_stats(wallet_rpc_port)
     plots = await get_plots(harvester_rpc_port)
     blockchain_state = await get_blockchain_state(rpc_port)
@@ -264,13 +263,11 @@ async def summary(rpc_port: int, wallet_rpc_port: int, harvester_rpc_port: int,
     if amounts is not None:
         summary.total_chia_farmed = amounts['farmed_amount'] / units['chia']
         summary.user_transaction_fees = amounts['fee_amount'] / units['chia']
-        summary.block_rewards = (amounts['farmer_reward_amount'] +
-                                 amounts['pool_reward_amount']) / units['chia']
+        summary.block_rewards = (amounts['farmer_reward_amount'] + amounts['pool_reward_amount']) / units['chia']
         summary.last_height_farmed = amounts['last_height_farmed']
 
     if plots is not None:
-        summary.total_plot_size = sum(map(lambda x: x["file_size"],
-                                          plots["plots"]))
+        summary.total_plot_size = sum(map(lambda x: x["file_size"], plots["plots"]))
         summary.plot_count = len(plots['plots'])
 
     if blockchain_state is not None:
