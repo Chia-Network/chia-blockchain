@@ -16,7 +16,7 @@ def configure(
     enable_upnp: str,
     set_outbound_peer_count: str,
     set_peer_count: str,
-    testnet: str
+    testnet: str,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False
