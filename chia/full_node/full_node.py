@@ -56,6 +56,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.util.profiler import profile_task
 
 
 class FullNode:
@@ -127,6 +128,10 @@ class FullNode:
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         self.weight_proof_handler = None
         asyncio.create_task(self.initialize_weight_proof())
+
+        if self.config.get("enable_profiler", False):
+            asyncio.create_task(profile_task(self.root_path, self.log))
+
         self._sync_task = None
         self._segment_task = None
         time_taken = time.time() - start_time
