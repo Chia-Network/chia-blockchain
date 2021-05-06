@@ -139,7 +139,17 @@ def configure(
     "--set-peer-count", help="Update the target peer count (default 60)", type=str
 )
 @click.pass_context
-def configure_cmd(ctx, set_farmer_peer, set_node_introducer, set_fullnode_port, set_log_level, enable_upnp, set_outbound_peer_count, set_peer_count, testnet):
+def configure_cmd(
+    ctx,
+    set_farmer_peer,
+    set_node_introducer,
+    set_fullnode_port,
+    set_log_level,
+    enable_upnp,
+    set_outbound_peer_count,
+    set_peer_count,
+    testnet
+):
     configure(
         ctx.obj["root_path"],
         set_farmer_peer,
