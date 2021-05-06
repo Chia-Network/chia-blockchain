@@ -74,11 +74,11 @@ def configure(
             print("uPnP disabled")
         change_made = True
     if set_outbound_peer_count is not None:
-        config["target_outbound_peer_count"]= int(set_outbound_peer_count)
+        config["full_node"]["target_outbound_peer_count"]= int(set_outbound_peer_count)
         print("Target outbound peer count updated")
         change_made = True
     if set_peer_count is not None:
-        config["target_peer_count"]= int(set_peer_count)
+        config["full_node"]["target_peer_count"]= int(set_peer_count)
         print("Target peer count updated")
         change_made = True
     if change_made:
