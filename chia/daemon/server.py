@@ -802,7 +802,7 @@ async def kill_process(
     if sys.platform == "win32" or sys.platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
         # pylint: disable=E1101
-        kill(process.pid, signal.SIGBREAK)  # type: ignore
+        kill(process.pid, signal.SIGBREAK)
 
     else:
         log.info("sending term signal to %s", service_name)
