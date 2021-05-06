@@ -37,15 +37,15 @@ if [ "$(uname)" = "Linux" ]; then
 	if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
 		# Debian/Ubuntu
 		echo "Installing on Ubuntu/Debian pre 20.04 LTS"
-		sudo apt-get update
+		sudo apt-get update || echo '\033[1;33mWARNING: dependencies update errors \033[0m'
 		sudo apt-get install -y python3.7-venv python3.7-distutils
 	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
 		echo "Installing on Ubuntu/Debian 20.04 LTS"
-		sudo apt-get update
+		sudo apt-get update || echo '\033[1;33mWARNING: dependencies update errors \033[0m'
 		sudo apt-get install -y python3.8-venv python3-distutils
 	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
 		echo "Installing on Ubuntu/Debian 21.04 or newer"
-		sudo apt-get update
+		sudo apt-get update || echo '\033[1;33mWARNING: dependencies update errors \033[0m'
 		sudo apt-get install -y python3.9-venv python3-distutils
 	elif type pacman && [ -f "/etc/arch-release" ]; then
 		# Arch Linux
