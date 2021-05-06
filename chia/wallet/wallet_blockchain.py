@@ -228,7 +228,8 @@ class WalletBlockchain(BlockchainInterface):
                     await self.block_store.db_wrapper.commit_transaction()
                 except BaseException as e:
                     self.log.error(f"Error during db transaction: {e}")
-                    await self.block_store.db_wrapper.rollback_transaction()
+                    if self.block_store.db_wrapper.db._running:
+                        await self.block_store.db_wrapper.rollback_transaction()
                     raise
             if fork_height is not None:
                 self.log.info(f"💰 Updated wallet peak to height {block_record.height}, weight {block_record.weight}, ")

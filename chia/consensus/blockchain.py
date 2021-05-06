@@ -258,6 +258,7 @@ class Blockchain(BlockchainInterface):
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(block, block_record)
+                self.block_store.cache_block(block)
                 fork_height, peak_height, records = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
@@ -273,8 +274,9 @@ class Blockchain(BlockchainInterface):
                         ] = fetched_block_record.sub_epoch_summary_included
                 if peak_height is not None:
                     self._peak_height = peak_height
-                self.block_store.cache_block(block)
             except BaseException:
+                if self.block_store.block_cache.get(block.header_hash) is not None:
+                    self.block_store.block_cache.remove(block.header_hash)
                 await self.block_store.db_wrapper.rollback_transaction()
                 raise
         if fork_height is not None:

@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
@@ -16,9 +17,10 @@ from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
+from chia.types.generator_types import BlockGenerator, GeneratorArg
 from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.errors import Err
@@ -42,7 +44,7 @@ def batch_pre_validate_blocks(
     blocks_pickled: Dict[bytes, bytes],
     full_blocks_pickled: Optional[List[bytes]],
     header_blocks_pickled: Optional[List[bytes]],
-    prev_transaction_generators: List[Optional[bytes]],
+    block_generators_bytes: List[Optional[Tuple[bytes, List[Tuple[int, bytes]]]]],
     npc_results: Dict[uint32, bytes],
     check_filter: bool,
     expected_difficulty: List[uint64],
@@ -69,13 +71,18 @@ def batch_pre_validate_blocks(
                         removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
                     else:
                         removals, tx_additions = [], []
-
-                if block.transactions_generator is not None and npc_result is None:
-                    prev_generator_bytes = prev_transaction_generators[i]
-                    assert prev_generator_bytes is not None
+                has_transactions: bool = block.transactions_info is not None and block.transactions_info.cost > 0
+                if has_transactions and npc_result is None:
                     assert block.transactions_info is not None
-                    block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
-                    assert block_generator.program == block.transactions_generator
+                    block_generator_bytes: Optional[Tuple[bytes, List[Tuple[int, bytes]]]] = block_generators_bytes[i]
+                    assert block_generator_bytes is not None
+                    generator: SerializedProgram = SerializedProgram.from_bytes(block_generator_bytes[0])
+                    prev_generator_args: List[GeneratorArg] = []
+                    prev_gen_args_bytes: List[Tuple[int, bytes]] = block_generator_bytes[1]
+                    assert prev_gen_args_bytes is not None
+                    for bh, arg_bytes in prev_gen_args_bytes:
+                        prev_generator_args.append(GeneratorArg(uint32(bh), SerializedProgram.from_bytes(arg_bytes)))
+                    block_generator: BlockGenerator = BlockGenerator(generator, prev_generator_args)
                     npc_result = get_name_puzzle_conditions(
                         block_generator, min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost), True
                     )
@@ -253,7 +260,11 @@ async def pre_validate_blocks_multiprocessing(
             final_pickled = recent_sb_compressed_pickled
         b_pickled: Optional[List[bytes]] = None
         hb_pickled: Optional[List[bytes]] = None
-        previous_generators: List[Optional[bytes]] = []
+
+        # This includes BlockGenerator objects in a way which makes them efficient to parse later (no need to parse
+        # the SerializedProgram with inefficient CLVM parsing, since we know the length here)
+        block_generators_pickled: List[Optional[Tuple[bytes, List[Tuple[int, bytes]]]]] = []
+
         for block in blocks_to_validate:
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
@@ -269,15 +280,19 @@ async def pre_validate_blocks_multiprocessing(
                 assert get_block_generator is not None
                 if b_pickled is None:
                     b_pickled = []
-                b_pickled.append(bytes(block))
+                block_no_tx = dataclasses.replace(block, transactions_generator=None)
+                b_pickled.append(bytes(block_no_tx))
                 try:
                     block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
                 except ValueError:
                     return None
                 if block_generator is not None:
-                    previous_generators.append(bytes(block_generator))
+                    prev_list = [
+                        (int(arg.block_height), bytes(arg.generator)) for arg in block_generator.generator_args
+                    ]
+                    block_generators_pickled.append((bytes(block_generator.program), prev_list))
                 else:
-                    previous_generators.append(None)
+                    block_generators_pickled.append(None)
             else:
                 if hb_pickled is None:
                     hb_pickled = []
@@ -291,7 +306,7 @@ async def pre_validate_blocks_multiprocessing(
                 final_pickled,
                 b_pickled,
                 hb_pickled,
-                previous_generators,
+                block_generators_pickled,
                 npc_results_pickled,
                 check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
