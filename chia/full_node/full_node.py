@@ -113,6 +113,8 @@ class FullNode:
 
     async def _start(self):
         self.timelord_lock = asyncio.Lock()
+        self.compact_vdf_lock = asyncio.Semaphore(4)
+        self.new_peak_lock = asyncio.Semaphore(8)
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
@@ -630,6 +632,13 @@ class FullNode:
             if response.wp.recent_chain_data[-1].reward_chain_block.weight != heaviest_peak_weight:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
+
+            # dont sync to wp if local peak is heavier,
+            # dont ban peer, we asked for this peak
+            current_peak = self.blockchain.get_peak()
+            if current_peak is not None:
+                if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
+                    raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
 
             try:
                 validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
@@ -1536,7 +1545,7 @@ class FullNode:
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
-        self.log.debug(f"Processingetransaction: {spend_name}")
+        self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
@@ -1729,13 +1738,12 @@ class FullNode:
             return
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if await self._needs_compact_proof(request.vdf_info, header_block, field_vdf):
-            msg = make_msg(
-                ProtocolMessageTypes.request_compact_vdf,
-                full_node_protocol.RequestCompactVDF(
-                    request.height, request.header_hash, request.field_vdf, request.vdf_info
-                ),
+            peer_request = full_node_protocol.RequestCompactVDF(
+                request.height, request.header_hash, request.field_vdf, request.vdf_info
             )
-            await peer.send_message(msg)
+            response = await peer.request_compact_vdf(peer_request, timeout=10)
+            if response is not None and isinstance(response, full_node_protocol.RespondCompactVDF):
+                await self.respond_compact_vdf(response, peer)
 
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)

@@ -121,7 +121,6 @@ class WalletStateManager:
         else:
             self.log = logging.getLogger(__name__)
         self.lock = asyncio.Lock()
-        self.tx_lock = asyncio.Lock()
 
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
@@ -141,6 +140,7 @@ class WalletStateManager:
             self.constants,
             self.coins_of_interest_received,
             self.reorg_rollback,
+            self.lock,
         )
         self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
@@ -498,14 +498,18 @@ class WalletStateManager:
         """
         confirmed = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        removal_amount = 0
+        removal_amount: int = 0
+        addition_amount: int = 0
 
         for record in unconfirmed_tx:
+            for removal in record.removals:
+                removal_amount += removal.amount
+            for addition in record.additions:
+                # This change or a self transaction
+                if await self.does_coin_belong_to_wallet(addition, wallet_id):
+                    addition_amount += addition.amount
 
-            removal_amount += record.amount
-            removal_amount += record.fee_amount
-
-        result = confirmed - removal_amount
+        result = confirmed - removal_amount + addition_amount
         return uint128(result)
 
     async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
@@ -785,7 +789,7 @@ class WalletStateManager:
     async def get_filter_additions_removals(
         self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
     ) -> Tuple[List[bytes32], List[bytes32]]:
-        """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
+        """Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter."""
         # assert new_block.prev_header_hash in self.blockchain.blocks
 
         tx_filter = PyBIP158([b for b in transactions_filter])
@@ -863,7 +867,7 @@ class WalletStateManager:
         return additions_of_interest, removals_of_interest
 
     async def get_relevant_additions(self, additions: List[Coin]) -> List[Coin]:
-        """ Returns the list of coins that are relevant to us.(We can spend them) """
+        """Returns the list of coins that are relevant to us.(We can spend them)"""
 
         result: List[Coin] = []
         my_puzzle_hashes: Set[bytes32] = self.puzzle_store.all_puzzle_hashes
@@ -891,7 +895,7 @@ class WalletStateManager:
         return wallet
 
     async def get_relevant_removals(self, removals: List[Coin]) -> List[Coin]:
-        """ Returns a list of our unspent coins that are in the passed list. """
+        """Returns a list of our unspent coins that are in the passed list."""
 
         result: List[Coin] = []
         wallet_coin_records = await self.coin_store.get_unspent_coins_at_height()

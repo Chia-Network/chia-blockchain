@@ -2,6 +2,7 @@ import asyncio
 from typing import Dict, List, Optional, Set
 
 import aiosqlite
+import sqlite3
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -126,6 +127,12 @@ class WalletCoinStore:
 
         await self.add_coin_record(spent)
 
+    def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
+        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+        return WalletCoinRecord(
+            coin, uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
+        )
+
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
         """ Returns CoinRecord with specified coin id. """
         if coin_name in self.coin_record_cache:
@@ -133,10 +140,10 @@ class WalletCoinStore:
         cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
-        if row is not None:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            return WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
-        return None
+
+        if row is None:
+            return None
+        return self.coin_record_from_row(row)
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """ Returns height of first confirmed coin"""
@@ -188,49 +195,34 @@ class WalletCoinStore:
             await cursor.close()
             cache_dict = {}
             for row in rows:
-                coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-                coin_record = WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
+                coin_record = self.coin_record_from_row(row)
                 coin_set.add(coin_record)
-                cache_dict[coin.name()] = coin_record
+                cache_dict[coin_record.name()] = coin_record
 
             self.coin_wallet_record_cache[wallet_id] = cache_dict
             return coin_set
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
         """ Returns set of all CoinRecords."""
-        coins = set()
-
         cursor = await self.db_connection.execute("SELECT * from coin_record")
         rows = await cursor.fetchall()
         await cursor.close()
-        for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
-        return coins
+
+        return set(self.coin_record_from_row(row) for row in rows)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""
-        coins = set()
         cursor = await self.db_connection.execute("SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),))
         rows = await cursor.fetchall()
         await cursor.close()
-        for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
-        return list(coins)
+
+        return [self.coin_record_from_row(row) for row in rows]
 
     async def get_coin_record_by_coin_id(self, coin_id: bytes32) -> Optional[WalletCoinRecord]:
         """Returns a coin records with the given name, if it exists"""
-        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_id.hex(),))
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is None:
-            return None
-
-        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
-        coin_record = WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
-        return coin_record
+        # TODO: This is a duplicate of get_coin_record()
+        return await self.get_coin_record(coin_id)
 
     async def rollback_to_block(self, height: int):
         """
@@ -270,10 +262,4 @@ class WalletCoinStore:
             "UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_height>?",
             (height,),
         )
-        c3 = await self.db_connection.execute(
-            "UPDATE coin_record SET spent_height = 0, spent = 0 WHERE spent_height>?",
-            (height,),
-        )
-        await c3.close()
         await c2.close()
-        await self.db_connection.commit()

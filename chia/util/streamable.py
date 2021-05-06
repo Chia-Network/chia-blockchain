@@ -7,7 +7,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type
+from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -125,6 +125,9 @@ def recurse_jsonify(d):
     return d
 
 
+PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+
+
 def streamable(cls: Any):
     """
     This is a decorator for class definitions. It applies the strictdataclass decorator,
@@ -152,80 +155,121 @@ def streamable(cls: Any):
     """
 
     cls1 = strictdataclass(cls)
-    return type(cls.__name__, (cls1, Streamable), {})
+    t = type(cls.__name__, (cls1, Streamable), {})
+
+    parse_functions = []
+    try:
+        fields = cls1.__annotations__  # pylint: disable=no-member
+    except Exception:
+        fields = {}
+
+    for _, f_type in fields.items():
+        parse_functions.append(cls.function_to_parse_one_item(f_type))
+
+    PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
+    return t
+
+
+def parse_bool(f: BinaryIO) -> bool:
+    bool_byte = f.read(1)
+    assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
+    if bool_byte == bytes([0]):
+        return False
+    elif bool_byte == bytes([1]):
+        return True
+    else:
+        raise ValueError("Bool byte must be 0 or 1")
+
+
+def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Optional[Any]:
+    is_present_bytes = f.read(1)
+    assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
+    if is_present_bytes == bytes([0]):
+        return None
+    elif is_present_bytes == bytes([1]):
+        return parse_inner_type_f(f)
+    else:
+        raise ValueError("Optional must be 0 or 1")
+
+
+def parse_bytes(f: BinaryIO) -> bytes:
+    list_size_bytes = f.read(4)
+    assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+    list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
+    bytes_read = f.read(list_size)
+    assert bytes_read is not None and len(bytes_read) == list_size
+    return bytes_read
+
+
+def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> List[Any]:
+    full_list: List = []
+    # wjb assert inner_type != get_args(List)[0]
+    list_size_bytes = f.read(4)
+    assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
+    list_size = uint32(int.from_bytes(list_size_bytes, "big"))
+    for list_index in range(list_size):
+        full_list.append(parse_inner_type_f(f))
+    return full_list
+
+
+def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[Callable[[BinaryIO], Any]]) -> Tuple[Any, ...]:
+    full_list = []
+    for parse_f in list_parse_inner_type_f:
+        full_list.append(parse_f(f))
+    return tuple(full_list)
+
+
+def parse_size_hints(f: BinaryIO, f_type: Type, bytes_to_read: int) -> Any:
+    bytes_read = f.read(bytes_to_read)
+    assert bytes_read is not None and len(bytes_read) == bytes_to_read
+    return f_type.from_bytes(bytes_read)
+
+
+def parse_str(f: BinaryIO) -> str:
+    str_size_bytes = f.read(4)
+    assert str_size_bytes is not None and len(str_size_bytes) == 4  # Checks for EOF
+    str_size: uint32 = uint32(int.from_bytes(str_size_bytes, "big"))
+    str_read_bytes = f.read(str_size)
+    assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
+    return bytes.decode(str_read_bytes, "utf-8")
 
 
 class Streamable:
     @classmethod
-    def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
+    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
+        """
+        This function returns a function taking one argument `f: BinaryIO` that parses
+        and returns a value of the given type.
+        """
         inner_type: Type
         if f_type is bool:
-            bool_byte = f.read(1)
-            assert bool_byte is not None and len(bool_byte) == 1  # Checks for EOF
-            if bool_byte == bytes([0]):
-                return False
-            elif bool_byte == bytes([1]):
-                return True
-            else:
-                raise ValueError("Bool byte must be 0 or 1")
+            return parse_bool
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
-            is_present_bytes = f.read(1)
-            assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
-            if is_present_bytes == bytes([0]):
-                return None
-            elif is_present_bytes == bytes([1]):
-                return cls.parse_one_item(inner_type, f)  # type: ignore
-            else:
-                raise ValueError("Optional must be 0 or 1")
+            parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
+            return lambda f: parse_optional(f, parse_inner_type_f)
         if hasattr(f_type, "parse"):
-            return f_type.parse(f)
+            return f_type.parse
         if f_type == bytes:
-            list_size_bytes = f.read(4)
-            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-            list_size: uint32 = uint32(int.from_bytes(list_size_bytes, "big"))
-            bytes_read = f.read(list_size)
-            assert bytes_read is not None and len(bytes_read) == list_size
-            return bytes_read
+            return parse_bytes
         if is_type_List(f_type):
             inner_type = get_args(f_type)[0]
-            full_list: List[inner_type] = []  # type: ignore
-            # wjb assert inner_type != get_args(List)[0]  # type: ignore
-            list_size_bytes = f.read(4)
-            assert list_size_bytes is not None and len(list_size_bytes) == 4  # Checks for EOF
-            list_size = uint32(int.from_bytes(list_size_bytes, "big"))
-            for list_index in range(list_size):
-                full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
-            return full_list
+            parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
+            return lambda f: parse_list(f, parse_inner_type_f)
         if is_type_Tuple(f_type):
             inner_types = get_args(f_type)
-            full_list = []
-            for inner_type in inner_types:
-                full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
-            return tuple(full_list)
+            list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
+            return lambda f: parse_tuple(f, list_parse_inner_type_f)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
-            bytes_read = f.read(bytes_to_read)
-            assert bytes_read is not None and len(bytes_read) == bytes_to_read
-            return f_type.from_bytes(bytes_read)
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read)
         if f_type is str:
-            str_size_bytes = f.read(4)
-            assert str_size_bytes is not None and len(str_size_bytes) == 4  # Checks for EOF
-            str_size: uint32 = uint32(int.from_bytes(str_size_bytes, "big"))
-            str_read_bytes = f.read(str_size)
-            assert str_read_bytes is not None and len(str_read_bytes) == str_size  # Checks for EOF
-            return bytes.decode(str_read_bytes, "utf-8")
-        raise RuntimeError(f"Type {f_type} does not have parse")
+            return parse_str
+        raise NotImplementedError(f"Type {f_type} does not have parse")
 
     @classmethod
     def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
-        values = []
-        try:
-            fields = cls.__annotations__  # pylint: disable=no-member
-        except Exception:
-            fields = {}
-        for _, f_type in fields.items():
-            values.append(cls.parse_one_item(f_type, f))  # type: ignore
+        values = [parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls]]
         return cls(*values)
 
     def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
