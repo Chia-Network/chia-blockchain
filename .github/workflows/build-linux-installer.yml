@@ -93,8 +93,8 @@ jobs:
     - name: Create installer version number
       id: version_number
       run: |
-        . ./venv/bin/activate
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$(. ./venv/bin/chia version)"
+        . ./activate
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
