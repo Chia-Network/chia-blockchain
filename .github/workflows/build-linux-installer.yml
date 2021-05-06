@@ -1,6 +1,7 @@
 name: Linux installer on Python 3.8
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -89,8 +90,62 @@ jobs:
         cd ../build_scripts
         sh build_linux.sh amd64
 
+    - name: Create installer version number
+      id: version_number
+      run: |
+        . ./activate
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$(chia version)"
+
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
       with:
         name: Linux-Installers
         path: ${{ github.workspace }}/build_scripts/final_installer/
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
+        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        aws-region: us-west-2
+
+    - name: Upload to s3
+      env:
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+          ls ${{ github.workspace }}/build_scripts/final_installer/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/builds/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/builds/
+
+    - name: Install py3createtorrent
+      #if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        pip3 install py3createtorrent
+
+    - name: Create .rpm torrent
+      #if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          py3createtorrent ${{ github.workspace }}/build_scripts/final_installer/*.rpm
+          ls
+
+    - name: Create .deb torrent
+      #if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        py3createtorrent  ${{ github.workspace }}/build_scripts/final_installer/*.deb
+        ls
+
+    - name: Create Checksums
+      #if: startsWith(github.ref, 'refs/tags/')
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm > chia-blockchain-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}-1.x86_64.rpm.checksum
+        sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb > chia-blockchain_${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}_amd64.deb.checksum
+
+    - name: Upload Release Files
+      #if: startsWith(github.ref, 'refs/tags/')
+      run: |
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.rpm s3://download-chia-net/test-installs/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.deb s3://download-chia-net/test-installs/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.torrent s3://download-chia-net/test-installs/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/*.checksum s3://download-chia-net/test-installs/
