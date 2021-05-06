@@ -100,8 +100,8 @@ class WSChiaConnection:
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
-        self.outbound_rate_limiter = RateLimiter(percentage_of_limit=outbound_rate_limit_percent)
-        self.inbound_rate_limiter = RateLimiter(percentage_of_limit=inbound_rate_limit_percent)
+        self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
+        self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
 
     async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
         if self.is_outbound:
@@ -238,7 +238,7 @@ class WSChiaConnection:
             self.log.error(f"Exception Stack: {error_stack}")
 
     async def send_message(self, message: Message):
-        """ Send message sends a message with no tracking / callback. """
+        """Send message sends a message with no tracking / callback."""
         if self.closed:
             return
         await self.outgoing_queue.put(message)
@@ -335,6 +335,14 @@ class WSChiaConnection:
         for message in messages:
             await self.outgoing_queue.put(message)
 
+    async def _wait_and_retry(self, msg: Message, queue: asyncio.Queue):
+        try:
+            await asyncio.sleep(1)
+            await queue.put(msg)
+        except Exception as e:
+            self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
+            return
+
     async def _send_message(self, message: Message):
         encoded: bytes = bytes(message)
         size = len(encoded)
@@ -346,15 +354,10 @@ class WSChiaConnection:
                     f"peer: {self.peer_host}"
                 )
 
-                async def wait_and_retry(msg: Message, queue: asyncio.Queue):
-                    try:
-                        await asyncio.sleep(1)
-                        await queue.put(msg)
-                    except Exception as e:
-                        self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
-                        return
+                # TODO: fix this special case. This function has rate limits which are too low.
+                if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
+                    asyncio.create_task(self._wait_and_retry(message, self.outgoing_queue))
 
-                asyncio.create_task(wait_and_retry(message, self.outgoing_queue))
                 return
             else:
                 self.log.debug(

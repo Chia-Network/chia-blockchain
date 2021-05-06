@@ -26,6 +26,7 @@ from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.full_block import FullBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
@@ -388,8 +389,11 @@ class TestFullNodeBlockCompression:
 
     @pytest.mark.asyncio
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain):
-        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
-        self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
+        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 10000, True)
+
+    @pytest.mark.asyncio
+    async def test_block_compression_2(self, setup_two_nodes_and_wallet, empty_blockchain):
+        await self.do_test_block_compression(setup_two_nodes_and_wallet, empty_blockchain, 3000000000000, False)
 
 
 class TestFullNodeProtocol:
@@ -792,6 +796,7 @@ class TestFullNodeProtocol:
         included_tx = 0
         not_included_tx = 0
         seen_bigger_transaction_has_high_fee = False
+        successful_bundle: Optional[SpendBundle] = None
 
         # Fill mempool
         for puzzle_hash in puzzle_hashes[1:]:
@@ -807,7 +812,6 @@ class TestFullNodeProtocol:
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
-            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(spend_bundle)
 
             await full_node_1.respond_transaction(respond_transaction, peer)
 
@@ -828,6 +832,8 @@ class TestFullNodeProtocol:
                 spend_bundles.append(spend_bundle)
                 assert not full_node_1.full_node.mempool_manager.mempool.at_full_capacity(0)
                 assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(0) == 0
+                if force_high_fee:
+                    successful_bundle = spend_bundle
             else:
                 assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000)
                 assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10000000) > 0
@@ -845,6 +851,13 @@ class TestFullNodeProtocol:
 
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
+        # Cannot resubmit transaction
+        status, err = await full_node_1.full_node.respond_transaction(
+            successful_bundle, successful_bundle.name(), peer, test=True
+        )
+        assert status == MempoolInclusionStatus.FAILED
+        assert err == Err.ALREADY_INCLUDING_TRANSACTION
+
         # Farm one block to clear mempool
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
@@ -852,7 +865,31 @@ class TestFullNodeProtocol:
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
         await full_node_1.new_transaction(new_transaction, fake_peer)
 
+        # Cannot resubmit transaction, but not because of ALREADY_INCLUDING
+        status, err = await full_node_1.full_node.respond_transaction(
+            successful_bundle, successful_bundle.name(), peer, test=True
+        )
+        assert status == MempoolInclusionStatus.FAILED
+        assert err != Err.ALREADY_INCLUDING_TRANSACTION
+
         await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
+
+        # Reorg the blockchain
+        blocks = await full_node_1.get_all_full_blocks()
+        blocks = bt.get_consecutive_blocks(
+            3,
+            block_list_input=blocks[:-1],
+            guarantee_transaction_block=True,
+        )
+        for block in blocks[-3:]:
+            await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
+
+        # Can now resubmit a transaction after the reorg
+        status, err = await full_node_1.full_node.respond_transaction(
+            successful_bundle, successful_bundle.name(), peer, test=True
+        )
+        assert err is None
+        assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
     async def test_request_respond_transaction(self, wallet_nodes):
