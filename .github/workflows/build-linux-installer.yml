@@ -94,9 +94,7 @@ jobs:
       id: version_number
       run: |
         . ./venv/bin/activate
-        $env:CHIA_INSTALLER_VERSION = python ./build_scripts/installer-version.py
-        echo "$env:CHIA_INSTALLER_VERSION"
-        echo "::set-output name=CHIA_INSTALLER_VERSION::$env:CHIA_INSTALLER_VERSION"
+        echo "::set-output name=CHIA_INSTALLER_VERSION::$(. ./venv/bin/chia version)"
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
