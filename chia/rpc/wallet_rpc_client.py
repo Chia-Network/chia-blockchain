@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.coin import Coin
@@ -132,6 +132,16 @@ class WalletRpcClient(RpcClient):
 
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
+
+    async def create_new_wallet(self, wallet_type: str, data: Dict[str, Any]) -> None:
+        return await self.fetch(
+            "create_new_wallet",
+            {
+                "wallet_type": wallet_type,
+                "host": "https://backup.chia.net",
+                **data,
+            },
+        )
 
     async def create_signed_transaction(
         self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
