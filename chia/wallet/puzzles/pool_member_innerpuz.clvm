@@ -1,0 +1,29 @@
+(mod (POOL_PUZHASH RELATIVE_LOCK_HEIGHT ESCAPE_MODE_PUZHASH P2_SINGLETON_PUZHASH PUBKEY spend_type my_puzhash my_amount pool_reward_amount pool_reward_height)
+
+  ; POOL_PUZHASH is commitment to the pool's puzzle hash
+  ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
+  ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
+  ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
+
+  ; spend_type is: 0 for absorbing money, 1 to escape
+
+  ; absorb_coin_id and my_puzhash are only used for absorbtion case
+
+  (include condition_codes.clvm)
+  (defconstant GENESIS_CHALLENGE 0xccd5bb71183532bff220ba46c268991a)
+
+  (defun calculate_pool_reward (pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount)
+    (sha256 (concat (lsh GENESIS_CHALLENGE (- 128 (* (strlen pool_reward_height) 8))) pool_reward_height) P2_SINGLETON_PUZHASH pool_reward_amount)
+  )
+
+  (defun absorb_pool_reward (POOL_PUZHASH my_puzhash my_amount pool_reward_amount pool_reward_id)
+    (list (list CREATE_COIN my_puzhash my_amount) (list ASSERT_MY_PUZZLEHASH my_puzhash) (list ASSERT_MY_AMOUNT my_amount) (list CREATE_COIN POOL_PUZHASH pool_reward_amount) (list CREATE_PUZZLE_ANNOUNCEMENT pool_reward_id) (list ASSERT_COIN_ANNOUNCEMENT (sha256 pool_reward_id 0x00)))
+  )
+
+  ; main
+
+  (if spend_type
+    (list (list AGG_SIG_ME PUBKEY 0x00) (list CREATE_COIN ESCAPE_MODE_PUZHASH my_amount) (list ASSERT_MY_AMOUNT my_amount))
+    (absorb_pool_reward POOL_PUZHASH my_puzhash my_amount pool_reward_amount (calculate_pool_reward pool_reward_height P2_SINGLETON_PUZHASH pool_reward_amount))
+  )
+)
