@@ -438,7 +438,14 @@ function SendCard(props: SendCardProps) {
   }
 
   return (
-    <Card title={<Trans>Create Transaction</Trans>}>
+    <Card
+      title={<Trans>Create Transaction</Trans>}
+      tooltip={(
+        <Trans>
+          On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute.
+        </Trans>
+      )}
+    >
       {result_message && (
         <Grid item xs={12}>
           <p className={result_class}>{result_message}</p>
