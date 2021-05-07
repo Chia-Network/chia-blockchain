@@ -287,6 +287,10 @@ full_node:
   # timeout for weight proof request
   weight_proof_timeout: 360
 
+  # when enabled, the full node will print a pstats profile to the root_dir/profile every second
+  # analyze with chia/utils/profiler.py
+  enable_profiler: False
+
   farmer_peer:
       host: *self_hostname
       port: 8447
