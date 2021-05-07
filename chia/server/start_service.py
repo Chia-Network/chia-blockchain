@@ -15,7 +15,7 @@ except ImportError:
 from chia.rpc.rpc_server import start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.server.upnp import upnp_remap_port
+from chia.server.upnp import upnp_remap_port, upnp_release_port
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
@@ -188,6 +188,9 @@ class Service:
                         await (await self._rpc_task)()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
+
+            for port in self._upnp_ports:
+                upnp_release_port(port)
 
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()
