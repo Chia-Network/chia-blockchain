@@ -7,17 +7,17 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-upnp = None
+upnp = miniupnpc.UPnP()
+upnp.discoverdelay = 30
+upnp.discover()
+upnp.selectigd()
 
 
 def upnp_remap_port(port) -> None:
     log.info(f"Attempting to enable UPnP (open up port {port})")
     try:
         global upnp
-        upnp = miniupnpc.UPnP()
-        upnp.discoverdelay = 30
-        upnp.discover()
-        upnp.selectigd()
+        upnp.deleteportmapping(port, "TCP")
         upnp.addportmapping(port, "TCP", upnp.lanaddr, port, "chia", "")
         log.info(f"Port {port} opened with UPnP. lanaddr {upnp.lanaddr} external: {upnp.externalipaddress()}")
     except Exception as e:
@@ -28,9 +28,6 @@ def upnp_remap_port(port) -> None:
 def upnp_release_port(port) -> None:
     try:
         global upnp
-        if not upnp:
-            log.info("UPnP not initialized")
-            return
         upnp.deleteportmapping(port, "TCP")
         log.info(f"Port {port} closed with UPnP")
     except Exception as e:
