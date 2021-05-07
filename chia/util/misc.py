@@ -1,4 +1,4 @@
-def format_minutes(minutes):
+def format_minutes(minutes: int) -> str:
 
     if not isinstance(minutes, int):
         return "Invalid"
@@ -18,10 +18,10 @@ def format_minutes(minutes):
     days = int(minutes / day_minutes)
     hours = int(minutes / hour_minutes)
 
-    def format_unit_string(str_unit, count):
+    def format_unit_string(str_unit: str, count: int) -> str:
         return f"{count} {str_unit}{('s' if count > 1 else '')}"
 
-    def format_unit(unit, count, unit_minutes, next_unit, next_unit_minutes):
+    def format_unit(unit: str, count: int, unit_minutes: int, next_unit: str, next_unit_minutes: int) -> str:
         formatted = format_unit_string(unit, count)
         minutes_left = minutes % unit_minutes
         if minutes_left >= next_unit_minutes:

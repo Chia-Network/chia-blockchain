@@ -2,7 +2,7 @@ from dataclasses import replace
 from typing import Any
 
 
-def recursive_replace(root_obj: Any, replace_str: str, replace_with: Any):
+def recursive_replace(root_obj: Any, replace_str: str, replace_with: Any) -> Any:
     split_str = replace_str.split(".")
     if len(split_str) == 1:
         return replace(root_obj, **{split_str[0]: replace_with})

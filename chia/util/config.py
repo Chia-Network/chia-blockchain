@@ -83,7 +83,7 @@ def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = 
     return unflatten_properties(flattened_props)
 
 
-def flatten_properties(config: Dict):
+def flatten_properties(config: Dict) -> Dict:
     properties = {}
     for key, value in config.items():
         if type(value) is dict:
@@ -94,7 +94,7 @@ def flatten_properties(config: Dict):
     return properties
 
 
-def unflatten_properties(config: Dict):
+def unflatten_properties(config: Dict) -> Dict:
     properties: Dict = {}
     for key, value in config.items():
         if "." in key:
@@ -114,7 +114,7 @@ def add_property(d: Dict, partial_key: str, value: Any):
         d[key_1][key_2] = value
 
 
-def str2bool(v: Any) -> bool:
+def str2bool(v: Union[str, bool]) -> bool:
     # Source from https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     if isinstance(v, bool):
         return v

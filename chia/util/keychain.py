@@ -39,7 +39,7 @@ def generate_mnemonic() -> str:
     return mnemonic
 
 
-def bytes_to_mnemonic(mnemonic_bytes: bytes):
+def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
     if len(mnemonic_bytes) not in [16, 20, 24, 28, 32]:
         raise ValueError(
             f"Data length should be one of the following: [16, 20, 24, 28, 32], but it is {len(mnemonic_bytes)}."
@@ -64,7 +64,7 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes):
     return " ".join(mnemonics)
 
 
-def bytes_from_mnemonic(mnemonic_str: str):
+def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     mnemonic: List[str] = mnemonic_str.split(" ")
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
@@ -93,7 +93,7 @@ def bytes_from_mnemonic(mnemonic_str: str):
     return entropy_bytes
 
 
-def mnemonic_to_seed(mnemonic: str, passphrase):
+def mnemonic_to_seed(mnemonic: str, passphrase: str) -> bytes:
     """
     Uses BIP39 standard to derive a seed from entropy bytes.
     """
@@ -124,7 +124,7 @@ class Keychain:
         self.testing = testing
         self.user = user
 
-    def _get_service(self):
+    def _get_service(self) -> str:
         """
         The keychain stores keys under a different name for tests.
         """
@@ -148,7 +148,7 @@ class Keychain:
             str_bytes[G1Element.SIZE :],  # flake8: noqa
         )
 
-    def _get_private_key_user(self, index: int):
+    def _get_private_key_user(self, index: int) -> str:
         """
         Returns the keychain user string for a key index.
         """
