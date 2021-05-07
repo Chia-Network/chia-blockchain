@@ -175,7 +175,7 @@ async def challenges(farmer_rpc_port: int, limit: int) -> None:
     for signage_point in signage_points:
         print(
             (
-                f"Hash: {signage_point['signage_point']['challenge_hash']}"
+                f"Hash: {signage_point['signage_point']['challenge_hash']} "
                 f"Index: {signage_point['signage_point']['signage_point_index']}"
             )
         )
