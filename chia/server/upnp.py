@@ -29,9 +29,9 @@ def upnp_release_port(port) -> None:
     try:
         global upnp
         if not upnp:
-            log.info(f"UPnP not initialized")
+            log.info("UPnP not initialized")
             return
-        x = upnp.deleteportmapping(port, 'TCP')
+        upnp.deleteportmapping(port, "TCP")
         log.info(f"Port {port} closed with UPnP")
     except Exception as e:
         log.info("UPnP delete failed")
