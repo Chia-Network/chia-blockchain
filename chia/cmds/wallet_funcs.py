@@ -60,13 +60,12 @@ def get_csv_line(tx: TransactionRecord, name, date_fmt, delim):
 
 def get_tx_type_as_string(tx_type: int):
     TX_TYPE_DICT = {
-        TransactionType.FEE_REWARD: "FEE_REWARD",
-        TransactionType.COINBASE_REWARD: "COINBASE_REWARD",
-        TransactionType.INCOMING_TX: "INCOMING_TX",
-        TransactionType.OUTGOING_TX: "OUTGOING_TX",
-        TransactionType.INCOMING_TRADE: "INCOMING_TRADE",
-        TransactionType.OUTGOING_TRADE: "OUTGOING_TRADE",
-        999: "UNKNOWN",
+        int(TransactionType.FEE_REWARD): "FEE_REWARD",
+        int(TransactionType.COINBASE_REWARD): "COINBASE_REWARD",
+        int(TransactionType.INCOMING_TX): "INCOMING_TX",
+        int(TransactionType.OUTGOING_TX): "OUTGOING_TX",
+        int(TransactionType.INCOMING_TRADE): "INCOMING_TRADE",
+        int(TransactionType.OUTGOING_TRADE): "OUTGOING_TRADE",
     }
 
     return TX_TYPE_DICT.get(tx_type, "UNKNOWN")
@@ -121,7 +120,7 @@ async def get_csv(args: dict, wallet_client: WalletRpcClient, fingerprint: int) 
         print("There are no transactions to this address")
         return
 
-    header_list = [
+    HEADER_LIST = [
         "wallet_id",
         "date_time",
         "tx_type",
@@ -132,18 +131,19 @@ async def get_csv(args: dict, wallet_client: WalletRpcClient, fingerprint: int) 
         "fee",
         "to_address",
     ]
-    file_header = delim.join(map(str, header_list))
+    file_header = delim.join(HEADER_LIST)
 
     lines = [get_csv_line(tx, name, date_fmt, delim) for tx in txs[offset:]]
+    csv_body = "\n".join([file_header] + lines)
 
     if file_path:
         f = open(file_path, "w")
-        f.write("\n".join([file_header] + lines))
+        f.write(csv_body)
         f.close()
         print(f"CSV Output to: {file_path}")
         return
 
-    print("\n".join([file_header] + lines))
+    print(csv_body)
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
