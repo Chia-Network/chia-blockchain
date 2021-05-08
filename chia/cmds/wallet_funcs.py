@@ -39,14 +39,14 @@ def get_csv_line(tx: TransactionRecord, name, date_fmt, delim) -> None:
     chia_amount = Decimal(int(tx.amount)) / units["chia"]
     fee_amount = Decimal(int(tx.fee_amount)) / units["chia"]
     to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
-    txType = get_tx_type_as_string(tx.type)
+    tx_type = get_tx_type_as_string(tx.type)
     tx_datetime = datetime.fromtimestamp(tx.created_at_time).strftime(date_fmt)
     status = "Confirmed" if tx.confirmed else ("In mempool" if tx.is_in_mempool() else "Pending")
 
     line_elems = [
         tx.wallet_id,
         tx_datetime,
-        txType,
+        tx_type,
         status,
         tx.confirmed_at_height,
         tx.name,
@@ -67,7 +67,7 @@ def get_tx_type_as_string(tx_type: int):
         TransactionType.OUTGOING_TRADE: "OUTGOING_TRADE",
     }
 
-    return TX_TYPE_DICT.get(tx_type, None)
+    return TX_TYPE_DICT.get(tx_type, "Unknown")
 
 
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
