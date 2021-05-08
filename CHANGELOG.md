@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.1.4 Chia Blockchain 2021-05-04
+
+### Changed
+
+- Secret wallet key is hidden by default in `chia keys show`. Use `chia keys show --show-mnemonic-seed` for private keys.
+- Performance improvement while parsing variable length field in transaction blocks.
+
+### Fixed
+
+- Spends are now sorted in the mempool by fee/cost.
+- Resolved pending transaction issue during reorgs.
+- Fixed bug in message send retry logic.
+- Two issues with processing Weight Proofs during syncing while farming.
+- Fixed a bug in the outgoing rate control logic that could prevent messages being sent.
+
 ## 1.1.3 Chia Blockchain 2021-05-01
 
 ### Added
@@ -19,6 +34,7 @@ for setuptools_scm/PEP 440 reasons.
 - Node will now farm while syncing.
 - We changed chialisp singletons to take a puzzlehash as its origin. We also updated the DID wallet to use this.
 - Transactions are now cached for 10 minutes in mempool to retry if there is a failure of a spending attempt.
+- Thank you to @Chida82 who made the log rotation count fully configurable. Apologies to him for not initially being included here.
 - Thank you to @fiveangle for making install.sh more resilient across python installations.
 - Standard transactions now all have announcements.
 - VDF verification during sync and normal operations are now cached to enhance node performance.

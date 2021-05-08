@@ -177,7 +177,7 @@ class TestDos:
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
-        ws_con.outbound_rate_limiter = RateLimiter(percentage_of_limit=10000)
+        ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
         for i in range(6000):
             await ws_con._send_message(new_tx_message)
@@ -232,7 +232,7 @@ class TestDos:
         assert not ws_con.closed
 
         # Remove outbound rate limiter to test inbound limits
-        ws_con.outbound_rate_limiter = RateLimiter(percentage_of_limit=10000)
+        ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
         for i in range(6):
             await ws_con._send_message(new_message)

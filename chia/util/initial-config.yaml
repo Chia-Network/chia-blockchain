@@ -58,6 +58,17 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       EPOCH_BLOCKS: 768
       DIFFICULTY_STARTING: 30
+    testnet7:
+      DIFFICULTY_CONSTANT_FACTOR: 10052721566054
+      GENESIS_CHALLENGE: 117816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015af
+      GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 3d8765d3a597ec1d99663f6c9816d915b9f68613ac94009884c4addaefcce6af
+      GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
+      INITIAL_FREEZE_END_TIMESTAMP: 1619661600  # Wed Apr 28 2021 22:00:00 GMT-0400 (Eastern Daylight Time)
+      MIN_PLOT_SIZE: 18
+      NETWORK_TYPE: 1
+      MEMPOOL_BLOCK_BUFFER: 10
+      EPOCH_BLOCKS: 768
+      DIFFICULTY_STARTING: 30
   config:
     mainnet:
       address_prefix: "xch"
@@ -71,7 +82,7 @@ network_overrides: &network_overrides
       address_prefix: "txch"
     testnet4:
       address_prefix: "txch"
-    testnet5:
+    testnet7:
       address_prefix: "txch"
 
 selected_network: &selected_network "mainnet"
