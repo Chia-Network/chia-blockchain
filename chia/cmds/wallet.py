@@ -54,6 +54,38 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
 
 
+@wallet_cmd.command("get_csv", short_help="Get a CSV output of all transactions")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option(
+    "-o",
+    "--offset",
+    help="Skip transactions from the beginning of the list",
+    type=int,
+    default=0,
+    show_default=True,
+    required=True,
+)
+@click.option("--file", type=click.Path(), default="", help="Output to a File")
+@click.option("--date_fmt", type=str, default="%Y-%m-%d %H:%M:%S", help="Date Format", show_default=True)
+@click.option("--delim", type=str, default=",", help="Alternative Delimiter", show_default=True)
+def get_csv_cmd(
+    wallet_rpc_port: int, fingerprint: int, id: int, offset: int, file: str, date_fmt: str, delim: str
+) -> None:
+    extra_params = {"id": id, "offset": offset, "file": file, "date_fmt": date_fmt, "delim": delim}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, get_csv
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_csv))
+
+
 @wallet_cmd.command("send", short_help="Send chia to another wallet")
 @click.option(
     "-wp",

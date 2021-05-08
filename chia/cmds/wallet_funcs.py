@@ -16,6 +16,7 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 
@@ -31,6 +32,42 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
+
+
+def get_csv_line(tx: TransactionRecord, name, date_fmt, delim) -> None:
+
+    chia_amount = Decimal(int(tx.amount)) / units["chia"]
+    fee_amount = Decimal(int(tx.fee_amount)) / units["chia"]
+    to_address = encode_puzzle_hash(tx.to_puzzle_hash, name)
+    txType = get_tx_type_as_string(tx.type)
+    tx_datetime = datetime.fromtimestamp(tx.created_at_time).strftime(date_fmt)
+    status = "Confirmed" if tx.confirmed else ("In mempool" if tx.is_in_mempool() else "Pending")
+
+    line_elems = [
+        tx.wallet_id,
+        tx_datetime,
+        txType,
+        status,
+        tx.confirmed_at_height,
+        tx.name,
+        chia_amount,
+        fee_amount,
+        to_address,
+    ]
+    return delim.join(map(str, line_elems))
+
+
+def get_tx_type_as_string(tx_type: int):
+    TX_TYPE_DICT = {
+        TransactionType.FEE_REWARD: "FEE_REWARD",
+        TransactionType.COINBASE_REWARD: "COINBASE_REWARD",
+        TransactionType.INCOMING_TX: "INCOMING_TX",
+        TransactionType.OUTGOING_TX: "OUTGOING_TX",
+        TransactionType.INCOMING_TRADE: "INCOMING_TRADE",
+        TransactionType.OUTGOING_TRADE: "OUTGOING_TRADE",
+    }
+
+    return TX_TYPE_DICT.get(tx_type, None)
 
 
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -66,6 +103,44 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
                 return
             elif entered_key == "c":
                 break
+
+
+async def get_csv(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["id"]
+    offset = args["offset"]
+    file_path = args["file"]
+    date_fmt = args["date_fmt"]
+    delim = args["delim"]
+
+    txs: List[TransactionRecord] = await wallet_client.get_csv(wallet_id)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    if len(txs) == 0:
+        print("There are no transactions to this address")
+        return
+
+    header_list = [
+        "wallet_id",
+        "date_time",
+        "tx_type",
+        "status",
+        "height_confirmed",
+        "tx_name",
+        "amount",
+        "fee",
+        "to_address",
+    ]
+    file_header = delim.join(map(str, header_list))
+    lines = [get_csv_line(tx, name, date_fmt, delim) for tx in txs[offset:]]
+
+    if file_path:
+        f = open(file_path, "w")
+        f.write("\n".join([file_header] + lines))
+        f.close()
+        print(f"CSV Output to: {file_path}")
+        return
+
+    print("\n".join([file_header] + lines))
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
