@@ -67,6 +67,7 @@ class WalletRpcApi:
             "/get_wallet_balance": self.get_wallet_balance,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
+            "/get_csv": self.get_csv,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/create_backup": self.create_backup,
@@ -486,6 +487,26 @@ class WalletRpcApi:
             end = 50
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(wallet_id, start, end)
+        formatted_transactions = []
+        selected = self.service.config["selected_network"]
+        prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
+        for tx in transactions:
+            formatted = tx.to_json_dict()
+            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
+            formatted_transactions.append(formatted)
+
+        return {
+            "transactions": formatted_transactions,
+            "wallet_id": wallet_id,
+        }
+
+
+    async def get_csv(self, request: Dict) -> Dict:
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = int(request["wallet_id"])
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions(wallet_id)
         formatted_transactions = []
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
