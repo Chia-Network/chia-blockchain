@@ -34,7 +34,7 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name) -> None:
         print("")
 
 
-def get_csv_line(tx: TransactionRecord, name, date_fmt, delim) -> None:
+def get_csv_line(tx: TransactionRecord, name, date_fmt, delim):
 
     chia_amount = Decimal(int(tx.amount)) / units["chia"]
     fee_amount = Decimal(int(tx.fee_amount)) / units["chia"]
@@ -54,6 +54,7 @@ def get_csv_line(tx: TransactionRecord, name, date_fmt, delim) -> None:
         fee_amount,
         to_address,
     ]
+
     return delim.join(map(str, line_elems))
 
 
@@ -65,9 +66,10 @@ def get_tx_type_as_string(tx_type: int):
         TransactionType.OUTGOING_TX: "OUTGOING_TX",
         TransactionType.INCOMING_TRADE: "INCOMING_TRADE",
         TransactionType.OUTGOING_TRADE: "OUTGOING_TRADE",
+        999: "UNKNOWN",
     }
 
-    return TX_TYPE_DICT.get(tx_type, "Unknown")
+    return TX_TYPE_DICT.get(tx_type, "UNKNOWN")
 
 
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -131,6 +133,7 @@ async def get_csv(args: dict, wallet_client: WalletRpcClient, fingerprint: int) 
         "to_address",
     ]
     file_header = delim.join(map(str, header_list))
+
     lines = [get_csv_line(tx, name, date_fmt, delim) for tx in txs[offset:]]
 
     if file_path:
