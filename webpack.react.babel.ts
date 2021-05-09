@@ -120,6 +120,7 @@ export default {
     }),
     new HtmlWebpackPlugin({
       template: './src/index.html',
+      inject: 'body',
     }),
     DEV && new ReactRefreshWebpackPlugin(),
   ].filter(Boolean),
