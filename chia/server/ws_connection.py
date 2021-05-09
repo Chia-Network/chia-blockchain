@@ -31,21 +31,21 @@ class WSChiaConnection:
     """
 
     def __init__(
-        self,
-        local_type: NodeType,
-        ws: Any,  # Websocket
-        server_port: int,
-        log: logging.Logger,
-        is_outbound: bool,
-        is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
-        peer_host,
-        incoming_queue,
-        close_callback: Callable,
-        peer_id,
-        inbound_rate_limit_percent: int,
-        outbound_rate_limit_percent: int,
-        close_event=None,
-        session=None,
+            self,
+            local_type: NodeType,
+            ws: Any,  # Websocket
+            server_port: int,
+            log: logging.Logger,
+            is_outbound: bool,
+            is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
+            peer_host,
+            incoming_queue,
+            close_callback: Callable,
+            peer_id,
+            inbound_rate_limit_percent: int,
+            outbound_rate_limit_percent: int,
+            close_event=None,
+            session=None,
     ):
         # Local properties
         self.ws: Any = ws

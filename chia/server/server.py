@@ -29,7 +29,7 @@ from chia.util.network import is_localhost
 
 
 def ssl_context_for_server(
-    ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
+        ca_cert: Path, ca_key: Path, private_cert_path: Path, private_key_path: Path
 ) -> Optional[ssl.SSLContext]:
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
@@ -39,17 +39,17 @@ def ssl_context_for_server(
 
 
 def ssl_context_for_root(
-    ca_cert_file: str,
+        ca_cert_file: str,
 ) -> Optional[ssl.SSLContext]:
     ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_cert_file)
     return ssl_context
 
 
 def ssl_context_for_client(
-    ca_cert: Path,
-    ca_key: Path,
-    private_cert_path: Path,
-    private_key_path: Path,
+        ca_cert: Path,
+        ca_key: Path,
+        private_cert_path: Path,
+        private_key_path: Path,
 ) -> Optional[ssl.SSLContext]:
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
@@ -60,21 +60,21 @@ def ssl_context_for_client(
 
 class ChiaServer:
     def __init__(
-        self,
-        port: int,
-        node: Any,
-        api: Any,
-        local_type: NodeType,
-        ping_interval: int,
-        network_id: str,
-        inbound_rate_limit_percent: int,
-        outbound_rate_limit_percent: int,
-        root_path: Path,
-        config: Dict,
-        private_ca_crt_key: Tuple[Path, Path],
-        chia_ca_crt_key: Tuple[Path, Path],
-        name: str = None,
-        introducer_peers: Optional[IntroducerPeers] = None,
+            self,
+            port: int,
+            node: Any,
+            api: Any,
+            local_type: NodeType,
+            ping_interval: int,
+            network_id: str,
+            inbound_rate_limit_percent: int,
+            outbound_rate_limit_percent: int,
+            root_path: Path,
+            config: Dict,
+            private_ca_crt_key: Tuple[Path, Path],
+            chia_ca_crt_key: Tuple[Path, Path],
+            name: str = None,
+            introducer_peers: Optional[IntroducerPeers] = None,
     ):
         # Keeps track of all connections to and from this node.
         logging.basicConfig(level=logging.DEBUG)
@@ -312,11 +312,11 @@ class ChiaServer:
         return False
 
     async def start_client(
-        self,
-        target_node: PeerInfo,
-        on_connect: Callable = None,
-        auth: bool = False,
-        is_feeler: bool = False,
+            self,
+            target_node: PeerInfo,
+            on_connect: Callable = None,
+            auth: bool = False,
+            is_feeler: bool = False,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -563,10 +563,10 @@ class ChiaServer:
             self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
 
     async def send_to_others(
-        self,
-        messages: List[Message],
-        node_type: NodeType,
-        origin_peer: WSChiaConnection,
+            self,
+            messages: List[Message],
+            node_type: NodeType,
+            origin_peer: WSChiaConnection,
     ):
         for node_id, connection in self.all_connections.items():
             if node_id == origin_peer.peer_node_id:

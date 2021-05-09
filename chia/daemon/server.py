@@ -89,6 +89,7 @@ if getattr(sys, "frozen", False):
         "chia_full_node_simulator": "start_simulator",
     }
 
+
     def executable_for_service(service_name: str) -> str:
         application_path = os.path.dirname(sys.executable)
         if sys.platform == "win32" or sys.platform == "cygwin":
@@ -102,6 +103,7 @@ if getattr(sys, "frozen", False):
 
 else:
     application_path = os.path.dirname(__file__)
+
 
     def executable_for_service(service_name: str) -> str:
         return service_name
@@ -243,7 +245,7 @@ class WebSocketServer:
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
-        self, websocket: WebSocketServerProtocol, message: WsRpcMessage
+            self, websocket: WebSocketServerProtocol, message: WsRpcMessage
     ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
@@ -795,7 +797,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
 
 async def kill_process(
-    process: subprocess.Popen, root_path: Path, service_name: str, id: str, delay_before_kill: int = 15
+        process: subprocess.Popen, root_path: Path, service_name: str, id: str, delay_before_kill: int = 15
 ) -> bool:
     pid_path = pid_path_for_service(root_path, service_name, id)
 
@@ -831,7 +833,7 @@ async def kill_process(
 
 
 async def kill_service(
-    root_path: Path, services: Dict[str, subprocess.Popen], service_name: str, delay_before_kill: int = 15
+        root_path: Path, services: Dict[str, subprocess.Popen], service_name: str, delay_before_kill: int = 15
 ) -> bool:
     process = services.get(service_name)
     if process is None:

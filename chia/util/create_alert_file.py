@@ -58,7 +58,6 @@ while True:
     if verify == "y":
         break
 
-
 k = Keychain()
 private_keys = k.get_all_private_keys()
 path: List[uint32] = [uint32(int(i)) for i in hd_path.split("/") if i != "m"]

@@ -19,7 +19,8 @@ log = logging.getLogger(__name__)
 
 
 def create_block_generator(
-    generator: SerializedProgram, block_heights_list: List[uint32], generator_block_cache: GeneratorBlockCacheInterface
+        generator: SerializedProgram, block_heights_list: List[uint32],
+        generator_block_cache: GeneratorBlockCacheInterface
 ) -> Optional[BlockGenerator]:
     """ `create_block_generator` will returns None if it fails to look up any referenced block """
     generator_arg_list: List[GeneratorArg] = []
@@ -41,8 +42,8 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
 
 
 def create_compressed_generator(
-    original_generator: CompressorArg,
-    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]],
+        original_generator: CompressorArg,
+        compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]],
 ) -> BlockGenerator:
     """
     Bind the generator block program template to a particular reference block,

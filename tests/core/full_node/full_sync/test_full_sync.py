@@ -76,8 +76,8 @@ class TestFullSync:
         )
 
         for block in blocks[
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 : test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
-        ]:
+                     test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5: test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
+                     ]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_3.start_client(
@@ -97,7 +97,7 @@ class TestFullSync:
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()
-        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5:]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -339,7 +339,7 @@ class TestFullSync:
         await full_node_2.full_node.new_peak(peak, con)
         await asyncio.sleep(2)
         assert not full_node_2.full_node.sync_store.get_sync_mode()
-        for block in default_1000_blocks[1000 - num_blocks_initial :]:
+        for block in default_1000_blocks[1000 - num_blocks_initial:]:
             await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)

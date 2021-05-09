@@ -7,6 +7,7 @@ if sys.version_info < (3, 8):
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
         return getattr(t, "__args__", ())
 
+
     def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
         return getattr(t, "__origin__", None)
 

@@ -26,14 +26,13 @@ def get_discriminant(challenge, size_bites) -> int:
 
 @lru_cache(maxsize=100)
 def verify_vdf(
-    disc: int,
-    input_el: bytes100,
-    output: bytes,
-    number_of_iterations: uint64,
-    discriminant_size: int,
-    witness_type: uint8,
+        disc: int,
+        input_el: bytes100,
+        output: bytes,
+        number_of_iterations: uint64,
+        discriminant_size: int,
+        witness_type: uint8,
 ):
-
     return verify_n_wesolowski(
         str(disc),
         input_el,
@@ -60,11 +59,11 @@ class VDFProof(Streamable):
     normalized_to_identity: bool
 
     def is_valid(
-        self,
-        constants: ConsensusConstants,
-        input_el: ClassgroupElement,
-        info: VDFInfo,
-        target_vdf_info: Optional[VDFInfo] = None,
+            self,
+            constants: ConsensusConstants,
+            input_el: ClassgroupElement,
+            info: VDFInfo,
+            target_vdf_info: Optional[VDFInfo] = None,
     ) -> bool:
         """
         If target_vdf_info is passed in, it is compared with info.

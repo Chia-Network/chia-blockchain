@@ -17,9 +17,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 
 MAX_COST = int(1e15)
 
-
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
-
 
 GENERATOR_CODE = """
 (mod (deserialize-mod historical-generators)
@@ -37,7 +35,6 @@ GENERATOR_CODE = """
 )
 """
 
-
 COMPILED_GENERATOR_CODE = bytes.fromhex(
     "ff02ffff01ff04ffff02ff04ffff04ff02ffff04ff05ffff04ff0bff8080808080ffff02"
     "ff06ffff04ff02ffff04ff05ffff04ff0bff808080808080ffff04ffff01ffff02ff05ff"
@@ -51,7 +48,6 @@ FIRST_GENERATOR = Program.to(
 ).as_bin()
 
 SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()
-
 
 FIRST_GENERATOR = Program.to(
     binutils.assemble(

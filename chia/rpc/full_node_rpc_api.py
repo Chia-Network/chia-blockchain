@@ -302,10 +302,10 @@ class FullNodeRpcApi:
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
         eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
-            UI_ACTUAL_SPACE_CONSTANT_FACTOR
-            * weight_div_iters
-            * additional_difficulty_constant
-            * eligible_plots_filter_multiplier
+                UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                * weight_div_iters
+                * additional_difficulty_constant
+                * eligible_plots_filter_multiplier
         )
         return {"space": uint128(int(network_space_bytes_estimate))}
 

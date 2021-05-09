@@ -278,8 +278,8 @@ class Timelord:
             remove_unfinished = []
             for unf_block_timelord in self.unfinished_blocks + self.overflow_blocks:
                 if (
-                    unf_block_timelord.reward_chain_block.get_hash()
-                    == self.new_peak.reward_chain_block.get_unfinished().get_hash()
+                        unf_block_timelord.reward_chain_block.get_hash()
+                        == self.new_peak.reward_chain_block.get_unfinished().get_hash()
                 ):
                     if unf_block_timelord not in self.unfinished_blocks:
                         # We never got the EOS for this, but we have the block in overflow list
@@ -533,21 +533,21 @@ class Timelord:
                     self.proofs_finished = self._clear_proof_list(iteration)
 
                     if (
-                        self.last_state.get_last_block_total_iters() is None
-                        and not self.last_state.state_type == StateType.FIRST_SUB_SLOT
+                            self.last_state.get_last_block_total_iters() is None
+                            and not self.last_state.state_type == StateType.FIRST_SUB_SLOT
                     ):
                         # We don't know when the last block was, so we can't make peaks
                         return
 
                     sp_total_iters = (
-                        ip_total_iters
-                        - ip_iters
-                        + calculate_sp_iters(
-                            self.constants,
-                            block.sub_slot_iters,
-                            block.reward_chain_block.signage_point_index,
-                        )
-                        - (block.sub_slot_iters if overflow else 0)
+                            ip_total_iters
+                            - ip_iters
+                            + calculate_sp_iters(
+                        self.constants,
+                        block.sub_slot_iters,
+                        block.reward_chain_block.signage_point_index,
+                    )
+                            - (block.sub_slot_iters if overflow else 0)
                     )
                     if self.last_state.state_type == StateType.FIRST_SUB_SLOT:
                         is_transaction_block = True
@@ -683,9 +683,9 @@ class Timelord:
             if icc_ip_vdf is not None:
                 if self.last_state.peak is not None:
                     total_iters = (
-                        self.last_state.get_total_iters()
-                        - self.last_state.get_last_ip()
-                        + self.last_state.get_sub_slot_iters()
+                            self.last_state.get_total_iters()
+                            - self.last_state.get_last_ip()
+                            + self.last_state.get_sub_slot_iters()
                     )
                 else:
                     total_iters = self.last_state.get_total_iters() + self.last_state.get_sub_slot_iters()
@@ -823,20 +823,20 @@ class Timelord:
                 log.error(f"Error while handling message: {tb}")
 
     async def _do_process_communication(
-        self,
-        chain: Chain,
-        challenge: bytes32,
-        initial_form: ClassgroupElement,
-        ip: str,
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
-        # Data specific only when running in bluebox mode.
-        bluebox_iteration: Optional[uint64] = None,
-        header_hash: Optional[bytes32] = None,
-        height: Optional[uint32] = None,
-        field_vdf: Optional[uint8] = None,
-        # Labels a proof to the current state only
-        proof_label: Optional[int] = None,
+            self,
+            chain: Chain,
+            challenge: bytes32,
+            initial_form: ClassgroupElement,
+            ip: str,
+            reader: asyncio.StreamReader,
+            writer: asyncio.StreamWriter,
+            # Data specific only when running in bluebox mode.
+            bluebox_iteration: Optional[uint64] = None,
+            header_hash: Optional[bytes32] = None,
+            height: Optional[uint32] = None,
+            field_vdf: Optional[uint8] = None,
+            # Labels a proof to the current state only
+            proof_label: Optional[int] = None,
     ):
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 
@@ -900,9 +900,9 @@ class Timelord:
                 try:
                     data = await reader.readexactly(4)
                 except (
-                    asyncio.IncompleteReadError,
-                    ConnectionResetError,
-                    Exception,
+                        asyncio.IncompleteReadError,
+                        ConnectionResetError,
+                        Exception,
                 ) as e:
                     log.warning(f"{type(e)} {e}")
                     async with self.lock:
@@ -928,9 +928,9 @@ class Timelord:
                         proof = await reader.readexactly(length)
                         stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
                     except (
-                        asyncio.IncompleteReadError,
-                        ConnectionResetError,
-                        Exception,
+                            asyncio.IncompleteReadError,
+                            ConnectionResetError,
+                            Exception,
                     ) as e:
                         log.warning(f"{type(e)} {e}")
                         async with self.lock:

@@ -387,13 +387,13 @@ def deserialize_proof(proof: bytes32) -> MerkleSet:
 
 
 def _deserialize(proof: bytes32, pos: int, bits: List[int]) -> Tuple[Node, int]:
-    t = proof[pos : pos + 1]  # flake8: noqa
+    t = proof[pos: pos + 1]  # flake8: noqa
     if t == EMPTY:
         return _empty, pos + 1
     if t == TERMINAL:
-        return TerminalNode(proof[pos + 1 : pos + 33], bits), pos + 33  # flake8: noqa
+        return TerminalNode(proof[pos + 1: pos + 33], bits), pos + 33  # flake8: noqa
     if t == TRUNCATED:
-        return TruncatedNode(proof[pos + 1 : pos + 33]), pos + 33  # flake8: noqa
+        return TruncatedNode(proof[pos + 1: pos + 33]), pos + 33  # flake8: noqa
     if t != MIDDLE:
         raise SetError()
     v0, pos = _deserialize(proof, pos + 1, bits + [0])

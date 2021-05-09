@@ -22,6 +22,7 @@ NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
+
 # information needed to spend a cc
 # if we ever support more genesis conditions, like a re-issuable coin,
 # we may need also to save the `genesis_coin_mod` or its hash
@@ -82,9 +83,9 @@ def subtotals_for_deltas(deltas) -> List[int]:
 
 
 def coin_solution_for_lock_coin(
-    prev_coin: Coin,
-    subtotal: int,
-    coin: Coin,
+        prev_coin: Coin,
+        subtotal: int,
+        coin: Coin,
 ) -> CoinSolution:
     puzzle_reveal = LOCK_INNER_PUZZLE.curry(prev_coin.as_list(), subtotal)
     coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
@@ -98,11 +99,11 @@ def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
 
 
 def spend_bundle_for_spendable_ccs(
-    mod_code: Program,
-    genesis_coin_checker: Program,
-    spendable_cc_list: List[SpendableCC],
-    inner_solutions: List[Program],
-    sigs: Optional[List[G2Element]] = [],
+        mod_code: Program,
+        genesis_coin_checker: Program,
+        spendable_cc_list: List[SpendableCC],
+        inner_solutions: List[Program],
+        sigs: Optional[List[G2Element]] = [],
 ) -> SpendBundle:
     """
     Given a list of `SpendableCC` objects and inner solutions for those objects, create a `SpendBundle`
@@ -211,7 +212,6 @@ def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
 
 
 def spendable_cc_list_from_coin_solution(coin_solution: CoinSolution, hash_to_puzzle_f) -> List[SpendableCC]:
-
     """
     Given a `CoinSolution`, extract out a list of `SpendableCC` objects.
 

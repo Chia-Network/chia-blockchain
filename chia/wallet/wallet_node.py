@@ -72,12 +72,12 @@ class WalletNode:
     logged_in: bool
 
     def __init__(
-        self,
-        config: Dict,
-        keychain: Keychain,
-        root_path: Path,
-        consensus_constants: ConsensusConstants,
-        name: str = None,
+            self,
+            config: Dict,
+            keychain: Keychain,
+            root_path: Path,
+            consensus_constants: ConsensusConstants,
+            name: str = None,
     ):
         self.config = config
         self.constants = consensus_constants
@@ -127,11 +127,11 @@ class WalletNode:
         return private_key
 
     async def _start(
-        self,
-        fingerprint: Optional[int] = None,
-        new_wallet: bool = False,
-        backup_file: Optional[Path] = None,
-        skip_backup_import: bool = False,
+            self,
+            fingerprint: Optional[int] = None,
+            new_wallet: bool = False,
+            backup_file: Optional[Path] = None,
+            skip_backup_import: bool = False,
     ) -> bool:
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
@@ -141,8 +141,8 @@ class WalletNode:
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
         db_path_replaced: str = (
             self.config["database_path"]
-            .replace("CHALLENGE", self.config["selected_network"])
-            .replace("KEY", db_path_key_suffix)
+                .replace("CHALLENGE", self.config["selected_network"])
+                .replace("KEY", db_path_key_suffix)
         )
         path = path_from_root(self.root_path, db_path_replaced)
         mkdir(path.parent)
@@ -249,19 +249,19 @@ class WalletNode:
 
     async def _resend_queue(self):
         if (
-            self._shut_down
-            or self.server is None
-            or self.wallet_state_manager is None
-            or self.backup_initialized is None
+                self._shut_down
+                or self.server is None
+                or self.wallet_state_manager is None
+                or self.backup_initialized is None
         ):
             return
 
         for msg, sent_peers in await self._messages_to_resend():
             if (
-                self._shut_down
-                or self.server is None
-                or self.wallet_state_manager is None
-                or self.backup_initialized is None
+                    self._shut_down
+                    or self.server is None
+                    or self.wallet_state_manager is None
+                    or self.backup_initialized is None
             ):
                 return
             full_nodes = self.server.get_full_node_connections()
@@ -272,10 +272,10 @@ class WalletNode:
 
         for msg in await self._action_messages():
             if (
-                self._shut_down
-                or self.server is None
-                or self.wallet_state_manager is None
-                or self.backup_initialized is None
+                    self._shut_down
+                    or self.server is None
+                    or self.wallet_state_manager is None
+                    or self.backup_initialized is None
             ):
                 return
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -348,8 +348,8 @@ class WalletNode:
                 self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
                     if (
-                        connection.get_peer_info() != full_node_peer
-                        and connection.get_peer_info() != full_node_resolved
+                            connection.get_peer_info() != full_node_peer
+                            and connection.get_peer_info() != full_node_resolved
                     ):
                         self.log.info(f"Closing unnecessary connection to {connection.get_peer_info()}.")
                         asyncio.create_task(connection.close())
@@ -417,7 +417,7 @@ class WalletNode:
             header_block = response.header_block
 
             if (curr_peak is None and header_block.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
-                curr_peak is not None and curr_peak.height > header_block.height - 200
+                    curr_peak is not None and curr_peak.height > header_block.height - 200
             ):
                 top = header_block
                 blocks = [top]
@@ -561,8 +561,8 @@ class WalletNode:
                     max_fork_ses_height = ses_heigths[-3]
                     # This is fork point in SES in case where fork was not detected
                     if (
-                        self.wallet_state_manager.blockchain.get_peak_height() is not None
-                        and fork_height == max_fork_ses_height
+                            self.wallet_state_manager.blockchain.get_peak_height() is not None
+                            and fork_height == max_fork_ses_height
                     ):
                         peers = self.server.get_full_node_connections()
                         for peer in peers:
@@ -572,12 +572,12 @@ class WalletNode:
                                 wallet_protocol.RequestHeaderBlocks(potential_height, potential_height)
                             )
                             if block_response is not None and isinstance(
-                                block_response, wallet_protocol.RespondHeaderBlocks
+                                    block_response, wallet_protocol.RespondHeaderBlocks
                             ):
                                 our_peak = self.wallet_state_manager.blockchain.get_peak()
                                 if (
-                                    our_peak is not None
-                                    and block_response.header_blocks[0].prev_header_hash == our_peak.header_hash
+                                        our_peak is not None
+                                        and block_response.header_blocks[0].prev_header_hash == our_peak.header_hash
                                 ):
                                     fork_height = our_peak_height
                                 break
@@ -615,11 +615,11 @@ class WalletNode:
                 )
 
     async def fetch_blocks_and_validate(
-        self,
-        peer: WSChiaConnection,
-        height_start: uint32,
-        height_end: uint32,
-        fork_point_with_peak: Optional[uint32],
+            self,
+            peer: WSChiaConnection,
+            height_start: uint32,
+            height_end: uint32,
+            fork_point_with_peak: Optional[uint32],
     ) -> Tuple[bool, bool]:
         """
         Returns whether the blocks validated, and whether the peak was advanced
@@ -638,9 +638,9 @@ class WalletNode:
         if header_blocks is None:
             raise ValueError(f"No response from peer {peer}")
         if (
-            self.full_node_peer is not None
-            and peer.peer_host == self.full_node_peer.host
-            or peer.peer_host == "127.0.0.1"
+                self.full_node_peer is not None
+                and peer.peer_host == self.full_node_peer.host
+                or peer.peer_host == "127.0.0.1"
         ):
             trusted = True
             pre_validation_results: Optional[List[PreValidationResult]] = None
@@ -702,10 +702,10 @@ class WalletNode:
         return True, advanced_peak
 
     def validate_additions(
-        self,
-        coins: List[Tuple[bytes32, List[Coin]]],
-        proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
-        root,
+            self,
+            coins: List[Tuple[bytes32, List[Coin]]],
+            proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
+            root,
     ):
         if proofs is None:
             # Verify root

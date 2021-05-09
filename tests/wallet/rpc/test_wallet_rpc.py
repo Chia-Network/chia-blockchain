@@ -143,8 +143,8 @@ class TestWalletRpc:
             push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))
             assert push_res["success"]
             assert (await client.get_wallet_balance("1"))[
-                "confirmed_wallet_balance"
-            ] == initial_funds_eventually - tx_amount
+                       "confirmed_wallet_balance"
+                   ] == initial_funds_eventually - tx_amount
 
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
@@ -171,9 +171,9 @@ class TestWalletRpc:
             assert any([addition["amount"] == 444 for addition in tx_res["signed_tx"]["additions"]])
             assert any([addition["amount"] == 999 for addition in tx_res["signed_tx"]["additions"]])
             assert (
-                sum([rem["amount"] for rem in tx_res["signed_tx"]["removals"]])
-                - sum([ad["amount"] for ad in tx_res["signed_tx"]["additions"]])
-                == 100
+                    sum([rem["amount"] for rem in tx_res["signed_tx"]["removals"]])
+                    - sum([ad["amount"] for ad in tx_res["signed_tx"]["additions"]])
+                    == 100
             )
 
             push_res = await client_node.push_tx(SpendBundle.from_json_dict(tx_res["signed_tx"]["spend_bundle"]))

@@ -23,7 +23,6 @@ DEFAULT_SETTINGS = RLSettings(100, 1024 * 1024, 100 * 1024 * 1024)
 NON_TX_FREQ = 1000
 NON_TX_MAX_TOTAL_SIZE = 100 * 1024 * 1024
 
-
 # The three values in the tuple correspond to the three limits above
 # The third is optional
 

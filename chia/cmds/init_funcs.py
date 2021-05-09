@@ -119,10 +119,10 @@ def copy_files_rec(old_path: Path, new_path: Path):
 
 
 def migrate_from(
-    old_root: Path,
-    new_root: Path,
-    manifest: List[str],
-    do_not_migrate_settings: List[str],
+        old_root: Path,
+        new_root: Path,
+        manifest: List[str],
+        do_not_migrate_settings: List[str],
 ):
     """
     Copy all the files in "manifest" to the new config directory.

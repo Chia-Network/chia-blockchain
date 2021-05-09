@@ -10,13 +10,13 @@ from chia.util.ints import uint64, uint128
 
 
 def get_signage_point_vdf_info(
-    constants: ConsensusConstants,
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    overflow: bool,
-    prev_b: Optional[BlockRecord],
-    blocks: BlockchainInterface,
-    sp_total_iters: uint128,
-    sp_iters: uint64,
+        constants: ConsensusConstants,
+        finished_sub_slots: List[EndOfSubSlotBundle],
+        overflow: bool,
+        prev_b: Optional[BlockRecord],
+        blocks: BlockchainInterface,
+        sp_total_iters: uint128,
+        sp_iters: uint64,
 ):
     """
     Returns the following information, for the VDF of the signage point at sp_total_iters.

@@ -22,12 +22,12 @@ log = logging.getLogger(__name__)
 
 
 def make_sub_epoch_summary(
-    constants: ConsensusConstants,
-    blocks: BlockchainInterface,
-    blocks_included_height: uint32,
-    prev_prev_block: BlockRecord,
-    new_difficulty: Optional[uint64],
-    new_sub_slot_iters: Optional[uint64],
+        constants: ConsensusConstants,
+        blocks: BlockchainInterface,
+        blocks_included_height: uint32,
+        prev_prev_block: BlockRecord,
+        new_difficulty: Optional[uint64],
+        new_sub_slot_iters: Optional[uint64],
 ) -> SubEpochSummary:
     """
     Creates a sub-epoch-summary object, assuming that the first block in the new sub-epoch is at height
@@ -70,11 +70,11 @@ def make_sub_epoch_summary(
 
 
 def next_sub_epoch_summary(
-    constants: ConsensusConstants,
-    blocks: BlockchainInterface,
-    required_iters: uint64,
-    block: Union[UnfinishedBlock, FullBlock],
-    can_finish_soon: bool = False,
+        constants: ConsensusConstants,
+        blocks: BlockchainInterface,
+        required_iters: uint64,
+        block: Union[UnfinishedBlock, FullBlock],
+        can_finish_soon: bool = False,
 ) -> Optional[SubEpochSummary]:
     """
     Returns the sub-epoch summary that can be included in the block after block. If it should include one. Block
@@ -110,8 +110,8 @@ def next_sub_epoch_summary(
     overflow = is_overflow_block(constants, signage_point_index)
 
     if (
-        len(block.finished_sub_slots) > 0
-        and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
+            len(block.finished_sub_slots) > 0
+            and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
     ):
         return None
 
@@ -124,15 +124,15 @@ def next_sub_epoch_summary(
                 curr: BlockRecord = prev_b
                 while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
                     if (
-                        curr.sub_epoch_summary_included is not None
-                        and curr.sub_epoch_summary_included.new_difficulty is not None
+                            curr.sub_epoch_summary_included is not None
+                            and curr.sub_epoch_summary_included.new_difficulty is not None
                     ):
                         can_finish_epoch = False
                     curr = blocks.block_record(curr.prev_hash)
 
                 if (
-                    curr.sub_epoch_summary_included is not None
-                    and curr.sub_epoch_summary_included.new_difficulty is not None
+                        curr.sub_epoch_summary_included is not None
+                        and curr.sub_epoch_summary_included.new_difficulty is not None
                 ):
                     can_finish_epoch = False
         elif height_can_be_first_in_epoch(constants, uint32(prev_b.height + constants.MAX_SUB_SLOT_BLOCKS + 2)):

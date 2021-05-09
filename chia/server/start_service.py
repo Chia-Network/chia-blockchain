@@ -27,22 +27,22 @@ from .reconnect_task import start_reconnect_task
 
 class Service:
     def __init__(
-        self,
-        root_path,
-        node: Any,
-        peer_api: Any,
-        node_type: NodeType,
-        advertised_port: int,
-        service_name: str,
-        network_id: str,
-        upnp_ports: List[int] = [],
-        server_listen_ports: List[int] = [],
-        connect_peers: List[PeerInfo] = [],
-        auth_connect_peers: bool = True,
-        on_connect_callback: Optional[Callable] = None,
-        rpc_info: Optional[Tuple[type, int]] = None,
-        parse_cli_args=True,
-        connect_to_daemon=True,
+            self,
+            root_path,
+            node: Any,
+            peer_api: Any,
+            node_type: NodeType,
+            advertised_port: int,
+            service_name: str,
+            network_id: str,
+            upnp_ports: List[int] = [],
+            server_listen_ports: List[int] = [],
+            connect_peers: List[PeerInfo] = [],
+            auth_connect_peers: bool = True,
+            on_connect_callback: Optional[Callable] = None,
+            rpc_info: Optional[Tuple[type, int]] = None,
+            parse_cli_args=True,
+            connect_to_daemon=True,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")

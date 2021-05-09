@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
@@ -13,88 +13,88 @@ on:
 jobs:
   build:
     name: Windows Installer on Windows 10 and Python 3.7
-    runs-on: [windows-latest]
+    runs-on: [ windows-latest ]
     timeout-minutes: 40
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.0
-      with:
-        access_token: ${{ github.token }}
+      - name: Cancel previous runs on the same branch
+        if: ${{ github.ref != 'refs/heads/main' }}
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
 
-    - name: Checkout Code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-        submodules: recursive
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
-    - name: Get npm cache directory
-      id: npm-cache
-      run: |
-        echo "::set-output name=dir::$(npm config get cache)"
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
 
-    - name: Cache npm
-      uses: actions/cache@v2.1.5
-      with:
-        path: ${{ steps.npm-cache.outputs.dir }}
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      - name: Cache npm
+        uses: actions/cache@v2.1.5
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
 
-    - name: Cache pip
-      uses: actions/cache@v2.1.5
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Cache pip
+        uses: actions/cache@v2.1.5
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-#  We can't upgrade to Python 3.8 until we have a miniupnpc binary
-    - uses: actions/setup-python@v2
-      name: Install Python 3.7
-      with:
-        python-version: "3.7"
+      #  We can't upgrade to Python 3.8 until we have a miniupnpc binary
+      - uses: actions/setup-python@v2
+        name: Install Python 3.7
+        with:
+          python-version: "3.7"
 
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
-      env:
-        SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
+      - name: Test for secrets access
+        id: check_secrets
+        shell: bash
+        run: |
+          unset HAS_SECRET
+          if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
+          echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        env:
+          SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
 
-    - name: Decode code signing cert into an encrypted file
-      if: steps.check_secrets.outputs.HAS_SECRET
-      uses: kitek/decode-base64-into-file-action@1.0
-      with:
-        encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-        destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
+      - name: Decode code signing cert into an encrypted file
+        if: steps.check_secrets.outputs.HAS_SECRET
+        uses: kitek/decode-base64-into-file-action@1.0
+        with:
+          encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
+          destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
 
-    - name: Build Windows installer with build_scripts\build_windows.ps1
-      env:
-        WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
-        HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SECRET }}
-      run: |
-        $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
-        $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
-        .\build_scripts\build_windows.ps1
+      - name: Build Windows installer with build_scripts\build_windows.ps1
+        env:
+          WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
+          HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SECRET }}
+        run: |
+          $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
+          $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
+          .\build_scripts\build_windows.ps1
 
-    - name: Upload Windows exe's to artifacts
-      uses: actions/upload-artifact@v2.2.2
-      with:
-        name: Windows-Exe
-        path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
+      - name: Upload Windows exe's to artifacts
+        uses: actions/upload-artifact@v2.2.2
+        with:
+          name: Windows-Exe
+          path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
-    - name: Upload Installer to artifacts
-      uses: actions/upload-artifact@v2.2.2
-      with:
-        name: Windows-Installers
-        path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+      - name: Upload Installer to artifacts
+        uses: actions/upload-artifact@v2.2.2
+        with:
+          name: Windows-Installers
+          path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\

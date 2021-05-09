@@ -92,7 +92,7 @@ class FullNodeStore:
         self.serialized_wp_message_tip = None
 
     def add_candidate_block(
-        self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
+            self, quality_string: bytes32, height: uint32, unfinished_block: UnfinishedBlock, backup: bool = False
     ):
         if backup:
             self.candidate_backup_blocks[quality_string] = (height, unfinished_block)
@@ -100,7 +100,7 @@ class FullNodeStore:
             self.candidate_blocks[quality_string] = (height, unfinished_block)
 
     def get_candidate_block(
-        self, quality_string: bytes32, backup: bool = False
+            self, quality_string: bytes32, backup: bool = False
     ) -> Optional[Tuple[uint32, UnfinishedBlock]]:
         if backup:
             return self.candidate_backup_blocks.get(quality_string, None)
@@ -137,7 +137,7 @@ class FullNodeStore:
         self.seen_unfinished_blocks.clear()
 
     def add_unfinished_block(
-        self, height: uint32, unfinished_block: UnfinishedBlock, result: PreValidationResult
+            self, height: uint32, unfinished_block: UnfinishedBlock, result: PreValidationResult
     ) -> None:
         self.unfinished_blocks[unfinished_block.partial_hash] = (height, unfinished_block, result)
 
@@ -177,10 +177,10 @@ class FullNodeStore:
     def add_to_future_sp(self, signage_point: SignagePoint, index: uint8):
         # We are missing a block here
         if (
-            signage_point.cc_vdf is None
-            or signage_point.rc_vdf is None
-            or signage_point.cc_proof is None
-            or signage_point.rc_proof is None
+                signage_point.cc_vdf is None
+                or signage_point.rc_vdf is None
+                or signage_point.cc_proof is None
+                or signage_point.rc_proof is None
         ):
             return
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
@@ -220,11 +220,11 @@ class FullNodeStore:
         self.finished_sub_slots = [(None, [None] * self.constants.NUM_SPS_SUB_SLOT, uint128(0))]
 
     def new_finished_sub_slot(
-        self,
-        eos: EndOfSubSlotBundle,
-        blocks: BlockchainInterface,
-        peak: Optional[BlockRecord],
-        peak_full_block: Optional[FullBlock],
+            self,
+            eos: EndOfSubSlotBundle,
+            blocks: BlockchainInterface,
+            peak: Optional[BlockRecord],
+            peak_full_block: Optional[FullBlock],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
@@ -296,12 +296,12 @@ class FullNodeStore:
                 assert icc_challenge is not None
 
             if can_finish_sub_and_full_epoch(
-                self.constants,
-                blocks,
-                peak.height,
-                peak.prev_hash,
-                peak.deficit,
-                peak.sub_epoch_summary_included is not None,
+                    self.constants,
+                    blocks,
+                    peak.height,
+                    peak.prev_hash,
+                    peak.deficit,
+                    peak.sub_epoch_summary_included is not None,
             )[0]:
                 assert peak_full_block is not None
                 ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
@@ -326,8 +326,8 @@ class FullNodeStore:
             icc_challenge = (
                 last_slot.infused_challenge_chain.get_hash()
                 if last_slot is not None
-                and last_slot.infused_challenge_chain is not None
-                and last_slot.reward_chain.deficit != self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
+                   and last_slot.infused_challenge_chain is not None
+                   and last_slot.reward_chain.deficit != self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
                 else None
             )
 
@@ -339,35 +339,35 @@ class FullNodeStore:
         )
         # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
-            partial_cc_vdf_info,
-            number_of_iterations=sub_slot_iters,
-        ):
-            return None
-        if (
-            not eos.proofs.challenge_chain_slot_proof.normalized_to_identity
-            and not eos.proofs.challenge_chain_slot_proof.is_valid(
-                self.constants,
-                cc_start_element,
                 partial_cc_vdf_info,
-            )
+                number_of_iterations=sub_slot_iters,
         ):
             return None
         if (
-            eos.proofs.challenge_chain_slot_proof.normalized_to_identity
-            and not eos.proofs.challenge_chain_slot_proof.is_valid(
-                self.constants,
-                ClassgroupElement.get_default_element(),
-                eos.challenge_chain.challenge_chain_end_of_slot_vdf,
-            )
+                not eos.proofs.challenge_chain_slot_proof.normalized_to_identity
+                and not eos.proofs.challenge_chain_slot_proof.is_valid(
+            self.constants,
+            cc_start_element,
+            partial_cc_vdf_info,
+        )
+        ):
+            return None
+        if (
+                eos.proofs.challenge_chain_slot_proof.normalized_to_identity
+                and not eos.proofs.challenge_chain_slot_proof.is_valid(
+            self.constants,
+            ClassgroupElement.get_default_element(),
+            eos.challenge_chain.challenge_chain_end_of_slot_vdf,
+        )
         ):
             return None
 
         # Validate reward chain VDF
         if not eos.proofs.reward_chain_slot_proof.is_valid(
-            self.constants,
-            ClassgroupElement.get_default_element(),
-            eos.reward_chain.end_of_slot_vdf,
-            VDFInfo(rc_challenge, iters, eos.reward_chain.end_of_slot_vdf.output),
+                self.constants,
+                ClassgroupElement.get_default_element(),
+                eos.reward_chain.end_of_slot_vdf,
+                VDFInfo(rc_challenge, iters, eos.reward_chain.end_of_slot_vdf.output),
         ):
             return None
 
@@ -385,24 +385,24 @@ class FullNodeStore:
             )
             # The EOS will have the whole sub-slot iters, but the proof is only the delta, from the last peak
             if eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                partial_icc_vdf_info,
-                number_of_iterations=icc_iters,
+                    partial_icc_vdf_info,
+                    number_of_iterations=icc_iters,
             ):
                 return None
             if (
-                not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-                and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                    self.constants, icc_start_element, partial_icc_vdf_info
-                )
+                    not eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                    and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
+                self.constants, icc_start_element, partial_icc_vdf_info
+            )
             ):
                 return None
             if (
-                eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-                and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                    self.constants,
-                    ClassgroupElement.get_default_element(),
-                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                )
+                    eos.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                    and not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
+                self.constants,
+                ClassgroupElement.get_default_element(),
+                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+            )
             ):
                 return None
         else:
@@ -419,13 +419,13 @@ class FullNodeStore:
         return new_ips
 
     def new_signage_point(
-        self,
-        index: uint8,
-        blocks: BlockchainInterface,
-        peak: Optional[BlockRecord],
-        next_sub_slot_iters: uint64,
-        signage_point: SignagePoint,
-        skip_vdf_validation=False,
+            self,
+            index: uint8,
+            blocks: BlockchainInterface,
+            peak: Optional[BlockRecord],
+            next_sub_slot_iters: uint64,
+            signage_point: SignagePoint,
+            skip_vdf_validation=False,
     ) -> bool:
         """
         Returns true if sp successfully added
@@ -441,10 +441,10 @@ class FullNodeStore:
         if index == 0 or index >= self.constants.NUM_SPS_SUB_SLOT:
             return False
         assert (
-            signage_point.cc_vdf is not None
-            and signage_point.cc_proof is not None
-            and signage_point.rc_vdf is not None
-            and signage_point.rc_proof is not None
+                signage_point.cc_vdf is not None
+                and signage_point.cc_proof is not None
+                and signage_point.rc_vdf is not None
+                and signage_point.rc_proof is not None
         )
         for sub_slot, sp_arr, start_ss_total_iters in self.finished_sub_slots:
             if sub_slot is None:
@@ -474,9 +474,9 @@ class FullNodeStore:
                 else:
                     check_from_start_of_ss = False
                     while (
-                        curr is not None
-                        and curr.total_iters > start_ss_total_iters
-                        and curr.total_iters > sp_total_iters
+                            curr is not None
+                            and curr.total_iters > start_ss_total_iters
+                            and curr.total_iters > sp_total_iters
                     ):
                         if curr.first_in_sub_slot:
                             # Did not find a block where it's iters are before our sp_total_iters, in this ss
@@ -511,7 +511,7 @@ class FullNodeStore:
                         signage_point.rc_vdf.output,
                     )
                 if not signage_point.cc_vdf == dataclasses.replace(
-                    cc_vdf_info_expected, number_of_iterations=delta_iters
+                        cc_vdf_info_expected, number_of_iterations=delta_iters
                 ):
                     self.add_to_future_sp(signage_point, index)
                     return False
@@ -522,16 +522,16 @@ class FullNodeStore:
                     start_ele = curr.challenge_vdf_output
                 if not skip_vdf_validation:
                     if not signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
-                        self.constants,
-                        start_ele,
-                        cc_vdf_info_expected,
+                            self.constants,
+                            start_ele,
+                            cc_vdf_info_expected,
                     ):
                         self.add_to_future_sp(signage_point, index)
                         return False
                     if signage_point.cc_proof.normalized_to_identity and not signage_point.cc_proof.is_valid(
-                        self.constants,
-                        ClassgroupElement.get_default_element(),
-                        signage_point.cc_vdf,
+                            self.constants,
+                            ClassgroupElement.get_default_element(),
+                            signage_point.cc_vdf,
                     ):
                         self.add_to_future_sp(signage_point, index)
                         return False
@@ -543,10 +543,10 @@ class FullNodeStore:
 
                 if not skip_vdf_validation:
                     if not signage_point.rc_proof.is_valid(
-                        self.constants,
-                        ClassgroupElement.get_default_element(),
-                        signage_point.rc_vdf,
-                        rc_vdf_info_expected,
+                            self.constants,
+                            ClassgroupElement.get_default_element(),
+                            signage_point.rc_vdf,
+                            rc_vdf_info_expected,
                     ):
                         self.add_to_future_sp(signage_point, index)
                         return False
@@ -572,7 +572,7 @@ class FullNodeStore:
         return None
 
     def get_signage_point_by_index(
-        self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
+            self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
     ) -> Optional[SignagePoint]:
         assert len(self.finished_sub_slots) >= 1
         for sub_slot, sps, _ in self.finished_sub_slots:
@@ -611,22 +611,22 @@ class FullNodeStore:
                         found_rc_hash = True
                 sp = sps[index]
                 if (
-                    found_rc_hash
-                    and sp is not None
-                    and sp.rc_vdf is not None
-                    and sp.rc_vdf.challenge != last_rc_infusion
+                        found_rc_hash
+                        and sp is not None
+                        and sp.rc_vdf is not None
+                        and sp.rc_vdf.challenge != last_rc_infusion
                 ):
                     return True
         return False
 
     def new_peak(
-        self,
-        peak: BlockRecord,
-        peak_full_block: FullBlock,
-        sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
-        ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
-        reorg: bool,
-        blocks: BlockchainInterface,
+            self,
+            peak: BlockRecord,
+            peak_full_block: FullBlock,
+            sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
+            ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
+            reorg: bool,
+            blocks: BlockchainInterface,
     ) -> Tuple[
         Optional[EndOfSubSlotBundle], List[Tuple[uint8, SignagePoint]], List[timelord_protocol.NewInfusionPointVDF]
     ]:
@@ -694,10 +694,10 @@ class FullNodeStore:
         return new_eos, new_sps, new_ips
 
     def get_finished_sub_slots(
-        self,
-        block_records: BlockchainInterface,
-        prev_b: Optional[BlockRecord],
-        last_challenge_to_add: bytes32,
+            self,
+            block_records: BlockchainInterface,
+            prev_b: Optional[BlockRecord],
+            last_challenge_to_add: bytes32,
     ) -> Optional[List[EndOfSubSlotBundle]]:
         """
         Retrieves the EndOfSubSlotBundles that are in the store either:

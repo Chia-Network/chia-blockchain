@@ -6,7 +6,7 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 async def send_all_first_reply(
-    func: str, arg: Any, peers: List[WSChiaConnection], timeout=15
+        func: str, arg: Any, peers: List[WSChiaConnection], timeout=15
 ) -> Optional[Tuple[Any, WSChiaConnection]]:
     """performs an API request to peers and returns the result of the first response and the peer that sent it."""
 

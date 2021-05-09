@@ -8,13 +8,13 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
 def configure(
-    root_path: Path,
-    set_farmer_peer: str,
-    set_node_introducer: str,
-    set_fullnode_port: str,
-    set_log_level: str,
-    enable_upnp: str,
-    testnet: str,
+        root_path: Path,
+        set_farmer_peer: str,
+        set_node_introducer: str,
+        set_fullnode_port: str,
+        set_log_level: str,
+        enable_upnp: str,
+        testnet: str,
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     change_made = False

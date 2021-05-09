@@ -34,6 +34,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
+
 # from chia.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 
 
@@ -44,9 +45,9 @@ class TradeManager:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        db_wrapper: DBWrapper,
-        name: str = None,
+            wallet_state_manager: Any,
+            db_wrapper: DBWrapper,
+            name: str = None,
     ):
         self = TradeManager()
         if name:
@@ -63,7 +64,7 @@ class TradeManager:
         return records
 
     async def get_coins_of_interest(
-        self,
+            self,
     ) -> Tuple[Dict[bytes32, Coin], Dict[bytes32, Coin]]:
         """
         Returns list of coins we want to check if they are included in filter,
@@ -230,7 +231,7 @@ class TradeManager:
         await self.trade_store.add_trade_record(trade, False)
 
     async def create_offer_for_ids(
-        self, offer: Dict[int, int], file_name: str
+            self, offer: Dict[int, int], file_name: str
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         success, trade_offer, error = await self._create_offer_for_ids(offer)
 

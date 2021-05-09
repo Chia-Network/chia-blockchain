@@ -17,16 +17,14 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 
 SERVICE_NAME = "timelord"
 
-
 log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_timelord(
-    root_path: pathlib.Path,
-    config: Dict,
-    constants: ConsensusConstants,
+        root_path: pathlib.Path,
+        config: Dict,
+        constants: ConsensusConstants,
 ) -> Dict:
-
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)

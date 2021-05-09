@@ -83,24 +83,24 @@ def plots_cmd(ctx: click.Context):
 )
 @click.pass_context
 def create_cmd(
-    ctx: click.Context,
-    size: int,
-    override_k: bool,
-    num: int,
-    buffer: int,
-    num_threads: int,
-    buckets: int,
-    alt_fingerprint: int,
-    pool_contract_address: str,
-    farmer_public_key: str,
-    pool_public_key: str,
-    tmp_dir: str,
-    tmp2_dir: str,
-    final_dir: str,
-    plotid: str,
-    memo: str,
-    nobitfield: bool,
-    exclude_final_dir: bool,
+        ctx: click.Context,
+        size: int,
+        override_k: bool,
+        num: int,
+        buffer: int,
+        num_threads: int,
+        buckets: int,
+        alt_fingerprint: int,
+        pool_contract_address: str,
+        farmer_public_key: str,
+        pool_public_key: str,
+        tmp_dir: str,
+        tmp2_dir: str,
+        final_dir: str,
+        plotid: str,
+        memo: str,
+        nobitfield: bool,
+        exclude_final_dir: bool,
 ):
     from chia.plotting.create_plots import create_plots
 
@@ -149,7 +149,8 @@ def create_cmd(
 @click.option("--challenge-start", help="Begins at a different [start] for -n [challenges]", type=int, default=None)
 @click.pass_context
 def check_cmd(
-    ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int
+        ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool,
+        challenge_start: int
 ):
     from chia.plotting.check_plots import check_plots
 

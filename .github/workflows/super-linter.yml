@@ -49,7 +49,7 @@ jobs:
       ################################
       - name: Lint Code Base
         uses: github/super-linter@v3.15.5
-#        uses: docker://github/super-linter:v3.10.2
+        #        uses: docker://github/super-linter:v3.10.2
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
@@ -67,7 +67,7 @@ jobs:
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_FLAKE8: true
           VALIDATE_PYTHON_BLACK: true
-#          VALIDATE_PYTHON_ISORT: true
+          #          VALIDATE_PYTHON_ISORT: true
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_YAML: true

@@ -46,12 +46,12 @@ def throwaway_puzzle_hash(index: int, key_lookup: KeyTool) -> bytes32:
 
 
 def do_test_spend(
-    puzzle_reveal: Program,
-    solution: Program,
-    payments: Iterable[Tuple[bytes32, int]],
-    key_lookup: KeyTool,
-    farm_time: CoinTimestamp = T1,
-    spend_time: CoinTimestamp = T2,
+        puzzle_reveal: Program,
+        solution: Program,
+        payments: Iterable[Tuple[bytes32, int]],
+        key_lookup: KeyTool,
+        farm_time: CoinTimestamp = T1,
+        spend_time: CoinTimestamp = T2,
 ) -> SpendBundle:
     """
     This method will farm a coin paid to the hash of `puzzle_reveal`, then try to spend it
@@ -91,9 +91,8 @@ def do_test_spend(
 
 
 def default_payments_and_conditions(
-    initial_index: int, key_lookup: KeyTool
+        initial_index: int, key_lookup: KeyTool
 ) -> Tuple[List[Tuple[bytes32, int]], Program]:
-
     payments = [
         (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 1000),
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 1000),

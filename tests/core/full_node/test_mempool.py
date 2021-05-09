@@ -34,11 +34,11 @@ log = logging.getLogger(__name__)
 
 
 def generate_test_spend_bundle(
-    coin: Coin,
-    condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
-    fee: uint64 = uint64(0),
-    amount: uint64 = uint64(1000),
-    new_puzzle_hash=BURN_PUZZLE_HASH,
+        coin: Coin,
+        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
+        fee: uint64 = uint64(0),
+        amount: uint64 = uint64(1000),
+        new_puzzle_hash=BURN_PUZZLE_HASH,
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}

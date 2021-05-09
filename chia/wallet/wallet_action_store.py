@@ -66,7 +66,7 @@ class WalletActionStore:
         return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
 
     async def create_action(
-        self, name: str, wallet_id: int, type: int, callback: str, done: bool, data: str, in_transaction: bool
+            self, name: str, wallet_id: int, type: int, callback: str, done: bool, data: str, in_transaction: bool
     ):
         """
         Creates Wallet Action

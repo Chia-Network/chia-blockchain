@@ -17,11 +17,11 @@ from .tree_hash import sha256_treehash
 
 
 def run_program(
-    program,
-    args,
-    max_cost,
-    operator_lookup=OPERATOR_LOOKUP,
-    pre_eval_f=None,
+        program,
+        args,
+        max_cost,
+        operator_lookup=OPERATOR_LOOKUP,
+        pre_eval_f=None,
 ):
     return default_run_program(
         program,
@@ -148,7 +148,7 @@ class SerializedProgram:
 
     @classmethod
     def parse(cls, f) -> "SerializedProgram":
-        length = serialized_length(f.getvalue()[f.tell() :])
+        length = serialized_length(f.getvalue()[f.tell():])
         return SerializedProgram.from_bytes(f.read(length))
 
     def stream(self, f):

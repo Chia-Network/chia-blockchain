@@ -143,11 +143,11 @@ class CoinStore:
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
-        self,
-        include_spent_coins: bool,
-        puzzle_hash: bytes32,
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+            self,
+            include_spent_coins: bool,
+            puzzle_hash: bytes32,
+            start_height: uint32 = uint32(0),
+            end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
 
         coins = set()
@@ -165,11 +165,11 @@ class CoinStore:
         return list(coins)
 
     async def get_coin_records_by_puzzle_hashes(
-        self,
-        include_spent_coins: bool,
-        puzzle_hashes: List[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+            self,
+            include_spent_coins: bool,
+            puzzle_hashes: List[bytes32],
+            start_height: uint32 = uint32(0),
+            end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
         if len(puzzle_hashes) == 0:
             return []

@@ -31,9 +31,9 @@ log = logging.getLogger(__name__)
 # This is a Python port from 'CAddrInfo' class from Bitcoin core code.
 class ExtendedPeerInfo:
     def __init__(
-        self,
-        addr: TimestampedPeerInfo,
-        src_peer: Optional[PeerInfo],
+            self,
+            addr: TimestampedPeerInfo,
+            src_peer: Optional[PeerInfo],
     ):
         self.peer_info: PeerInfo = PeerInfo(
             addr.host,
@@ -54,15 +54,15 @@ class ExtendedPeerInfo:
     def to_string(self) -> str:
         assert self.src is not None
         out = (
-            self.peer_info.host
-            + " "
-            + str(int(self.peer_info.port))
-            + " "
-            + str(int(self.timestamp))
-            + " "
-            + self.src.host
-            + " "
-            + str(int(self.src.port))
+                self.peer_info.host
+                + " "
+                + str(int(self.peer_info.port))
+                + " "
+                + str(int(self.timestamp))
+                + " "
+                + self.src.host
+                + " "
+                + str(int(self.src.port))
         )
         return out
 
@@ -374,7 +374,7 @@ class AddressManager:
             currently_online = time.time() - addr.timestamp < 24 * 60 * 60
             update_interval = 60 * 60 if currently_online else 24 * 60 * 60
             if addr.timestamp > 0 and (
-                info.timestamp > 0 or info.timestamp < addr.timestamp - update_interval - penalty
+                    info.timestamp > 0 or info.timestamp < addr.timestamp - update_interval - penalty
             ):
                 info.timestamp = max(0, addr.timestamp - penalty)
 
@@ -570,8 +570,8 @@ class AddressManager:
                     node_id = self.new_matrix[bucket][pos]
                     cur_info = self.map_info[node_id]
                     if (
-                        cur_info.timestamp < now - max_timestamp_difference
-                        and cur_info.num_attempts >= max_consecutive_failures
+                            cur_info.timestamp < now - max_timestamp_difference
+                            and cur_info.num_attempts >= max_consecutive_failures
                     ):
                         self.clear_new_(bucket, pos)
 
@@ -593,10 +593,10 @@ class AddressManager:
             return len(self.random_pos)
 
     async def add_to_new_table(
-        self,
-        addresses: List[TimestampedPeerInfo],
-        source: Optional[PeerInfo] = None,
-        penalty: int = 0,
+            self,
+            addresses: List[TimestampedPeerInfo],
+            source: Optional[PeerInfo] = None,
+            penalty: int = 0,
     ) -> bool:
         is_added = False
         async with self.lock:
@@ -607,10 +607,10 @@ class AddressManager:
 
     # Mark an entry as accesible.
     async def mark_good(
-        self,
-        addr: PeerInfo,
-        test_before_evict: bool = True,
-        timestamp: int = -1,
+            self,
+            addr: PeerInfo,
+            test_before_evict: bool = True,
+            timestamp: int = -1,
     ):
         if timestamp == -1:
             timestamp = math.floor(time.time())
@@ -619,10 +619,10 @@ class AddressManager:
 
     # Mark an entry as connection attempted to.
     async def attempt(
-        self,
-        addr: PeerInfo,
-        count_failures: bool,
-        timestamp: int = -1,
+            self,
+            addr: PeerInfo,
+            count_failures: bool,
+            timestamp: int = -1,
     ):
         if timestamp == -1:
             timestamp = math.floor(time.time())

@@ -103,12 +103,12 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        private_key: PrivateKey,
-        config: Dict,
-        db_path: Path,
-        constants: ConsensusConstants,
-        server: ChiaServer,
-        name: str = None,
+            private_key: PrivateKey,
+            config: Dict,
+            db_path: Path,
+            constants: ConsensusConstants,
+            server: ChiaServer,
+            name: str = None,
     ):
         self = WalletStateManager()
         self.new_wallet = False
@@ -476,7 +476,7 @@ class WalletStateManager:
         return False
 
     async def get_confirmed_balance_for_wallet(
-        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+            self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
     ) -> uint128:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
@@ -490,7 +490,7 @@ class WalletStateManager:
         return uint128(amount)
 
     async def get_unconfirmed_balance(
-        self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+            self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
     ) -> uint128:
         """
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
@@ -647,14 +647,14 @@ class WalletStateManager:
         return trade_coin_removed
 
     async def coin_added(
-        self,
-        coin: Coin,
-        coinbase: bool,
-        fee_reward: bool,
-        wallet_id: uint32,
-        wallet_type: WalletType,
-        height: uint32,
-        all_outgoing_transaction_records: List[TransactionRecord],
+            self,
+            coin: Coin,
+            coinbase: bool,
+            fee_reward: bool,
+            wallet_id: uint32,
+            wallet_type: WalletType,
+            height: uint32,
+            all_outgoing_transaction_records: List[TransactionRecord],
     ):
         """
         Adding coin to DB
@@ -754,11 +754,11 @@ class WalletStateManager:
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def remove_from_queue(
-        self,
-        spendbundle_id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        error: Optional[Err],
+            self,
+            spendbundle_id: bytes32,
+            name: str,
+            send_status: MempoolInclusionStatus,
+            error: Optional[Err],
     ):
         """
         Full node received our transaction, no need to keep it in queue anymore
@@ -787,7 +787,7 @@ class WalletStateManager:
         return await self.tx_store.get_transaction_record(tx_id)
 
     async def get_filter_additions_removals(
-        self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
+            self, new_block: HeaderBlock, transactions_filter: bytes, fork_point_with_peak: Optional[uint32]
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter."""
         # assert new_block.prev_header_hash in self.blockchain.blocks
@@ -1084,7 +1084,8 @@ class WalletStateManager:
         return filtered
 
     async def create_action(
-        self, name: str, wallet_id: int, wallet_type: int, callback: str, done: bool, data: str, in_transaction: bool
+            self, name: str, wallet_id: int, wallet_type: int, callback: str, done: bool, data: str,
+            in_transaction: bool
     ):
         await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data, in_transaction)
         self.tx_pending_changed()

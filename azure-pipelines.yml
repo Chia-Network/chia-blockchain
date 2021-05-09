@@ -9,7 +9,7 @@ trigger:
       - "*"
   tags:
     include:
-    - "*"
+      - "*"
 
 pool:
   vmImage: "macOS-10.15"

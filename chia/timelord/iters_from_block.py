@@ -7,10 +7,10 @@ from chia.util.ints import uint64
 
 
 def iters_from_block(
-    constants,
-    reward_chain_block: Union[RewardChainBlock, RewardChainBlockUnfinished],
-    sub_slot_iters: uint64,
-    difficulty: uint64,
+        constants,
+        reward_chain_block: Union[RewardChainBlock, RewardChainBlockUnfinished],
+        sub_slot_iters: uint64,
+        difficulty: uint64,
 ) -> Tuple[uint64, uint64]:
     if reward_chain_block.challenge_chain_sp_vdf is None:
         assert reward_chain_block.signage_point_index == 0

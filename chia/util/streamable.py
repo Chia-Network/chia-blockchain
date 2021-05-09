@@ -28,7 +28,6 @@ else:
 
     from typing import get_args
 
-
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
 # TODO: Remove hack, this allows streaming these objects from binary

@@ -83,9 +83,9 @@ def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: Program) 
 
 
 def solution_for_hidden_puzzle(
-    hidden_public_key: G1Element,
-    hidden_puzzle: Program,
-    solution_to_hidden_puzzle: Program,
+        hidden_public_key: G1Element,
+        hidden_puzzle: Program,
+        solution_to_hidden_puzzle: Program,
 ) -> Program:
     return Program.to([hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle])
 

@@ -60,14 +60,14 @@ class TestSimulation:
                             # cc_eos[index] = True
                             has_compact[index] = True
                         if (
-                            sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-                            and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                                sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                                and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
                         ):
                             # icc_eos[index] = True
                             has_compact[index] = True
                     if (
-                        header.challenge_chain_sp_proof is not None
-                        and header.challenge_chain_sp_proof.normalized_to_identity
+                            header.challenge_chain_sp_proof is not None
+                            and header.challenge_chain_sp_proof.normalized_to_identity
                     ):
                         # cc_sp[index] = True
                         has_compact[index] = True

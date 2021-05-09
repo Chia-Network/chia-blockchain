@@ -38,15 +38,15 @@ class PreValidationResult(Streamable):
 
 
 def batch_pre_validate_blocks(
-    constants_dict: Dict,
-    blocks_pickled: Dict[bytes, bytes],
-    full_blocks_pickled: Optional[List[bytes]],
-    header_blocks_pickled: Optional[List[bytes]],
-    prev_transaction_generators: List[Optional[bytes]],
-    npc_results: Dict[uint32, bytes],
-    check_filter: bool,
-    expected_difficulty: List[uint64],
-    expected_sub_slot_iters: List[uint64],
+        constants_dict: Dict,
+        blocks_pickled: Dict[bytes, bytes],
+        full_blocks_pickled: Optional[List[bytes]],
+        header_blocks_pickled: Optional[List[bytes]],
+        prev_transaction_generators: List[Optional[bytes]],
+        npc_results: Dict[uint32, bytes],
+        check_filter: bool,
+        expected_difficulty: List[uint64],
+        expected_sub_slot_iters: List[uint64],
 ) -> List[bytes]:
     blocks = {}
     for k, v in blocks_pickled.items():
@@ -123,15 +123,15 @@ def batch_pre_validate_blocks(
 
 
 async def pre_validate_blocks_multiprocessing(
-    constants: ConsensusConstants,
-    constants_json: Dict,
-    block_records: BlockchainInterface,
-    blocks: Sequence[Union[FullBlock, HeaderBlock]],
-    pool: ProcessPoolExecutor,
-    check_filter: bool,
-    npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Optional[Callable],
-    batch_size: int,
+        constants: ConsensusConstants,
+        constants_json: Dict,
+        block_records: BlockchainInterface,
+        blocks: Sequence[Union[FullBlock, HeaderBlock]],
+        pool: ProcessPoolExecutor,
+        check_filter: bool,
+        npc_results: Dict[uint32, NPCResult],
+        get_block_generator: Optional[Callable],
+        batch_size: int,
 ) -> Optional[List[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
@@ -160,9 +160,9 @@ async def pre_validate_blocks_multiprocessing(
         curr = block_records.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
-            curr.sub_epoch_summary_included is None
-            or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
-            or num_sub_slots_found < num_sub_slots_to_look_for
+                curr.sub_epoch_summary_included is None
+                or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
+                or num_sub_slots_found < num_sub_slots_to_look_for
         ) and curr.height > 0:
             if num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS or num_sub_slots_found < num_sub_slots_to_look_for:
                 recent_blocks_compressed[curr.header_hash] = curr

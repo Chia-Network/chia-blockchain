@@ -30,7 +30,6 @@ def float_to_str(f):
 
 
 def run_and_return_cost_time(chialisp):
-
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
@@ -82,7 +81,7 @@ def benchmark_all_operators():
     one_if = get_cost_compared_to_addition(addition_cost, addition_time, if_time) / addition_cost
     one_sha256 = get_cost_compared_to_addition(addition_cost, addition_time, sha256tree_time) / addition_cost
     one_pubkey_for_exp = (
-        get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time) / addition_cost
+            get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time) / addition_cost
     )
     one_point_add = get_cost_compared_to_addition(addition_cost, addition_time, point_add_time) / addition_cost
 
@@ -158,4 +157,4 @@ if __name__ == "__main__":
     constant = clvm_should_cost / clvm_cost
     format = float_to_str(constant)
     print(f"Constant factor: {format}")
-    print(f"CLVM RATIO MULTIPLIER: {1/constant}")
+    print(f"CLVM RATIO MULTIPLIER: {1 / constant}")

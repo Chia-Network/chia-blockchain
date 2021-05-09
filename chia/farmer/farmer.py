@@ -23,7 +23,6 @@ from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 
 log = logging.getLogger(__name__)
 
-
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
@@ -31,12 +30,12 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 class Farmer:
     def __init__(
-        self,
-        root_path: Path,
-        farmer_config: Dict,
-        pool_config: Dict,
-        keychain: Keychain,
-        consensus_constants: ConsensusConstants,
+            self,
+            root_path: Path,
+            farmer_config: Dict,
+            pool_config: Dict,
+            keychain: Keychain,
+            consensus_constants: ConsensusConstants,
     ):
         self._root_path = root_path
         self.config = farmer_config

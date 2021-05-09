@@ -91,15 +91,14 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
-        * 24
-        * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+                           * 24
+                           * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
         "INITIAL_FREEZE_END_TIMESTAMP": int(time.time()) - 1,
         "NETWORK_TYPE": 1,
     }
 )
-
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +109,7 @@ class BlockTools:
     """
 
     def __init__(
-        self, constants: ConsensusConstants = test_constants, root_path: Optional[Path] = None, const_dict=None
+            self, constants: ConsensusConstants = test_constants, root_path: Optional[Path] = None, const_dict=None
     ):
         self._tempdir = None
         if root_path is None:
@@ -263,24 +262,24 @@ class BlockTools:
         return WalletTool(self.constants, self.pool_master_sk)
 
     def get_consecutive_blocks(
-        self,
-        num_blocks: int,
-        block_list_input: List[FullBlock] = None,
-        farmer_reward_puzzle_hash: Optional[bytes32] = None,
-        pool_reward_puzzle_hash: Optional[bytes32] = None,
-        transaction_data: Optional[SpendBundle] = None,
-        seed: bytes = b"",
-        time_per_block: Optional[float] = None,
-        force_overflow: bool = False,
-        skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
-        guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
-        normalized_to_identity_cc_eos: bool = False,
-        normalized_to_identity_icc_eos: bool = False,
-        normalized_to_identity_cc_sp: bool = False,
-        normalized_to_identity_cc_ip: bool = False,
-        current_time: bool = False,
-        previous_generator: CompressorArg = None,
-        genesis_timestamp: Optional[uint64] = None,
+            self,
+            num_blocks: int,
+            block_list_input: List[FullBlock] = None,
+            farmer_reward_puzzle_hash: Optional[bytes32] = None,
+            pool_reward_puzzle_hash: Optional[bytes32] = None,
+            transaction_data: Optional[SpendBundle] = None,
+            seed: bytes = b"",
+            time_per_block: Optional[float] = None,
+            force_overflow: bool = False,
+            skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
+            guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
+            normalized_to_identity_cc_eos: bool = False,
+            normalized_to_identity_icc_eos: bool = False,
+            normalized_to_identity_cc_sp: bool = False,
+            normalized_to_identity_cc_ip: bool = False,
+            current_time: bool = False,
+            previous_generator: CompressorArg = None,
+            genesis_timestamp: Optional[uint64] = None,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -357,7 +356,7 @@ class BlockTools:
                 for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
-                        constants, sub_slot_iters, uint8(signage_point_index)
+                            constants, sub_slot_iters, uint8(signage_point_index)
                     ):
                         if curr.height == 0:
                             break
@@ -634,15 +633,15 @@ class BlockTools:
             sub_slots_finished += 1
             log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
-                f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+                f"{(len(block_list) - initial_block_list_len) / sub_slots_finished}"
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
             # Handle overflows: No overflows on new epoch
             if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and new_difficulty is None:
                 for signage_point_index in range(
-                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
-                    constants.NUM_SPS_SUB_SLOT,
+                        constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
+                        constants.NUM_SPS_SUB_SLOT,
                 ):
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
@@ -747,7 +746,7 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
+                        log.info(f"Created block {block_record.height} ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
@@ -769,12 +768,12 @@ class BlockTools:
                 difficulty = new_difficulty
 
     def create_genesis_block(
-        self,
-        constants: ConsensusConstants,
-        seed: bytes32 = b"",
-        timestamp: Optional[uint64] = None,
-        force_overflow: bool = False,
-        skip_slots: int = 0,
+            self,
+            constants: ConsensusConstants,
+            seed: bytes32 = b"",
+            timestamp: Optional[uint64] = None,
+            force_overflow: bool = False,
+            skip_slots: int = 0,
     ) -> FullBlock:
         if timestamp is None:
             timestamp = uint64(int(time.time()))
@@ -950,13 +949,13 @@ class BlockTools:
             sub_slot_total_iters = uint128(sub_slot_total_iters + constants.SUB_SLOT_ITERS_STARTING)
 
     def get_pospaces_for_challenge(
-        self,
-        constants: ConsensusConstants,
-        challenge_hash: bytes32,
-        signage_point: bytes32,
-        seed: bytes,
-        difficulty: uint64,
-        sub_slot_iters: uint64,
+            self,
+            constants: ConsensusConstants,
+            challenge_hash: bytes32,
+            signage_point: bytes32,
+            seed: bytes,
+            difficulty: uint64,
+            sub_slot_iters: uint64,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
         plots: List[PlotInfo] = [
@@ -1010,14 +1009,14 @@ class BlockTools:
 
 
 def get_signage_point(
-    constants: ConsensusConstants,
-    blocks: BlockchainInterface,
-    latest_block: Optional[BlockRecord],
-    sub_slot_start_total_iters: uint128,
-    signage_point_index: uint8,
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    sub_slot_iters: uint64,
-    normalized_to_identity_cc_sp: bool = False,
+        constants: ConsensusConstants,
+        blocks: BlockchainInterface,
+        latest_block: Optional[BlockRecord],
+        sub_slot_start_total_iters: uint128,
+        signage_point_index: uint8,
+        finished_sub_slots: List[EndOfSubSlotBundle],
+        sub_slot_iters: uint64,
+        normalized_to_identity_cc_sp: bool = False,
 ) -> SignagePoint:
     if signage_point_index == 0:
         return SignagePoint(None, None, None, None)
@@ -1069,21 +1068,21 @@ def get_signage_point(
 
 
 def finish_block(
-    constants: ConsensusConstants,
-    blocks: Dict[bytes32, BlockRecord],
-    height_to_hash: Dict[uint32, bytes32],
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    sub_slot_start_total_iters: uint128,
-    signage_point_index: uint8,
-    unfinished_block: UnfinishedBlock,
-    required_iters: uint64,
-    ip_iters: uint64,
-    slot_cc_challenge: bytes32,
-    slot_rc_challenge: bytes32,
-    latest_block: BlockRecord,
-    sub_slot_iters: uint64,
-    difficulty: uint64,
-    normalized_to_identity_cc_ip: bool = False,
+        constants: ConsensusConstants,
+        blocks: Dict[bytes32, BlockRecord],
+        height_to_hash: Dict[uint32, bytes32],
+        finished_sub_slots: List[EndOfSubSlotBundle],
+        sub_slot_start_total_iters: uint128,
+        signage_point_index: uint8,
+        unfinished_block: UnfinishedBlock,
+        required_iters: uint64,
+        ip_iters: uint64,
+        slot_cc_challenge: bytes32,
+        slot_rc_challenge: bytes32,
+        latest_block: BlockRecord,
+        sub_slot_iters: uint64,
+        difficulty: uint64,
+        normalized_to_identity_cc_ip: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
     is_overflow = is_overflow_block(constants, signage_point_index)
     cc_vdf_challenge = slot_cc_challenge
@@ -1158,10 +1157,10 @@ def finish_block(
 
 
 def get_challenges(
-    constants: ConsensusConstants,
-    blocks: Dict[uint32, BlockRecord],
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    prev_header_hash: Optional[bytes32],
+        constants: ConsensusConstants,
+        blocks: Dict[uint32, BlockRecord],
+        finished_sub_slots: List[EndOfSubSlotBundle],
+        prev_header_hash: Optional[bytes32],
 ):
     if len(finished_sub_slots) == 0:
         if prev_header_hash is None:
@@ -1186,7 +1185,7 @@ def get_plot_dir() -> Path:
 
 
 def load_block_list(
-    block_list: List[FullBlock], constants: ConsensusConstants
+        block_list: List[FullBlock], constants: ConsensusConstants
 ) -> Tuple[Dict[uint32, bytes32], uint64, Dict[uint32, BlockRecord]]:
     difficulty = 0
     height_to_hash: Dict[uint32, bytes32] = {}
@@ -1226,13 +1225,13 @@ def load_block_list(
 
 
 def get_icc(
-    constants: ConsensusConstants,
-    vdf_end_total_iters: uint128,
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    latest_block: BlockRecord,
-    blocks: Dict[bytes32, BlockRecord],
-    sub_slot_start_total_iters: uint128,
-    deficit: uint8,
+        constants: ConsensusConstants,
+        vdf_end_total_iters: uint128,
+        finished_sub_slots: List[EndOfSubSlotBundle],
+        latest_block: BlockRecord,
+        blocks: Dict[bytes32, BlockRecord],
+        sub_slot_start_total_iters: uint128,
+        deficit: uint8,
 ) -> Tuple[Optional[VDFInfo], Optional[VDFProof]]:
     if len(finished_sub_slots) == 0:
         prev_deficit = latest_block.deficit
@@ -1283,36 +1282,36 @@ def get_icc(
 
 
 def get_full_block_and_block_record(
-    constants: ConsensusConstants,
-    blocks: Dict[uint32, BlockRecord],
-    sub_slot_start_total_iters: uint128,
-    signage_point_index: uint8,
-    proof_of_space: ProofOfSpace,
-    slot_cc_challenge: bytes32,
-    slot_rc_challenge: bytes32,
-    farmer_reward_puzzle_hash: bytes32,
-    pool_target: PoolTarget,
-    start_timestamp: uint64,
-    start_height: uint32,
-    time_per_block: float,
-    block_generator: Optional[BlockGenerator],
-    aggregate_signature: G2Element,
-    additions: Optional[List[Coin]],
-    removals: Optional[List[Coin]],
-    height_to_hash: Dict[uint32, bytes32],
-    difficulty: uint64,
-    required_iters: uint64,
-    sub_slot_iters: uint64,
-    get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-    get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    signage_point: SignagePoint,
-    prev_block: BlockRecord,
-    seed: bytes = b"",
-    overflow_cc_challenge: bytes32 = None,
-    overflow_rc_challenge: bytes32 = None,
-    normalized_to_identity_cc_ip: bool = False,
-    current_time: bool = False,
+        constants: ConsensusConstants,
+        blocks: Dict[uint32, BlockRecord],
+        sub_slot_start_total_iters: uint128,
+        signage_point_index: uint8,
+        proof_of_space: ProofOfSpace,
+        slot_cc_challenge: bytes32,
+        slot_rc_challenge: bytes32,
+        farmer_reward_puzzle_hash: bytes32,
+        pool_target: PoolTarget,
+        start_timestamp: uint64,
+        start_height: uint32,
+        time_per_block: float,
+        block_generator: Optional[BlockGenerator],
+        aggregate_signature: G2Element,
+        additions: Optional[List[Coin]],
+        removals: Optional[List[Coin]],
+        height_to_hash: Dict[uint32, bytes32],
+        difficulty: uint64,
+        required_iters: uint64,
+        sub_slot_iters: uint64,
+        get_plot_signature: Callable[[bytes32, G1Element], G2Element],
+        get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
+        finished_sub_slots: List[EndOfSubSlotBundle],
+        signage_point: SignagePoint,
+        prev_block: BlockRecord,
+        seed: bytes = b"",
+        overflow_cc_challenge: bytes32 = None,
+        overflow_rc_challenge: bytes32 = None,
+        normalized_to_identity_cc_ip: bool = False,
+        current_time: bool = False,
 ) -> Tuple[FullBlock, BlockRecord]:
     if current_time is True:
         if prev_block.timestamp is not None:

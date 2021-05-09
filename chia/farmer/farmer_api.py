@@ -27,7 +27,7 @@ class FarmerAPI:
     @api_request
     @peer_required
     async def new_proof_of_space(
-        self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: ws.WSChiaConnection
+            self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: ws.WSChiaConnection
     ):
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof

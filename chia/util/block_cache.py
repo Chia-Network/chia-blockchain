@@ -12,11 +12,11 @@ from chia.util.ints import uint32
 
 class BlockCache(BlockchainInterface):
     def __init__(
-        self,
-        blocks: Dict[bytes32, BlockRecord],
-        headers: Dict[bytes32, HeaderBlock] = None,
-        height_to_hash: Dict[uint32, bytes32] = None,
-        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = None,
+            self,
+            blocks: Dict[bytes32, BlockRecord],
+            headers: Dict[bytes32, HeaderBlock] = None,
+            height_to_hash: Dict[uint32, bytes32] = None,
+            sub_epoch_summaries: Dict[uint32, SubEpochSummary] = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
@@ -78,13 +78,13 @@ class BlockCache(BlockchainInterface):
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
+            self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
     ):
         self._sub_epoch_segments[sub_epoch_summary_height] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
-        self,
-        sub_epoch_summary_height: uint32,
+            self,
+            sub_epoch_summary_height: uint32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         segments = self._sub_epoch_segments.get(sub_epoch_summary_height)
         if segments is None:

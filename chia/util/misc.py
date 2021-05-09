@@ -1,5 +1,4 @@
 def format_minutes(minutes):
-
     if not isinstance(minutes, int):
         return "Invalid"
 

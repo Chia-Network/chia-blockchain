@@ -6,9 +6,9 @@ import click
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml. "
-        "[default: 8555]"
+            "Set the port where the Full Node is hosting the RPC interface. "
+            "See the rpc_port under full_node in config.yaml. "
+            "[default: 8555]"
     ),
     type=int,
     default=None,
@@ -17,10 +17,10 @@ import click
     "-d",
     "--delta-block-height",
     help=(
-        "Compare a block X blocks older to estimate total network space. "
-        "Defaults to 4608 blocks (~1 day) and Peak block as the starting block. "
-        "Use --start BLOCK_HEIGHT to specify starting block. "
-        "Use 192 blocks to estimate over the last hour."
+            "Compare a block X blocks older to estimate total network space. "
+            "Defaults to 4608 blocks (~1 day) and Peak block as the starting block. "
+            "Use --start BLOCK_HEIGHT to specify starting block. "
+            "Use 192 blocks to estimate over the last hour."
     ),
     type=str,
     default="4608",

@@ -174,11 +174,11 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx, True)
 
     async def increment_sent(
-        self,
-        tx_id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        err: Optional[Err],
+            self,
+            tx_id: bytes32,
+            name: str,
+            send_status: MempoolInclusionStatus,
+            err: Optional[Err],
     ) -> bool:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
