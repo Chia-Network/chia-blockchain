@@ -1257,10 +1257,11 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-        async with self.full_node.compact_vdf_lock:
-            await self.full_node.new_compact_vdf(request, peer)
+        return None
+        # if self.full_node.sync_store.get_sync_mode():
+        #     return None
+        # async with self.full_node.compact_vdf_lock:
+        #     await self.full_node.new_compact_vdf(request, peer)
 
     @peer_required
     @api_request
@@ -1272,6 +1273,7 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: ws.WSChiaConnection):
-        if self.full_node.sync_store.get_sync_mode():
-            return None
-        await self.full_node.respond_compact_vdf(request, peer)
+        return None
+        # if self.full_node.sync_store.get_sync_mode():
+        #     return None
+        # await self.full_node.respond_compact_vdf(request, peer)
