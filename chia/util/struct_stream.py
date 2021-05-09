@@ -11,9 +11,11 @@ class StructStream(int):
     """
 
     def __new__(cls: Any, value: int):
-        bits = struct.calcsize(cls.PACK) * 8
         value = int(value)
-        if value.bit_length() > bits:
+        try:
+            struct.pack(cls.PACK, value)
+        except Exception:
+            bits = struct.calcsize(cls.PACK) * 8
             raise ValueError(
                 f"Value {value} of size {value.bit_length()} does not fit into " f"{cls.__name__} of size {bits}"
             )
