@@ -64,9 +64,6 @@ export default {
     filename: 'js/[name].js',
     publicPath: './',
   },
-  externals: {
-    electron: 'electron',
-  },
   resolve: {
     extensions: ['.wasm', '.mjs', '.ts', '.tsx', '.js', '.jsx', '.json'],
     modules: [
