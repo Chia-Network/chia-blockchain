@@ -466,6 +466,8 @@ class Blockchain(BlockchainInterface):
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
                 # Start from the most recent
                 for rc in reversed(curr.finished_reward_slot_hashes):
+                    if sub_slot_total_iters < curr.sub_slot_iters:
+                        break
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
             curr = self.try_block_record(curr.prev_hash)
