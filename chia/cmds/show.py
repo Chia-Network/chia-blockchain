@@ -4,14 +4,14 @@ import click
 
 
 async def show_async(
-    rpc_port: int,
-    state: bool,
-    show_connections: bool,
-    exit_node: bool,
-    add_connection: str,
-    remove_connection: str,
-    block_header_hash_by_height: str,
-    block_by_header_hash: str,
+        rpc_port: int,
+        state: bool,
+        show_connections: bool,
+        exit_node: bool,
+        add_connection: str,
+        remove_connection: str,
+        block_header_hash_by_height: str,
+        block_by_header_hash: str,
 ) -> None:
     import aiohttp
     import time
@@ -281,8 +281,8 @@ async def show_async(
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml"
+            "Set the port where the Full Node is hosting the RPC interface. "
+            "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
     default=None,
@@ -308,15 +308,15 @@ async def show_async(
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
 def show_cmd(
-    rpc_port: int,
-    wallet_rpc_port: int,
-    state: bool,
-    connections: bool,
-    exit_node: bool,
-    add_connection: str,
-    remove_connection: str,
-    block_header_hash_by_height: str,
-    block_by_header_hash: str,
+        rpc_port: int,
+        wallet_rpc_port: int,
+        state: bool,
+        connections: bool,
+        exit_node: bool,
+        add_connection: str,
+        remove_connection: str,
+        block_header_hash_by_height: str,
+        block_by_header_hash: str,
 ) -> None:
     import asyncio
 

@@ -15,9 +15,9 @@ log = logging.getLogger(__name__)
 
 
 def final_eos_is_already_included(
-    header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    blocks: BlockchainInterface,
-    sub_slot_iters: uint64,
+        header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
+        blocks: BlockchainInterface,
+        sub_slot_iters: uint64,
 ) -> bool:
     """
     Args:
@@ -52,12 +52,12 @@ def final_eos_is_already_included(
 
 
 def get_block_challenge(
-    constants: ConsensusConstants,
-    header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    blocks: BlockchainInterface,
-    genesis_block: bool,
-    overflow: bool,
-    skip_overflow_last_ss_validation: bool,
+        constants: ConsensusConstants,
+        header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
+        blocks: BlockchainInterface,
+        genesis_block: bool,
+        overflow: bool,
+        skip_overflow_last_ss_validation: bool,
 ):
     if len(header_block.finished_sub_slots) > 0:
         if overflow:

@@ -102,7 +102,7 @@ class BlockStore:
         await cursor_2.close()
 
     async def persist_sub_epoch_challenge_segments(
-        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
+            self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ) -> None:
         async with self.db_wrapper.lock:
             cursor_1 = await self.db.execute(
@@ -113,8 +113,8 @@ class BlockStore:
             await self.db.commit()
 
     async def get_sub_epoch_challenge_segments(
-        self,
-        ses_block_hash: bytes32,
+            self,
+            ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
         cached = self.ses_challenge_cache.get(ses_block_hash)
         if cached is not None:
@@ -230,7 +230,7 @@ class BlockStore:
         return None
 
     async def get_block_records(
-        self,
+            self,
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks, as well as the header hash of the peak,
@@ -250,9 +250,9 @@ class BlockStore:
         return ret, peak
 
     async def get_block_records_in_range(
-        self,
-        start: int,
-        stop: int,
+            self,
+            start: int,
+            stop: int,
     ) -> Dict[bytes32, BlockRecord]:
         """
         Returns a dictionary with all blocks in range between start and stop
@@ -272,7 +272,7 @@ class BlockStore:
         return ret
 
     async def get_block_records_close_to_peak(
-        self, blocks_n: int
+            self, blocks_n: int
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the

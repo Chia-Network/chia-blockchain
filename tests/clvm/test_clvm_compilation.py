@@ -146,7 +146,8 @@ class TestClvmCompilation(TestCase):
             self.assertEqual(
                 s.get_tree_hash().hex(),
                 existing_sha,
-                msg=f"Checked-in shatree hash file does not match shatree hash of loaded SerializedProgram: {prog_path}",  # noqa
+                msg=f"Checked-in shatree hash file does not match shatree hash of loaded SerializedProgram: {prog_path}",
+                # noqa
             )
             self.assertEqual(
                 p.get_tree_hash().hex(),

@@ -98,8 +98,8 @@ class TestRLWallet:
         )
 
         assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))["wallet_balance"][
-            "confirmed_wallet_balance"
-        ] == 0
+                   "confirmed_wallet_balance"
+               ] == 0
         for i in range(0, 2 * num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"\0"))
 
@@ -124,8 +124,8 @@ class TestRLWallet:
                 return False
             for _, mis, _ in val["transaction"].sent_to:
                 if (
-                    MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS
-                    or MempoolInclusionStatus(mis) == MempoolInclusionStatus.PENDING
+                        MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS
+                        or MempoolInclusionStatus(mis) == MempoolInclusionStatus.PENDING
                 ):
                     return True
             return False

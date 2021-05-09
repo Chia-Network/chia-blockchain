@@ -23,10 +23,10 @@ def calculate_sp_iters(constants: ConsensusConstants, sub_slot_iters: uint64, si
 
 
 def calculate_ip_iters(
-    constants: ConsensusConstants,
-    sub_slot_iters: uint64,
-    signage_point_index: uint8,
-    required_iters: uint64,
+        constants: ConsensusConstants,
+        sub_slot_iters: uint64,
+        signage_point_index: uint8,
+        required_iters: uint64,
 ) -> uint64:
     # Note that the SSI is for the block passed in, which might be in the previous epoch
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
@@ -44,11 +44,11 @@ def calculate_ip_iters(
 
 
 def calculate_iterations_quality(
-    difficulty_constant_factor: uint128,
-    quality_string: bytes32,
-    size: int,
-    difficulty: uint64,
-    cc_sp_output_hash: bytes32,
+        difficulty_constant_factor: uint128,
+        quality_string: bytes32,
+        size: int,
+        difficulty: uint64,
+        cc_sp_output_hash: bytes32,
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. This is derives as the difficulty times the constant factor

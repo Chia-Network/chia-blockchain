@@ -23,10 +23,10 @@ SERVICE_NAME = "wallet"
 
 
 def service_kwargs_for_wallet(
-    root_path: pathlib.Path,
-    config: Dict,
-    consensus_constants: ConsensusConstants,
-    keychain: Keychain,
+        root_path: pathlib.Path,
+        config: Dict,
+        consensus_constants: ConsensusConstants,
+        keychain: Keychain,
 ) -> Dict:
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)

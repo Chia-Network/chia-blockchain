@@ -107,11 +107,11 @@ class TradeStore:
         await self.add_trade_record(tx, in_transaction)
 
     async def increment_sent(
-        self,
-        id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        err: Optional[Err],
+            self,
+            id: bytes32,
+            name: str,
+            send_status: MempoolInclusionStatus,
+            err: Optional[Err],
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).

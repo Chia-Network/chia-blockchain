@@ -145,7 +145,7 @@ class Keychain:
         str_bytes = bytes.fromhex(read_str)
         return (
             G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
-            str_bytes[G1Element.SIZE :],  # flake8: noqa
+            str_bytes[G1Element.SIZE:],  # flake8: noqa
         )
 
     def _get_private_key_user(self, index: int):
@@ -212,7 +212,7 @@ class Keychain:
         return None
 
     def get_private_key_by_fingerprint(
-        self, fingerprint: int, passphrases: List[str] = [""]
+            self, fingerprint: int, passphrases: List[str] = [""]
     ) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.

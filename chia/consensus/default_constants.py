@@ -56,5 +56,4 @@ testnet_kwargs = {
     "MAX_GENERATOR_REF_LIST_SIZE": 512,  # Number of references allowed in the block generator ref list
 }
 
-
 DEFAULT_CONSTANTS = ConsensusConstants(**testnet_kwargs)  # type: ignore

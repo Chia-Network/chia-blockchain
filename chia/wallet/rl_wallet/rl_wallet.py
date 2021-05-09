@@ -58,7 +58,7 @@ class RLWallet:
 
     @staticmethod
     async def create_rl_admin(
-        wallet_state_manager: Any,
+            wallet_state_manager: Any,
     ):
         unused: Optional[uint32] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
         if unused is None:
@@ -96,7 +96,7 @@ class RLWallet:
 
     @staticmethod
     async def create_rl_user(
-        wallet_state_manager: Any,
+            wallet_state_manager: Any,
     ):
         async with wallet_state_manager.puzzle_store.lock:
             unused: Optional[uint32] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
@@ -155,12 +155,12 @@ class RLWallet:
         return self.wallet_info.id
 
     async def admin_create_coin(
-        self,
-        interval: uint64,
-        limit: uint64,
-        user_pubkey: str,
-        amount: uint64,
-        fee: uint64,
+            self,
+            interval: uint64,
+            limit: uint64,
+            user_pubkey: str,
+            amount: uint64,
+            fee: uint64,
     ) -> bool:
         coins = await self.wallet_state_manager.main_wallet.select_coins(amount)
         if coins is None:
@@ -223,13 +223,13 @@ class RLWallet:
         return True
 
     async def set_user_info(
-        self,
-        interval: uint64,
-        limit: uint64,
-        origin_parent_id: str,
-        origin_puzzle_hash: str,
-        origin_amount: uint64,
-        admin_pubkey: str,
+            self,
+            interval: uint64,
+            limit: uint64,
+            origin_parent_id: str,
+            origin_puzzle_hash: str,
+            origin_amount: uint64,
+            admin_pubkey: str,
     ) -> None:
         admin_pubkey_bytes = hexstr_to_bytes(admin_pubkey)
 
@@ -375,11 +375,11 @@ class RLWallet:
 
     def get_new_puzzle(self) -> Program:
         if (
-            self.rl_info.limit is None
-            or self.rl_info.interval is None
-            or self.rl_info.user_pubkey is None
-            or self.rl_info.admin_pubkey is None
-            or self.rl_info.rl_origin_id is None
+                self.rl_info.limit is None
+                or self.rl_info.interval is None
+                or self.rl_info.user_pubkey is None
+                or self.rl_info.admin_pubkey is None
+                or self.rl_info.rl_origin_id is None
         ):
             raise ValueError("One or more of the RL info fields is None")
         return rl_puzzle_for_pk(
@@ -400,11 +400,11 @@ class RLWallet:
         if self.rl_info.initialized is False:
             return None
         if (
-            self.rl_info.limit is None
-            or self.rl_info.interval is None
-            or self.rl_info.user_pubkey is None
-            or self.rl_info.admin_pubkey is None
-            or self.rl_info.rl_origin_id is None
+                self.rl_info.limit is None
+                or self.rl_info.interval is None
+                or self.rl_info.user_pubkey is None
+                or self.rl_info.admin_pubkey is None
+                or self.rl_info.rl_origin_id is None
         ):
             return None
         return rl_puzzle_for_pk(
@@ -557,10 +557,10 @@ class RLWallet:
 
     def generate_unsigned_clawback_transaction(self, clawback_coin: Coin, clawback_puzzle_hash: bytes32, fee):
         if (
-            self.rl_info.limit is None
-            or self.rl_info.interval is None
-            or self.rl_info.user_pubkey is None
-            or self.rl_info.admin_pubkey is None
+                self.rl_info.limit is None
+                or self.rl_info.interval is None
+                or self.rl_info.user_pubkey is None
+                or self.rl_info.admin_pubkey is None
         ):
             raise ValueError("One ore more of the elements of rl_info is None")
         spends = []
@@ -579,7 +579,7 @@ class RLWallet:
         return spends
 
     async def sign_clawback_transaction(
-        self, spends: List[Tuple[Program, CoinSolution]], clawback_pubkey
+            self, spends: List[Tuple[Program, CoinSolution]], clawback_pubkey
     ) -> SpendBundle:
         sigs = []
         for puzzle, solution in spends:
@@ -625,10 +625,10 @@ class RLWallet:
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
     async def rl_generate_signed_aggregation_transaction(self, rl_info, consolidating_coin, rl_parent, rl_coin):
         if (
-            rl_info.limit is None
-            or rl_info.interval is None
-            or rl_info.user_pubkey is None
-            or rl_info.admin_pubkey is None
+                rl_info.limit is None
+                or rl_info.interval is None
+                or rl_info.user_pubkey is None
+                or rl_info.admin_pubkey is None
         ):
             raise ValueError("One or more of the elements of rl_info is None")
         if self.rl_coin_record is None:

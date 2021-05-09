@@ -16,11 +16,11 @@ CLAWBACK_MODE = 3
 
 
 def rl_puzzle_for_pk(
-    pubkey: bytes,
-    rate_amount: uint64,
-    interval_time: uint64,
-    origin_id: bytes32,
-    clawback_pk: bytes,
+        pubkey: bytes,
+        rate_amount: uint64,
+        interval_time: uint64,
+        origin_id: bytes32,
+        clawback_pk: bytes,
 ):
     """
     Solution to this puzzle must be in format:
@@ -53,14 +53,14 @@ def make_clawback_solution(puzzlehash, amount, fee):
 
 
 def rl_make_solution_mode_2(
-    my_puzzle_hash,
-    consolidating_primary_input,
-    consolidating_coin_puzzle_hash,
-    outgoing_amount,
-    my_primary_input,
-    incoming_amount,
-    parent_amount,
-    my_parent_parent_id,
+        my_puzzle_hash,
+        consolidating_primary_input,
+        consolidating_coin_puzzle_hash,
+        outgoing_amount,
+        my_primary_input,
+        incoming_amount,
+        parent_amount,
+        my_parent_parent_id,
 ):
     my_puzzle_hash = hexlify(my_puzzle_hash).decode("ascii")
     consolidating_primary_input = hexlify(consolidating_primary_input).decode("ascii")
@@ -81,16 +81,16 @@ def rl_make_solution_mode_2(
 
 
 def solution_for_rl(
-    my_parent_id: bytes32,
-    my_puzzlehash: bytes32,
-    my_amount: uint64,
-    out_puzzlehash: bytes32,
-    out_amount: uint64,
-    my_parent_parent_id: bytes32,
-    parent_amount: uint64,
-    interval,
-    limit,
-    fee,
+        my_parent_id: bytes32,
+        my_puzzlehash: bytes32,
+        my_amount: uint64,
+        out_puzzlehash: bytes32,
+        out_amount: uint64,
+        my_parent_parent_id: bytes32,
+        parent_amount: uint64,
+        interval,
+        limit,
+        fee,
 ):
     """
     Solution is (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,

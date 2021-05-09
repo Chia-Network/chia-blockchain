@@ -76,11 +76,11 @@ class WalletBlockchain(BlockchainInterface):
 
     @staticmethod
     async def create(
-        block_store: WalletBlockStore,
-        consensus_constants: ConsensusConstants,
-        coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
-        reorg_rollback: Callable,
-        lock: asyncio.Lock,
+            block_store: WalletBlockStore,
+            consensus_constants: ConsensusConstants,
+            coins_of_interest_received: Callable,  # f(removals: List[Coin], additions: List[Coin], height: uint32)
+            reorg_rollback: Callable,
+            lock: asyncio.Lock,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -141,11 +141,11 @@ class WalletBlockchain(BlockchainInterface):
         return self.height_to_block_record(self._peak_height)
 
     async def receive_block(
-        self,
-        header_block_record: HeaderBlockRecord,
-        pre_validation_result: Optional[PreValidationResult] = None,
-        trusted: bool = False,
-        fork_point_with_peak: Optional[uint32] = None,
+            self,
+            header_block_record: HeaderBlockRecord,
+            pre_validation_result: Optional[PreValidationResult] = None,
+            trusted: bool = False,
+            fork_point_with_peak: Optional[uint32] = None,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -237,7 +237,7 @@ class WalletBlockchain(BlockchainInterface):
                 return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
     async def _reconsider_peak(
-        self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
+            self, block_record: BlockRecord, genesis: bool, fork_point_with_peak: Optional[uint32]
     ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
@@ -331,7 +331,7 @@ class WalletBlockchain(BlockchainInterface):
         return get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, curr, self)[0]
 
     async def pre_validate_blocks_multiprocessing(
-        self, blocks: List[HeaderBlock], batch_size: int = 4
+            self, blocks: List[HeaderBlock], batch_size: int = 4
     ) -> Optional[List[PreValidationResult]]:
         return await pre_validate_blocks_multiprocessing(
             self.constants, self.constants_json, self, blocks, self.pool, True, {}, None, batch_size

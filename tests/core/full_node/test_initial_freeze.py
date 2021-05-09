@@ -69,9 +69,9 @@ class TestTransactions:
             while not incoming.empty():
                 response, peer = await incoming.get()
                 if (
-                    response is not None
-                    and isinstance(response, Message)
-                    and response.type == ProtocolMessageTypes.request_transaction.value
+                        response is not None
+                        and isinstance(response, Message)
+                        and response.type == ProtocolMessageTypes.request_transaction.value
                 ):
                     return False
             return True
@@ -95,9 +95,9 @@ class TestTransactions:
             while not incoming.empty():
                 response, peer = await incoming.get()
                 if (
-                    response is not None
-                    and isinstance(response, Message)
-                    and response.type == ProtocolMessageTypes.request_transaction.value
+                        response is not None
+                        and isinstance(response, Message)
+                        and response.type == ProtocolMessageTypes.request_transaction.value
                 ):
                     request = full_node_protocol.RequestTransaction.from_bytes(response.data)
                     if request.transaction_id == new_spend.transaction_id:

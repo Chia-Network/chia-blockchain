@@ -6,9 +6,9 @@ from chia.util.ints import uint128
 
 
 def get_prev_transaction_block(
-    curr: BlockRecord,
-    blocks: BlockchainInterface,
-    total_iters_sp: uint128,
+        curr: BlockRecord,
+        blocks: BlockchainInterface,
+        total_iters_sp: uint128,
 ) -> Tuple[bool, BlockRecord]:
     prev_transaction_block = curr
     while not curr.is_transaction_block:

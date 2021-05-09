@@ -5,7 +5,6 @@ import os
 
 # example: 1.0b5.dev225
 def main():
-
     if len(sys.argv) > 1 and "win" in sys.argv[1]:  # Special case windows to 0.1.6225
         windows = True
     else:

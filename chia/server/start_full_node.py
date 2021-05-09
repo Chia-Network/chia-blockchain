@@ -21,9 +21,8 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
+        root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-
     full_node = FullNode(
         config,
         root_path=root_path,

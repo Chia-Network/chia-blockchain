@@ -18,6 +18,7 @@ else:
         signal.SIGBREAK: signal.CTRL_BREAK_EVENT,  # pylint: disable=E1101
     }
 
+
     def kill(pid, signum):
         if signum in sigmap and pid == os.getpid():
             # we don't know if the current process is a

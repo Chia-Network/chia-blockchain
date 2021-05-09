@@ -38,17 +38,17 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
 
     cert = (
         x509.CertificateBuilder()
-        .subject_name(new_subject)
-        .issuer_name(root_cert.issuer)
-        .public_key(cert_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.today() - one_day)
-        .not_valid_after(datetime.datetime(2100, 8, 2))
-        .add_extension(
+            .subject_name(new_subject)
+            .issuer_name(root_cert.issuer)
+            .public_key(cert_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(datetime.datetime.today() - one_day)
+            .not_valid_after(datetime.datetime(2100, 8, 2))
+            .add_extension(
             x509.SubjectAlternativeName([x509.DNSName("chia.net")]),
             critical=False,
         )
-        .sign(root_key, hashes.SHA256(), default_backend())
+            .sign(root_key, hashes.SHA256(), default_backend())
     )
 
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
@@ -73,14 +73,14 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     )
     root_cert = (
         x509.CertificateBuilder()
-        .subject_name(subject)
-        .issuer_name(issuer)
-        .public_key(root_key.public_key())
-        .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=3650))
-        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
-        .sign(root_key, hashes.SHA256(), default_backend())
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(root_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(datetime.datetime.utcnow())
+            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=3650))
+            .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+            .sign(root_key, hashes.SHA256(), default_backend())
     )
 
     cert_path.write_bytes(

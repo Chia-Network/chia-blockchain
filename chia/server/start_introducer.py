@@ -15,8 +15,8 @@ SERVICE_NAME = "introducer"
 
 
 def service_kwargs_for_introducer(
-    root_path: pathlib.Path,
-    config: Dict,
+        root_path: pathlib.Path,
+        config: Dict,
 ) -> Dict:
     introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)

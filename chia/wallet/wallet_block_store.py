@@ -144,7 +144,7 @@ class WalletBlockStore:
         return None
 
     async def get_block_records(
-        self,
+            self,
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks, as well as the header hash of the peak,
@@ -174,7 +174,7 @@ class WalletBlockStore:
         await cursor_2.close()
 
     async def get_block_records_close_to_peak(
-        self, blocks_n: int
+            self, blocks_n: int
     ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks, as well as the header hash of the peak,
@@ -201,9 +201,9 @@ class WalletBlockStore:
         return ret, peak
 
     async def get_header_blocks_in_range(
-        self,
-        start: int,
-        stop: int,
+            self,
+            start: int,
+            stop: int,
     ) -> Dict[bytes32, HeaderBlock]:
 
         formatted_str = f"SELECT header_hash, block from header_blocks WHERE height >= {start} and height <= {stop}"
@@ -220,9 +220,9 @@ class WalletBlockStore:
         return ret
 
     async def get_block_records_in_range(
-        self,
-        start: int,
-        stop: int,
+            self,
+            start: int,
+            stop: int,
     ) -> Dict[bytes32, BlockRecord]:
         """
         Returns a dictionary with all blocks, as well as the header hash of the peak,

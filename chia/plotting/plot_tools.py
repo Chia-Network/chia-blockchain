@@ -83,9 +83,9 @@ def parse_plot_info(memo: bytes) -> Tuple[Union[G1Element, bytes32], G1Element, 
 
 
 def stream_plot_info_pk(
-    pool_public_key: G1Element,
-    farmer_public_key: G1Element,
-    local_master_sk: PrivateKey,
+        pool_public_key: G1Element,
+        farmer_public_key: G1Element,
+        local_master_sk: PrivateKey,
 ):
     # There are two ways to stream plot info: with a pool public key, or with a pool contract puzzle hash.
     # This one streams the public key, into bytes
@@ -95,9 +95,9 @@ def stream_plot_info_pk(
 
 
 def stream_plot_info_ph(
-    pool_contract_puzzle_hash: bytes32,
-    farmer_public_key: G1Element,
-    local_master_sk: PrivateKey,
+        pool_contract_puzzle_hash: bytes32,
+        farmer_public_key: G1Element,
+        local_master_sk: PrivateKey,
 ):
     # There are two ways to stream plot info: with a pool public key, or with a pool contract puzzle hash.
     # This one streams the pool contract puzzle hash, into bytes
@@ -136,14 +136,14 @@ def remove_plot_directory(str_path: str, root_path: Path) -> None:
 
 
 def load_plots(
-    provers: Dict[Path, PlotInfo],
-    failed_to_open_filenames: Dict[Path, int],
-    farmer_public_keys: Optional[List[G1Element]],
-    pool_public_keys: Optional[List[G1Element]],
-    match_str: Optional[str],
-    show_memo: bool,
-    root_path: Path,
-    open_no_key_filenames=False,
+        provers: Dict[Path, PlotInfo],
+        failed_to_open_filenames: Dict[Path, int],
+        farmer_public_keys: Optional[List[G1Element]],
+        pool_public_keys: Optional[List[G1Element]],
+        match_str: Optional[str],
+        show_memo: bool,
+        root_path: Path,
+        open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
     start_time = time.time()
     config_file = load_config(root_path, "config.yaml", "harvester")
@@ -196,7 +196,7 @@ def load_plots(
 
                 if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
                     log.warning(
-                        f"Not farming plot {filename}. Size is {stat_info.st_size / (1024**3)} GiB, but expected"
+                        f"Not farming plot {filename}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
                         f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
                     )
                     return 0, new_provers
@@ -223,9 +223,9 @@ def load_plots(
                     pool_contract_puzzle_hash = pool_public_key_or_puzzle_hash
 
                 if (
-                    pool_public_keys is not None
-                    and pool_public_key is not None
-                    and pool_public_key not in pool_public_keys
+                        pool_public_keys is not None
+                        and pool_public_key is not None
+                        and pool_public_key not in pool_public_keys
                 ):
                     log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
                     no_key_filenames.add(filename)
@@ -282,7 +282,7 @@ def load_plots(
 
     log.info(
         f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB, in"
-        f" {time.time()-start_time} seconds"
+        f" {time.time() - start_time} seconds"
     )
     return changed, new_provers, failed_to_open_filenames, no_key_filenames
 

@@ -45,9 +45,9 @@ def int_as_bytes32(v: int) -> bytes32:
 
 
 def generate_farmed_coin(
-    block_index: int,
-    puzzle_hash: bytes32,
-    amount: int,
+        block_index: int,
+        puzzle_hash: bytes32,
+        amount: int,
 ) -> Coin:
     """
     Generate a (fake) coin which can be used as a starting point for a chain
@@ -57,11 +57,11 @@ def generate_farmed_coin(
 
 
 def issue_cc_from_farmed_coin(
-    mod_code: Program,
-    coin_checker_for_farmed_coin,
-    block_id: int,
-    inner_puzzle_hash: bytes32,
-    amount: int,
+        mod_code: Program,
+        coin_checker_for_farmed_coin,
+        block_id: int,
+        inner_puzzle_hash: bytes32,
+        amount: int,
 ) -> Tuple[Program, SpendBundle]:
     """
     This is an example of how to issue a cc.

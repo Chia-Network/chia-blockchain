@@ -130,11 +130,11 @@ harvester:
   selected_network: *selected_network
 
   # Plots are searched for in the following directories
-  plot_directories: []
+  plot_directories: [ ]
 
   ssl:
-    private_crt:  "config/ssl/harvester/private_harvester.crt"
-    private_key:  "config/ssl/harvester/private_harvester.key"
+    private_crt: "config/ssl/harvester/private_harvester.crt"
+    private_key: "config/ssl/harvester/private_harvester.key"
 
   private_ssl_ca:
     crt: "config/ssl/ca/private_ca.crt"
@@ -163,7 +163,7 @@ farmer:
     host: *self_hostname
     port: 8448
 
-  pool_public_keys: []
+  pool_public_keys: [ ]
 
   # Replace this with a real puzzle hash
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
@@ -179,10 +179,10 @@ farmer:
   selected_network: *selected_network
 
   ssl:
-    private_crt:  "config/ssl/farmer/private_farmer.crt"
-    private_key:  "config/ssl/farmer/private_farmer.key"
-    public_crt:  "config/ssl/farmer/public_farmer.crt"
-    public_key:  "config/ssl/farmer/public_farmer.key"
+    private_crt: "config/ssl/farmer/private_farmer.crt"
+    private_key: "config/ssl/farmer/private_farmer.key"
+    public_crt: "config/ssl/farmer/public_farmer.crt"
+    public_key: "config/ssl/farmer/public_farmer.key"
 
 # Don't run this unless you want to run VDF clients on the local machine.
 timelord_launcher:
@@ -206,8 +206,8 @@ timelord:
     ips_estimate:
       - 150000
   full_node_peer:
-      host: *self_hostname
-      port: 8444
+    host: *self_hostname
+    port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -235,10 +235,10 @@ timelord:
   sanitizer_mode: False
 
   ssl:
-    private_crt:  "config/ssl/timelord/private_timelord.crt"
-    private_key:  "config/ssl/timelord/private_timelord.key"
-    public_crt:  "config/ssl/timelord/public_timelord.crt"
-    public_key:  "config/ssl/timelord/public_timelord.key"
+    private_crt: "config/ssl/timelord/private_timelord.crt"
+    private_key: "config/ssl/timelord/private_timelord.key"
+    public_crt: "config/ssl/timelord/public_timelord.crt"
+    public_key: "config/ssl/timelord/public_timelord.key"
 
 full_node:
   # The full node server (if run) will run on this port
@@ -288,14 +288,14 @@ full_node:
   weight_proof_timeout: 360
 
   farmer_peer:
-      host: *self_hostname
-      port: 8447
+    host: *self_hostname
+    port: 8447
   timelord_peer:
-      host: *self_hostname
-      port: 8446
+    host: *self_hostname
+    port: 8446
   introducer_peer:
-      host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
-      port: 8444
+    host: introducer.chia.net  # Chia AWS introducer IPv4/IPv6
+    port: 8444
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -304,13 +304,13 @@ full_node:
   selected_network: *selected_network
 
   ssl:
-    private_crt:  "config/ssl/full_node/private_full_node.crt"
-    private_key:  "config/ssl/full_node/private_full_node.key"
-    public_crt:  "config/ssl/full_node/public_full_node.crt"
-    public_key:  "config/ssl/full_node/public_full_node.key"
+    private_crt: "config/ssl/full_node/private_full_node.crt"
+    private_key: "config/ssl/full_node/private_full_node.key"
+    public_crt: "config/ssl/full_node/public_full_node.crt"
+    public_key: "config/ssl/full_node/public_full_node.key"
 
 ui:
-   # The ui node server (if run) will run on this port
+  # The ui node server (if run) will run on this port
   port: 8222
 
   # Which port to use to communicate with the full node
@@ -342,8 +342,8 @@ introducer:
   selected_network: *selected_network
 
   ssl:
-    public_crt:  "config/ssl/full_node/public_full_node.crt"
-    public_key:  "config/ssl/full_node/public_full_node.key"
+    public_crt: "config/ssl/full_node/public_full_node.crt"
+    public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
   port: 8449
@@ -380,10 +380,10 @@ wallet:
     port: 8444
 
   ssl:
-    private_crt:  "config/ssl/wallet/private_wallet.crt"
-    private_key:  "config/ssl/wallet/private_wallet.key"
-    public_crt:  "config/ssl/wallet/public_wallet.crt"
-    public_key:  "config/ssl/wallet/public_wallet.key"
+    private_crt: "config/ssl/wallet/private_wallet.crt"
+    private_key: "config/ssl/wallet/private_wallet.key"
+    public_crt: "config/ssl/wallet/public_wallet.crt"
+    public_key: "config/ssl/wallet/public_wallet.key"
 
   trusted_peers:
     trusted_node_1: "config/ssl/full_node/public_full_node.crt"

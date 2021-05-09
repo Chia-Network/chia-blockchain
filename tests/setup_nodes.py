@@ -60,15 +60,15 @@ async def setup_daemon(btools):
 
 
 async def setup_full_node(
-    consensus_constants: ConsensusConstants,
-    db_name,
-    port,
-    local_bt,
-    introducer_port=None,
-    simulator=False,
-    send_uncompact_interval=0,
-    sanitize_weight_proof_only=False,
-    connect_to_daemon=False,
+        consensus_constants: ConsensusConstants,
+        db_name,
+        port,
+        local_bt,
+        introducer_port=None,
+        simulator=False,
+        send_uncompact_interval=0,
+        sanitize_weight_proof_only=False,
+        connect_to_daemon=False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -111,13 +111,13 @@ async def setup_full_node(
 
 
 async def setup_wallet_node(
-    port,
-    consensus_constants: ConsensusConstants,
-    local_bt,
-    full_node_port=None,
-    introducer_port=None,
-    key_seed=None,
-    starting_height=None,
+        port,
+        consensus_constants: ConsensusConstants,
+        local_bt,
+        full_node_port=None,
+        introducer_port=None,
+        key_seed=None,
+        starting_height=None,
 ):
     config = bt.config["wallet"]
     config["port"] = port
@@ -197,10 +197,10 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
 
 async def setup_farmer(
-    port,
-    consensus_constants: ConsensusConstants,
-    b_tools,
-    full_node_port: Optional[uint16] = None,
+        port,
+        consensus_constants: ConsensusConstants,
+        b_tools,
+        full_node_port: Optional[uint16] = None,
 ):
     config = bt.config["farmer"]
     config_pool = bt.config["pool"]
@@ -369,12 +369,12 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int,
-    wallet_count: int,
-    dic: Dict,
-    starting_height=None,
-    key_seed=None,
-    starting_port=50000,
+        simulator_count: int,
+        wallet_count: int,
+        dic: Dict,
+        starting_height=None,
+        key_seed=None,
+        starting_port=50000,
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
@@ -433,7 +433,7 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
 
 
 async def setup_full_system(
-    consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, connect_to_daemon=False
+        consensus_constants: ConsensusConstants, b_tools=None, b_tools_1=None, connect_to_daemon=False
 ):
     if b_tools is None:
         b_tools = BlockTools(constants=test_constants)

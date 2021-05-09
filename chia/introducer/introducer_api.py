@@ -22,9 +22,9 @@ class IntroducerAPI:
     @peer_required
     @api_request
     async def request_peers_introducer(
-        self,
-        request: RequestPeersIntroducer,
-        peer: WSChiaConnection,
+            self,
+            request: RequestPeersIntroducer,
+            peer: WSChiaConnection,
     ) -> Optional[Message]:
         max_peers = self.introducer.max_peers_to_send
         if self.introducer.server is None or self.introducer.server.introducer_peers is None:

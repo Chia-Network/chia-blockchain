@@ -6,11 +6,11 @@ from chia.util.ints import uint8, uint32
 
 
 def calculate_deficit(
-    constants: ConsensusConstants,
-    height: uint32,
-    prev_b: Optional[BlockRecord],
-    overflow: bool,
-    num_finished_sub_slots: int,
+        constants: ConsensusConstants,
+        height: uint32,
+        prev_b: Optional[BlockRecord],
+        overflow: bool,
+        num_finished_sub_slots: int,
 ) -> uint8:
     """
     Returns the deficit of the block to be created at height.

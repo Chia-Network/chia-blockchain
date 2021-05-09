@@ -48,7 +48,7 @@ class HarvesterAPI:
     @peer_required
     @api_request
     async def new_signage_point_harvester(
-        self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
+            self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ):
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
@@ -152,7 +152,7 @@ class HarvesterAPI:
                 return []
 
         async def lookup_challenge(
-            filename: Path, plot_info: PlotInfo
+                filename: Path, plot_info: PlotInfo
         ) -> Tuple[Path, List[harvester_protocol.NewProofOfSpace]]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
@@ -183,10 +183,10 @@ class HarvesterAPI:
                     # This is being executed at the beginning of the slot
                     total += 1
                     if ProofOfSpace.passes_plot_filter(
-                        self.harvester.constants,
-                        try_plot_info.prover.get_id(),
-                        new_challenge.challenge_hash,
-                        new_challenge.sp_hash,
+                            self.harvester.constants,
+                            try_plot_info.prover.get_id(),
+                            new_challenge.challenge_hash,
+                            new_challenge.sp_hash,
                     ):
                         passed += 1
                         awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))

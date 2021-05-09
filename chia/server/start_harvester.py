@@ -19,9 +19,9 @@ SERVICE_NAME = "harvester"
 
 
 def service_kwargs_for_harvester(
-    root_path: pathlib.Path,
-    config: Dict,
-    consensus_constants: ConsensusConstants,
+        root_path: pathlib.Path,
+        config: Dict,
+        consensus_constants: ConsensusConstants,
 ) -> Dict:
     connect_peers = [PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]

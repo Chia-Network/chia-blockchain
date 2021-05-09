@@ -33,8 +33,8 @@ class TimelordAPI:
                 )
                 self.timelord.new_peak = new_peak
             elif (
-                self.timelord.last_state.peak is not None
-                and self.timelord.last_state.peak.reward_chain_block == new_peak.reward_chain_block
+                    self.timelord.last_state.peak is not None
+                    and self.timelord.last_state.peak.reward_chain_block == new_peak.reward_chain_block
             ):
                 log.info("Skipping peak, already have.")
                 return

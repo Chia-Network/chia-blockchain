@@ -59,7 +59,7 @@ def get_output_amount_for_puzzle_and_solution(puzzle: Program, solution: Program
 
 
 def get_discrepancies_for_spend_bundle(
-    trade_offer: SpendBundle,
+        trade_offer: SpendBundle,
 ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
     try:
         cc_discrepancies: Dict[str, int] = dict()

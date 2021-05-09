@@ -37,10 +37,10 @@ class CoinStore:
         return coin
 
     def validate_spend_bundle(
-        self,
-        spend_bundle: SpendBundle,
-        now: CoinTimestamp,
-        max_cost: int,
+            self,
+            spend_bundle: SpendBundle,
+            now: CoinTimestamp,
+            max_cost: int,
     ) -> int:
         # this should use blockchain consensus code
 

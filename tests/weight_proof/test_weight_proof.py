@@ -29,7 +29,6 @@ try:
 except ImportError:
     pass
 
-
 from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
@@ -83,7 +82,7 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
 
 
 async def load_blocks_dont_validate(
-    blocks,
+        blocks,
 ) -> Tuple[
     Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[bytes32, SubEpochSummary]
 ]:

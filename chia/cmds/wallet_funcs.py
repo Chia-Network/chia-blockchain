@@ -112,21 +112,21 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         typ = WalletType(int(summary["type"])).name
         if typ != "STANDARD_WALLET":
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(f"   -Total Balance: " f"{balances['confirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
-            print(f"   -Spendable Balance: {balances['spendable_balance']/units['colouredcoin']}")
+            print(f"   -Total Balance: " f"{balances['confirmed_wallet_balance'] / units['colouredcoin']}")
+            print(f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance'] / units['colouredcoin']}")
+            print(f"   -Spendable Balance: {balances['spendable_balance'] / units['colouredcoin']}")
         else:
             print(f"Wallet ID {wallet_id} type {typ}")
             print(
-                f"   -Total Balance: {balances['confirmed_wallet_balance']/units['chia']} {address_prefix} "
+                f"   -Total Balance: {balances['confirmed_wallet_balance'] / units['chia']} {address_prefix} "
                 f"({balances['confirmed_wallet_balance']} mojo)"
             )
             print(
-                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance']/units['chia']} {address_prefix} "
+                f"   -Pending Total Balance: {balances['unconfirmed_wallet_balance'] / units['chia']} {address_prefix} "
                 f"({balances['unconfirmed_wallet_balance']} mojo)"
             )
             print(
-                f"   -Spendable: {balances['spendable_balance']/units['chia']} {address_prefix} "
+                f"   -Spendable: {balances['spendable_balance'] / units['chia']} {address_prefix} "
                 f"({balances['spendable_balance']} mojo)"
             )
 
@@ -146,7 +146,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     else:
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i + 1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")

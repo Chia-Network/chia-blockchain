@@ -18,7 +18,7 @@ def create_genesis_or_zero_coin_checker(genesis_coin_id: bytes32) -> Program:
 
 
 def genesis_coin_id_for_genesis_coin_checker(
-    genesis_coin_checker: Program,
+        genesis_coin_checker: Program,
 ) -> Optional[bytes32]:
     """
     Given a `genesis_coin_checker` program, pull out the genesis coin id.

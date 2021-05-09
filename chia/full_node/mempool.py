@@ -56,10 +56,10 @@ class Mempool:
         assert self.total_mempool_cost >= 0
 
     def add_to_pool(
-        self,
-        item: MempoolItem,
-        additions: List[Coin],
-        removals_dic: Dict[bytes32, Coin],
+            self,
+            item: MempoolItem,
+            additions: List[Coin],
+            removals_dic: Dict[bytes32, Coin],
     ):
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost

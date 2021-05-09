@@ -52,7 +52,6 @@ class RpcServer:
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
             if data is not None:
-
                 payload = create_payload_dict(
                     "get_connections",
                     data,
@@ -156,7 +155,7 @@ class RpcServer:
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
         if getattr(self.rpc_api.service, "server", None) is None or not (
-            await self.rpc_api.service.server.start_client(target_node, on_connect)
+                await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
             raise ValueError("Start client failed, or server is not set")
         return {}
@@ -270,12 +269,12 @@ class RpcServer:
                 session = aiohttp.ClientSession()
 
                 async with session.ws_connect(
-                    f"wss://{self_hostname}:{daemon_port}",
-                    autoclose=True,
-                    autoping=True,
-                    heartbeat=60,
-                    ssl_context=self.ssl_context,
-                    max_msg_size=100 * 1024 * 1024,
+                        f"wss://{self_hostname}:{daemon_port}",
+                        autoclose=True,
+                        autoping=True,
+                        heartbeat=60,
+                        ssl_context=self.ssl_context,
+                        max_msg_size=100 * 1024 * 1024,
                 ) as ws:
                     self.websocket = ws
                     await self.connection(ws)
@@ -293,14 +292,14 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: Any,
-    self_hostname: str,
-    daemon_port: uint16,
-    rpc_port: uint16,
-    stop_cb: Callable,
-    root_path: Path,
-    net_config,
-    connect_to_daemon=True,
+        rpc_api: Any,
+        self_hostname: str,
+        daemon_port: uint16,
+        rpc_port: uint16,
+        stop_cb: Callable,
+        root_path: Path,
+        net_config,
+        connect_to_daemon=True,
 ):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to

@@ -64,9 +64,9 @@ class CCWallet:
 
     @staticmethod
     async def create_new_cc(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        amount: uint64,
+            wallet_state_manager: Any,
+            wallet: Wallet,
+            amount: uint64,
     ):
         self = CCWallet()
         self.cost_of_single_tx = None
@@ -149,9 +149,9 @@ class CCWallet:
 
     @staticmethod
     async def create_wallet_for_cc(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        genesis_checker_hex: str,
+            wallet_state_manager: Any,
+            wallet: Wallet,
+            genesis_checker_hex: str,
     ) -> CCWallet:
         self = CCWallet()
         self.cost_of_single_tx = None
@@ -175,9 +175,9 @@ class CCWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        wallet_info: WalletInfo,
+            wallet_state_manager: Any,
+            wallet: Wallet,
+            wallet_info: WalletInfo,
     ) -> CCWallet:
         self = CCWallet()
 
@@ -548,7 +548,7 @@ class CCWallet:
         )
         if conditions is not None:
             for _, msg in pkm_pairs_for_conditions_dict(
-                conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    conditions, coin_name, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
@@ -568,13 +568,13 @@ class CCWallet:
         return None
 
     async def generate_signed_transaction(
-        self,
-        amounts: List[uint64],
-        puzzle_hashes: List[bytes32],
-        fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
-        coins: Set[Coin] = None,
-        ignore_max_send_amount: bool = False,
+            self,
+            amounts: List[uint64],
+            puzzle_hashes: List[bytes32],
+            fee: uint64 = uint64(0),
+            origin_id: bytes32 = None,
+            coins: Set[Coin] = None,
+            ignore_max_send_amount: bool = False,
     ) -> TransactionRecord:
         # Get coins and calculate amount of change required
         outgoing_amount = uint64(sum(amounts))

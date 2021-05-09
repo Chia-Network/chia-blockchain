@@ -44,16 +44,16 @@ log = logging.getLogger(__name__)
 
 
 async def validate_block_body(
-    constants: ConsensusConstants,
-    blocks: BlockchainInterface,
-    block_store: BlockStore,
-    coin_store: CoinStore,
-    peak: Optional[BlockRecord],
-    block: Union[FullBlock, UnfinishedBlock],
-    height: uint32,
-    npc_result: Optional[NPCResult],
-    fork_point_with_peak: Optional[uint32],
-    get_block_generator: Callable,
+        constants: ConsensusConstants,
+        blocks: BlockchainInterface,
+        block_store: BlockStore,
+        coin_store: CoinStore,
+        peak: Optional[BlockRecord],
+        block: Union[FullBlock, UnfinishedBlock],
+        height: uint32,
+        npc_result: Optional[NPCResult],
+        fork_point_with_peak: Optional[uint32],
+        get_block_generator: Callable,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
     This assumes the header block has been completely validated.
@@ -72,9 +72,9 @@ async def validate_block_body(
     # None
     if block.foliage.foliage_transaction_block_hash is None:
         if (
-            block.foliage_transaction_block is not None
-            or block.transactions_info is not None
-            or block.transactions_generator is not None
+                block.foliage_transaction_block is not None
+                or block.transactions_info is not None
+                or block.transactions_generator is not None
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
@@ -83,8 +83,8 @@ async def validate_block_body(
             prev_tb = blocks.block_record(prev_tb.prev_hash)
         assert prev_tb.timestamp is not None
         if (
-            prev_tb.timestamp > constants.INITIAL_FREEZE_END_TIMESTAMP
-            and len(block.transactions_generator_ref_list) > 0
+                prev_tb.timestamp > constants.INITIAL_FREEZE_END_TIMESTAMP
+                and len(block.transactions_generator_ref_list) > 0
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
@@ -172,8 +172,8 @@ async def validate_block_body(
 
     # We check in header validation that timestamp is not more that 10 minutes into the future
     if (
-        block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
-        and block.transactions_generator is not None
+            block.foliage_transaction_block.timestamp <= constants.INITIAL_FREEZE_END_TIMESTAMP
+            and block.transactions_generator is not None
     ):
         # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
         return Err.INITIAL_TRANSACTION_FREEZE, None
@@ -460,7 +460,7 @@ async def validate_block_body(
             if error:
                 return error, None
             for pk, m in pkm_pairs_for_conditions_dict(
-                npc.condition_dict, npc.coin_name, constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    npc.condition_dict, npc.coin_name, constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)

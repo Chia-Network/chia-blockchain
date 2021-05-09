@@ -85,14 +85,14 @@ async def default_10000_blocks_compact():
 
 
 def persistent_blocks(
-    num_of_blocks: int,
-    db_name: str,
-    seed: bytes = b"",
-    empty_sub_slots=0,
-    normalized_to_identity_cc_eos: bool = False,
-    normalized_to_identity_icc_eos: bool = False,
-    normalized_to_identity_cc_sp: bool = False,
-    normalized_to_identity_cc_ip: bool = False,
+        num_of_blocks: int,
+        db_name: str,
+        seed: bytes = b"",
+        empty_sub_slots=0,
+        normalized_to_identity_cc_eos: bool = False,
+        normalized_to_identity_icc_eos: bool = False,
+        normalized_to_identity_cc_sp: bool = False,
+        normalized_to_identity_cc_ip: bool = False,
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
@@ -128,14 +128,14 @@ def persistent_blocks(
 
 
 def new_test_db(
-    path: Path,
-    num_of_blocks: int,
-    seed: bytes,
-    empty_sub_slots: int,
-    normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
-    normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
-    normalized_to_identity_cc_sp: bool = False,  # CC_SP,
-    normalized_to_identity_cc_ip: bool = False,  # CC_IP
+        path: Path,
+        num_of_blocks: int,
+        seed: bytes,
+        empty_sub_slots: int,
+        normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
+        normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
+        normalized_to_identity_cc_sp: bool = False,  # CC_SP,
+        normalized_to_identity_cc_ip: bool = False,  # CC_IP
 ):
     print(f"create {path} with {num_of_blocks} blocks with ")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(

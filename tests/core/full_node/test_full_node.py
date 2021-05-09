@@ -59,9 +59,9 @@ async def new_transaction_not_requested(incoming, new_spend):
     while not incoming.empty():
         response, peer = await incoming.get()
         if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
+                response is not None
+                and isinstance(response, Message)
+                and response.type == ProtocolMessageTypes.request_transaction.value
         ):
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
@@ -74,9 +74,9 @@ async def new_transaction_requested(incoming, new_spend):
     while not incoming.empty():
         response, peer = await incoming.get()
         if (
-            response is not None
-            and isinstance(response, Message)
-            and response.type == ProtocolMessageTypes.request_transaction.value
+                response is not None
+                and isinstance(response, Message)
+                and response.type == ProtocolMessageTypes.request_transaction.value
         ):
             request = full_node_protocol.RequestTransaction.from_bytes(response.data)
             if request.transaction_id == new_spend.transaction_id:
@@ -1494,8 +1494,8 @@ class TestFullNodeProtocol:
                 if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
                     cc_eos_compact_count += 1
                 if (
-                    sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-                    and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                        sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                        and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
                 ):
                     icc_eos_compact_count += 1
             if block.challenge_chain_sp_proof is not None and block.challenge_chain_sp_proof.normalized_to_identity:

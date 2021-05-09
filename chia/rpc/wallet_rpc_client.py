@@ -99,8 +99,8 @@ class WalletRpcClient(RpcClient):
         return TransactionRecord.from_json_dict(res["transaction"])
 
     async def get_transactions(
-        self,
-        wallet_id: str,
+            self,
+            wallet_id: str,
     ) -> List[TransactionRecord]:
         res = await self.fetch(
             "get_transactions",
@@ -118,7 +118,7 @@ class WalletRpcClient(RpcClient):
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
 
     async def send_transaction(
-        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
+            self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
 
         res = await self.fetch(
@@ -134,7 +134,7 @@ class WalletRpcClient(RpcClient):
         return await self.fetch("get_farmed_amount", {})
 
     async def create_signed_transaction(
-        self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
+            self, additions: List[Dict], coins: List[Coin] = None, fee: uint64 = uint64(0)
     ) -> Dict:
         # Converts bytes to hex for puzzle hashes
         additions_hex = [{"amount": ad["amount"], "puzzle_hash": ad["puzzle_hash"].hex()} for ad in additions]
@@ -145,6 +145,5 @@ class WalletRpcClient(RpcClient):
             )
         else:
             return await self.fetch("create_signed_transaction", {"additions": additions_hex, "fee": fee})
-
 
 # TODO: add APIs for coloured coins and RL wallet
