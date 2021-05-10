@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:11\n"
+"PO-Revision-Date: 2021-05-10 21:11\n"
 "Last-Translator: \n"
 "Language-Team: Pirate English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -546,7 +546,7 @@ msgstr "Builder Tools"
 #: src/components/block/Block.jsx:216
 #: src/components/fullNode/FullNode.jsx:178
 msgid "Difficulty"
-msgstr "Pirate-hunting fleets"
+msgstr "Pirate-huntin' fleets"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -1066,7 +1066,7 @@ msgstr "Offers Made"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "On average we got a transaction booty every minute. If pirates aren't movin' loot like crazy, ye can expect yer transaction t' be included in less than a minute."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
