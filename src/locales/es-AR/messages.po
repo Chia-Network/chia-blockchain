@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 09:04\n"
+"PO-Revision-Date: 2021-05-10 15:11\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -92,12 +92,12 @@ msgstr "Agregar directorio de plots"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:373
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Address"
 msgstr "Dirección"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:321
+#: src/components/wallet/standard/WalletStandard.tsx:323
 msgid "Address / Puzzle hash"
 msgstr "Direccion / Hash"
 
@@ -106,7 +106,7 @@ msgstr "Direccion / Hash"
 #: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:331
+#: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Amount"
 msgstr "Monto"
 
@@ -388,7 +388,7 @@ msgstr "Copiado"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:377
+#: src/components/wallet/standard/WalletStandard.tsx:379
 msgid "Copy"
 msgstr "Copiar"
 
@@ -636,7 +636,7 @@ msgstr "Error al abrir (Plot inválido)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:344
+#: src/components/wallet/standard/WalletStandard.tsx:346
 msgid "Farm"
 msgstr "Granja"
 
@@ -683,7 +683,7 @@ msgstr "Estado de tu granja"
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:336
+#: src/components/wallet/standard/WalletStandard.tsx:338
 msgid "Fee"
 msgstr "Comisión"
 
@@ -752,7 +752,7 @@ msgstr "Pantalla Completa"
 msgid "Generate New Colour"
 msgstr "Generar Nuevo Color"
 
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "Las claves Determinísticas HD o Jerárquicas son un tipo de esquema de clave pública/privada en el que una clave privada puede tener un número casi infinito de diferentes claves públicas (y luego recibir direcciones de las billeteras) que finalmente todos volverán y serán gastados por una sola clave privada."
 
@@ -778,7 +778,7 @@ msgstr "Altura"
 msgid "Help"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:39
 msgid "Help translate"
 msgstr ""
 
@@ -966,7 +966,7 @@ msgstr ""
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:387
+#: src/components/wallet/standard/WalletStandard.tsx:389
 msgid "New Address"
 msgstr ""
 
@@ -1062,6 +1062,10 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.tsx:312
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:19
@@ -1354,7 +1358,7 @@ msgid "Rate Limited User Wallet Setup"
 msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "Receive Address"
 msgstr ""
 
@@ -1470,7 +1474,7 @@ msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:349
+#: src/components/wallet/standard/WalletStandard.tsx:351
 msgid "Send"
 msgstr ""
 
