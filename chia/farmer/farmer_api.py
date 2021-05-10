@@ -73,41 +73,63 @@ class FarmerAPI:
                 sp.difficulty,
                 new_proof_of_space.sp_hash,
             )
-            # Double check that the iters are good
-            assert required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters)
 
-            # Proceed at getting the signatures for this PoSpace
-            request = harvester_protocol.RequestSignatures(
-                new_proof_of_space.plot_identifier,
-                new_proof_of_space.challenge_hash,
-                new_proof_of_space.sp_hash,
-                [sp.challenge_chain_sp, sp.reward_chain_sp],
-            )
-
-            if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
-                self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = [
-                    (
-                        new_proof_of_space.plot_identifier,
-                        new_proof_of_space.proof,
-                    )
-                ]
-            else:
-                self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
-                    (
-                        new_proof_of_space.plot_identifier,
-                        new_proof_of_space.proof,
-                    )
+            # If the iters are good enough to make a block, proceed with the block making flow
+            if required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters):
+                # Proceed at getting the signatures for this PoSpace
+                request = harvester_protocol.RequestSignatures(
+                    new_proof_of_space.plot_identifier,
+                    new_proof_of_space.challenge_hash,
+                    new_proof_of_space.sp_hash,
+                    [sp.challenge_chain_sp, sp.reward_chain_sp],
                 )
-            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
-            self.farmer.quality_str_to_identifiers[computed_quality_string] = (
-                new_proof_of_space.plot_identifier,
-                new_proof_of_space.challenge_hash,
-                new_proof_of_space.sp_hash,
-                peer.peer_node_id,
-            )
-            self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
-            return make_msg(ProtocolMessageTypes.request_signatures, request)
+                if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
+                    self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = [
+                        (
+                            new_proof_of_space.plot_identifier,
+                            new_proof_of_space.proof,
+                        )
+                    ]
+                else:
+                    self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
+                        (
+                            new_proof_of_space.plot_identifier,
+                            new_proof_of_space.proof,
+                        )
+                    )
+                self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
+                self.farmer.quality_str_to_identifiers[computed_quality_string] = (
+                    new_proof_of_space.plot_identifier,
+                    new_proof_of_space.challenge_hash,
+                    new_proof_of_space.sp_hash,
+                    peer.peer_node_id,
+                )
+                self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
+
+                return make_msg(ProtocolMessageTypes.request_signatures, request)
+            else:
+                # Otherwise, send the proof of space to the pool
+                for pool_threshold in self.farmer.pool_thresholds:
+                    if pool_threshold.pool_contract_puzzle_hash == new_proof_of_space.proof.pool_contract_puzzle_hash:
+                        required_iters = calculate_iterations_quality(
+                            self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR,
+                            computed_quality_string,
+                            new_proof_of_space.proof.size,
+                            pool_threshold.difficulty,
+                            new_proof_of_space.sp_hash,
+                        )
+                        if required_iters >= calculate_sp_interval_iters(
+                            self.farmer.constants, pool_threshold.sub_slot_iters
+                        ):
+                            self.farmer.log.error(f"Proof of space not good enough for pool: {pool_threshold}")
+                            return
+
+                        # Submit share to pool
+
+                        return
+
+                self.farmer.log.error(f"Did not find pool info for {new_proof_of_space}")
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
@@ -243,6 +265,7 @@ class FarmerAPI:
             new_signage_point.sub_slot_iters,
             new_signage_point.signage_point_index,
             new_signage_point.challenge_chain_sp,
+            self.farmer.pool_thresholds,
         )
 
         msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)

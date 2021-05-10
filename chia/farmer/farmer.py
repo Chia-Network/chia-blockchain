@@ -10,6 +10,7 @@ import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.harvester_protocol import PoolThreshold
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
@@ -90,6 +91,8 @@ class Farmer:
         if len(self.pool_sks_map) == 0:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
+
+        self.pool_thresholds: List[PoolThreshold] = []
 
     async def _start(self):
         self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_task())

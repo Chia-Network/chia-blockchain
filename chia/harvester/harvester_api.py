@@ -98,18 +98,27 @@ class HarvesterAPI:
 
                 responses: List[Tuple[bytes32, ProofOfSpace]] = []
                 if quality_strings is not None:
+                    difficulty = new_challenge.difficulty
+                    sub_slot_iters = new_challenge.sub_slot_iters
+                    if plot_info.pool_contract_puzzle_hash is not None:
+                        # If we are pooling, override the difficulty and sub slot iters with the pool threshold info.
+                        # This will mean more proofs actually get found, but they are only submitted to the pool,
+                        # not the blockchain
+                        for pool_threshold in new_challenge.pool_thresholds:
+                            if pool_threshold.pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash:
+                                difficulty = pool_threshold.difficulty
+                                sub_slot_iters = pool_threshold.sub_slot_iters
+
                     # Found proofs of space (on average 1 is expected per plot)
                     for index, quality_str in enumerate(quality_strings):
                         required_iters: uint64 = calculate_iterations_quality(
                             self.harvester.constants.DIFFICULTY_CONSTANT_FACTOR,
                             quality_str,
                             plot_info.prover.get_size(),
-                            new_challenge.difficulty,
+                            difficulty,
                             new_challenge.sp_hash,
                         )
-                        sp_interval_iters = calculate_sp_interval_iters(
-                            self.harvester.constants, new_challenge.sub_slot_iters
-                        )
+                        sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, sub_slot_iters)
                         if required_iters < sp_interval_iters:
                             # Found a very good proof of space! will fetch the whole proof from disk,
                             # then send to farmer

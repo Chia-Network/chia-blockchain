@@ -34,6 +34,7 @@ class FullNodeRpcApi:
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_initial_freeze_period": self.get_initial_freeze_period,
             "/get_network_info": self.get_network_info,
+            "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
@@ -156,6 +157,83 @@ class FullNodeRpcApi:
         network_name = self.service.config["selected_network"]
         address_prefix = self.service.config["network_overrides"]["config"][network_name]["address_prefix"]
         return {"network_name": network_name, "network_prefix": address_prefix}
+
+    async def get_recent_signage_point_or_eos(self, request: Dict):
+        if "sp_hash" not in request:
+            # This is the case of getting an end of slot
+            eos_tuple = self.service.full_node_store.recent_eos.get(request["challenge_hash"])
+            if not eos_tuple:
+                raise ValueError(f"Did not find eos {request['challenge_hash']} in cache")
+            eos, time_received = eos_tuple
+
+            # If it's still in the full node store, it's not reverted
+            if self.service.full_node_store.get_sub_slot(eos.challenge_chain.get_hash()):
+                return {"eos": eos, "time_received": time_received, "reverted": False}
+
+            # Otherwise we can backtrack from peak to find it in the blockchain
+            curr: Optional[BlockRecord] = self.service.blockchain.get_peak()
+            if curr is None:
+                raise ValueError("No blocks in the chain")
+
+            number_of_slots_searched = 0
+            while number_of_slots_searched < 10:
+                if curr.first_in_sub_slot:
+                    if curr.finished_challenge_slot_hashes[-1] == eos.challenge_chain.get_hash():
+                        # Found this slot in the blockchain
+                        return {"eos": eos, "time_received": time_received, "reverted": False}
+                    number_of_slots_searched += len(curr.finished_challenge_slot_hashes)
+                curr = self.service.blockchain.try_block_record(curr.prev_hash)
+                if curr is None:
+                    # Got to the beginning of the blockchain without finding the slot
+                    return {"eos": eos, "time_received": time_received, "reverted": True}
+
+            # Backtracked through 10 slots but still did not find it
+            return {"eos": eos, "time_received": time_received, "reverted": True}
+
+        # Now we handle the case of getting a signage point
+        sp_tuple = self.service.full_node_store.recent_signage_points.get(request["sp_hash"])
+        if sp_tuple is None:
+            raise ValueError(f"Did not find sp {request['sp_hash']} in cache")
+
+        sp, time_received = sp_tuple
+
+        # If it's still in the full node store, it's not reverted
+        if self.service.full_node_store.get_signage_point(request["sp_hash"]):
+            return {"signage_point": sp, "time_received": time_received, "reverted": False}
+
+        # Otherwise we can backtrack from peak to find it in the blockchain
+        rc_challenge: bytes32 = sp.rc_vdf.challenge
+        next: Optional[BlockRecord] = None
+        curr: Optional[BlockRecord] = self.service.blockchain.get_peak()
+
+        for _ in range(200):
+            sp_total_iters = sp.cc_vdf.number_of_iterations + curr.ip_sub_slot_total_iters(self.service.constants)
+            if curr.reward_infusion_new_challenge == rc_challenge:
+                if next is None:
+                    return {"signage_point": sp, "time_received": time_received, "reverted": False}
+                next_total_iters = next.ip_sub_slot_total_iters(self.service.constants) + next.ip_iters(
+                    self.service.constants
+                )
+
+                return {
+                    "signage_point": sp,
+                    "time_received": time_received,
+                    "reverted": sp_total_iters > next_total_iters,
+                }
+            if curr.finished_reward_slot_hashes is not None:
+                for eos_rc in curr.finished_challenge_slot_hashes:
+                    if eos_rc == rc_challenge:
+                        if next is None:
+                            return {"signage_point": sp, "time_received": time_received, "reverted": False}
+                        next_total_iters = next.ip_sub_slot_total_iters(self.service.constants) + next.ip_iters(
+                            self.service.constants
+                        )
+                        return {
+                            "signage_point": sp,
+                            "time_received": time_received,
+                            "reverted": sp_total_iters > next_total_iters,
+                        }
+        return {"signage_point": sp, "time_received": time_received, "reverted": True}
 
     async def get_block(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
