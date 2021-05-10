@@ -22,16 +22,16 @@ def generate_and_print():
     print("Generating private key. Mnemonic (24 secret words):")
     print(mnemonic)
     passphrase = ""
-    root_path = DEFAULT_ROOT_PATH
-    config = load_config(root_path, "config.yaml")
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     seed = mnemonic_to_seed(mnemonic, passphrase)
     sk = AugSchemeMPL.key_gen(seed)
+    wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix)
     print(
-            "First wallet address:",
-            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
-        )
+        "First wallet address:",
+        wallet_address,
+    )
     print('Note that this key has not been added to the keychain. Run chia keys add_seed -m "[MNEMONICS]" to add')
     return mnemonic
 
