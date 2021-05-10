@@ -183,8 +183,7 @@ class WeightProofHandlerV2:
             if ses_height > tip_height:
                 break
             ses = self.blockchain.get_ses(ses_height)
-            blk = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(ses_height))
-            log.info(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height}  weight {blk.weight} {ses.get_hash()}")
+            log.info(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height}  ")
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
 
@@ -223,6 +222,8 @@ class WeightProofHandlerV2:
         seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
         rng = random.Random(seed)
         last_ses_block, prev_prev_ses_block = await self.get_last_l_weight(summary_heights, tip_rec.height)
+        if last_ses_block is None or prev_prev_ses_block is None:
+            return None
         last_l_weight = last_ses_block.weight - prev_prev_ses_block.weight
         log.debug(f"total weight {last_ses_block.weight} prev weight {prev_prev_ses_block.weight}")
         weight_to_check = _get_weights_for_sampling(rng, last_ses_block.weight, last_l_weight)
@@ -274,7 +275,8 @@ class WeightProofHandlerV2:
         summaries_n = len(summary_heights)
         for idx, height in enumerate(reversed(summary_heights)):
             if height <= peak:
-                if summaries_n - idx < 4:
+                if summaries_n - idx < 3:
+                    log.warning(f"chain to short not enough sub epochs ")
                     return None, None
                 last_ses_block = await self.blockchain.get_block_record_from_db(
                     self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 1]))
@@ -557,35 +559,18 @@ class WeightProofHandlerV2:
 
     def handle_block_vdfs(self, curr: HeaderBlock, blocks: Dict[bytes32, BlockRecord]):
         cc_sp_proof = None
-        cc_sp_info = None
-        block_record = blocks[curr.header_hash]
+        cc_sp_output = None
         if curr.challenge_chain_sp_proof is not None:
             assert curr.reward_chain_block.challenge_chain_sp_vdf
-            cc_sp_vdf_info = curr.reward_chain_block.challenge_chain_sp_vdf
-            if not curr.challenge_chain_sp_proof.normalized_to_identity:
-                (_, _, _, _, cc_vdf_iters, _,) = get_signage_point_vdf_info(
-                    self.constants,
-                    curr.finished_sub_slots,
-                    block_record.overflow,
-                    None if curr.height == 0 else blocks[curr.prev_header_hash],
-                    BlockCache(blocks),
-                    block_record.sp_total_iters(self.constants),
-                    block_record.sp_iters(self.constants),
-                )
-                cc_sp_vdf_info = VDFInfo(
-                    curr.reward_chain_block.challenge_chain_sp_vdf.challenge,
-                    cc_vdf_iters,
-                    curr.reward_chain_block.challenge_chain_sp_vdf.output,
-                )
+            cc_sp_output = curr.reward_chain_block.challenge_chain_sp_vdf.output
             cc_sp_proof = curr.challenge_chain_sp_proof
-            cc_sp_info = cc_sp_vdf_info
         return SubSlotDataV2(
             None,
             cc_sp_proof,
             curr.challenge_chain_ip_proof,
             curr.reward_chain_block.signage_point_index,
             None,
-            None if cc_sp_info is None else cc_sp_info.output,
+            None if cc_sp_output is None else cc_sp_output,
             curr.reward_chain_block.challenge_chain_ip_vdf.output,
             None,
             None,
@@ -757,7 +742,7 @@ def _validate_sub_epoch_summaries(
     weight_proof: WeightProofV2,
 ) -> Tuple[Optional[List[SubEpochSummary]], Optional[List[uint128]]]:
 
-    last_ses_hash, last_ses_sub_height,last_ses_sub_weight = _get_last_ses(constants, weight_proof.recent_chain_data)
+    last_ses_hash, last_ses_sub_height, last_ses_sub_weight = _get_last_ses(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
         return None, None
@@ -1428,7 +1413,7 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
 
 def _get_last_ses(
     constants: ConsensusConstants, recent_reward_chain: List[HeaderBlock]
-) -> Tuple[Optional[bytes32], uint32]:
+) -> Tuple[Optional[bytes32], uint32, uint128]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
         if (block.reward_chain_block.height % constants.SUB_EPOCH_BLOCKS) == 0:
             idx = len(recent_reward_chain) - 1 - idx  # reverse
@@ -1444,7 +1429,7 @@ def _get_last_ses(
                                 curr.reward_chain_block.weight,
                             )
                 idx += 1
-    return None, uint32(0)
+    return None, uint32(0), uint128(0)
 
 
 def _get_ses_idx(recent_reward_chain: List[HeaderBlock]) -> List[int]:
