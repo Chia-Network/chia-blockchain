@@ -85,7 +85,6 @@ class Harvester:
                     "filename": str(path),
                     "size": prover.get_size(),
                     "plot-seed": prover.get_id(),
-                    "pool_public_key": plot_info.pool_public_key,
                     "pool_contract_puzzle_hash": plot_info.pool_contract_puzzle_hash,
                     "plot_public_key": plot_info.plot_public_key,
                     "file_size": plot_info.file_size,
