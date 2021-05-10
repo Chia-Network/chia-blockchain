@@ -75,6 +75,10 @@
     (sha256 (sha256 parent_parent (create_fullpuzhash mod_hash mod_hash_hash genesis_puzhash parent_innerpuz) parent_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_puzhash my_innerpuzhash) my_amount)
   )
 
+  (defmacro launcher_puzhash (my_puzhash my_amount)
+    (qq (c (q. 51) (c (q . (unquote my_puzhash)) (c (q . (unquote my_amount)) ()))))
+  )
+
   (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_puzhash genesis_parent genesis_amount my_innerpuzhash parent_info my_amount)
     (if (logand my_amount 1)
       (if (l parent_info)

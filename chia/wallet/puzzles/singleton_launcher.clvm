@@ -1,0 +1,5 @@
+(mod (puzhash amount)
+
+  ; main
+  (qq (c (q. 51) (c (q . (unquote puzhash)) (c (q . (unquote amount)) ()))))
+)

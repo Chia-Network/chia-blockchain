@@ -2,6 +2,7 @@
 
   ; POOL_PUZHASH is commitment to the pool's puzzlehash
   ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
+  ; OWNER_PUBKEY is the farmer pubkey which signs the exit puzhash
   ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
   ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay_to_singleton puzzle
 
