@@ -85,7 +85,7 @@ class DNSServer:
         mkdir(self.db_path.parent)
 
     async def start(self):
-        self.crawl_db = await aiosqlite.connect(self.db_path)
+        # self.crawl_db = await aiosqlite.connect(self.db_path)
         # Get a reference to the event loop as we plan to use
         # low-level APIs.
         loop = asyncio.get_running_loop()
@@ -102,12 +102,15 @@ class DNSServer:
             # Restore every 15 mins.
             await asyncio.sleep(15 * 60)
             try:
-                cursor = await self.crawl_db.execute(
+                # TODO: double check this. It shouldn't take this long to connect.
+                crawl_db = await aiosqlite.connect(self.db_path, timeout=600)
+                cursor = await crawl_db.execute(
                     "SELECT * from good_peers",
                 )
                 new_reliable_peers = []
                 rows = await cursor.fetchall()
                 await cursor.close()
+                await crawl_db.close()
                 for row in rows:
                     new_reliable_peers.append(row[0])
                 if len(new_reliable_peers) > 0:
