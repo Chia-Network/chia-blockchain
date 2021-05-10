@@ -21,7 +21,6 @@ else
     Write-Output "miniupnpc download successful."
 }
 
-
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
 Write-Output "   ---"
