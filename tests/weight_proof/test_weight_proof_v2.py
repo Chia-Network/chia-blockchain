@@ -477,8 +477,8 @@ class TestWeightProof:
         assert fork_point != 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof_extend_multiple_ses(self, default_1000_blocks):
-        blocks = default_1000_blocks
+    async def test_weight_proof_extend_multiple_ses(self, default_10000_blocks):
+        blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         last_ses_height = sorted(summaries.keys())[-1]
         last_ses = summaries[last_ses_height]
