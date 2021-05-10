@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-04 16:49\n"
+"PO-Revision-Date: 2021-05-10 09:03\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -697,7 +697,7 @@ msgstr "费用"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:422
 msgid "Fee ({currencyCode})"
-msgstr "费用({currencyCode})"
+msgstr "手续费({currencyCode})"
 
 #: src/components/block/Block.jsx:294
 msgid "Fees Amount"
@@ -883,7 +883,7 @@ msgstr "正在载入"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "Local Harvester Plots"
-msgstr "本地收割农地"
+msgstr "本地农田"
 
 #: src/components/app/AppRouter.tsx:28
 msgid "Logging in"
@@ -1368,7 +1368,7 @@ msgstr "刷新农田列表"
 
 #: src/electron/main.tsx:324
 msgid "Release Notes"
-msgstr "发布通知"
+msgstr "版本发布说明"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
@@ -1927,7 +1927,7 @@ msgstr "钱包"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:84
 msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr "想要赚取更多奇亚币？ 给你的农场多开垦一些农田吧。"
+msgstr "想要获得更多奇亚币？ 给你的农场多开垦一些农田吧。"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "Want to have a delay before the next plot starts?"
@@ -2063,3 +2063,4 @@ msgstr "{currencyCode} 收获的奇亚币总计"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 用户交易费用"
+
