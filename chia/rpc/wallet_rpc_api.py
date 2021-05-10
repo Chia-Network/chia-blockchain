@@ -457,6 +457,7 @@ class WalletRpcApi:
             "spendable_balance": spendable_balance,
             "pending_change": pending_change,
             "max_send_amount": max_send_amount,
+            "unspent_coin_count": len(unspent_records),
         }
 
         return {"wallet_balance": wallet_balance}
