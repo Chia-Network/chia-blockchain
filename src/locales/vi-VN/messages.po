@@ -8,7 +8,7 @@ msgstr ""
 "Language: vi_VN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-04 16:49\n"
+"PO-Revision-Date: 2021-05-10 09:03\n"
 "Last-Translator: \n"
 "Language-Team: Vietnamese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "128 nhóm được khuyến nghị"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Harvester là một dịch vụ chạy trên một  máy chứa các tệp plot  . Một farmer và harvester tương tác với một nút đầy đủ để xác định trạng thái của chuỗi. Xem các harvester được kết nối của bạn dưới đây Tìm hiểu thêm"
+msgstr "Harvester là một dịch vụ chạy trên một máy chứa các tệp plot. Một farmer và harvester tương tác với một khối để xác định trạng thái của chuỗi. Xem các harvester được kết nối với bạn dưới đây. Tìm hiểu thêm"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -41,7 +41,7 @@ msgstr "Về Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
-msgstr "Đồng ý"
+msgstr "Chấp nhận"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "Accepted at time:"
@@ -51,7 +51,7 @@ msgstr "Đồng ý tại thời điểm:"
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr "Hoạt động"
+msgstr "Hành động"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
@@ -69,11 +69,11 @@ msgstr "Thêm Thư Mục Plot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Add Plot to Queue"
-msgstr "Thêm Plot vào Hàng Chờ"
+msgstr "Thêm Plot vào hàng đợi"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "Thêm Ví"
+msgstr "Thêm ví"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -84,7 +84,7 @@ msgstr "Thêm một Plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:40
 msgid "Add a plot"
-msgstr "Thêm một Plot"
+msgstr "Thêm một plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
@@ -94,7 +94,7 @@ msgstr "Thêm thư mục plot"
 #: src/components/wallet/coloured/WalletColoured.tsx:457
 #: src/components/wallet/standard/WalletStandard.tsx:373
 msgid "Address"
-msgstr "Địa chỉ"
+msgstr "Địa chỉ (ví)"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
 #: src/components/wallet/standard/WalletStandard.tsx:321
@@ -184,7 +184,7 @@ msgstr "Kiểm Tra Khối"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr "Khối VDF Lặp Lại"
+msgstr "Khối VDF lặp lại"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
@@ -253,11 +253,11 @@ msgstr "Huỷ và Gửi"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "Chú ý, xóa những plot này sẽ xóa chúng vĩnh viễn. Kiểm tra xem các thiết bị lưu trữ đã được kết nối đúng cách chưa."
+msgstr "Chú ý, tiếp tục sẽ xoá những plot này vĩnh viễn. Kiểm tra xem các thiết bị lưu trữ đã được kết nối đúng cách chưa."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
-msgstr "Challenge"
+msgstr "Thử thách"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:11
 msgid "Challenge Hash"
@@ -430,7 +430,7 @@ msgstr "Tạo Ví Người Dùng Giới Hạn"
 
 #: src/components/trading/CreateOffer.jsx:146
 msgid "Create Trade Offer"
-msgstr "Tạo đề nghị trao đổi"
+msgstr "Tạo giao dịch"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:396
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:729
