@@ -79,7 +79,7 @@ def get_transactions_cmd(wallet_rpc_port: int, fingerprint: int, id: int, offset
 def get_csv_cmd(
     wallet_rpc_port: int, fingerprint: int, id: int, offset: int, file: str, date_fmt: str, delim: str
 ) -> None:
-    extra_params = {"id": id, "offset": offset, "file": file, "date_fmt": date_fmt, "delim": delim}
+    extra_params = {"wallet_id": id, "offset": offset, "file": file, "date_fmt": date_fmt, "delim": delim}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_csv
 

@@ -2,12 +2,14 @@ import asyncio
 import logging
 import time
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from blspy import PrivateKey, G1Element
 
 from chia.cmds.init_funcs import check_keys
+from chia.cmds.units import units
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -501,24 +503,61 @@ class WalletRpcApi:
             "wallet_id": wallet_id,
         }
 
-    async def get_csv(self, request: Dict) -> Dict:
+    def __get_csv_line(self, tx, prefix, date_fmt, delim):
+
+        chia_amount = Decimal(int(tx.amount)) / units["chia"]
+        fee_amount = Decimal(int(tx.fee_amount)) / units["chia"]
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
+        tx_type = TransactionType(tx.type).name
+        tx_datetime = datetime.fromtimestamp(tx.created_at_time).strftime(date_fmt)
+        status = "Confirmed" if tx.confirmed else ("In mempool" if tx.is_in_mempool() else "Pending")
+
+        line_elems = [
+            tx.wallet_id,
+            tx_datetime,
+            tx_type,
+            status,
+            tx.confirmed_at_height,
+            tx.name,
+            chia_amount,
+            fee_amount,
+            to_address,
+        ]
+
+        return delim.join(map(str, line_elems))
+
+    async def get_csv(self, args: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
 
-        wallet_id = int(request["wallet_id"])
-
-        transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions(wallet_id)
-        formatted_transactions = []
         selected = self.service.config["selected_network"]
         prefix = self.service.config["network_overrides"]["config"][selected]["address_prefix"]
-        for tx in transactions:
-            formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash, prefix)
-            formatted_transactions.append(formatted)
 
-        return {
-            "transactions": formatted_transactions,
-            "wallet_id": wallet_id,
-        }
+        wallet_id = int(args["wallet_id"])
+        offset = args["offset"]
+        date_fmt = args["date_fmt"]
+        delim = args["delim"]
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_all_transactions(wallet_id)
+
+        if len(transactions) == 0:
+            return {"results": "There are no transactions to this address"}
+
+        HEADER_LIST = [
+            "wallet_id",
+            "date_time",
+            "tx_type",
+            "status",
+            "height_confirmed",
+            "tx_name",
+            "amount",
+            "fee",
+            "to_address",
+        ]
+        file_header = delim.join(HEADER_LIST)
+        lines = [self.__get_csv_line(tx, prefix, date_fmt, delim) for tx in transactions[offset:]]
+        csv_body = "\n".join([file_header] + lines)
+
+        return {"results": csv_body}
 
     async def get_initial_freeze_period(self, _: Dict):
         freeze_period = self.service.constants.INITIAL_FREEZE_END_TIMESTAMP

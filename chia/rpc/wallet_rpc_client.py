@@ -116,19 +116,13 @@ class WalletRpcClient(RpcClient):
 
     async def get_csv(
         self,
-        wallet_id: str,
-    ) -> List[TransactionRecord]:
+        args,
+    ) -> Dict:
         res = await self.fetch(
             "get_csv",
-            {"wallet_id": wallet_id},
+            args,
         )
-        reverted_tx: List[TransactionRecord] = []
-        for modified_tx in res["transactions"]:
-            # Server returns address instead of ph, but TransactionRecord requires ph
-            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
-            del modified_tx["to_address"]
-            reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
-        return reverted_tx
+        return res
 
     async def get_next_address(self, wallet_id: str, new_address: bool) -> str:
         return (await self.fetch("get_next_address", {"wallet_id": wallet_id, "new_address": new_address}))["address"]
