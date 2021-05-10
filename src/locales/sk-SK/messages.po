@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 09:04\n"
+"PO-Revision-Date: 2021-05-10 15:12\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -2067,3 +2067,4 @@ msgstr "{currencyCode} Celkové množstvo vyfarmárčenej Chii"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Užívateľské poplatky za transakcie"
+
