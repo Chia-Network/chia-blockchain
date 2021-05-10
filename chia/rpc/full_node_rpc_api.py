@@ -14,6 +14,7 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.types.blockchain_format.coin import Coin
 
+
 class FullNodeRpcApi:
     def __init__(self, service: FullNode):
         self.service = service
@@ -389,7 +390,7 @@ class FullNodeRpcApi:
         return {
             "status": status.name,
         }
-    
+
     async def get_coin_id(self, request: Dict):
         """
         Returns coin id by parent_coin_info puzzle_hash and amount
@@ -398,7 +399,7 @@ class FullNodeRpcApi:
             raise ValueError("parent_coin_info not in request")
         if "puzzle_hash" not in request:
             raise ValueError("puzzle_hash not in request")
-        
+
         if "amount" not in request:
             raise ValueError("amount not in request")
         if not isinstance(request["amount"], uint64):
