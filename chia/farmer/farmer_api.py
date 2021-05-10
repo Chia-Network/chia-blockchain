@@ -276,10 +276,12 @@ class FarmerAPI:
     async def farming_info(self, request: farmer_protocol.FarmingInfo):
         if request.sp_hash in self.farmer.cache_add_time:
             d = int(time.time()) - self.farmer.cache_add_time[request.sp_hash]
-            self.farmer.log.info(f"{request.passed} plots were eligible for farming {request.sp_hash.hex()[:10]}... " +
-                                 f"Found {request.proofs} proofs. " +
-                                 f"Time: {d} s.       " +
-                                 f"Total {request.total_plots} plots")
+            self.farmer.log.info(
+                f"{request.passed} plots were eligible for farming {request.sp_hash.hex()[:10]}... "
+                + f"Found {request.proofs} proofs. "
+                + f"Time: {d} s.       "
+                + f"Total {request.total_plots} plots"
+            )
 
         self.farmer.state_changed(
             "new_farming_info",
