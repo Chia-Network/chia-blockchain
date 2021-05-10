@@ -18,17 +18,23 @@ if [ "$(uname)" = "Linux" ]; then
 		# Debian/Ubuntu
 		UBUNTU=true
 		sudo apt-get install -y nodejs libxss1
-	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
+	elif type yum &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2"
 		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
 		sudo yum install -y nodejs
-	elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+	elif type yum && [ ! -f /etc/rocky-release ] && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
 		# CentOS or Redhat
 		echo "Installing on CentOS/Redhat"
 		curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
 		sudo yum install -y nodejs
-	fi
+	elif type yum && [ -f /etc/rocky-release ]; then
+                # RockyLinux
+                echo "Installing on RockyLinux"
+                dnf module enable nodejs:12
+                sudo dnf install -y nodejs
+        fi
+
 elif [ "$(uname)" = "Darwin" ] && type brew && ! npm version >/dev/null 2>&1; then
 	# Install npm if not installed
 	brew install npm
