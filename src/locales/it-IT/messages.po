@@ -8,7 +8,7 @@ msgstr ""
 "Language: it_IT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-04 16:50\n"
+"PO-Revision-Date: 2021-05-10 09:04\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "Vuoi esplorare ulteriormente i blocchi di Chia? Dai uno sguardo a <0>Chia Explorer</0> creato da uno sviluppatore open source."
+msgstr "*Vuoi esplorare ulteriormente i blocchi di Chia? Dai uno sguardo a <0>Chia Explorer</0> creato da uno sviluppatore open source."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -32,12 +32,12 @@ msgstr "Sono consigliati 128 bucket"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Un harvester è un servizio eseguito sulla macchina in cui i plot sono realmente conservati. Un farmer e un harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
+msgstr "Un harvester è un servizio eseguito sulla macchina in cui i plot sono conservati. Un farmer e un harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
 msgid "About Chia Blockchain"
-msgstr "Info su Chia Blockchain"
+msgstr "Informazioni sulla Blockchain di Chia"
 
 #: src/components/trading/ViewOffer.jsx:85
 msgid "Accept"
@@ -73,7 +73,7 @@ msgstr "Aggiungi Plot alla Coda"
 
 #: src/components/wallet/Wallets.tsx:83
 msgid "Add Wallet"
-msgstr "Aggiungi Wallet"
+msgstr "Aggiungi portafoglio"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:35
 #: src/components/plot/PlotHeader.tsx:33
@@ -88,7 +88,7 @@ msgstr "Aggiungi un plot"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:69
 msgid "Add plot directory"
-msgstr "Scegli la directory per il plot"
+msgstr "Scegli la cartella per il plot"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
@@ -156,12 +156,12 @@ msgstr "Bilancio"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Quantità minima come ricompensansa per il farming"
+msgstr "Quantità minima come ricompensa per il farming"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr "Di seguito sono riportate le attuali sfide del blocco. Puoi avere o non avere una prova di spazio per queste sfide. Questi blocchi non contengono attualmente una prova di tempo."
+msgstr "Di seguito sono riportate le attuali sfide dei blocchi. Puoi avere o non avere una prova di spazio per queste sfide. Questi blocchi non contengono attualmente una prova di tempo."
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
@@ -218,7 +218,7 @@ msgstr "Sfoglia"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr "Ma attualmente stai coltivando <0/>"
+msgstr "Ma attualmente stai farmando <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -228,7 +228,7 @@ msgstr "Compra"
 
 #: src/components/wallet/Wallets.tsx:36
 msgid "CC Wallet"
-msgstr "Wallet CC"
+msgstr "Portafoglio CC"
 
 #: src/components/wallet/create/WalletCreate.jsx:182
 #~ msgid "CCListItems.title"
@@ -245,11 +245,11 @@ msgstr "Può essere eseguito il backup su seed mnemonico"
 #: src/components/trading/TradingOverview.jsx:410
 #: src/components/trading/ViewOffer.jsx:78
 msgid "Cancel"
-msgstr "Cancella"
+msgstr "Annulla"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "Cancel and Spend"
-msgstr "Annulla e cancella"
+msgstr "Annulla e Spendi"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -277,7 +277,7 @@ msgstr "Wiki Blockchain Chia"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr "Wallet Chia"
+msgstr "Portafoglio Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
@@ -331,7 +331,7 @@ msgstr "Conferma"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr "Confermare la Disconessione"
+msgstr "Confermare la Disconnessione"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
@@ -357,7 +357,7 @@ msgstr "Connesso"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr "Connettendo al wallet"
+msgstr "Connettendo al portafoglio"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
@@ -406,7 +406,7 @@ msgstr "Crea"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr "Crea Wallet DID"
+msgstr "Crea portafoglio DID"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -418,11 +418,11 @@ msgstr "Crea Plot"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr "Crea un wallett di tipo admin con tariffa limitata"
+msgstr "Crea un portafoglio di tipo amministratore con tariffa limitata"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr "Crea User Wallet a Velocità Limitata"
+msgstr "Crea un portafoglio di tipo utente con tariffa limitata"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -448,7 +448,7 @@ msgstr "Crea una nuova chiave privata"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr "Crea wallet amministratore"
+msgstr "Crea un portafoglio amministratore"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
@@ -456,15 +456,15 @@ msgstr "Crea nuova moneta colorata"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr "Crea wallet utente"
+msgstr "Crea un portafoglio utente"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr "Crea un wallet per colore"
+msgstr "Crea un portafoglio per colore"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr "Crea un wallet per un colore esistente"
+msgstr "Crea un portafoglio per un colore esistente"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -488,7 +488,7 @@ msgstr "ATTENZIONE: cancella permanentemente la chiave privata"
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr "Wallet DID"
+msgstr "Portafoglio DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -1372,7 +1372,7 @@ msgstr "Note di Rilascio"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:23
 msgid "Removing"
-msgstr ""
+msgstr "Rimuovendo"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:206
 msgid "Rename"
@@ -2063,3 +2063,4 @@ msgstr "{currencyCode} Chia Farmati in Totale"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Tasse Transazione Utente"
+
