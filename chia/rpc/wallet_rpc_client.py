@@ -116,7 +116,7 @@ class WalletRpcClient(RpcClient):
 
     async def get_csv(
         self,
-        args,
+        args: dict,
     ) -> Dict:
         res = await self.fetch(
             "get_csv",

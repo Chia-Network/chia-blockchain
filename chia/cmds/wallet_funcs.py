@@ -73,8 +73,8 @@ async def get_csv(args: dict, wallet_client: WalletRpcClient, fingerprint: int) 
 
     file_path = args["file"]
 
-    results = await wallet_client.get_csv(args)
-    csv_body = results["results"]
+    results: dict = await wallet_client.get_csv(args)
+    csv_body: str = results["results"]
 
     if file_path:
         f = open(file_path, "w")

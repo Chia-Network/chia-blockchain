@@ -503,7 +503,7 @@ class WalletRpcApi:
             "wallet_id": wallet_id,
         }
 
-    def __get_csv_line(self, tx, prefix, date_fmt, delim):
+    def __get_csv_line(self, tx: TransactionRecord, prefix: str, date_fmt: str, delim: str) -> str:
 
         chia_amount = Decimal(int(tx.amount)) / units["chia"]
         fee_amount = Decimal(int(tx.fee_amount)) / units["chia"]
@@ -526,7 +526,10 @@ class WalletRpcApi:
 
         return delim.join(map(str, line_elems))
 
-    async def get_csv(self, args: Dict) -> Dict:
+    async def get_csv(self, args: dict) -> Dict:
+        #  Wallet does not show outgoing transactions when
+        #  you sync up from scratch on a new computer
+        #  this function will not return those transactions
         assert self.service.wallet_state_manager is not None
 
         selected = self.service.config["selected_network"]
