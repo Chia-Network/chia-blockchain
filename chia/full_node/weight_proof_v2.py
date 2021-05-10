@@ -177,12 +177,35 @@ class WeightProofHandlerV2:
 
         return height
 
+    async def get_sub_epoch_data(self, tip_height: uint32, summary_heights: List[uint32]) -> List[SubEpochData]:
+        sub_epoch_data: List[SubEpochData] = []
+        for sub_epoch_n, ses_height in enumerate(summary_heights):
+            if ses_height > tip_height:
+                break
+            ses = self.blockchain.get_ses(ses_height)
+            blk = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(ses_height))
+            log.info(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height}  weight {blk.weight} {ses.get_hash()}")
+            sub_epoch_data.append(_create_sub_epoch_data(ses))
+        return sub_epoch_data
+
+    def get_seed_for_proof(self, summary_heights: List[uint32], tip_height) -> bytes32:
+        count = 0
+        ses = None
+        for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
+            if ses_height <= tip_height:
+                count += 1
+            if count == 2:
+                ses = self.blockchain.get_ses(ses_height)
+                break
+        assert ses is not None
+        seed = ses.get_hash()
+        return seed
+
     async def _create_proof_of_weight(self, tip: bytes32) -> Optional[WeightProofV2]:
         """
         Creates a weight proof object
         """
         assert self.blockchain is not None
-        sub_epoch_data: List[SubEpochData] = []
         sub_epoch_segments: List[SubEpochChallengeSegmentV2] = []
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
@@ -194,34 +217,39 @@ class WeightProofHandlerV2:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
-        # use second to last ses as seed
-        seed = self.blockchain.get_ses(summary_heights[-2]).get_hash()
-        rng = random.Random(seed)
-        weight_to_check = _get_weights_for_sampling(rng, tip_rec.weight, recent_chain)
+        sub_epoch_data = await self.get_sub_epoch_data(tip_rec.height, summary_heights)
 
+        # use 2 last ses weight as last l weight
+        seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
+        rng = random.Random(seed)
+        last_ses_block, prev_prev_ses_block = await self.get_last_l_weight(summary_heights, tip_rec.height)
+        last_l_weight = last_ses_block.weight - prev_prev_ses_block.weight
+        log.debug(f"total weight {last_ses_block.weight} prev weight {prev_prev_ses_block.weight}")
+        weight_to_check = _get_weights_for_sampling(rng, last_ses_block.weight, last_l_weight)
+        sample_n = 0
+        ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
+        if ses_blocks is None:
+            return None
+
+        # set prev_ses to genesis
         prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
         if prev_ses_block is None:
             return None
-
-        sample_n = 0
-        summary_heights = self.blockchain.get_ses_heights()
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_rec.height:
                 break
-            # next sub block
-            ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(ses_height))
-            if ses_block is None or ses_block.sub_epoch_summary_included is None:
-                log.error("error while building proof")
-                return None
-
-            log.debug(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height} weight: {ses_block.weight}")
-            sub_epoch_data.append(_create_sub_epoch_data(ses_block.sub_epoch_summary_included))
 
             # if we have enough sub_epoch samples, dont sample
             if sample_n >= self.MAX_SAMPLES:
                 log.debug("reached sampled sub epoch cap")
-                continue
+                break
             # sample sub epoch
+            # next sub block
+            ses_block = ses_blocks[sub_epoch_n]
+            if ses_block is None or ses_block.sub_epoch_summary_included is None:
+                log.error("error while building proof")
+                return None
+
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):  # type: ignore
                 sample_n += 1
                 segments = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.height)
@@ -241,6 +269,21 @@ class WeightProofHandlerV2:
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProofV2(sub_epoch_data, sub_epoch_segments, recent_chain)
+
+    async def get_last_l_weight(self, summary_heights, peak):
+        summaries_n = len(summary_heights)
+        for idx, height in enumerate(reversed(summary_heights)):
+            if height <= peak:
+                if summaries_n - idx < 4:
+                    return None, None
+                last_ses_block = await self.blockchain.get_block_record_from_db(
+                    self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 1]))
+                )
+                prev_prev_ses_block = await self.blockchain.get_block_record_from_db(
+                    self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 3]))
+                )
+                return last_ses_block, prev_prev_ses_block
+        return None, None
 
     async def _get_recent_chain(self, tip_height: uint32) -> Optional[List[HeaderBlock]]:
         recent_chain: List[HeaderBlock] = []
@@ -569,11 +612,8 @@ def bytes_to_vars(constants_dict, summaries_bytes, weight_proof_bytes):
     return constants, summaries, weight_proof
 
 
-def _get_weights_for_sampling(
-    rng: random.Random, total_weight: uint128, recent_chain: List[HeaderBlock]
-) -> Optional[List[uint128]]:
+def _get_weights_for_sampling(rng: random.Random, total_weight: uint128, last_l_weight) -> Optional[List[uint128]]:
     weight_to_check = []
-    last_l_weight = recent_chain[-1].reward_chain_block.weight - recent_chain[0].reward_chain_block.weight
     delta = last_l_weight / total_weight
     prob_of_adv_succeeding = 1 - math.log(WeightProofHandlerV2.C, delta)
     if prob_of_adv_succeeding <= 0:
@@ -717,7 +757,7 @@ def _validate_sub_epoch_summaries(
     weight_proof: WeightProofV2,
 ) -> Tuple[Optional[List[SubEpochSummary]], Optional[List[uint128]]]:
 
-    last_ses_hash, last_ses_sub_height = _get_last_ses_hash(constants, weight_proof.recent_chain_data)
+    last_ses_hash, last_ses_sub_height,last_ses_sub_weight = _get_last_ses(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
         return None, None
@@ -729,13 +769,14 @@ def _validate_sub_epoch_summaries(
         constants.DIFFICULTY_STARTING,
     )
 
-    log.info(f"validating {len(summaries)} sub epochs")
-
+    log.info(f"validating {len(summaries)} sub epochs, sub epoch data weight {total}")
     # validate weight
     if not _validate_summaries_weight(constants, total, summaries, weight_proof):
         log.error("failed validating weight")
         return None, None
 
+    # add last ses weight from recent chain
+    sub_epoch_weight_list.append(last_ses_sub_weight)
     last_ses = summaries[-1]
     log.debug(f"last ses sub height {last_ses_sub_height}")
     # validate last ses_hash
@@ -765,9 +806,7 @@ def _map_sub_epoch_summaries(
         )
 
         if idx < len(sub_epoch_data) - 1:
-            delta = 0
-            if idx > 0:
-                delta = sub_epoch_data[idx].num_blocks_overflow
+            delta = sub_epoch_data[idx].num_blocks_overflow
             log.debug(f"sub epoch {idx} start weight is {total_weight+curr_difficulty} ")
             sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
             total_weight = total_weight + uint128(  # type: ignore
@@ -1387,7 +1426,7 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
     return curr_difficulty, curr_ssi
 
 
-def _get_last_ses_hash(
+def _get_last_ses(
     constants: ConsensusConstants, recent_reward_chain: List[HeaderBlock]
 ) -> Tuple[Optional[bytes32], uint32]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
@@ -1402,6 +1441,7 @@ def _get_last_ses_hash(
                             return (
                                 slot.challenge_chain.subepoch_summary_hash,
                                 curr.reward_chain_block.height,
+                                curr.reward_chain_block.weight,
                             )
                 idx += 1
     return None, uint32(0)
@@ -1454,8 +1494,10 @@ def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
 
 
 def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
-    tip = weight_proof.recent_chain_data[-1]
-    weight_to_check = _get_weights_for_sampling(rng, tip.weight, weight_proof.recent_chain_data)
+    total_weight = sub_epoch_weight_list[-1]
+    last_l_weight = sub_epoch_weight_list[-1] - sub_epoch_weight_list[-3]
+    log.debug(f"total weight {total_weight} prev weight {sub_epoch_weight_list[-2]}")
+    weight_to_check = _get_weights_for_sampling(rng, total_weight, last_l_weight)
     sampled_sub_epochs: dict[int, bool] = {}
     for idx in range(1, len(sub_epoch_weight_list)):
         if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
