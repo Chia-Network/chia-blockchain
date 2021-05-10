@@ -411,6 +411,8 @@ class WalletBlockchain(BlockchainInterface):
                 del self.__block_records[header_hash]
             del self.__heights_in_cache[uint32(height)]  # remove height from heights in cache
 
+            if height == 0:
+                break
             height -= 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
