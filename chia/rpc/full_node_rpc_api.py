@@ -12,7 +12,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
-
+from chia.types.blockchain_format.coin import Coin
 
 class FullNodeRpcApi:
     def __init__(self, service: FullNode):
@@ -39,6 +39,7 @@ class FullNodeRpcApi:
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
             "/push_tx": self.push_tx,
+            "/get_coin_id": self.get_coin_id,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
@@ -388,6 +389,22 @@ class FullNodeRpcApi:
         return {
             "status": status.name,
         }
+    
+        async def get_coin_id(self, request: Dict):
+        """
+        Returns coin id by parent_coin_info puzzle_hash and amount
+        """
+        if "parent_coin_info" not in request:
+            raise ValueError("parent_coin_info not in request")
+        if "puzzle_hash" not in request:
+            raise ValueError("puzzle_hash not in request")
+        
+        if "amount" not in request:
+            raise ValueError("amount not in request")
+        if not isinstance(request["amount"], int):
+            raise ValueError("An integer amount or fee is required (too many decimals)")
+
+        return {"coin_id": Coin(hexstr_to_bytes(request["parent_coin_info"]), hexstr_to_bytes(request["puzzle_hash"]), int(request["amount"])).name()}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
