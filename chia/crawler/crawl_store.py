@@ -7,19 +7,20 @@ import aiosqlite
 from typing import List, Dict
 from chia.crawler.peer_record import PeerRecord, PeerReliability
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 
 log = logging.getLogger(__name__)
 
 
 class CrawlStore:
     crawl_db: aiosqlite.Connection
-    cached_peers: List[PeerRecord]
     last_timestamp: int
     lock: asyncio.Lock
 
     host_to_records: Dict
     host_to_reliability: Dict
     banned_peers: int
+    reliable_peers: int
 
     @classmethod
     async def create(cls, connection: aiosqlite.Connection):
@@ -52,6 +53,12 @@ class CrawlStore:
             )
         )
 
+        await self.crawl_db.execute(
+            (
+                "CREATE TABLE IF NOT EXISTS good_peers(ip text)"
+            )
+        )
+
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS ip_address on peer_records(ip_address)")
 
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS port on peer_records(port)")
@@ -65,9 +72,9 @@ class CrawlStore:
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS is_reliable on peer_reliability(is_reliable)")
 
         await self.crawl_db.commit()
-        self.cached_peers = []
         self.last_timestamp = 0
         self.banned_peers = 0
+        self.reliable_peers = 0
         await self.unload_from_db()
         return self
 
@@ -146,27 +153,6 @@ class CrawlStore:
         record = self.host_to_records[host]
         await self.peer_connected(record)
 
-    async def reload_cached_peers(self):
-        peers = []
-        counter = 0
-        for peer_id in self.host_to_reliability:
-            counter += 1
-            reliability = self.host_to_reliability[peer_id]
-            if reliability.is_reliable():
-                peer = PeerInfo(peer_id, 8444)
-                peers.append(peer)
-            # Switch to responding some DNS queries.
-            if counter % 50000 == 0:
-                await asyncio.sleep(0.1)
-        self.cached_peers = peers
-
-    async def get_cached_peers(self, peer_count: int) -> List[PeerRecord]:
-        peers = self.cached_peers
-        if len(peers) > peer_count:
-            random.shuffle(peers)
-            peers = peers[:peer_count]
-        return peers
-
     async def get_peers_to_crawl(self, min_batch_size, max_batch_size) -> List[PeerRecord]:
         now = int(time.time())
         records = []
@@ -185,9 +171,6 @@ class CrawlStore:
                 add = True
             if add:
                 records.append(record)
-            # Switch to responding some DNS queries.
-            if counter % 50000 == 0:
-                await asyncio.sleep(0.1)
         batch_size = max(min_batch_size, len(records) // 10)
         batch_size = min(batch_size, max_batch_size)
         if len(records) > batch_size:
@@ -198,12 +181,12 @@ class CrawlStore:
     def get_banned_peers(self) -> int:
         return self.banned_peers
 
+    def get_reliable_peers(self) -> int:
+        return self.reliable_peers
+
     async def load_to_db(self):
         counter = 0
         for peer_id in list(self.host_to_reliability.keys()):
-            counter += 1
-            if counter % 50000 == 0:
-                await asyncio.sleep(0.1)
             if peer_id in self.host_to_reliability and peer_id in self.host_to_records:
                 reliability = self.host_to_reliability[peer_id]
                 record = self.host_to_records[peer_id]
@@ -247,3 +230,22 @@ class CrawlStore:
         for row in rows:
             peer = PeerRecord(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7])
             self.host_to_records[row[0]] = peer
+
+    # Crawler -> DNS.
+    async def load_reliable_peers_to_db(self):
+        peers = []
+        for peer_id in self.host_to_reliability:
+            reliability = self.host_to_reliability[peer_id]
+            if reliability.is_reliable():
+                peers.append(peer_id)
+        self.reliable_peers = len(peers)
+        cursor = await self.crawl_db.execute(
+            "DELETE from good_peers",
+        )
+        await cursor.close()
+        for peer in peers:
+            cursor = await self.crawl_db.execute(
+                "INSERT OR REPLACE INTO good_peers VALUES(?)", (peer,),
+            )
+            await cursor.close()
+        await self.crawl_db.commit()
