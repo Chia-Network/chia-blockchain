@@ -169,7 +169,8 @@ class Crawler:
                 self.log.error(f"Total unique nodes attempted: {len(tried_nodes)}.")
                 t_now = time.time()
                 t_delta = int(t_now - t_start)
-                self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
+                if t_delta > 0:
+                    self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
                 # Periodically print detailed stats.
                 reliable_peers = self.crawl_store.get_reliable_peers()
                 self.log.error(f"Reliable nodes: {reliable_peers}")
