@@ -16,69 +16,13 @@ from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
 from chia.util.path import mkdir, path_from_root
-from dnslib import A, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
 
-# https://gist.github.com/pklaus/b5a7876d4d2cf7271873
-
-
-class DomainName(str):
-    def __getattr__(self, item):
-        return DomainName(item + "." + self)
-
-
-D = DomainName("seeder.example.com.")
-ns = DomainName("example.com.")
-IP = "127.0.0.1"
-TTL = 60 * 5
-soa_record = SOA(
-    mname=ns,  # primary name server
-    rname=ns.hostmaster,  # email of the domain administrator
-    times=(
-        1619105223,  # serial number
-        10800,  # refresh
-        3600,  # retry
-        604800,  # expire
-        1800,  # minimum
-    ),
-)
-ns_records = [NS(ns)]
-
 bootstrap_peers = ["node.chia.net"]
-minimum_height = 225974
-
-
-class EchoServerProtocol(asyncio.DatagramProtocol):
-    def __init__(self, callback):
-        self.data_queue = asyncio.Queue(loop=asyncio.get_event_loop())
-        self.callback = callback
-        asyncio.ensure_future(self.respond())
-
-    def connection_made(self, transport):
-        self.transport = transport
-
-    def datagram_received(self, data, addr):
-        asyncio.ensure_future(self.handler(data, addr), loop=asyncio.get_event_loop())
-
-    async def respond(self):
-        while True:
-            try:
-                resp, caller = await self.data_queue.get()
-                self.transport.sendto(resp, caller)
-            except Exception as e:
-                log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
-
-    async def handler(self, data, caller):
-        try:
-            data = await self.callback(data)
-            if data is None:
-                return
-            await self.data_queue.put((data, caller))
-        except Exception as e:
-            log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
+minimum_height = 240000
 
 
 class Crawler:
@@ -93,7 +37,6 @@ class Crawler:
     root_path: Path
     peer_count: int
     peer_queue: asyncio.Queue
-    with_peers: set
     with_peak: set
 
     def __init__(
@@ -113,8 +56,8 @@ class Crawler:
         self.crawl_store = None
         self.log = log
         self.peer_count = 0
-        self.with_peers = set()
         self.with_peak = set()
+        self.peers_retrieved = []
 
         db_path_replaced: str = "crawler.db"
         self.db_path = path_from_root(root_path, db_path_replaced)
@@ -122,69 +65,6 @@ class Crawler:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-
-    async def dns_response(self, data):
-        try:
-            request = DNSRecord.parse(data)
-            IPs = [MX(D.mail), soa_record] + ns_records
-            peers = await self.crawl_store.get_cached_peers(16)
-            if len(peers) == 0:
-                return None
-            for peer in peers:
-                ipv4 = True
-                try:
-                    _ = ipaddress.IPv4Address(peer.host)
-                except ValueError:
-                    ipv4 = False
-                if ipv4:
-                    IPs.append(A(peer.host))
-                # TODO: Re enable IPv6.
-                # else:
-                #    IPs.append(AAAA(peer.host))
-            reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=len(peers), ra=1), q=request.q)
-
-            records = {
-                D: IPs,
-                D.ns1: [A(IP)],  # MX and NS records must never point to a CNAME alias (RFC 2181 section 10.3)
-                D.ns2: [A(IP)],
-                D.mail: [A(IP)],
-                D.andrei: [CNAME(D)],
-            }
-
-            qname = request.q.qname
-            qn = str(qname)
-            qtype = request.q.qtype
-            qt = QTYPE[qtype]
-            if qn == D or qn.endswith("." + D):
-                for name, rrs in records.items():
-                    if name == qn:
-                        for rdata in rrs:
-                            rqt = rdata.__class__.__name__
-                            if qt in ["*", rqt]:
-                                reply.add_answer(
-                                    RR(rname=qname, rtype=getattr(QTYPE, rqt), rclass=1, ttl=TTL, rdata=rdata)
-                                )
-
-                for rdata in ns_records:
-                    reply.add_ar(RR(rname=D, rtype=QTYPE.NS, rclass=1, ttl=TTL, rdata=rdata))
-
-                reply.add_auth(RR(rname=D, rtype=QTYPE.SOA, rclass=1, ttl=TTL, rdata=soa_record))
-
-            return reply.pack()
-        except Exception as e:
-            self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
-
-    async def _start(self):
-        asyncio.create_task(self.crawl())
-        # Get a reference to the event loop as we plan to use
-        # low-level APIs.
-        loop = asyncio.get_running_loop()
-
-        # One protocol instance will be created to serve all
-        # client requests.
-        self.transport, self.protocol = await loop.create_datagram_endpoint(
-            lambda: EchoServerProtocol(self.dns_response), local_addr=("0.0.0.0", 53)
-        )
 
     async def create_client(self, peer_info, on_connect):
         return await self.server.start_client(peer_info, on_connect)
@@ -195,32 +75,17 @@ class Crawler:
             response = await peer.request_peers(full_node_protocol.RequestPeers(), timeout=2)
             # Add peers to DB
             if isinstance(response, full_node_protocol.RespondPeers):
-                for response_peer in response.peer_list:
-                    if (
-                        response_peer.host not in self.seen_nodes
-                        and response_peer.timestamp > time.time() - 5 * 24 * 3600
-                    ):
-                        self.seen_nodes.add(response_peer.host)
-                        new_peer = PeerRecord(
-                            response_peer.host,
-                            response_peer.host,
-                            uint32(response_peer.port),
-                            False,
-                            uint64(0),
-                            uint32(0),
-                            uint64(0),
-                            uint64(int(time.time())),
-                        )
-                        new_peer_reliability = PeerReliability(response_peer.host)
-                        if self.crawl_store is not None:
-                            await self.crawl_store.add_peer(new_peer, new_peer_reliability)
-                peer_info = peer.get_peer_info()
+                self.peers_retrieved.append(response)
+            peer_info = peer.get_peer_info()
+            tries = 0
+            while tries < 10:
+                tries += 1
                 if peer_info is None:
-                    return
+                    break
                 if peer_info in self.with_peak:
-                    await peer.close()
-                else:
-                    self.with_peers.add(peer_info)
+                    break
+                await asyncio.sleep(0.1)
+            await peer.close()
 
         try:
             connected = await self.create_client(PeerInfo(peer.ip_address, peer.port), peer_action)
@@ -235,6 +100,9 @@ class Crawler:
             peer = await self.peer_queue.get()
             await self.connect_task(peer)
             self.peer_queue.task_done()
+
+    async def _start(self):
+        self.task = asyncio.create_task(self.crawl())
 
     async def crawl(self):
         try:
@@ -251,11 +119,10 @@ class Crawler:
                 await self.crawl_store.add_peer(new_peer, new_peer_reliability)
 
             while True:
-                self.with_peers = set()
                 self.with_peak = set()
-                await self.crawl_store.reload_cached_peers()
                 await self.crawl_store.load_to_db()
-                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
+                await self.crawl_store.load_reliable_peers_to_db()
+                peers_to_crawl = await self.crawl_store.get_peers_to_crawl(10000, 100000)
 
                 self.peer_queue = asyncio.Queue()
                 for peer in peers_to_crawl:
@@ -273,6 +140,28 @@ class Crawler:
                 for task in tasks:
                     task.cancel()
 
+                for response in self.peers_retrieved:
+                    for response_peer in response.peer_list:
+                        if (
+                            response_peer.host not in self.seen_nodes
+                            and response_peer.timestamp > time.time() - 5 * 24 * 3600
+                        ):
+                            self.seen_nodes.add(response_peer.host)
+                            new_peer = PeerRecord(
+                                response_peer.host,
+                                response_peer.host,
+                                uint32(response_peer.port),
+                                False,
+                                uint64(0),
+                                uint32(0),
+                                uint64(0),
+                                uint64(int(time.time())),
+                            )
+                            new_peer_reliability = PeerReliability(response_peer.host)
+                            if self.crawl_store is not None:
+                                await self.crawl_store.add_peer(new_peer, new_peer_reliability)
+                self.peers_retrieved = []
+
                 self.server.banned_peers = {}
                 self.log.error("***")
                 self.log.error("Finished batch:")
@@ -282,8 +171,8 @@ class Crawler:
                 t_delta = int(t_now - t_start)
                 self.log.error(f"Avg connections per second: {total_nodes // t_delta}.")
                 # Periodically print detailed stats.
-                good_peers = await self.crawl_store.get_cached_peers(99999999)
-                self.log.error(f"Reliable nodes: {len(good_peers)}")
+                reliable_peers = self.crawl_store.get_reliable_peers()
+                self.log.error(f"Reliable nodes: {reliable_peers}")
                 banned_peers = self.crawl_store.get_banned_peers()
                 self.log.error(f"Banned/ignored addresses: {banned_peers}")
                 self.log.error("***")
@@ -305,10 +194,7 @@ class Crawler:
             if request.height >= minimum_height:
                 if self.crawl_store is not None:
                     await self.crawl_store.peer_connected_hostname(peer_info.host)
-            if peer_info in self.with_peers:
-                await peer.close()
-            else:
-                self.with_peak.add(peer_info)
+            self.with_peak.add(peer_info)
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
