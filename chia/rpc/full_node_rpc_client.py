@@ -169,7 +169,7 @@ class FullNodeRpcClient(RpcClient):
                 assert challenge_hash is not None
                 response = await self.fetch("get_recent_signage_point_or_eos", {"challenge_hash": challenge_hash.hex()})
                 return {
-                    "signage_point": EndOfSubSlotBundle.from_json_dict(response["eos"]),
+                    "eos": EndOfSubSlotBundle.from_json_dict(response["eos"]),
                     "time_received": response["time_received"],
                     "reverted": response["reverted"],
                 }

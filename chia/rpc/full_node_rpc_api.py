@@ -164,10 +164,11 @@ class FullNodeRpcApi:
 
     async def get_recent_signage_point_or_eos(self, request: Dict):
         if "sp_hash" not in request:
+            challenge_hash: bytes32 = hexstr_to_bytes(request["challenge_hash"])
             # This is the case of getting an end of slot
-            eos_tuple = self.service.full_node_store.recent_eos.get(request["challenge_hash"])
+            eos_tuple = self.service.full_node_store.recent_eos.get(challenge_hash)
             if not eos_tuple:
-                raise ValueError(f"Did not find eos {request['challenge_hash']} in cache")
+                raise ValueError(f"Did not find eos {challenge_hash.hex()} in cache")
             eos, time_received = eos_tuple
 
             # If it's still in the full node store, it's not reverted
@@ -195,14 +196,15 @@ class FullNodeRpcApi:
             return {"eos": eos, "time_received": time_received, "reverted": True}
 
         # Now we handle the case of getting a signage point
-        sp_tuple = self.service.full_node_store.recent_signage_points.get(request["sp_hash"])
+        sp_hash: bytes32 = hexstr_to_bytes(request["sp_hash"])
+        sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
         if sp_tuple is None:
-            raise ValueError(f"Did not find sp {request['sp_hash']} in cache")
+            raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
 
         sp, time_received = sp_tuple
 
         # If it's still in the full node store, it's not reverted
-        if self.service.full_node_store.get_signage_point(request["sp_hash"]):
+        if self.service.full_node_store.get_signage_point(sp_hash):
             return {"signage_point": sp, "time_received": time_received, "reverted": False}
 
         # Otherwise we can backtrack from peak to find it in the blockchain

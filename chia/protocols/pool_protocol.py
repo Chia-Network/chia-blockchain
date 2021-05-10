@@ -24,7 +24,7 @@ class PoolInfo(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class SubmitPartial(Streamable):
+class PartialPayload(Streamable):
     proof_of_space: ProofOfSpace
     sp_hash: bytes32
     end_of_sub_slot: bool
@@ -33,6 +33,12 @@ class SubmitPartial(Streamable):
     singleton_farmer_public_key: G1Element
     singleton_coin_id_hint: bytes32  # Some incarnation of the singleton, the later the better
     rewards_target: bytes
+
+
+@dataclass(frozen=True)
+@streamable
+class SubmitPartial(Streamable):
+    payload: PartialPayload
     rewards_and_partial_aggregate_signature: G2Element  # Signature of rewards by singleton key, and partial by plot key
 
 
@@ -42,3 +48,4 @@ class RespondSubmitPartial(Streamable):
     error_code: uint16
     error_message: Optional[str]
     points_balance: uint64
+    difficulty: uint64
