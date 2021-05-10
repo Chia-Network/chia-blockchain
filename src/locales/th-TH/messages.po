@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-04 16:49\n"
+"PO-Revision-Date: 2021-05-10 09:03\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -51,13 +51,13 @@ msgstr "ยอมรับเมื่อเวลา:"
 #: src/components/plot/PlotsNotFound.tsx:14
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "Action"
-msgstr "การกระทำ"
+msgstr "ดำเนินการ"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 #: src/components/fullNode/FullNodeConnections.tsx:57
 msgid "Actions"
-msgstr "การกระทำ"
+msgstr "ดำเนินการ"
 
 #: src/components/trading/CreateOffer.jsx:222
 msgid "Add"
@@ -156,16 +156,16 @@ msgstr "ยอดคงเหลือ"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr ""
+msgstr "ฐานรางวัลที่ Farmer จะได้รับจำนวน"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "ภายใต้บล็อคปัจจุบัน, คุณอาจจะมีหรือไม่มีพื้นที่ว่างสำหรับครั้งนี้บล็อคเหล่านี้ไม่จำกัดเวลา"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr ""
+msgstr "ปริมาณที่มากที่สุดภายใน 24 ชั่วโมง"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -180,15 +180,15 @@ msgstr "บล็อก"
 
 #: src/components/block/Block.jsx:124
 msgid "Block Test"
-msgstr ""
+msgstr "ทดสอบบล็อค"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr ""
+msgstr "การทำซ้ำของบล็อค VDF"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr ""
+msgstr "ปริมาณของบล็อคใน Chia blockchain คือ {0}"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr ""
+msgstr "บล็อคกับ Hash {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
-msgstr ""
+msgstr "ไม่มีบล็อคกับHash {headerHash}"
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -307,7 +307,7 @@ msgstr "ประเภท"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "ราละเอียดของสี"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
@@ -335,11 +335,11 @@ msgstr "ยืนยันการตัดการเชื่อมต่อ
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "ยืนยันที่บล็อค:"
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "ยืนยันที่ปริมาณ {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
@@ -378,7 +378,7 @@ msgstr "การเชื่อมต่อ"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "มีส่วนร่วมใน GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
@@ -406,7 +406,7 @@ msgstr "สร้าง"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
-msgstr ""
+msgstr "สร้าง DID ของกระเป๋า"
 
 #: src/components/trading/TradeManager.tsx:22
 msgid "Create Offer"
@@ -418,11 +418,11 @@ msgstr "สร้างพล็อต"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "Create Rate Limited Admin Wallet"
-msgstr ""
+msgstr "สร้างขีดจำกัดกระเป๋าของ Admin"
 
 #: src/components/wallet/create/createRLUser.jsx:78
 msgid "Create Rate Limited User Wallet"
-msgstr ""
+msgstr "สร้างขีดจำกัดกระเป๋าของ User"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -448,23 +448,23 @@ msgstr "สร้างคีย์ส่วนตัวใหม่"
 
 #: src/components/wallet/create/WalletCreate.jsx:244
 msgid "Create admin wallet"
-msgstr ""
+msgstr "สร้างกระเป๋าของ Admin"
 
 #: src/components/wallet/create/WalletCreate.jsx:180
 msgid "Create new coloured coin"
-msgstr ""
+msgstr "สร้างสีของเหรียญใหม่"
 
 #: src/components/wallet/create/WalletCreate.jsx:256
 msgid "Create user wallet"
-msgstr ""
+msgstr "สร้างกระเป๋าของผู้ใช้"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "Create wallet for colour"
-msgstr ""
+msgstr "สร้างสีของกระเป๋า"
 
 #: src/components/wallet/create/WalletCreate.jsx:192
 msgid "Create wallet for existing colour"
-msgstr ""
+msgstr "สร้างกระเป๋าจากสีที่มีอยู่แล้ว"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -476,7 +476,7 @@ msgstr "สร้างเมื่อ:"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "Created by us:"
-msgstr ""
+msgstr "สร้างโดยพวกเรา:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "Current trade status"
@@ -488,7 +488,7 @@ msgstr "อันตราย: ลบคีย์ส่วนตัวถาว�
 
 #: src/components/wallet/Wallets.tsx:50
 msgid "DID Wallet"
-msgstr ""
+msgstr "กระเป๋า DID"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -554,7 +554,7 @@ msgstr "ระดับความยาก"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:109
 msgid "Disable bitfield plotting"
-msgstr ""
+msgstr "ปิด Bitfield plotting"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Disconnect"
@@ -566,7 +566,7 @@ msgstr "ตัดการเชื่อมต่อ"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 msgid "Distributed Identity Options"
-msgstr ""
+msgstr "ตัวเลือกการแยกข้อมูล"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
@@ -606,7 +606,7 @@ msgstr "ข้อผิดพลาด"
 
 #: src/components/wallet/standard/WalletStandard.tsx:292
 msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "ข้อผิดพลาด: ไม่สามารถส่งchiaไปที่coloures addressได้ กรุณากรอก Chia address"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -750,7 +750,7 @@ msgstr "เต็มหน้าจอ"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "Generate New Colour"
-msgstr ""
+msgstr "สร้าง Colour ใหม่"
 
 #: src/components/wallet/standard/WalletStandard.tsx:367
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
@@ -850,7 +850,7 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "Interval"
-msgstr ""
+msgstr "ช่วงเวลา"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:37
 msgid "K-Size"
