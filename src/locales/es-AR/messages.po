@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-04 16:50\n"
+"PO-Revision-Date: 2021-05-10 09:04\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -32,7 +32,7 @@ msgstr "128 bloques es lo recomendado"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr "Un cosechador es un servicio ejecutado en una maquina donde se almacena(n) la(s) parcela(s). El agricultor y el cosechador hablan con un nodo completo para ver el estado de la cadena. Revise su red de cosechadores a continuación Más información"
+msgstr "Un cosechador es un servidor ejecutado en una maquina donde se almacena(n) la(s) parcela(s). El agricultor y el cosechador hablan con un nodo completo para ver el estado de la cadena. Revise su red de cosechadores a continuación Más información"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -142,7 +142,7 @@ msgstr "¿Estás seguro de querer usar k={plotSize}?"
 #: src/components/selectKey/SelectKey.tsx:39
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "Back"
-msgstr "Volver"
+msgstr "atras"
 
 #: src/components/backup/BackupCreate.tsx:61
 msgid "Backup file is used to restore smart wallets."
@@ -156,7 +156,7 @@ msgstr "Saldo"
 
 #: src/components/block/Block.jsx:290
 msgid "Base Farmer Reward Amount"
-msgstr "Recompensa base del Laburante"
+msgstr "Recompensa base del agricultor"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:25
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
@@ -165,7 +165,7 @@ msgstr "A continuación se encuentran los desafios de bloque actuales. Puede que
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr "Estimación de las ultimas 24 horas"
+msgstr "La mejor estimación de las últimas 24 horas"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -277,112 +277,112 @@ msgstr "Wiki de Chia"
 
 #: src/components/wallet/Wallets.tsx:32
 msgid "Chia Wallet"
-msgstr ""
+msgstr "Monedero Chia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "Choose Number of Plots"
-msgstr ""
+msgstr "Elegir la cantidad de Parcelas"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:54
 msgid "Choose Plot Size"
-msgstr ""
+msgstr "Elegir el Tamaño de la Parcela"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:76
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "Close"
-msgstr ""
+msgstr "Cerrar"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Closing down node and server"
-msgstr ""
+msgstr "Cerrando nodo y servidor"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "Coins:"
-msgstr ""
+msgstr "Monedas:"
 
 #: src/components/trading/CreateOffer.jsx:192
 #: src/components/trading/TradesTable.tsx:19
 msgid "Colour"
-msgstr ""
+msgstr "Color"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:181
 msgid "Colour Info"
-msgstr ""
+msgstr "Información de Color"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "Cadena de Caracteres de Color"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
-msgstr ""
+msgstr "Color:"
 
 #: src/components/wallet/create/WalletCreate.jsx:120
 msgid "Coloured Coin"
-msgstr ""
+msgstr "Moneda de Color"
 
 #: src/components/wallet/create/WalletCreate.jsx:168
 msgid "Coloured Coin Options"
-msgstr ""
+msgstr "Opciones de Moneda de Color"
 
 #: src/electron/main.tsx:162
 msgid "Confirm"
-msgstr ""
+msgstr "Confirmar"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:22
 msgid "Confirm Disconnect"
-msgstr ""
+msgstr "Confirmar Desconexión"
 
 #: src/components/trading/TradingOverview.jsx:202
 msgid "Confirmed at block:"
-msgstr ""
+msgstr "Confirmado en el bloque:"
 
 #: src/components/wallet/WalletHistory.tsx:40
 msgid "Confirmed at height {0}"
-msgstr ""
+msgstr "Confirmado en altura {0}"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "Connect"
-msgstr ""
+msgstr "Conectar"
 
 #: src/components/fullNode/FullNodeAddConnection.tsx:55
 #: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connect to other peers"
-msgstr ""
+msgstr "Conectar a otros pares"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 #: src/components/fullNode/FullNode.jsx:143
 msgid "Connected"
-msgstr ""
+msgstr "Conectado"
 
 #: src/components/app/AppRouter.tsx:23
 msgid "Connecting to wallet"
-msgstr ""
+msgstr "Conectando a la cartera"
 
 #: src/components/fullNode/FullNode.jsx:141
 msgid "Connection Status"
-msgstr ""
+msgstr "Estado de Conexión"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:65
 msgid "Connection Status:"
-msgstr ""
+msgstr "Estado de Conexión:"
 
 #: src/components/fullNode/FullNodeConnections.tsx:50
 msgid "Connection type"
-msgstr ""
+msgstr "Tipo de Conexión"
 
 #: src/components/fullNode/FullNodeConnections.tsx:73
 msgid "Connections"
-msgstr ""
+msgstr "Conexiones"
 
 #: src/electron/main.tsx:330
 msgid "Contribute on GitHub"
-msgstr ""
+msgstr "Contribuir en GitHub"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:22
 msgid "Copied"
-msgstr ""
+msgstr "Copiado"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:461
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
@@ -390,11 +390,11 @@ msgstr ""
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
 #: src/components/wallet/standard/WalletStandard.tsx:377
 msgid "Copy"
-msgstr ""
+msgstr "Copiar"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:23
 msgid "Copy to Clipboard"
-msgstr ""
+msgstr "Copiar al Portapapeles"
 
 #: src/components/backup/BackupCreate.tsx:70
 #: src/components/wallet/create/createExistingColouredCoin.jsx:141
@@ -402,7 +402,7 @@ msgstr ""
 #: src/components/wallet/create/createRLAdmin.jsx:333
 #: src/components/wallet/create/createRLUser.jsx:103
 msgid "Create"
-msgstr ""
+msgstr "Crear"
 
 #: src/components/wallet/create/WalletCreate.jsx:308
 msgid "Create DID wallet"
