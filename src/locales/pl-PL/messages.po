@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-04 16:50\n"
+"PO-Revision-Date: 2021-05-10 09:04\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr "Chciałbyś dokładniej przejrzeć bloki Chia? Sprawdź otwarte oprogramowanie eksploratora bloków <0>Chia Explorer</0>."
+msgstr "*Chcesz dowiedzieć się więcej o blokchainie Chia? Sprawdź <0>Chia Explorer</0> zbudowany przez programistę otwartego oprogramowania."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -28,7 +28,7 @@ msgstr "Chciałbyś dokładniej przejrzeć bloki Chia? Sprawdź otwarte oprogram
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "128 buckets is recommended"
-msgstr "Zalecane jest 128 wiader"
+msgstr "Zalecane jest 128 Bucketów"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -116,7 +116,7 @@ msgstr "Ilość ({cc_unit})"
 
 #: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "Amount For Initial Coin"
-msgstr "Kwota na monetę inicjującą"
+msgstr "Kwota Na Monetę Początkową"
 
 #: src/components/plot/PlotAction.tsx:30
 #: src/components/plot/queue/PlotQueueActions.tsx:31
@@ -165,7 +165,7 @@ msgstr "Poniżej są aktualne wyzwania blokowe. Możesz mieć proof of space na 
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "Best estimate over last 24 hours"
-msgstr "Najlepsza estymacja dla ostatnich 24 godzin"
+msgstr "Najlepsza ocena z ostatnich 24 godzin"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 #~ msgid "Best estimate over last 5 hours"
@@ -184,11 +184,11 @@ msgstr "Test bloku"
 
 #: src/components/block/Block.jsx:230
 msgid "Block VDF Iterations"
-msgstr "Iteracje bloku VDF"
+msgstr "Powtórzenia bloku VDF"
 
 #: src/components/block/Block.jsx:311
 msgid "Block at height {0} in the Chia blockchain"
-msgstr "Blok na poziomie {0} w łańcuchu bloków Chia"
+msgstr "Blok na poziomie {0} w blockchainie Chia"
 
 #: src/components/fullNode/FullNode.jsx:331
 #~ msgid "Block hash"
@@ -196,11 +196,11 @@ msgstr "Blok na poziomie {0} w łańcuchu bloków Chia"
 
 #: src/components/block/Block.jsx:129
 msgid "Block with hash {headerHash}"
-msgstr "Blok o hashu {headerHash}"
+msgstr "Blok z haszem {headerHash}"
 
 #: src/components/block/Block.jsx:158
 msgid "Block with hash {headerHash} does not exists."
-msgstr "Blok o hashu {headerHash} nie istnieje."
+msgstr "Blok o haszu {headerHash} nie istnieje."
 
 #: src/components/fullNode/FullNode.jsx:298
 msgid "Blocks"
@@ -218,7 +218,7 @@ msgstr "Przeglądaj"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:50
 msgid "But you are currently farming <0/>"
-msgstr "Obecnie farmisz <0/>"
+msgstr "Obecnie farmisz  <0/>"
 
 #: src/components/trading/CreateOffer.jsx:181
 #: src/components/trading/TradesTable.tsx:31
@@ -236,7 +236,7 @@ msgstr "Portfel CC"
 
 #: src/components/selectKey/SelectKey.tsx:89
 msgid "Can be backed up to mnemonic seed"
-msgstr "Kopia zapasowa może być zrobiona za pomocą ziarna mnemonicznego"
+msgstr "Można przywróćic do nasiona mnemonicznego"
 
 #: src/components/core/components/ConfirmDialog/ConfirmDialog.tsx:50
 #: src/components/farm/FarmManageFarmingRewards.tsx:102
@@ -253,7 +253,7 @@ msgstr "Zatrzymaj i wydaj"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "Ostrożnie, usunięcie tych działek będzie nieodwracalne. Sprawdź czy dyski są poprawnie podłączone."
+msgstr "Ostrożnie, usunięcie tych działek jest nieodwracalne. Sprawdź czy dyski są poprawnie podłączone."
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:13
 msgid "Challenge"
@@ -1845,7 +1845,7 @@ msgstr "Nieznany"
 #: src/components/wallet/create/createRLAdmin.jsx:307
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:300
 msgid "User Pubkey"
-msgstr "Klucz Publiczny Użytkownika"
+msgstr "Publiczny Klucz Użytkownika"
 
 #: src/components/fullNode/FullNode.jsx:185
 msgid "VDF Sub Slot Iterations"
@@ -2005,7 +2005,7 @@ msgstr "Twoje połączenie pełnego węzła"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:56
 msgid "Your Harvester Network"
-msgstr "Twoja sieć żniwiarza"
+msgstr "Twoja sieć Żniwiarza"
 
 #: src/util/getDescriptiveError.ts:4
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -2062,4 +2062,5 @@ msgstr "{currencyCode} Całkowita ilość wydobytego Chia"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
-msgstr "{currencyCode} Opłaty transakcyjne użytkownika"
+msgstr "{currencyCode} Opłaty za transakcje użytkownika"
+
