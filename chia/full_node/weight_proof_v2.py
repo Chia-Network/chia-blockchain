@@ -183,7 +183,7 @@ class WeightProofHandlerV2:
             if ses_height > tip_height:
                 break
             ses = self.blockchain.get_ses(ses_height)
-            log.info(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height}  ")
+            log.debug(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height}  ")
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
 
