@@ -8,7 +8,7 @@ msgstr ""
 "Language: da_DK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:12\n"
+"PO-Revision-Date: 2021-05-10 21:11\n"
 "Last-Translator: \n"
 "Language-Team: Danish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1066,7 +1066,7 @@ msgstr "Bud Oprettet"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "I gennemsnit er der et minut mellem hver transaktionsblok. Medmindre der er overbelastning, kan du forvente, at din transaktion bliver inkluderet på mindre end et minut."
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
