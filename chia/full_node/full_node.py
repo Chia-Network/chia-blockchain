@@ -1263,6 +1263,10 @@ class FullNode:
             # TODO: pre-validate VDFs outside of lock
             validate_result = await self.blockchain.validate_unfinished_block(block)
             if validate_result.error is not None:
+                if validate_result.error == Err.COIN_AMOUNT_NEGATIVE.value:
+                    # TODO: remove in the future, hotfix for 1.1.5 peers to not disconnect older peers
+                    self.log.error(f"Consensus error {validate_result.error}, not disconnecting")
+                    return
                 raise ConsensusError(Err(validate_result.error))
 
         assert validate_result.required_iters is not None

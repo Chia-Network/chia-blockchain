@@ -260,6 +260,12 @@ class MempoolManager:
         addition_amount = uint64(0)
         # Check additions for max coin amount
         for coin in additions:
+            if coin.amount < 0:
+                return (
+                    None,
+                    MempoolInclusionStatus.FAILED,
+                    Err.COIN_AMOUNT_NEGATIVE,
+                )
             if coin.amount > self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
