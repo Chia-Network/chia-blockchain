@@ -16,6 +16,14 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 
 @dataclass(frozen=True)
 @streamable
+class PoolThreshold(Streamable):
+    pool_contract_puzzle_hash: bytes32
+    difficulty: uint64
+    sub_slot_iters: uint64
+
+
+@dataclass(frozen=True)
+@streamable
 class HarvesterHandshake(Streamable):
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
@@ -29,6 +37,7 @@ class NewSignagePointHarvester(Streamable):
     sub_slot_iters: uint64
     signage_point_index: uint8
     sp_hash: bytes32
+    pool_thresholds: List[PoolThreshold]
 
 
 @dataclass(frozen=True)

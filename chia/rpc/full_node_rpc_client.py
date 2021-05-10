@@ -1,9 +1,11 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from chia.consensus.block_record import BlockRecord
+from chia.full_node.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
@@ -148,5 +150,28 @@ class FullNodeRpcClient(RpcClient):
         try:
             response = await self.fetch("get_mempool_item_by_tx_id", {"tx_id": tx_id.hex()})
             return response["mempool_item"]
+        except Exception:
+            return None
+
+    async def get_recent_signage_point_or_eos(
+        self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
+    ) -> Optional[Any]:
+        try:
+            if sp_hash is not None:
+                assert challenge_hash is None
+                response = await self.fetch("get_recent_signage_point_or_eos", {"sp_hash": sp_hash.hex()})
+                return {
+                    "signage_point": SignagePoint.from_json_dict(response["signage_point"]),
+                    "time_received": response["time_received"],
+                    "reverted": response["reverted"],
+                }
+            else:
+                assert challenge_hash is not None
+                response = await self.fetch("get_recent_signage_point_or_eos", {"challenge_hash": challenge_hash.hex()})
+                return {
+                    "signage_point": EndOfSubSlotBundle.from_json_dict(response["eos"]),
+                    "time_received": response["time_received"],
+                    "reverted": response["reverted"],
+                }
         except Exception:
             return None

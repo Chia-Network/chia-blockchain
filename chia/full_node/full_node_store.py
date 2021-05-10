@@ -23,6 +23,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import CompressorArg
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +62,10 @@ class FullNodeStore:
     # This stores the time that each key was added to the future cache, so we can clear old keys
     future_cache_key_times: Dict[bytes32, int]
 
+    # These recent caches are for pooling support
+    recent_signage_points: LRUCache
+    recent_eos: LRUCache
+
     # Partial hashes of unfinished blocks we are requesting
     requesting_unfinished_blocks: Set[bytes32]
 
@@ -80,6 +85,8 @@ class FullNodeStore:
         self.future_eos_cache = {}
         self.future_sp_cache = {}
         self.future_ip_cache = {}
+        self.recent_signage_points = LRUCache(500)
+        self.recent_eos = LRUCache(50)
         self.requesting_unfinished_blocks = set()
         self.previous_generator = None
         self.future_cache_key_times = {}
@@ -426,6 +433,9 @@ class FullNodeStore:
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
+        new_cc_hash = eos.challenge_chain.challenge_chain_end_of_slot_vdf.get_hash()
+        self.recent_eos.put(new_cc_hash, (eos, time.time()))
+
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
         for ip in self.future_ip_cache.get(eos.reward_chain.get_hash(), []):
             new_ips.append(ip)
@@ -566,6 +576,7 @@ class FullNodeStore:
                         return False
 
                 sp_arr[index] = signage_point
+                self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
                 return True
         self.add_to_future_sp(signage_point, index)
         return False
