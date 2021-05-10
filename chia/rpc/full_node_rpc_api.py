@@ -390,7 +390,7 @@ class FullNodeRpcApi:
             "status": status.name,
         }
     
-        async def get_coin_id(self, request: Dict):
+    async def get_coin_id(self, request: Dict):
         """
         Returns coin id by parent_coin_info puzzle_hash and amount
         """
@@ -401,10 +401,14 @@ class FullNodeRpcApi:
         
         if "amount" not in request:
             raise ValueError("amount not in request")
-        if not isinstance(request["amount"], int):
+        if not isinstance(request["amount"], uint64):
             raise ValueError("An integer amount or fee is required (too many decimals)")
-
-        return {"coin_id": Coin(hexstr_to_bytes(request["parent_coin_info"]), hexstr_to_bytes(request["puzzle_hash"]), int(request["amount"])).name()}
+        parent_coin_info = hexstr_to_bytes(request["parent_coin_info"])
+        puzzle_hash = hexstr_to_bytes(request["puzzle_hash"])
+        amount = uint64(request["amount"])
+        return {
+            "coin_id": Coin(parent_coin_info, puzzle_hash, amount).name(),
+        }
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
