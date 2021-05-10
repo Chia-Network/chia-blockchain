@@ -63,7 +63,7 @@ class WeightProofHandlerV2:
             return None
 
         if tip_rec.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-            log.debug("chain to short for weight proof")
+            log.debug("need at least 3 sub epochs for weight proof")
             return None
 
         async with self.lock:
