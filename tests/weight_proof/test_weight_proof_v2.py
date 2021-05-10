@@ -154,14 +154,14 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
 
 class TestWeightProof:
     @pytest.mark.asyncio
-    async def test_weight_proof_map_summaries_1(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(default_400_blocks)
-        await _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks, summaries)
-
-    @pytest.mark.asyncio
-    async def test_weight_proof_map_summaries_2(self, default_1000_blocks):
+    async def test_weight_proof_map_summaries_1(self, default_1000_blocks):
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(default_1000_blocks)
         await _test_map_summaries(default_1000_blocks, header_cache, height_to_hash, sub_blocks, summaries)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_map_summaries_2(self, default_10000_blocks):
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(default_10000_blocks)
+        await _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, summaries)
 
     @pytest.mark.asyncio
     async def test_weight_proof_summaries_1000_blocks(self, default_1000_blocks):
