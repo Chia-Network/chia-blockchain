@@ -433,7 +433,7 @@ class FullNodeStore:
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
-        new_cc_hash = eos.challenge_chain.challenge_chain_end_of_slot_vdf.get_hash()
+        new_cc_hash = eos.get_hash()
         self.recent_eos.put(new_cc_hash, (eos, time.time()))
 
         new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
@@ -576,6 +576,7 @@ class FullNodeStore:
                         return False
 
                 sp_arr[index] = signage_point
+                log.warning(f"Putting into cache: {signage_point.cc_vdf.output.get_hash()}")
                 self.recent_signage_points.put(signage_point.cc_vdf.output.get_hash(), (signage_point, time.time()))
                 return True
         self.add_to_future_sp(signage_point, index)
@@ -738,6 +739,10 @@ class FullNodeStore:
         self.future_eos_cache.pop(peak.reward_infusion_new_challenge, [])
         self.future_sp_cache.pop(peak.reward_infusion_new_challenge, [])
         self.future_ip_cache.pop(peak.reward_infusion_new_challenge, [])
+
+        for eos, _, _ in self.finished_sub_slots:
+            if eos is not None:
+                self.recent_eos.put(eos.get_hash(), (eos, time.time()))
 
         return new_eos, new_sps, new_ips
 
