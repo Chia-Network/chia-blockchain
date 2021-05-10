@@ -92,12 +92,12 @@ msgstr "新增耕地資料夾"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:373
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Address"
 msgstr "位址"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:321
+#: src/components/wallet/standard/WalletStandard.tsx:323
 msgid "Address / Puzzle hash"
 msgstr "位址 / 拼圖雜湊值"
 
@@ -106,7 +106,7 @@ msgstr "位址 / 拼圖雜湊值"
 #: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:331
+#: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Amount"
 msgstr "數量"
 
@@ -388,7 +388,7 @@ msgstr "已複製"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:377
+#: src/components/wallet/standard/WalletStandard.tsx:379
 msgid "Copy"
 msgstr "複製"
 
@@ -636,7 +636,7 @@ msgstr "開啟失敗（無效耕地）"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:344
+#: src/components/wallet/standard/WalletStandard.tsx:346
 msgid "Farm"
 msgstr "耕種"
 
@@ -683,7 +683,7 @@ msgstr "耕種狀態"
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:336
+#: src/components/wallet/standard/WalletStandard.tsx:338
 msgid "Fee"
 msgstr "費用"
 
@@ -752,7 +752,7 @@ msgstr "全畫面"
 msgid "Generate New Colour"
 msgstr "生成新顏色"
 
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "層及式確定性金鑰是一種公鑰/私鑰格式，一個私鑰可以具有幾乎無限數量的不同公鑰（以此類推，同錢包接收地址），最終所有這些公鑰都將回朔於一個私鑰使用／花用。"
 
@@ -778,7 +778,7 @@ msgstr "高度"
 msgid "Help"
 msgstr "幫助"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:39
 msgid "Help translate"
 msgstr "協助翻譯"
 
@@ -966,7 +966,7 @@ msgstr "網路名稱"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:387
+#: src/components/wallet/standard/WalletStandard.tsx:389
 msgid "New Address"
 msgstr "新位址"
 
@@ -1063,6 +1063,10 @@ msgstr "提案"
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
 msgstr "已建立提案"
+
+#: src/components/wallet/standard/WalletStandard.tsx:312
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1354,7 +1358,7 @@ msgid "Rate Limited User Wallet Setup"
 msgstr "速率限制使用者錢包設定"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "Receive Address"
 msgstr "接收位址"
 
@@ -1470,7 +1474,7 @@ msgstr "賣出"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:349
+#: src/components/wallet/standard/WalletStandard.tsx:351
 msgid "Send"
 msgstr "發送"
 
@@ -2063,4 +2067,3 @@ msgstr "{currencyCode} 已收耕 Chia"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} 使用者交易費用"
-

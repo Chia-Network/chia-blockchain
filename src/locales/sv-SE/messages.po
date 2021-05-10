@@ -92,12 +92,12 @@ msgstr "Lägg till mapp med plottar"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:405
 #: src/components/wallet/coloured/WalletColoured.tsx:457
-#: src/components/wallet/standard/WalletStandard.tsx:373
+#: src/components/wallet/standard/WalletStandard.tsx:375
 msgid "Address"
 msgstr "Adress"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:748
-#: src/components/wallet/standard/WalletStandard.tsx:321
+#: src/components/wallet/standard/WalletStandard.tsx:323
 msgid "Address / Puzzle hash"
 msgstr "Adress/pusselhash"
 
@@ -106,7 +106,7 @@ msgstr "Adress/pusselhash"
 #: src/components/wallet/WalletHistory.tsx:49
 #: src/components/wallet/create/createNewColouredCoin.jsx:125
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:770
-#: src/components/wallet/standard/WalletStandard.tsx:331
+#: src/components/wallet/standard/WalletStandard.tsx:333
 msgid "Amount"
 msgstr "Belopp"
 
@@ -388,7 +388,7 @@ msgstr "Kopierad"
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:314
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:442
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:505
-#: src/components/wallet/standard/WalletStandard.tsx:377
+#: src/components/wallet/standard/WalletStandard.tsx:379
 msgid "Copy"
 msgstr "Kopiera"
 
@@ -636,7 +636,7 @@ msgstr "Det gick inte att öppna (ogiltiga plottar)"
 
 #: src/components/dashboard/DashboardSideBar.tsx:26
 #: src/components/wallet/coloured/WalletColoured.tsx:430
-#: src/components/wallet/standard/WalletStandard.tsx:344
+#: src/components/wallet/standard/WalletStandard.tsx:346
 msgid "Farm"
 msgstr "Odling"
 
@@ -683,7 +683,7 @@ msgstr "Odlingsstatus"
 #: src/components/wallet/create/createRLAdmin.jsx:266
 #: src/components/wallet/create/createRLAdmin.jsx:298
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:783
-#: src/components/wallet/standard/WalletStandard.tsx:336
+#: src/components/wallet/standard/WalletStandard.tsx:338
 msgid "Fee"
 msgstr "Avgift"
 
@@ -752,7 +752,7 @@ msgstr "Helskärm"
 msgid "Generate New Colour"
 msgstr "Skapa ny färg"
 
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "HD eller Hierarkiska Deterministiska nycklar är en typ av schema med publik nyckel/privat nyckel där en privat nyckel kan ha ett nästan oändligt antal olika publika nycklar (och därigenom mottagaradresser i plånboken) som alla i slutänden kan härledas tillbaka till och är spenderbara med en och samma privata nyckel."
 
@@ -778,7 +778,7 @@ msgstr "Höjd"
 msgid "Help"
 msgstr "Hjälp"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:42
+#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:39
 msgid "Help translate"
 msgstr "Hjälp till med översättning"
 
@@ -966,7 +966,7 @@ msgstr "Nätverksnamn"
 #~ msgstr "Network not launched yet, waiting for genesis challenge!"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:471
-#: src/components/wallet/standard/WalletStandard.tsx:387
+#: src/components/wallet/standard/WalletStandard.tsx:389
 msgid "New Address"
 msgstr "Ny adress"
 
@@ -1063,6 +1063,10 @@ msgstr "Erbjudande"
 #: src/components/trading/TradingOverview.jsx:424
 msgid "Offers Created"
 msgstr "Skapade erbjudanden"
+
+#: src/components/wallet/standard/WalletStandard.tsx:312
+msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+msgstr ""
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
@@ -1354,7 +1358,7 @@ msgid "Rate Limited User Wallet Setup"
 msgstr "Konfiguration av spenderbegränsad användarplånbok"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:453
-#: src/components/wallet/standard/WalletStandard.tsx:367
+#: src/components/wallet/standard/WalletStandard.tsx:369
 msgid "Receive Address"
 msgstr "Mottagaradress"
 
@@ -1470,7 +1474,7 @@ msgstr "Sälj"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:435
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:798
-#: src/components/wallet/standard/WalletStandard.tsx:349
+#: src/components/wallet/standard/WalletStandard.tsx:351
 msgid "Send"
 msgstr "Skicka"
 
@@ -1973,7 +1977,8 @@ msgstr "Ja"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
+msgstr ""
+"Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
@@ -2064,4 +2069,3 @@ msgstr "{currencyCode} Totalt antal Chia som odlats"
 #: src/components/farm/card/FarmCardUserFees.tsx:17
 msgid "{currencyCode} User Transaction Fees"
 msgstr "{currencyCode} Transaktionsavgifter för användare"
-
