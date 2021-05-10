@@ -225,7 +225,7 @@ class WalletNode:
 
     def _pending_tx_handler(self):
         if self.wallet_state_manager is None or self.backup_initialized is False:
-            return
+            return None
         asyncio.create_task(self._resend_queue())
 
     async def _action_messages(self) -> List[Message]:
@@ -254,7 +254,7 @@ class WalletNode:
             or self.wallet_state_manager is None
             or self.backup_initialized is None
         ):
-            return
+            return None
 
         for msg, sent_peers in await self._messages_to_resend():
             if (
@@ -263,7 +263,7 @@ class WalletNode:
                 or self.wallet_state_manager is None
                 or self.backup_initialized is None
             ):
-                return
+                return None
             full_nodes = self.server.get_full_node_connections()
             for peer in full_nodes:
                 if peer.peer_node_id in sent_peers:
@@ -277,7 +277,7 @@ class WalletNode:
                 or self.wallet_state_manager is None
                 or self.backup_initialized is None
             ):
-                return
+                return None
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
@@ -316,7 +316,7 @@ class WalletNode:
 
     async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
-            return
+            return None
         messages_peer_ids = await self._messages_to_resend()
         for msg, peer_ids in messages_peer_ids:
             if peer.peer_node_id in peer_ids:
@@ -358,7 +358,7 @@ class WalletNode:
 
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
         if self.wallet_state_manager is None:
-            return
+            return None
         header_block_records: List[HeaderBlockRecord] = []
         async with self.wallet_state_manager.blockchain.lock:
             for block in header_blocks:
@@ -394,17 +394,17 @@ class WalletNode:
                 elif result == ReceiveBlockResult.INVALID_BLOCK:
                     self.log.info(f"Invalid block from peer: {peer.get_peer_info()} {error}")
                     await peer.close()
-                    return
+                    return None
                 else:
                     self.log.debug(f"Result: {result}")
 
     async def new_peak_wallet(self, peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self.wallet_state_manager is None:
-            return
+            return None
 
         curr_peak = self.wallet_state_manager.blockchain.get_peak()
         if curr_peak is not None and curr_peak.weight >= peak.weight:
-            return
+            return None
         if self.new_peak_lock is None:
             self.new_peak_lock = asyncio.Lock()
         async with self.new_peak_lock:
@@ -412,7 +412,7 @@ class WalletNode:
             response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
 
             if response is None or not isinstance(response, RespondBlockHeader) or response.header_block is None:
-                return
+                return None
 
             header_block = response.header_block
 
@@ -427,9 +427,9 @@ class WalletNode:
                     request_prev = wallet_protocol.RequestBlockHeader(top.height - 1)
                     response_prev: Optional[RespondBlockHeader] = await peer.request_block_header(request_prev)
                     if response_prev is None:
-                        return
+                        return None
                     if not isinstance(response_prev, RespondBlockHeader):
-                        return
+                        return None
                     prev_head = response_prev.header_block
                     blocks.append(prev_head)
                     top = prev_head
@@ -440,16 +440,16 @@ class WalletNode:
                 # Request weight proof
                 # Sync if PoW validates
                 if self.wallet_state_manager.sync_mode:
-                    return
+                    return None
                 weight_request = RequestProofOfWeight(header_block.height, header_block.header_hash)
                 weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
                     weight_request, timeout=360
                 )
                 if weight_proof_response is None:
-                    return
+                    return None
                 weight_proof = weight_proof_response.wp
                 if self.wallet_state_manager is None:
-                    return
+                    return None
                 if self.server is not None and self.server.is_trusted_peer(peer, self.config["trusted_peers"]):
                     valid, fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point_no_validations(
                         weight_proof
@@ -478,11 +478,11 @@ class WalletNode:
 
     async def check_new_peak(self) -> None:
         if self.wallet_state_manager is None:
-            return
+            return None
 
         current_peak: Optional[BlockRecord] = self.wallet_state_manager.blockchain.get_peak()
         if current_peak is None:
-            return
+            return None
         potential_peaks: List[
             Tuple[bytes32, HeaderBlock]
         ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
@@ -490,7 +490,7 @@ class WalletNode:
             if current_peak.weight < block.weight:
                 await asyncio.sleep(5)
                 self.start_sync()
-                return
+                return None
 
     async def sync_job(self) -> None:
         while True:
@@ -521,7 +521,7 @@ class WalletNode:
         up to the LCA of the blockchain.
         """
         if self.wallet_state_manager is None or self.backup_initialized is False or self.server is None:
-            return
+            return None
 
         highest_weight: uint128 = uint128(0)
         peak_height: uint32 = uint32(0)
@@ -539,16 +539,16 @@ class WalletNode:
                 peak = potential_peak_block
 
         if peak_height is None or peak_height == 0:
-            return
+            return None
 
         if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
             self.log.info("Not performing sync, already caught up.")
-            return
+            return None
 
         peers: List[WSChiaConnection] = self.server.get_full_node_connections()
         if len(peers) == 0:
             self.log.info("No peers to sync to")
-            return
+            return None
 
         async with self.wallet_state_manager.blockchain.lock:
             fork_height = None

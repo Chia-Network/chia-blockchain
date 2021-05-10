@@ -28,7 +28,7 @@ async def time_out_assert(timeout: int, function, value, arg=None):
         else:
             function_result = await function(arg)
         if value == function_result:
-            return
+            return None
         await asyncio.sleep(2)
     assert False
 

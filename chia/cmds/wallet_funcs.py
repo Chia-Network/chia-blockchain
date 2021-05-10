@@ -58,12 +58,12 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
                 break
             print_transaction(txs[i + j], verbose=(args["verbose"] > 0), name=name)
         if i + num_per_screen >= len(txs):
-            return
+            return None
         print("Press q to quit, or c to continue")
         while True:
             entered_key = sys.stdin.read(1)
             if entered_key == "q":
-                return
+                return None
             elif entered_key == "c":
                 break
 
@@ -86,7 +86,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
             print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
-            return
+            return None
 
     print("Transaction not yet submitted to nodes")
     print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
@@ -214,7 +214,7 @@ async def execute_with_wallet(wallet_rpc_port: int, fingerprint: int, extra_para
         if wallet_client_f is None:
             wallet_client.close()
             await wallet_client.await_closed()
-            return
+            return None
         wallet_client, fingerprint = wallet_client_f
         await function(extra_params, wallet_client, fingerprint)
     except KeyboardInterrupt:

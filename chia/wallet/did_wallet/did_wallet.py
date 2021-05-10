@@ -328,7 +328,7 @@ class DIDWallet:
             f.close()
         except Exception as e:
             raise e
-        return
+        return None
 
     async def load_backup(self, filename: str):
         try:
@@ -412,7 +412,7 @@ class DIDWallet:
                         )
                         await self.save_info(did_info, False)
 
-            return
+            return None
         except Exception as e:
             raise e
 

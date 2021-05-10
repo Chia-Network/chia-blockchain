@@ -55,7 +55,7 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
         find_duplicate_plot_IDs(all_filenames)
 
     if num == 0:
-        return
+        return None
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
@@ -113,10 +113,10 @@ def check_plots(root_path, num, challenge_start, grep_string, list_duplicates, d
                         caught_exception = True
             except KeyboardInterrupt:
                 log.warning("Interrupted, closing")
-                return
+                return None
             except SystemExit:
                 log.warning("System is shutting down.")
-                return
+                return None
             except Exception as e:
                 log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                 caught_exception = True

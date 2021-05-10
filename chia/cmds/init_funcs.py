@@ -51,7 +51,7 @@ def check_keys(new_root: Path) -> None:
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
-        return
+        return None
 
     config: Dict = load_config(new_root, "config.yaml")
     pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]

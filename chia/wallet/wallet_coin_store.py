@@ -113,7 +113,7 @@ class WalletCoinStore:
     async def set_spent(self, coin_name: bytes32, height: uint32):
         current: Optional[WalletCoinRecord] = await self.get_coin_record(coin_name)
         if current is None:
-            return
+            return None
 
         spent: WalletCoinRecord = WalletCoinRecord(
             current.coin,

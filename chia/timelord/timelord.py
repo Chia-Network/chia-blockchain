@@ -140,7 +140,7 @@ class Timelord:
                 await self.lock.acquire()
                 if chain not in self.chain_type_to_stream:
                     log.warning(f"Trying to stop a crashed chain: {chain}.")
-                    return
+                    return None
             stop_ip, _, stop_writer = self.chain_type_to_stream[chain]
             self.potential_free_clients.append((stop_ip, time.time()))
             stop_writer.write(b"010")
@@ -370,7 +370,7 @@ class Timelord:
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.SIGNAGE_POINT
         ]
         if len(signage_iters) == 0:
-            return
+            return None
         to_remove = []
         for potential_sp_iters, signage_point_index in self.signage_point_iters:
             if potential_sp_iters not in signage_iters or potential_sp_iters != iter_to_look_for:
@@ -439,7 +439,7 @@ class Timelord:
 
     async def _check_for_new_ip(self, iter_to_look_for: uint64):
         if len(self.unfinished_blocks) == 0:
-            return
+            return None
         infusion_iters = [
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.INFUSION_POINT
         ]
@@ -494,7 +494,7 @@ class Timelord:
                             icc_proof = proof
                     if cc_info is None or cc_proof is None or rc_info is None or rc_proof is None:
                         log.error(f"Insufficient VDF proofs for infusion point ch: {challenge} iterations:{iteration}")
-                        return
+                        return None
 
                     rc_challenge = self.last_state.get_challenge(Chain.REWARD_CHAIN)
                     if rc_info.challenge != rc_challenge:
@@ -514,7 +514,7 @@ class Timelord:
 
                     if not self.last_state.can_infuse_block(overflow):
                         log.warning("Too many blocks, or overflow in new epoch, cannot infuse, discarding")
-                        return
+                        return None
 
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
@@ -537,7 +537,7 @@ class Timelord:
                         and not self.last_state.state_type == StateType.FIRST_SUB_SLOT
                     ):
                         # We don't know when the last block was, so we can't make peaks
-                        return
+                        return None
 
                     sp_total_iters = (
                         ip_total_iters
@@ -561,7 +561,7 @@ class Timelord:
                     if height < 5:
                         # Don't directly update our state for the first few blocks, because we cannot validate
                         # whether the pre-farm is correct
-                        return
+                        return None
 
                     new_reward_chain_block = RewardChainBlock(
                         uint128(self.last_state.get_weight() + block.difficulty),
@@ -638,9 +638,9 @@ class Timelord:
             iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.END_OF_SUBSLOT
         ]
         if len(left_subslot_iters) == 0:
-            return
+            return None
         if left_subslot_iters[0] != iter_to_look_for:
-            return
+            return None
         chains_finished = [
             (chain, info, proof)
             for chain, info, proof, label in self.proofs_finished
@@ -674,7 +674,7 @@ class Timelord:
                 assert rc_challenge is not None
                 log.warning(f"Do not have correct challenge {rc_challenge.hex()} has" f" {rc_vdf.challenge}")
                 # This proof is on an outdated challenge, so don't use it
-                return
+                return None
             log.debug("Collected end of subslot vdfs.")
             self.iters_finished.add(iter_to_look_for)
             self.last_active_time = time.time()
@@ -875,10 +875,10 @@ class Timelord:
                 async with self.lock:
                     self.vdf_failures.append((chain, proof_label))
                     self.vdf_failures_count += 1
-                return
+                return None
 
             if ok.decode() != "OK":
-                return
+                return None
 
             log.debug("Got handshake with VDF client.")
             if not self.sanitizer_mode:

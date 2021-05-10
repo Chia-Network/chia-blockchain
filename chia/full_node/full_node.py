@@ -360,19 +360,19 @@ class FullNode:
                 if await self.short_sync_backtrack(
                     peer, curr_peak_height, request.height, request.unfinished_reward_block_hash
                 ):
-                    return
+                    return None
 
             if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 # TODO(almog): fix weight proofs so they work at the beginning as well
                 self.log.debug("Doing batch sync, no backup")
                 await self.short_sync_batch(peer, uint32(0), request.height)
-                return
+                return None
 
             if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
-                    return
+                    return None
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
@@ -464,7 +464,7 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
         if self.initialized is False:
-            return
+            return None
 
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it (Only if we are currently synced)
@@ -545,14 +545,14 @@ class FullNode:
             - Disconnect peers that provide invalid blocks or don't have the blocks
         """
         if self.weight_proof_handler is None:
-            return
+            return None
         # Ensure we are only syncing once and not double calling this method
         if self.sync_store.get_sync_mode():
-            return
+            return None
 
         if self.sync_store.get_long_sync():
             self.log.debug("already in long sync")
-            return
+            return None
 
         self.sync_store.set_long_sync(True)
         self.log.debug("long sync started")
@@ -566,7 +566,7 @@ class FullNode:
                 peaks = [tup[0] for tup in self.sync_store.get_peak_of_each_peer().values()]
                 if len(self.sync_store.get_peers_that_have_peak(peaks)) < 3:
                     if self._shut_down:
-                        return
+                        return None
                     await asyncio.sleep(0.1)
 
             self.log.info(f"Collected a total of {len(peaks)} peaks.")
@@ -664,7 +664,7 @@ class FullNode:
             self.log.error(f"Error with syncing: {type(e)}{tb}")
         finally:
             if self._shut_down:
-                return
+                return None
             await self._finish_sync()
 
     async def sync_from_fork_point(
@@ -830,7 +830,7 @@ class FullNode:
         self.sync_store.set_sync_mode(False)
         self._state_changed("sync_mode")
         if self.server is None:
-            return
+            return None
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         async with self.blockchain.lock:
@@ -1217,27 +1217,27 @@ class FullNode:
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.debug("Received a disconnected unfinished block")
-            return
+            return None
 
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
         # foliages for the same trunk). This is intentional, to prevent DOS attacks.
         # Note that it does not require that this block was successfully processed
         if self.full_node_store.seen_unfinished_block(block.get_hash()):
-            return
+            return None
 
         block_hash = block.reward_chain_block.get_hash()
 
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
         # hash, return
         if self.full_node_store.get_unfinished_block(block_hash) is not None:
-            return
+            return None
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             if block.total_iters < peak.sp_total_iters(self.constants):
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
-                return
+                return None
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
             prev_b = None
@@ -1257,7 +1257,7 @@ class FullNode:
         if num_blocks_in_ss > self.constants.MAX_SUB_SLOT_BLOCKS:
             # TODO: potentially allow overflow blocks here, which count for the next slot
             self.log.warning("Too many blocks added, not adding block")
-            return
+            return None
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
@@ -1269,7 +1269,7 @@ class FullNode:
 
         # Perform another check, in case we have already concurrently added the same unfinished block
         if self.full_node_store.get_unfinished_block(block_hash) is not None:
-            return
+            return None
 
         if block.prev_header_hash == self.constants.GENESIS_CHALLENGE:
             height = uint32(0)
@@ -1311,7 +1311,7 @@ class FullNode:
                     rc_prev = self.constants.GENESIS_CHALLENGE
                 else:
                     self.log.warning(f"Do not have sub slot {block.reward_chain_block.pos_ss_cc_challenge_hash}")
-                    return
+                    return None
             else:
                 rc_prev = res[0].reward_chain.get_hash()
         else:
@@ -1719,7 +1719,7 @@ class FullNode:
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
-            return
+            return None
         async with self.blockchain.lock:
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
@@ -1735,7 +1735,7 @@ class FullNode:
             return False
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
         if header_block is None:
-            return
+            return None
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if await self._needs_compact_proof(request.vdf_info, header_block, field_vdf):
             peer_request = full_node_protocol.RequestCompactVDF(
@@ -1748,7 +1748,7 @@ class FullNode:
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: ws.WSChiaConnection):
         header_block = await self.blockchain.get_header_block_by_height(request.height, request.header_hash)
         if header_block is None:
-            return
+            return None
         vdf_proof: Optional[VDFProof] = None
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if field_vdf == CompressibleVDFField.CC_EOS_VDF:
@@ -1776,7 +1776,7 @@ class FullNode:
             vdf_proof = header_block.challenge_chain_ip_proof
         if vdf_proof is None or vdf_proof.witness_type > 0 or not vdf_proof.normalized_to_identity:
             self.log.error(f"{peer} requested compact vdf we don't have, height: {request.height}.")
-            return
+            return None
         compact_vdf = full_node_protocol.RespondCompactVDF(
             request.height,
             request.header_hash,
@@ -1792,10 +1792,10 @@ class FullNode:
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
         ):
-            return
+            return None
         async with self.blockchain.lock:
             if self.blockchain.seen_compact_proofs(request.vdf_info, request.height):
-                return
+                return None
             await self._replace_proof(request.vdf_info, request.vdf_proof, request.height, field_vdf)
         msg = make_msg(
             ProtocolMessageTypes.new_compact_vdf,
@@ -1812,7 +1812,7 @@ class FullNode:
             while not self._shut_down:
                 while self.sync_store.get_sync_mode():
                     if self._shut_down:
-                        return
+                        return None
                     await asyncio.sleep(30)
 
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
