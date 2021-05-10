@@ -4,6 +4,7 @@
   ; RELATIVE_LOCK_HEIGHT is how long it takes to leave
   ; ESCAPE_MODE_PUZHASH is the puzzle_hash you'll go to when you iniate the leaving process
   ; P2_SINGLETON_PUZHASH is the puzzlehash for your pay to singleton puzzle
+  ; PUBKEY is the farmer pubkey which authorises an escape attempt
 
   ; spend_type is: 0 for absorbing money, 1 to escape
 
