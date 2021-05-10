@@ -1,9 +1,13 @@
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
+POOL_COMMITED_MOD = load_clvm("pool_member_innerpuz.clvm")
+POOL_ESCAPING_MOD = load_clvm("pool_escaping_innerpuz.clvm")
 
 
 def test_only_odd_coins():
@@ -94,3 +98,39 @@ def test_p2_singleton():
         INFINITE_COST, Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
     )
     assert result.first().rest().first().as_atom() == expected_announcement
+
+
+def test_pool_puzzles():
+    singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
+    genesis_id = 0xCAFEF00D
+
+    genesis_challenge = bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
+    block_height = 101  # 0x65
+    pool_reward_parent_id = bytes32(genesis_challenge[:16] + block_height.to_bytes(16, "big"))
+
+    p2_singleton_full = P2_SINGLETON_MOD.curry(
+        singleton_mod_hash, Program.to(singleton_mod_hash).get_tree_hash(), genesis_id
+    )
+
+    p2_singleton_full_puzhash = p2_singleton_full.get_tree_hash()
+    p2_singlton_coin_amount = 2000000000
+    p2_singleton_coin_id = Coin(pool_reward_parent_id, p2_singleton_full_puzhash, p2_singlton_coin_amount).name()
+
+    pool_puzhash = 0xd34db33f
+    relative_lock_height = 600
+    owner_pubkey = 0xFADEDDAB
+
+    # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, OWNER_PUBKEY, P2_SINGLETON_PUZHASH
+    escape_innerpuz = POOL_ESCAPING_MOD.curry(pool_puzhash, relative_lock_height, owner_pubkey, p2_singleton_full_puzhash)
+    # Curry params are POOL_PUZHASH, RELATIVE_LOCK_HEIGHT, ESCAPE_MODE_PUZHASH, P2_SINGLETON_PUZHASH, PUBKEY
+    committed_innerpuz = POOL_COMMITED_MOD.curry(pool_puzhash, relative_lock_height, escape_innerpuz.get_tree_hash(), p2_singleton_full_puzhash, owner_pubkey)
+    singleton_full = SINGLETON_MOD.curry(singleton_mod_hash, genesis_id, committed_innerpuz)
+    singleton_amount = 3
+
+    # innersol = spend_type, my_puzhash, my_amount, pool_reward_amount, pool_reward_height
+    inner_sol = Program.to([0, singleton_full.get_tree_hash(), singleton_amount, p2_singlton_coin_amount, block_height])
+    full_sol = Program.to([genesis_id, singleton_amount, inner_sol])
+
+    cost, result = singleton_full.run_with_cost(INFINITE_COST, full_sol)
+
+    # result = '((70 0x196fde08c221af2dfc00c4d281a3a7969cda6791cf97fe2dcf10d5f25b7efdb4) (51 0xfee0b1f4d6c86e0e34f3e3e253482a0db29436dd30891809333a2d094540b6f7 3) (72 0xfee0b1f4d6c86e0e34f3e3e253482a0db29436dd30891809333a2d094540b6f7) (73 3) (51 0x00d34db33f 0x77359400) (62 0x5bfd313e20659e7da5e1f9c165b83b342a0d32974ae80a090a3f1857e3331fde) (61 0x7b17ee829e409d2132a6ccebb9b064746eb68888c51082bb6373788f71702b77))'
