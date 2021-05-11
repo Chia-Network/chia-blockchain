@@ -202,7 +202,7 @@ msgstr "Blokke med hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok med hash {headerHash} eksisterer ikke."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Blokke"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Forbind til andre noder"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Forbundet"
 
@@ -359,7 +359,7 @@ msgstr "Forbundet"
 msgid "Connecting to wallet"
 msgstr "Forbinder pung"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Forbindelses Status"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Udvikler Værktøjer"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Sværhed"
 
@@ -613,11 +613,11 @@ msgstr "Fejl: Kan ikke sende chia til en farvet addresse. Venligst indtast en ch
 msgid "Estimated Time to Win"
 msgstr "Estimeret Tid til Gevinst"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Estimeret netværk størrelse"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Estimeret sum af alt plottet drev plads af alle farmerer på netværket"
 
@@ -722,8 +722,8 @@ msgstr "Filnavn"
 msgid "Final folder location"
 msgstr "Endelig folder placering"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Færdig"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Ofte Stillet Spørgsmål"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Fuld Node"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Fuld Node Status"
 
@@ -760,7 +760,7 @@ msgstr "HD eller Hierarkisk Deterministiske nøgler er en type a offentlig nøgl
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Header Hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Header hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Højde"
@@ -815,7 +815,7 @@ msgstr "Importer Pung fra mnemonik"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importer fra mnemonik (24 ord)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "Igangværende"
 
@@ -953,7 +953,7 @@ msgstr "Mere hukommelse øger hastighed en smule"
 msgid "My Pubkey"
 msgstr "Min Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Netværksnavn"
 
@@ -1022,7 +1022,7 @@ msgstr "Ingen af dine plotfiler har passeret plotfilteret endnu."
 msgid "Not Available"
 msgstr "Ikke Tilgængelig"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Ikke Synkroniseret"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Ikke bekrætet endnu"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Ikke forbundet"
 
@@ -1072,7 +1072,7 @@ msgstr "I gennemsnit er der et minut mellem hver transaktionsblok. Medmindre der
 msgid "Outgoing"
 msgstr "Udgående"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Top Højde"
 
@@ -1080,7 +1080,7 @@ msgstr "Top Højde"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Top Tidspunkt"
 
@@ -1547,14 +1547,14 @@ msgstr "Forbrugsinterval Længde (nummer af blokke)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Forbrugsgrænse (chia per interval): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Indsend"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Synkroniseret"
 
@@ -1609,7 +1609,7 @@ msgstr "Synkroniseret"
 msgid "Syncing"
 msgstr "Synkroniserer"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "Synkroniserer {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "Den fulder node som din farmer er forbundet til herunder. <0>Lær mere</
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Den mindste tilladte størrelse for mainnet er k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "Noden er ikke synkroniseret"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Noden Synkroniserer, hvilket betyder at den er ved at hente blokke fra andre noder, for at nå den sidste blok i kæden"
 
@@ -1704,7 +1704,7 @@ msgstr "Dette er den afventende ændring, som er vekslet til dig selv, men ikke 
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Dette er summen af indkommende og udgående afventende transaktioner (ikke skrevet ind i blokkæden endnu). Dette er ekslusivt farmede gevinster."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Dette er tidstemplet for den sidste blok."
 
@@ -1720,7 +1720,7 @@ msgstr "Dette er det totale beløb af chia i blokkæden ved den nuværende sidst
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Dette er den totalle + afventende saldo: det er hvad din balance vil være når alle afventende transaktioner er bekræftet."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Denne node er fuldt synkroniseret og validerer netværket"
 
@@ -1744,7 +1744,7 @@ msgstr "Denne handel blev inkluderet i blokkæden i denne blok"
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "Denne version af Chia er ikke længere kompatibel med netværket og kan ikke farme."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Tid Oprettet"
 
@@ -1770,7 +1770,7 @@ msgstr "Total Saldo"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Total iterationer"
 
@@ -1790,7 +1790,7 @@ msgstr "Total Størrelse af Plotfiler"
 msgid "Total VDF Iterations"
 msgstr "Total VDF Iterationer"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Total iterationer siden blokkædens start"
 
@@ -1834,7 +1834,7 @@ msgstr "Transaktionsfilter Hash"
 msgid "Type"
 msgstr "Type"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Ikke Afsluttet"
 
@@ -1851,7 +1851,7 @@ msgstr "Ukendt"
 msgid "User Pubkey"
 msgstr "Bruger Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF blok iterationer"
 

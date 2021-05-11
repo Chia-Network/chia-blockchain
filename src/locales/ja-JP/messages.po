@@ -202,7 +202,7 @@ msgstr "ハッシュ値 {headerHash} のブロック"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "ハッシュ値 {headerHash} のブロックは存在しません。"
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "ブロック"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "手動で接続"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "接続済み"
 
@@ -359,7 +359,7 @@ msgstr "接続済み"
 msgid "Connecting to wallet"
 msgstr "ウォレットに接続中"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "接続状態"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "開発者向けツール"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "難易度"
 
@@ -613,11 +613,11 @@ msgstr "エラー: チアは色付きのアドレスには送れません。チ�
 msgid "Estimated Time to Win"
 msgstr "報酬が当たるまでの推定時間"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "推定ネットワーク容量"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "ネットワーク上の全農家が耕した全容量の推定値"
 
@@ -722,8 +722,8 @@ msgstr "ファイル名"
 msgid "Final folder location"
 msgstr "最終フォルダの場所"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "完成"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "よくある質問"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "フルノード"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "フルノードの状態"
 
@@ -760,7 +760,7 @@ msgstr "階層的決定性鍵、または HD 鍵とは、一つの秘密鍵に�
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "ヘッダーのハッシュ値"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "ヘッダーのハッシュ値"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "高さ"
@@ -815,7 +815,7 @@ msgstr "合言葉でウォレットをインポート"
 msgid "Import from Mnemonics (24 words)"
 msgstr "合言葉 (24語) で鍵をインポート"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "進行中"
 
@@ -953,7 +953,7 @@ msgstr "メモリ使用量を増やすと速度が微上昇します"
 msgid "My Pubkey"
 msgstr "私の公開鍵"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "ネットワーク名"
 
@@ -1022,7 +1022,7 @@ msgstr "お持ちの耕地は現在、どれも耕地フィルターを通過で
 msgid "Not Available"
 msgstr "該当なし"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "同期されていません"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "未承認"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "未接続"
 
@@ -1072,7 +1072,7 @@ msgstr "取引ブロックは約1分間隔で作成されます。混雑時を�
 msgid "Outgoing"
 msgstr "出金"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "先端の高さ"
 
@@ -1080,7 +1080,7 @@ msgstr "先端の高さ"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "先端の日時"
 
@@ -1547,14 +1547,14 @@ msgstr "支払いインターバル長 (ブロック数)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "支払い額上限 (チア毎インターバル): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "状態"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "状態:"
 msgid "Submit"
 msgstr "提出"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "同期完了"
 
@@ -1609,7 +1609,7 @@ msgstr "同期完了"
 msgid "Syncing"
 msgstr "同期中"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "同期中 {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "以下が農家の接続先のフルノードです。<0>詳しく</0>"
 msgid "The minimum required size for mainnet is k=32"
 msgstr "メインネットで必要な最小サイズは k=32 です"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "ノードが同期されていません"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "ノードが同期中です。ブロックチェーンの先端に辿り着くまで他のノードからブロックをダウンロードします。"
 
@@ -1704,7 +1704,7 @@ msgstr "保留中のお釣り、つまり自己送信したが、まだ承認さ
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "これが (まだブロックチェーンに含まれていない) 保留中の入出金の合計です。耕作報酬は含まれていません。"
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "最新のピークサブブロックの日時です。"
 
@@ -1720,7 +1720,7 @@ msgstr "現在の先端サブブロックにおいて、あなたの秘密鍵が
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "これが全残高 + 保留中残高です: 全ての保留中の取引が承認されたら、残高はこの額になります。"
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "このノードは先端に辿り着いて、ネットワークの検証に携わっています"
 
@@ -1744,7 +1744,7 @@ msgstr "このトレードはこのブロック高でブロックチェーンに
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "ご使用のバージョンのチアアプリはブロックチェーンと互換性が無く、安全に耕作できません。"
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "作成日時"
 
@@ -1770,7 +1770,7 @@ msgstr "全残高"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "全評価回数"
 
@@ -1790,7 +1790,7 @@ msgstr "全ての耕地の容量の合計"
 msgid "Total VDF Iterations"
 msgstr "全 VDF 評価回数"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "ブロックチェーンの開始からの合計評価回数"
 
@@ -1834,7 +1834,7 @@ msgstr "取引フィルターハッシュ値"
 msgid "Type"
 msgstr "種類"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "未完成"
 
@@ -1851,7 +1851,7 @@ msgstr "不明"
 msgid "User Pubkey"
 msgstr "ユーザー公開鍵"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF サブスロット評価回数"
 

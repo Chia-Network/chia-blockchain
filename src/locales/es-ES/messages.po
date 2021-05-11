@@ -202,7 +202,7 @@ msgstr "Bloque con hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "No existe bloque con el hash {headerHash}."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Bloques"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Conectar a otros pares"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Conectado"
 
@@ -359,7 +359,7 @@ msgstr "Conectado"
 msgid "Connecting to wallet"
 msgstr "Conectar a cartera"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Estado de Conexión"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Herramientas de Desarrollador"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Dificultad"
 
@@ -613,11 +613,11 @@ msgstr "Error: No se puede enviar chia a la dirección de color. Por favor intro
 msgid "Estimated Time to Win"
 msgstr "Tiempo Estimado para Ganar"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Espacio estimado de red"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Suma estimada de todo el espacio en disco trazado de todos los agricultores de la red"
 
@@ -722,8 +722,8 @@ msgstr "Nombre del Archivo"
 msgid "Final folder location"
 msgstr "Ubicación de la Carpeta Final"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Finalizado"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Preguntas Frecuentes"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Nodo Completo"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Estado de Nodo Completo"
 
@@ -760,7 +760,7 @@ msgstr "HD o llaves Jerárquicamente Determinísticas son un tipo de esquema de 
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Encabezado de Hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Encabezado de hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Altura"
@@ -815,7 +815,7 @@ msgstr "Importar Cartera desde Mnemotécnica"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importar desde Mnemotécnica (24 palabras)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "En Progreso"
 
@@ -953,7 +953,7 @@ msgstr "Más memoria aumenta ligeramente la velocidad"
 msgid "My Pubkey"
 msgstr "Mi Llave Pública"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Nombre de Red"
 
@@ -1022,7 +1022,7 @@ msgstr "Ninguna de sus parcelas a pasado un filtro de parcela aún."
 msgid "Not Available"
 msgstr "No Disponible"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "No sincronizado"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "No confirmado todavía"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Desconectado"
 
@@ -1072,7 +1072,7 @@ msgstr "Por término medio, hay un minuto entre cada bloque de transacción. A m
 msgid "Outgoing"
 msgstr "Enviado"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Altura del Pico"
 
@@ -1080,7 +1080,7 @@ msgstr "Altura del Pico"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Hora del Pico"
 
@@ -1547,14 +1547,14 @@ msgstr "Duración del Intervalo de Gasto (cantidad de bloques)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limite de gasto (chia por intervalo): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Estado"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "Estado:"
 msgid "Submit"
 msgstr "Enviar"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Sincronizado"
 
@@ -1609,7 +1609,7 @@ msgstr "Sincronizado"
 msgid "Syncing"
 msgstr "Sincronizando"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "Sincronizando {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "El nodo completo al que está conectado su agricultor se encuentra a con
 msgid "The minimum required size for mainnet is k=32"
 msgstr "El tamaño mínimo requerido para mainnet es k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "El nodo no está sincronizado"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "El nodo se está sincronizando, lo que significa que está descargando bloques de otros nodos, para alcanzar el último bloque de la cadena"
 
@@ -1704,7 +1704,7 @@ msgstr "Esto es un cambio pendiente, los cuales son cambios de monedas que usted
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Esta es la suma de las transacciones pendientes entrantes y salientes (aún no incluidas en la cadena de bloques). Esto no incluye las recompensas de cultivo."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Este es la hora del último sub-bloque pico."
 
@@ -1720,7 +1720,7 @@ msgstr "Esta es la cantidad total de chía en la cadena de bloques en el sub-blo
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Este es el saldo total + saldo pendiente: es lo que será su saldo después de que se confirmen todas las transacciones pendientes."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Este nodo esta al día y validando la red"
 
@@ -1744,7 +1744,7 @@ msgstr "Esta operación fue incluida en la cadena de bloques a esta altura de bl
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "Esta versión de Chia ya no es compatible con la cadena de bloques y no puede cultivar de manera segura."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Hora de Creación"
 
@@ -1770,7 +1770,7 @@ msgstr "Saldo Total"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Total de iteraciones"
 
@@ -1790,7 +1790,7 @@ msgstr "Tamaño Total de Parcelas"
 msgid "Total VDF Iterations"
 msgstr "Total de iteraciones VDF"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Total de iteraciones desde el principio de la cadena de bloques"
 
@@ -1834,7 +1834,7 @@ msgstr "Filtro de Transacciones Hash"
 msgid "Type"
 msgstr "Tipo"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Inconcluso"
 
@@ -1851,7 +1851,7 @@ msgstr "Desconocido"
 msgid "User Pubkey"
 msgstr "Llave Pública de Usuario"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteraciones VDF Sub Slot"
 

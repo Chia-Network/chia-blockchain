@@ -202,7 +202,7 @@ msgstr "Booty wit' hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Booty hash'd {headerHash} ain't aboard."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Booties"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Say ahoy to other peers"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Natter'd wit' me hearties jus' now"
 
@@ -359,7 +359,7 @@ msgstr "Natter'd wit' me hearties jus' now"
 msgid "Connecting to wallet"
 msgstr "Lookin' fer treasure chest"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Contact t' other Capt'ns"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Builder Tools"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Pirate-huntin' fleets"
 
@@ -613,11 +613,11 @@ msgstr "Arrgh: Can nah send chia 't jinxed coordinates. Give chia coordinates."
 msgid "Estimated Time to Win"
 msgstr "Fortune Teller's Next Prize Prophecy"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Strength o' all pirates on the seas"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Guessed strength of all pirates on the seas"
 
@@ -722,8 +722,8 @@ msgstr "Filename"
 msgid "Final folder location"
 msgstr "Final folder"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Done"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Oftentimes Asked Questions"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Capt'n"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Report o' yer Capt'n"
 
@@ -760,7 +760,7 @@ msgstr "HD or Hierarchical Deterministic treasure maps are a type o' public trea
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Header Hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Header hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Booty Number"
@@ -815,7 +815,7 @@ msgstr "Get Treasure Chest from Mnemonics"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Get from Mnemonics (24 words)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "Workin' on it"
 
@@ -953,7 +953,7 @@ msgstr "More memory makes it wee faster"
 msgid "My Pubkey"
 msgstr "My Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Ocean"
 
@@ -1022,7 +1022,7 @@ msgstr "None of your barrages has hit a ship."
 msgid "Not Available"
 msgstr "Nothin' 'ere"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Not Over the Horizon Yet"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Not yet let through"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Arrgh, can see naught in this fog"
 
@@ -1072,7 +1072,7 @@ msgstr "On average we got a transaction booty every minute. If pirates aren't mo
 msgid "Outgoing"
 msgstr "Goin' Out"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Ships taken all o'er the seas"
 
@@ -1080,7 +1080,7 @@ msgstr "Ships taken all o'er the seas"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Time o' last lucky boardin'"
 
@@ -1547,14 +1547,14 @@ msgstr "Spendin' Interval Length (number o' booties)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Squanderin' Limit (chia per interval): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "State"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "State o' t'ings:"
 msgid "Submit"
 msgstr "Go Ahead"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Everythin' jolly"
 
@@ -1609,7 +1609,7 @@ msgstr "Everythin' jolly"
 msgid "Syncing"
 msgstr "Catchin' up wit' other Capt'ns"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "Catchin' up {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "The Capt'n that yer Plunderer be connected t' be below. <0>Look fer more
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Minimum size fer mainnet be k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "The Capt'n be three sheets to the wind"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "The capt'n be collectin' reports, which means he's gettin' information o' other capt'ns' boarded ships"
 
@@ -1704,7 +1704,7 @@ msgstr "'tis the pendin' change, which are change doubloons which ye 'ave sent t
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "'tis the sum o' the incomin' 'n outgoin' pendin' transactions (nah yet included into the blockchain). This be nah includin' lootin' rewards."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "'tis the time o' the latest peak sub booty."
 
@@ -1720,7 +1720,7 @@ msgstr "'tis the total amount o' chia in the blockchain at the current peak sub 
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "'tis ye whole treasure + ye under way treasure: 'tis wha' yer trasure will be aft all under way treasure be let through."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "This pirate be fully caught up 'n scannin' the ocean"
 
@@ -1744,7 +1744,7 @@ msgstr "This trade was added t' the blockchain at this booty number"
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "T'is version o' Chia is no longer workin' wit' the blockchain 'n no good fer plunderin'."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Time o' Boardin'"
 
@@ -1770,7 +1770,7 @@ msgstr "Ye Whole Treasure"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Thumbs twiddled"
 
@@ -1790,7 +1790,7 @@ msgstr "Yer Strength o' Crew"
 msgid "Total VDF Iterations"
 msgstr "Combined Thumbs Twiddled"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Thumbs twiddled since the beginnin' o' time"
 
@@ -1834,7 +1834,7 @@ msgstr "Transactions Filter Hash"
 msgid "Type"
 msgstr "Type"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Fightin'"
 
@@ -1851,7 +1851,7 @@ msgstr "Unknown"
 msgid "User Pubkey"
 msgstr "Scallywag Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "Shots fired"
 

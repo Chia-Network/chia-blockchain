@@ -202,7 +202,7 @@ msgstr "Block with hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Blocks"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Σύνδεση με άλλους υπολογιστές"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Συνδέθηκε"
 
@@ -359,7 +359,7 @@ msgstr "Συνδέθηκε"
 msgid "Connecting to wallet"
 msgstr "Σύνδεση σε πορτοφόλι"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Κατάσταση Σύνδεσης"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Εργαλεία Προγραμματιστή"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Eπίπεδο Δυσκολίας"
 
@@ -613,11 +613,11 @@ msgstr "Σφάλμα: Δεν μπορείτε να στείλετε chia σε χ
 msgid "Estimated Time to Win"
 msgstr "Εκτιμώμενος χρόνος για να κερδίσετε:"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Εκτιμώμενος χώρος δικτύου"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Εκτιμώμενο άθροισμα του συνόλου του plotted disk space όλων των farmers στο δίκτυο"
 
@@ -722,8 +722,8 @@ msgstr "Όνομα αρχείου"
 msgid "Final folder location"
 msgstr "Τελική τοποθεσία φακέλου"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Ολοκληρώθηκε"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Συχνές ερωτήσεις"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Πλήρης Κόμβος"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Κατάσταση Πλήρους Κόμβου"
 
@@ -760,7 +760,7 @@ msgstr "Τα HD ή τα Hierarchical Deterministic keys είναι ένας τύ
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Header Hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Header Hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Ύψος"
@@ -815,7 +815,7 @@ msgstr "Εισαγωγή πορτοφολιού από Mnemonics"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Εισαγωγή από Mnemonics (24 λέξεις)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "Σε Εξέλιξη"
 
@@ -953,7 +953,7 @@ msgstr "Περισσότερη μνήμη αυξάνει ελαφρώς την �
 msgid "My Pubkey"
 msgstr "Αντιγραφή Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Όνομα Δικτύου"
 
@@ -1022,7 +1022,7 @@ msgstr "Κανένα από τα οικόπεδά σας δεν έχει περ�
 msgid "Not Available"
 msgstr "Δεν είναι διαθέσιμο"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Δεν Είναι Συγχρονισμένο"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Δεν έχει επιβεβαιωθεί ακόμη"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Χωρίς σύνδεση"
 
@@ -1072,7 +1072,7 @@ msgstr "Κατά μέσο όρο υπάρχει ένα λεπτό μεταξύ �
 msgid "Outgoing"
 msgstr "Εξερχόμενες"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Peak Height"
 
@@ -1080,7 +1080,7 @@ msgstr "Peak Height"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Peak Time"
 
@@ -1547,14 +1547,14 @@ msgstr "Spending Interval Length (number of blocks)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Όριο δαπανών (chia ανά διάστημα): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "State"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "Κατάσταση:"
 msgid "Submit"
 msgstr "Υποβολή"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Συγχρονίστηκε"
 
@@ -1609,7 +1609,7 @@ msgstr "Συγχρονίστηκε"
 msgid "Syncing"
 msgstr "Συγχρονισμός..."
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "Γίνεται συγχρονισμός {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "Ο πλήρης κόμβος στον οποίο είναι συνδεδ
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Το ελάχιστο απαιτούμενο μέγεθος για το mainnet είναι k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "Ο κόμβος δεν είναι συγχρονισμένος"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Ο κόμβος συγχρονίζεται, πράγμα που σημαίνει ότι γίνεται λήψη μπλοκ από άλλους κόμβους, για να φτάσει το τελευταίο μπλοκ στην αλυσίδα"
 
@@ -1704,7 +1704,7 @@ msgstr "Αυτή είναι η αλλαγή που εκκρεμεί, η οποί
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Αυτό είναι το άθροισμα των εισερχόμενων και εξερχόμενων συναλλαγών (που δεν περιλαμβάνονται ακόμη στο blockchain). Αυτό δεν περιλαμβάνει τις farming ανταμοιβές."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Αυτή είναι η ώρα του τελευταίου υπο-μπλοκ κορυφής."
 
@@ -1720,7 +1720,7 @@ msgstr "Αυτή είναι η συνολική ποσότητα chia στο blo
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Αυτό είναι το συνολικό υπόλοιπο + το εκκρεμές υπόλοιπο: αυτό είναι που θα είναι το υπόλοιπό σας μετά από όλες τις εκκρεμείς συναλλαγές που θα επιβεβαιωθούν."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Αυτός ο κόμβος είναι πλήρως παγιδευμένος και επικυρώνει το δίκτυο"
 
@@ -1744,7 +1744,7 @@ msgstr "Αυτή η συναλλαγή συμπεριλήφθηκε στο block
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "Αυτή η έκδοση του Chia δεν είναι πλέον συμβατή με το blockchain και δεν μπορεί να γίνει farm με ασφάλεια."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Ώρα δημιουργίας"
 
@@ -1770,7 +1770,7 @@ msgstr "Συνολικό Υπόλοιπο"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Σύνολο Επαναλήψεων"
 
@@ -1790,7 +1790,7 @@ msgstr "Συνολικό μέγεθος των plots"
 msgid "Total VDF Iterations"
 msgstr "Σύνολο Επαναλήψεων VDF"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Συνολικές επαναλήψεις από την αρχή του blockchain"
 
@@ -1834,7 +1834,7 @@ msgstr "Hash Φίλτρο Συναλλαγών"
 msgid "Type"
 msgstr "Τύπος"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Μη Ολοκληρωμένο"
 
@@ -1851,7 +1851,7 @@ msgstr "Άγνωστο"
 msgid "User Pubkey"
 msgstr "Pubkey Χρήστη"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF Sub Slot Iterations"
 

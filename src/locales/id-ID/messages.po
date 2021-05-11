@@ -202,7 +202,7 @@ msgstr "Blok dengan hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Blok-blok"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Sambung ke peer lain"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Tersambung"
 
@@ -359,7 +359,7 @@ msgstr "Tersambung"
 msgid "Connecting to wallet"
 msgstr "Menyambungkan ke wallet"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Status Koneksi"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Developer Tools"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Tingkat kesulitan"
 
@@ -613,11 +613,11 @@ msgstr "Error: Tidak dapat mengirim Chia ke alamat berwarna. Mohon masukkan sebu
 msgid "Estimated Time to Win"
 msgstr "Perkiraan waktu untuk menang"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Estimasi besar network"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Estimasi jumlah total ruang penyimpanan yang sudah diplot oleh seluruh farmer di network"
 
@@ -722,8 +722,8 @@ msgstr "Nama file"
 msgid "Final folder location"
 msgstr "Lokasi folder akhir"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Selesai"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Status Full Node"
 
@@ -760,7 +760,7 @@ msgstr "HD atau kunci Hierarchical Deterministic adalah salah satu skema kunci p
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Kepala hash"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Kepala hash"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Tinggi"
@@ -815,7 +815,7 @@ msgstr "Impor Dompet elektronik dari Mnemonik"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Impor dari Mnemonic (24 kata)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "Sedang Berlangsung"
 
@@ -953,7 +953,7 @@ msgstr "Lebih banyak memori sedikit meningkatkan kecepatan"
 msgid "My Pubkey"
 msgstr "Pubkey saya"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Nama jaringan"
 
@@ -1022,7 +1022,7 @@ msgstr "Anda tidak ada plot yang telah lulus plot filter."
 msgid "Not Available"
 msgstr "Tidak Tersedia"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Tidak Disinkronkan"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Belum dikonfirmasi lagi"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Tidak terhubung"
 
@@ -1072,7 +1072,7 @@ msgstr "Rata rata ada jarak 1 menit antara masing masing blok transaksi. Kecuali
 msgid "Outgoing"
 msgstr "Keluar"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Puncak tertinggi"
 
@@ -1080,7 +1080,7 @@ msgstr "Puncak tertinggi"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Puncak Masa"
 
@@ -1549,14 +1549,14 @@ msgstr "Durasi Interval Pengeluaran (jumlah blok)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Batas Pengeluaran (chia per jarak waktu): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Keadaan"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1601,7 +1601,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Kirim"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Sinkron"
 
@@ -1611,7 +1611,7 @@ msgstr "Sinkron"
 msgid "Syncing"
 msgstr "Sinkronisasi"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "Sinkronisasi {progress}/{tip}"
 
@@ -1656,11 +1656,11 @@ msgstr "Node penuh yang terhubung ke farmer anda di bawah. <0>Pelajari lebih lan
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Ukuran minimum yang di butuhkan untuk mainnet adalah k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "Node tidak sinkron"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Node sedang melakukan sinkronisasi, yang berarti node sedang meng unduh blok dari node lainya, untuk mencapai blok terahir dalam rantai"
 
@@ -1706,7 +1706,7 @@ msgstr "Ini adalah perubahan yang tertahan, perubahan koin yang anda kirim ke di
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Ini ada jumlah dari transaksi masuk dan keluar yang masih dalam antrian (belum terdaftar ke dalam blockchain). Tidak berikut penghasilan dari farming."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Ini adalah waktu dari ketinggian terakhir sub block."
 
@@ -1722,7 +1722,7 @@ msgstr "Ini adalah jumlah total Chia di dalam blockchain di pucak terbaru sub bl
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Ini adalah total saldo + saldo tertahan: total saldo yang akan ada pegang apabila semua transaksi tertahan sudah di konfirmasi."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Node ini sudah mempunyai data terbaru dan sudah ikut men validasi dalam jaringan"
 
@@ -1746,7 +1746,7 @@ msgstr "Perdagangan ini sudah termasuk di blockchain pada ketinggian block ini"
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "Versi Chia anda tidak serasi kepada blockchain dan tidak boleh ditransaksi."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Waktu Dibuat"
 
@@ -1772,7 +1772,7 @@ msgstr "Jumlah Saldo"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Jumlah iterasi"
 
@@ -1792,7 +1792,7 @@ msgstr "Jumlah Ukuran Plot-Plot"
 msgid "Total VDF Iterations"
 msgstr "Jumlah iterasi VDF"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Jumlah bilangan sejak mula blockchain"
 
@@ -1836,7 +1836,7 @@ msgstr "Seleksi Hash Transaksi"
 msgid "Type"
 msgstr "Jenis"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Belum Selesai"
 
@@ -1853,7 +1853,7 @@ msgstr "Diketahui"
 msgid "User Pubkey"
 msgstr "Pubkey User"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "Iterasi VDF Sub Slot"
 

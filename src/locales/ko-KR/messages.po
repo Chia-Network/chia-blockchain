@@ -202,7 +202,7 @@ msgstr "해쉬 {headerHash} 의 블록"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "{headerHash} 에 해당하는 블록이 존재하지 않습니다."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "블록"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "다른 피어에 연결"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "연결됨"
 
@@ -359,7 +359,7 @@ msgstr "연결됨"
 msgid "Connecting to wallet"
 msgstr "지갑 연결"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "연결 상태"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "개발자 도구"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "난이도"
 
@@ -613,11 +613,11 @@ msgstr "에러: 치아를 컬러드 주소로 보낼 수 없습니다. 치아 �
 msgid "Estimated Time to Win"
 msgstr "블록 보상을 얻기까지 남은 예상 시간"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "전체 네트워크 용량 추정치"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "전체 네트워크 사용자의 디스크 크기 총합"
 
@@ -722,8 +722,8 @@ msgstr "파일 이름"
 msgid "Final folder location"
 msgstr "최종 폴더 위치"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "완료됨"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "자주 묻는 질문"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "전체 노드"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "전체 노드 현황"
 
@@ -760,7 +760,7 @@ msgstr "HD키, 또는 \"계층구조 결정성 키\" 라고 부르는 이것은 
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "헤더 해시"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "해더 해시"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "높이"
@@ -815,7 +815,7 @@ msgstr "니모닉으로부터 지갑 가져오기"
 msgid "Import from Mnemonics (24 words)"
 msgstr "니모닉에서 불러오기 (24단어)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "처리 중"
 
@@ -953,7 +953,7 @@ msgstr "많은 메모리는 약간의 속도 향상을 가져옵니다"
 msgid "My Pubkey"
 msgstr "나의 공개 키"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "네트워크 이름"
 
@@ -1022,7 +1022,7 @@ msgstr "아직 플롯 필터를 통과 한 플롯이 없습니다."
 msgid "Not Available"
 msgstr "사용할 수 없음"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "동기화 되지 않음"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "아직 확인되지 않음"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "연결되지 않음"
 
@@ -1072,7 +1072,7 @@ msgstr "당신이 보낸 트랜잭션(이체) 주문이 1분 이내로 처리된
 msgid "Outgoing"
 msgstr "내보내는 중"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "최종 높이"
 
@@ -1080,7 +1080,7 @@ msgstr "최종 높이"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "최고 시간"
 
@@ -1547,14 +1547,14 @@ msgstr "지출 간격 길이 (블록 수)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "지출 한도 (간격 당 chia): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "상태"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "상태:"
 msgid "Submit"
 msgstr "제출"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "동기화됨"
 
@@ -1609,7 +1609,7 @@ msgstr "동기화됨"
 msgid "Syncing"
 msgstr "동기화 중"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "동기화 중: {progress}/{tip} 완료"
 
@@ -1654,11 +1654,11 @@ msgstr "농부가 연결된 전체 노드는 다음과 같습니다. <0> 자세�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "mainnet을 위한 최소 사이즈는 k=32입니다."
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "노드가 동기화되지 않았습니다"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "노드가 동기화 중입니다. 즉, 체인의 최신 블록에 도달하기 위해 다른 노드에서 블록을 다운로드하고 있습니다."
 
@@ -1704,7 +1704,7 @@ msgstr "이것은 귀하가 자신에게 보냈지만 아직 확인되지 않은
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "이것은 들어오고 나가는 보류 트랜잭션의 합계입니다 (아직 블록 체인에 포함되지 않음). 여기에는 농업 보상이 포함되지 않습니다."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "이것은 최신 피크 서브 블록의 시간입니다."
 
@@ -1720,7 +1720,7 @@ msgstr "이것은 개인 키에 의해 제어되는 현재 피크 하위 블록�
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "이것은 총 잔액 + 보류 잔액입니다. 모든 보류중인 거래가 확인 된 후 잔액이 됩니다."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "이 노드는 완전히 포착되어 네트워크를 확인하고 있습니다."
 
@@ -1744,7 +1744,7 @@ msgstr "이 거래는이 block height 에서 블록 체인에 포함되었습니
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "이 버전의 Chia는 더 이상 블록 체인과 호환되지 않으며 안전하게 파밍 할 수 없습니다."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "생성 시간"
 
@@ -1770,7 +1770,7 @@ msgstr "총 잔고"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "총 반복"
 
@@ -1790,7 +1790,7 @@ msgstr "총 구성 크기"
 msgid "Total VDF Iterations"
 msgstr "총 VDF 반복"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "블록체인 시작 후 총 반복"
 
@@ -1834,7 +1834,7 @@ msgstr "거래 필터 해시"
 msgid "Type"
 msgstr "종류"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "미완성"
 
@@ -1851,7 +1851,7 @@ msgstr "알 수 없음"
 msgid "User Pubkey"
 msgstr "사용자 공개 키"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF 서브 슬롯 반복"
 

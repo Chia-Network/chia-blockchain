@@ -3,6 +3,7 @@ import { Trans } from '@lingui/macro';
 import { get } from 'lodash';
 import {
   FormatBytes,
+  FormatLargeNumber,
   Flex,
   Card,
   Loading,
@@ -183,13 +184,13 @@ const getStatusItems = (state, connected, latestPeakTimestamp, networkInfo) => {
   const { sub_slot_iters } = state;
   status_items.push({
     label: <Trans>VDF Sub Slot Iterations</Trans>,
-    value: sub_slot_iters,
+    value: <FormatLargeNumber value={sub_slot_iters} />,
   });
 
   const totalIters = state.peak?.total_iters ?? 0;
   status_items.push({
     label: <Trans>Total Iterations</Trans>,
-    value: totalIters,
+    value: <FormatLargeNumber value={totalIters} />,
     tooltip: <Trans>Total iterations since the start of the blockchain</Trans>,
   });
 

@@ -202,7 +202,7 @@ msgstr "Bloc cu hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blocul cu hashul {headerHash} nu exista."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "Blocuri"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "Conectare la alți parteneri"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "Conectat"
 
@@ -359,7 +359,7 @@ msgstr "Conectat"
 msgid "Connecting to wallet"
 msgstr "Se conectează la portofel"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "Statutul conexiunii"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "Unelte Dezvoltator"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "Dificultate"
 
@@ -613,11 +613,11 @@ msgstr "Eroare: Nu se poate trimite chia la adresa colorată. Vă rugăm să int
 msgid "Estimated Time to Win"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "Spațiu estimat în rețea"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "Suma estimată a întregului spațiu pe disc reprezentat de toți fermierii din rețea"
 
@@ -722,8 +722,8 @@ msgstr "Nume fisier"
 msgid "Final folder location"
 msgstr "Locatia folderului final"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Terminat"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "Întrebări frecvente"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "Nod complet"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "Stare nod complet"
 
@@ -760,7 +760,7 @@ msgstr "Cheile DI sau Deterministic Ierarhice sunt un tip de schemă de cheie pu
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "Hash-ul Antetului"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "Hash-ul Antetului"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "Înălțime"
@@ -815,7 +815,7 @@ msgstr "Importă portofelul din Mnemonice"
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importă din Mnemonice (24 cuvinte)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "În Desfășurare"
 
@@ -953,7 +953,7 @@ msgstr "Mai multă memorie crește ușor viteza"
 msgid "My Pubkey"
 msgstr "Cheia mea publică"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "Nume Rețea"
 
@@ -1022,7 +1022,7 @@ msgstr "Niciuna din parcelele tale nu a trecut încă filtrul."
 msgid "Not Available"
 msgstr "Indisponibil"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "Nesincronizat"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "Nu a fost confirmat încă"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "Neconectat"
 
@@ -1072,7 +1072,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr "Expedieri"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "Înălțimea Vârfului"
 
@@ -1080,7 +1080,7 @@ msgstr "Înălțimea Vârfului"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "Timpul Vârfului"
 
@@ -1547,14 +1547,14 @@ msgstr "Lungimea intervalului pentru cheltuieli (număr de blocuri)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "Limită de cheltuieli (Chia per interval): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Stare"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "Status:"
 msgid "Submit"
 msgstr "Trimite"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "Sincronizat"
 
@@ -1609,7 +1609,7 @@ msgstr "Sincronizat"
 msgid "Syncing"
 msgstr "Se sincronizează"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "Sincronizare {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "Nodul la care este conectat fermierul tău este mai jos. <0> Află mai m
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Dimensiunea minimă necesară pentru mainnet este k = 32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "Nodul nu este sincronizat"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Nodul se sincronizează, ceea ce înseamnă că descarcă blocuri din alte noduri, pentru a ajunge la cel mai recent bloc din lanț"
 
@@ -1704,7 +1704,7 @@ msgstr "Aceasta este schimbarea în așteptare, care sunt monede de schimb pe ca
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "Aceasta este suma tranzacțiilor în așteptare primite și expediate (neincluse încă în blockchain). Aceasta nu include recompensele."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "Acesta este momentul celui mai recent subbloc peak."
 
@@ -1720,7 +1720,7 @@ msgstr "Aceasta este cantitatea totală de chia din blockchain la subblocul peak
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Acesta este soldul total + soldul în așteptare: acesta va fi soldul dvs. după confirmarea tuturor tranzacțiilor în așteptare."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "Acest nod este complet prins și validează rețeaua"
 
@@ -1744,7 +1744,7 @@ msgstr "Această tranzacție a fost inclusă pe blockchain la această înălți
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Creata in timp"
 
@@ -1770,7 +1770,7 @@ msgstr "Sold Total"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "Iteratii totale"
 
@@ -1790,7 +1790,7 @@ msgstr "Dimensiunea totală a parcelelor"
 msgid "Total VDF Iterations"
 msgstr "Totalul iteratiilor VDF"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "Totalul iteratiilor de la inceputul blockchain-ului"
 
@@ -1834,7 +1834,7 @@ msgstr "Filtru Hash Tranzacții"
 msgid "Type"
 msgstr "Tip"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Neterminat"
 
@@ -1851,7 +1851,7 @@ msgstr ""
 msgid "User Pubkey"
 msgstr "Pubkey Utilizator"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "Iteratii sub slot VDF"
 

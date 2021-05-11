@@ -202,7 +202,7 @@ msgstr "区块哈希{headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "哈希为 {headerHash} 的区块不存在。"
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "区块"
 
@@ -351,7 +351,7 @@ msgid "Connect to other peers"
 msgstr "连接到其他节点"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "已连接"
 
@@ -359,7 +359,7 @@ msgstr "已连接"
 msgid "Connecting to wallet"
 msgstr "正在连接到钱包"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "连接状态"
 
@@ -544,7 +544,7 @@ msgid "Developer Tools"
 msgstr "开发工具"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "难度"
 
@@ -613,11 +613,11 @@ msgstr "错误：无法发送奇亚到染色地址。请输入奇亚钱包地址
 msgid "Estimated Time to Win"
 msgstr "预计区块发现时间"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "全网已占用空间（估算）"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "估计网络中所有农场主已开垦农田占用磁盘空间量"
 
@@ -722,8 +722,8 @@ msgstr "文件名"
 msgid "Final folder location"
 msgstr "最终输出文件夹位置"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "已完成"
 
@@ -736,11 +736,11 @@ msgid "Frequently Asked Questions"
 msgstr "常见问题解答"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "全节点状态"
 
@@ -760,7 +760,7 @@ msgstr "分层确定性钱包中的私钥可以对应有无限多个公钥（也
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "头部哈希"
 
@@ -769,7 +769,7 @@ msgid "Header hash"
 msgstr "头部哈希"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "高度"
@@ -815,7 +815,7 @@ msgstr "使用助记词导入钱包"
 msgid "Import from Mnemonics (24 words)"
 msgstr "自助记词导入（24个词）"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "处理中"
 
@@ -953,7 +953,7 @@ msgstr "增加内存可以略微提高速度"
 msgid "My Pubkey"
 msgstr "我的公钥"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "网络名称"
 
@@ -1022,7 +1022,7 @@ msgstr "你的农田还没有通过过滤器检查."
 msgid "Not Available"
 msgstr "不可用"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "未同步"
 
@@ -1035,8 +1035,8 @@ msgid "Not confirmed yet"
 msgstr "尚未被确认"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "未连接"
 
@@ -1072,7 +1072,7 @@ msgstr "每个交易区块平均打包时间为一分钟。通常您的交易将
 msgid "Outgoing"
 msgstr "支出"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "最高高度"
 
@@ -1080,7 +1080,7 @@ msgstr "最高高度"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "最高时间"
 
@@ -1547,14 +1547,14 @@ msgstr "支出迭代长度(区块数)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "消费限额（单位时间可消费的奇亚币）：{0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1599,7 +1599,7 @@ msgstr "状态："
 msgid "Submit"
 msgstr "提交"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "已同步"
 
@@ -1609,7 +1609,7 @@ msgstr "已同步"
 msgid "Syncing"
 msgstr "正在同步"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "正在同步 {progress}/{tip}"
 
@@ -1654,11 +1654,11 @@ msgstr "你的农场连接的全节点如下.<0>了解更多</0>"
 msgid "The minimum required size for mainnet is k=32"
 msgstr "主网要求的最小农田大小为k=32"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "节点没有同步"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "节点正在同步中, 也就是说它正在从其他节点下载区块, 以便达到最新的区块高度"
 
@@ -1704,7 +1704,7 @@ msgstr "处理中的找零钱, 是你发送支出的找回, 但是没有被链�
 msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 msgstr "待处理的收入与支出总和(还未上链). 不包括农场耕种奖励."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "最新的子块时间."
 
@@ -1720,7 +1720,7 @@ msgstr "这里是你的私钥所控制的, 到目前最新子块高度为止的�
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "目前结余+待处理的结余: 在链上确认完成后就是你的最终总结余."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "本节点完全同步好了"
 
@@ -1744,7 +1744,7 @@ msgstr "该交易在链上的区块高度"
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "此版本的奇亚客户端与区块链已经不再兼容，无法安全地种植。"
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "创建时间"
 
@@ -1770,7 +1770,7 @@ msgstr "总余额"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "总迭代次数"
 
@@ -1790,7 +1790,7 @@ msgstr "总农田大小："
 msgid "Total VDF Iterations"
 msgstr "总VDF迭代数"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "自区块开始以来的迭代数"
 
@@ -1834,7 +1834,7 @@ msgstr "交易过滤器哈希"
 msgid "Type"
 msgstr "类别"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "未完成"
 
@@ -1851,7 +1851,7 @@ msgstr "未知"
 msgid "User Pubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "VDF子项迭代数"
 

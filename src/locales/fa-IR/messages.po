@@ -206,7 +206,7 @@ msgstr "بلوک با هش {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "هیچ بلوکی با هش {headerHash} موجود نیست."
 
-#: src/components/fullNode/FullNode.jsx:298
+#: src/components/fullNode/FullNode.jsx:299
 msgid "Blocks"
 msgstr "بلوک ها"
 
@@ -355,7 +355,7 @@ msgid "Connect to other peers"
 msgstr "اتصال به سایر همسان‌ ها"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:47
-#: src/components/fullNode/FullNode.jsx:143
+#: src/components/fullNode/FullNode.jsx:144
 msgid "Connected"
 msgstr "متصل شد"
 
@@ -363,7 +363,7 @@ msgstr "متصل شد"
 msgid "Connecting to wallet"
 msgstr "اتصال به کیف پول"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "Connection Status"
 msgstr "وضعیت اتصال"
 
@@ -550,7 +550,7 @@ msgid "Developer Tools"
 msgstr "ابزارهای توسعه دهنده"
 
 #: src/components/block/Block.jsx:216
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "Difficulty"
 msgstr "سختی"
 
@@ -619,11 +619,11 @@ msgstr "خطا: چیـا را به آدرس رنگی نمی‌توان ارسا�
 msgid "Estimated Time to Win"
 msgstr "زمان تقریبی برنده شدن"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:198
 msgid "Estimated network space"
 msgstr "فضای تقریبی کل شبکه"
 
-#: src/components/fullNode/FullNode.jsx:200
+#: src/components/fullNode/FullNode.jsx:201
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr "تخمین مجموع دیسک های پلات شده همه مزرعه داران در شبکه"
 
@@ -728,8 +728,8 @@ msgstr "نام فايل"
 msgid "Final folder location"
 msgstr "مکان پوشه نهایی"
 
-#: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "تمام شد"
 
@@ -742,11 +742,11 @@ msgid "Frequently Asked Questions"
 msgstr "سوالات متداول"
 
 #: src/components/dashboard/DashboardSideBar.tsx:23
-#: src/components/fullNode/FullNode.jsx:312
+#: src/components/fullNode/FullNode.jsx:313
 msgid "Full Node"
 msgstr "گره کامل"
 
-#: src/components/fullNode/FullNode.jsx:255
+#: src/components/fullNode/FullNode.jsx:256
 msgid "Full Node Status"
 msgstr "وضعیت گره کامل"
 
@@ -766,7 +766,7 @@ msgstr "کلید های سلسله مراتب قطعی(HD)، نوعی طرح ک�
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:59
+#: src/components/fullNode/FullNode.jsx:60
 msgid "Header Hash"
 msgstr "عنوان هش"
 
@@ -775,7 +775,7 @@ msgid "Header hash"
 msgstr "عنوان هش"
 
 #: src/components/block/Block.jsx:194
-#: src/components/fullNode/FullNode.jsx:75
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:54
 msgid "Height"
 msgstr "ارتفاع"
@@ -821,7 +821,7 @@ msgstr "وارد کردن کیف پول از رمزینه حفظی"
 msgid "Import from Mnemonics (24 words)"
 msgstr "رمزینه حفظی را وارد کنید(24 کلمه)"
 
-#: src/components/fullNode/FullNode.jsx:43
+#: src/components/fullNode/FullNode.jsx:44
 msgid "In Progress"
 msgstr "در حال انجام"
 
@@ -959,7 +959,7 @@ msgstr "حافظه بیشتر سرعت را کمی افزایش می دهد"
 msgid "My Pubkey"
 msgstr "کلید عمومی من"
 
-#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:161
 msgid "Network Name"
 msgstr "نام شبکه"
 
@@ -1028,7 +1028,7 @@ msgstr "هنوز هیچ یک از پلات های شما از فیلتر طرح 
 msgid "Not Available"
 msgstr "در دسترس نیست"
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:123
 msgid "Not Synced"
 msgstr "همگام سازی نشده است"
 
@@ -1041,8 +1041,8 @@ msgid "Not confirmed yet"
 msgstr "هنوز تایید نشده"
 
 #: src/components/core/components/FormatConnectionStatus/FormatConnectionStatus.tsx:48
-#: src/components/fullNode/FullNode.jsx:145
-#: src/components/fullNode/FullNode.jsx:152
+#: src/components/fullNode/FullNode.jsx:146
+#: src/components/fullNode/FullNode.jsx:153
 msgid "Not connected"
 msgstr "متصل نیست"
 
@@ -1080,7 +1080,7 @@ msgstr ""
 msgid "Outgoing"
 msgstr "در حال خروج"
 
-#: src/components/fullNode/FullNode.jsx:166
+#: src/components/fullNode/FullNode.jsx:167
 msgid "Peak Height"
 msgstr "حداکثر ارتفاع"
 
@@ -1088,7 +1088,7 @@ msgstr "حداکثر ارتفاع"
 #~ msgid "Peak Sub-block Height"
 #~ msgstr "Peak Sub-block Height"
 
-#: src/components/fullNode/FullNode.jsx:171
+#: src/components/fullNode/FullNode.jsx:172
 msgid "Peak Time"
 msgstr "حداکثر زمان"
 
@@ -1555,14 +1555,14 @@ msgstr "مدت فاصله خرج کردن (تعداد بلوک ها)"
 msgid "Spending Limit (chia per interval): {0}"
 msgstr "محدودیت خرج کردن (چیـا بر فاصله): {0}"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "حالت"
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:129
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:152
 #: src/components/plot/overview/PlotOverviewPlots.tsx:65
 #: src/components/trading/TradingOverview.jsx:128
 #: src/components/wallet/WalletHistory.tsx:43
@@ -1607,7 +1607,7 @@ msgstr "وضعیت:"
 msgid "Submit"
 msgstr "ثبت و ارسال"
 
-#: src/components/fullNode/FullNode.jsx:130
+#: src/components/fullNode/FullNode.jsx:131
 msgid "Synced"
 msgstr "همگام سازی شده"
 
@@ -1617,7 +1617,7 @@ msgstr "همگام سازی شده"
 msgid "Syncing"
 msgstr "در حال همگام‌سازی"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "Syncing {progress}/{tip}"
 msgstr "همگام‌سازی {progress}/{tip}"
 
@@ -1662,11 +1662,11 @@ msgstr "گره کاملی که مزرعه شما به آن متصل است. <0>�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "حداقل اندازه مورد نیاز برای شبکه اصلی k = 32 است"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:125
 msgid "The node is not synced"
 msgstr "گره همگام سازی نشده"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "گره در حال همگام‌سازی است، به این معنی که بلاک‌ها را از گره‌های دیگر بارگیری می‌کند تا به آخرین بلاک در زنجیره برسد"
 
@@ -1714,7 +1714,7 @@ msgstr ""
 "این مجموع تراکنش‌های در حال واریز و در حال برداشت شما است (که هنوز وارد زنجیره بلاکی نشده‌اند).\n"
 "این شامل پاداش‌های مزرعه‌داری نمی‌شود."
 
-#: src/components/fullNode/FullNode.jsx:173
+#: src/components/fullNode/FullNode.jsx:174
 msgid "This is the time of the latest peak sub block."
 msgstr "این مدت زمان به حداکثر رسیدن آخرین زیربلاک است."
 
@@ -1730,7 +1730,7 @@ msgstr "این مقدار کل چیـا در زنجیره بلوکی در نقط
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "این مقدار موجودی کل + موجودی در حال انتظار است: یعنی موجودی شما در زمانی که تمام تراکنش های در انتظار انجام به تایید برسند."
 
-#: src/components/fullNode/FullNode.jsx:133
+#: src/components/fullNode/FullNode.jsx:134
 msgid "This node is fully caught up and validating the network"
 msgstr "این گره کاملا درگیر و در حال اعتبار سنجی شبکه است"
 
@@ -1756,7 +1756,7 @@ msgstr "این معامله در این ارتفاع بلوکی شامل زنج�
 msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 msgstr "این ورژن از چیـا دیگر با با شبکه بلوکی سازگاری ندارد و نمی‌تواند با امنیت به مزرعه داری بپردازد."
 
-#: src/components/fullNode/FullNode.jsx:86
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "زمان ایجاد"
 
@@ -1782,7 +1782,7 @@ msgstr "موجودی کل"
 #~ msgid "Total Chia Farmed"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:191
+#: src/components/fullNode/FullNode.jsx:192
 msgid "Total Iterations"
 msgstr "کل تکرار ها"
 
@@ -1802,7 +1802,7 @@ msgstr "جمع اندازه پلات ها"
 msgid "Total VDF Iterations"
 msgstr "کل تکرار های VDF"
 
-#: src/components/fullNode/FullNode.jsx:193
+#: src/components/fullNode/FullNode.jsx:194
 msgid "Total iterations since the start of the blockchain"
 msgstr "کل تکرارها از زمان شروع زنجیره بلوکی"
 
@@ -1846,7 +1846,7 @@ msgstr "هشِ فیلتر تراکنش ها"
 msgid "Type"
 msgstr "نوع"
 
-#: src/components/fullNode/FullNode.jsx:92
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "ناتمام"
 
@@ -1863,7 +1863,7 @@ msgstr "ناشناخته"
 msgid "User Pubkey"
 msgstr "کلید عمومی کاربر"
 
-#: src/components/fullNode/FullNode.jsx:185
+#: src/components/fullNode/FullNode.jsx:186
 msgid "VDF Sub Slot Iterations"
 msgstr "تکرارهای زیر شکافی VDF"
 

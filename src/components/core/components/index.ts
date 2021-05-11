@@ -17,6 +17,7 @@ export { default as Flex } from './Flex';
 export { default as Form } from './Form';
 export { default as FormatBytes } from './FormatBytes';
 export { default as FormatConnectionStatus } from './FormatConnectionStatus';
+export { default as FormatLargeNumber } from './FormatLargeNumber';
 export { default as GuestRoute } from './GuestRoute';
 export { default as IconButton } from './IconButton';
 export { default as Indicator } from './Indicator';
