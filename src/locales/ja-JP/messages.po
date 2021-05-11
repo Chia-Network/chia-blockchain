@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:12\n"
+"PO-Revision-Date: 2021-05-11 03:14\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1066,7 +1066,7 @@ msgstr "作成した注文"
 
 #: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr ""
+msgstr "取引ブロックは約1分間隔で作成されます。混雑時を除き、1分以内にあなたの送金も取り込まれるはずです。"
 
 #: src/components/wallet/WalletHistory.tsx:19
 msgid "Outgoing"
