@@ -7,7 +7,7 @@
 In order to be accessible from another machine, the daemon's port must be opened on its host. Using [ufw](https://help.ubuntu.com/community/UFW) and restricting traffic to just the UI's host:
 
 ````bash
-sudo ufw allow from <IP of UI machine> to any port 55400 proto tcp`
+sudo ufw allow from <IP of UI machine> to any port 55400 proto tcp
 ````
 
 ### Copy the daemon's cert files
