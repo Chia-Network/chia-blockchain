@@ -1,8 +1,8 @@
 import asyncio
 import logging
-import ipaddress
 import traceback
 import time
+import random
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
@@ -120,7 +120,8 @@ class Crawler:
 
             while True:
                 self.with_peak = set()
-                await self.crawl_store.load_to_db()
+                if random.randrange(0, 4) == 0:
+                    await self.crawl_store.load_to_db()
                 await self.crawl_store.load_reliable_peers_to_db()
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(10000, 100000)
 
