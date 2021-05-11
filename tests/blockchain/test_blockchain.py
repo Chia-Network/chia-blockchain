@@ -3,7 +3,6 @@ import asyncio
 import logging
 import multiprocessing
 import time
-from _datetime import datetime
 from dataclasses import replace
 from secrets import token_bytes
 
@@ -2557,7 +2556,6 @@ class TestReorgs:
             result, error_code, _ = await b.receive_block(block)
             assert error_code is None
 
-
     @pytest.mark.asyncio
     async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain):
         b = empty_blockchain
@@ -2583,9 +2581,11 @@ class TestReorgs:
         err = (await b.receive_block(blocks[-1]))[1]
         assert not err
 
-        blocks_with_filter = await b.get_header_blocks_in_range(0,10,tx_filter=True)
-        blocks_without_filter = await b.get_header_blocks_in_range(0,10,tx_filter=False)
+        blocks_with_filter = await b.get_header_blocks_in_range(0, 10, tx_filter=True)
+        blocks_without_filter = await b.get_header_blocks_in_range(0, 10, tx_filter=False)
         header_hash = blocks[-1].header_hash
-        assert blocks_with_filter[header_hash].transactions_filter != blocks_without_filter[header_hash].transactions_filter
+        assert (
+            blocks_with_filter[header_hash].transactions_filter
+            != blocks_without_filter[header_hash].transactions_filter
+        )
         assert blocks_with_filter[header_hash].header_hash == blocks_without_filter[header_hash].header_hash
-
