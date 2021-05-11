@@ -205,7 +205,6 @@ class Crawler:
 
     def _close(self):
         self._shut_down = True
-        self.transport.close()
 
     async def _await_closed(self):
         await self.connection.close()

@@ -51,11 +51,7 @@ class CrawlStore:
             )
         )
 
-        await self.crawl_db.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS good_peers(ip text)"
-            )
-        )
+        await self.crawl_db.execute(("CREATE TABLE IF NOT EXISTS good_peers(ip text)"))
 
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS ip_address on peer_records(ip_address)")
 
@@ -242,7 +238,8 @@ class CrawlStore:
         await cursor.close()
         for peer in peers:
             cursor = await self.crawl_db.execute(
-                "INSERT OR REPLACE INTO good_peers VALUES(?)", (peer,),
+                "INSERT OR REPLACE INTO good_peers VALUES(?)",
+                (peer,),
             )
             await cursor.close()
         await self.crawl_db.commit()
