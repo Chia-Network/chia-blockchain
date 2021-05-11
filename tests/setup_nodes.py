@@ -85,6 +85,7 @@ async def setup_full_node(
         config["introducer_peer"]["port"] = introducer_port
     else:
         config["introducer_peer"] = None
+    config["dns_servers"] = []
     config["port"] = port
     config["rpc_port"] = port + 1000
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
