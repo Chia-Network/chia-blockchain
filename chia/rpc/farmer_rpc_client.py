@@ -32,6 +32,7 @@ class FarmerRpcClient(RpcClient):
             return_dict["have_pool_sk"] = response["have_pool_sk"]
         if "have_farmer_sk" in response:
             return_dict["have_farmer_sk"] = response["have_farmer_sk"]
+
         return return_dict
 
     async def set_reward_targets(self, farmer_target: Optional[str] = None, pool_target: Optional[str] = None) -> Dict:
@@ -40,4 +41,5 @@ class FarmerRpcClient(RpcClient):
             request["farmer_target"] = farmer_target
         if pool_target is not None:
             request["pool_target"] = pool_target
+
         return await self.fetch("set_reward_targets", request)

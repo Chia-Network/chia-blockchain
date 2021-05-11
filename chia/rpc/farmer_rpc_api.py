@@ -39,6 +39,7 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             ]
+
         return []
 
     async def get_signage_point(self, request: Dict) -> Dict:
@@ -58,6 +59,7 @@ class FarmerRpcApi:
                         },
                         "proofs": pospaces,
                     }
+
         raise ValueError(f"Signage point {sp_hash.hex()} not found")
 
     async def get_signage_points(self, _: Dict) -> Dict:
@@ -78,6 +80,7 @@ class FarmerRpcApi:
                         "proofs": pospaces,
                     }
                 )
+
         return {"signage_points": result}
 
     async def get_reward_targets(self, request: Dict) -> Dict:

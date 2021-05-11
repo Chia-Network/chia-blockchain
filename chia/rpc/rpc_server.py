@@ -44,15 +44,15 @@ class RpcServer:
             await self.websocket.close()
 
     async def _state_changed(self, *args):
-        change = args[0]
         if self.websocket is None:
             return None
+
+        change = args[0]
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
             if data is not None:
-
                 payload = create_payload_dict(
                     "get_connections",
                     data,
@@ -60,6 +60,7 @@ class RpcServer:
                     "wallet_ui",
                 )
                 payloads.append(payload)
+
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
@@ -69,10 +70,11 @@ class RpcServer:
                 tb = traceback.format_exc()
                 self.log.warning(f"Sending data failed. Exception {tb}.")
 
+        return None
+
     def state_changed(self, *args):
-        if self.websocket is None:
-            return None
-        asyncio.create_task(self._state_changed(*args))
+        if self.websocket is not None:
+            asyncio.create_task(self._state_changed(*args))
 
     def _wrap_http_handler(self, f) -> Callable:
         async def inner(request) -> aiohttp.web.Response:
@@ -146,6 +148,7 @@ class RpcServer:
                 }
                 for con in connections
             ]
+
         return {"connections": con_info}
 
     async def open_connection(self, request: Dict):
@@ -159,6 +162,7 @@ class RpcServer:
             await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
             raise ValueError("Start client failed, or server is not set")
+
         return {}
 
     async def close_connection(self, request: Dict):
@@ -170,6 +174,7 @@ class RpcServer:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
             await connection.close()
+
         return {}
 
     async def stop_node(self, request):
@@ -178,6 +183,7 @@ class RpcServer:
         """
         if self.stop_cb is not None:
             self.stop_cb()
+
         return {}
 
     async def ws_api(self, message):
@@ -198,11 +204,13 @@ class RpcServer:
         f = getattr(self, command, None)
         if f is not None:
             return await f(data)
+
         f = getattr(self.rpc_api, command, None)
         if f is not None:
             return await f(data)
 
         raise ValueError(f"unknown_command {command}")
+        return None
 
     async def safe_handle(self, websocket, payload):
         message = None
@@ -226,9 +234,8 @@ class RpcServer:
                 error = {"success": False, "error": f"{e.args[0]}"}
             else:
                 error = {"success": False, "error": f"{e}"}
-            if message is None:
-                return None
-            await websocket.send_str(format_response(message, error))
+            if message is not None:
+                await websocket.send_str(format_response(message, error))
 
     async def connection(self, ws):
         data = {"service": self.service_name}

@@ -24,6 +24,7 @@ class HarvesterRpcApi:
             data = await self.get_plots({})
             payload = create_payload_dict("get_plots", data, self.service_name, "wallet_ui")
             return [payload]
+
         return []
 
     async def get_plots(self, request: Dict) -> Dict:
@@ -40,15 +41,19 @@ class HarvesterRpcApi:
 
     async def delete_plot(self, request: Dict) -> Dict:
         filename = request["filename"]
-        if self.service.delete_plot(filename):
-            return {}
-        raise ValueError(f"Not able to delete file {filename}")
+        if not self.service.delete_plot(filename):
+            raise ValueError(f"Not able to delete file {filename}")
+            return None
+
+        return {}
 
     async def add_plot_directory(self, request: Dict) -> Dict:
         directory_name = request["dirname"]
-        if await self.service.add_plot_directory(directory_name):
-            return {}
-        raise ValueError(f"Did not add plot directory {directory_name}")
+        if not await self.service.add_plot_directory(directory_name):
+            raise ValueError(f"Did not add plot directory {directory_name}")
+            return None
+
+        return {}
 
     async def get_plot_directories(self, request: Dict) -> Dict:
         plot_dirs = await self.service.get_plot_directories()
@@ -56,6 +61,8 @@ class HarvesterRpcApi:
 
     async def remove_plot_directory(self, request: Dict) -> Dict:
         directory_name = request["dirname"]
-        if await self.service.remove_plot_directory(directory_name):
-            return {}
-        raise ValueError(f"Did not remove plot directory {directory_name}")
+        if not await self.service.remove_plot_directory(directory_name):
+            raise ValueError(f"Did not remove plot directory {directory_name}")
+            return None
+
+        return {}
