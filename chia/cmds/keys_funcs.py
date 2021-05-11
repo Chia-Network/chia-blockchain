@@ -27,10 +27,10 @@ def generate_and_print():
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     seed = mnemonic_to_seed(mnemonic, passphrase)
     sk = AugSchemeMPL.key_gen(seed)
-    wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix)
+    address = encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix)
     print(
         "First wallet address:",
-        wallet_address,
+        address,
     )
     print('Note that this key has not been added to the keychain. Run chia keys add_seed -m "[MNEMONICS]" to add')
     return mnemonic
