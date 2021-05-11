@@ -67,15 +67,16 @@ class BlockStore:
         return self
 
     async def add_full_block(self, block: FullBlock, block_record: BlockRecord) -> None:
-        cached = self.block_cache.get(block.header_hash)
+        block_header_hash = block.header_hash
+        cached = self.block_cache.get(block_header_hash)
         if cached is not None:
             # Since write to db can fail, we remove from cache here to avoid potential inconsistency
             # Adding to cache only from reading
-            self.block_cache.remove(block.header_hash)
+            self.block_cache.remove(block_header_hash)
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
-                block.header_hash.hex(),
+                block_header_hash.hex(),
                 block.height,
                 int(block.is_transaction_block()),
                 int(block.is_fully_compactified()),
@@ -88,7 +89,7 @@ class BlockStore:
         cursor_2 = await self.db.execute(
             "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?,?, ?, ?)",
             (
-                block.header_hash.hex(),
+                block_header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.height,
                 bytes(block_record),
@@ -142,7 +143,7 @@ class BlockStore:
         await cursor.close()
         if row is not None:
             block = FullBlock.from_bytes(row[0])
-            self.block_cache.put(block.header_hash, block)
+            self.block_cache.put(header_hash, block)
             return block
         return None
 
@@ -209,8 +210,10 @@ class BlockStore:
         all_blocks: Dict[bytes32, FullBlock] = {}
         for row in rows:
             full_block: FullBlock = FullBlock.from_bytes(row[0])
-            all_blocks[full_block.header_hash] = full_block
-            self.block_cache.put(full_block.header_hash, full_block)
+            # only compute the header hash once
+            full_block_header_hash = full_block.header_hash
+            all_blocks[full_block_header_hash] = full_block
+            self.block_cache.put(full_block_header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:
             if hh not in all_blocks:
