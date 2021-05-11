@@ -13,7 +13,9 @@ class StructStream(int):
     def __new__(cls: Any, value: int):
         value = int(value)
         try:
-            struct.pack(cls.PACK, value)
+            v1 = struct.unpack(cls.PACK, struct.pack(cls.PACK, value))[0]
+            if value != v1:
+                raise ValueError(f"Value {value} does not fit into {cls.__name__}")
         except Exception:
             bits = struct.calcsize(cls.PACK) * 8
             raise ValueError(

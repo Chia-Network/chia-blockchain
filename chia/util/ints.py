@@ -58,6 +58,9 @@ class uint128(int):
 class int512(int):
     def __new__(cls: Any, value: int):
         value = int(value)
+        # note that the boundaries for int512 is not what you might expect. We
+        # encode these with one extra byte, but only allow a range of
+        # [-INT512_MAX, INT512_MAX]
         if value >= (2 ** 512) or value <= -(2 ** 512):
             raise ValueError(f"Value {value} of does not fit into in512")
         return int.__new__(cls, value)  # type: ignore
