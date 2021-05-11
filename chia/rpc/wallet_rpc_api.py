@@ -449,6 +449,10 @@ class WalletRpcApi:
         pending_change = await wallet.get_pending_change_balance()
         max_send_amount = await wallet.get_max_send_amount(unspent_records)
 
+        unconfirmed_removals: Dict[bytes32, Coin] = await wallet.wallet_state_manager.unconfirmed_removals_for_wallet(
+            wallet_id
+        )
+
         wallet_balance = {
             "wallet_id": wallet_id,
             "confirmed_wallet_balance": balance,
@@ -457,6 +461,7 @@ class WalletRpcApi:
             "pending_change": pending_change,
             "max_send_amount": max_send_amount,
             "unspent_coin_count": len(unspent_records),
+            "pending_coin_removal_count": len(unconfirmed_removals),
         }
 
         return {"wallet_balance": wallet_balance}
