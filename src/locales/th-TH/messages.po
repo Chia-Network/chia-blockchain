@@ -8,7 +8,7 @@ msgstr ""
 "Language: th_TH\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-05-10 15:11\n"
+"PO-Revision-Date: 2021-05-11 15:12\n"
 "Last-Translator: \n"
 "Language-Team: Thai\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -32,7 +32,7 @@ msgstr "จำนวนบักเก็ตที่แนะนำคือ 12
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:58
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
-msgstr ""
+msgstr "ระบบกำลังทำงานอยู่ในระหว่างการพล็อต ซึ่งตัวโปรแกรมกำลังเชื่อมต่อกับเครื่อข่าย โดยสามารถดูรายละเอียดเพิ่มเติมได้ได้ใต้ข้อความนี้"
 
 #: src/electron/main.tsx:365
 #: src/electron/main.tsx:443
@@ -311,7 +311,7 @@ msgstr "ราละเอียดของสี"
 
 #: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "Colour String"
-msgstr ""
+msgstr "สีตัวอักษร"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "Colour:"
